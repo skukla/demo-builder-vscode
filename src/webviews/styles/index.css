@@ -1,0 +1,135 @@
+/* Base styles for the webview */
+* {
+    box-sizing: border-box;
+}
+
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+#root {
+    width: 100%;
+    height: 100%;
+}
+
+/* Spectrum overrides for quiet mode */
+.spectrum--quiet {
+    --spectrum-textfield-border-width: 0;
+    --spectrum-textfield-border-width-focused: 1px;
+    --spectrum-picker-border-width: 0;
+    --spectrum-picker-border-width-hover: 1px;
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--spectrum-global-color-gray-500);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--spectrum-global-color-gray-600);
+}
+
+/* Terminal output styles */
+.terminal-output {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    background: var(--spectrum-global-color-gray-900);
+    color: #00ff00;
+    padding: var(--spectrum-global-dimension-size-200);
+    border-radius: var(--spectrum-global-dimension-size-50);
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.terminal-output.dark {
+    background: #1e1e1e;
+}
+
+/* Step animation */
+.wizard-step-enter {
+    opacity: 0;
+    transform: translateX(20px);
+}
+
+.wizard-step-enter-active {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 300ms ease, transform 300ms ease;
+}
+
+.wizard-step-exit {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.wizard-step-exit-active {
+    opacity: 0;
+    transform: translateX(-20px);
+    transition: opacity 300ms ease, transform 300ms ease;
+}
+
+/* Status indicators */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-indicator.success {
+    color: var(--spectrum-global-color-green-600);
+}
+
+.status-indicator.error {
+    color: var(--spectrum-global-color-red-600);
+}
+
+.status-indicator.warning {
+    color: var(--spectrum-global-color-orange-600);
+}
+
+.status-indicator.checking {
+    color: var(--spectrum-global-color-blue-600);
+}
+
+/* Pulse animation for checking status */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+.pulse {
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Code block styles */
+.code-block {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    background: var(--spectrum-global-color-gray-100);
+    padding: var(--spectrum-global-dimension-size-150);
+    border-radius: var(--spectrum-global-dimension-size-50);
+    overflow-x: auto;
+}
+
+.code-block.dark {
+    background: var(--spectrum-global-color-gray-800);
+    color: var(--spectrum-global-color-gray-100);
+}
