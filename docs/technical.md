@@ -143,6 +143,61 @@ Strict CSP is enforced for webviews:
 - Verify CSP allows script execution
 - Check for console errors in webview
 
+## React Spectrum Component Patterns
+
+### Component Configuration
+React Spectrum components require specific prop patterns rather than CSS customization:
+
+#### Picker Width Control
+```tsx
+// CORRECT: Use menuWidth prop
+<Picker menuWidth="size-4600">
+
+// INCORRECT: CSS won't affect dropdown width
+.spectrum-Menu { min-width: 400px; } // This won't work
+```
+
+#### Layout Control
+When React Spectrum's default layout doesn't meet requirements, use CSS Grid:
+```css
+.spectrum-Menu-itemGrid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto !important;
+}
+```
+
+### Styling Approach
+1. **First**: Try React Spectrum props
+2. **Second**: Use UNSAFE_style for inline styles when needed
+3. **Last**: Override with CSS using high specificity and !important
+
+### Message Passing for Component Data
+
+The wizard loads component options dynamically:
+
+```typescript
+// Extension side (ComponentHandler)
+const componentsData = {
+    frontends: await this.registryManager.getFrontends(),
+    backends: await this.registryManager.getBackends(),
+    externalSystems: await this.registryManager.getExternalSystems(),
+    appBuilder: await this.registryManager.getAppBuilder()
+};
+await webview.postMessage('componentsLoaded', componentsData);
+
+// Webview side (WizardContainer)
+useEffect(() => {
+    const unsubscribe = vscode.onMessage('componentsLoaded', (data) => {
+        setComponentsData(data);
+    });
+    vscode.postMessage('loadComponents');
+    return unsubscribe;
+}, []);
+```
+
+This pattern ensures component options are loaded from `components.json` rather than hardcoded in the UI.
+
 ## Future Improvements
 
 ### Potential Enhancements
@@ -150,8 +205,10 @@ Strict CSP is enforced for webviews:
 - Skeleton screens for content areas
 - Optimistic UI updates
 - WebAssembly for performance-critical operations
+- Custom React Spectrum theme for consistent styling
 
 ### Technical Debt
 - Consider migrating to single webview with routing
 - Evaluate newer bundling tools (esbuild, etc.)
 - Implement comprehensive error boundaries
+- Create wrapper components for commonly configured Spectrum components
