@@ -1,17 +1,27 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { spawn } from 'child_process';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { BaseCommand } from './baseCommand';
 import { PrerequisitesChecker } from '../utils/prerequisitesChecker';
+import { PrerequisitesManager } from '../utils/prerequisitesManager';
 import { AdobeAuthManager } from '../utils/adobeAuthManager';
 import { setLoadingState } from '../utils/loadingHTML';
 import { ComponentHandler } from './componentHandler';
+import { TerminalManager } from '../utils/terminalManager';
+import { ErrorLogger } from '../utils/errorLogger';
+
+const execAsync = promisify(exec);
 
 export class CreateProjectWebviewCommand extends BaseCommand {
     private panel: vscode.WebviewPanel | undefined;
     private prereqChecker: PrerequisitesChecker;
+    private prereqManager: PrerequisitesManager;
     private authManager: AdobeAuthManager;
     private componentHandler: ComponentHandler;
+    private terminalManager: TerminalManager;
+    private errorLogger: ErrorLogger;
+    private currentComponentSelection?: any;
 
     constructor(
         context: vscode.ExtensionContext,
@@ -21,8 +31,11 @@ export class CreateProjectWebviewCommand extends BaseCommand {
     ) {
         super(context, stateManager, statusBar, logger);
         this.prereqChecker = new PrerequisitesChecker(logger);
+        this.prereqManager = new PrerequisitesManager(context.extensionPath, logger);
         this.authManager = new AdobeAuthManager(logger);
         this.componentHandler = new ComponentHandler(context);
+        this.terminalManager = new TerminalManager();
+        this.errorLogger = new ErrorLogger(context);
     }
 
     public async execute(): Promise<void> {
@@ -205,11 +218,24 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 break;
 
             case 'check-prerequisites':
-                await this.checkPrerequisites();
+                // Clear previous logs and start checking
+                this.errorLogger.clear();
+                this.errorLogger.logInfo('Starting prerequisite checks', 'Prerequisites');
+                await this.checkPrerequisitesWithManager();
+                break;
+            
+            case 'update-component-selection':
+                // Store component selection for prerequisite checking
+                this.currentComponentSelection = payload;
                 break;
 
             case 'install-prerequisite':
-                await this.installPrerequisite(payload.index, payload.name);
+                // Use new manager if ID provided, otherwise fallback to old method
+                if (payload.id) {
+                    await this.installPrerequisiteWithManager(payload.index, payload.id);
+                } else {
+                    await this.installPrerequisite(payload.index, payload.name);
+                }
                 break;
 
             case 'check-auth':
@@ -291,14 +317,152 @@ export class CreateProjectWebviewCommand extends BaseCommand {
         });
     }
 
+    private async checkPrerequisitesWithManager(): Promise<void> {
+        try {
+            // Load prerequisites from configuration
+            const prerequisites = await this.prereqManager.getRequiredPrerequisites(
+                this.currentComponentSelection
+            );
+            
+            // Send prerequisites list to UI
+            await this.sendMessage('prerequisites-loaded', {
+                prerequisites: prerequisites.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    description: p.description,
+                    optional: p.optional || false,
+                    plugins: p.plugins?.map(plugin => ({
+                        id: plugin.id,
+                        name: plugin.name,
+                        description: plugin.description
+                    }))
+                }))
+            });
+            
+            // Check each prerequisite
+            for (let i = 0; i < prerequisites.length; i++) {
+                const prereq = prerequisites[i];
+                
+                // Log to error logger
+                this.errorLogger.logInfo(`Checking ${prereq.name}`, 'Prerequisites');
+                
+                // Send checking status to UI
+                await this.sendMessage('prerequisite-status', {
+                    index: i,
+                    id: prereq.id,
+                    status: 'checking'
+                });
+                
+                // No terminal output - just check prerequisites
+                
+                // Give command time to execute
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Check prerequisite status
+                const status = await this.prereqManager.checkPrerequisite(prereq);
+                
+                // Special handling for Node.js - check if ALL required versions are installed
+                if (prereq.id === 'node' && status.installed) {
+                    const requiredVersions = await this.prereqManager.getRequiredNodeVersions(
+                        this.currentComponentSelection
+                    );
+                    
+                    if (requiredVersions.length > 0) {
+                        // Get installed versions from fnm
+                        let installedVersions: string[] = [];
+                        try {
+                            const { stdout: fnmList } = await execAsync('fnm list');
+                            const versionLines = fnmList.split('\n').filter(line => line.trim());
+                            
+                            for (const line of versionLines) {
+                                const versionMatch = line.match(/v?(\d+\.\d+\.\d+)/);
+                                if (versionMatch) {
+                                    installedVersions.push(versionMatch[1]);
+                                }
+                            }
+                        } catch (error) {
+                            this.errorLogger.logWarning('Could not query fnm for installed versions', 'Prerequisites');
+                        }
+                        
+                        // Check which required versions are missing
+                        const missingVersions: string[] = [];
+                        const installedMajorVersions = installedVersions.map(v => v.split('.')[0]);
+                        
+                        for (const reqVersion of requiredVersions) {
+                            if (reqVersion === 'latest') {
+                                // Check if we have any version >= 23
+                                const hasRecent = installedMajorVersions.some(v => parseInt(v) >= 23);
+                                if (!hasRecent) {
+                                    missingVersions.push('latest');
+                                }
+                            } else {
+                                // Check for specific major version
+                                const reqMajor = reqVersion.split('.')[0];
+                                if (!installedMajorVersions.includes(reqMajor)) {
+                                    missingVersions.push(reqVersion);
+                                }
+                            }
+                        }
+                        
+                        // Update status based on missing versions
+                        if (missingVersions.length > 0) {
+                            status.installed = false;
+                            const missingWithComponents = missingVersions.map(v => {
+                                const component = this.getComponentNameForNodeVersion(v);
+                                return `v${v}${component ? ` (${component})` : ''}`;
+                            });
+                            status.message = `Node.js partially installed. Missing: ${missingWithComponents.join(', ')}`;
+                            
+                            // Store missing versions for later installation
+                            (status as any).missingVersions = missingVersions;
+                        } else {
+                            // All required versions are installed
+                            status.message = `Node.js is installed (${installedVersions.map(v => `v${v}`).join(', ')})`;
+                        }
+                        
+                        // Store installed versions for display
+                        (status as any).installedVersions = installedVersions;
+                    }
+                }
+                
+                // Log result
+                if (status.installed) {
+                    this.errorLogger.logInfo(`${prereq.name} found: ${status.version || 'version unknown'}`, 'Prerequisites');
+                } else {
+                    this.errorLogger.logWarning(`${prereq.name} not installed${status.message ? ': ' + status.message : ''}`, 'Prerequisites');
+                }
+                
+                // Send result to UI
+                await this.sendMessage('prerequisite-status', {
+                    index: i,
+                    id: prereq.id,
+                    status: status.installed ? 'success' : 'error',
+                    message: status.message || (status.installed ? 
+                        `${status.name} is installed${status.version ? ` (v${status.version})` : ''}` :
+                        `${status.name} is not installed`),
+                    version: status.version,
+                    plugins: status.plugins,
+                    missingVersions: (status as any).missingVersions,
+                    installedVersions: (status as any).installedVersions
+                });
+            }
+        } catch (error) {
+            this.logger.error('Error checking prerequisites:', error as Error);
+            this.errorLogger.logError(error as Error, 'Prerequisites', true); // Critical error
+            await this.sendMessage('prerequisite-error', {
+                error: (error as Error).message
+            });
+        }
+    }
+
     private async checkPrerequisites(): Promise<void> {
         const result = await this.prereqChecker.check();
         
         const checks = [
-            { name: 'Node.js', status: result.node },
-            { name: 'Node Version Manager', status: result.fnm },
-            { name: 'Adobe I/O CLI', status: result.adobeIO },
-            { name: 'API Mesh Plugin', status: result.apiMesh }
+            { name: 'Node.js', status: result.node, command: 'node --version' },
+            { name: 'Node Version Manager', status: result.fnm, command: 'fnm --version' },
+            { name: 'Adobe I/O CLI', status: result.adobeIO, command: 'aio --version' },
+            { name: 'API Mesh Plugin', status: result.apiMesh, command: 'aio api-mesh --version' }
         ];
 
         for (let i = 0; i < checks.length; i++) {
@@ -306,109 +470,339 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             let status: string;
             let message: string;
             
+            // Check prerequisite command
+            
+            // Send status update
+            await this.sendMessage('prerequisite-status', {
+                index: i,
+                status: 'checking'
+            });
+            
+            // Add a small delay for visual feedback
+            await new Promise(resolve => setTimeout(resolve, 300));
+            
             if (check.status.installed) {
                 status = 'success';
                 const version = check.status.version || 'unknown';
                 message = `${check.name} is installed${version !== 'unknown' ? ` (v${version})` : ''}`;
+                
+                // For Node.js, pass all installed versions from fnm
+                let plugins = undefined;
+                if (check.name === 'Node.js' && (check.status as any).installedVersions) {
+                    plugins = (check.status as any).installedVersions;
+                }
+                
+                await this.sendMessage('prerequisite-status', {
+                    index: i,
+                    status,
+                    message,
+                    version: version !== 'unknown' ? version : undefined,
+                    plugins // Pass installed versions for Node.js
+                });
             } else {
                 status = 'error';
                 message = `${check.name} is not installed`;
+                
+                // Not installed
+                
+                await this.sendMessage('prerequisite-status', {
+                    index: i,
+                    status,
+                    message
+                });
+            }
+        }
+    }
+
+    private async installPrerequisiteWithManager(index: number, prereqId: string): Promise<void> {
+        try {
+            const prereq = await this.prereqManager.getPrerequisiteById(prereqId);
+            if (!prereq) {
+                throw new Error(`Prerequisite ${prereqId} not found`);
+            }
+            
+            // Start installation
+            
+            // Log installation start
+            this.errorLogger.logInfo(`Installing ${prereq.name}`, 'Prerequisites');
+            
+            await this.sendMessage('prerequisite-status', {
+                index,
+                id: prereqId,
+                status: 'checking',
+                message: `Installing ${prereq.name}...`
+            });
+            
+            // Get install commands
+            let nodeVersions: string[] = [];
+            
+            // For Node.js, get required versions and filter out already installed ones
+            if (prereq.id === 'node') {
+                const requiredVersions = await this.prereqManager.getRequiredNodeVersions(
+                    this.currentComponentSelection
+                );
+                
+                // Get currently installed versions
+                let installedMajorVersions: string[] = [];
+                try {
+                    const { stdout: fnmList } = await execAsync('fnm list');
+                    const versionLines = fnmList.split('\n').filter(line => line.trim());
+                    
+                    for (const line of versionLines) {
+                        const versionMatch = line.match(/v?(\d+)\.(\d+)\.(\d+)/);
+                        if (versionMatch) {
+                            installedMajorVersions.push(versionMatch[1]);
+                        }
+                    }
+                    this.errorLogger.logInfo(`Already installed Node versions: ${installedMajorVersions.join(', ')}`, 'Prerequisites');
+                } catch (error) {
+                    this.errorLogger.logWarning('Could not query fnm for installed versions', 'Prerequisites');
+                }
+                
+                // Filter out already installed versions and resolve "latest"
+                const versionsToInstall: string[] = [];
+                for (const version of requiredVersions) {
+                    if (version === 'latest') {
+                        // Check if we already have a recent version (>= 23)
+                        const hasRecent = installedMajorVersions.some(v => parseInt(v) >= 23);
+                        if (!hasRecent) {
+                            try {
+                                // Query fnm for latest available version
+                                const { stdout } = await execAsync('fnm list-remote | head -1');
+                                const latestVersion = stdout.trim().replace('v', '');
+                                versionsToInstall.push(latestVersion);
+                                this.errorLogger.logInfo(`Will install latest Node version: ${latestVersion}`, 'Prerequisites');
+                            } catch (error) {
+                                this.errorLogger.logWarning(`Could not resolve latest version, using 24`, 'Prerequisites');
+                                versionsToInstall.push('24'); // Fallback
+                            }
+                        } else {
+                            this.errorLogger.logInfo(`Skipping 'latest' - already have Node ${installedMajorVersions.find(v => parseInt(v) >= 23)}`, 'Prerequisites');
+                        }
+                    } else {
+                        // Check if this major version is already installed
+                        const reqMajor = version.split('.')[0];
+                        if (!installedMajorVersions.includes(reqMajor)) {
+                            versionsToInstall.push(version);
+                            this.errorLogger.logInfo(`Will install Node version: ${version}`, 'Prerequisites');
+                        } else {
+                            this.errorLogger.logInfo(`Skipping Node ${version} - already have Node ${reqMajor}`, 'Prerequisites');
+                        }
+                    }
+                }
+                
+                if (versionsToInstall.length === 0) {
+                    // All required versions are already installed
+                    this.errorLogger.logInfo(`All required Node versions are already installed`, 'Prerequisites');
+                    
+                    await this.sendMessage('prerequisite-status', {
+                        index,
+                        id: prereqId,
+                        status: 'success',
+                        message: `All required Node.js versions are already installed`
+                    });
+                    return;
+                }
+                
+                nodeVersions = versionsToInstall;
+            }
+            
+            const installInfo = this.prereqManager.getInstallCommands(prereq, {
+                nodeVersions: prereq.id === 'node' ? nodeVersions : undefined,
+                preferredMethod: 'homebrew' // Could be configured
+            });
+            
+            if (installInfo.manual) {
+                // Manual installation required
+                this.errorLogger.logWarning(`Manual installation required for ${prereq.name}`, 'Prerequisites');
+                
+                await this.sendMessage('prerequisite-status', {
+                    index,
+                    id: prereqId,
+                    status: 'warning',
+                    message: installInfo.message || 'Manual installation required'
+                });
+                return;
+            }
+            
+            // Execute install commands from prerequisites.json
+            let commandIndex = 0;
+            for (const command of installInfo.commands) {
+                try {
+                    // For Node.js with multiple versions, show which version we're installing
+                    let progressMessage = `Executing: ${command.substring(0, 50)}...`;
+                    if (prereq.id === 'node' && nodeVersions.length > 1) {
+                        const version = nodeVersions[commandIndex] || '';
+                        const componentName = this.getComponentNameForNodeVersion(version);
+                        progressMessage = `Installing Node.js ${version}${componentName ? ` for ${componentName}` : ''}...`;
+                    }
+                    
+                    this.errorLogger.logInfo(`Executing: ${command}`, 'Prerequisites');
+                    
+                    await this.sendMessage('prerequisite-status', {
+                        index,
+                        id: prereqId,
+                        status: 'checking',
+                        message: progressMessage
+                    });
+                    
+                    // Execute the actual command
+                    const { stdout, stderr } = await execAsync(command, {
+                        timeout: 60000, // 60 second timeout
+                        maxBuffer: 1024 * 1024 * 10 // 10MB buffer
+                    });
+                    
+                    // Log output
+                    if (stdout) {
+                        this.errorLogger.logInfo(`Output: ${stdout.substring(0, 500)}`, 'Prerequisites');
+                    }
+                    
+                    // Check if stderr contains only warnings (common with npm)
+                    if (stderr) {
+                        const hasOnlyWarnings = stderr.split('\n').every(line => 
+                            !line.trim() || 
+                            line.includes('warn') || 
+                            line.includes('deprecated') ||
+                            line.includes('notice')
+                        );
+                        
+                        if (!hasOnlyWarnings) {
+                            this.errorLogger.logWarning(`Stderr: ${stderr.substring(0, 500)}`, 'Prerequisites');
+                        }
+                    }
+                    
+                } catch (error: any) {
+                    // Check if this is actually a failure or just warnings
+                    // npm often returns exit code 1 with deprecation warnings but still succeeds
+                    const isNpmCommand = command.includes('npm install');
+                    const hasSuccessIndicators = error.stdout && (
+                        error.stdout.includes('added') || 
+                        error.stdout.includes('changed') ||
+                        error.stdout.includes('packages in')
+                    );
+                    
+                    if (isNpmCommand && hasSuccessIndicators) {
+                        // npm succeeded despite warnings
+                        this.errorLogger.logInfo(`Command completed with warnings: ${command}`, 'Prerequisites');
+                        if (error.stdout) {
+                            this.errorLogger.logInfo(`Output: ${error.stdout.substring(0, 500)}`, 'Prerequisites');
+                        }
+                    } else {
+                        // This is a real error
+                        const errorDetails = `Command: ${command}\nError: ${error.message}\nStderr: ${error.stderr || 'N/A'}\nStdout: ${error.stdout || 'N/A'}\nCode: ${error.code || 'N/A'}`;
+                        this.errorLogger.logError(
+                            new Error(`Failed to execute: ${command}`),
+                            'Prerequisites',
+                            false,
+                            errorDetails
+                        );
+                        
+                        // Re-throw to handle in outer catch
+                        throw error;
+                    }
+                }
+                commandIndex++;
+            }
+            
+            // Check if installation was successful
+            const status = await this.prereqManager.checkPrerequisite(prereq);
+            const success = status.installed;
+            
+            // Log result
+            let successMessage = `${prereq.name} installed successfully`;
+            
+            if (success) {
+                // For Node.js, show which versions were installed
+                if (prereq.id === 'node' && nodeVersions.length > 0) {
+                    successMessage = `${prereq.name} installed (${nodeVersions.join(', ')})`;
+                }
+                this.errorLogger.logInfo(successMessage, 'Prerequisites');
+            } else {
+                this.errorLogger.logError(`Failed to install ${prereq.name}`, 'Prerequisites');
             }
             
             await this.sendMessage('prerequisite-status', {
-                index: i,
-                status,
-                message
+                index,
+                id: prereqId,
+                status: success ? 'success' : 'error',
+                message: success ? successMessage : `Failed to install ${prereq.name}`
+            });
+            
+            // If there's a post-install message, send it
+            if (success && prereq.postInstall?.message) {
+                await this.sendMessage('prerequisite-status', {
+                    index,
+                    id: prereqId,
+                    status: 'success',
+                    log: prereq.postInstall.message
+                });
+            }
+        } catch (error) {
+            // Log error
+            this.errorLogger.logError(error as Error, `Installing ${prereqId}`, true);
+            
+            await this.sendMessage('prerequisite-status', {
+                index,
+                id: prereqId,
+                status: 'error',
+                message: `Error installing: ${error}`
             });
         }
+    }
+
+    private getComponentNameForNodeVersion(version: string): string {
+        // Map Node version to component based on requirements
+        if (!this.currentComponentSelection) return '';
+        
+        const majorVersion = version.split('.')[0];
+        
+        // Check if version 18 is for API Mesh
+        if (majorVersion === '18' && 
+            this.currentComponentSelection.dependencies?.includes('commerce-mesh')) {
+            return 'API Mesh';
+        }
+        
+        // Check if version 22 is for App Builder
+        if (majorVersion === '22' && 
+            this.currentComponentSelection.appBuilderApps?.length > 0) {
+            return 'App Builder';
+        }
+        
+        // Check if latest/24 is for frontend
+        if ((majorVersion === '24' || majorVersion === '23' || version === 'latest') && 
+            this.currentComponentSelection.frontend) {
+            return 'Headless Storefront';
+        }
+        
+        return '';
     }
 
     private async installPrerequisite(index: number, name: string): Promise<void> {
-        await this.sendMessage('prerequisite-status', {
-            index,
-            status: 'checking',
-            message: `Installing ${name}...`
-        });
-
         try {
-            let success = false;
+            // Map display names to prerequisite IDs
+            const nameToIdMap: { [key: string]: string } = {
+                'Node Version Manager': 'fnm',
+                'Fast Node Manager': 'fnm',
+                'Node.js': 'node',
+                'Adobe I/O CLI': 'aio-cli',
+                'API Mesh Plugin': 'api-mesh',
+                'Git': 'git'
+            };
             
-            switch (name) {
-                case 'Node Version Manager':
-                    success = await this.installFnm(index);
-                    break;
-                case 'Node.js':
-                    success = await this.installNode(index);
-                    break;
-                case 'Adobe I/O CLI':
-                    success = await this.prereqChecker.installAdobeIO();
-                    break;
-                case 'API Mesh Plugin':
-                    // API Mesh is installed via aio plugins:install @adobe/aio-cli-plugin-api-mesh
-                    success = await new Promise<boolean>((resolve) => {
-                        const installer = spawn('aio', ['plugins:install', '@adobe/aio-cli-plugin-api-mesh']);
-                        installer.on('close', (code) => resolve(code === 0));
-                    });
-                    break;
-            }
-
-            await this.sendMessage('prerequisite-status', {
-                index,
-                status: success ? 'success' : 'error',
-                message: success ? `${name} installed successfully` : `Failed to install ${name}`
-            });
+            const prereqId = nameToIdMap[name] || name.toLowerCase().replace(/\s+/g, '-');
+            
+            // Use the PrerequisitesManager to handle installation
+            await this.installPrerequisiteWithManager(index, prereqId);
+            
         } catch (error) {
+            this.errorLogger.logError(error as Error, `Installing ${name}`);
+            
             await this.sendMessage('prerequisite-status', {
                 index,
                 status: 'error',
-                message: `Error installing ${name}: ${error}`,
-                log: error instanceof Error ? error.message : String(error)
+                message: `Error installing ${name}: ${error}`
             });
         }
-    }
-
-    private async installFnm(index: number): Promise<boolean> {
-        return new Promise((resolve) => {
-            const installer = spawn('bash', ['-c', 'curl -fsSL https://fnm.vercel.app/install | bash']);
-            
-            installer.stdout.on('data', (data) => {
-                this.sendMessage('prerequisite-status', {
-                    index,
-                    status: 'checking',
-                    log: data.toString()
-                });
-            });
-
-            installer.stderr.on('data', (data) => {
-                this.sendMessage('prerequisite-status', {
-                    index,
-                    status: 'checking',
-                    log: data.toString()
-                });
-            });
-
-            installer.on('close', (code) => {
-                resolve(code === 0);
-            });
-        });
-    }
-
-    private async installNode(index: number): Promise<boolean> {
-        return new Promise((resolve) => {
-            const installer = spawn('fnm', ['install', '20']);
-            
-            installer.stdout.on('data', (data) => {
-                this.sendMessage('prerequisite-status', {
-                    index,
-                    status: 'checking',
-                    log: data.toString()
-                });
-            });
-
-            installer.on('close', (code) => {
-                resolve(code === 0);
-            });
-        });
     }
 
     private async checkAuthentication(): Promise<void> {
