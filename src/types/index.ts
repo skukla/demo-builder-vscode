@@ -11,6 +11,12 @@ export interface Project {
     frontend?: FrontendConfig;
     mesh?: MeshConfig;
     inspector?: InspectorConfig;
+    // Component-based configuration
+    components?: {
+        frontend?: string;  // Component ID
+        backend?: string;   // Component ID  
+        dependencies?: string[]; // Component IDs
+    };
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;
@@ -110,14 +116,88 @@ export interface LicenseKey {
 export interface ComponentDefinition {
     id: string;
     name: string;
-    type: 'frontend' | 'mesh' | 'inspector' | 'app-builder' | 'custom';
-    source: {
-        type: 'git' | 'npm' | 'local';
-        url: string;
+    type: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder';
+    subType?: 'mesh' | 'inspector' | 'utility' | 'service';
+    description?: string;
+    source?: ComponentSource;
+    dependencies?: ComponentDependencies;
+    compatibleBackends?: string[];
+    configuration?: ComponentConfiguration;
+    features?: string[];
+    requiresApiKey?: boolean;
+    endpoint?: string;
+    requiresDeployment?: boolean;
+}
+
+export interface ComponentSource {
+    type: 'git' | 'npm' | 'local';
+    url?: string;
+    package?: string;
+    version?: string;
+    branch?: string;
+}
+
+export interface ComponentDependencies {
+    required: string[];
+    optional: string[];
+}
+
+export interface ComponentConfiguration {
+    envVars?: string[];
+    port?: number;
+    nodeVersion?: string;
+    required?: Record<string, ConfigField>;
+    services?: ServiceDefinition[];
+    meshIntegration?: any;
+    providesEndpoint?: boolean;
+    impact?: 'minimal' | 'moderate' | 'significant';
+    removable?: boolean;
+    defaultEnabled?: boolean;
+}
+
+export interface ConfigField {
+    type: 'string' | 'url' | 'password' | 'number' | 'boolean';
+    label: string;
+    placeholder?: string;
+    default?: string | number | boolean;
+    validation?: string;
+}
+
+export interface ServiceDefinition {
+    id: string;
+    name: string;
+    required?: boolean;
+    endpoint?: string;
+    requiresApiKey?: boolean;
+}
+
+export interface ComponentRegistry {
+    version: string;
+    components: {
+        frontends: ComponentDefinition[];
+        backends: ComponentDefinition[];
+        dependencies: ComponentDefinition[];
+        externalSystems?: ComponentDefinition[];
+        appBuilder?: ComponentDefinition[];
     };
-    configuration?: {
-        envVars?: string[];
-        meshIntegration?: any;
+    compatibilityMatrix?: Record<string, Record<string, CompatibilityInfo>>;
+    presets?: PresetDefinition[];
+}
+
+export interface CompatibilityInfo {
+    compatible: boolean;
+    recommended?: boolean;
+    notes?: string;
+}
+
+export interface PresetDefinition {
+    id: string;
+    name: string;
+    description?: string;
+    selections: {
+        frontend: string;
+        backend: string;
+        dependencies: string[];
     };
 }
 

@@ -1,0 +1,362 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Demo Builder Component Registry Schema",
+  "description": "Schema for defining frontend, backend, and dependency components",
+  "type": "object",
+  "required": ["version", "components"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "components": {
+      "type": "object",
+      "required": ["frontends", "backends", "dependencies"],
+      "properties": {
+        "frontends": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/frontend"
+          }
+        },
+        "backends": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/backend"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/dependency"
+          }
+        },
+        "externalSystems": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/externalSystem"
+          }
+        },
+        "appBuilder": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/appBuilderApp"
+          }
+        }
+      }
+    },
+    "compatibilityMatrix": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": {
+          "$ref": "#/definitions/compatibility"
+        }
+      }
+    },
+    "presets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/preset"
+      }
+    }
+  },
+  "definitions": {
+    "frontend": {
+      "type": "object",
+      "required": ["id", "name", "source", "dependencies", "compatibleBackends"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "dependencies": {
+          "type": "object",
+          "properties": {
+            "required": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "optional": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "compatibleBackends": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "configuration": {
+          "type": "object",
+          "properties": {
+            "envVars": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "port": {
+              "type": "number"
+            },
+            "nodeVersion": {
+              "type": "string"
+            }
+          }
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "backend": {
+      "type": "object",
+      "required": ["id", "name", "configuration"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "configuration": {
+          "type": "object",
+          "properties": {
+            "required": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/configField"
+              }
+            },
+            "services": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/service"
+              }
+            }
+          }
+        }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "required": ["id", "name", "type", "source"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "type": {
+          "enum": ["mesh", "inspector", "utility", "service"]
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "configuration": {
+          "type": "object"
+        },
+        "providesEndpoint": {
+          "type": "boolean"
+        },
+        "impact": {
+          "enum": ["minimal", "moderate", "significant"]
+        },
+        "removable": {
+          "type": "boolean"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["git", "npm", "local"]
+        },
+        "url": {
+          "type": "string"
+        },
+        "package": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        }
+      }
+    },
+    "configField": {
+      "type": "object",
+      "required": ["type", "label"],
+      "properties": {
+        "type": {
+          "enum": ["string", "url", "password", "number", "boolean"]
+        },
+        "label": {
+          "type": "string"
+        },
+        "placeholder": {
+          "type": "string"
+        },
+        "default": {
+          "type": ["string", "number", "boolean"]
+        },
+        "validation": {
+          "type": "string"
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "requiresApiKey": {
+          "type": "boolean"
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "required": ["compatible"],
+      "properties": {
+        "compatible": {
+          "type": "boolean"
+        },
+        "recommended": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    },
+    "preset": {
+      "type": "object",
+      "required": ["id", "name", "selections"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "selections": {
+          "type": "object",
+          "required": ["frontend", "backend", "dependencies"],
+          "properties": {
+            "frontend": {
+              "type": "string"
+            },
+            "backend": {
+              "type": "string"
+            },
+            "dependencies": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "externalSystem": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "configuration": {
+          "type": "object"
+        },
+        "requiresApiKey": {
+          "type": "boolean"
+        },
+        "endpoint": {
+          "type": "string"
+        }
+      }
+    },
+    "appBuilderApp": {
+      "type": "object",
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "configuration": {
+          "type": "object"
+        },
+        "requiresDeployment": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

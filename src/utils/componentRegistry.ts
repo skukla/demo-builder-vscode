@@ -1,0 +1,269 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import { 
+    ComponentDefinition, 
+    ComponentRegistry, 
+    ComponentDependencies,
+    PresetDefinition 
+} from '../types';
+
+export class ComponentRegistryManager {
+    private registry: ComponentRegistry | null = null;
+    private registryPath: string;
+
+    constructor(extensionPath: string) {
+        this.registryPath = path.join(extensionPath, 'templates', 'components.json');
+    }
+
+    async loadRegistry(): Promise<ComponentRegistry> {
+        if (!this.registry) {
+            const content = await fs.promises.readFile(this.registryPath, 'utf8');
+            this.registry = JSON.parse(content);
+        }
+        return this.registry!;
+    }
+
+    async getFrontends(): Promise<ComponentDefinition[]> {
+        const registry = await this.loadRegistry();
+        return registry.components.frontends;
+    }
+
+    async getBackends(): Promise<ComponentDefinition[]> {
+        const registry = await this.loadRegistry();
+        return registry.components.backends;
+    }
+
+    async getDependencies(): Promise<ComponentDefinition[]> {
+        const registry = await this.loadRegistry();
+        return registry.components.dependencies;
+    }
+
+    async getExternalSystems(): Promise<ComponentDefinition[]> {
+        const registry = await this.loadRegistry();
+        return registry.components.externalSystems || [];
+    }
+
+    async getAppBuilder(): Promise<ComponentDefinition[]> {
+        const registry = await this.loadRegistry();
+        return registry.components.appBuilder || [];
+    }
+
+    async getComponentById(id: string): Promise<ComponentDefinition | undefined> {
+        const registry = await this.loadRegistry();
+        const allComponents = [
+            ...registry.components.frontends,
+            ...registry.components.backends,
+            ...registry.components.dependencies,
+            ...(registry.components.externalSystems || []),
+            ...(registry.components.appBuilder || [])
+        ];
+        return allComponents.find(c => c.id === id);
+    }
+
+    async getPresets(): Promise<PresetDefinition[]> {
+        const registry = await this.loadRegistry();
+        return registry.presets || [];
+    }
+
+    async checkCompatibility(frontendId: string, backendId: string): Promise<boolean> {
+        const frontend = await this.getComponentById(frontendId);
+        if (!frontend) return false;
+        
+        return frontend.compatibleBackends?.includes(backendId) || false;
+    }
+
+    async getCompatibilityInfo(frontendId: string, backendId: string) {
+        const registry = await this.loadRegistry();
+        return registry.compatibilityMatrix?.[frontendId]?.[backendId];
+    }
+}
+
+export class DependencyResolver {
+    constructor(private registryManager: ComponentRegistryManager) {}
+
+    async resolveDependencies(
+        frontendId: string,
+        backendId: string,
+        selectedOptional: string[] = []
+    ): Promise<{
+        required: ComponentDefinition[];
+        optional: ComponentDefinition[];
+        selected: ComponentDefinition[];
+        all: ComponentDefinition[];
+    }> {
+        const frontend = await this.registryManager.getComponentById(frontendId);
+        const backend = await this.registryManager.getComponentById(backendId);
+        
+        if (!frontend || !backend) {
+            throw new Error('Invalid frontend or backend selection');
+        }
+
+        const requiredIds = new Set<string>();
+        const optionalIds = new Set<string>();
+
+        // Add frontend dependencies
+        if (frontend.dependencies) {
+            frontend.dependencies.required.forEach(id => requiredIds.add(id));
+            frontend.dependencies.optional.forEach(id => optionalIds.add(id));
+        }
+
+        // Add backend dependencies (if any)
+        if (backend.dependencies) {
+            backend.dependencies.required.forEach(id => requiredIds.add(id));
+            backend.dependencies.optional.forEach(id => optionalIds.add(id));
+        }
+
+        // Resolve component definitions
+        const required = await this.resolveComponentIds(Array.from(requiredIds));
+        const optional = await this.resolveComponentIds(Array.from(optionalIds));
+        const selected = await this.resolveComponentIds(selectedOptional);
+
+        // Combine all dependencies
+        const allDependencies = [
+            ...required,
+            ...selected
+        ];
+
+        return {
+            required,
+            optional,
+            selected,
+            all: allDependencies
+        };
+    }
+
+    private async resolveComponentIds(ids: string[]): Promise<ComponentDefinition[]> {
+        const components: ComponentDefinition[] = [];
+        for (const id of ids) {
+            const component = await this.registryManager.getComponentById(id);
+            if (component) {
+                components.push(component);
+            }
+        }
+        return components;
+    }
+
+    async validateDependencyChain(dependencies: ComponentDefinition[]): Promise<{
+        valid: boolean;
+        errors: string[];
+        warnings: string[];
+    }> {
+        const errors: string[] = [];
+        const warnings: string[] = [];
+
+        // Check for circular dependencies
+        const visited = new Set<string>();
+        const recursionStack = new Set<string>();
+
+        const checkCircular = async (componentId: string): Promise<boolean> => {
+            if (recursionStack.has(componentId)) {
+                errors.push(`Circular dependency detected: ${componentId}`);
+                return false;
+            }
+
+            if (visited.has(componentId)) {
+                return true;
+            }
+
+            visited.add(componentId);
+            recursionStack.add(componentId);
+
+            const component = await this.registryManager.getComponentById(componentId);
+            if (component?.dependencies?.required) {
+                for (const depId of component.dependencies.required) {
+                    await checkCircular(depId);
+                }
+            }
+
+            recursionStack.delete(componentId);
+            return true;
+        };
+
+        for (const dep of dependencies) {
+            await checkCircular(dep.id);
+        }
+
+        // Check for conflicting versions or configurations
+        const componentVersions = new Map<string, string[]>();
+        for (const dep of dependencies) {
+            const versions = componentVersions.get(dep.id) || [];
+            versions.push(dep.source?.version || 'latest');
+            componentVersions.set(dep.id, versions);
+        }
+
+        componentVersions.forEach((versions, id) => {
+            const uniqueVersions = new Set(versions);
+            if (uniqueVersions.size > 1) {
+                warnings.push(`Multiple versions requested for ${id}: ${Array.from(uniqueVersions).join(', ')}`);
+            }
+        });
+
+        return {
+            valid: errors.length === 0,
+            errors,
+            warnings
+        };
+    }
+
+    async generateConfiguration(
+        frontend: ComponentDefinition,
+        backend: ComponentDefinition,
+        dependencies: ComponentDefinition[]
+    ): Promise<Record<string, any>> {
+        const config: Record<string, any> = {};
+
+        // Collect all environment variables
+        const envVars: Record<string, string> = {};
+        
+        // Frontend env vars
+        if (frontend.configuration?.envVars) {
+            frontend.configuration.envVars.forEach(varName => {
+                envVars[varName] = '${' + varName + '}';
+            });
+        }
+
+        // Dependency-specific configurations
+        for (const dep of dependencies) {
+            if (dep.id === 'commerce-mesh' && dep.configuration?.providesEndpoint) {
+                envVars['MESH_ENDPOINT'] = '${MESH_ENDPOINT}';
+            }
+            
+            if (dep.id === 'demo-inspector') {
+                envVars['DEMO_INSPECTOR_ENABLED'] = dep.configuration?.defaultEnabled ? 'true' : 'false';
+            }
+
+            // Add any dependency-specific env vars
+            if (dep.configuration?.envVars) {
+                dep.configuration.envVars.forEach(varName => {
+                    envVars[varName] = '${' + varName + '}';
+                });
+            }
+        }
+
+        config.envVars = envVars;
+        config.frontend = {
+            id: frontend.id,
+            port: frontend.configuration?.port || 3000,
+            nodeVersion: frontend.configuration?.nodeVersion || '20'
+        };
+        config.backend = {
+            id: backend.id,
+            configuration: backend.configuration?.required || {}
+        };
+        config.dependencies = dependencies.map(d => ({
+            id: d.id,
+            type: d.subType || d.type,
+            configuration: d.configuration || {}
+        }));
+
+        return config;
+    }
+}
+
+export function createComponentRegistryManager(extensionPath: string): ComponentRegistryManager {
+    return new ComponentRegistryManager(extensionPath);
+}
+
+export function createDependencyResolver(registryManager: ComponentRegistryManager): DependencyResolver {
+    return new DependencyResolver(registryManager);
+}

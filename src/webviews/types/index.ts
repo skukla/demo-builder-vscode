@@ -4,6 +4,7 @@ export type ThemeMode = 'light' | 'dark';
 
 export type WizardStep = 
     | 'welcome'
+    | 'component-selection'
     | 'prerequisites'
     | 'adobe-auth'
     | 'org-selection'
@@ -16,6 +17,7 @@ export interface WizardState {
     currentStep: WizardStep;
     projectName: string;
     projectTemplate: ProjectTemplate;
+    components?: ComponentSelection;
     adobeAuth: AdobeAuthState;
     organization?: Organization;
     project?: Project;
@@ -86,4 +88,11 @@ export interface PrerequisiteCheck {
     message?: string;
     canInstall?: boolean;
     isOptional?: boolean;
+}
+
+export interface ComponentSelection {
+    frontend?: string;
+    backend?: string;
+    dependencies?: string[];
+    preset?: string;
 }

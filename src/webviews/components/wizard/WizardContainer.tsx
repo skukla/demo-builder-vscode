@@ -8,6 +8,7 @@ import {
 import { WizardState, WizardStep, FeedbackMessage } from '../../types';
 import { TimelineNav } from './TimelineNav';
 import { WelcomeStep } from '../steps/WelcomeStep';
+import { ComponentSelectionStep } from '../steps/ComponentSelectionStep';
 import { PrerequisitesStep } from '../steps/PrerequisitesStep';
 import { AdobeAuthStep } from '../steps/AdobeAuthStep';
 import { OrgSelectionStep } from '../steps/OrgSelectionStep';
@@ -19,6 +20,7 @@ import { vscode } from '../../app/vscodeApi';
 
 const WIZARD_STEPS: { id: WizardStep; name: string }[] = [
     { id: 'welcome', name: 'Project Details' },
+    { id: 'component-selection', name: 'Components' },
     { id: 'prerequisites', name: 'Prerequisites' },
     { id: 'adobe-auth', name: 'Adobe Auth' },
     { id: 'org-selection', name: 'Organization' },
@@ -43,7 +45,8 @@ export function WizardContainer() {
     const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
     const [completedSteps, setCompletedSteps] = useState<WizardStep[]>([]);
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
-    const contentRef = useRef<HTMLDivElement>(null);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const [componentsData, setComponentsData] = useState<any>(null);
 
     // Listen for feedback messages from extension
     useEffect(() => {
@@ -71,38 +74,59 @@ export function WizardContainer() {
         return unsubscribe;
     }, [state.currentStep, state.creationProgress]);
 
-    const getCurrentStepIndex = () => {
+    // Listen for components data from extension
+    useEffect(() => {
+        const unsubscribe = vscode.onMessage('componentsLoaded', (data: any) => {
+            console.log('Received components data:', data);
+            setComponentsData(data);
+        });
+
+        // Request components when component mounts
+        vscode.postMessage('loadComponents');
+
+        return unsubscribe;
+    }, []);
+
+    const getCurrentStepIndex = useCallback(() => {
         return WIZARD_STEPS.findIndex(step => step.id === state.currentStep);
-    };
+    }, [state.currentStep]);
 
     const goToStep = useCallback((step: WizardStep) => {
+        console.log('goToStep called with:', step);
         const currentIndex = getCurrentStepIndex();
         const targetIndex = WIZARD_STEPS.findIndex(s => s.id === step);
         
         setAnimationDirection(targetIndex > currentIndex ? 'forward' : 'backward');
+        setIsTransitioning(true);
         
-        // Add animation class
-        if (contentRef.current) {
-            contentRef.current.classList.add('transitioning');
-            setTimeout(() => {
-                setState(prev => ({ ...prev, currentStep: step }));
-                contentRef.current?.classList.remove('transitioning');
-            }, 300);
-        } else {
-            setState(prev => ({ ...prev, currentStep: step }));
-        }
-    }, [state.currentStep]);
+        // Update state after animation starts
+        setTimeout(() => {
+            setState(prev => {
+                console.log('Setting new step:', step, 'from:', prev.currentStep);
+                return { ...prev, currentStep: step };
+            });
+            setIsTransitioning(false);
+        }, 300);
+    }, [getCurrentStepIndex]);
 
     const goNext = useCallback(() => {
+        console.log('goNext called, current step:', state.currentStep, 'canProceed:', canProceed);
         const currentIndex = getCurrentStepIndex();
+        console.log('Current index:', currentIndex, 'Total steps:', WIZARD_STEPS.length);
+        
         if (currentIndex < WIZARD_STEPS.length - 1) {
+            const nextStep = WIZARD_STEPS[currentIndex + 1];
+            console.log('Moving to next step:', nextStep.id);
+            
             // Mark current step as completed
             if (!completedSteps.includes(state.currentStep)) {
                 setCompletedSteps(prev => [...prev, state.currentStep]);
             }
-            goToStep(WIZARD_STEPS[currentIndex + 1].id);
+            goToStep(nextStep.id);
+        } else {
+            console.log('Already at last step');
         }
-    }, [state.currentStep, completedSteps]);
+    }, [state.currentStep, completedSteps, canProceed, getCurrentStepIndex, goToStep]);
 
     const handleCancel = useCallback(() => {
         vscode.postMessage('cancel');
@@ -116,7 +140,7 @@ export function WizardContainer() {
         } else if (currentIndex > 0) {
             goToStep(WIZARD_STEPS[currentIndex - 1].id);
         }
-    }, [state.currentStep, handleCancel]);
+    }, [getCurrentStepIndex, goToStep, handleCancel]);
 
     const updateState = useCallback((updates: Partial<WizardState>) => {
         setState(prev => ({ ...prev, ...updates }));
@@ -134,6 +158,8 @@ export function WizardContainer() {
         switch (state.currentStep) {
             case 'welcome':
                 return <WelcomeStep {...props} />;
+            case 'component-selection':
+                return <ComponentSelectionStep {...props} componentsData={componentsData} />;
             case 'prerequisites':
                 return <PrerequisitesStep {...props} />;
             case 'adobe-auth':
@@ -217,9 +243,8 @@ export function WizardContainer() {
                         }}
                     >
                         <View
-                            ref={contentRef}
                             height="100%"
-                            UNSAFE_className={`step-content ${animationDirection}`}
+                            UNSAFE_className={`step-content ${animationDirection} ${isTransitioning ? 'transitioning' : ''}`}
                             UNSAFE_style={{
                                 transition: 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out'
                             }}
@@ -255,7 +280,10 @@ export function WizardContainer() {
                                     </Button>
                                     <Button
                                         variant="accent"
-                                        onPress={goNext}
+                                        onPress={() => {
+                                            console.log('Continue button clicked!');
+                                            goNext();
+                                        }}
                                         isDisabled={!canProceed}
                                     >
                                         {currentStepIndex === WIZARD_STEPS.length - 2 ? 'Create Project' : 'Continue'}
@@ -267,7 +295,7 @@ export function WizardContainer() {
                 </Flex>
             </Flex>
 
-            <style jsx>{`
+            <style>{`
                 .step-content {
                     opacity: 1;
                     transform: translateX(0);

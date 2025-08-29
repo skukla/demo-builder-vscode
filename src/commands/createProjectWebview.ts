@@ -5,11 +5,13 @@ import { BaseCommand } from './baseCommand';
 import { PrerequisitesChecker } from '../utils/prerequisitesChecker';
 import { AdobeAuthManager } from '../utils/adobeAuthManager';
 import { setLoadingState } from '../utils/loadingHTML';
+import { ComponentHandler } from './componentHandler';
 
 export class CreateProjectWebviewCommand extends BaseCommand {
     private panel: vscode.WebviewPanel | undefined;
     private prereqChecker: PrerequisitesChecker;
     private authManager: AdobeAuthManager;
+    private componentHandler: ComponentHandler;
 
     constructor(
         context: vscode.ExtensionContext,
@@ -20,6 +22,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
         super(context, stateManager, statusBar, logger);
         this.prereqChecker = new PrerequisitesChecker(logger);
         this.authManager = new AdobeAuthManager(logger);
+        this.componentHandler = new ComponentHandler(context);
     }
 
     public async execute(): Promise<void> {
@@ -215,6 +218,15 @@ export class CreateProjectWebviewCommand extends BaseCommand {
 
             case 'authenticate':
                 await this.authenticate(payload.force);
+                break;
+
+            // Component selection messages
+            case 'loadComponents':
+            case 'checkCompatibility':
+            case 'loadDependencies':
+            case 'loadPreset':
+            case 'validateSelection':
+                await this.componentHandler.handleMessage(message, this.panel!);
                 break;
 
             case 'get-organizations':

@@ -1,0 +1,165 @@
+{
+  "$schema": "./components.schema.json",
+  "version": "1.0.0",
+  "components": {
+    "frontends": [
+      {
+        "id": "citisignal-nextjs",
+        "name": "Headless CitiSignal",
+        "description": "NextJS-based storefront with Adobe mesh integration",
+        "version": "latest",
+        "source": {
+          "type": "git",
+          "url": "https://github.com/skukla/citisignal-nextjs",
+          "branch": "master"
+        },
+        "dependencies": {
+          "required": ["commerce-mesh"],
+          "optional": ["demo-inspector"]
+        },
+        "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-saas"],
+        "configuration": {
+          "envVars": [
+            "MESH_ENDPOINT",
+            "ADOBE_COMMERCE_URL",
+            "DEMO_INSPECTOR_ENABLED"
+          ],
+          "port": 3000,
+          "nodeVersion": "20"
+        },
+        "features": [
+          "Product Catalog",
+          "Shopping Cart",
+          "Checkout Flow",
+          "Customer Account",
+          "Search & Filters"
+        ]
+      }
+    ],
+    "backends": [
+      {
+        "id": "adobe-commerce-paas",
+        "name": "Adobe Commerce PaaS",
+        "description": "Adobe Commerce DSN instance",
+        "configuration": {
+          "required": {
+            "commerceUrl": {
+              "type": "url",
+              "label": "Commerce Instance URL",
+              "placeholder": "https://your-instance.adobe.com"
+            },
+            "environmentId": {
+              "type": "string",
+              "label": "Environment ID",
+              "placeholder": "your-environment-id"
+            },
+            "storeView": {
+              "type": "string",
+              "label": "Store View Code",
+              "default": "default"
+            },
+            "storeCode": {
+              "type": "string",
+              "label": "Store Code",
+              "default": "main_website_store"
+            }
+          },
+          "services": [
+            {
+              "id": "catalog-service",
+              "name": "Catalog Service",
+              "description": "Enhanced product information management",
+              "required": true,
+              "endpoint": "https://catalog.adobe.io",
+              "requiresApiKey": true
+            },
+            {
+              "id": "live-search",
+              "name": "Live Search",
+              "description": "AI-powered search with personalization",
+              "required": true,
+              "endpoint": "https://search.adobe.io",
+              "requiresApiKey": true
+            }
+          ]
+        }
+      }
+    ],
+    "dependencies": [
+      {
+        "id": "commerce-mesh",
+        "name": "Adobe Commerce API Mesh",
+        "description": "GraphQL gateway for unifying commerce data sources",
+        "type": "mesh",
+        "source": {
+          "type": "git",
+          "url": "https://github.com/skukla/commerce-mesh"
+        },
+        "configuration": {
+          "nodeVersion": "18",
+          "requiresDeployment": true,
+          "deploymentTarget": "adobe-io"
+        },
+        "providesEndpoint": true
+      },
+      {
+        "id": "demo-inspector",
+        "name": "Demo Inspector",
+        "description": "Visual debugging overlay showing data sources and API calls",
+        "type": "inspector",
+        "source": {
+          "type": "npm",
+          "package": "@adobe/demo-inspector",
+          "version": "^1.0.0"
+        },
+        "configuration": {
+          "defaultEnabled": true,
+          "position": "right",
+          "startOpen": false
+        },
+        "impact": "minimal",
+        "removable": true
+      }
+    ],
+    "externalSystems": [
+      {
+        "id": "experience-platform",
+        "name": "Experience Platform",
+        "description": "Adobe Experience Platform integration via Commerce Data Sharing",
+        "requiresApiKey": true,
+        "endpoint": "https://platform.adobe.io",
+        "configuration": {
+          "datastream": {
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    ],
+    "appBuilder": [
+      {
+        "id": "integration-service",
+        "name": "Kukla Integration Service",
+        "description": "Custom integration service for Target Product Recommendations, AEM Assets, and more",
+        "source": {
+          "type": "git",
+          "url": "https://github.com/skukla/kukla-integration-service"
+        },
+        "requiresDeployment": true,
+        "configuration": {
+          "runtime": "nodejs:18",
+          "actions": ["browse-files", "get-products", "download-file", "delete-file"]
+        }
+      }
+    ]
+  },
+  "compatibilityMatrix": {
+    "citisignal-nextjs": {
+      "adobe-commerce-paas": {
+        "compatible": true,
+        "recommended": true,
+        "notes": "Full feature support with all commerce capabilities"
+      }
+    }
+  }
+}
