@@ -165,3 +165,77 @@ h1, h2, h3 {
     display: flex;
     flex-direction: column;
 }
+
+/* Ensure Picker takes full width of container */
+.spectrum-Picker {
+    width: 100% !important;
+    cursor: pointer !important;
+}
+
+/* All Picker elements should have pointer cursor */
+.spectrum-Picker,
+.spectrum-Picker *,
+button[class*="spectrum-Picker"],
+div[class*="spectrum-Picker"],
+button[class*="Picker"],
+button[aria-haspopup="listbox"] {
+    cursor: pointer !important;
+}
+
+/* Dropdown Menu Item Styling */
+.spectrum-Menu-item {
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+}
+
+/* All menu items and their children - more specific targeting */
+.spectrum-Menu-item,
+.spectrum-Menu-item *,
+li[role="option"],
+li[role="option"] *,
+ul[role="listbox"] li,
+ul[role="listbox"] li *,
+[role="option"],
+[role="option"] * {
+    cursor: pointer !important;
+}
+
+/* Checkbox cursor styling - target all checkbox-related elements */
+.spectrum-Checkbox,
+.spectrum-Checkbox *,
+.spectrum-Checkbox-input,
+.spectrum-Checkbox-box,
+.spectrum-Checkbox-label,
+label[class*="spectrum-Checkbox"],
+label[class*="spectrum-Checkbox"] *,
+input[type="checkbox"],
+input[type="checkbox"] + label {
+    cursor: pointer !important;
+}
+
+/* Force dropdown descriptions to appear on separate lines */
+.spectrum-Menu-itemGrid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto !important;
+    gap: 2px !important;
+}
+
+.spectrum-Menu-itemLabel {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.spectrum-Menu-description {
+    grid-column: 1 !important;
+    grid-row: 2 !important;
+    display: block !important;
+    white-space: normal !important;
+    font-size: 11px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
