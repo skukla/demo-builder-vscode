@@ -25,7 +25,7 @@
             "DEMO_INSPECTOR_ENABLED"
           ],
           "port": 3000,
-          "nodeVersion": "20"
+          "nodeVersion": "latest"
         },
         "features": [
           "Product Catalog",
@@ -147,7 +147,8 @@
         },
         "requiresDeployment": true,
         "configuration": {
-          "runtime": "nodejs:18",
+          "runtime": "nodejs:22",
+          "nodeVersion": "22",
           "actions": ["browse-files", "get-products", "download-file", "delete-file"]
         }
       }

@@ -76,6 +76,54 @@ export class ComponentRegistryManager {
         const registry = await this.loadRegistry();
         return registry.compatibilityMatrix?.[frontendId]?.[backendId];
     }
+
+    async getRequiredNodeVersions(
+        frontendId?: string,
+        backendId?: string,
+        dependencies?: string[],
+        externalSystems?: string[],
+        appBuilder?: string[]
+    ): Promise<Set<string>> {
+        const nodeVersions = new Set<string>();
+        
+        // Check frontend node version
+        if (frontendId) {
+            const frontend = await this.getComponentById(frontendId);
+            if (frontend?.configuration?.nodeVersion) {
+                nodeVersions.add(frontend.configuration.nodeVersion);
+            }
+        }
+        
+        // Check backend node version
+        if (backendId) {
+            const backend = await this.getComponentById(backendId);
+            if (backend?.configuration?.nodeVersion) {
+                nodeVersions.add(backend.configuration.nodeVersion);
+            }
+        }
+        
+        // Check dependencies node versions (e.g., API Mesh requires Node 18)
+        if (dependencies) {
+            for (const depId of dependencies) {
+                const dep = await this.getComponentById(depId);
+                if (dep?.configuration?.nodeVersion) {
+                    nodeVersions.add(dep.configuration.nodeVersion);
+                }
+            }
+        }
+        
+        // Check app builder node versions (typically Node 22)
+        if (appBuilder) {
+            for (const appId of appBuilder) {
+                const app = await this.getComponentById(appId);
+                if (app?.configuration?.nodeVersion) {
+                    nodeVersions.add(app.configuration.nodeVersion);
+                }
+            }
+        }
+        
+        return nodeVersions;
+    }
 }
 
 export class DependencyResolver {
