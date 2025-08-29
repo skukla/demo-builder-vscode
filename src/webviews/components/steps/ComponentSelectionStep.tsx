@@ -10,6 +10,7 @@ import {
     Content
 } from '@adobe/react-spectrum';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
+import { vscode } from '../../app/vscodeApi';
 
 interface ComponentSelectionStepProps {
     state: any;
@@ -150,16 +151,19 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         const isValid = !!(selectedFrontend && selectedBackend);
         setCanProceed(isValid);
         
-        updateState({
-            components: {
-                frontend: selectedFrontend,
-                backend: selectedBackend,
-                dependencies: Array.from(selectedDependencies),
-                services: Array.from(selectedServices),
-                externalSystems: Array.from(selectedExternalSystems),
-                appBuilderApps: Array.from(selectedAppBuilder)
-            }
-        });
+        const components = {
+            frontend: selectedFrontend,
+            backend: selectedBackend,
+            dependencies: Array.from(selectedDependencies),
+            services: Array.from(selectedServices),
+            externalSystems: Array.from(selectedExternalSystems),
+            appBuilderApps: Array.from(selectedAppBuilder)
+        };
+        
+        updateState({ components });
+        
+        // Send component selection to backend for prerequisite determination
+        vscode.postMessage('update-component-selection', components);
     }, [selectedFrontend, selectedBackend, selectedDependencies, selectedServices, selectedExternalSystems, selectedAppBuilder, setCanProceed, updateState]);
 
     const handleDependencyToggle = (id: string, selected: boolean) => {

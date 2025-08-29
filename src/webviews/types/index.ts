@@ -82,12 +82,21 @@ export interface ValidationResult {
 }
 
 export interface PrerequisiteCheck {
+    id?: string;
     name: string;
     description: string;
     status: 'pending' | 'checking' | 'success' | 'error' | 'warning';
     message?: string;
     canInstall?: boolean;
     isOptional?: boolean;
+    version?: string;
+    plugins?: Array<{
+        id: string;
+        name: string;
+        description?: string;
+        installed: boolean;
+        canInstall?: boolean;
+    }>;
 }
 
 export interface ComponentSelection {

@@ -46,20 +46,34 @@ body, html {
 
 /* Terminal output styles */
 .terminal-output {
-    font-family: 'Courier New', Courier, monospace;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
     font-size: 12px;
-    background: var(--spectrum-global-color-gray-900);
-    color: #00ff00;
+    background: #0d0d0d;
+    color: #d4d4d4;
     padding: var(--spectrum-global-dimension-size-200);
     border-radius: var(--spectrum-global-dimension-size-50);
     max-height: 300px;
     overflow-y: auto;
     white-space: pre-wrap;
     word-break: break-all;
+    line-height: 1.4;
 }
 
-.terminal-output.dark {
-    background: #1e1e1e;
+/* Terminal colors for different output types */
+.terminal-output .command {
+    color: #569cd6; /* Blue for commands */
+}
+
+.terminal-output .success {
+    color: #4ec9b0; /* Green for success */
+}
+
+.terminal-output .error {
+    color: #f48771; /* Red for errors */
+}
+
+.terminal-output .warning {
+    color: #dcdcaa; /* Yellow for warnings */
 }
 
 /* Step animation */

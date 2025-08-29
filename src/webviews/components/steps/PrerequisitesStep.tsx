@@ -1,24 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     View,
     Flex,
-    Heading,
     Text,
     Button,
-    ProgressCircle,
-    Well,
-    Content,
-    ActionButton,
-    Divider
+    ProgressCircle
 } from '@adobe/react-spectrum';
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
-import ChevronUp from '@spectrum-icons/workflow/ChevronUp';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import { WizardState, PrerequisiteCheck } from '../../types';
 import { vscode } from '../../app/vscodeApi';
-import { TerminalOutput } from '../feedback/TerminalOutput';
 
 interface PrerequisitesStepProps {
     state: WizardState;
@@ -26,67 +18,190 @@ interface PrerequisitesStepProps {
     onNext: () => void;
     onBack: () => void;
     setCanProceed: (canProceed: boolean) => void;
+    requiredNodeVersions?: string[];
+    componentsData?: any;
 }
 
-const PREREQUISITES: PrerequisiteCheck[] = [
-    {
-        name: 'Node.js',
-        description: 'JavaScript runtime (v18 or v20)',
-        status: 'pending',
-        canInstall: true,
-        isOptional: false
-    },
-    {
-        name: 'Node Version Manager',
-        description: 'Manage multiple Node.js versions (fnm)',
-        status: 'pending',
-        canInstall: true,
-        isOptional: false
-    },
-    {
-        name: 'Adobe I/O CLI',
-        description: 'Command-line interface for Adobe services',
-        status: 'pending',
-        canInstall: true,
-        isOptional: false
-    },
-    {
-        name: 'API Mesh Plugin',
-        description: 'Adobe API Mesh management',
-        status: 'pending',
-        canInstall: true,
-        isOptional: false
-    }
-];
+// This function is now deprecated - prerequisites come from the backend
+const getDefaultPrerequisites = (): PrerequisiteCheck[] => {
+    return [
+        {
+            id: 'loading',
+            name: 'Loading prerequisites...',
+            description: 'Fetching prerequisite configuration',
+            status: 'checking',
+            canInstall: false,
+            isOptional: false,
+            message: 'Initializing...'
+        }
+    ];
+};
 
-export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
-    const [checks, setChecks] = useState<PrerequisiteCheck[]>(PREREQUISITES);
+export function PrerequisitesStep({ setCanProceed, requiredNodeVersions = [], componentsData, state }: PrerequisitesStepProps) {
+    const [checks, setChecks] = useState<PrerequisiteCheck[]>(getDefaultPrerequisites());
     const [isChecking, setIsChecking] = useState(false);
-    const [showTerminal, setShowTerminal] = useState(false);
-    const [terminalLogs, setTerminalLogs] = useState<string[]>([]);
     const [installingIndex, setInstallingIndex] = useState<number | null>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     useEffect(() => {
+        // Listen for prerequisites loaded from backend
+        const unsubscribeLoaded = vscode.onMessage('prerequisites-loaded', (data) => {
+            const prerequisites = data.prerequisites.map((p: any) => {
+                return {
+                    id: p.id,
+                    name: p.name,
+                    description: p.description,
+                    status: 'pending' as const,
+                    canInstall: true,
+                    isOptional: p.optional || false,
+                    plugins: p.plugins,
+                    message: 'Checking version...'
+                };
+            });
+            setChecks(prerequisites);
+        });
+
         // Check prerequisites on mount
         checkPrerequisites();
 
+        return () => {
+            unsubscribeLoaded();
+        };
+    }, []);
+
+    useEffect(() => {
+
         // Listen for feedback from extension
         const unsubscribe = vscode.onMessage('prerequisite-status', (data) => {
-            const { index, status, message, log } = data;
-            
-            if (log) {
-                setTerminalLogs(prev => [...prev, log]);
+            const { index, id, status, message, version, plugins } = data;
+
+            // Auto-scroll to the item being checked
+            if (status === 'checking' && itemRefs.current[index]) {
+                // Use setTimeout to ensure DOM is updated before scrolling
+                setTimeout(() => {
+                    if (itemRefs.current[index]) {
+                        // Determine scroll position based on item position
+                        let scrollBlock = 'center';
+                        
+                        // For last item, align to end to ensure full visibility
+                        if (index === checks.length - 1) {
+                            scrollBlock = 'end';
+                        } 
+                        // For first item, align to start
+                        else if (index === 0) {
+                            scrollBlock = 'start';
+                        }
+                        
+                        itemRefs.current[index].scrollIntoView({
+                            behavior: 'smooth',
+                            block: scrollBlock as ScrollLogicalPosition
+                        });
+                    }
+                }, 100);
             }
 
             setChecks(prev => {
                 const newChecks = [...prev];
                 if (newChecks[index]) {
+                    // Enhanced message for Node.js with multiple version requirements
+                    let enhancedMessage = message;
+                    if (newChecks[index].id === 'node') {
+                        // Build component name mapping from componentsData and state
+                        const getComponentName = (reqVersion: string): string => {
+                            // Check dependencies for commerce-mesh (requires Node 18)
+                            if (reqVersion === '18' && state?.components?.dependencies?.includes('commerce-mesh')) {
+                                const meshComponent = componentsData?.dependencies?.find((d: any) => d.id === 'commerce-mesh');
+                                return meshComponent?.name || 'Adobe Commerce API Mesh';
+                            }
+                            
+                            // Check for App Builder apps (require Node 22)
+                            if (reqVersion === '22' && state?.components?.appBuilderApps?.length > 0) {
+                                return 'App Builder';
+                            }
+                            
+                            // Check frontend for latest/24
+                            if ((reqVersion === 'latest' || reqVersion === '24') && state?.components?.frontend) {
+                                const frontendComponent = componentsData?.frontends?.find((f: any) => 
+                                    f.id === state.components.frontend
+                                );
+                                return frontendComponent?.name || 'Headless Storefront';
+                            }
+                            
+                            return reqVersion; // Fallback to version number if no match
+                        };
+                        
+                        if (status === 'success') {
+                            enhancedMessage = 'Node.js is installed';
+                            
+                            // Check if we have installed versions from fnm (passed as plugins)
+                            const installedVersions = plugins as string[] | undefined;
+                            
+                            if (installedVersions && installedVersions.length > 0) {
+                                // Show all installed versions with their component mappings
+                                installedVersions.forEach((installedVer: string) => {
+                                    const majorVersion = installedVer.split('.')[0];
+                                    let component = '';
+                                    
+                                    // Map to component based on major version and requirements
+                                    if (majorVersion === '18' && requiredNodeVersions.includes('18')) {
+                                        component = getComponentName('18');
+                                    } else if (majorVersion === '22' && requiredNodeVersions.includes('22')) {
+                                        component = getComponentName('22');
+                                    } else if ((majorVersion === '24' || majorVersion === '23') && 
+                                             (requiredNodeVersions.includes('latest') || requiredNodeVersions.includes('24'))) {
+                                        component = getComponentName('latest');
+                                    }
+                                    
+                                    // Add version to message
+                                    enhancedMessage += `\n${installedVer}${component ? ` (${component})` : ''}`;
+                                });
+                            } else if (version) {
+                                // Fallback to single version display if no fnm data
+                                enhancedMessage += `\n${version}`;
+                                
+                                // Show requirements if multiple versions needed
+                                if (requiredNodeVersions.length > 1) {
+                                    requiredNodeVersions.forEach(reqVersion => {
+                                        if (!version.startsWith(reqVersion)) {
+                                            const component = getComponentName(reqVersion);
+                                            enhancedMessage += `\n${reqVersion} required (${component})`;
+                                        }
+                                    });
+                                }
+                            }
+                        } else if (status === 'error') {
+                            enhancedMessage = 'Node.js is not installed';
+                            if (requiredNodeVersions.length > 0) {
+                                requiredNodeVersions.forEach(reqVersion => {
+                                    const component = getComponentName(reqVersion);
+                                    enhancedMessage += `\n${reqVersion} required (${component})`;
+                                });
+                            }
+                        }
+                    }
+                    
                     newChecks[index] = {
                         ...newChecks[index],
                         status,
-                        message
+                        message: enhancedMessage,
+                        version,
+                        plugins
                     };
                 }
+                
+                // Check if all prerequisites are done checking
+                const allDone = newChecks.every(check => 
+                    check.status === 'success' || 
+                    check.status === 'error' || 
+                    check.status === 'warning' ||
+                    check.status === 'pending'
+                );
+                
+                if (allDone) {
+                    setIsChecking(false);
+                }
+                
                 return newChecks;
             });
 
@@ -116,23 +231,22 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
 
     const checkPrerequisites = () => {
         setIsChecking(true);
-        setTerminalLogs([]);
         vscode.postMessage('check-prerequisites');
 
-        // Set all to checking status
+        // Set all to checking status with placeholder message
         setChecks(prev => prev.map(check => ({
             ...check,
-            status: 'checking'
+            status: 'checking',
+            message: 'Verifying installation...'
         })));
     };
 
     const installPrerequisite = (index: number) => {
         setInstallingIndex(index);
-        setShowTerminal(true);
-        setTerminalLogs(prev => [...prev, `\nInstalling ${checks[index].name}...\n`]);
         
         vscode.postMessage('install-prerequisite', { 
             index, 
+            id: checks[index].id,
             name: checks[index].name 
         });
 
@@ -156,11 +270,11 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
     const getStatusIcon = (status: PrerequisiteCheck['status']) => {
         switch (status) {
             case 'success':
-                return <CheckmarkCircle color="positive" />;
+                return <CheckmarkCircle size="S" color="positive" />;
             case 'error':
-                return <CloseCircle color="negative" />;
+                return <CloseCircle size="S" color="negative" />;
             case 'warning':
-                return <AlertCircle color="notice" />;
+                return <AlertCircle size="S" color="notice" />;
             case 'checking':
                 return <ProgressCircle size="S" isIndeterminate />;
             default:
@@ -172,126 +286,142 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
     const hasInstallable = checks.some(check => check.status === 'error' && check.canInstall);
 
     return (
-        <View maxWidth="size-6000" height="100%" UNSAFE_style={{ display: 'flex', flexDirection: 'column' }}>
-            <Text marginBottom="size-200" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)', fontSize: '14px' }}>
-                Checking required tools. Missing tools can be installed automatically.
-            </Text>
+        <View 
+            height="100%" 
+            UNSAFE_style={{ 
+                padding: '20px',
+                width: '100%'
+            }}
+        >
+            <View UNSAFE_style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <Text marginBottom="size-200" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)', fontSize: '14px' }}>
+                        Checking required tools. Missing tools can be installed automatically.
+                    </Text>
 
-            <View 
-                flex
-                UNSAFE_style={{ 
-                    overflowY: 'auto',
-                    marginBottom: '16px',
-                    border: '1px solid var(--spectrum-global-color-gray-300)',
-                    borderRadius: '4px',
-                    padding: '12px'
-                }}
-            >
-                <Flex direction="column" gap="size-150">
-                    {checks.map((check, index) => (
-                        <Flex key={check.name} justifyContent="space-between" alignItems="center" 
-                            UNSAFE_style={{ 
-                                padding: '8px',
-                                borderBottom: index < checks.length - 1 ? '1px solid var(--spectrum-global-color-gray-200)' : 'none'
-                            }}
-                        >
-                            <Flex gap="size-150" alignItems="center" flex>
-                                {getStatusIcon(check.status)}
-                                <View flex>
-                                    <Text UNSAFE_style={{ fontSize: '13px', fontWeight: 600 }}>
-                                        {check.name}
-                                        {check.isOptional && <span style={{ fontWeight: 400, opacity: 0.7 }}> (Optional)</span>}
-                                    </Text>
-                                    <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                                        {check.description}
-                                    </Text>
-                                    {check.message && (
-                                        <Text UNSAFE_style={{ 
-                                            fontSize: '11px',
-                                            color: check.status === 'error' 
-                                                ? 'var(--spectrum-global-color-red-600)' 
-                                                : 'var(--spectrum-global-color-gray-600)'
-                                        }}>
-                                            {check.message}
-                                        </Text>
-                                    )}
-                                </View>
-                            </Flex>
-                            {check.status === 'error' && check.canInstall && (
-                                <Button
-                                    variant="secondary"
-                                    isQuiet
-                                    onPress={() => installPrerequisite(index)}
-                                    isDisabled={installingIndex !== null}
-                                    UNSAFE_style={{ minWidth: '60px', height: '28px', fontSize: '12px' }}
-                                >
-                                    Install
-                                </Button>
-                            )}
-                        </Flex>
-                    ))}
-                </Flex>
-            </View>
-
-            <Flex gap="size-150" marginBottom="size-200">
-                <Button
-                    variant="secondary"
-                    onPress={checkPrerequisites}
-                    isDisabled={isChecking || installingIndex !== null}
-                    UNSAFE_style={{ height: '32px', fontSize: '13px' }}
-                >
-                    {isChecking ? 'Checking...' : 'Recheck'}
-                </Button>
-                {hasInstallable && (
-                    <Button
-                        variant="accent"
-                        onPress={installAll}
-                        isDisabled={installingIndex !== null}
-                        UNSAFE_style={{ height: '32px', fontSize: '13px' }}
+                    <View 
+                        flex
+                        ref={scrollContainerRef}
+                        UNSAFE_style={{ 
+                            overflowY: 'auto',
+                            marginBottom: '16px',
+                            border: '1px solid var(--spectrum-global-color-gray-300)',
+                            borderRadius: '4px',
+                            backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                            padding: '12px'
+                        }}
                     >
-                        Install Missing
-                    </Button>
-                )}
-            </Flex>
+                        <Flex direction="column" gap="size-150" UNSAFE_style={{ paddingBottom: '40px' }}>
+                            {checks.map((check, index) => (
+                                <div 
+                                    key={check.name} 
+                                    ref={el => itemRefs.current[index] = el}
+                                >
+                                <Flex justifyContent="space-between" alignItems="center" 
+                                    UNSAFE_style={{ 
+                                        padding: '12px',
+                                        backgroundColor: 'var(--spectrum-global-color-gray-75)',
+                                        borderRadius: '4px',
+                                        marginBottom: index < checks.length - 1 ? '8px' : '0',
+                                        transition: 'all 0.3s ease'
+                                    }}
+                                >
+                                    <Flex gap="size-150" alignItems="center" flex>
+                                        {getStatusIcon(check.status)}
+                                        <View flex>
+                                            <Text UNSAFE_style={{ fontSize: '14px', fontWeight: 600, display: 'block', marginBottom: '2px' }}>
+                                                {check.name}
+                                                {check.isOptional && <span style={{ fontWeight: 400, opacity: 0.7 }}> (Optional)</span>}
+                                            </Text>
+                                            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)', display: 'block' }}>
+                                                {check.description}
+                                            </Text>
+                                            <Text UNSAFE_style={{ 
+                                                fontSize: '11px',
+                                                color: check.status === 'error' 
+                                                    ? 'var(--spectrum-global-color-red-600)' 
+                                                    : 'var(--spectrum-global-color-gray-600)',
+                                                display: 'block',
+                                                marginTop: '4px',
+                                                minHeight: '16px',
+                                                lineHeight: '16px',
+                                                transition: 'color 0.3s ease, opacity 0.3s ease',
+                                                opacity: check.message ? 1 : 0.5,
+                                                whiteSpace: 'pre-line'  // Preserve line breaks
+                                            }}>
+                                                {check.message || 'Waiting...'}
+                                            </Text>
+                                            {check.plugins && check.plugins.length > 0 && (
+                                                <View marginTop="size-100">
+                                                    {check.plugins.map(plugin => (
+                                                        <Flex key={plugin.id} alignItems="center" gap="size-50" marginBottom="size-50">
+                                                            <Text UNSAFE_style={{ fontSize: '11px', marginLeft: '20px' }}>
+                                                                • {plugin.name}
+                                                            </Text>
+                                                            {plugin.installed ? (
+                                                                <CheckmarkCircle size="XS" color="positive" />
+                                                            ) : (
+                                                                <CloseCircle size="XS" color="negative" />
+                                                            )}
+                                                        </Flex>
+                                                    ))}
+                                                </View>
+                                            )}
+                                        </View>
+                                    </Flex>
+                                    {check.status === 'error' && check.canInstall && (
+                                        <Button
+                                            variant="secondary"
+                                            isQuiet
+                                            onPress={() => installPrerequisite(index)}
+                                            isDisabled={installingIndex !== null}
+                                            UNSAFE_style={{ minWidth: '60px', height: '28px', fontSize: '12px' }}
+                                        >
+                                            Install
+                                        </Button>
+                                    )}
+                                </Flex>
+                                </div>
+                            ))}
+                        </Flex>
+                    </View>
 
-            {(terminalLogs.length > 0 || installingIndex !== null) && showTerminal && (
-                <View 
-                    UNSAFE_style={{ 
-                        maxHeight: '150px',
-                        overflow: 'hidden',
-                        borderTop: '1px solid var(--spectrum-global-color-gray-300)',
-                        paddingTop: '8px'
-                    }}
-                >
-                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
-                        <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 600 }}>Terminal Output</Text>
-                        <ActionButton 
-                            isQuiet 
-                            onPress={() => setShowTerminal(!showTerminal)}
-                            UNSAFE_style={{ height: '24px', padding: '0 4px' }}
+                    <Flex gap="size-150" marginBottom="size-200">
+                        <Button
+                            variant="secondary"
+                            onPress={checkPrerequisites}
+                            isDisabled={isChecking || installingIndex !== null}
+                            UNSAFE_style={{ height: '32px', fontSize: '13px' }}
                         >
-                            <ChevronUp />
-                        </ActionButton>
+                            Recheck
+                        </Button>
+                        {hasInstallable && (
+                            <Button
+                                variant="accent"
+                                onPress={installAll}
+                                isDisabled={installingIndex !== null}
+                                UNSAFE_style={{ height: '32px', fontSize: '13px' }}
+                            >
+                                Install Missing
+                            </Button>
+                        )}
                     </Flex>
-                    <TerminalOutput logs={terminalLogs} />
-                </View>
-            )}
 
-            {!hasErrors && checks.every(check => check.status === 'success') && (
-                <View 
-                    padding="size-150" 
-                    backgroundColor="green-100"
-                    borderRadius="medium"
-                    UNSAFE_style={{ marginTop: 'auto' }}
-                >
-                    <Flex gap="size-100" alignItems="center">
-                        <CheckmarkCircle size="S" color="positive" />
-                        <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-green-700)' }}>
-                            All prerequisites installed!
-                        </Text>
-                    </Flex>
-                </View>
-            )}
+                    {!hasErrors && checks.every(check => check.status === 'success') && (
+                        <View 
+                            padding="size-150" 
+                            backgroundColor="green-100"
+                            borderRadius="medium"
+                            UNSAFE_style={{ marginTop: 'auto' }}
+                        >
+                            <Flex gap="size-100" alignItems="center">
+                                <CheckmarkCircle size="S" color="positive" />
+                                <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-green-700)' }}>
+                                    All prerequisites installed!
+                                </Text>
+                            </Flex>
+                        </View>
+                    )}
+            </View>
         </View>
     );
 }

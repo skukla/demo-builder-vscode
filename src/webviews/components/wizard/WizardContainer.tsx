@@ -155,13 +155,35 @@ export function WizardContainer() {
             setCanProceed
         };
 
+        // Calculate required Node versions based on selected components
+        const getRequiredNodeVersions = (): string[] => {
+            const versions = new Set<string>();
+            
+            // Check if API Mesh is selected (requires Node 18)
+            if (state.components?.dependencies?.includes('commerce-mesh')) {
+                versions.add('18');
+            }
+            
+            // Check if App Builder apps are selected (require Node 22)
+            if (state.components?.appBuilderApps && state.components.appBuilderApps.length > 0) {
+                versions.add('22');
+            }
+            
+            // Frontend may require latest
+            if (state.components?.frontend === 'citisignal-nextjs') {
+                versions.add('latest');
+            }
+            
+            return Array.from(versions);
+        };
+
         switch (state.currentStep) {
             case 'welcome':
                 return <WelcomeStep {...props} />;
             case 'component-selection':
                 return <ComponentSelectionStep {...props} componentsData={componentsData} />;
             case 'prerequisites':
-                return <PrerequisitesStep {...props} />;
+                return <PrerequisitesStep {...props} requiredNodeVersions={getRequiredNodeVersions()} componentsData={componentsData} />;
             case 'adobe-auth':
                 return <AdobeAuthStep {...props} />;
             case 'org-selection':
