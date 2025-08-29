@@ -25,7 +25,7 @@ export class PrerequisitesChecker {
         try {
             const { stdout } = await execAsync('node --version');
             result.node.installed = true;
-            result.node.version = stdout.trim();
+            result.node.version = stdout.trim().replace('v', '');
             this.logger.info(`Node.js version: ${result.node.version}`);
         } catch {
             this.logger.warn('Node.js not found');
@@ -37,6 +37,29 @@ export class PrerequisitesChecker {
             result.fnm.installed = true;
             result.fnm.version = stdout.trim();
             this.logger.info(`fnm version: ${result.fnm.version}`);
+            
+            // Check all installed Node versions via fnm
+            try {
+                const { stdout: fnmList } = await execAsync('fnm list');
+                // Parse fnm list output to extract versions
+                // Example output: "* v22.18.0 default\n  v18.20.0\n  v24.0.1"
+                const versionLines = fnmList.split('\n').filter(line => line.trim());
+                const installedVersions: string[] = [];
+                
+                for (const line of versionLines) {
+                    // Extract version number from each line
+                    const versionMatch = line.match(/v?(\d+\.\d+\.\d+)/);
+                    if (versionMatch) {
+                        installedVersions.push(versionMatch[1]);
+                    }
+                }
+                
+                // Store all installed versions (will be passed to frontend)
+                (result.node as any).installedVersions = installedVersions;
+                this.logger.info(`fnm installed Node versions: ${installedVersions.join(', ')}`);
+            } catch (error) {
+                this.logger.warn('Could not query fnm for installed versions');
+            }
         } catch {
             this.logger.warn('fnm not found');
         }
@@ -71,62 +94,7 @@ export class PrerequisitesChecker {
         return result;
     }
 
-    public async installFnm(): Promise<boolean> {
-        const terminal = vscode.window.createTerminal('Install fnm');
-        terminal.show();
-        
-        // Install fnm using curl
-        const installCommand = 'curl -fsSL https://fnm.vercel.app/install | bash';
-        terminal.sendText(installCommand);
-        
-        // Wait for user confirmation
-        const result = await vscode.window.showInformationMessage(
-            'fnm installation started. Complete the installation in the terminal, then click Continue.',
-            { modal: true },
-            'Continue'
-        );
-        
-        return result === 'Continue';
-    }
-
-    public async installAdobeIO(): Promise<boolean> {
-        const terminal = vscode.window.createTerminal('Install Adobe I/O CLI');
-        terminal.show();
-        
-        // Install Adobe I/O CLI globally
-        terminal.sendText('npm install -g @adobe/aio-cli');
-        
-        // Wait for completion
-        await new Promise(resolve => setTimeout(resolve, 10000));
-        
-        // Install API Mesh plugin
-        terminal.sendText('aio plugins:install @adobe/aio-cli-plugin-api-mesh');
-        
-        // Wait for user confirmation
-        const result = await vscode.window.showInformationMessage(
-            'Adobe I/O CLI installation started. Complete the installation in the terminal, then click Continue.',
-            { modal: true },
-            'Continue'
-        );
-        
-        return result === 'Continue';
-    }
-
-    public async installNode(version: string): Promise<boolean> {
-        const terminal = vscode.window.createTerminal('Install Node.js');
-        terminal.show();
-        
-        // Use fnm to install Node.js
-        terminal.sendText(`fnm install ${version}`);
-        terminal.sendText(`fnm use ${version}`);
-        
-        // Wait for user confirmation
-        const result = await vscode.window.showInformationMessage(
-            `Node.js ${version} installation started. Complete the installation in the terminal, then click Continue.`,
-            { modal: true },
-            'Continue'
-        );
-        
-        return result === 'Continue';
-    }
+    // Installation methods have been removed - use PrerequisitesManager instead
+    // PrerequisitesManager reads installation commands from prerequisites.json
+    // for better maintainability and consistency
 }

@@ -95,18 +95,14 @@ export class CreateProjectCommand extends BaseCommand {
             if (!prereqs.adobeIO.installed) {
                 const install = await vscode.window.showWarningMessage(
                     'Adobe I/O CLI is not installed. It\'s required for mesh deployment.',
-                    'Install Now',
+                    'Use Webview Wizard',
                     'Continue Anyway'
                 );
                 
-                if (install === 'Install Now') {
-                    await checker.installAdobeIO();
-                    // Re-check
-                    const updated = await checker.check();
-                    if (!updated.adobeIO.installed) {
-                        await this.showError('Failed to install Adobe I/O CLI');
-                        return false;
-                    }
+                if (install === 'Use Webview Wizard') {
+                    // The webview wizard handles prerequisite installation
+                    await vscode.commands.executeCommand('demoBuilder.createProjectWebview');
+                    return false; // Exit this flow as user will use webview
                 }
             }
 
