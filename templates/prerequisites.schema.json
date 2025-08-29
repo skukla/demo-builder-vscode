@@ -1,0 +1,308 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Prerequisites Configuration",
+  "description": "Schema for defining installation prerequisites and their commands",
+  "type": "object",
+  "required": ["version", "prerequisites"],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "prerequisites": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/prerequisite"
+      }
+    },
+    "groups": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/group"
+      }
+    },
+    "componentRequirements": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/componentRequirement"
+      }
+    }
+  },
+  "definitions": {
+    "prerequisite": {
+      "type": "object",
+      "required": ["id", "name", "description", "check"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "platforms": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["darwin", "linux", "win32"]
+          }
+        },
+        "optional": {
+          "type": "boolean",
+          "default": false
+        },
+        "depends": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "check": {
+          "$ref": "#/definitions/checkCommand"
+        },
+        "install": {
+          "$ref": "#/definitions/installConfig"
+        },
+        "uninstall": {
+          "$ref": "#/definitions/commandSet"
+        },
+        "postInstall": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string"
+            }
+          }
+        },
+        "multiVersion": {
+          "type": "boolean",
+          "default": false
+        },
+        "versionCheck": {
+          "$ref": "#/definitions/versionCheckCommand"
+        },
+        "plugins": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/plugin"
+          }
+        }
+      }
+    },
+    "checkCommand": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "parseVersion": {
+          "type": "string",
+          "description": "Regex pattern to extract version"
+        },
+        "contains": {
+          "type": "string",
+          "description": "String that output should contain"
+        }
+      }
+    },
+    "versionCheckCommand": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": {
+          "type": "string"
+        },
+        "parseInstalledVersions": {
+          "type": "string",
+          "description": "Regex pattern to extract installed versions"
+        }
+      }
+    },
+    "installConfig": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/commandSet"
+        },
+        {
+          "$ref": "#/definitions/platformSpecificInstall"
+        },
+        {
+          "$ref": "#/definitions/dynamicInstall"
+        }
+      ]
+    },
+    "commandSet": {
+      "type": "object",
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "message": {
+          "type": "string"
+        },
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "platformSpecificInstall": {
+      "type": "object",
+      "properties": {
+        "darwin": {
+          "$ref": "#/definitions/platformInstallOptions"
+        },
+        "linux": {
+          "$ref": "#/definitions/platformInstallOptions"
+        },
+        "win32": {
+          "$ref": "#/definitions/platformInstallOptions"
+        },
+        "default": {
+          "$ref": "#/definitions/commandSet"
+        }
+      }
+    },
+    "platformInstallOptions": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/commandSet"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "preferredMethod": {
+              "type": "string"
+            },
+            "homebrew": {
+              "$ref": "#/definitions/commandSet"
+            },
+            "default": {
+              "$ref": "#/definitions/commandSet"
+            },
+            "manual": {
+              "type": "boolean"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "message": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "dynamicInstall": {
+      "type": "object",
+      "required": ["dynamic", "template"],
+      "properties": {
+        "dynamic": {
+          "type": "boolean",
+          "const": true
+        },
+        "template": {
+          "type": "string",
+          "description": "Command template with {version} placeholder"
+        },
+        "message": {
+          "type": "string"
+        },
+        "versions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "plugin": {
+      "type": "object",
+      "required": ["id", "name", "description", "check", "install"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "check": {
+          "$ref": "#/definitions/checkCommand"
+        },
+        "install": {
+          "$ref": "#/definitions/commandSet"
+        },
+        "requiredFor": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "group": {
+      "type": "object",
+      "required": ["id", "name", "prerequisites"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "prerequisites": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "componentRequirement": {
+      "type": "object",
+      "properties": {
+        "prerequisites": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "plugins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "nodeVersions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

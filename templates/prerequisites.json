@@ -1,0 +1,220 @@
+{
+  "$schema": "./prerequisites.schema.json",
+  "version": "1.0.0",
+  "prerequisites": [
+    {
+      "id": "homebrew",
+      "name": "Homebrew",
+      "description": "Package manager for macOS",
+      "platforms": ["darwin"],
+      "optional": true,
+      "check": {
+        "command": "brew --version",
+        "parseVersion": "Homebrew ([0-9.]+)"
+      },
+      "install": {
+        "commands": [
+          "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+        ],
+        "message": "Installing Homebrew package manager..."
+      },
+      "uninstall": {
+        "commands": [
+          "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)\""
+        ]
+      }
+    },
+    {
+      "id": "fnm",
+      "name": "Fast Node Manager",
+      "description": "Cross-platform Node.js version manager",
+      "platforms": ["darwin", "linux", "win32"],
+      "optional": false,
+      "check": {
+        "command": "fnm --version",
+        "parseVersion": "fnm ([0-9.]+)"
+      },
+      "install": {
+        "darwin": {
+          "preferredMethod": "homebrew",
+          "homebrew": {
+            "commands": ["brew install fnm"],
+            "message": "Installing Fast Node Manager via Homebrew...",
+            "requires": ["homebrew"]
+          },
+          "default": {
+            "commands": ["curl -fsSL https://fnm.vercel.app/install | bash"],
+            "message": "Installing Fast Node Manager..."
+          }
+        },
+        "linux": {
+          "commands": ["curl -fsSL https://fnm.vercel.app/install | bash"],
+          "message": "Installing Fast Node Manager..."
+        },
+        "win32": {
+          "commands": ["winget install Schniz.fnm"],
+          "message": "Installing Fast Node Manager via WinGet..."
+        }
+      },
+      "postInstall": {
+        "message": "You may need to restart your terminal for fnm to be available in PATH"
+      }
+    },
+    {
+      "id": "node",
+      "name": "Node.js",
+      "description": "JavaScript runtime",
+      "platforms": ["darwin", "linux", "win32"],
+      "optional": false,
+      "depends": ["fnm"],
+      "check": {
+        "command": "node --version",
+        "parseVersion": "v([0-9.]+)"
+      },
+      "install": {
+        "dynamic": true,
+        "template": "fnm install {version} && fnm use {version}",
+        "message": "Installing Node.js {version}...",
+        "versions": {
+          "default": ["latest"],
+          "api-mesh": ["18"],
+          "app-builder": ["22"],
+          "frontend": ["latest"]
+        }
+      },
+      "multiVersion": true,
+      "versionCheck": {
+        "command": "fnm list",
+        "parseInstalledVersions": "\\* ([0-9.]+)"
+      }
+    },
+    {
+      "id": "aio-cli",
+      "name": "Adobe I/O CLI",
+      "description": "Command-line interface for Adobe services (required for App Builder and API Mesh)",
+      "platforms": ["darwin", "linux", "win32"],
+      "optional": false,
+      "depends": ["node"],
+      "check": {
+        "command": "aio --version",
+        "parseVersion": "@adobe/aio-cli/([0-9.]+)"
+      },
+      "install": {
+        "commands": ["npm install -g @adobe/aio-cli"],
+        "message": "Installing Adobe I/O CLI globally..."
+      },
+      "uninstall": {
+        "commands": ["npm uninstall -g @adobe/aio-cli"]
+      },
+      "plugins": [
+        {
+          "id": "api-mesh",
+          "name": "API Mesh Plugin",
+          "description": "Adobe API Mesh management plugin",
+          "check": {
+            "command": "aio plugins",
+            "contains": "@adobe/aio-cli-plugin-api-mesh"
+          },
+          "install": {
+            "commands": ["aio plugins:install @adobe/aio-cli-plugin-api-mesh"],
+            "message": "Installing API Mesh plugin..."
+          },
+          "requiredFor": ["commerce-mesh"]
+        }
+      ]
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "description": "Version control system",
+      "platforms": ["darwin", "linux", "win32"],
+      "optional": false,
+      "check": {
+        "command": "git --version",
+        "parseVersion": "git version ([0-9.]+)"
+      },
+      "install": {
+        "darwin": {
+          "homebrew": {
+            "commands": ["brew install git"],
+            "requires": ["homebrew"]
+          },
+          "default": {
+            "commands": ["xcode-select --install"],
+            "message": "Installing Xcode Command Line Tools (includes Git)..."
+          }
+        },
+        "linux": {
+          "commands": ["sudo apt-get install git"],
+          "message": "Installing Git..."
+        },
+        "win32": {
+          "commands": ["winget install --id Git.Git"],
+          "message": "Installing Git..."
+        }
+      }
+    },
+    {
+      "id": "docker",
+      "name": "Docker",
+      "description": "Container platform for development",
+      "platforms": ["darwin", "linux", "win32"],
+      "optional": true,
+      "check": {
+        "command": "docker --version",
+        "parseVersion": "Docker version ([0-9.]+)"
+      },
+      "install": {
+        "darwin": {
+          "manual": true,
+          "url": "https://www.docker.com/products/docker-desktop",
+          "message": "Please download and install Docker Desktop from docker.com"
+        },
+        "linux": {
+          "commands": [
+            "curl -fsSL https://get.docker.com -o get-docker.sh",
+            "sudo sh get-docker.sh"
+          ],
+          "message": "Installing Docker..."
+        },
+        "win32": {
+          "manual": true,
+          "url": "https://www.docker.com/products/docker-desktop",
+          "message": "Please download and install Docker Desktop from docker.com"
+        }
+      },
+      "postInstall": {
+        "message": "Ensure Docker Desktop is running before proceeding"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "id": "core",
+      "name": "Core Requirements",
+      "prerequisites": ["fnm", "node", "git", "aio-cli"],
+      "required": true
+    },
+    {
+      "id": "optional",
+      "name": "Optional Tools",
+      "prerequisites": ["homebrew", "docker"],
+      "required": false
+    }
+  ],
+  "componentRequirements": {
+    "commerce-mesh": {
+      "prerequisites": ["aio-cli"],
+      "plugins": ["api-mesh"],
+      "nodeVersions": ["18"]
+    },
+    "citisignal-nextjs": {
+      "prerequisites": ["node", "git"],
+      "nodeVersions": ["latest"]
+    },
+    "integration-service": {
+      "prerequisites": ["aio-cli", "docker"],
+      "nodeVersions": ["22"]
+    }
+  }
+}
