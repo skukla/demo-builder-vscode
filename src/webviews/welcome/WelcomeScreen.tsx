@@ -24,6 +24,7 @@ import Book from '@spectrum-icons/workflow/Book';
 import Settings from '@spectrum-icons/workflow/Settings';
 import Star from '@spectrum-icons/workflow/Star';
 import { vscode } from '../app/vscodeApi';
+import { cn } from '../utils/classNames';
 
 interface WelcomeScreenProps {
     theme?: 'light' | 'dark';
@@ -95,18 +96,13 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
                 <Flex direction="column" gap="size-400" alignItems="center" justifyContent="center" height="100%">
                     <View maxWidth="600px" width="100%">
                         <Flex direction="column" gap="size-300" alignItems="center">
-                            <Key size="XXL" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-600)' }} />
+                            <Key size="XXL" UNSAFE_className="text-gray-600" />
                             
-                            <Heading level={1} UNSAFE_style={{ fontSize: '28px', textAlign: 'center' }}>
+                            <Heading level={1} UNSAFE_className={cn('text-3xl', 'text-center')}>
                                 License Required
                             </Heading>
                             
-                            <Text UNSAFE_style={{ 
-                                fontSize: '14px', 
-                                color: 'var(--spectrum-global-color-gray-700)',
-                                textAlign: 'center',
-                                marginBottom: '24px'
-                            }}>
+                            <Text UNSAFE_className={cn('text-md', 'text-gray-700', 'text-center', 'mb-5')}>
                                 Adobe Demo Builder requires a valid license key to activate.
                                 Please enter your license key below to continue.
                             </Text>
@@ -145,12 +141,7 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
                                 </Button>
                             </ButtonGroup>
 
-                            <Text UNSAFE_style={{ 
-                                fontSize: '12px', 
-                                color: 'var(--spectrum-global-color-gray-600)',
-                                textAlign: 'center',
-                                marginTop: '24px'
-                            }}>
+                            <Text UNSAFE_className={cn('text-sm', 'text-gray-600', 'text-center', 'mt-5')}>
                                 Don't have a license? Visit the Adobe Demo Builder portal to request one.
                             </Text>
                         </Flex>
@@ -180,10 +171,10 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
                     <View marginBottom="size-400">
                         <Flex justifyContent="space-between" alignItems="center">
                             <View>
-                                <Heading level={1} UNSAFE_style={{ fontSize: '28px', marginBottom: '8px' }}>
+                                <Heading level={1} UNSAFE_className={cn('text-3xl', 'mb-2')}>
                                     Adobe Demo Builder
                                 </Heading>
-                                <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)' }}>
+                                <Text UNSAFE_className={cn('text-md', 'text-gray-600')}>
                                     Create and manage Adobe Commerce demo environments
                                 </Text>
                             </View>
@@ -211,33 +202,15 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
                         <ActionButton
                             onPress={handleCreateNew}
                             isQuiet
-                            UNSAFE_style={{
-                                background: 'var(--spectrum-global-color-gray-100)',
-                                borderRadius: '8px',
-                                padding: '40px',
-                                transition: 'all 0.15s ease',
-                                border: '1px solid var(--spectrum-global-color-gray-300)',
-                                textAlign: 'center',
-                                minHeight: '200px',
-                                width: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                cursor: 'pointer',
-                                ':hover': {
-                                    background: 'var(--spectrum-global-color-gray-200)',
-                                    borderColor: 'var(--spectrum-global-color-blue-400)'
-                                }
-                            }}
+                            UNSAFE_className="welcome-action-card"
                         >
-                            <View UNSAFE_style={{ marginBottom: '20px', transform: 'scale(1.8)' }}>
-                                <Add size="L" UNSAFE_style={{ color: 'var(--spectrum-global-color-blue-600)' }} />
+                            <View UNSAFE_className={cn('mb-5', 'scale-180')}>
+                                <Add size="L" UNSAFE_className="text-blue-600" />
                             </View>
-                            <Heading level={3} UNSAFE_style={{ marginBottom: '8px', fontSize: '22px' }}>
+                            <Heading level={3} UNSAFE_className={cn('mb-2', 'text-2xl')}>
                                 Create New Project
                             </Heading>
-                            <Text UNSAFE_style={{ fontSize: '15px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                            <Text UNSAFE_className={cn('text-15', 'text-gray-700')}>
                                 Set up a new demo environment
                             </Text>
                         </ActionButton>
@@ -246,33 +219,15 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
                         <ActionButton
                             onPress={handleOpenExisting}
                             isQuiet
-                            UNSAFE_style={{
-                                background: 'var(--spectrum-global-color-gray-100)',
-                                borderRadius: '8px',
-                                padding: '40px',
-                                transition: 'all 0.15s ease',
-                                border: '1px solid var(--spectrum-global-color-gray-300)',
-                                textAlign: 'center',
-                                minHeight: '200px',
-                                width: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                cursor: 'pointer',
-                                ':hover': {
-                                    background: 'var(--spectrum-global-color-gray-200)',
-                                    borderColor: 'var(--spectrum-global-color-blue-400)'
-                                }
-                            }}
+                            UNSAFE_className="welcome-action-card"
                         >
-                            <View UNSAFE_style={{ marginBottom: '20px', transform: 'scale(1.8)' }}>
-                                <FolderOpen size="L" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)' }} />
+                            <View UNSAFE_className={cn('mb-5', 'scale-180')}>
+                                <FolderOpen size="L" UNSAFE_className="text-gray-700" />
                             </View>
-                            <Heading level={3} UNSAFE_style={{ marginBottom: '8px', fontSize: '22px' }}>
+                            <Heading level={3} UNSAFE_className={cn('mb-2', 'text-2xl')}>
                                 Open Existing Project
                             </Heading>
-                            <Text UNSAFE_style={{ fontSize: '15px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                            <Text UNSAFE_className={cn('text-15', 'text-gray-700')}>
                                 Continue working on a demo
                             </Text>
                         </ActionButton>

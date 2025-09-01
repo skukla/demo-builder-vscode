@@ -11,6 +11,7 @@ import {
 } from '@adobe/react-spectrum';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
 import { vscode } from '../../app/vscodeApi';
+import { cn } from '../../utils/classNames';
 
 interface ComponentSelectionStepProps {
     state: any;
@@ -190,40 +191,23 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         });
     };
 
-    // Custom style for dropdowns to make them more visible with padding
-    const dropdownStyle = {
-        border: '1px solid var(--spectrum-global-color-gray-300)',
-        borderRadius: '4px',
-        backgroundColor: 'var(--spectrum-global-color-gray-50)',
-        padding: '6px 12px'
-    };
+    // Classes for dropdowns
+    const dropdownClasses = 'dropdown-container';
 
     return (
         <View 
             height="100%" 
-            UNSAFE_style={{ 
-                padding: '20px',
-                maxWidth: '800px',
-                margin: '0 auto',
-                width: '100%'
-            }}
+            UNSAFE_className={cn('p-5', 'max-w-800', 'w-full', 'mx-auto')}
         >
             {/* Two column layout for Frontend and Backend */}
             <Flex gap="size-300" wrap marginBottom="size-300">
                 {/* Frontend Section */}
                 <View flex="1" minWidth="300px">
-                    <Text UNSAFE_style={{ 
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: 'var(--spectrum-global-color-gray-700)',
-                        marginBottom: '8px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                    }}>
+                    <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         Frontend
                     </Text>
                     
-                    <View UNSAFE_style={dropdownStyle}>
+                    <View UNSAFE_className={dropdownClasses}>
                         <Picker
                             width="100%"
                             selectedKey={selectedFrontend}
@@ -234,8 +218,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                             direction="bottom"
                             shouldFlip={false}
                             menuWidth="size-4600"
-                            UNSAFE_className="custom-picker"
-                            UNSAFE_style={{ cursor: 'pointer' }}
+                            UNSAFE_className={cn('custom-picker', 'cursor-pointer')}
                         >
                             {frontendOptions.map(option => (
                                 <Item key={option.id} textValue={option.name}>
@@ -255,15 +238,13 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                     isSelected={selectedDependencies.has(dep.id)}
                                     isDisabled={dep.required}
                                     onChange={(isSelected) => handleDependencyToggle(dep.id, isSelected)}
-                                    UNSAFE_style={{ marginBottom: '4px' }}
+                                    UNSAFE_className="mb-1"
                                 >
                                     <Flex alignItems="center" gap="size-50">
                                         {dep.required && (
-                                            <LockClosed size="XS" UNSAFE_style={{ 
-                                                color: 'var(--spectrum-global-color-gray-600)' 
-                                            }} />
+                                            <LockClosed size="XS" UNSAFE_className="text-gray-600" />
                                         )}
-                                        <Text UNSAFE_style={{ fontSize: '14px' }}>
+                                        <Text UNSAFE_className="text-md">
                                             {dep.name}
                                         </Text>
                                     </Flex>
@@ -275,18 +256,11 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
 
                 {/* Backend Section */}
                 <View flex="1" minWidth="300px">
-                    <Text UNSAFE_style={{ 
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: 'var(--spectrum-global-color-gray-700)',
-                        marginBottom: '8px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                    }}>
+                    <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         Backend
                     </Text>
                     
-                    <View UNSAFE_style={dropdownStyle}>
+                    <View UNSAFE_className={dropdownClasses}>
                         <Picker
                             width="100%"
                             selectedKey={selectedBackend}
@@ -297,8 +271,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                             direction="bottom"
                             shouldFlip={false}
                             menuWidth="size-4600"
-                            UNSAFE_className="custom-picker"
-                            UNSAFE_style={{ cursor: 'pointer' }}
+                            UNSAFE_className={cn('custom-picker', 'cursor-pointer')}
                         >
                             {backendOptions.map(option => (
                                 <Item key={option.id} textValue={option.name}>
@@ -318,15 +291,13 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                     isSelected={selectedServices.has(service.id)}
                                     isDisabled={service.required}
                                     onChange={(isSelected) => handleServiceToggle(service.id, isSelected)}
-                                    UNSAFE_style={{ marginBottom: '4px' }}
+                                    UNSAFE_className="mb-1"
                                 >
                                     <Flex alignItems="center" gap="size-50">
                                         {service.required && (
-                                            <LockClosed size="XS" UNSAFE_style={{ 
-                                                color: 'var(--spectrum-global-color-gray-600)' 
-                                            }} />
+                                            <LockClosed size="XS" UNSAFE_className="text-gray-600" />
                                         )}
-                                        <Text UNSAFE_style={{ fontSize: '14px' }}>
+                                        <Text UNSAFE_className="text-md">
                                             {service.name}
                                         </Text>
                                     </Flex>
@@ -343,23 +314,11 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
             <Flex gap="size-300" wrap marginTop="size-300">
                 {/* External Systems Section */}
                 <View flex="1" minWidth="300px">
-                    <Text UNSAFE_style={{ 
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: 'var(--spectrum-global-color-gray-700)',
-                        marginBottom: '8px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                    }}>
+                    <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         External Systems
                     </Text>
                     
-                    <View UNSAFE_style={{
-                        border: '1px solid var(--spectrum-global-color-gray-300)',
-                        borderRadius: '4px',
-                        backgroundColor: 'var(--spectrum-global-color-gray-50)',
-                        padding: '12px'
-                    }}>
+                    <View UNSAFE_className={cn('border', 'rounded', 'bg-gray-50', 'p-3')}>
                         {externalSystemsOptions.map(system => (
                             <Checkbox
                                 key={system.id}
@@ -375,13 +334,13 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                         return newSet;
                                     });
                                 }}
-                                UNSAFE_style={{ marginBottom: '8px' }}
+                                UNSAFE_className="mb-2"
                             >
                                 <Flex direction="column" gap="size-50">
-                                    <Text UNSAFE_style={{ fontSize: '14px', fontWeight: 500, display: 'block' }}>
+                                    <Text UNSAFE_className={cn('text-md', 'font-medium', 'block')}>
                                         {system.name}
                                     </Text>
-                                    <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)', display: 'block' }}>
+                                    <Text UNSAFE_className={cn('text-sm', 'text-gray-600', 'block')}>
                                         {system.description}
                                     </Text>
                                 </Flex>
@@ -392,23 +351,11 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
 
                 {/* App Builder Apps Section */}
                 <View flex="1" minWidth="300px">
-                    <Text UNSAFE_style={{ 
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        color: 'var(--spectrum-global-color-gray-700)',
-                        marginBottom: '8px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                    }}>
+                    <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         App Builder Apps
                     </Text>
                     
-                    <View UNSAFE_style={{
-                        border: '1px solid var(--spectrum-global-color-gray-300)',
-                        borderRadius: '4px',
-                        backgroundColor: 'var(--spectrum-global-color-gray-50)',
-                        padding: '12px'
-                    }}>
+                    <View UNSAFE_className={cn('border', 'rounded', 'bg-gray-50', 'p-3')}>
                         {appBuilderOptions.map(app => (
                             <Checkbox
                                 key={app.id}
@@ -424,13 +371,13 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                         return newSet;
                                     });
                                 }}
-                                UNSAFE_style={{ marginBottom: '8px' }}
+                                UNSAFE_className="mb-2"
                             >
                                 <Flex direction="column" gap="size-50">
-                                    <Text UNSAFE_style={{ fontSize: '14px', fontWeight: 500, display: 'block' }}>
+                                    <Text UNSAFE_className={cn('text-md', 'font-medium', 'block')}>
                                         {app.name}
                                     </Text>
-                                    <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)', display: 'block' }}>
+                                    <Text UNSAFE_className={cn('text-sm', 'text-gray-600', 'block')}>
                                         {app.description}
                                     </Text>
                                 </Flex>

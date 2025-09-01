@@ -1,0 +1,866 @@
+/* ============================================
+   CUSTOM SPECTRUM OVERRIDES
+   Warning: These styles override React Spectrum defaults
+   and may break with future Spectrum updates.
+   
+   This file provides a pragmatic solution for customizing
+   React Spectrum components while maintaining reusability.
+   
+   IMPORTANT NOTE ON UNSAFE_className:
+   React Spectrum components require UNSAFE_className for custom styling.
+   This is the OFFICIAL way to apply custom CSS classes to React Spectrum components.
+   While marked as "unsafe" to discourage overriding the design system,
+   it's necessary and correct for customization beyond built-in props.
+   There is NO "safe" className prop in React Spectrum.
+   ============================================ */
+
+/* ===========================================
+   Typography Classes
+   =========================================== */
+.text-xs { font-size: 11px !important; }
+.text-sm { font-size: 12px !important; }
+.text-base { font-size: 13px !important; }
+.text-md { font-size: 14px !important; }
+.text-lg { font-size: 16px !important; }
+.text-xl { font-size: 18px !important; }
+.text-2xl { font-size: 22px !important; }
+.text-3xl { font-size: 28px !important; }
+.text-4xl { font-size: 32px !important; }
+.text-5xl { font-size: 36px !important; }
+.text-15 { font-size: 15px !important; }
+
+.font-normal { font-weight: 400 !important; }
+.font-medium { font-weight: 500 !important; }
+.font-semibold { font-weight: 600 !important; }
+.font-bold { font-weight: 700 !important; }
+
+.text-center { text-align: center !important; }
+.text-left { text-align: left !important; }
+.text-right { text-align: right !important; }
+.text-uppercase { text-transform: uppercase !important; }
+.text-italic { font-style: italic !important; }
+
+/* ===========================================
+   Color Classes (using Spectrum variables)
+   =========================================== */
+.text-gray-500 { color: var(--spectrum-global-color-gray-500) !important; }
+.text-gray-600 { color: var(--spectrum-global-color-gray-600) !important; }
+.text-gray-700 { color: var(--spectrum-global-color-gray-700) !important; }
+.text-red-600 { color: var(--spectrum-global-color-red-600) !important; }
+.text-green-600 { color: var(--spectrum-global-color-green-600) !important; }
+.text-green-700 { color: var(--spectrum-global-color-green-700) !important; }
+.text-blue-600 { color: var(--spectrum-global-color-blue-600) !important; }
+
+.bg-gray-50 { background-color: var(--spectrum-global-color-gray-50) !important; }
+.bg-gray-75 { background-color: var(--spectrum-global-color-gray-75) !important; }
+.bg-gray-100 { background-color: var(--spectrum-global-color-gray-100) !important; }
+
+/* ===========================================
+   Layout Classes
+   =========================================== */
+.w-full { width: 100% !important; }
+.h-full { height: 100% !important; }
+.max-w-full { max-width: 100% !important; }
+.min-w-0 { min-width: 0 !important; }
+
+.flex { display: flex !important; }
+.flex-center { 
+    display: flex !important; 
+    align-items: center !important; 
+    justify-content: center !important;
+}
+.flex-column { 
+    display: flex !important; 
+    flex-direction: column !important; 
+}
+.flex-1 { flex: 1 !important; }
+.items-center { align-items: center !important; }
+.justify-between { justify-content: space-between !important; }
+
+.block { display: block !important; }
+.hidden { display: none !important; }
+
+.overflow-hidden { overflow: hidden !important; }
+.overflow-auto { overflow: auto !important; }
+.overflow-y-auto { overflow-y: auto !important; }
+.overflow-x-hidden { overflow-x: hidden !important; }
+
+/* ===========================================
+   Spacing Classes
+   =========================================== */
+.p-0 { padding: 0 !important; }
+.p-badge { padding: 2px 6px !important; }
+.p-2 { padding: 8px !important; }
+.p-3 { padding: 12px !important; }
+.p-4 { padding: 16px !important; }
+.p-5 { padding: 20px !important; }
+
+.px-3 { padding-left: 12px !important; padding-right: 12px !important; }
+.px-4 { padding-left: 16px !important; padding-right: 16px !important; }
+.py-2 { padding-top: 8px !important; padding-bottom: 8px !important; }
+.py-3 { padding-top: 12px !important; padding-bottom: 12px !important; }
+
+.m-0 { margin: 0 !important; }
+.mb-0 { margin-bottom: 0 !important; }
+.mb-1 { margin-bottom: 4px !important; }
+.mb-2 { margin-bottom: 8px !important; }
+.mb-3 { margin-bottom: 12px !important; }
+.mb-4 { margin-bottom: 16px !important; }
+.mb-5 { margin-bottom: 20px !important; }
+.mt-1 { margin-top: 4px !important; }
+.mt-2 { margin-top: 8px !important; }
+.mt-auto { margin-top: auto !important; }
+.mr-3 { margin-right: 12px !important; }
+.ml-5 { margin-left: 20px !important; }
+
+/* ===========================================
+   Border & Radius Classes
+   =========================================== */
+.border { border: 1px solid var(--spectrum-global-color-gray-300) !important; }
+.border-radius { border-radius: 4px !important; }
+.rounded-md { border-radius: 4px !important; }
+
+/* ===========================================
+   Button Classes - Override Spectrum defaults
+   =========================================== */
+/* All enabled buttons should have pointer cursor */
+.spectrum-Button:not(:disabled),
+.spectrum-Button:not([disabled]),
+button[class*="spectrum-Button"]:not(:disabled),
+button[class*="spectrum-Button"]:not([disabled]),
+[class*="spectrum-Button"]:not([aria-disabled="true"]) {
+    cursor: pointer !important;
+}
+
+/* Disabled buttons should show not-allowed cursor */
+.spectrum-Button:disabled,
+.spectrum-Button[disabled],
+button[class*="spectrum-Button"]:disabled,
+button[class*="spectrum-Button"][disabled],
+[class*="spectrum-Button"][aria-disabled="true"] {
+    cursor: not-allowed !important;
+    opacity: 0.5 !important;
+}
+
+/* Button size variations */
+.btn-compact {
+    height: 28px !important;
+    font-size: 12px !important;
+    padding: 0 12px !important;
+    min-width: 60px !important;
+}
+
+.btn-standard {
+    height: 32px !important;
+    font-size: 13px !important;
+    padding: 0 16px !important;
+}
+
+.btn-large {
+    height: 40px !important;
+    font-size: 14px !important;
+    padding: 0 20px !important;
+}
+
+/* ===========================================
+   Container Classes
+   =========================================== */
+.bordered-container {
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 4px !important;
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    padding: 12px !important;
+}
+
+.card-container {
+    background-color: var(--spectrum-global-color-gray-75) !important;
+    border-radius: 4px !important;
+    padding: 12px !important;
+    transition: all 0.3s ease !important;
+}
+
+.card-hover:hover {
+    background-color: var(--spectrum-global-color-gray-100) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ===========================================
+   Prerequisite-specific Classes
+   =========================================== */
+.prerequisite-container {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    margin-bottom: 16px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 4px !important;
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    padding: 12px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+}
+
+.prerequisite-list {
+    padding-bottom: 60px !important;
+}
+
+.prerequisite-item {
+    padding: 12px !important;
+    background-color: var(--spectrum-global-color-gray-75) !important;
+    border-radius: 4px !important;
+    width: 100% !important;
+    overflow: hidden !important;
+    transition: all 0.3s ease !important;
+}
+
+.prerequisite-item:not(:last-child) {
+    margin-bottom: 8px !important;
+}
+
+.prerequisite-content {
+    margin-right: 12px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+}
+
+.prerequisite-title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    display: block !important;
+    margin-bottom: 2px !important;
+}
+
+.prerequisite-description {
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    display: block !important;
+}
+
+.prerequisite-message {
+    font-size: 11px !important;
+    display: block !important;
+    margin-top: 4px !important;
+    min-height: 16px !important;
+    line-height: 16px !important;
+    transition: color 0.3s ease, opacity 0.3s ease !important;
+    white-space: pre-wrap !important;
+    word-break: break-word !important;
+    overflow: hidden !important;
+}
+
+.prerequisite-message-error {
+    color: var(--spectrum-global-color-red-600) !important;
+}
+
+.prerequisite-message-default {
+    color: var(--spectrum-global-color-gray-600) !important;
+}
+
+.prerequisite-plugin-item {
+    font-size: 11px !important;
+    margin-left: 20px !important;
+}
+
+/* ===========================================
+   Transition Classes
+   =========================================== */
+.transition-all {
+    transition: all 0.3s ease !important;
+}
+
+.transition-colors {
+    transition: color 0.3s ease, background-color 0.3s ease !important;
+}
+
+.transition-opacity {
+    transition: opacity 0.3s ease !important;
+}
+
+/* ===========================================
+   Utility Classes
+   =========================================== */
+.opacity-50 { opacity: 0.5 !important; }
+.opacity-60 { opacity: 0.6 !important; }
+.opacity-70 { opacity: 0.7 !important; }
+.opacity-100 { opacity: 1 !important; }
+
+.cursor-pointer { cursor: pointer !important; }
+.cursor-not-allowed { cursor: not-allowed !important; }
+.cursor-default { cursor: default !important; }
+
+.min-h-16 { min-height: 16px !important; }
+.h-28 { height: 28px !important; }
+.h-32 { height: 32px !important; }
+
+.line-height-16 { line-height: 16px !important; }
+
+.whitespace-pre-wrap { white-space: pre-wrap !important; }
+.whitespace-nowrap { white-space: nowrap !important; }
+.word-break { word-break: break-word !important; }
+
+.scale-180 { transform: scale(1.8) !important; }
+
+/* ===========================================
+   Success State Styling
+   =========================================== */
+.success-banner {
+    padding: 12px !important;
+    background-color: var(--spectrum-global-color-green-100) !important;
+    border-radius: 4px !important;
+    margin-top: auto !important;
+}
+
+.success-text {
+    font-size: 13px !important;
+    color: var(--spectrum-global-color-green-600) !important;
+    font-weight: 500 !important;
+}
+
+/* ===========================================
+   Position Classes
+   =========================================== */
+.relative { position: relative !important; }
+.absolute { position: absolute !important; }
+.fixed { position: fixed !important; }
+.sticky { position: sticky !important; }
+
+.top-0 { top: 0 !important; }
+.top-2 { top: 8px !important; }
+.top-7 { top: 28px !important; }
+.left-0 { left: 0 !important; }
+.left-3 { left: 11px !important; }
+.right-0 { right: 0 !important; }
+.right-2 { right: 8px !important; }
+.bottom-0 { bottom: 0 !important; }
+.bottom-14 { bottom: 56px !important; }
+.z-1 { z-index: 1 !important; }
+.z-2 { z-index: 2 !important; }
+.z-10 { z-index: 10 !important; }
+
+/* ===========================================
+   Display Variations
+   =========================================== */
+.inline { display: inline !important; }
+.inline-block { display: inline-block !important; }
+.inline-flex { display: inline-flex !important; }
+.grid { display: grid !important; }
+
+/* ===========================================
+   Flexbox Gap Classes
+   =========================================== */
+.gap-1 { gap: 4px !important; }
+.gap-2 { gap: 8px !important; }
+.gap-3 { gap: 12px !important; }
+.gap-4 { gap: 16px !important; }
+.gap-5 { gap: 20px !important; }
+
+/* ===========================================
+   Border Radius Variations
+   =========================================== */
+.rounded-none { border-radius: 0 !important; }
+.rounded-sm { border-radius: 2px !important; }
+.rounded { border-radius: 4px !important; }
+.rounded-lg { border-radius: 8px !important; }
+.rounded-xl { border-radius: 12px !important; }
+.rounded-full { border-radius: 50% !important; }
+
+/* ===========================================
+   Border Styles
+   =========================================== */
+.border-none { border: none !important; }
+.border-t { border-top: 1px solid var(--spectrum-global-color-gray-300) !important; }
+.border-r { border-right: 1px solid var(--spectrum-global-color-gray-300) !important; }
+.border-b { border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important; }
+.border-l { border-left: 1px solid var(--spectrum-global-color-gray-300) !important; }
+
+.border-2 { border-width: 2px !important; }
+.border-3 { border-width: 3px !important; }
+.border-dashed { border-style: dashed !important; }
+.border-dotted { border-style: dotted !important; }
+
+.border-gray-400 { border-color: var(--spectrum-global-color-gray-400) !important; }
+.border-blue-400 { border-color: var(--spectrum-global-color-blue-400) !important; }
+.border-green-600 { border-color: var(--spectrum-global-color-green-600) !important; }
+
+/* ===========================================
+   Background Color Extensions
+   =========================================== */
+.bg-white { background-color: white !important; }
+.bg-transparent { background-color: transparent !important; }
+.bg-gray-200 { background-color: var(--spectrum-global-color-gray-200) !important; }
+.bg-gray-300 { background-color: var(--spectrum-global-color-gray-300) !important; }
+.bg-gray-400 { background-color: var(--spectrum-global-color-gray-400) !important; }
+.bg-gray-600 { background-color: var(--spectrum-global-color-gray-600) !important; }
+.bg-gray-700 { background-color: var(--spectrum-global-color-gray-700) !important; }
+.bg-gray-800 { background-color: var(--spectrum-global-color-gray-800) !important; }
+.bg-green-100 { background-color: var(--spectrum-global-color-green-100) !important; }
+.bg-green-600 { background-color: var(--spectrum-global-color-green-600) !important; }
+.bg-blue-600 { background-color: var(--spectrum-global-color-blue-600) !important; }
+.bg-red-100 { background-color: var(--spectrum-global-color-red-100) !important; }
+
+/* ===========================================
+   Text Color Extensions
+   =========================================== */
+.text-white { color: white !important; }
+.text-gray-800 { color: var(--spectrum-global-color-gray-800) !important; }
+.text-blue-700 { color: var(--spectrum-global-color-blue-700) !important; }
+
+/* ===========================================
+   Text Utilities
+   =========================================== */
+.letter-spacing-05 { letter-spacing: 0.5px !important; }
+.letter-spacing-1 { letter-spacing: 1px !important; }
+.user-select-none { user-select: none !important; }
+.user-select-text { user-select: text !important; }
+
+/* ===========================================
+   Width and Height Utilities
+   =========================================== */
+.w-3 { width: 12px !important; }
+.w-4 { width: 16px !important; }
+.w-6 { width: 24px !important; }
+.w-100 { width: 100px !important; }
+.w-150 { width: 150px !important; }
+.w-200 { width: 200px !important; }
+.w-300 { width: 300px !important; }
+.w-400 { width: 400px !important; }
+.w-600 { width: 600px !important; }
+
+.h-3 { height: 12px !important; }
+.h-4 { height: 16px !important; }
+.h-6 { height: 24px !important; }
+.h-100 { height: 100px !important; }
+.h-screen { height: 100vh !important; }
+
+.min-w-60 { min-width: 60px !important; }
+.min-w-80 { min-width: 80px !important; }
+.min-w-100 { min-width: 100px !important; }
+.min-w-150 { min-width: 150px !important; }
+.min-w-200 { min-width: 200px !important; }
+.min-w-240 { min-width: 240px !important; }
+.max-w-240 { max-width: 240px !important; }
+.max-w-600 { max-width: 600px !important; }
+.max-w-800 { max-width: 800px !important; }
+
+.min-h-0 { min-height: 0 !important; }
+.min-h-120 { min-height: 120px !important; }
+.min-h-200 { min-height: 200px !important; }
+.max-h-300 { max-height: 300px !important; }
+.max-h-400 { max-height: 400px !important; }
+.max-h-500 { max-height: 500px !important; }
+
+/* ===========================================
+   Box Model Utilities
+   =========================================== */
+.box-border { box-sizing: border-box !important; }
+.box-content { box-sizing: content-box !important; }
+
+/* ===========================================
+   Animation Classes
+   =========================================== */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slide-down {
+    from { transform: translateY(-10px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-pulse { animation: pulse 2s infinite !important; }
+.animate-fade-in { animation: fade-in 0.3s ease !important; }
+.animate-slide-down { animation: slide-down 0.3s ease !important; }
+
+/* ===========================================
+   Shadow Classes
+   =========================================== */
+.shadow-sm { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important; }
+.shadow { box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important; }
+.shadow-md { box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important; }
+.shadow-lg { box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important; }
+.shadow-xl { box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important; }
+.shadow-none { box-shadow: none !important; }
+
+/* ===========================================
+   Transform Classes
+   =========================================== */
+.translate-y-0 { transform: translateY(0) !important; }
+.translate-y--2 { transform: translateY(-2px) !important; }
+.translate-y-2 { transform: translateY(2px) !important; }
+.scale-110 { transform: scale(1.1) !important; }
+.scale-125 { transform: scale(1.25) !important; }
+.scale-150 { transform: scale(1.5) !important; }
+.scale-200 { transform: scale(2) !important; }
+
+/* ===========================================
+   Icon Size Classes
+   =========================================== */
+.icon-xs { width: 12px !important; height: 12px !important; }
+.icon-sm { width: 16px !important; height: 16px !important; }
+.icon-md { width: 20px !important; height: 20px !important; }
+.icon-lg { width: 24px !important; height: 24px !important; }
+.icon-xl { width: 32px !important; height: 32px !important; }
+
+/* ===========================================
+   Timeline Specific Classes
+   =========================================== */
+.timeline-container {
+    border-right: 1px solid var(--spectrum-global-color-gray-300) !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+}
+
+.timeline-step-dot {
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+.timeline-step-dot-completed {
+    background: var(--spectrum-global-color-green-600) !important;
+}
+
+.timeline-step-dot-current {
+    background: var(--spectrum-global-color-blue-600) !important;
+    border: 2px solid var(--spectrum-global-color-blue-400) !important;
+}
+
+.timeline-step-dot-upcoming {
+    background: var(--spectrum-global-color-gray-75) !important;
+    border: 2px solid var(--spectrum-global-color-gray-400) !important;
+}
+
+.timeline-connector {
+    position: absolute !important;
+    left: 11px !important;
+    top: 28px !important;
+    width: 3px !important;
+    height: 28px !important;
+    z-index: 0 !important;
+}
+
+.timeline-connector-completed {
+    background: repeating-linear-gradient(to bottom, var(--spectrum-global-color-blue-600) 0px, var(--spectrum-global-color-blue-600) 4px, transparent 4px, transparent 8px) !important;
+}
+
+.timeline-connector-pending {
+    background: repeating-linear-gradient(to bottom, var(--spectrum-global-color-gray-400) 0px, var(--spectrum-global-color-gray-400) 4px, transparent 4px, transparent 8px) !important;
+}
+
+/* ===========================================
+   Component Selection Dropdown Styles
+   =========================================== */
+.dropdown-container {
+    padding: 8px !important;
+    background-color: var(--spectrum-global-color-gray-75) !important;
+    border-radius: 4px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+}
+
+/* ===========================================
+   Welcome Screen Card Styles
+   =========================================== */
+.welcome-card {
+    padding: 30px !important;
+    background: linear-gradient(135deg, var(--spectrum-global-color-blue-50) 0%, var(--spectrum-global-color-blue-100) 100%) !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--spectrum-global-color-blue-200) !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+.welcome-card:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+.welcome-card-secondary {
+    padding: 30px !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+.welcome-card-secondary:hover {
+    background: var(--spectrum-global-color-gray-100) !important;
+    transform: translateY(-4px) !important;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+}
+
+.welcome-action-card {
+    background: var(--spectrum-global-color-gray-100) !important;
+    border-radius: 8px !important;
+    padding: 40px !important;
+    transition: all 0.15s ease !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    text-align: center !important;
+    min-height: 200px !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    cursor: pointer !important;
+}
+
+.welcome-action-card:hover {
+    background: var(--spectrum-global-color-gray-200) !important;
+    border-color: var(--spectrum-global-color-blue-400) !important;
+}
+
+/* ===========================================
+   Component Card Styles
+   =========================================== */
+.component-card {
+    padding: 16px !important;
+    background: var(--spectrum-global-color-gray-50) !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 8px !important;
+    transition: all 0.3s ease !important;
+}
+
+.component-card:hover {
+    background: var(--spectrum-global-color-gray-75) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.component-card-selected {
+    background: var(--spectrum-global-color-blue-100) !important;
+    border-color: var(--spectrum-global-color-blue-400) !important;
+}
+
+.component-card-disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
+/* ===========================================
+   Project Card Styles
+   =========================================== */
+.project-card {
+    padding: 16px !important;
+    background: white !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 8px !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+}
+
+.project-card:hover {
+    border-color: var(--spectrum-global-color-blue-400) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* ===========================================
+   Selection Summary Styles
+   =========================================== */
+.selection-summary-container {
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+}
+
+.selection-summary-label {
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 4px !important;
+}
+
+.selection-summary-value {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+}
+
+.selection-summary-placeholder {
+    font-size: 13px !important;
+    color: var(--spectrum-global-color-gray-500) !important;
+}
+
+/* ===========================================
+   App Container Styles
+   =========================================== */
+.app-container {
+    width: 100% !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: var(--vscode-editor-background) !important;
+}
+
+/* ===========================================
+   Empty State Styles
+   =========================================== */
+.empty-state-container {
+    text-align: center !important;
+    background: var(--vscode-sideBar-background) !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--vscode-widget-border) !important;
+}
+
+/* ===========================================
+   Dependency Item Styles
+   =========================================== */
+.dependency-item-container {
+    padding: 12px !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+    border-radius: 4px !important;
+    margin-bottom: 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+.dependency-item-container:hover {
+    background: var(--spectrum-global-color-gray-100) !important;
+}
+
+.dependency-item-title {
+    font-size: 14px !important;
+    font-weight: 500 !important;
+}
+
+.dependency-item-description {
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    margin-top: 2px !important;
+}
+
+/* ===========================================
+   Compact Option Styles
+   =========================================== */
+.compact-option-container {
+    padding: 8px 12px !important;
+    cursor: pointer !important;
+    transition: background 0.2s ease !important;
+}
+
+.compact-option-container:hover {
+    background: var(--spectrum-global-color-gray-100) !important;
+}
+
+.compact-option-title {
+    font-size: 14px !important;
+    font-weight: 500 !important;
+}
+
+.compact-option-description {
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+}
+
+.compact-option-tag {
+    font-size: 10px !important;
+    padding: 2px 6px !important;
+    background-color: var(--spectrum-global-color-gray-200) !important;
+    border-radius: 4px !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+}
+
+/* ===========================================
+   ProjectCard Styles
+   =========================================== */
+.project-card-wrapper {
+    position: relative !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.project-card-current {
+    border: 2px solid var(--spectrum-global-color-blue-600) !important;
+}
+
+.project-card-default {
+    border: 1px solid var(--vscode-widget-border) !important;
+}
+
+.project-card-title {
+    font-weight: bold !important;
+    font-size: 16px !important;
+}
+
+.project-card-path {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 11px !important;
+}
+
+/* ===========================================
+   WelcomeStep Styles
+   =========================================== */
+.welcome-step-container {
+    padding: 20px !important;
+    max-width: 800px !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+}
+
+.welcome-step-subtitle {
+    color: var(--spectrum-global-color-gray-700) !important;
+    font-size: 14px !important;
+}
+
+.welcome-step-description {
+    color: var(--spectrum-global-color-gray-600) !important;
+    font-size: 13px !important;
+}
+
+.info-tip-icon {
+    font-size: 14px !important;
+}
+
+.info-tip-text {
+    font-size: 13px !important;
+    color: var(--spectrum-global-color-blue-700) !important;
+}
+
+/* ===========================================
+   Additional Utilities
+   =========================================== */
+.compact-option-icon {
+    color: var(--spectrum-global-color-gray-700) !important;
+    flex-shrink: 0 !important;
+}
+
+.opacity-60 {
+    opacity: 0.6 !important;
+}
+
+/* ===========================================
+   Grid Utilities
+   =========================================== */
+.grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+.grid-cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+.grid-gap-4 { gap: 16px !important; }
+
+/* ===========================================
+   Alignment Utilities
+   =========================================== */
+.items-start { align-items: flex-start !important; }
+.items-end { align-items: flex-end !important; }
+.justify-start { justify-content: flex-start !important; }
+.justify-end { justify-content: flex-end !important; }
+.justify-center { justify-content: center !important; }
+
+/* ===========================================
+   Additional Spacing
+   =========================================== */
+.pt-2 { padding-top: 8px !important; }
+.pt-3 { padding-top: 12px !important; }
+.pb-2 { padding-bottom: 8px !important; }
+.pb-15 { padding-bottom: 60px !important; }
+.pl-5 { padding-left: 20px !important; }
+.mx-auto { margin-left: auto !important; margin-right: auto !important; }
+.my-2 { margin-top: 8px !important; margin-bottom: 8px !important; }
+.my-5 { margin-top: 20px !important; margin-bottom: 20px !important; }

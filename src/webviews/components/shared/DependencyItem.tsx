@@ -7,6 +7,7 @@ import {
     Badge
 } from '@adobe/react-spectrum';
 import Info from '@spectrum-icons/workflow/Info';
+import { cn } from '../../utils/classNames';
 
 interface DependencyItemProps {
     id: string;
@@ -38,46 +39,36 @@ export const DependencyItem: React.FC<DependencyItemProps> = ({
             padding="size-200"
             backgroundColor={selected ? 'gray-75' : 'transparent'}
             borderRadius="medium"
-            UNSAFE_style={{
-                border: '1px solid var(--spectrum-global-color-gray-200)',
-                transition: 'all 0.2s ease'
-            }}
+            UNSAFE_className="dependency-item-container"
         >
             <Checkbox
                 isSelected={selected}
                 isDisabled={required}
                 onChange={(isSelected) => onToggle?.(id, isSelected)}
-                UNSAFE_style={{ width: '100%' }}
+                UNSAFE_className="w-full"
             >
                 <Flex direction="column" gap="size-50" width="100%">
                     <Flex alignItems="center" gap="size-100">
-                        <Text UNSAFE_style={{ 
-                            fontSize: '13px',
-                            fontWeight: 500
-                        }}>
+                        <Text UNSAFE_className="dependency-item-title">
                             {name}
                         </Text>
                         <Flex gap="size-75">
                             {required && (
-                                <Badge variant="neutral" UNSAFE_style={{ fontSize: '10px' }}>
+                                <Badge variant="neutral" UNSAFE_className="text-xs">
                                     Required
                                 </Badge>
                             )}
                             {impact && (
                                 <Badge 
                                     variant={impactColors[impact] as any}
-                                    UNSAFE_style={{ fontSize: '10px' }}
+                                    UNSAFE_className="text-xs"
                                 >
                                     {impact} impact
                                 </Badge>
                             )}
                         </Flex>
                     </Flex>
-                    <Text UNSAFE_style={{ 
-                        fontSize: '11px',
-                        color: 'var(--spectrum-global-color-gray-600)',
-                        marginLeft: '28px'
-                    }}>
+                    <Text UNSAFE_className={cn('dependency-item-description', 'ml-5')}>
                         {description}
                     </Text>
                 </Flex>

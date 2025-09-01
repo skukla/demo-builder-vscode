@@ -8,6 +8,7 @@ import {
     ActionButton
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import { cn } from '../../utils/classNames';
 
 interface ComponentCardProps {
     id: string;
@@ -37,41 +38,27 @@ export const ComponentCard: React.FC<ComponentCardProps> = ({
             onPress={() => !disabled && onSelect(id)}
             isQuiet
             width="100%"
-            UNSAFE_style={{
-                textAlign: 'left',
-                padding: 0,
-                height: 'auto',
-                minHeight: '120px'
-            }}
+            UNSAFE_className={cn('text-left', 'p-0', 'min-h-120')}
         >
             <View
                 backgroundColor={selected ? 'blue-100' : 'gray-75'}
                 borderRadius="medium"
                 padding="size-300"
                 width="100%"
-                UNSAFE_style={{
-                    border: selected 
-                        ? '2px solid var(--spectrum-global-color-blue-500)' 
-                        : '1px solid var(--spectrum-global-color-gray-300)',
-                    opacity: disabled ? 0.5 : 1,
-                    cursor: disabled ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease',
-                    position: 'relative'
-                }}
+                UNSAFE_className={cn(
+                    'component-card',
+                    selected && 'component-card-selected',
+                    disabled && 'component-card-disabled',
+                    'relative'
+                )}
             >
                 {selected && (
                     <View
-                        UNSAFE_style={{
-                            position: 'absolute',
-                            top: '8px',
-                            right: '8px'
-                        }}
+                        UNSAFE_className={cn('absolute', 'top-2', 'right-2')}
                     >
                         <CheckmarkCircle 
                             size="S" 
-                            UNSAFE_style={{ 
-                                color: 'var(--spectrum-global-color-blue-600)' 
-                            }} 
+                            UNSAFE_className="text-blue-600" 
                         />
                     </View>
                 )}
@@ -82,14 +69,12 @@ export const ComponentCard: React.FC<ComponentCardProps> = ({
                             <View 
                                 width="size-400" 
                                 height="size-400"
-                                UNSAFE_style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: selected 
-                                        ? 'var(--spectrum-global-color-blue-600)'
-                                        : 'var(--spectrum-global-color-gray-700)'
-                                }}
+                                UNSAFE_className={cn(
+                                    'flex',
+                                    'items-center',
+                                    'justify-center',
+                                    selected ? 'text-blue-600' : 'text-gray-700'
+                                )}
                             >
                                 {icon}
                             </View>
@@ -98,25 +83,21 @@ export const ComponentCard: React.FC<ComponentCardProps> = ({
                             <Flex alignItems="center" gap="size-100">
                                 <Heading 
                                     level={4} 
-                                    UNSAFE_style={{ 
-                                        fontSize: '14px',
-                                        margin: 0,
-                                        fontWeight: selected ? 600 : 500
-                                    }}
+                                    UNSAFE_className={cn(
+                                        'text-md',
+                                        'm-0',
+                                        selected ? 'font-semibold' : 'font-medium'
+                                    )}
                                 >
                                     {name}
                                 </Heading>
                                 {recommended && (
-                                    <Badge variant="positive" UNSAFE_style={{ fontSize: '10px' }}>
+                                    <Badge variant="positive" UNSAFE_className="text-xs">
                                         Recommended
                                     </Badge>
                                 )}
                             </Flex>
-                            <Text UNSAFE_style={{ 
-                                fontSize: '12px', 
-                                color: 'var(--spectrum-global-color-gray-600)',
-                                marginTop: '2px'
-                            }}>
+                            <Text UNSAFE_className={cn('text-sm', 'text-gray-600', 'mt-1')}>
                                 {description}
                             </Text>
                         </Flex>
@@ -128,10 +109,7 @@ export const ComponentCard: React.FC<ComponentCardProps> = ({
                                 <Badge 
                                     key={feature} 
                                     variant="info"
-                                    UNSAFE_style={{ 
-                                        fontSize: '10px',
-                                        padding: '2px 6px'
-                                    }}
+                                    UNSAFE_className={cn('text-xs', 'p-badge')}
                                 >
                                     {feature}
                                 </Badge>
@@ -139,10 +117,7 @@ export const ComponentCard: React.FC<ComponentCardProps> = ({
                             {features.length > 3 && (
                                 <Badge 
                                     variant="neutral"
-                                    UNSAFE_style={{ 
-                                        fontSize: '10px',
-                                        padding: '2px 6px'
-                                    }}
+                                    UNSAFE_className={cn('text-xs', 'p-badge')}
                                 >
                                     +{features.length - 3} more
                                 </Badge>

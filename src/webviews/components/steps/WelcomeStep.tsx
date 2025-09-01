@@ -40,12 +40,7 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
     return (
         <View 
             height="100%" 
-            UNSAFE_style={{ 
-                padding: '20px',
-                maxWidth: '800px',
-                margin: '0 auto',
-                width: '100%'
-            }}
+            UNSAFE_className="welcome-step-container"
         >
             <Flex direction="column" gap="size-400">
                 <View>
@@ -53,10 +48,7 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                         Welcome to Adobe Demo Builder
                     </Heading>
                     
-                    <Text marginBottom="size-400" UNSAFE_style={{ 
-                        color: 'var(--spectrum-global-color-gray-700)',
-                        fontSize: '14px'
-                    }}>
+                    <Text marginBottom="size-400" UNSAFE_className="welcome-step-subtitle">
                         Let's create a new demo project. We'll guide you through selecting components, 
                         configuring your environment, and deploying your demo.
                     </Text>
@@ -68,10 +60,7 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                             Project Information
                         </Heading>
                         
-                        <Text marginBottom="size-300" UNSAFE_style={{ 
-                            color: 'var(--spectrum-global-color-gray-600)',
-                            fontSize: '13px'
-                        }}>
+                        <Text marginBottom="size-300" UNSAFE_className="welcome-step-description">
                             Enter a unique name for your demo project. This will be used to identify your Commerce environment 
                             and organize your project files.
                         </Text>
@@ -110,9 +99,9 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                     marginTop="size-200"
                 >
                     <Flex gap="size-100" alignItems="flex-start">
-                        <Text UNSAFE_style={{ fontSize: '14px' }}>💡</Text>
+                        <Text UNSAFE_className="info-tip-icon">💡</Text>
                         <View flex>
-                            <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-blue-700)' }}>
+                            <Text UNSAFE_className="info-tip-text">
                                 <strong>Next Steps:</strong> After naming your project, you'll select your frontend framework, 
                                 backend system, and any additional components you need for your demo.
                             </Text>

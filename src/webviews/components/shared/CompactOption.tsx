@@ -30,32 +30,23 @@ export const CompactOption: React.FC<CompactOptionProps> = ({
             {icon && (
                 <View 
                     width="size-400"
-                    UNSAFE_style={{
-                        color: 'var(--spectrum-global-color-gray-700)',
-                        flexShrink: 0
-                    }}
+                    UNSAFE_className="compact-option-icon"
                 >
                     {icon}
                 </View>
             )}
             <View flex>
                 <Flex alignItems="center" gap="size-100" marginBottom="size-50">
-                    <Text UNSAFE_style={{ 
-                        fontSize: '14px',
-                        fontWeight: 500
-                    }}>
+                    <Text UNSAFE_className="compact-option-title">
                         {name}
                     </Text>
                     {recommended && (
-                        <Badge variant="positive" UNSAFE_style={{ fontSize: '10px' }}>
+                        <Badge variant="positive">
                             Recommended
                         </Badge>
                     )}
                 </Flex>
-                <Text UNSAFE_style={{ 
-                    fontSize: '12px',
-                    color: 'var(--spectrum-global-color-gray-600)'
-                }}>
+                <Text UNSAFE_className="compact-option-description">
                     {description}
                 </Text>
                 {tags && tags.length > 0 && (
@@ -63,13 +54,7 @@ export const CompactOption: React.FC<CompactOptionProps> = ({
                         {tags.map(tag => (
                             <Text
                                 key={tag}
-                                UNSAFE_style={{
-                                    fontSize: '10px',
-                                    padding: '2px 6px',
-                                    backgroundColor: 'var(--spectrum-global-color-gray-200)',
-                                    borderRadius: '4px',
-                                    color: 'var(--spectrum-global-color-gray-700)'
-                                }}
+                                UNSAFE_className="compact-option-tag"
                             >
                                 {tag}
                             </Text>

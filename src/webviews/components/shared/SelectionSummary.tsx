@@ -10,6 +10,7 @@ import {
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import Settings from '@spectrum-icons/workflow/Settings';
+import { cn } from '../../utils/classNames';
 
 interface SelectionSummaryProps {
     frontend?: {
@@ -36,9 +37,7 @@ export const SelectionSummary: React.FC<SelectionSummaryProps> = ({
             borderRadius="medium"
             padding="size-300"
             height="100%"
-            UNSAFE_style={{
-                border: '1px solid var(--spectrum-global-color-gray-300)'
-            }}
+            UNSAFE_className="selection-summary-container"
         >
             <Heading level={3} marginBottom="size-300">
                 Your Configuration
@@ -46,24 +45,18 @@ export const SelectionSummary: React.FC<SelectionSummaryProps> = ({
 
             {/* Frontend Selection */}
             <View marginBottom="size-250">
-                <Text UNSAFE_style={{ 
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    color: 'var(--spectrum-global-color-gray-600)',
-                    marginBottom: '8px'
-                }}>
+                <Text UNSAFE_className="selection-summary-label">
                     Frontend
                 </Text>
                 {frontend ? (
                     <Flex alignItems="center" gap="size-100">
-                        <CheckmarkCircle size="XS" UNSAFE_style={{ color: 'var(--spectrum-global-color-green-600)' }} />
-                        <Text UNSAFE_style={{ fontSize: '13px', fontWeight: 500 }}>
+                        <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" />
+                        <Text UNSAFE_className="selection-summary-value">
                             {frontend.name}
                         </Text>
                     </Flex>
                 ) : (
-                    <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                    <Text UNSAFE_className="selection-summary-placeholder">
                         Not selected
                     </Text>
                 )}
@@ -73,24 +66,18 @@ export const SelectionSummary: React.FC<SelectionSummaryProps> = ({
 
             {/* Backend Selection */}
             <View marginTop="size-250" marginBottom="size-250">
-                <Text UNSAFE_style={{ 
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    color: 'var(--spectrum-global-color-gray-600)',
-                    marginBottom: '8px'
-                }}>
+                <Text UNSAFE_className="selection-summary-label">
                     Backend
                 </Text>
                 {backend ? (
                     <Flex alignItems="center" gap="size-100">
-                        <CheckmarkCircle size="XS" UNSAFE_style={{ color: 'var(--spectrum-global-color-green-600)' }} />
-                        <Text UNSAFE_style={{ fontSize: '13px', fontWeight: 500 }}>
+                        <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" />
+                        <Text UNSAFE_className="selection-summary-value">
                             {backend.name}
                         </Text>
                     </Flex>
                 ) : (
-                    <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-500)' }}>
+                    <Text UNSAFE_className="selection-summary-placeholder">
                         Not selected
                     </Text>
                 )}
@@ -103,7 +90,7 @@ export const SelectionSummary: React.FC<SelectionSummaryProps> = ({
                     <View marginTop="size-250">
                         <Flex alignItems="center" gap="size-100">
                             <Settings size="XS" />
-                            <Text UNSAFE_style={{ fontSize: '12px', fontWeight: 500 }}>
+                            <Text UNSAFE_className={cn('text-sm', 'font-medium')}>
                                 {dependencyCount} {dependencyCount === 1 ? 'dependency' : 'dependencies'} selected
                             </Text>
                         </Flex>
@@ -116,7 +103,7 @@ export const SelectionSummary: React.FC<SelectionSummaryProps> = ({
                 <Well marginTop="size-400">
                     <Flex alignItems="center" gap="size-100">
                         <Clock size="XS" />
-                        <Text UNSAFE_style={{ fontSize: '11px' }}>
+                        <Text UNSAFE_className="text-xs">
                             Estimated setup: ~5 minutes
                         </Text>
                     </Flex>

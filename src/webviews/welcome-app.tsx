@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Provider, defaultTheme, View } from '@adobe/react-spectrum';
 import { WelcomeScreen } from './welcome/WelcomeScreen';
 import { vscode } from './app/vscodeApi';
+import { cn } from './utils/classNames';
 
 export function WelcomeApp() {
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
@@ -39,13 +40,7 @@ export function WelcomeApp() {
             theme={defaultTheme} 
             colorScheme={theme}
             isQuiet
-            UNSAFE_style={{ 
-                width: '100%', 
-                height: '100vh',
-                margin: 0,
-                padding: 0,
-                background: 'var(--vscode-editor-background)'
-            }}
+            UNSAFE_className="app-container"
         >
             <WelcomeScreen theme={theme} />
         </Provider>

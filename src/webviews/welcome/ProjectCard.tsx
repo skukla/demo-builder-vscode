@@ -7,6 +7,7 @@ import {
     Badge,
     Well
 } from '@adobe/react-spectrum';
+import { cn } from '../utils/classNames';
 import Folder from '@spectrum-icons/workflow/Folder';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Clock from '@spectrum-icons/workflow/Clock';
@@ -46,12 +47,10 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
 
     return (
         <Well 
-            UNSAFE_style={{ 
-                position: 'relative',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                border: isCurrent ? '2px solid var(--spectrum-global-color-blue-600)' : '1px solid var(--vscode-widget-border)'
-            }}
+            UNSAFE_className={cn(
+                'project-card-wrapper',
+                isCurrent ? 'project-card-current' : 'project-card-default'
+            )}
             onPress={onOpen}
         >
             <Flex direction="column" gap="size-100">
@@ -59,7 +58,7 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
                 <Flex justifyContent="space-between" alignItems="flex-start">
                     <Flex gap="size-100" alignItems="center">
                         <Folder size="S" />
-                        <Text UNSAFE_style={{ fontWeight: 'bold', fontSize: '16px' }}>
+                        <Text UNSAFE_className="project-card-title">
                             {project.name}
                         </Text>
                     </Flex>
@@ -71,7 +70,7 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
                 {/* Organization */}
                 {project.organization && (
                     <Flex gap="size-100" alignItems="center">
-                        <Building size="XS" UNSAFE_style={{ opacity: 0.6 }} />
+                        <Building size="XS" UNSAFE_className="opacity-60" />
                         <Text elementType="small" color="gray-700">
                             {project.organization}
                         </Text>
@@ -80,19 +79,14 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
 
                 {/* Last opened */}
                 <Flex gap="size-100" alignItems="center">
-                    <Clock size="XS" UNSAFE_style={{ opacity: 0.6 }} />
+                    <Clock size="XS" UNSAFE_className="opacity-60" />
                     <Text elementType="small" color="gray-600">
                         {formatDate(project.lastOpened)}
                     </Text>
                 </Flex>
 
                 {/* Path */}
-                <Text elementType="small" color="gray-500" UNSAFE_style={{ 
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    fontSize: '11px'
-                }}>
+                <Text elementType="small" color="gray-500" UNSAFE_className="project-card-path">
                     {project.path}
                 </Text>
 

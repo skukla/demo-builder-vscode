@@ -17,6 +17,7 @@ import { CommerceConfigStep } from '../steps/CommerceConfigStep';
 import { ReviewStep } from '../steps/ReviewStep';
 import { CreatingStep } from '../steps/CreatingStep';
 import { vscode } from '../../app/vscodeApi';
+import { cn } from '../../utils/classNames';
 
 const WIZARD_STEPS: { id: WizardStep; name: string }[] = [
     { id: 'welcome', name: 'Project Details' },
@@ -211,20 +212,14 @@ export function WizardContainer() {
             backgroundColor="gray-50"
             width="100%"
             height="100vh"
-            UNSAFE_style={{
-                display: 'flex',
-                overflow: 'hidden'
-            }}
+            UNSAFE_className={cn('flex', 'overflow-hidden')}
         >
             <Flex height="100%">
                 {/* Timeline Navigation */}
                 <View 
                     width="size-3000" 
                     height="100%"
-                    UNSAFE_style={{
-                        minWidth: '240px',
-                        maxWidth: '240px'
-                    }}
+                    UNSAFE_className={cn('min-w-240', 'max-w-240')}
                 >
                     <TimelineNav
                         steps={WIZARD_STEPS}
@@ -239,18 +234,12 @@ export function WizardContainer() {
                     {/* Header */}
                     <View 
                         padding="size-400"
-                        UNSAFE_style={{
-                            borderBottom: '1px solid var(--spectrum-global-color-gray-300)',
-                            background: 'var(--spectrum-global-color-gray-75)'
-                        }}
+                        UNSAFE_className={cn('border-b', 'bg-gray-75')}
                     >
                         <Heading level={1} marginBottom="size-100">
                             Create Demo Project
                         </Heading>
-                        <Heading level={3} UNSAFE_style={{ 
-                            fontWeight: 400,
-                            color: 'var(--spectrum-global-color-gray-600)'
-                        }}>
+                        <Heading level={3} UNSAFE_className={cn('font-normal', 'text-gray-600')}>
                             {currentStepName}
                         </Heading>
                     </View>
@@ -259,17 +248,16 @@ export function WizardContainer() {
                     <View 
                         flex
                         padding="size-400"
-                        UNSAFE_style={{ 
-                            overflow: 'hidden',
-                            position: 'relative'
-                        }}
+                        UNSAFE_className={cn('overflow-hidden', 'relative')}
                     >
                         <View
                             height="100%"
-                            UNSAFE_className={`step-content ${animationDirection} ${isTransitioning ? 'transitioning' : ''}`}
-                            UNSAFE_style={{
-                                transition: 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out'
-                            }}
+                            UNSAFE_className={cn(
+                                'step-content',
+                                animationDirection,
+                                isTransitioning && 'transitioning',
+                                'transition-all'
+                            )}
                         >
                             {renderStep()}
                         </View>
@@ -279,10 +267,7 @@ export function WizardContainer() {
                     {!isLastStep && (
                         <View
                             padding="size-400"
-                            UNSAFE_style={{
-                                borderTop: '1px solid var(--spectrum-global-color-gray-300)',
-                                background: 'var(--spectrum-global-color-gray-75)'
-                            }}
+                            UNSAFE_className={cn('border-t', 'bg-gray-75')}
                         >
                             <Flex justifyContent="space-between" width="100%">
                                 <Button 
