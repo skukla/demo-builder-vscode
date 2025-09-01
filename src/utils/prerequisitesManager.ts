@@ -13,7 +13,26 @@ export interface PrerequisiteCheck {
     contains?: string;
 }
 
+export interface ProgressMilestone {
+    pattern: string;
+    progress: number;
+    message?: string;
+}
+
+export interface InstallStep {
+    name: string;
+    message: string;
+    commands?: string[];
+    commandTemplate?: string;
+    estimatedDuration?: number;
+    progressStrategy?: 'exact' | 'milestones' | 'synthetic' | 'immediate';
+    milestones?: ProgressMilestone[];
+    progressParser?: string;
+    continueOnError?: boolean;
+}
+
 export interface PrerequisiteInstall {
+    // Legacy format
     commands?: string[];
     message?: string;
     requires?: string[];
@@ -22,6 +41,8 @@ export interface PrerequisiteInstall {
     versions?: Record<string, string[]>;
     manual?: boolean;
     url?: string;
+    // New step-based format
+    steps?: InstallStep[];
 }
 
 export interface PrerequisitePlugin {
@@ -40,11 +61,11 @@ export interface PrerequisiteDefinition {
     id: string;
     name: string;
     description: string;
-    platforms?: string[];
     optional?: boolean;
     depends?: string[];
+    perNodeVersion?: boolean; // Install in each Node.js version
     check: PrerequisiteCheck;
-    install?: any; // Complex type - platform specific or dynamic
+    install?: any; // Installation configuration
     uninstall?: {
         commands: string[];
         message?: string;
@@ -60,23 +81,14 @@ export interface PrerequisiteDefinition {
     plugins?: PrerequisitePlugin[];
 }
 
-export interface PrerequisiteGroup {
-    id: string;
-    name: string;
-    prerequisites: string[];
-    required: boolean;
-}
-
 export interface ComponentRequirement {
     prerequisites?: string[];
     plugins?: string[];
-    nodeVersions?: string[];
 }
 
 export interface PrerequisitesConfig {
     version: string;
     prerequisites: PrerequisiteDefinition[];
-    groups?: PrerequisiteGroup[];
     componentRequirements?: Record<string, ComponentRequirement>;
 }
 
@@ -100,12 +112,11 @@ export class PrerequisitesManager {
     private config: PrerequisitesConfig | null = null;
     private configPath: string;
     private logger: Logger;
-    private platform: string;
+    private resolvedVersionCache: Map<string, string> = new Map();
 
     constructor(extensionPath: string, logger: Logger) {
         this.configPath = path.join(extensionPath, 'templates', 'prerequisites.json');
         this.logger = logger;
-        this.platform = os.platform();
     }
 
     async loadConfig(): Promise<PrerequisitesConfig> {
@@ -132,12 +143,6 @@ export class PrerequisitesManager {
         const config = await this.loadConfig();
         const required = new Set<string>();
         
-        // Add core prerequisites
-        const coreGroup = config.groups?.find(g => g.id === 'core' && g.required);
-        if (coreGroup) {
-            coreGroup.prerequisites.forEach(id => required.add(id));
-        }
-        
         // Add component-specific requirements
         if (selectedComponents && config.componentRequirements) {
             const checkComponent = (componentId: string) => {
@@ -157,11 +162,10 @@ export class PrerequisitesManager {
             selectedComponents.appBuilderApps?.forEach(checkComponent);
         }
         
-        // Filter prerequisites by platform and required IDs
+        // Return all non-optional prerequisites plus any required by components
         return config.prerequisites.filter(p => {
-            const platformMatch = !p.platforms || p.platforms.includes(this.platform);
             const isRequired = required.has(p.id) || !p.optional;
-            return platformMatch && isRequired;
+            return isRequired;
         });
     }
 
@@ -228,86 +232,47 @@ export class PrerequisitesManager {
         }
     }
 
-    getInstallCommands(
+    getInstallSteps(
         prereq: PrerequisiteDefinition,
         options?: {
             nodeVersions?: string[];
             preferredMethod?: string;
         }
-    ): { commands: string[]; message?: string; manual?: boolean; url?: string } {
+    ): { steps: InstallStep[]; manual?: boolean; url?: string } | null {
         if (!prereq.install) {
-            return { commands: [], message: 'No installation method available' };
+            return null;
         }
 
-        // Handle dynamic installation (e.g., Node.js with versions)
+        // Check for manual installation
+        if (prereq.install.manual) {
+            return {
+                steps: [],
+                manual: true,
+                url: prereq.install.url
+            };
+        }
+
+        // Return steps directly if available
+        if (prereq.install.steps) {
+            return {
+                steps: prereq.install.steps
+            };
+        }
+
+        // Handle dynamic installation (e.g., Node.js with versions) - convert to steps
         if (prereq.install.dynamic && prereq.install.template) {
             const versions = options?.nodeVersions || ['latest'];
-            const commands = versions.map(version => 
-                prereq.install.template.replace(/{version}/g, version)
-            );
-            const message = prereq.install.message?.replace(/{version}/g, versions.join(', '));
-            return { commands, message };
+            const steps: InstallStep[] = versions.map(version => ({
+                name: `Install Node.js ${version}`,
+                message: prereq.install.message?.replace(/{version}/g, version) || `Installing Node.js ${version}`,
+                commandTemplate: prereq.install.template,
+                progressStrategy: 'exact' as const,
+                estimatedDuration: 30000
+            }));
+            return { steps };
         }
 
-        // Handle platform-specific installation
-        if (prereq.install[this.platform]) {
-            const platformInstall = prereq.install[this.platform];
-            
-            // Check for manual installation
-            if (platformInstall.manual) {
-                return {
-                    commands: [],
-                    message: platformInstall.message,
-                    manual: true,
-                    url: platformInstall.url
-                };
-            }
-            
-            // Check for preferred method (e.g., homebrew)
-            if (platformInstall.preferredMethod && options?.preferredMethod) {
-                const method = platformInstall[options.preferredMethod];
-                if (method) {
-                    return {
-                        commands: method.commands,
-                        message: method.message
-                    };
-                }
-            }
-            
-            // Use default for platform
-            if (platformInstall.default) {
-                return {
-                    commands: platformInstall.default.commands,
-                    message: platformInstall.default.message
-                };
-            }
-            
-            // Direct commands for platform
-            if (platformInstall.commands) {
-                return {
-                    commands: platformInstall.commands,
-                    message: platformInstall.message
-                };
-            }
-        }
-
-        // Use default if available
-        if (prereq.install.default) {
-            return {
-                commands: prereq.install.default.commands,
-                message: prereq.install.default.message
-            };
-        }
-
-        // Direct commands
-        if (prereq.install.commands) {
-            return {
-                commands: prereq.install.commands,
-                message: prereq.install.message
-            };
-        }
-
-        return { commands: [], message: 'No installation method available for this platform' };
+        return null;
     }
 
     getPluginInstallCommands(
@@ -328,6 +293,26 @@ export class PrerequisitesManager {
         };
     }
 
+    async resolveNodeVersion(version: string): Promise<string> {
+        // Version families are simple - just return as-is
+        // fnm will handle resolving "18" to "18.x.x", "20" to "20.x.x", etc.
+        return version;
+    }
+    
+    async getLatestInFamily(versionFamily: string): Promise<string | null> {
+        // Get the actual installed version for a version family
+        // This is used for display purposes after installation
+        try {
+            const { stdout } = await execAsync(`fnm list-remote | grep "^v${versionFamily}\\." | head -1`);
+            if (stdout) {
+                return stdout.trim().replace('v', '');
+            }
+        } catch (error) {
+            this.logger.warn(`Could not get latest version for Node ${versionFamily}: ${error}`);
+        }
+        return null;
+    }
+
     async getRequiredNodeVersions(
         selectedComponents?: {
             frontend?: string;
@@ -336,30 +321,9 @@ export class PrerequisitesManager {
             appBuilderApps?: string[];
         }
     ): Promise<string[]> {
-        const config = await this.loadConfig();
-        const versions = new Set<string>();
-        
-        if (!selectedComponents || !config.componentRequirements) {
-            return ['latest'];
-        }
-        
-        const checkComponent = (componentId: string) => {
-            const req = config.componentRequirements![componentId];
-            if (req?.nodeVersions) {
-                req.nodeVersions.forEach(v => versions.add(v));
-            }
-        };
-        
-        if (selectedComponents.frontend) {
-            checkComponent(selectedComponents.frontend);
-        }
-        if (selectedComponents.backend) {
-            checkComponent(selectedComponents.backend);
-        }
-        selectedComponents.dependencies?.forEach(checkComponent);
-        selectedComponents.appBuilderApps?.forEach(checkComponent);
-        
-        return Array.from(versions);
+        // Node versions should come from components.json, not prerequisites.json
+        // This method is deprecated - use ComponentRegistryManager.getRequiredNodeVersions() instead
+        return ['20']; // Return LTS as default
     }
 
     async checkAllPrerequisites(

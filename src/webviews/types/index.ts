@@ -81,6 +81,21 @@ export interface ValidationResult {
     field: string;
 }
 
+export interface UnifiedProgress {
+    overall: {
+        percent: number;
+        currentStep: number;
+        totalSteps: number;
+        stepName: string;
+    };
+    command?: {
+        type: 'determinate' | 'indeterminate';
+        percent?: number;
+        detail?: string;
+        confidence: 'exact' | 'estimated' | 'synthetic';
+    };
+}
+
 export interface PrerequisiteCheck {
     id?: string;
     name: string;
@@ -97,6 +112,7 @@ export interface PrerequisiteCheck {
         installed: boolean;
         canInstall?: boolean;
     }>;
+    unifiedProgress?: UnifiedProgress;
 }
 
 export interface ComponentSelection {

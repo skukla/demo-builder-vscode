@@ -4,13 +4,16 @@ import {
     Flex,
     Text,
     Button,
-    ProgressCircle
+    ProgressCircle,
+    ProgressBar
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
+import Pending from '@spectrum-icons/workflow/Pending';
 import { WizardState, PrerequisiteCheck } from '../../types';
 import { vscode } from '../../app/vscodeApi';
+import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '../../utils/classNames';
 
 interface PrerequisitesStepProps {
     state: WizardState;
@@ -18,7 +21,6 @@ interface PrerequisitesStepProps {
     onNext: () => void;
     onBack: () => void;
     setCanProceed: (canProceed: boolean) => void;
-    requiredNodeVersions?: string[];
     componentsData?: any;
 }
 
@@ -37,11 +39,11 @@ const getDefaultPrerequisites = (): PrerequisiteCheck[] => {
     ];
 };
 
-export function PrerequisitesStep({ setCanProceed, requiredNodeVersions = [], componentsData, state }: PrerequisitesStepProps) {
+export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
     const [checks, setChecks] = useState<PrerequisiteCheck[]>(getDefaultPrerequisites());
     const [isChecking, setIsChecking] = useState(false);
     const [installingIndex, setInstallingIndex] = useState<number | null>(null);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [versionComponentMapping, setVersionComponentMapping] = useState<{ [key: string]: string }>({});
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     useEffect(() => {
@@ -56,13 +58,19 @@ export function PrerequisitesStep({ setCanProceed, requiredNodeVersions = [], co
                     canInstall: true,
                     isOptional: p.optional || false,
                     plugins: p.plugins,
-                    message: 'Checking version...'
+                    message: 'Waiting...'
                 };
             });
             setChecks(prerequisites);
+            
+            // Store the version to component mapping
+            if (data.versionComponentMapping) {
+                setVersionComponentMapping(data.versionComponentMapping);
+            }
+            
         });
 
-        // Check prerequisites on mount
+        // Check prerequisites on mount to trigger backend to load and check them
         checkPrerequisites();
 
         return () => {
@@ -71,10 +79,30 @@ export function PrerequisitesStep({ setCanProceed, requiredNodeVersions = [], co
     }, []);
 
     useEffect(() => {
+        // Listen for installation complete events
+        const unsubscribeInstallComplete = vscode.onMessage('prerequisite-install-complete', (data) => {
+            const { index, continueChecking } = data;
+            
+            if (continueChecking) {
+                // Continue checking from the next prerequisite, not from the beginning
+                setTimeout(() => {
+                    vscode.postMessage('continue-prerequisites', { fromIndex: index + 1 });
+                }, 500);
+            }
+        });
+        
+        // Listen for check stopped events
+        const unsubscribeCheckStopped = vscode.onMessage('prerequisite-check-stopped', (data) => {
+            const { stoppedAt, reason } = data;
+            setIsChecking(false);
+            
+            // Show a message about why checking stopped
+            console.log(`Prerequisites check stopped at index ${stoppedAt}: ${reason}`);
+        });
 
         // Listen for feedback from extension
         const unsubscribe = vscode.onMessage('prerequisite-status', (data) => {
-            const { index, id, status, message, version, plugins } = data;
+            const { index, status, message, version, plugins } = data;
 
             // Auto-scroll to the item being checked
             if (status === 'checking' && itemRefs.current[index]) {
@@ -84,14 +112,11 @@ export function PrerequisitesStep({ setCanProceed, requiredNodeVersions = [], co
                         // Determine scroll position based on item position
                         let scrollBlock = 'center';
                         
-                        // For last item, align to end to ensure full visibility
-                        if (index === checks.length - 1) {
-                            scrollBlock = 'end';
-                        } 
                         // For first item, align to start
-                        else if (index === 0) {
+                        if (index === 0) {
                             scrollBlock = 'start';
                         }
+                        // Use center for all other items including last to ensure proper padding visibility
                         
                         itemRefs.current[index].scrollIntoView({
                             behavior: 'smooth',
@@ -104,82 +129,9 @@ export function PrerequisitesStep({ setCanProceed, requiredNodeVersions = [], co
             setChecks(prev => {
                 const newChecks = [...prev];
                 if (newChecks[index]) {
-                    // Enhanced message for Node.js with multiple version requirements
+                    // For Node.js, the backend sends a detailed message with all the info we need
+                    // Just use the message as-is from the backend
                     let enhancedMessage = message;
-                    if (newChecks[index].id === 'node') {
-                        // Build component name mapping from componentsData and state
-                        const getComponentName = (reqVersion: string): string => {
-                            // Check dependencies for commerce-mesh (requires Node 18)
-                            if (reqVersion === '18' && state?.components?.dependencies?.includes('commerce-mesh')) {
-                                const meshComponent = componentsData?.dependencies?.find((d: any) => d.id === 'commerce-mesh');
-                                return meshComponent?.name || 'Adobe Commerce API Mesh';
-                            }
-                            
-                            // Check for App Builder apps (require Node 22)
-                            if (reqVersion === '22' && state?.components?.appBuilderApps?.length > 0) {
-                                return 'App Builder';
-                            }
-                            
-                            // Check frontend for latest/24
-                            if ((reqVersion === 'latest' || reqVersion === '24') && state?.components?.frontend) {
-                                const frontendComponent = componentsData?.frontends?.find((f: any) => 
-                                    f.id === state.components.frontend
-                                );
-                                return frontendComponent?.name || 'Headless Storefront';
-                            }
-                            
-                            return reqVersion; // Fallback to version number if no match
-                        };
-                        
-                        if (status === 'success') {
-                            enhancedMessage = 'Node.js is installed';
-                            
-                            // Check if we have installed versions from fnm (passed as plugins)
-                            const installedVersions = plugins as string[] | undefined;
-                            
-                            if (installedVersions && installedVersions.length > 0) {
-                                // Show all installed versions with their component mappings
-                                installedVersions.forEach((installedVer: string) => {
-                                    const majorVersion = installedVer.split('.')[0];
-                                    let component = '';
-                                    
-                                    // Map to component based on major version and requirements
-                                    if (majorVersion === '18' && requiredNodeVersions.includes('18')) {
-                                        component = getComponentName('18');
-                                    } else if (majorVersion === '22' && requiredNodeVersions.includes('22')) {
-                                        component = getComponentName('22');
-                                    } else if ((majorVersion === '24' || majorVersion === '23') && 
-                                             (requiredNodeVersions.includes('latest') || requiredNodeVersions.includes('24'))) {
-                                        component = getComponentName('latest');
-                                    }
-                                    
-                                    // Add version to message
-                                    enhancedMessage += `\n${installedVer}${component ? ` (${component})` : ''}`;
-                                });
-                            } else if (version) {
-                                // Fallback to single version display if no fnm data
-                                enhancedMessage += `\n${version}`;
-                                
-                                // Show requirements if multiple versions needed
-                                if (requiredNodeVersions.length > 1) {
-                                    requiredNodeVersions.forEach(reqVersion => {
-                                        if (!version.startsWith(reqVersion)) {
-                                            const component = getComponentName(reqVersion);
-                                            enhancedMessage += `\n${reqVersion} required (${component})`;
-                                        }
-                                    });
-                                }
-                            }
-                        } else if (status === 'error') {
-                            enhancedMessage = 'Node.js is not installed';
-                            if (requiredNodeVersions.length > 0) {
-                                requiredNodeVersions.forEach(reqVersion => {
-                                    const component = getComponentName(reqVersion);
-                                    enhancedMessage += `\n${reqVersion} required (${component})`;
-                                });
-                            }
-                        }
-                    }
                     
                     newChecks[index] = {
                         ...newChecks[index],
@@ -205,21 +157,19 @@ export function PrerequisitesStep({ setCanProceed, requiredNodeVersions = [], co
                 return newChecks;
             });
 
-            // If installation complete, move to next
+            // If installation complete, clear installing index
             if (status === 'success' && installingIndex === index) {
                 setInstallingIndex(null);
-                // Check if there are more to install
-                const nextToInstall = checks.findIndex(
-                    (check, idx) => idx > index && check.status === 'error' && check.canInstall
-                );
-                if (nextToInstall !== -1) {
-                    installPrerequisite(nextToInstall);
-                }
+                // The backend will automatically continue checking
             }
         });
 
-        return unsubscribe;
-    }, []);
+        return () => {
+            unsubscribe();
+            unsubscribeInstallComplete();
+            unsubscribeCheckStopped();
+        };
+    }, [checks, versionComponentMapping]);
 
     useEffect(() => {
         // Check if all required prerequisites are met
@@ -258,15 +208,6 @@ export function PrerequisitesStep({ setCanProceed, requiredNodeVersions = [], co
         });
     };
 
-    const installAll = () => {
-        const firstToInstall = checks.findIndex(
-            check => check.status === 'error' && check.canInstall
-        );
-        if (firstToInstall !== -1) {
-            installPrerequisite(firstToInstall);
-        }
-    };
-
     const getStatusIcon = (status: PrerequisiteCheck['status']) => {
         switch (status) {
             case 'success':
@@ -277,87 +218,94 @@ export function PrerequisitesStep({ setCanProceed, requiredNodeVersions = [], co
                 return <AlertCircle size="S" color="notice" />;
             case 'checking':
                 return <ProgressCircle size="S" isIndeterminate />;
+            case 'pending':
+                return <Pending size="S" />;
             default:
                 return <div style={{ width: '20px', height: '20px' }} />;
         }
     };
 
     const hasErrors = checks.some(check => check.status === 'error');
-    const hasInstallable = checks.some(check => check.status === 'error' && check.canInstall);
 
     return (
         <View 
             height="100%" 
-            UNSAFE_style={{ 
-                padding: '20px',
-                width: '100%'
-            }}
+            UNSAFE_className={cn('p-5', 'w-full')}
         >
-            <View UNSAFE_style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                    <Text marginBottom="size-200" UNSAFE_style={{ color: 'var(--spectrum-global-color-gray-700)', fontSize: '14px' }}>
+            <View UNSAFE_className={cn('flex', 'flex-column', 'h-full')}>
+                    <Text marginBottom="size-200" UNSAFE_className={cn('text-gray-700', 'text-md')}>
                         Checking required tools. Missing tools can be installed automatically.
                     </Text>
 
                     <View 
                         flex
-                        ref={scrollContainerRef}
-                        UNSAFE_style={{ 
-                            overflowY: 'auto',
-                            marginBottom: '16px',
-                            border: '1px solid var(--spectrum-global-color-gray-300)',
-                            borderRadius: '4px',
-                            backgroundColor: 'var(--spectrum-global-color-gray-50)',
-                            padding: '12px'
-                        }}
+                        UNSAFE_className={cn('prerequisite-container')}
                     >
-                        <Flex direction="column" gap="size-150" UNSAFE_style={{ paddingBottom: '40px' }}>
+                        <Flex direction="column" gap="size-150" UNSAFE_className="pb-15">
                             {checks.map((check, index) => (
                                 <div 
                                     key={check.name} 
                                     ref={el => itemRefs.current[index] = el}
                                 >
                                 <Flex justifyContent="space-between" alignItems="center" 
-                                    UNSAFE_style={{ 
-                                        padding: '12px',
-                                        backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                                        borderRadius: '4px',
-                                        marginBottom: index < checks.length - 1 ? '8px' : '0',
-                                        transition: 'all 0.3s ease'
-                                    }}
+                                    UNSAFE_className={getPrerequisiteItemClasses('pending', index === checks.length - 1)}
                                 >
                                     <Flex gap="size-150" alignItems="center" flex>
                                         {getStatusIcon(check.status)}
-                                        <View flex>
-                                            <Text UNSAFE_style={{ fontSize: '14px', fontWeight: 600, display: 'block', marginBottom: '2px' }}>
+                                        <View flex UNSAFE_className={cn('prerequisite-content')}>
+                                            <Text UNSAFE_className={cn('prerequisite-title')}>
                                                 {check.name}
                                                 {check.isOptional && <span style={{ fontWeight: 400, opacity: 0.7 }}> (Optional)</span>}
+                                                {check.status === 'pending' && <span style={{ fontWeight: 400, opacity: 0.7 }}> (Waiting)</span>}
                                             </Text>
-                                            <Text UNSAFE_style={{ fontSize: '12px', color: 'var(--spectrum-global-color-gray-600)', display: 'block' }}>
+                                            <Text UNSAFE_className={cn('prerequisite-description')}>
                                                 {check.description}
                                             </Text>
-                                            <Text UNSAFE_style={{ 
-                                                fontSize: '11px',
-                                                color: check.status === 'error' 
-                                                    ? 'var(--spectrum-global-color-red-600)' 
-                                                    : 'var(--spectrum-global-color-gray-600)',
-                                                display: 'block',
-                                                marginTop: '4px',
-                                                minHeight: '16px',
-                                                lineHeight: '16px',
-                                                transition: 'color 0.3s ease, opacity 0.3s ease',
-                                                opacity: check.message ? 1 : 0.5,
-                                                whiteSpace: 'pre-line'  // Preserve line breaks
-                                            }}>
+                                            <Text UNSAFE_className={getPrerequisiteMessageClasses(check.status)}>
                                                 {check.message || 'Waiting...'}
                                             </Text>
-                                            {check.plugins && check.plugins.length > 0 && (
+                                            {check.status === 'checking' && check.unifiedProgress && (
+                                                <View marginTop="size-100">
+                                                    <ProgressBar 
+                                                        label={`Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}`}
+                                                        value={check.unifiedProgress.overall.percent}
+                                                        maxValue={100}
+                                                        showValueLabel
+                                                        size="S"
+                                                        UNSAFE_className="mb-2"
+                                                    />
+                                                    
+                                                    {check.unifiedProgress.command && (
+                                                        <Flex gap="size-100" alignItems="center" marginTop="size-50">
+                                                            {check.unifiedProgress.command.type === 'indeterminate' ? (
+                                                                <ProgressCircle size="S" isIndeterminate aria-label="Processing" />
+                                                            ) : (
+                                                                <ProgressBar 
+                                                                    value={check.unifiedProgress.command.percent || 0}
+                                                                    maxValue={100}
+                                                                    size="S"
+                                                                    label=""
+                                                                    UNSAFE_className="flex-1"
+                                                                />
+                                                            )}
+                                                            <Text UNSAFE_className={cn('text-xs', 'text-muted')}>
+                                                                {check.unifiedProgress.command.detail}
+                                                                {check.unifiedProgress.command.confidence !== 'exact' && ' (estimated)'}
+                                                            </Text>
+                                                        </Flex>
+                                                    )}
+                                                </View>
+                                            )}
+                                            {check.plugins && check.plugins.length > 0 && (check.status === 'checking' || check.status === 'success' || check.status === 'error') && (
                                                 <View marginTop="size-100">
                                                     {check.plugins.map(plugin => (
                                                         <Flex key={plugin.id} alignItems="center" gap="size-50" marginBottom="size-50">
-                                                            <Text UNSAFE_style={{ fontSize: '11px', marginLeft: '20px' }}>
-                                                                • {plugin.name}
+                                                            <Text UNSAFE_className={cn('prerequisite-plugin-item')}>
+                                                                {plugin.name}
                                                             </Text>
-                                                            {plugin.installed ? (
+                                                            {check.status === 'checking' && plugin.installed === undefined ? (
+                                                                <Pending size="XS" />
+                                                            ) : plugin.installed ? (
                                                                 <CheckmarkCircle size="XS" color="positive" />
                                                             ) : (
                                                                 <CloseCircle size="XS" color="negative" />
@@ -371,10 +319,9 @@ export function PrerequisitesStep({ setCanProceed, requiredNodeVersions = [], co
                                     {check.status === 'error' && check.canInstall && (
                                         <Button
                                             variant="secondary"
-                                            isQuiet
                                             onPress={() => installPrerequisite(index)}
                                             isDisabled={installingIndex !== null}
-                                            UNSAFE_style={{ minWidth: '60px', height: '28px', fontSize: '12px' }}
+                                            UNSAFE_className={cn('btn-compact', 'min-w-100')}
                                         >
                                             Install
                                         </Button>
@@ -390,32 +337,17 @@ export function PrerequisitesStep({ setCanProceed, requiredNodeVersions = [], co
                             variant="secondary"
                             onPress={checkPrerequisites}
                             isDisabled={isChecking || installingIndex !== null}
-                            UNSAFE_style={{ height: '32px', fontSize: '13px' }}
+                                            UNSAFE_className={cn('btn-standard', 'text-base')}
                         >
                             Recheck
                         </Button>
-                        {hasInstallable && (
-                            <Button
-                                variant="accent"
-                                onPress={installAll}
-                                isDisabled={installingIndex !== null}
-                                UNSAFE_style={{ height: '32px', fontSize: '13px' }}
-                            >
-                                Install Missing
-                            </Button>
-                        )}
                     </Flex>
 
                     {!hasErrors && checks.every(check => check.status === 'success') && (
-                        <View 
-                            padding="size-150" 
-                            backgroundColor="green-100"
-                            borderRadius="medium"
-                            UNSAFE_style={{ marginTop: 'auto' }}
-                        >
+                        <View UNSAFE_className="mt-auto">
                             <Flex gap="size-100" alignItems="center">
                                 <CheckmarkCircle size="S" color="positive" />
-                                <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-green-700)' }}>
+                                <Text UNSAFE_className={cn('success-text')}>
                                     All prerequisites installed!
                                 </Text>
                             </Flex>
