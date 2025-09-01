@@ -36,35 +36,50 @@ export class ComponentHandler {
             const backends = await this.registryManager.getBackends();
             const externalSystems = await this.registryManager.getExternalSystems();
             const appBuilder = await this.registryManager.getAppBuilder();
+            const dependencies = await this.registryManager.getDependencies();
             const presets = await this.registryManager.getPresets();
 
+            const componentsData = {
+                frontends: frontends.map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    description: f.description,
+                    features: f.features,
+                    recommended: f.id === 'citisignal-nextjs'
+                })),
+                backends: backends.map(b => ({
+                    id: b.id,
+                    name: b.name,
+                    description: b.description
+                })),
+                externalSystems: externalSystems.map(e => ({
+                    id: e.id,
+                    name: e.name,
+                    description: e.description
+                })),
+                appBuilder: appBuilder.map(a => ({
+                    id: a.id,
+                    name: a.name,
+                    description: a.description
+                })),
+                dependencies: dependencies.map(d => ({
+                    id: d.id,
+                    name: d.name,
+                    description: d.description
+                })),
+                presets
+            };
+
+            // Send components to webview
             panel.webview.postMessage({
                 type: 'componentsLoaded',
-                payload: {
-                    frontends: frontends.map(f => ({
-                        id: f.id,
-                        name: f.name,
-                        description: f.description,
-                        features: f.features,
-                        recommended: f.id === 'citisignal-nextjs'
-                    })),
-                    backends: backends.map(b => ({
-                        id: b.id,
-                        name: b.name,
-                        description: b.description
-                    })),
-                    externalSystems: externalSystems.map(e => ({
-                        id: e.id,
-                        name: e.name,
-                        description: e.description
-                    })),
-                    appBuilder: appBuilder.map(a => ({
-                        id: a.id,
-                        name: a.name,
-                        description: a.description
-                    })),
-                    presets
-                }
+                payload: componentsData
+            });
+            
+            // Also send to backend for reference
+            panel.webview.postMessage({
+                type: 'update-components-data',
+                payload: componentsData
             });
         } catch (error) {
             panel.webview.postMessage({

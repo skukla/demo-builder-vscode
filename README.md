@@ -129,7 +129,12 @@ This extension is part of Adobe's Demo Builder toolkit. For development setup:
 3. Open in VSCode
 4. Press `F5` to launch Extension Development Host
 
-For detailed technical documentation, see `docs/technical.md`.
+### Documentation
+
+- **Technical Documentation**: See `docs/technical.md`
+- **Styling Guide**: See `docs/development/styling-guide.md` for CSS architecture
+- **Architecture**: See `docs/architecture/` for system design documents
+- **Changelog**: See `docs/CHANGELOG.md` for version history
 
 ## Security
 

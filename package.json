@@ -27,10 +27,6 @@
   },
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:demoBuilder.createProject",
-    "onCommand:demoBuilder.startDemo",
-    "onCommand:demoBuilder.stopDemo",
-    "onCommand:demoBuilder.deleteProject",
     "workspaceContains:.demo-builder"
   ],
   "main": "./dist/extension.js",
@@ -138,8 +134,8 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile && npm run compile:webview",
-    "compile": "tsc -p ./",
+    "compile": "npm run compile:typescript && npm run compile:webview",
+    "compile:typescript": "tsc -p ./",
     "compile:webview": "webpack --mode production",
     "watch": "tsc -watch -p ./",
     "watch:webview": "webpack --mode development --watch",

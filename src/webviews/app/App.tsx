@@ -3,6 +3,7 @@ import { Provider, defaultTheme, View } from '@adobe/react-spectrum';
 import { WizardContainer } from '../components/wizard/WizardContainer';
 import { vscode } from './vscodeApi';
 import { ThemeMode } from '../types';
+import { cn } from '../utils/classNames';
 
 export function App() {
     const [theme, setTheme] = useState<ThemeMode>('light');
@@ -58,12 +59,7 @@ export function App() {
             theme={defaultTheme} 
             colorScheme={theme}
             isQuiet // Enable quiet mode globally for minimal appearance
-            UNSAFE_style={{ 
-                width: '100%', 
-                height: '100vh',
-                margin: 0,
-                padding: 0
-            }}
+            UNSAFE_className="app-container"
         >
             <WizardContainer />
         </Provider>
