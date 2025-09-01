@@ -22,11 +22,20 @@ Create and manage Adobe Commerce demos with ease directly from Visual Studio Cod
 
 ## Installation
 
+### From VSIX Package
 1. Download the `.vsix` file from your team
 2. Open VSCode Command Palette (`Cmd+Shift+P` on Mac)
 3. Run: `Extensions: Install from VSIX...`
 4. Select the downloaded file
 5. Reload VSCode when prompted
+
+### From Source Code
+1. Clone the repository
+2. Checkout desired branch: `git checkout mvp/integration`
+3. Run setup: `npm run setup`
+4. Press `F5` to launch the extension in development mode
+
+See [build documentation](docs/build.md) for detailed build instructions.
 
 ## Quick Start
 

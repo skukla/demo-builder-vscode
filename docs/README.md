@@ -28,12 +28,18 @@ Detailed documentation about specific subsystems.
 Guides for developers working on the extension.
 
 - **[Development Strategy](./DEVELOPMENT-STRATEGY.md)** - Overall development approach and methodology
+- **[Build Instructions](./build.md)** - How to build and run the extension from source
 - **[Styling Guide](./development/styling-guide.md)** - CSS architecture and React Spectrum styling patterns
 - **[UI Patterns](./development/ui-patterns.md)** - UI/UX decisions and implementation patterns
 
 ## 🎯 Quick Navigation
 
 ### By Topic
+
+**Building & Running**
+- Build from source → [Build Instructions](./build.md)
+- Development setup → [Build Instructions - Quick Start](./build.md#quick-start)
+- Troubleshooting builds → [Build Instructions - Troubleshooting](./build.md#troubleshooting)
 
 **Prerequisites & Installation**
 - How prerequisites work → [Prerequisites System](./systems/prerequisites-system.md)

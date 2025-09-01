@@ -146,7 +146,9 @@
     "package": "vsce package",
     "publish": "vsce publish",
     "encrypt-keys": "node scripts/encrypt-keys.js",
-    "manage-keys": "node scripts/manage-keys.js"
+    "manage-keys": "node scripts/manage-keys.js",
+    "setup": "npm install && npm run compile",
+    "postinstall": "npm run compile"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
