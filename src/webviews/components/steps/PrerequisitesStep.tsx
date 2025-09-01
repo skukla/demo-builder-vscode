@@ -102,7 +102,7 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
 
         // Listen for feedback from extension
         const unsubscribe = vscode.onMessage('prerequisite-status', (data) => {
-            const { index, status, message, version, plugins } = data;
+            const { index, status, message, version, plugins, unifiedProgress } = data;
 
             // Auto-scroll to the item being checked
             if (status === 'checking' && itemRefs.current[index]) {
@@ -138,7 +138,8 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
                         status,
                         message: enhancedMessage,
                         version,
-                        plugins
+                        plugins,
+                        unifiedProgress
                     };
                 }
                 
