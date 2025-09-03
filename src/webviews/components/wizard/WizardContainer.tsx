@@ -19,7 +19,8 @@ import { CreatingStep } from '../steps/CreatingStep';
 import { vscode } from '../../app/vscodeApi';
 import { cn } from '../../utils/classNames';
 
-const WIZARD_STEPS: { id: WizardStep; name: string }[] = [
+// Default steps if not provided from configuration
+const DEFAULT_WIZARD_STEPS: { id: WizardStep; name: string }[] = [
     { id: 'welcome', name: 'Project Details' },
     { id: 'component-selection', name: 'Components' },
     { id: 'prerequisites', name: 'Prerequisites' },
@@ -33,9 +34,14 @@ const WIZARD_STEPS: { id: WizardStep; name: string }[] = [
 
 interface WizardContainerProps {
     componentDefaults?: any;
+    wizardSteps?: { id: string; name: string; enabled: boolean }[];
 }
 
-export function WizardContainer({ componentDefaults }: WizardContainerProps) {
+export function WizardContainer({ componentDefaults, wizardSteps }: WizardContainerProps) {
+    // Use provided steps or fall back to defaults
+    const WIZARD_STEPS = wizardSteps 
+        ? wizardSteps.map(step => ({ id: step.id as WizardStep, name: step.name }))
+        : DEFAULT_WIZARD_STEPS;
     const [state, setState] = useState<WizardState>({
         currentStep: 'welcome',
         projectName: '',

@@ -9,6 +9,7 @@ export function App() {
     const [theme, setTheme] = useState<ThemeMode>('light');
     const [isReady, setIsReady] = useState(false);
     const [componentDefaults, setComponentDefaults] = useState<any>(null);
+    const [wizardSteps, setWizardSteps] = useState<any>(null);
 
     useEffect(() => {
         console.log('App mounted, setting up message listeners');
@@ -27,6 +28,10 @@ export function App() {
             }
             if (data.componentDefaults) {
                 setComponentDefaults(data.componentDefaults);
+            }
+            if (data.wizardSteps) {
+                setWizardSteps(data.wizardSteps);
+                console.log('Loaded wizard steps from configuration:', data.wizardSteps);
             }
             setIsReady(true);
         });
@@ -65,7 +70,7 @@ export function App() {
             isQuiet // Enable quiet mode globally for minimal appearance
             UNSAFE_className="app-container"
         >
-            <WizardContainer componentDefaults={componentDefaults} />
+            <WizardContainer componentDefaults={componentDefaults} wizardSteps={wizardSteps} />
         </Provider>
     );
 }
