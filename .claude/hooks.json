@@ -1,0 +1,68 @@
+{
+  "description": "Demo Builder VS Code Extension - Automated Sub-Agent Hooks",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "comment": "Warn before editing complex files",
+        "tool": "Write|Edit|MultiEdit",
+        "pattern": "PrerequisitesStep\\.tsx",
+        "hooks": [
+          {
+            "type": "notify",
+            "message": "⚠️ PrerequisitesStep.tsx has known complexity issues. Consider running: 'Use quality-guardian to review PrerequisitesStep.tsx' before making changes."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "comment": "Track all source file changes",
+        "tool": "Write|Edit|MultiEdit",
+        "pattern": "src/.*\\.(tsx?|jsx?)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/track-changes.sh"
+          }
+        ]
+      },
+      {
+        "comment": "Documentation file changes",
+        "tool": "Write|Edit",
+        "pattern": ".*\\.md$",
+        "hooks": [
+          {
+            "type": "notify",
+            "message": "📝 Documentation modified. Remember to keep CLAUDE.md files in sync."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "comment": "Session end checks",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/check-documentation.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "thresholds": {
+    "quality_check": 5,
+    "doc_update": 10,
+    "commit_reminder": 3
+  },
+  "sub_agents": {
+    "quality-guardian": {
+      "trigger_patterns": ["refactor", "simplify", "clean", "complexity"],
+      "file_patterns": ["*.tsx", "*.ts", "*.jsx", "*.js"]
+    },
+    "docs-sync": {
+      "trigger_patterns": ["document", "readme", "claude.md"],
+      "file_patterns": ["*.md", "CLAUDE.md"]
+    }
+  }
+}
