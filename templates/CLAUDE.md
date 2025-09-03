@@ -11,6 +11,8 @@ templates/
 ├── prerequisites.json       # Tool requirements and installation
 ├── prerequisites.schema.json # JSON schema for validation
 ├── components.json         # Available project components
+├── defaults.json          # Default component selections
+├── wizard-steps.json      # Wizard timeline configuration
 ├── project-templates/      # Project scaffolding templates
 └── scripts/               # Installation and setup scripts
 ```
@@ -166,6 +168,61 @@ templates/
   ]
 }
 ```
+
+## Wizard Steps Configuration
+
+### wizard-steps.json Structure
+
+The `wizard-steps.json` file provides a simple configuration layer for customizing the wizard timeline without modifying React code.
+
+```json
+{
+  "steps": [
+    {
+      "id": "welcome",           // Must match WizardStep type
+      "name": "Project Setup",    // Display name in timeline
+      "enabled": true            // Show/hide this step
+    }
+  ]
+}
+```
+
+### Customization Options
+
+**Change Step Names**:
+```json
+{
+  "id": "component-selection",
+  "name": "Choose Your Stack",  // Custom display name
+  "enabled": true
+}
+```
+
+**Disable Steps** (for simplified flows):
+```json
+{
+  "id": "commerce-config",
+  "name": "Commerce",
+  "enabled": false  // Skip this step entirely
+}
+```
+
+**Reorder Steps**:
+Simply change the order of objects in the array. The wizard will follow the sequence defined in the JSON.
+
+### Use Cases
+
+1. **Quick Demo Mode**: Disable auth/org/project steps for internal demos
+2. **Simplified Flow**: Remove advanced configuration steps
+3. **Custom Branding**: Rename steps for different audiences
+4. **A/B Testing**: Test different wizard flows
+
+### Implementation Notes
+
+- Changes take effect on next extension activation
+- Invalid step IDs are ignored (fallback to defaults)
+- All steps must have corresponding React components
+- The timeline dynamically adjusts to show only enabled steps
 
 ## Components System
 
