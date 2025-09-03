@@ -1,0 +1,49 @@
+{
+  "steps": [
+    {
+      "id": "welcome",
+      "name": "Project Setup",
+      "enabled": true
+    },
+    {
+      "id": "component-selection",
+      "name": "Components",
+      "enabled": true
+    },
+    {
+      "id": "prerequisites",
+      "name": "Prerequisites",
+      "enabled": true
+    },
+    {
+      "id": "adobe-auth",
+      "name": "Authentication",
+      "enabled": true
+    },
+    {
+      "id": "org-selection",
+      "name": "Organization",
+      "enabled": true
+    },
+    {
+      "id": "project-selection",
+      "name": "Project",
+      "enabled": true
+    },
+    {
+      "id": "commerce-config",
+      "name": "Commerce",
+      "enabled": true
+    },
+    {
+      "id": "review",
+      "name": "Review",
+      "enabled": true
+    },
+    {
+      "id": "creating",
+      "name": "Creating",
+      "enabled": true
+    }
+  ]
+}
