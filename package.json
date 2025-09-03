@@ -148,7 +148,9 @@
     "encrypt-keys": "node scripts/encrypt-keys.js",
     "manage-keys": "node scripts/manage-keys.js",
     "setup": "npm install && npm run compile",
-    "postinstall": "npm run compile"
+    "postinstall": "npm run compile",
+    "hooks": "node scripts/hooks.js",
+    "docs:check": "node scripts/hooks.js coverage"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
