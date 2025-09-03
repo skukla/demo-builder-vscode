@@ -1,0 +1,243 @@
+{
+  "total_files": 15,
+  "documented_files": 1,
+  "partially_documented_files": 3,
+  "undocumented_files": 11,
+  "overall_coverage": 22.22222222222222,
+  "by_directory": {
+    "utils": {
+      "files": 15,
+      "coverage": 17.777777777777775,
+      "undocumented_items": [
+        {
+          "name": "MeshDeployer",
+          "type": "classes"
+        },
+        {
+          "name": "MeshDeployer",
+          "type": "exports"
+        },
+        {
+          "name": "getLoadingHTML",
+          "type": "functions"
+        },
+        {
+          "name": "that",
+          "type": "functions"
+        },
+        {
+          "name": "setLoadingState",
+          "type": "functions"
+        },
+        {
+          "name": "PrerequisitesChecker",
+          "type": "classes"
+        },
+        {
+          "name": "PrerequisitesChecker",
+          "type": "exports"
+        },
+        {
+          "name": "createPrerequisitesManager",
+          "type": "functions"
+        },
+        {
+          "name": "checkComponent",
+          "type": "functions"
+        },
+        {
+          "name": "resolve",
+          "type": "functions"
+        },
+        {
+          "name": "PrerequisiteCheck",
+          "type": "interfaces"
+        },
+        {
+          "name": "PrerequisiteInstall",
+          "type": "interfaces"
+        },
+        {
+          "name": "PrerequisitePlugin",
+          "type": "interfaces"
+        },
+        {
+          "name": "ComponentRequirement",
+          "type": "interfaces"
+        },
+        {
+          "name": "PrerequisitesConfig",
+          "type": "interfaces"
+        },
+        {
+          "name": "PrerequisiteStatus",
+          "type": "interfaces"
+        },
+        {
+          "name": "PrerequisiteCheck",
+          "type": "exports"
+        },
+        {
+          "name": "PrerequisiteInstall",
+          "type": "exports"
+        },
+        {
+          "name": "PrerequisitePlugin",
+          "type": "exports"
+        },
+        {
+          "name": "ComponentRequirement",
+          "type": "exports"
+        },
+        {
+          "name": "PrerequisitesConfig",
+          "type": "exports"
+        },
+        {
+          "name": "PrerequisiteStatus",
+          "type": "exports"
+        },
+        {
+          "name": "createPrerequisitesManager",
+          "type": "exports"
+        },
+        {
+          "name": "AutoUpdater",
+          "type": "classes"
+        },
+        {
+          "name": "AutoUpdater",
+          "type": "exports"
+        },
+        {
+          "name": "RecentProject",
+          "type": "interfaces"
+        },
+        {
+          "name": "ProcessManager",
+          "type": "classes"
+        },
+        {
+          "name": "ProcessManager",
+          "type": "exports"
+        },
+        {
+          "name": "Logger",
+          "type": "classes"
+        },
+        {
+          "name": "LogLevel",
+          "type": "types"
+        },
+        {
+          "name": "LogLevel",
+          "type": "exports"
+        },
+        {
+          "name": "Logger",
+          "type": "exports"
+        },
+        {
+          "name": "AdobeAuthManager",
+          "type": "classes"
+        },
+        {
+          "name": "AdobeOrg",
+          "type": "interfaces"
+        },
+        {
+          "name": "AdobeProject",
+          "type": "interfaces"
+        },
+        {
+          "name": "AdobeWorkspace",
+          "type": "interfaces"
+        },
+        {
+          "name": "AdobeOrg",
+          "type": "exports"
+        },
+        {
+          "name": "AdobeProject",
+          "type": "exports"
+        },
+        {
+          "name": "AdobeWorkspace",
+          "type": "exports"
+        },
+        {
+          "name": "AdobeAuthManager",
+          "type": "exports"
+        },
+        {
+          "name": "FrontendInstaller",
+          "type": "classes"
+        },
+        {
+          "name": "FrontendInstaller",
+          "type": "exports"
+        },
+        {
+          "name": "CommerceValidator",
+          "type": "classes"
+        },
+        {
+          "name": "CommerceValidator",
+          "type": "exports"
+        },
+        {
+          "name": "createComponentRegistryManager",
+          "type": "functions"
+        },
+        {
+          "name": "createDependencyResolver",
+          "type": "functions"
+        },
+        {
+          "name": "ComponentRegistryManager",
+          "type": "classes"
+        },
+        {
+          "name": "DependencyResolver",
+          "type": "classes"
+        },
+        {
+          "name": "ComponentRegistryManager",
+          "type": "exports"
+        },
+        {
+          "name": "DependencyResolver",
+          "type": "exports"
+        },
+        {
+          "name": "createComponentRegistryManager",
+          "type": "exports"
+        },
+        {
+          "name": "createDependencyResolver",
+          "type": "exports"
+        },
+        {
+          "name": "checkMilestones",
+          "type": "functions"
+        },
+        {
+          "name": "ProgressHandler",
+          "type": "interfaces"
+        },
+        {
+          "name": "TerminalManager",
+          "type": "classes"
+        },
+        {
+          "name": "TerminalManager",
+          "type": "exports"
+        }
+      ]
+    }
+  },
+  "suggestions": [
+    "\ud83d\udcdd Create documentation for 11 completely undocumented files",
+    "\ud83d\udcc1 Focus on improving coverage in: utils"
+  ]
+}
