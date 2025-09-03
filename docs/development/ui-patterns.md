@@ -240,8 +240,71 @@ Two-column responsive layout for better space utilization:
    - `size-4600` for menuWidth is not intuitive
    - Future developers need to know why specific values were chosen
 
+## Wizard Layout Constraints
+
+### Problem
+Adobe Spectrum's Flex component was constraining child widths to 450px in the wizard layout, causing inconsistent step widths. Some steps (Prerequisites, Auth, Organization) appeared narrower than others (Welcome, Components, Project Details).
+
+### Root Cause
+React Spectrum's Flex component applies internal constraints that don't properly inherit parent widths in certain nested layouts. This was discovered after extensive debugging using a custom WidthDebugger component.
+
+### Solution
+Replace Adobe Spectrum Flex with standard HTML div for horizontal layouts:
+
+```tsx
+// ❌ Don't: Using Adobe Spectrum Flex constrains width
+<Flex height="100%">
+    <TimelineNav />
+    <Content />
+</Flex>
+
+// ✅ Do: Using div preserves proper width inheritance
+<div style={{ display: 'flex', height: '100%', width: '100%' }}>
+    <TimelineNav />
+    <Content />
+</div>
+```
+
+**Key Implementation Details:**
+- Always include `width: '100%'` in the style object
+- Use `display: 'flex'` for flex behavior without Spectrum constraints
+- Test all wizard steps to ensure consistent widths
+- Keep Adobe Spectrum components for other uses where width isn't critical
+
+### Debugging Width Issues
+When encountering width problems:
+
+1. **Create a WidthDebugger component** to trace width inheritance:
+```tsx
+export function WidthDebugger() {
+    useEffect(() => {
+        const measureWidths = () => {
+            let element = containerRef.current;
+            const widths = [];
+            while (element) {
+                widths.push({
+                    tag: element.tagName,
+                    offsetWidth: element.offsetWidth,
+                    clientWidth: element.clientWidth,
+                    computedWidth: window.getComputedStyle(element).width
+                });
+                element = element.parentElement;
+            }
+            console.table(widths);
+        };
+        measureWidths();
+    }, []);
+    return <div ref={containerRef}>Debug Container</div>;
+}
+```
+
+2. **Look for constraints** in the ancestor chain
+3. **Test with plain HTML elements** to isolate the issue
+4. **Document the solution** for future reference
+
 ## Future Considerations
 
 - Consider creating a custom Picker wrapper component with our standard props
 - Investigate React Spectrum theming for more systematic customization
 - Monitor React Spectrum updates that might provide better native solutions
+- Create standard layout components that avoid Spectrum Flex constraints

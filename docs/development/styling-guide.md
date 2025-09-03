@@ -224,6 +224,7 @@ UNSAFE_className={cn('text-medium', 'text-muted')}
 - `m-0` to `m-10`: Margin
 - `mt-`, `mb-`, `ml-`, `mr-`: Directional spacing
 - `mx-`, `my-`: Axis spacing
+- `gap-1` to `gap-10`: Gap for flex/grid containers
 
 ### Flexbox
 - `flex`, `inline-flex`: Display types
@@ -231,17 +232,40 @@ UNSAFE_className={cn('text-medium', 'text-muted')}
 - `gap-1` to `gap-10`: Gap between items
 - `items-center`, `items-start`, `items-end`: Alignment
 - `justify-center`, `justify-between`, `justify-around`: Justification
+- `flex-1`: Flex grow/shrink/basis shorthand
 
 ### Typography
 - `text-xs` to `text-xl`: Font sizes
+- `text-sm`: Small text (12px) - commonly used for sub-items
 - `font-normal`, `font-medium`, `font-bold`: Font weights
 - `text-muted`, `text-error`, `text-success`: Semantic colors
+- `text-gray-500`, `text-gray-600`, `text-gray-700`: Gray scale colors
+- `text-green-600`, `text-green-700`: Success colors
+- `text-red-600`: Error colors
+- `text-blue-600`: Info colors
 
 ### Layout
 - `w-full`, `h-full`: Full width/height
 - `min-w-0`, `max-w-full`: Width constraints
 - `overflow-hidden`, `overflow-auto`: Overflow behavior
 - `relative`, `absolute`: Positioning
+
+### Prerequisites Specific
+- `prerequisites-container`: Scrollable container for prerequisites list
+- `prerequisite-item`: Individual prerequisite item
+- `prerequisite-message`: Message display area
+- `prerequisite-plugin-item`: Plugin sub-item styling
+- `animate-fade-in`: Fade in animation for new content
+
+### Animation Classes
+- `animate-fade-in`: Smooth fade in with slight upward movement
+- `animate-pulse`: Pulsing animation for active items
+- `transition-all`: Smooth transitions for all properties
+
+### Border Classes
+- `border`: Default border
+- `border-gray-400`: Gray border for light mode
+- `border-radius`: Standard 4px border radius
 
 ## VS Code Theme Integration
 
@@ -268,12 +292,60 @@ The system automatically adapts to VS Code themes through CSS variables:
 4. **Ensure accessibility with keyboard navigation**
 5. **Validate in both development and production builds**
 
+## Dark Mode Border Patterns
+
+When creating borders for dark mode containers, use rgba values for better visibility:
+
+```css
+/* Good: Subtle border visible in dark mode */
+.prerequisites-container {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Avoid: Too bright in dark mode */
+.container {
+    border: 1px solid #e0e0e0;
+}
+```
+
+## Scroll Container Patterns
+
+For scrollable containers within the wizard, use these patterns:
+
+```css
+.scrollable-container {
+    max-height: 360px;  /* Fixed height */
+    overflow-y: auto;   /* Vertical scroll only */
+    overflow-x: hidden; /* Prevent horizontal scroll */
+    padding: 12px;
+    
+    /* Smooth scroll behavior */
+    scroll-behavior: smooth;
+    
+    /* Custom scrollbar for better visibility */
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    &::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+    }
+    
+    &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+    }
+}
+```
+
 ## Performance Considerations
 
 1. **CSS classes are cached** by the browser, reducing re-render overhead
 2. **Avoid complex selectors** that require extensive DOM traversal
 3. **Group related style changes** to minimize reflows
 4. **Use transform/opacity** for animations instead of position/size changes
+5. **Use container queries** for responsive design within confined spaces
 
 ## Future Improvements
 

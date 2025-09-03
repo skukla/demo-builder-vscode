@@ -563,6 +563,197 @@ Enable detailed logging by checking the Demo Builder Logs output channel:
 2. Run "Demo Builder: Show Logs"
 3. Review detailed error messages and stack traces
 
+## UI Implementation
+
+### Scrollable Container Design
+
+The prerequisites UI uses a fixed-height scrollable container to maintain consistent layout:
+
+```tsx
+// PrerequisitesStep.tsx container structure
+<div 
+    ref={scrollContainerRef}
+    className="prerequisites-container"
+>
+    <Flex direction="column" gap="size-150">
+        {checks.map((check, index) => (
+            <div ref={el => itemRefs.current[index] = el}>
+                {/* Prerequisite item content */}
+            </div>
+        ))}
+    </Flex>
+</div>
+```
+
+**CSS Configuration:**
+```css
+.prerequisites-container {
+    max-height: 360px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 20px;
+    margin-bottom: 30px;
+}
+```
+
+### Auto-Scroll Implementation
+
+The system implements intelligent auto-scrolling during prerequisite checking:
+
+```typescript
+// Auto-scroll to current checking item
+useEffect(() => {
+    const currentCheckIndex = checks.findIndex(c => c.status === 'checking');
+    
+    if (currentCheckIndex !== -1 && 
+        itemRefs.current[currentCheckIndex] && 
+        scrollContainerRef.current) {
+        
+        const item = itemRefs.current[currentCheckIndex];
+        const container = scrollContainerRef.current;
+        
+        // Calculate positions
+        const itemTop = item.offsetTop;
+        const itemHeight = item.offsetHeight;
+        const containerHeight = container.clientHeight;
+        const containerScrollTop = container.scrollTop;
+        
+        // Scroll only if item is below visible area
+        if (itemTop + itemHeight > containerScrollTop + containerHeight) {
+            const scrollTo = itemTop + itemHeight - containerHeight + 10;
+            container.scrollTo({ 
+                top: Math.max(0, scrollTo), 
+                behavior: 'smooth' 
+            });
+        }
+    }
+}, [checks]);
+```
+
+### Visual Consistency for Sub-Items
+
+#### Node.js Version Display
+
+Node.js versions are displayed as sub-items with consistent formatting:
+
+```tsx
+{check.nodeVersionStatus && (
+    <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
+        {check.nodeVersionStatus.map((item, idx) => (
+            <Flex key={idx} alignItems="center" marginBottom="size-50">
+                <Text UNSAFE_className={cn('text-sm')}>
+                    {item.version}
+                    {item.component && ` (${item.component})`}
+                </Text>
+                {item.installed ? (
+                    <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
+                ) : (
+                    <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
+                )}
+            </Flex>
+        ))}
+    </View>
+)}
+```
+
+#### Plugin Display
+
+Plugins are shown as indented sub-items:
+
+```tsx
+{check.plugins && check.plugins.map((plugin, idx) => (
+    <Flex key={idx} alignItems="center" UNSAFE_className="prerequisite-plugin-item">
+        <Text UNSAFE_className={cn('text-sm')}>
+            {plugin.name}
+        </Text>
+        {plugin.status === 'installed' ? (
+            <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
+        ) : (
+            <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
+        )}
+    </Flex>
+))}
+```
+
+### Error Message Parsing
+
+The UI intelligently parses error messages to extract structured information:
+
+```typescript
+// Parse Adobe I/O CLI error messages
+if (check.name === 'Adobe I/O CLI' && check.status === 'error') {
+    const match = check.message.match(/Node\s+([\d.]+)\s*(?:\(([^)]+)\))?/g);
+    if (match) {
+        return match.map((versionStr, idx) => {
+            const versionMatch = versionStr.match(/Node\s+([\d.]+)\s*(?:\(([^)]+)\))?/);
+            const version = versionMatch?.[1] || '';
+            const component = versionMatch?.[2] || '';
+            
+            return (
+                <Flex key={idx} alignItems="center" marginBottom="size-50">
+                    <Text UNSAFE_className={cn('text-sm')}>
+                        Node {version}
+                        {component && ` (${component})`}
+                    </Text>
+                    <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
+                </Flex>
+            );
+        });
+    }
+}
+```
+
+### Success Message Display
+
+When all prerequisites pass, a success message is displayed and scrolled into view:
+
+```tsx
+{allSuccessful && (
+    <Well marginTop="size-300">
+        <Flex alignItems="center" gap="size-150">
+            <CheckmarkCircle size="M" UNSAFE_className="text-green-600" />
+            <View>
+                <Heading level={4} UNSAFE_className="text-green-700">
+                    All prerequisites satisfied
+                </Heading>
+                <Text UNSAFE_className="text-gray-600">
+                    Your environment is ready for creating demo projects
+                </Text>
+            </View>
+        </Flex>
+    </Well>
+)}
+
+// Auto-scroll to success message
+useEffect(() => {
+    if (allSuccessful && scrollContainerRef.current) {
+        setTimeout(() => {
+            scrollContainerRef.current.scrollTo({
+                top: scrollContainerRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+        }, 100);
+    }
+}, [allSuccessful]);
+```
+
+### Animation Classes
+
+Smooth animations are applied using CSS classes:
+
+```css
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+```
+
 ## Contributing
 
 When contributing to the prerequisites system:
@@ -572,6 +763,8 @@ When contributing to the prerequisites system:
 3. Test on multiple platforms if possible
 4. Document any special handling required
 5. Update this documentation for significant changes
+6. Ensure UI changes maintain visual consistency
+7. Test scroll behavior with various content lengths
 
 ## Future Enhancements
 
@@ -584,3 +777,5 @@ Planned improvements to the system:
 - **Rollback capability** for failed installations
 - **Custom progress parsers** via plugins
 - **Prerequisite version constraints** (minimum/maximum versions)
+- **Virtualized list** for better performance with many prerequisites
+- **Collapsible prerequisite groups** for better organization

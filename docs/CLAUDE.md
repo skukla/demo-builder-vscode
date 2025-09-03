@@ -164,6 +164,66 @@ src/
 - Enterprise features
 - API ecosystem
 
+## Lessons Learned
+
+### Adobe Spectrum Component Limitations
+
+#### Width Constraint Issues
+- **Problem**: Adobe Spectrum's Flex component constrains child widths to 450px in certain layouts
+- **Solution**: Use standard HTML div with flex styles for critical layouts
+- **Example**: Replace `<Flex height="100%">` with `<div style={{ display: 'flex', height: '100%', width: '100%' }}>`
+- **Why**: Spectrum components apply internal constraints that don't always inherit parent dimensions correctly
+
+#### Component Props vs CSS
+- Always prefer component props over CSS for behavior (e.g., `menuWidth` for Picker)
+- Use `UNSAFE_className` and `!important` when CSS overrides are necessary
+- Some styles require inline `UNSAFE_style` (e.g., cursor on Pickers)
+
+### Debugging Complex Layout Issues
+
+#### Width Debugging Pattern
+When encountering width issues, create a WidthDebugger component:
+```typescript
+function WidthDebugger() {
+    // Trace width inheritance through DOM tree
+    // Log offsetWidth, clientWidth, computedWidth
+    // Identify constraint source
+}
+```
+
+#### Testing Strategy
+1. Test in both light and dark themes
+2. Verify with different content lengths
+3. Check responsive behavior at various panel sizes
+4. Use browser DevTools to inspect computed styles
+
+### Scroll Management in Constrained Containers
+
+#### Container vs Page Scrolling
+- Always constrain container height with `max-height`
+- Use `overflow-y: auto` for vertical scrolling
+- Implement auto-scroll with container.scrollTo(), not window.scrollTo()
+- Calculate relative positions for smooth scrolling to items
+
+#### Auto-scroll Implementation
+- Track current checking item with refs
+- Calculate if item is below visible area
+- Scroll just enough to show item at bottom
+- Add padding to prevent cutoff
+
+### UI Consistency Patterns
+
+#### Status Display Standardization
+- Display multi-value items (versions, plugins) on separate lines
+- Use consistent icon placement (right side with margin)
+- Parse error messages to extract structured data
+- Maintain consistent font sizes for hierarchy
+
+#### Dark Mode Considerations
+- Use rgba borders for subtle visibility: `rgba(255, 255, 255, 0.2)`
+- Test all color choices in both themes
+- Ensure sufficient contrast for readability
+
 ## Contributing Guidelines
 
 ### Code Review Criteria
@@ -172,6 +232,8 @@ src/
 - Handles edge cases
 - Maintains backward compatibility
 - Updates relevant documentation
+- Tests width inheritance in layouts
+- Verifies scroll behavior
 
 ### Commit Messages
 - Use conventional commits format
