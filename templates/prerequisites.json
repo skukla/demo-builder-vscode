@@ -88,18 +88,17 @@
         "dynamic": true,
         "steps": [
           {
-            "name": "Install Node.js {version}",
-            "message": "Installing Node.js {version}",
+            "name": "Install Node.js",
+            "message": "Installing Node.js",
             "commandTemplate": "fnm install {version}",
-            "estimatedDuration": 45000,
-            "progressStrategy": "exact",
-            "progressParser": "fnm"
+            "estimatedDuration": 30000,
+            "progressStrategy": "synthetic"
           },
           {
-            "name": "Set Default",
-            "message": "Setting Node.js {version} as default",
-            "commandTemplate": "fnm use {version} --install-if-missing",
-            "estimatedDuration": 1000,
+            "name": "Set as default",
+            "message": "Setting as default Node.js version",
+            "commandTemplate": "fnm default {version}",
+            "estimatedDuration": 2000,
             "progressStrategy": "immediate"
           }
         ]
@@ -126,14 +125,14 @@
           {
             "name": "Install Adobe I/O CLI",
             "message": "Installing Adobe I/O CLI globally",
-            "commands": ["npm install -g @adobe/aio-cli"],
-            "estimatedDuration": 30000,
+            "commands": ["npm install -g @adobe/aio-cli --verbose"],
+            "estimatedDuration": 60000,
             "progressStrategy": "milestones",
             "milestones": [
-              { "pattern": "fetching", "progress": 20, "message": "Fetching packages..." },
-              { "pattern": "resolving", "progress": 40, "message": "Resolving dependencies..." },
-              { "pattern": "added", "progress": 90, "message": "Finalizing installation..." },
-              { "pattern": "packages in", "progress": 100, "message": "Installation complete!" }
+              { "pattern": "npm http", "progress": 10, "message": "Starting package download..." },
+              { "pattern": "npm warn deprecated", "progress": 40, "message": "Resolving dependencies..." },
+              { "pattern": "npm info run", "progress": 70, "message": "Building native modules..." },
+              { "pattern": "added", "progress": 100, "message": "Installation complete!" }
             ]
           }
         ]
@@ -156,8 +155,14 @@
                 "name": "Install API Mesh Plugin",
                 "message": "Installing API Mesh plugin",
                 "commands": ["aio plugins:install @adobe/aio-cli-plugin-api-mesh"],
-                "estimatedDuration": 15000,
-                "progressStrategy": "synthetic"
+                "estimatedDuration": 20000,
+                "progressStrategy": "milestones",
+                "milestones": [
+                  { "pattern": "Installing", "progress": 25, "message": "Starting plugin installation..." },
+                  { "pattern": "Fetching", "progress": 50, "message": "Fetching plugin files..." },
+                  { "pattern": "extract", "progress": 75, "message": "Extracting plugin..." },
+                  { "pattern": "@adobe/aio-cli-plugin-api-mesh", "progress": 100, "message": "API Mesh plugin installed!" }
+                ]
               }
             ]
           },
@@ -195,6 +200,14 @@
     }
   ],
   "componentRequirements": {
+    "adobe-commerce-paas": {
+      "prerequisites": ["aio-cli"],
+      "plugins": ["api-mesh"]
+    },
+    "adobe-commerce-saas": {
+      "prerequisites": ["aio-cli"],
+      "plugins": ["api-mesh"]
+    },
     "commerce-mesh": {
       "prerequisites": ["aio-cli"],
       "plugins": ["api-mesh"]

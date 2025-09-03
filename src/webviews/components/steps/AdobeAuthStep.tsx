@@ -64,7 +64,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     };
 
     return (
-        <View padding="size-400" maxWidth="size-6000">
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
             <Heading level={2} marginBottom="size-300">
                 Adobe Authentication
             </Heading>
@@ -82,11 +82,11 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                         </Flex>
                     ) : state.adobeAuth.isAuthenticated ? (
                         <Flex gap="size-200" alignItems="center">
-                            <CheckmarkCircle color="positive" />
+                            <CheckmarkCircle UNSAFE_className="text-green-600" />
                             <View>
                                 <Text><strong>Authenticated</strong></Text>
                                 {state.adobeAuth.email && (
-                                    <Text elementType="small" color="gray-700">
+                                    <Text UNSAFE_className="text-sm text-gray-700">
                                         Signed in as {state.adobeAuth.email}
                                     </Text>
                                 )}
@@ -94,10 +94,10 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                         </Flex>
                     ) : (
                         <Flex gap="size-200" alignItems="center">
-                            <AlertCircle color="notice" />
+                            <AlertCircle UNSAFE_className="text-yellow-600" />
                             <View flex>
                                 <Text><strong>Authentication Required</strong></Text>
-                                <Text elementType="small" color="gray-700">
+                                <Text UNSAFE_className="text-sm text-gray-700">
                                     {state.adobeAuth.error || 'Please sign in to continue'}
                                 </Text>
                             </View>
@@ -137,6 +137,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                     </Content>
                 </Well>
             )}
-        </View>
+        </div>
     );
 }

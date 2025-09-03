@@ -48,6 +48,7 @@
 .text-gray-700 { color: var(--spectrum-global-color-gray-700) !important; }
 .text-red-600 { color: var(--spectrum-global-color-red-600) !important; }
 .text-green-600 { color: var(--spectrum-global-color-green-600) !important; }
+.text-yellow-600 { color: var(--spectrum-global-color-yellow-600) !important; }
 .text-green-700 { color: var(--spectrum-global-color-green-700) !important; }
 .text-blue-600 { color: var(--spectrum-global-color-blue-600) !important; }
 
@@ -237,11 +238,12 @@ button[class*="spectrum-Button"][disabled],
 }
 
 .prerequisite-message {
-    font-size: 11px !important;
+    font-size: 12px !important;
+    font-weight: 400 !important;
     display: block !important;
     margin-top: 4px !important;
-    min-height: 16px !important;
-    line-height: 16px !important;
+    min-height: 17px !important;
+    line-height: 17px !important;
     transition: color 0.3s ease, opacity 0.3s ease !important;
     white-space: pre-wrap !important;
     word-break: break-word !important;
@@ -252,13 +254,48 @@ button[class*="spectrum-Button"][disabled],
     color: var(--spectrum-global-color-red-600) !important;
 }
 
+.prerequisite-message-warning {
+    color: var(--spectrum-global-color-orange-600) !important;
+}
+
 .prerequisite-message-default {
     color: var(--spectrum-global-color-gray-600) !important;
 }
 
+.node-version-line {
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    line-height: 18px !important;
+    display: block !important;
+}
+
+.node-version-success {
+    color: var(--spectrum-global-color-green-600) !important;
+}
+
+.node-version-error {
+    color: var(--spectrum-global-color-red-600) !important;
+}
+
 .prerequisite-plugin-item {
-    font-size: 11px !important;
+    font-size: 12px !important;
     margin-left: 20px !important;
+}
+
+/* Progress bar customizations */
+.progress-bar-small-label [class*="spectrum-ProgressBar-label"] {
+    font-size: 12px !important;
+    font-weight: 400 !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+}
+
+.progress-bar-full-width {
+    width: 100% !important;
+    max-width: none !important;
+}
+
+.progress-bar-full-width [class*="spectrum-ProgressBar"] {
+    width: 100% !important;
 }
 
 /* ===========================================
@@ -864,3 +901,108 @@ button[class*="spectrum-Button"][disabled],
 .mx-auto { margin-left: auto !important; margin-right: auto !important; }
 .my-2 { margin-top: 8px !important; margin-bottom: 8px !important; }
 .my-5 { margin-top: 20px !important; margin-bottom: 20px !important; }
+
+/* ===========================================
+   Smooth Transitions for Prerequisites
+   =========================================== */
+/* Smooth transitions for all prerequisite elements */
+.prerequisite-item * {
+    transition: opacity 0.3s ease, transform 0.3s ease !important;
+}
+
+.prerequisite-content > * {
+    transition: opacity 0.3s ease !important;
+}
+
+/* Message text transitions */
+.prerequisite-message,
+.prerequisite-description,
+.prerequisite-title {
+    transition: opacity 0.2s ease, color 0.3s ease !important;
+}
+
+/* Progress bar entrance/exit animations */
+[class*="spectrum-ProgressBar"] {
+    animation: fadeInUp 0.3s ease;
+    transition: opacity 0.3s ease !important;
+}
+
+@keyframes fadeInUp {
+    from { 
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Smooth progress bar value changes */
+[class*="spectrum-ProgressBar-fill"] {
+    transition: width 0.3s ease !important;
+}
+
+/* Status icon transitions */
+.prerequisite-item svg {
+    transition: opacity 0.3s ease, transform 0.2s ease, color 0.3s ease !important;
+}
+
+/* Prevent jarring height changes */
+.prerequisite-item {
+    transition: min-height 0.3s ease, padding 0.3s ease !important;
+}
+
+/* Smooth transitions for conditional content */
+.prerequisite-content > div {
+    transition: all 0.3s ease !important;
+}
+
+/* Fade in animation class */
+.animate-fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0;
+    }
+    to { 
+        opacity: 1;
+    }
+}
+
+/* Ensure smooth transitions for dynamically added content */
+.prerequisite-item [role="progressbar"],
+.prerequisite-item .progress-bar-small-label {
+    animation: fadeInUp 0.3s ease;
+}
+
+/* Smooth text content updates */
+.prerequisite-message {
+    transition: opacity 0.2s ease !important;
+}
+
+.prerequisite-message:not(:empty) {
+    animation: fadeIn 0.2s ease;
+}
+
+/* Node version status lines transitions */
+.node-version-line {
+    transition: opacity 0.3s ease, color 0.3s ease !important;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Smooth install button transitions */
+.prerequisite-item button {
+    transition: opacity 0.3s ease, transform 0.2s ease !important;
+}
+
+/* Prevent layout shift during transitions */
+.prerequisite-container {
+    will-change: scroll-position;
+}
+
+.prerequisite-item {
+    will-change: transform;
+}

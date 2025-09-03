@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { BaseCommand } from './baseCommand';
 import { PrerequisitesChecker } from '../utils/prerequisitesChecker';
-import { PrerequisitesManager, PrerequisiteDefinition, PrerequisiteStatus, PrerequisitePlugin } from '../utils/prerequisitesManager';
+import { PrerequisitesManager, PrerequisiteDefinition, PrerequisiteStatus, PrerequisitePlugin, InstallStep } from '../utils/prerequisitesManager';
 import { AdobeAuthManager } from '../utils/adobeAuthManager';
 import { setLoadingState } from '../utils/loadingHTML';
 import { ComponentHandler } from './componentHandler';
@@ -215,9 +216,25 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             case 'ready':
                 // Send initialization data
                 this.logger.info('Webview ready, sending init message');
+                
+                // Load defaults if available
+                let componentDefaults = null;
+                try {
+                    const defaultsPath = path.join(this.context.extensionPath, 'templates', 'defaults.json');
+                    if (fs.existsSync(defaultsPath)) {
+                        const defaultsContent = fs.readFileSync(defaultsPath, 'utf8');
+                        const defaults = JSON.parse(defaultsContent);
+                        componentDefaults = defaults.componentSelection;
+                        this.logger.info('Loaded component defaults from defaults.json');
+                    }
+                } catch (error) {
+                    this.logger.info('No defaults.json found or error loading it, using empty defaults');
+                }
+                
                 await this.sendMessage('init', {
                     theme: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
-                    state: await this.stateManager.getCurrentProject()
+                    state: await this.stateManager.getCurrentProject(),
+                    componentDefaults
                 });
                 break;
 
@@ -483,7 +500,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                                 }
                             }
                         } catch (error) {
-                            this.errorLogger.logWarning('Could not query fnm for installed versions', 'Prerequisites');
+                            this.errorLogger.logInfo('Could not query fnm for installed versions', 'Prerequisites');
                         }
                         
                         // Check each required Node version
@@ -617,7 +634,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 }
                 
                 // Special handling for Node.js - check if ALL required versions are installed
-                if (prereq.id === 'node' && status.installed) {
+                if (prereq.id === 'node') {
                     // Get required version families from components.json (single source of truth)
                     const registryManager = new ComponentRegistryManager(this.context.extensionPath);
                     const requiredVersionSet = await registryManager.getRequiredNodeVersions(
@@ -643,7 +660,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                                 }
                             }
                         } catch (error) {
-                            this.errorLogger.logWarning('Could not query fnm for installed versions', 'Prerequisites');
+                            this.errorLogger.logInfo('Could not query fnm for installed versions', 'Prerequisites');
                         }
                         
                         // Check which required versions are missing
@@ -665,8 +682,8 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         if (missingVersions.length > 0) {
                             status.installed = false;
                             
-                            // Build compact message showing what's installed and what's missing
-                            const messageParts: string[] = [];
+                            // Build structured data for mixed color rendering
+                            const nodeVersionStatus: Array<{version: string; component: string; installed: boolean}> = [];
                             
                             // Add installed versions
                             const installedRequiredVersions = installedVersions.filter(v => {
@@ -677,22 +694,32 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                             installedRequiredVersions.forEach(v => {
                                 const major = v.split('.')[0];
                                 const component = versionComponentMap.get(major) || '';
-                                messageParts.push(`${v}${component ? ` (${component})` : ''} ✓`);
+                                nodeVersionStatus.push({
+                                    version: v,
+                                    component,
+                                    installed: true
+                                });
                             });
                             
                             // Add missing versions
                             missingVersions.forEach(v => {
                                 const component = versionComponentMap.get(v) || '';
-                                messageParts.push(`${v}.x${component ? ` (${component})` : ''} ✗`);
+                                nodeVersionStatus.push({
+                                    version: `${v}.x`,
+                                    component,
+                                    installed: false
+                                });
                             });
                             
-                            status.message = messageParts.join(' | ');
+                            // Store structured data
+                            (status as any).nodeVersionStatus = nodeVersionStatus;
                             
                             // Store missing versions for later installation
                             (status as any).missingVersions = missingVersions;
                             (status as any).installedVersions = installedRequiredVersions;
                         } else {
                             // All required versions are installed - filter to only show required ones
+                            status.installed = true;
                             const requiredInstalledVersions = installedVersions.filter(v => {
                                 const major = v.split('.')[0];
                                 return requiredVersions.some(reqVer => reqVer === major);
@@ -714,7 +741,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 if (status.installed) {
                     this.errorLogger.logInfo(`${prereq.name} found: ${status.version || 'version unknown'}`, 'Prerequisites');
                 } else {
-                    this.errorLogger.logWarning(`${prereq.name} not installed${status.message ? ': ' + status.message : ''}`, 'Prerequisites');
+                    this.errorLogger.logInfo(`${prereq.name} not installed${status.message ? ': ' + status.message : ''}`, 'Prerequisites');
                 }
                 
                 // Send result to UI
@@ -727,13 +754,14 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         `${status.name} is not installed`),
                     version: status.version,
                     plugins: status.plugins,
+                    nodeVersionStatus: (status as any).nodeVersionStatus,
                     missingVersions: (status as any).missingVersions,
                     installedVersions: (status as any).installedVersions
                 });
                 
                 // Stop checking if this prerequisite failed and is not optional
                 if (!status.installed && !prereq.optional) {
-                    this.errorLogger.logWarning(
+                    this.errorLogger.logInfo(
                         `Prerequisite ${prereq.name} needs to be installed`,
                         'Prerequisites'
                     );
@@ -837,13 +865,6 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             // Log installation start
             this.errorLogger.logInfo(`Installing ${prereq.name}`, 'Prerequisites');
             
-            await this.sendMessage('prerequisite-status', {
-                index,
-                id: prereqId,
-                status: 'checking',
-                message: `Installing ${prereq.name}...`
-            });
-            
             // Get install commands
             let nodeVersions: string[] = [];
             
@@ -899,10 +920,41 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         status: 'success',
                         message: `All required Node.js versions are already installed`
                     });
+                    
+                    // Send install complete to continue checking other prerequisites
+                    await this.sendMessage('prerequisite-install-complete', {
+                        index,
+                        id: prereqId,
+                        continueChecking: true
+                    });
                     return;
                 }
                 
-                nodeVersions = versionsToInstall;
+                // Resolve major versions to actual versions using fnm list-remote
+                const resolvedVersions: string[] = [];
+                for (const majorVersion of versionsToInstall) {
+                    try {
+                        const { stdout } = await execAsync(`fnm list-remote | grep "^v${majorVersion}\\." | tail -1`);
+                        if (stdout) {
+                            // Remove 'v' prefix and any codename in parentheses (e.g., "(Iron)")
+                            let fullVersion = stdout.trim().replace('v', '');
+                            // Remove codename if present (e.g., "20.19.4 (Iron)" -> "20.19.4")
+                            fullVersion = fullVersion.replace(/\s*\([^)]+\).*$/, '');
+                            resolvedVersions.push(fullVersion);
+                            this.errorLogger.logInfo(`Resolved Node.js ${majorVersion} to ${fullVersion}`, 'Prerequisites');
+                        } else {
+                            // Fallback to major version if resolution fails
+                            resolvedVersions.push(majorVersion);
+                            this.errorLogger.logWarning(`Could not resolve Node.js ${majorVersion}, using major version`, 'Prerequisites');
+                        }
+                    } catch (error) {
+                        // If fnm list-remote fails, fall back to major version
+                        resolvedVersions.push(majorVersion);
+                        this.errorLogger.logWarning(`Failed to resolve Node.js ${majorVersion}: ${error}`, 'Prerequisites');
+                    }
+                }
+                
+                nodeVersions = resolvedVersions;
             }
             
             // Check if this prerequisite needs to be installed per Node version
@@ -944,20 +996,203 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             const steps = installInfo.steps;
             const totalSteps = steps.length;
             
-            for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
-                const step = steps[stepIndex];
+            // For Node.js, we need to loop through each version
+            if (prereq.id === 'node' && nodeVersions && nodeVersions.length > 0) {
+                // First, determine which version should be set as default based on component requirements
+                let versionToSetAsDefault: string | null = null;
                 
-                try {
-                    // Check for special commands that need custom handling
-                    if (step.commands && step.commands.includes('configureFnmShell')) {
-                        // Handle shell configuration specially
-                        await this.sendMessage('prerequisite-status', {
-                            index,
-                            id: prereqId,
-                            status: 'checking',
-                            message: step.message || 'Configuring shell environment...',
-                            unifiedProgress: {
-                                overall: {
+                // Get the versions that actually need AIO CLI based on component requirements
+                // This uses the same logic that determines where AIO CLI will be installed
+                const versionsNeedingAioCli = await this.getNodeVersionsForPrerequisite('aio-cli');
+                this.errorLogger.logInfo(`Node versions needing AIO CLI: ${Array.from(versionsNeedingAioCli).join(', ')}`, 'Prerequisites');
+                
+                // Find installed versions that match the requirements
+                const installedVersionsNeedingAioCli = nodeVersions.filter(version => {
+                    const majorVersion = version.split('.')[0];
+                    return versionsNeedingAioCli.has(majorVersion);
+                });
+                
+                if (installedVersionsNeedingAioCli.length > 0) {
+                    // Select the highest version that will need AIO CLI
+                    versionToSetAsDefault = installedVersionsNeedingAioCli.reduce((latest, current) => {
+                        const latestParts = latest.split('.').map(Number);
+                        const currentParts = current.split('.').map(Number);
+                        // Compare major version first
+                        if (currentParts[0] > latestParts[0]) return current;
+                        if (currentParts[0] < latestParts[0]) return latest;
+                        // If major versions are equal, compare minor
+                        if (currentParts[1] > latestParts[1]) return current;
+                        if (currentParts[1] < latestParts[1]) return latest;
+                        // If minor versions are equal, compare patch
+                        if (currentParts[2] > latestParts[2]) return current;
+                        return latest;
+                    });
+                    this.errorLogger.logInfo(`Will set Node.js ${versionToSetAsDefault} as default (will be used with AIO CLI)`, 'Prerequisites');
+                } else {
+                    // No specific AIO CLI requirements, use the latest version
+                    versionToSetAsDefault = nodeVersions.reduce((latest, current) => {
+                        const latestParts = latest.split('.').map(Number);
+                        const currentParts = current.split('.').map(Number);
+                        if (currentParts[0] > latestParts[0]) return current;
+                        if (currentParts[0] < latestParts[0]) return latest;
+                        if (currentParts[1] > latestParts[1]) return current;
+                        if (currentParts[1] < latestParts[1]) return latest;
+                        if (currentParts[2] > latestParts[2]) return current;
+                        return latest;
+                    });
+                    this.errorLogger.logInfo(`No specific AIO CLI requirements, will set ${versionToSetAsDefault} as default (latest version)`, 'Prerequisites');
+                }
+                
+                // Now install all Node versions, including "Set as default" for the selected one
+                for (let versionIndex = 0; versionIndex < nodeVersions.length; versionIndex++) {
+                    const currentVersion = nodeVersions[versionIndex];
+                    const isDefault = currentVersion === versionToSetAsDefault;
+                    
+                    // Build steps for this version
+                    const versionSteps: InstallStep[] = [];
+                    const installStep = steps.find(s => s.name === "Install Node.js");
+                    const setDefaultStep = steps.find(s => s.name === "Set as default");
+                    
+                    if (installStep) {
+                        versionSteps.push(installStep);
+                    }
+                    
+                    // Add "Set as default" step only for the version we want as default
+                    if (isDefault && setDefaultStep) {
+                        versionSteps.push(setDefaultStep);
+                    }
+                    
+                    const totalStepsForVersion = versionSteps.length;
+                    
+                    // Main message for this version
+                    let versionMessage = nodeVersions.length > 1 
+                        ? `Installing Node.js ${currentVersion} (Version ${versionIndex + 1} of ${nodeVersions.length})`
+                        : `Installing Node.js ${currentVersion}`;
+                    
+                    // Process all steps for this version
+                    for (let stepIndex = 0; stepIndex < versionSteps.length; stepIndex++) {
+                        const step = versionSteps[stepIndex];
+                        
+                        try {
+                            // Determine the step message
+                            let stepMessage = versionMessage;
+                            let stepName = "";
+                            
+                            if (step.name === "Install Node.js") {
+                                stepName = "Installing Node.js";
+                            } else if (step.name === "Set as default") {
+                                stepName = "Setting as default";
+                            }
+                            
+                            // Send initial status for this step with progress info to avoid UI blip
+                            await this.sendMessage('prerequisite-status', {
+                                index,
+                                id: prereqId,
+                                status: 'checking',
+                                message: stepMessage,
+                                unifiedProgress: {
+                                    overall: {
+                                        percent: Math.round((stepIndex / totalStepsForVersion) * 100),
+                                        currentStep: stepIndex + 1,
+                                        totalSteps: totalStepsForVersion,
+                                        stepName: stepName
+                                    }
+                                }
+                            });
+                            
+                            // Create progress handler for this step
+                            const onProgress = async (progress: UnifiedProgress) => {
+                                // Calculate percentage based on step position
+                                // If this is the final update (no command object), ensure we hit the right percentage
+                                let calculatedPercent;
+                                if (!progress.command) {
+                                    // Final update from ProgressUnifier - ensure we complete this step
+                                    calculatedPercent = Math.round(((stepIndex + 1) / totalStepsForVersion) * 100);
+                                } else {
+                                    // Progress update - calculate based on command progress
+                                    calculatedPercent = Math.round(((stepIndex + (progress.command.percent || 0) / 100) / totalStepsForVersion) * 100);
+                                }
+                                
+                                await this.sendMessage('prerequisite-status', {
+                                    index,
+                                    id: prereqId,
+                                    status: 'checking',
+                                    message: stepMessage,
+                                    unifiedProgress: {
+                                        ...progress,
+                                        overall: {
+                                            ...progress.overall,
+                                            percent: calculatedPercent,
+                                            currentStep: stepIndex + 1,
+                                            totalSteps: totalStepsForVersion,
+                                            stepName: stepName
+                                        }
+                                    }
+                                });
+                            };
+                            
+                            // Log the step
+                            this.errorLogger.logInfo(`Node.js ${currentVersion} - Step ${stepIndex + 1}/${totalStepsForVersion}: ${step.name}`, 'Prerequisites');
+                            
+                            // Execute the step with progress tracking
+                            await this.progressUnifier.executeStep(
+                                step,
+                                stepIndex,
+                                totalStepsForVersion,
+                                onProgress,
+                                { nodeVersion: currentVersion }
+                            );
+                            
+                            // Ensure this step reaches 100% completion
+                            const stepCompletePercent = Math.round(((stepIndex + 1) / totalStepsForVersion) * 100);
+                            await this.sendMessage('prerequisite-status', {
+                                index,
+                                id: prereqId,
+                                status: 'checking',
+                                message: stepMessage,
+                                unifiedProgress: {
+                                    overall: {
+                                        percent: stepCompletePercent,
+                                        currentStep: stepIndex + 1,
+                                        totalSteps: totalStepsForVersion,
+                                        stepName: stepName
+                                    }
+                                }
+                            });
+                            
+                        } catch (error: any) {
+                            const errorDetails = `Node.js ${currentVersion} - ${step.name}\nError: ${error.message}`;
+                            this.errorLogger.logError(
+                                new Error(`Failed: ${step.name} for Node.js ${currentVersion}`),
+                                'Prerequisites',
+                                false,
+                                errorDetails
+                            );
+                            throw error;
+                        }
+                    }
+                    
+                    // Add a brief delay before starting the next version (if any)
+                    if (versionIndex < nodeVersions.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                    }
+                }
+            } else {
+                // Non-Node.js prerequisite installation or Node.js with no versions specified
+                for (let stepIndex = 0; stepIndex < steps.length; stepIndex++) {
+                    const step = steps[stepIndex];
+                    
+                    try {
+                        // Check for special commands that need custom handling
+                        if (step.commands && step.commands.includes('configureFnmShell')) {
+                            // Handle shell configuration specially
+                            await this.sendMessage('prerequisite-status', {
+                                index,
+                                id: prereqId,
+                                status: 'checking',
+                                message: step.message || 'Configuring shell environment...',
+                                unifiedProgress: {
+                                    overall: {
                                     percent: Math.round(((stepIndex + 0.5) / totalSteps) * 100),
                                     currentStep: stepIndex + 1,
                                     totalSteps,
@@ -996,17 +1231,11 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     } else {
                         // Create progress handler
                         const onProgress = async (progress: UnifiedProgress) => {
-                            // Resolve message placeholders if we have a node version
-                            let resolvedMessage = step.message || step.name;
-                            if (prereq.id === 'node' && nodeVersions && nodeVersions[stepIndex]) {
-                                resolvedMessage = resolvedMessage.replace(/{version}/g, nodeVersions[stepIndex]);
-                            }
-                            
                             await this.sendMessage('prerequisite-status', {
                                 index,
                                 id: prereqId,
                                 status: 'checking',
-                                message: resolvedMessage,
+                                message: step.message || step.name,
                                 unifiedProgress: progress
                             });
                         };
@@ -1019,9 +1248,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                             step,
                             stepIndex,
                             totalSteps,
-                            onProgress,
-                            prereq.id === 'node' && nodeVersions[stepIndex] ? 
-                                { nodeVersion: nodeVersions[stepIndex] } : undefined
+                            onProgress
                         );
                     }
                     
@@ -1040,6 +1267,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     
                     this.errorLogger.logWarning(`Step failed but continuing: ${step.name}`, 'Prerequisites');
                 }
+            }
             }
             
             // Check if installation was successful
@@ -1204,87 +1432,87 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 const versionComponentMap = await this.buildNodeVersionComponentMap();
                 const componentName = versionComponentMap.get(nodeVersion) || '';
                 
+                const baseMessage = `Installing ${prereq.name} in Node ${nodeVersion}${componentName ? ` (${componentName})` : ''}`;
                 await this.sendMessage('prerequisite-status', {
                     index,
                     id: prereqId,
                     status: 'checking',
-                    message: `Installing ${prereq.name} in Node ${nodeVersion}${componentName ? ` (${componentName})` : ''}... (${i + 1}/${versionsToInstallIn.length})`
+                    message: `${baseMessage}... (${i + 1}/${versionsToInstallIn.length})`
                 });
                 
                 try {
-                    // Execute each installation step with fnm context
-                    for (const step of installInfo.steps) {
-                        // Get commands from the step
-                        const commands = step.commands || (step.commandTemplate ? [step.commandTemplate] : []);
+                    // Execute each installation step using ProgressUnifier
+                    const totalSteps = installInfo.steps.length;
+                    
+                    for (let stepIndex = 0; stepIndex < installInfo.steps.length; stepIndex++) {
+                        const step = installInfo.steps[stepIndex];
                         
-                        for (const command of commands) {
-                            // Prepend fnm context to ensure command runs in correct Node version
-                            const contextualCommand = `eval "$(fnm env)" && fnm use ${nodeVersion} && ${command}`;
-                            this.errorLogger.logInfo(`Executing in Node ${nodeVersion}: ${command}`, 'Prerequisites');
+                        // Create a modified step with fnm context prepended to commands
+                        const contextualStep = {
+                            ...step,
+                            commands: step.commands?.map(cmd => 
+                                `eval "$(fnm env)" && fnm use ${nodeVersion} && ${cmd}`
+                            ) || (step.commandTemplate ? 
+                                [`eval "$(fnm env)" && fnm use ${nodeVersion} && ${step.commandTemplate}`] : 
+                                []
+                            )
+                        };
                         
-                            try {
-                                const { stdout, stderr } = await execAsync(contextualCommand, {
-                                    timeout: 60000,
-                                    maxBuffer: 1024 * 1024 * 10
-                                });
-                            
-                            if (stdout) {
-                                this.errorLogger.logInfo(`Output: ${stdout.substring(0, 200)}...`, 'Prerequisites');
-                            }
-                            
-                            // Check for npm warnings vs errors
-                            if (stderr) {
-                                const hasOnlyWarnings = stderr.split('\n').every(line => 
-                                    !line.trim() || 
-                                    line.includes('warn') || 
-                                    line.includes('deprecated') ||
-                                    line.includes('notice') ||
-                                    line.includes('EBADENGINE')  // Engine warnings are not fatal
-                                );
-                                
-                                if (!hasOnlyWarnings) {
-                                    this.errorLogger.logWarning(`Stderr: ${stderr.substring(0, 200)}`, 'Prerequisites');
-                                }
-                            }
-                        } catch (error: any) {
-                            // Check if npm succeeded despite warnings
-                            const isNpmCommand = command.includes('npm install');
-                            
-                            // Check if error contains only deprecation warnings
-                            const errorHasOnlyDeprecationWarnings = error.stderr && 
-                                error.stderr.split('\n').every((line: string) => 
-                                    !line.trim() || 
-                                    line.includes('npm warn deprecated') ||
-                                    line.includes('warn deprecated')
-                                );
-                            
-                            // Check stdout for success indicators
-                            const hasSuccessIndicators = error.stdout && (
-                                error.stdout.includes('added') || 
-                                error.stdout.includes('changed') ||
-                                error.stdout.includes('packages in')
+                        // Create progress handler
+                        const onProgress = async (progress: UnifiedProgress) => {
+                            await this.sendMessage('prerequisite-status', {
+                                index,
+                                id: prereqId,
+                                status: 'checking',
+                                message: `${baseMessage} (${i + 1}/${versionsToInstallIn.length})`,
+                                unifiedProgress: progress
+                            });
+                        };
+                        
+                        this.errorLogger.logInfo(`Executing step ${stepIndex + 1}/${totalSteps} in Node ${nodeVersion}: ${step.name}`, 'Prerequisites');
+                        
+                        try {
+                            // Use ProgressUnifier for better progress tracking
+                            await this.progressUnifier.executeStep(
+                                contextualStep,
+                                stepIndex,
+                                totalSteps,
+                                onProgress
                             );
                             
-                            // For aio-cli, also check if the binary was installed
-                            let binaryInstalled = false;
-                            if (prereq.id === 'aio-cli') {
-                                try {
-                                    // Check if aio command is available
-                                    await execAsync('which aio');
-                                    binaryInstalled = true;
-                                } catch {
-                                    // Binary not found
+                                // For aio-cli, verify the binary was installed
+                                let binaryInstalled = false;
+                                if (prereq.id === 'aio-cli') {
+                                    try {
+                                        // Check if aio command is available in this Node version
+                                        const checkCmd = `eval "$(fnm env)" && fnm use ${nodeVersion} && which aio`;
+                                        await execAsync(checkCmd);
+                                        binaryInstalled = true;
+                                        this.errorLogger.logInfo(`Verified aio CLI is available in Node ${nodeVersion}`, 'Prerequisites');
+                                    } catch {
+                                        this.errorLogger.logWarning(`Could not verify aio CLI in Node ${nodeVersion}`, 'Prerequisites');
+                                    }
                                 }
-                            }
+                        } catch (stepError: any) {
+                            this.errorLogger.logError(
+                                stepError,
+                                `Installing ${prereq.name} in Node ${nodeVersion} - Step ${stepIndex + 1}`,
+                                false
+                            );
                             
-                            // If npm command with only deprecation warnings, or has success indicators, or binary installed
-                            if (isNpmCommand && (errorHasOnlyDeprecationWarnings || hasSuccessIndicators || binaryInstalled)) {
-                                this.errorLogger.logInfo(`Command completed with warnings in Node ${nodeVersion}`, 'Prerequisites');
-                            } else if (!isNpmCommand || (!hasSuccessIndicators && !binaryInstalled)) {
-                                throw error;
+                            // Check for specific error conditions
+                            if (stepError.message?.includes('EBADENGINE') || 
+                                stepError.message?.includes('engine')) {
+                                this.errorLogger.logWarning(
+                                    `Package incompatible with Node ${nodeVersion}, skipping`,
+                                    'Prerequisites'
+                                );
+                                // Consider this a success since it's an expected incompatibility
+                                break;
+                            } else {
+                                throw stepError;
                             }
                         }
-                    }
                     }
                     
                     successCount++;

@@ -1,0 +1,11 @@
+{
+  "componentSelection": {
+    "frontend": "citisignal-nextjs",
+    "backend": "adobe-commerce-paas",
+    "dependencies": [],
+    "services": [],
+    "externalSystems": [],
+    "appBuilderApps": []
+  },
+  "_comment": "Set component IDs above to pre-select them in the wizard. Leave empty strings or empty arrays to have no defaults."
+}

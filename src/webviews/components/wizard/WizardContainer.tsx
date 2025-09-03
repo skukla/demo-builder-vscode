@@ -31,7 +31,11 @@ const WIZARD_STEPS: { id: WizardStep; name: string }[] = [
     { id: 'creating', name: 'Creating' }
 ];
 
-export function WizardContainer() {
+interface WizardContainerProps {
+    componentDefaults?: any;
+}
+
+export function WizardContainer({ componentDefaults }: WizardContainerProps) {
     const [state, setState] = useState<WizardState>({
         currentStep: 'welcome',
         projectName: '',
@@ -39,7 +43,8 @@ export function WizardContainer() {
         adobeAuth: {
             isAuthenticated: false,
             isChecking: false
-        }
+        },
+        components: componentDefaults || undefined
     });
 
     const [canProceed, setCanProceed] = useState(false);
@@ -214,7 +219,7 @@ export function WizardContainer() {
             height="100vh"
             UNSAFE_className={cn('flex', 'overflow-hidden')}
         >
-            <Flex height="100%">
+            <div style={{ display: 'flex', height: '100%', width: '100%' }}>
                 {/* Timeline Navigation */}
                 <View 
                     width="size-3000" 
@@ -230,7 +235,7 @@ export function WizardContainer() {
                 </View>
 
                 {/* Content Area */}
-                <Flex direction="column" flex height="100%">
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', width: '100%' }}>
                     {/* Header */}
                     <View 
                         padding="size-400"
@@ -245,14 +250,13 @@ export function WizardContainer() {
                     </View>
 
                     {/* Step Content */}
-                    <View 
-                        flex
-                        padding="size-400"
-                        UNSAFE_className={cn('overflow-hidden', 'relative')}
+                    <div 
+                        style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}
+                        className={cn('overflow-hidden', 'relative')}
                     >
-                        <View
-                            height="100%"
-                            UNSAFE_className={cn(
+                        <div
+                            style={{ height: '100%', width: '100%' }}
+                            className={cn(
                                 'step-content',
                                 animationDirection,
                                 isTransitioning && 'transitioning',
@@ -260,8 +264,8 @@ export function WizardContainer() {
                             )}
                         >
                             {renderStep()}
-                        </View>
-                    </View>
+                        </div>
+                    </div>
 
                     {/* Footer */}
                     {!isLastStep && (
@@ -269,38 +273,40 @@ export function WizardContainer() {
                             padding="size-400"
                             UNSAFE_className={cn('border-t', 'bg-gray-75')}
                         >
-                            <Flex justifyContent="space-between" width="100%">
-                                <Button 
-                                    variant="secondary" 
-                                    onPress={handleCancel}
-                                    isQuiet
-                                >
-                                    Cancel
-                                </Button>
-                                <Flex gap="size-100">
-                                    <Button
-                                        variant="secondary"
-                                        onPress={goBack}
+                            <div style={{ maxWidth: '800px', width: '100%' }}>
+                                <Flex justifyContent="space-between" width="100%">
+                                    <Button 
+                                        variant="secondary" 
+                                        onPress={handleCancel}
                                         isQuiet
                                     >
-                                        Back
+                                        Cancel
                                     </Button>
-                                    <Button
-                                        variant="accent"
-                                        onPress={() => {
-                                            console.log('Continue button clicked!');
-                                            goNext();
-                                        }}
-                                        isDisabled={!canProceed}
-                                    >
-                                        {currentStepIndex === WIZARD_STEPS.length - 2 ? 'Create Project' : 'Continue'}
-                                    </Button>
+                                    <Flex gap="size-100">
+                                        <Button
+                                            variant="secondary"
+                                            onPress={goBack}
+                                            isQuiet
+                                        >
+                                            Back
+                                        </Button>
+                                        <Button
+                                            variant="accent"
+                                            onPress={() => {
+                                                console.log('Continue button clicked!');
+                                                goNext();
+                                            }}
+                                            isDisabled={!canProceed}
+                                        >
+                                            {currentStepIndex === WIZARD_STEPS.length - 2 ? 'Create Project' : 'Continue'}
+                                        </Button>
+                                    </Flex>
                                 </Flex>
-                            </Flex>
+                            </div>
                         </View>
                     )}
-                </Flex>
-            </Flex>
+                </div>
+            </div>
 
             <style>{`
                 .step-content {

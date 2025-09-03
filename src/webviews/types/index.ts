@@ -113,6 +113,11 @@ export interface PrerequisiteCheck {
         canInstall?: boolean;
     }>;
     unifiedProgress?: UnifiedProgress;
+    nodeVersionStatus?: Array<{
+        version: string;
+        component: string;
+        installed: boolean;
+    }>;
 }
 
 export interface ComponentSelection {

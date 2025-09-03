@@ -36,6 +36,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     setCanProceed,
     componentsData
 }) => {
+    // Use defaults from state.components (which includes componentDefaults from init)
     const [selectedFrontend, setSelectedFrontend] = useState<string>(state.components?.frontend || '');
     const [selectedBackend, setSelectedBackend] = useState<string>(state.components?.backend || '');
     const [selectedDependencies, setSelectedDependencies] = useState<Set<string>>(
@@ -195,10 +196,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     const dropdownClasses = 'dropdown-container';
 
     return (
-        <View 
-            height="100%" 
-            UNSAFE_className={cn('p-5', 'max-w-800', 'w-full', 'mx-auto')}
-        >
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
             {/* Two column layout for Frontend and Backend */}
             <Flex gap="size-300" wrap marginBottom="size-300">
                 {/* Frontend Section */}
@@ -386,6 +384,6 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     </View>
                 </View>
             </Flex>
-        </View>
+        </div>
     );
 };

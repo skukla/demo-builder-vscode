@@ -37,7 +37,7 @@ export function ReviewStep({ state, setCanProceed }: ReviewStepProps) {
     }, [state, setCanProceed]);
 
     return (
-        <View padding="size-400" maxWidth="size-6000">
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
             <Heading level={2} marginBottom="size-300">
                 Review Configuration
             </Heading>
@@ -57,11 +57,11 @@ export function ReviewStep({ state, setCanProceed }: ReviewStepProps) {
                     <View paddingStart="size-400">
                         <Flex direction="column" gap="size-100">
                             <Flex justifyContent="space-between">
-                                <Text color="gray-700">Name:</Text>
+                                <Text UNSAFE_className="text-gray-700">Name:</Text>
                                 <Text><strong>{state.projectName || 'Not set'}</strong></Text>
                             </Flex>
                             <Flex justifyContent="space-between">
-                                <Text color="gray-700">Template:</Text>
+                                <Text UNSAFE_className="text-gray-700">Template:</Text>
                                 <Text>{state.projectTemplate || 'commerce-paas'}</Text>
                             </Flex>
                         </Flex>
@@ -81,19 +81,19 @@ export function ReviewStep({ state, setCanProceed }: ReviewStepProps) {
                         <Flex direction="column" gap="size-100">
                             {state.adobeAuth?.email && (
                                 <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Authenticated as:</Text>
+                                    <Text UNSAFE_className="text-gray-700">Authenticated as:</Text>
                                     <Text>{state.adobeAuth.email}</Text>
                                 </Flex>
                             )}
                             {state.adobeOrg && (
                                 <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Organization:</Text>
+                                    <Text UNSAFE_className="text-gray-700">Organization:</Text>
                                     <Text><strong>{state.adobeOrg.name}</strong></Text>
                                 </Flex>
                             )}
                             {state.adobeProject && (
                                 <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Project:</Text>
+                                    <Text UNSAFE_className="text-gray-700">Project:</Text>
                                     <Text><strong>{state.adobeProject.title}</strong></Text>
                                 </Flex>
                             )}
@@ -114,19 +114,19 @@ export function ReviewStep({ state, setCanProceed }: ReviewStepProps) {
                         <View paddingStart="size-400">
                             <Flex direction="column" gap="size-100">
                                 <Flex justifyContent="space-between">
-                                    <Text color="gray-700">URL:</Text>
+                                    <Text UNSAFE_className="text-gray-700">URL:</Text>
                                     <Text><strong>{state.commerceConfig.url}</strong></Text>
                                 </Flex>
                                 <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Environment:</Text>
+                                    <Text UNSAFE_className="text-gray-700">Environment:</Text>
                                     <Text>{state.commerceConfig.environment || 'staging'}</Text>
                                 </Flex>
                                 <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Admin User:</Text>
+                                    <Text UNSAFE_className="text-gray-700">Admin User:</Text>
                                     <Text>{state.commerceConfig.adminUser}</Text>
                                 </Flex>
                                 <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Sample Data:</Text>
+                                    <Text UNSAFE_className="text-gray-700">Sample Data:</Text>
                                     <Text>{state.commerceConfig.sampleData ? 'Yes' : 'No'}</Text>
                                 </Flex>
                             </Flex>
@@ -138,17 +138,17 @@ export function ReviewStep({ state, setCanProceed }: ReviewStepProps) {
             {/* Ready to Create */}
             <Well backgroundColor="green-100">
                 <Flex gap="size-200" alignItems="center">
-                    <CheckmarkCircle color="positive" />
+                    <CheckmarkCircle UNSAFE_className="text-green-600" />
                     <Content>
                         <Text>
                             <strong>Ready to create your demo project!</strong>
                         </Text>
-                        <Text elementType="small" color="gray-700">
+                        <Text UNSAFE_className="text-sm" UNSAFE_className="text-gray-700">
                             Click "Create Project" to start the setup process. This may take several minutes.
                         </Text>
                     </Content>
                 </Flex>
             </Well>
-        </View>
+        </div>
     );
 }

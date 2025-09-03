@@ -38,10 +38,7 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
     }, [state.projectName, setCanProceed]);
 
     return (
-        <View 
-            height="100%" 
-            UNSAFE_className="welcome-step-container"
-        >
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
             <Flex direction="column" gap="size-400">
                 <View>
                     <Heading level={2} marginBottom="size-200">
@@ -109,6 +106,6 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                     </Flex>
                 </View>
             </Flex>
-        </View>
+        </div>
     );
 }

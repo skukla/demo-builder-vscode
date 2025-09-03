@@ -8,6 +8,7 @@ import { cn } from '../utils/classNames';
 export function App() {
     const [theme, setTheme] = useState<ThemeMode>('light');
     const [isReady, setIsReady] = useState(false);
+    const [componentDefaults, setComponentDefaults] = useState<any>(null);
 
     useEffect(() => {
         console.log('App mounted, setting up message listeners');
@@ -23,6 +24,9 @@ export function App() {
                 // Update body class based on theme
                 document.body.classList.remove('vscode-light', 'vscode-dark');
                 document.body.classList.add(data.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
+            }
+            if (data.componentDefaults) {
+                setComponentDefaults(data.componentDefaults);
             }
             setIsReady(true);
         });
@@ -61,7 +65,7 @@ export function App() {
             isQuiet // Enable quiet mode globally for minimal appearance
             UNSAFE_className="app-container"
         >
-            <WizardContainer />
+            <WizardContainer componentDefaults={componentDefaults} />
         </Provider>
     );
 }

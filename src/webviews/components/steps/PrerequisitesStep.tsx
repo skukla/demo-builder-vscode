@@ -45,6 +45,7 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
     const [installingIndex, setInstallingIndex] = useState<number | null>(null);
     const [versionComponentMapping, setVersionComponentMapping] = useState<{ [key: string]: string }>({});
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         // Listen for prerequisites loaded from backend
@@ -102,26 +103,44 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
 
         // Listen for feedback from extension
         const unsubscribe = vscode.onMessage('prerequisite-status', (data) => {
-            const { index, status, message, version, plugins, unifiedProgress } = data;
+            const { index, status, message, version, plugins, unifiedProgress, nodeVersionStatus } = data;
 
-            // Auto-scroll to the item being checked
-            if (status === 'checking' && itemRefs.current[index]) {
+            // Auto-scroll within the container to the item being checked (skip first item as it's already visible)
+            if (status === 'checking' && itemRefs.current[index] && scrollContainerRef.current && index > 0) {
                 // Use setTimeout to ensure DOM is updated before scrolling
                 setTimeout(() => {
-                    if (itemRefs.current[index]) {
-                        // Determine scroll position based on item position
-                        let scrollBlock = 'center';
+                    if (itemRefs.current[index] && scrollContainerRef.current) {
+                        const container = scrollContainerRef.current;
+                        const item = itemRefs.current[index];
                         
-                        // For first item, align to start
-                        if (index === 0) {
-                            scrollBlock = 'start';
+                        // Calculate position relative to container
+                        const itemTop = item.offsetTop;
+                        const itemHeight = item.offsetHeight;
+                        const containerHeight = container.clientHeight;
+                        const containerScrollTop = container.scrollTop;
+                        
+                        // Check if item is already visible
+                        const isVisible = itemTop >= containerScrollTop && 
+                                        (itemTop + itemHeight) <= (containerScrollTop + containerHeight);
+                        
+                        // Only scroll if not already visible
+                        if (!isVisible) {
+                            // If item is below visible area, scroll just enough to show it at bottom
+                            if (itemTop + itemHeight > containerScrollTop + containerHeight) {
+                                const scrollTo = itemTop + itemHeight - containerHeight + 10; // 10px padding from bottom
+                                container.scrollTo({
+                                    top: Math.max(0, scrollTo),
+                                    behavior: 'smooth'
+                                });
+                            }
+                            // If item is above visible area (shouldn't happen), scroll to show it at top
+                            else if (itemTop < containerScrollTop) {
+                                container.scrollTo({
+                                    top: Math.max(0, itemTop - 10), // 10px padding from top
+                                    behavior: 'smooth'
+                                });
+                            }
                         }
-                        // Use center for all other items including last to ensure proper padding visibility
-                        
-                        itemRefs.current[index].scrollIntoView({
-                            behavior: 'smooth',
-                            block: scrollBlock as ScrollLogicalPosition
-                        });
                     }
                 }, 100);
             }
@@ -139,7 +158,8 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
                         message: enhancedMessage,
                         version,
                         plugins,
-                        unifiedProgress
+                        unifiedProgress,
+                        nodeVersionStatus
                     };
                 }
                 
@@ -178,6 +198,19 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
             .filter(check => !check.isOptional)
             .every(check => check.status === 'success' || check.status === 'warning');
         setCanProceed(allRequired);
+        
+        // Auto-scroll to bottom of container when all prerequisites succeed
+        const allSuccess = checks.length > 0 && checks.every(check => check.status === 'success');
+        if (allSuccess && scrollContainerRef.current) {
+            setTimeout(() => {
+                if (scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollTo({
+                        top: scrollContainerRef.current.scrollHeight,
+                        behavior: 'smooth'
+                    });
+                }
+            }, 200);
+        }
     }, [checks, setCanProceed]);
 
     const checkPrerequisites = () => {
@@ -190,6 +223,14 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
             status: 'checking',
             message: 'Verifying installation...'
         })));
+        
+        // Scroll container to top to show first item being checked
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        }
     };
 
     const installPrerequisite = (index: number) => {
@@ -212,11 +253,11 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
     const getStatusIcon = (status: PrerequisiteCheck['status']) => {
         switch (status) {
             case 'success':
-                return <CheckmarkCircle size="S" color="positive" />;
+                return <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />;
             case 'error':
-                return <CloseCircle size="S" color="negative" />;
+                return <CloseCircle size="S" UNSAFE_className="text-red-600" />;
             case 'warning':
-                return <AlertCircle size="S" color="notice" />;
+                return <AlertCircle size="S" UNSAFE_className="text-yellow-600" />;
             case 'checking':
                 return <ProgressCircle size="S" isIndeterminate />;
             case 'pending':
@@ -229,31 +270,26 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
     const hasErrors = checks.some(check => check.status === 'error');
 
     return (
-        <View 
-            height="100%" 
-            UNSAFE_className={cn('p-5', 'w-full')}
-        >
-            <View UNSAFE_className={cn('flex', 'flex-column', 'h-full')}>
-                    <Text marginBottom="size-200" UNSAFE_className={cn('text-gray-700', 'text-md')}>
-                        Checking required tools. Missing tools can be installed automatically.
-                    </Text>
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+            <Text marginBottom="size-200" UNSAFE_className={cn('text-gray-700', 'text-md')}>
+                Checking required tools. Missing tools can be installed automatically.
+            </Text>
 
-                    <View 
-                        flex
-                        UNSAFE_className={cn('prerequisite-container')}
-                    >
-                        <Flex direction="column" gap="size-150" UNSAFE_className="pb-15">
-                            {checks.map((check, index) => (
-                                <div 
-                                    key={check.name} 
-                                    ref={el => itemRefs.current[index] = el}
-                                >
-                                <Flex justifyContent="space-between" alignItems="center" 
-                                    UNSAFE_className={getPrerequisiteItemClasses('pending', index === checks.length - 1)}
-                                >
-                                    <Flex gap="size-150" alignItems="center" flex>
-                                        {getStatusIcon(check.status)}
-                                        <View flex UNSAFE_className={cn('prerequisite-content')}>
+            <div 
+                ref={scrollContainerRef}
+                className="prerequisites-container">
+                <Flex direction="column" gap="size-150">
+                    {checks.map((check, index) => (
+                        <div 
+                            key={check.name} 
+                            ref={el => itemRefs.current[index] = el}
+                        >
+                            <Flex justifyContent="space-between" alignItems="center" 
+                                UNSAFE_className={getPrerequisiteItemClasses('pending', index === checks.length - 1)}
+                            >
+                            <Flex gap="size-150" alignItems="center" flex>
+                                {getStatusIcon(check.status)}
+                                <View flex UNSAFE_className={cn('prerequisite-content')}>
                                             <Text UNSAFE_className={cn('prerequisite-title')}>
                                                 {check.name}
                                                 {check.isOptional && <span style={{ fontWeight: 400, opacity: 0.7 }}> (Optional)</span>}
@@ -262,79 +298,162 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
                                             <Text UNSAFE_className={cn('prerequisite-description')}>
                                                 {check.description}
                                             </Text>
-                                            <Text UNSAFE_className={getPrerequisiteMessageClasses(check.status)}>
-                                                {check.message || 'Waiting...'}
-                                            </Text>
-                                            {check.status === 'checking' && check.unifiedProgress && (
-                                                <View marginTop="size-100">
-                                                    <ProgressBar 
-                                                        label={`Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}`}
-                                                        value={check.unifiedProgress.overall.percent}
-                                                        maxValue={100}
-                                                        showValueLabel
-                                                        size="S"
-                                                        UNSAFE_className="mb-2"
-                                                    />
-                                                    
-                                                    {check.unifiedProgress.command && (
-                                                        <Flex gap="size-100" alignItems="center" marginTop="size-50">
-                                                            {check.unifiedProgress.command.type === 'indeterminate' ? (
-                                                                <ProgressCircle size="S" isIndeterminate aria-label="Processing" />
-                                                            ) : (
-                                                                <ProgressBar 
-                                                                    value={check.unifiedProgress.command.percent || 0}
-                                                                    maxValue={100}
-                                                                    size="S"
-                                                                    label=""
-                                                                    UNSAFE_className="flex-1"
-                                                                />
-                                                            )}
-                                                            <Text UNSAFE_className={cn('text-xs', 'text-muted')}>
-                                                                {check.unifiedProgress.command.detail}
-                                                                {check.unifiedProgress.command.confidence !== 'exact' && ' (estimated)'}
+                                            {check.nodeVersionStatus ? (
+                                                <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
+                                                    {check.nodeVersionStatus.map((item, idx) => (
+                                                        <Flex key={idx} alignItems="center" marginBottom="size-50">
+                                                            <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>
+                                                                {item.version}
+                                                                {item.component && ` (${item.component})`}
                                                             </Text>
+                                                            {item.installed ? (
+                                                                <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
+                                                            ) : (
+                                                                <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
+                                                            )}
                                                         </Flex>
+                                                    ))}
+                                                </View>
+                                            ) : (
+                                                <View>
+                                                    {/* Convert Node.js success message to nodeVersionStatus format */}
+                                                    {check.name === 'Node.js' && check.status === 'success' && check.message?.includes(',') ? (
+                                                        <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
+                                                            {check.message.split(',').map((versionInfo, idx) => {
+                                                                // Parse "20.19.4 (Adobe Commerce API Mesh)" format
+                                                                const match = versionInfo.trim().match(/^([\d.]+)\s*(?:\((.+)\))?$/);
+                                                                const version = match?.[1] || versionInfo.trim();
+                                                                const component = match?.[2] || '';
+                                                                
+                                                                return (
+                                                                    <Flex key={idx} alignItems="center" marginBottom="size-50">
+                                                                        <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>
+                                                                            {version}
+                                                                            {component && ` (${component})`}
+                                                                        </Text>
+                                                                        <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
+                                                                    </Flex>
+                                                                );
+                                                            })}
+                                                        </View>
+                                                    ) : check.name === 'Adobe I/O CLI' && check.status === 'error' && check.message?.includes('Node') ? (
+                                                        // Parse and display Adobe I/O CLI error versions as sub-items
+                                                        <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
+                                                            {(() => {
+                                                                // Extract version info from error message like "Adobe I/O CLI missing in: Node 20.19.4 (Adobe Commerce API Mesh)"
+                                                                const match = check.message.match(/Node\s+([\d.]+)\s*(?:\(([^)]+)\))?/g);
+                                                                if (match) {
+                                                                    return match.map((versionStr, idx) => {
+                                                                        const versionMatch = versionStr.match(/Node\s+([\d.]+)\s*(?:\(([^)]+)\))?/);
+                                                                        const version = versionMatch?.[1] || '';
+                                                                        const component = versionMatch?.[2] || '';
+                                                                        return (
+                                                                            <Flex key={idx} alignItems="center" marginBottom="size-50">
+                                                                                <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>
+                                                                                    Node {version}
+                                                                                    {component && ` (${component})`}
+                                                                                </Text>
+                                                                                <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
+                                                                            </Flex>
+                                                                        );
+                                                                    });
+                                                                }
+                                                                // Fallback if parsing fails
+                                                                return (
+                                                                    <Text UNSAFE_className={cn(getPrerequisiteMessageClasses(check.status), 'animate-fade-in')}>
+                                                                        {check.message}
+                                                                    </Text>
+                                                                );
+                                                            })()}
+                                                        </View>
+                                                    ) : (
+                                                        // Only show the main message if there are no plugins or if status is not success
+                                                        (!check.plugins || check.plugins.length === 0 || check.status !== 'success') && (
+                                                            <Text UNSAFE_className={cn(getPrerequisiteMessageClasses(check.status), 'animate-fade-in')}>
+                                                                {check.message || 'Waiting...'}
+                                                            </Text>
+                                                        )
+                                                    )}
+                                                </View>
+                                            )}
+                                            {check.status === 'checking' && check.unifiedProgress && (
+                                                <View marginTop="size-100" UNSAFE_className="animate-fade-in">
+                                                    {check.unifiedProgress.command?.type === 'determinate' && check.unifiedProgress.command?.percent != null ? (
+                                                        // Show command-level progress when we have exact percentages
+                                                        <ProgressBar 
+                                                            label={
+                                                                check.unifiedProgress.command.currentMilestoneIndex && check.unifiedProgress.command.totalMilestones
+                                                                    ? `${check.unifiedProgress.command.currentMilestoneIndex}/${check.unifiedProgress.command.totalMilestones}: ${check.unifiedProgress.command.detail}`
+                                                                    : `Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.command.detail || check.unifiedProgress.overall.stepName}`
+                                                            }
+                                                            value={check.unifiedProgress.command.percent}
+                                                            maxValue={100}
+                                                            showValueLabel
+                                                            size="S"
+                                                            UNSAFE_className="mb-2 progress-bar-small-label progress-bar-full-width"
+                                                        />
+                                                    ) : (
+                                                        // Show overall progress for milestones or synthetic progress
+                                                        <ProgressBar 
+                                                            label={`Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}`}
+                                                            value={check.unifiedProgress.overall.percent}
+                                                            maxValue={100}
+                                                            showValueLabel
+                                                            size="S"
+                                                            UNSAFE_className="mb-2 progress-bar-small-label progress-bar-full-width"
+                                                        />
                                                     )}
                                                 </View>
                                             )}
                                             {check.plugins && check.plugins.length > 0 && (check.status === 'checking' || check.status === 'success' || check.status === 'error') && (
-                                                <View marginTop="size-100">
+                                                <View marginTop="size-100" UNSAFE_className="animate-fade-in">
                                                     {check.plugins.map(plugin => (
-                                                        <Flex key={plugin.id} alignItems="center" gap="size-50" marginBottom="size-50">
-                                                            <Text UNSAFE_className={cn('prerequisite-plugin-item')}>
-                                                                {plugin.name}
+                                                        <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
+                                                            <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : 'prerequisite-plugin-item')}>
+                                                                {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
                                                             </Text>
                                                             {check.status === 'checking' && plugin.installed === undefined ? (
-                                                                <Pending size="XS" />
+                                                                <Pending size="XS" marginStart="size-50" />
                                                             ) : plugin.installed ? (
-                                                                <CheckmarkCircle size="XS" color="positive" />
+                                                                <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
                                                             ) : (
-                                                                <CloseCircle size="XS" color="negative" />
+                                                                <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
                                                             )}
                                                         </Flex>
                                                     ))}
                                                 </View>
                                             )}
-                                        </View>
-                                    </Flex>
-                                    {check.status === 'error' && check.canInstall && (
-                                        <Button
+                                </View>
+                            </Flex>
+                            {check.status === 'error' && check.canInstall && (
+                                <Button
                                             variant="secondary"
                                             onPress={() => installPrerequisite(index)}
                                             isDisabled={installingIndex !== null}
                                             UNSAFE_className={cn('btn-compact', 'min-w-100')}
                                         >
                                             Install
-                                        </Button>
-                                    )}
-                                </Flex>
-                                </div>
-                            ))}
+                                </Button>
+                            )}
+                        </Flex>
+                        </div>
+                    ))}
+                </Flex>
+                
+                {!hasErrors && checks.every(check => check.status === 'success') && (
+                    <View marginTop="size-300" paddingBottom="size-200">
+                        <Flex gap="size-100" alignItems="center">
+                            <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            <Text UNSAFE_className={cn('success-text')}>
+                                All prerequisites installed!
+                            </Text>
                         </Flex>
                     </View>
+                )}
+            </div>
 
-                    <Flex gap="size-150" marginBottom="size-200">
-                        <Button
+            <Flex gap="size-150" marginTop="size-200">
+                <Button
                             variant="secondary"
                             onPress={checkPrerequisites}
                             isDisabled={isChecking || installingIndex !== null}
@@ -343,18 +462,6 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
                             Recheck
                         </Button>
                     </Flex>
-
-                    {!hasErrors && checks.every(check => check.status === 'success') && (
-                        <View UNSAFE_className="mt-auto">
-                            <Flex gap="size-100" alignItems="center">
-                                <CheckmarkCircle size="S" color="positive" />
-                                <Text UNSAFE_className={cn('success-text')}>
-                                    All prerequisites installed!
-                                </Text>
-                            </Flex>
-                        </View>
-                    )}
-            </View>
-        </View>
+        </div>
     );
 }

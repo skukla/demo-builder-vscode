@@ -107,7 +107,8 @@ export function ProjectSelectionStep({ state, updateState, setCanProceed }: Proj
 
     if (isLoading) {
         return (
-            <View padding="size-400" maxWidth="size-6000">
+            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+                <View>
                 <Heading level={2} marginBottom="size-300">
                     Select Project
                 </Heading>
@@ -115,34 +116,37 @@ export function ProjectSelectionStep({ state, updateState, setCanProceed }: Proj
                     <ProgressCircle size="S" isIndeterminate />
                     <Text>Loading projects...</Text>
                 </Flex>
-            </View>
+                </View>
+            </div>
         );
     }
 
     if (error) {
         return (
-            <View padding="size-400" maxWidth="size-6000">
+            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+                <View>
                 <Heading level={2} marginBottom="size-300">
                     Select Project
                 </Heading>
                 <Well>
                     <Flex gap="size-200" alignItems="center">
-                        <AlertCircle color="negative" />
+                        <AlertCircle UNSAFE_className="text-red-600" />
                         <View flex>
                             <Text><strong>Error Loading Projects</strong></Text>
-                            <Text elementType="small" color="gray-700">{error}</Text>
+                            <Text UNSAFE_className="text-sm text-gray-700">{error}</Text>
                         </View>
                     </Flex>
                 </Well>
                 <Button variant="secondary" onPress={loadProjects} marginTop="size-200">
                     Retry
                 </Button>
-            </View>
+                </View>
+            </div>
         );
     }
 
     return (
-        <View padding="size-400" maxWidth="size-6000">
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
             <Heading level={2} marginBottom="size-300">
                 Select Project
             </Heading>
@@ -157,7 +161,7 @@ export function ProjectSelectionStep({ state, updateState, setCanProceed }: Proj
                     <Flex gap="size-200" alignItems="center">
                         <Building />
                         <View>
-                            <Text elementType="small" color="gray-700">Organization</Text>
+                            <Text UNSAFE_className="text-sm text-gray-700">Organization</Text>
                             <Text><strong>{state.adobeOrg.name}</strong></Text>
                         </View>
                     </Flex>
@@ -178,7 +182,7 @@ export function ProjectSelectionStep({ state, updateState, setCanProceed }: Proj
 
                     {/* Results count */}
                     <Flex justifyContent="space-between" marginBottom="size-100">
-                        <Text elementType="small" color="gray-700">
+                        <Text UNSAFE_className="text-sm text-gray-700">
                             {filteredProjects.length === projects.length 
                                 ? `${projects.length} projects available`
                                 : `Showing ${filteredProjects.length} of ${projects.length} projects`
@@ -215,7 +219,7 @@ export function ProjectSelectionStep({ state, updateState, setCanProceed }: Proj
                                 <Item key={item.id} textValue={item.title}>
                                     <Folder />
                                     <Text>{item.title}</Text>
-                                    <Text slot="description" elementType="small">
+                                    <Text slot="description" UNSAFE_className="text-sm">
                                         {item.description || item.name}
                                     </Text>
                                     {selectedProjectId === item.id && (
@@ -229,7 +233,7 @@ export function ProjectSelectionStep({ state, updateState, setCanProceed }: Proj
                     ) : (
                         <Well>
                             <Flex gap="size-200" alignItems="center">
-                                <AlertCircle color="notice" />
+                                <AlertCircle UNSAFE_className="text-yellow-600" />
                                 <Text>
                                     No projects found matching "{searchQuery}". Try a different search term.
                                 </Text>
@@ -247,7 +251,7 @@ export function ProjectSelectionStep({ state, updateState, setCanProceed }: Proj
                                         <strong>Selected:</strong> {state.adobeProject.title}
                                     </Text>
                                     {state.adobeProject.description && (
-                                        <Text elementType="small" color="gray-700">
+                                        <Text UNSAFE_className="text-sm text-gray-700">
                                             {state.adobeProject.description}
                                         </Text>
                                     )}
@@ -264,6 +268,6 @@ export function ProjectSelectionStep({ state, updateState, setCanProceed }: Proj
                     </Flex>
                 </Well>
             )}
-        </View>
+        </div>
     );
 }

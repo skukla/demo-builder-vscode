@@ -11,6 +11,17 @@
     }
 }
 
+/* Prerequisites Container */
+.prerequisites-container {
+    max-height: 360px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 20px;
+    margin-bottom: 30px;
+}
+
 /* Step Content Animations */
 .step-content {
     opacity: 1;

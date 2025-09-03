@@ -42,6 +42,7 @@
         "name": "Adobe Commerce PaaS",
         "description": "Adobe Commerce DSN instance",
         "configuration": {
+          "nodeVersion": "20",
           "required": {
             "commerceUrl": {
               "type": "url",

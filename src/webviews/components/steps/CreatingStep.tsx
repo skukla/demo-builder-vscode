@@ -11,7 +11,7 @@ export function CreatingStep({ state }: CreatingStepProps) {
     const progress = state.creationProgress;
 
     return (
-        <View padding="size-400">
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
             <Heading level={2} marginBottom="size-300">
                 Creating Your Demo Project
             </Heading>
@@ -30,7 +30,7 @@ export function CreatingStep({ state }: CreatingStepProps) {
                             <ProgressCircle size="S" isIndeterminate />
                             <View>
                                 <Text><strong>{progress.currentOperation}</strong></Text>
-                                <Text elementType="small" color="gray-700">
+                                <Text UNSAFE_className="text-sm text-gray-700">
                                     {progress.message}
                                 </Text>
                             </View>
@@ -45,8 +45,8 @@ export function CreatingStep({ state }: CreatingStepProps) {
                     )}
 
                     {progress.error && (
-                        <Well backgroundColor="red-100" marginTop="size-300">
-                            <Text color="red-600">
+                        <Well marginTop="size-300" UNSAFE_className="bg-red-100">
+                            <Text UNSAFE_className="text-red-600">
                                 <strong>Error:</strong> {progress.error}
                             </Text>
                         </Well>
@@ -55,6 +55,6 @@ export function CreatingStep({ state }: CreatingStepProps) {
             ) : (
                 <Text>Initializing project creation...</Text>
             )}
-        </View>
+        </div>
     );
 }

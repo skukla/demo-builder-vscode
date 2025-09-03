@@ -98,7 +98,8 @@ export function OrgSelectionStep({ state, updateState, setCanProceed }: OrgSelec
 
     if (isLoading) {
         return (
-            <View padding="size-400" maxWidth="size-6000">
+            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+                <View>
                 <Heading level={2} marginBottom="size-300">
                     Select Organization
                 </Heading>
@@ -106,34 +107,37 @@ export function OrgSelectionStep({ state, updateState, setCanProceed }: OrgSelec
                     <ProgressCircle size="S" isIndeterminate />
                     <Text>Loading organizations...</Text>
                 </Flex>
-            </View>
+                </View>
+            </div>
         );
     }
 
     if (error) {
         return (
-            <View padding="size-400" maxWidth="size-6000">
+            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+                <View>
                 <Heading level={2} marginBottom="size-300">
                     Select Organization
                 </Heading>
                 <Well>
                     <Flex gap="size-200" alignItems="center">
-                        <AlertCircle color="negative" />
+                        <AlertCircle UNSAFE_className="text-red-600" />
                         <View flex>
                             <Text><strong>Error Loading Organizations</strong></Text>
-                            <Text elementType="small" color="gray-700">{error}</Text>
+                            <Text UNSAFE_className="text-sm text-gray-700">{error}</Text>
                         </View>
                     </Flex>
                 </Well>
                 <Button variant="secondary" onPress={loadOrganizations} marginTop="size-200">
                     Retry
                 </Button>
-            </View>
+                </View>
+            </div>
         );
     }
 
     return (
-        <View padding="size-400" maxWidth="size-6000">
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
             <Heading level={2} marginBottom="size-300">
                 Select Organization
             </Heading>
@@ -156,7 +160,7 @@ export function OrgSelectionStep({ state, updateState, setCanProceed }: OrgSelec
 
                     {/* Results count */}
                     <Flex justifyContent="space-between" marginBottom="size-100">
-                        <Text elementType="small" color="gray-700">
+                        <Text UNSAFE_className="text-sm text-gray-700">
                             {filteredOrganizations.length === organizations.length 
                                 ? `${organizations.length} organizations available`
                                 : `Showing ${filteredOrganizations.length} of ${organizations.length} organizations`
@@ -193,7 +197,7 @@ export function OrgSelectionStep({ state, updateState, setCanProceed }: OrgSelec
                                 <Item key={item.id} textValue={item.name}>
                                     <Building />
                                     <Text>{item.name}</Text>
-                                    <Text slot="description" elementType="small">
+                                    <Text slot="description" UNSAFE_className="text-sm">
                                         {item.code}
                                     </Text>
                                     {selectedOrgId === item.id && (
@@ -207,7 +211,7 @@ export function OrgSelectionStep({ state, updateState, setCanProceed }: OrgSelec
                     ) : (
                         <Well>
                             <Flex gap="size-200" alignItems="center">
-                                <AlertCircle color="notice" />
+                                <AlertCircle UNSAFE_className="text-yellow-600" />
                                 <Text>
                                     No organizations found matching "{searchQuery}". Try a different search term.
                                 </Text>
@@ -224,7 +228,7 @@ export function OrgSelectionStep({ state, updateState, setCanProceed }: OrgSelec
                                     <Text>
                                         <strong>Selected:</strong> {state.adobeOrg.name}
                                     </Text>
-                                    <Text elementType="small" color="gray-700">
+                                    <Text UNSAFE_className="text-sm text-gray-700">
                                         Code: {state.adobeOrg.code}
                                     </Text>
                                 </Content>
@@ -240,6 +244,6 @@ export function OrgSelectionStep({ state, updateState, setCanProceed }: OrgSelec
                     </Flex>
                 </Well>
             )}
-        </View>
+        </div>
     );
 }

@@ -76,7 +76,7 @@ export function CommerceConfigStep({ state, updateState, setCanProceed }: Commer
     };
 
     return (
-        <View padding="size-400" maxWidth="size-6000">
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
             <Heading level={2} marginBottom="size-300">
                 Commerce Configuration
             </Heading>
@@ -165,7 +165,7 @@ export function CommerceConfigStep({ state, updateState, setCanProceed }: Commer
                             Install sample data
                         </Checkbox>
                         
-                        <Text elementType="small" color="gray-700">
+                        <Text UNSAFE_className="text-sm text-gray-700">
                             Sample data includes products, categories, and customer data for demo purposes.
                         </Text>
                     </Flex>
@@ -174,13 +174,13 @@ export function CommerceConfigStep({ state, updateState, setCanProceed }: Commer
                 {state.adobeProject && (
                     <Well marginTop="size-400" backgroundColor="blue-100">
                         <Content>
-                            <Text elementType="small" color="gray-700">
+                            <Text UNSAFE_className="text-sm text-gray-700">
                                 This configuration will be used for project: <strong>{state.adobeProject.title}</strong>
                             </Text>
                         </Content>
                     </Well>
                 )}
             </Form>
-        </View>
+        </div>
     );
 }

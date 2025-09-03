@@ -14,6 +14,8 @@ export interface UnifiedProgress {
         percent?: number;
         detail?: string;
         confidence: 'exact' | 'estimated' | 'synthetic';
+        currentMilestoneIndex?: number;
+        totalMilestones?: number;
     };
 }
 
@@ -65,16 +67,16 @@ export class ProgressUnifier {
             // Execute based on strategy
             switch (step.progressStrategy) {
                 case 'exact':
-                    await this.executeWithExactProgress(command, step, stepIndex, totalSteps, onProgress);
+                    await this.executeWithExactProgress(command, step, stepIndex, totalSteps, onProgress, options);
                     break;
                 case 'milestones':
-                    await this.executeWithMilestones(command, step, stepIndex, totalSteps, onProgress);
+                    await this.executeWithMilestones(command, step, stepIndex, totalSteps, onProgress, options);
                     break;
                 case 'immediate':
-                    await this.executeImmediate(command, step, stepIndex, totalSteps, onProgress);
+                    await this.executeImmediate(command, step, stepIndex, totalSteps, onProgress, options);
                     break;
                 default:
-                    await this.executeWithSyntheticProgress(command, step, stepIndex, totalSteps, onProgress);
+                    await this.executeWithSyntheticProgress(command, step, stepIndex, totalSteps, onProgress, options);
             }
         }
         
@@ -116,7 +118,8 @@ export class ProgressUnifier {
         step: InstallStep,
         stepIndex: number,
         totalSteps: number,
-        onProgress: ProgressHandler
+        onProgress: ProgressHandler,
+        options?: { nodeVersion?: string }
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
@@ -137,7 +140,7 @@ export class ProgressUnifier {
                                 percent: Math.round(((stepIndex + (percent / 100)) / totalSteps) * 100),
                                 currentStep: stepIndex + 1,
                                 totalSteps,
-                                stepName: step.name
+                                stepName: this.resolveStepName(step, options)
                             },
                             command: {
                                 type: 'determinate',
@@ -174,31 +177,37 @@ export class ProgressUnifier {
         step: InstallStep,
         stepIndex: number,
         totalSteps: number,
-        onProgress: ProgressHandler
+        onProgress: ProgressHandler,
+        options?: { nodeVersion?: string }
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
             const milestones = step.milestones || [];
             let currentProgress = 0;
+            let currentMilestoneIndex = 0;
             let outputBuffer = '';
             
             const checkMilestones = async (text: string) => {
-                for (const milestone of milestones) {
+                for (let i = 0; i < milestones.length; i++) {
+                    const milestone = milestones[i];
                     if (text.includes(milestone.pattern) && milestone.progress > currentProgress) {
                         currentProgress = milestone.progress;
+                        currentMilestoneIndex = i + 1; // 1-based for display
                         
                         await onProgress({
                             overall: {
                                 percent: Math.round(((stepIndex + (currentProgress / 100)) / totalSteps) * 100),
                                 currentStep: stepIndex + 1,
                                 totalSteps,
-                                stepName: step.name
+                                stepName: this.resolveStepName(step, options)
                             },
                             command: {
                                 type: 'determinate',
                                 percent: currentProgress,
                                 detail: milestone.message || text.trim().substring(0, 100),
-                                confidence: 'estimated'
+                                confidence: 'estimated',
+                                currentMilestoneIndex,
+                                totalMilestones: milestones.length
                             }
                         });
                         break;
@@ -238,7 +247,8 @@ export class ProgressUnifier {
         step: InstallStep,
         stepIndex: number,
         totalSteps: number,
-        onProgress: ProgressHandler
+        onProgress: ProgressHandler,
+        options?: { nodeVersion?: string }
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
@@ -310,7 +320,8 @@ export class ProgressUnifier {
         step: InstallStep,
         stepIndex: number,
         totalSteps: number,
-        onProgress: ProgressHandler
+        onProgress: ProgressHandler,
+        options?: { nodeVersion?: string }
     ): Promise<void> {
         // Special handling for internal commands
         if (command === 'configureFnmShell') {
@@ -334,28 +345,78 @@ export class ProgressUnifier {
         
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
+            const estimatedDuration = step.estimatedDuration || 500;
+            const minDuration = Math.min(estimatedDuration, 1000); // Cap at 1 second for immediate operations
+            const startTime = Date.now();
+            let commandCompleted = false;
+            let commandExitCode: number | null = null;
+            
+            // Create smooth progress updates (skip initial 0% to avoid blip)
+            const progressSteps = [
+                { time: minDuration * 0.2, percent: 20, detail: 'Processing...' },
+                { time: minDuration * 0.5, percent: 50, detail: 'Configuring...' },
+                { time: minDuration * 0.8, percent: 80, detail: 'Finishing...' }
+            ];
+            
+            const progressTimeouts: NodeJS.Timeout[] = [];
+            
+            // Schedule progress updates
+            progressSteps.forEach(({ time, percent, detail }) => {
+                const timeout = setTimeout(async () => {
+                    if (!commandCompleted) {
+                        await onProgress({
+                            overall: {
+                                percent: Math.round(((stepIndex + (percent / 100)) / totalSteps) * 100),
+                                currentStep: stepIndex + 1,
+                                totalSteps,
+                                stepName: this.resolveStepName(step, options)
+                            },
+                            command: {
+                                type: 'determinate',
+                                percent,
+                                detail,
+                                confidence: 'exact'
+                            }
+                        });
+                    }
+                }, time);
+                progressTimeouts.push(timeout);
+            });
             
             child.on('close', async (code) => {
-                await onProgress({
-                    overall: {
-                        percent: Math.round(((stepIndex + 1) / totalSteps) * 100),
-                        currentStep: stepIndex + 1,
-                        totalSteps,
-                        stepName: step.name
-                    },
-                    command: {
-                        type: 'determinate',
-                        percent: 100,
-                        detail: 'Complete',
-                        confidence: 'exact'
-                    }
-                });
+                commandCompleted = true;
+                commandExitCode = code;
                 
-                if (code === 0 || step.continueOnError) {
-                    resolve();
-                } else {
-                    reject(new Error(`Command failed with code ${code}: ${command}`));
-                }
+                // Clear any pending progress updates
+                progressTimeouts.forEach(timeout => clearTimeout(timeout));
+                
+                // Calculate how long we should wait before showing completion
+                const elapsed = Date.now() - startTime;
+                const remainingTime = Math.max(0, minDuration - elapsed);
+                
+                // Wait for minimum duration to ensure smooth transition
+                setTimeout(async () => {
+                    await onProgress({
+                        overall: {
+                            percent: Math.round(((stepIndex + 1) / totalSteps) * 100),
+                            currentStep: stepIndex + 1,
+                            totalSteps,
+                            stepName: this.resolveStepName(step, options)
+                        },
+                        command: {
+                            type: 'determinate',
+                            percent: 100,
+                            detail: 'Complete',
+                            confidence: 'exact'
+                        }
+                    });
+                    
+                    if (commandExitCode === 0 || step.continueOnError) {
+                        resolve();
+                    } else {
+                        reject(new Error(`Command failed with code ${commandExitCode}: ${command}`));
+                    }
+                }, remainingTime);
             });
         });
     }
@@ -364,8 +425,14 @@ export class ProgressUnifier {
      * Spawn a command with proper shell configuration
      */
     private spawnCommand(command: string): ChildProcessWithoutNullStreams {
+        // Wrap fnm commands with environment initialization
+        let actualCommand = command;
+        if (command.startsWith('fnm ')) {
+            actualCommand = `eval "$(fnm env)" && ${command}`;
+        }
+        
         // For complex commands, use shell
-        return spawn(command, [], {
+        return spawn(actualCommand, [], {
             shell: true,
             env: {
                 ...process.env,
