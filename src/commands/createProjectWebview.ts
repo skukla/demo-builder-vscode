@@ -231,10 +231,26 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     this.logger.info('No defaults.json found or error loading it, using empty defaults');
                 }
                 
+                // Load wizard steps configuration
+                let wizardSteps = null;
+                try {
+                    const stepsPath = path.join(this.context.extensionPath, 'templates', 'wizard-steps.json');
+                    if (fs.existsSync(stepsPath)) {
+                        const stepsContent = fs.readFileSync(stepsPath, 'utf8');
+                        const stepsConfig = JSON.parse(stepsContent);
+                        // Filter enabled steps only
+                        wizardSteps = stepsConfig.steps.filter((step: any) => step.enabled);
+                        this.logger.info(`Loaded wizard steps configuration: ${wizardSteps.length} steps enabled`);
+                    }
+                } catch (error) {
+                    this.logger.info('Error loading wizard-steps.json, will use default steps');
+                }
+                
                 await this.sendMessage('init', {
                     theme: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
                     state: await this.stateManager.getCurrentProject(),
-                    componentDefaults
+                    componentDefaults,
+                    wizardSteps
                 });
                 break;
 
