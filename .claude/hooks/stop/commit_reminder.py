@@ -37,21 +37,33 @@ def main():
         # Check threshold for commit reminder
         threshold = config.get("thresholds", {}).get("commit_reminder", 3)
         
-        if modified_count >= threshold:
-            # Try to get git status for more detail
-            try:
-                result = subprocess.run(
-                    ["git", "status", "--porcelain"],
-                    capture_output=True,
-                    text=True,
-                    cwd=Path.cwd()
-                )
-                
-                if result.returncode == 0 and result.stdout.strip():
+        # First check git status to see if there are actual uncommitted changes
+        has_uncommitted = False
+        git_available = False
+        git_files = []
+        
+        try:
+            result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                capture_output=True,
+                text=True,
+                cwd=Path.cwd()
+            )
+            
+            if result.returncode == 0:
+                git_available = True
+                if result.stdout.strip():
+                    has_uncommitted = True
                     git_files = result.stdout.strip().split('\n')
-                    uncommitted_count = len(git_files)
-                    
-                    message = f"""💾 Commit Reminder
+        except Exception:
+            # Git command failed
+            pass
+        
+        # Only show reminder if there are actual uncommitted changes
+        # or if git is unavailable and many files were modified
+        if has_uncommitted:
+            uncommitted_count = len(git_files)
+            message = f"""💾 Commit Reminder
 
 You have {uncommitted_count} uncommitted changes:
 {chr(10).join(f"  {line}" for line in git_files[:10])}
@@ -65,22 +77,18 @@ Consider committing your changes:
 
 Modified files in this session: {modified_count}
 """
-                else:
-                    # Git not available or no changes
-                    message = f"""💾 Commit Reminder
+            print(json.dumps({
+                "decision": "block",
+                "reason": message
+            }))
+            return
+        elif not git_available and modified_count >= threshold:
+            # Git not available but many files were modified
+            message = f"""💾 Commit Reminder
 
 You have made {modified_count} file modifications in this session.
 Consider reviewing and committing your changes if using version control.
 """
-                    
-            except Exception:
-                # Git command failed
-                message = f"""💾 Session Summary
-
-Modified files in this session: {modified_count}
-Consider saving your work before closing.
-"""
-            
             print(json.dumps({
                 "decision": "block",
                 "reason": message
