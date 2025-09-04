@@ -17,9 +17,7 @@ import {
 } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Folder from '@spectrum-icons/workflow/Folder';
-import Building from '@spectrum-icons/workflow/Building';
 import Layers from '@spectrum-icons/workflow/Layers';
-import ArrowDown from '@spectrum-icons/workflow/ArrowDown';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import { WizardState } from '../../types';
 import { vscode } from '../../app/vscodeApi';
@@ -347,54 +345,40 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                 Adobe Setup
             </Heading>
             
-            {/* Authentication status */}
-            {state.adobeAuth.isAuthenticated && (
-                <Well marginBottom="size-300" backgroundColor="positive">
-                    <Flex gap="size-200" alignItems="center">
-                        <CheckmarkCircle UNSAFE_className="text-green-600" />
-                        <Text>
-                            <strong>Signed in</strong>
-                            {state.adobeAuth.email && ` as ${state.adobeAuth.email}`}
-                        </Text>
-                    </Flex>
-                </Well>
-            )}
-            
             <Text marginBottom="size-400">
                 Select your Adobe project and workspace for deployment.
             </Text>
 
-            {/* Compact Organization Display */}
-            {state.adobeOrg && (
+            {/* Combined auth status and organization display */}
+            {state.adobeAuth.isAuthenticated && state.adobeOrg && (
                 <div ref={organizationRef}>
-                    <Well marginBottom="size-300">
-                        <Flex gap="size-200" alignItems="center">
-                            <Building size="S" />
-                            <Text>
-                                <strong>Organization:</strong> {state.adobeOrg.name}
-                            </Text>
-                            <ActionButton
-                                isQuiet
-                                onPress={() => handleLogin(true)}
-                                marginStart="auto"
-                            >
-                                Switch Organization
-                            </ActionButton>
+                    <Well marginBottom="size-400">
+                        <Flex direction="column" gap="size-100">
+                            {/* Authentication status row */}
+                            <Flex gap="size-200" alignItems="center">
+                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                                <Text>
+                                    <strong>Signed in</strong>
+                                    {state.adobeAuth.email && ` as ${state.adobeAuth.email}`}
+                                </Text>
+                            </Flex>
+                            
+                            {/* Organization row */}
+                            <Flex gap="size-200" alignItems="center">
+                                <Text marginStart="size-325">
+                                    Organization: <strong>{state.adobeOrg.name}</strong>
+                                </Text>
+                                <Button
+                                    variant="secondary"
+                                    onPress={() => handleLogin(true)}
+                                    marginStart="auto"
+                                    UNSAFE_style={{ minWidth: 'auto' }}
+                                >
+                                    Switch Organization
+                                </Button>
+                            </Flex>
                         </Flex>
                     </Well>
-                    
-                    {/* Jump to Projects button */}
-                    {projects.length > 0 && (
-                        <Flex marginBottom="size-300" justifyContent="center">
-                            <Button
-                                variant="secondary"
-                                onPress={() => scrollToSection('project')}
-                            >
-                                <ArrowDown size="S" />
-                                <Text>Jump to Projects</Text>
-                            </Button>
-                        </Flex>
-                    )}
                 </div>
             )}
 
@@ -448,7 +432,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                                             if (project) selectProject(project);
                                         }
                                     }}
-                                    height="size-4600"
+                                    height="size-2400"
                                     width="100%"
                                     marginBottom="size-200"
                                 >
@@ -488,18 +472,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                     )}
                 </View>
                 
-                {/* Jump to Workspaces button - show after project selection */}
-                {selectedProjectId && !isLoadingWorkspaces && workspaces.length > 0 && (
-                    <Flex marginBottom="size-300" justifyContent="center">
-                        <Button
-                            variant="secondary"
-                            onPress={() => scrollToSection('workspace')}
-                        >
-                            <ArrowDown size="S" />
-                            <Text>Select Workspace</Text>
-                        </Button>
-                    </Flex>
-                )}
+                {/* Removed jump to workspaces button - workspace section appears immediately below */}
             </div>
 
             {/* Workspace Selection Section - Only show when project is selected */}
@@ -549,7 +522,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                                         if (workspace) selectWorkspace(workspace);
                                     }
                                 }}
-                                height="size-3000"
+                                height="size-2400"
                                 width="100%"
                                 marginBottom="size-200"
                             >
