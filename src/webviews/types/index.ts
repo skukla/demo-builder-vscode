@@ -7,8 +7,9 @@ export type WizardStep =
     | 'component-selection'
     | 'prerequisites'
     | 'adobe-auth'
-    | 'org-selection'
-    | 'project-selection'
+    | 'adobe-context'
+    | 'org-selection'  // Kept for compatibility, will be disabled in config
+    | 'project-selection'  // Kept for compatibility, will be disabled in config
     | 'commerce-config'
     | 'review'
     | 'creating';
@@ -19,8 +20,9 @@ export interface WizardState {
     projectTemplate: ProjectTemplate;
     components?: ComponentSelection;
     adobeAuth: AdobeAuthState;
-    organization?: Organization;
-    project?: Project;
+    adobeOrg?: Organization;  // Renamed for consistency
+    adobeProject?: Project;  // Renamed for consistency
+    adobeWorkspace?: Workspace;  // New field for workspace
     commerceConfig?: CommerceConfig;
     creationProgress?: CreationProgress;
 }
@@ -45,6 +47,12 @@ export interface Project {
     name: string;
     title?: string;
     description?: string;
+}
+
+export interface Workspace {
+    id: string;
+    name: string;
+    title?: string;
 }
 
 export interface CommerceConfig {

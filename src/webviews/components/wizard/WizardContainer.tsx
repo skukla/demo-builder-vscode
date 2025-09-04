@@ -10,9 +10,7 @@ import { TimelineNav } from './TimelineNav';
 import { WelcomeStep } from '../steps/WelcomeStep';
 import { ComponentSelectionStep } from '../steps/ComponentSelectionStep';
 import { PrerequisitesStep } from '../steps/PrerequisitesStep';
-import { AdobeAuthStep } from '../steps/AdobeAuthStep';
-import { OrgSelectionStep } from '../steps/OrgSelectionStep';
-import { ProjectSelectionStep } from '../steps/ProjectSelectionStep';
+import { AdobeSetupStep } from '../steps/AdobeSetupStep';
 import { CommerceConfigStep } from '../steps/CommerceConfigStep';
 import { ReviewStep } from '../steps/ReviewStep';
 import { CreatingStep } from '../steps/CreatingStep';
@@ -196,12 +194,20 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 return <ComponentSelectionStep {...props} componentsData={componentsData} />;
             case 'prerequisites':
                 return <PrerequisitesStep {...props} requiredNodeVersions={getRequiredNodeVersions()} componentsData={componentsData} />;
+            case 'adobe-setup':
+                return <AdobeSetupStep {...props} />;
             case 'adobe-auth':
-                return <AdobeAuthStep {...props} />;
+                // Legacy step, now merged into adobe-setup
+                return <AdobeSetupStep {...props} />;
+            case 'adobe-context':
+                // Legacy step, now merged into adobe-setup
+                return <AdobeSetupStep {...props} />;
             case 'org-selection':
-                return <OrgSelectionStep {...props} />;
+                // Legacy step, no longer used
+                return <AdobeSetupStep {...props} />;
             case 'project-selection':
-                return <ProjectSelectionStep {...props} />;
+                // Legacy step, merged into adobe-setup
+                return <AdobeSetupStep {...props} />;
             case 'commerce-config':
                 return <CommerceConfigStep {...props} />;
             case 'review':
@@ -257,8 +263,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
                     {/* Step Content */}
                     <div 
-                        style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}
-                        className={cn('overflow-hidden', 'relative')}
+                        style={{ width: '100%', height: '100%', overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}
+                        className={cn('overflow-y-auto', 'overflow-x-hidden', 'relative')}
                     >
                         <div
                             style={{ height: '100%', width: '100%' }}

@@ -27,6 +27,8 @@ export class CreateProjectWebviewCommand extends BaseCommand {
     private componentsData?: any;
     private currentPrerequisites?: any[];  // Store resolved prerequisites for the session
     private currentPrerequisiteStates?: Map<number, any>;  // Track state of each prerequisite
+    private authPollingInterval?: NodeJS.Timeout;  // Track polling interval to prevent multiple
+    private isAuthenticating = false;  // Prevent multiple simultaneous auth attempts
 
     constructor(
         context: vscode.ExtensionContext,
@@ -90,6 +92,12 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             // Clean up on dispose
             this.panel.onDidDispose(
                 () => {
+                    // Clean up polling interval if still running
+                    if (this.authPollingInterval) {
+                        clearInterval(this.authPollingInterval);
+                        this.authPollingInterval = undefined;
+                        this.logger.info('Cleaned up authentication polling interval');
+                    }
                     this.panel = undefined;
                     this.logger.info('Webview panel disposed');
                 },
@@ -316,6 +324,10 @@ export class CreateProjectWebviewCommand extends BaseCommand {
 
             case 'get-projects':
                 await this.getProjects(payload.orgId);
+                break;
+            
+            case 'get-workspaces':
+                await this.getWorkspaces(payload.projectId);
                 break;
 
             case 'validate':
@@ -1781,28 +1793,152 @@ export class CreateProjectWebviewCommand extends BaseCommand {
     private async checkAuthentication(): Promise<void> {
         const isAuth = await this.authManager.isAuthenticated();
         
-        await this.sendMessage('auth-status', {
+        let authData: any = {
             isAuthenticated: isAuth,
             message: isAuth ? 'Authenticated' : 'Not authenticated'
-        });
+        };
+        
+        // If authenticated, get current organization
+        if (isAuth) {
+            const orgs = await this.authManager.getOrganizations();
+            if (orgs.length > 0) {
+                // Get the first org (usually the selected one)
+                authData.organization = orgs[0];
+            }
+        }
+        
+        await this.sendMessage('auth-status', authData);
     }
 
     private async authenticate(force: boolean): Promise<void> {
-        const terminal = this.createTerminal('Adobe Auth');
-        
-        if (force) {
-            terminal.sendText('aio auth logout --force');
-            terminal.sendText('aio auth login -f');
-        } else {
-            terminal.sendText('aio auth login');
+        // Prevent multiple simultaneous authentication attempts
+        if (this.isAuthenticating) {
+            this.logger.warn('Authentication already in progress');
+            return;
         }
         
-        terminal.show();
+        this.isAuthenticating = true;
         
-        // Wait a moment and check status
-        setTimeout(async () => {
-            await this.checkAuthentication();
-        }, 5000);
+        try {
+            // Cancel any existing polling first
+            if (this.authPollingInterval) {
+                clearInterval(this.authPollingInterval);
+                this.authPollingInterval = undefined;
+            }
+            
+            // Clear state when switching organizations
+            if (force) {
+                await this.sendMessage('auth-status', {
+                    isAuthenticated: false,
+                    isChecking: true,
+                    message: 'Switching organization...',
+                    organization: null
+                });
+            }
+            
+            // Use authManager directly (no terminal) - only call ONCE
+            const loginInitiated = force 
+                ? await this.authManager.forceLogin()
+                : await this.authManager.login();
+            
+            if (!loginInitiated) {
+                throw new Error('Failed to initiate login');
+            }
+            
+            // Send initial status to confirm authentication started
+            await this.sendMessage('auth-status', {
+                isAuthenticated: false,
+                isChecking: true,
+                message: 'Browser opened. Please complete sign-in...'
+            });
+            
+            // Add delay to let browser open before polling
+            // Longer delay for force login to ensure logout is fully complete
+            const pollDelay = force ? 5000 : 2000;
+            await new Promise(resolve => setTimeout(resolve, pollDelay));
+            
+            // Now poll for authentication completion
+            let attempts = 0;
+            const maxAttempts = 40; // 2 minutes max (40 * 3 seconds)
+            let firstAuthIgnored = false; // For force login, ignore first auth detection as it might be residual
+            
+            this.authPollingInterval = setInterval(async () => {
+                attempts++;
+                const isAuth = await this.authManager.isAuthenticated();
+                
+                // During force login, ignore the first authentication detection
+                // as it might be the old session that hasn't fully cleared yet
+                if (isAuth && force && !firstAuthIgnored) {
+                    firstAuthIgnored = true;
+                    this.logger.info('Ignoring first auth detection during org switch - likely residual');
+                    // Send waiting message
+                    await this.sendMessage('auth-status', {
+                        isAuthenticated: false,
+                        isChecking: true,
+                        message: `Waiting for new authentication... (${attempts * 3}s)`
+                    });
+                    return;
+                }
+                
+                if (isAuth) {
+                    if (this.authPollingInterval) {
+                        clearInterval(this.authPollingInterval);
+                        this.authPollingInterval = undefined;
+                    }
+                    
+                    // Send success message
+                    await this.sendMessage('auth-status', {
+                        isAuthenticated: false,  // Keep checking state briefly
+                        isChecking: true,
+                        message: 'Authentication successful! Loading organization...'
+                    });
+                    
+                    // Small delay for user to see the success message
+                    await new Promise(resolve => setTimeout(resolve, 800));
+                    
+                    // Get new organization info
+                    await this.checkAuthentication();
+                } else if (attempts >= maxAttempts) {
+                    if (this.authPollingInterval) {
+                        clearInterval(this.authPollingInterval);
+                        this.authPollingInterval = undefined;
+                    }
+                    await this.sendMessage('auth-status', {
+                        isAuthenticated: false,
+                        isChecking: false,  // Important: reset checking state
+                        error: 'Authentication timed out. Please try again.',
+                        message: 'Authentication timed out'
+                    });
+                } else {
+                    // Send periodic status updates with elapsed time
+                    const timeElapsed = attempts * 3;
+                    
+                    await this.sendMessage('auth-status', {
+                        isAuthenticated: false,
+                        isChecking: true,
+                        message: `Waiting for authentication... (${timeElapsed}s)`
+                    });
+                    
+                    this.logger.info(`Authentication polling attempt ${attempts}/${maxAttempts}`);
+                }
+            }, 3000); // Check every 3 seconds
+        } catch (error) {
+            // Clean up on error
+            if (this.authPollingInterval) {
+                clearInterval(this.authPollingInterval);
+                this.authPollingInterval = undefined;
+            }
+            
+            this.logger.error('Authentication failed', error as Error);
+            await this.sendMessage('auth-status', {
+                isAuthenticated: false,
+                isChecking: false,  // Important: reset checking state
+                error: 'Authentication failed. Please try again.',
+                message: 'Authentication failed'
+            });
+        } finally {
+            this.isAuthenticating = false;
+        }
     }
 
     private async getOrganizations(): Promise<void> {
@@ -1813,6 +1949,11 @@ export class CreateProjectWebviewCommand extends BaseCommand {
     private async getProjects(orgId: string): Promise<void> {
         const projects = await this.authManager.getProjects(orgId);
         await this.sendMessage('projects', projects);
+    }
+
+    private async getWorkspaces(projectId: string): Promise<void> {
+        const workspaces = await this.authManager.getWorkspaces(projectId);
+        await this.sendMessage('workspaces', workspaces);
     }
 
     private async validateField(field: string, value: string): Promise<void> {

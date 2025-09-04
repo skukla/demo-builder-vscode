@@ -29,6 +29,7 @@ export function ReviewStep({ state, setCanProceed }: ReviewStepProps) {
             state.projectName &&
             state.adobeOrg?.id &&
             state.adobeProject?.id &&
+            state.adobeWorkspace?.id &&
             state.commerceConfig?.url &&
             state.commerceConfig?.adminUser &&
             state.commerceConfig?.adminPassword
@@ -95,6 +96,12 @@ export function ReviewStep({ state, setCanProceed }: ReviewStepProps) {
                                 <Flex justifyContent="space-between">
                                     <Text UNSAFE_className="text-gray-700">Project:</Text>
                                     <Text><strong>{state.adobeProject.title}</strong></Text>
+                                </Flex>
+                            )}
+                            {state.adobeWorkspace && (
+                                <Flex justifyContent="space-between">
+                                    <Text UNSAFE_className="text-gray-700">Workspace:</Text>
+                                    <Text><strong>{state.adobeWorkspace.title || state.adobeWorkspace.name}</strong></Text>
                                 </Flex>
                             )}
                         </Flex>

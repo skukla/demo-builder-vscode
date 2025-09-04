@@ -1,13 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
-    View,
     Flex,
     Heading,
     Text,
     Button,
     Well,
-    ProgressCircle,
-    Content
+    ProgressCircle
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
@@ -21,24 +19,39 @@ interface AdobeAuthStepProps {
 }
 
 export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthStepProps) {
-    const [isChecking, setIsChecking] = useState(false);
     const [authStatus, setAuthStatus] = useState<string>('');
+    const isSwitchingRef = useRef(false);
 
     useEffect(() => {
-        checkAuthentication();
+        // Only check authentication if we don't already have a known state
+        // AND we're not currently checking/switching
+        // This prevents re-checking when switching orgs
+        if (state.adobeAuth.isAuthenticated === undefined && !state.adobeAuth.isChecking) {
+            checkAuthentication();
+        }
 
         // Listen for auth status updates
         const unsubscribe = vscode.onMessage('auth-status', (data) => {
+            // Reset the switching flag when authentication completes
+            if (data.isAuthenticated && isSwitchingRef.current) {
+                isSwitchingRef.current = false;
+            }
+            
             updateState({
                 adobeAuth: {
                     isAuthenticated: data.isAuthenticated,
-                    isChecking: false,
+                    isChecking: data.isChecking !== undefined ? data.isChecking : false,
                     email: data.email,
                     error: data.error
-                }
+                },
+                // Always update org - set to undefined when null/undefined
+                adobeOrg: data.organization ? {
+                    id: data.organization.id,
+                    code: data.organization.code,
+                    name: data.organization.name
+                } : undefined
             });
             setAuthStatus(data.message || '');
-            setIsChecking(false);
         });
 
         return unsubscribe;
@@ -49,7 +62,12 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     }, [state.adobeAuth.isAuthenticated, setCanProceed]);
 
     const checkAuthentication = () => {
-        setIsChecking(true);
+        // Don't check if we're already in the process of switching organizations
+        // Use ref for immediate check, not waiting for state updates
+        if (isSwitchingRef.current || state.adobeAuth.isChecking) {
+            console.log('Skipping auth check - switching org or already checking');
+            return;
+        }
         setAuthStatus('Checking Adobe authentication...');
         updateState({
             adobeAuth: { ...state.adobeAuth, isChecking: true }
@@ -58,8 +76,28 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     };
 
     const handleLogin = (force: boolean = false) => {
-        setIsChecking(true);
+        // Immediately set the ref when switching orgs to prevent race conditions
+        if (force) {
+            isSwitchingRef.current = true;
+        }
+        
+        // Update all state in a single call to prevent UI blips
+        updateState({
+            adobeAuth: { 
+                ...state.adobeAuth, 
+                isChecking: true,
+                // Set authenticated to false when switching orgs to hide the current state
+                isAuthenticated: force ? false : state.adobeAuth.isAuthenticated
+            },
+            // Clear organization-related state when switching
+            ...(force && {
+                adobeOrg: undefined,
+                adobeProject: undefined,
+                adobeWorkspace: undefined
+            })
+        });
         setAuthStatus(force ? 'Starting fresh login...' : 'Opening browser for login...');
+        
         vscode.requestAuth(force);
     };
 
@@ -73,69 +111,70 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 We need to authenticate with Adobe to deploy your API Mesh and access Adobe services.
             </Text>
 
-            <Well>
-                <Flex direction="column" gap="size-200">
-                    {isChecking ? (
-                        <Flex gap="size-200" alignItems="center">
-                            <ProgressCircle size="S" isIndeterminate />
+            {/* Authentication Status */}
+            {state.adobeAuth.isChecking && (
+                <Well>
+                    <Flex gap="size-200" alignItems="center">
+                        <ProgressCircle size="S" isIndeterminate />
+                        <Flex direction="column" gap="size-50">
                             <Text>{authStatus}</Text>
+                            <Text UNSAFE_className="text-sm text-gray-600">
+                                Please complete sign-in in your browser
+                            </Text>
                         </Flex>
-                    ) : state.adobeAuth.isAuthenticated ? (
-                        <Flex gap="size-200" alignItems="center">
-                            <CheckmarkCircle UNSAFE_className="text-green-600" />
-                            <View>
-                                <Text><strong>Authenticated</strong></Text>
-                                {state.adobeAuth.email && (
-                                    <Text UNSAFE_className="text-sm text-gray-700">
-                                        Signed in as {state.adobeAuth.email}
-                                    </Text>
-                                )}
-                            </View>
-                        </Flex>
-                    ) : (
-                        <Flex gap="size-200" alignItems="center">
-                            <AlertCircle UNSAFE_className="text-yellow-600" />
-                            <View flex>
-                                <Text><strong>Authentication Required</strong></Text>
-                                <Text UNSAFE_className="text-sm text-gray-700">
-                                    {state.adobeAuth.error || 'Please sign in to continue'}
-                                </Text>
-                            </View>
-                        </Flex>
-                    )}
-                </Flex>
-            </Well>
-
-            {!state.adobeAuth.isAuthenticated && !isChecking && (
-                <Flex gap="size-200" marginTop="size-300">
-                    <Button
-                        variant="accent"
-                        onPress={() => handleLogin(false)}
-                    >
-                        Sign In
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onPress={() => handleLogin(true)}
-                    >
-                        Force Fresh Login
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        isQuiet
-                        onPress={checkAuthentication}
-                    >
-                        Recheck Status
-                    </Button>
-                </Flex>
+                    </Flex>
+                </Well>
             )}
 
-            {state.adobeAuth.isAuthenticated && (
-                <Well marginTop="size-400" backgroundColor="green-100">
-                    <Content>
-                        Authentication successful! You can proceed to the next step.
-                    </Content>
+            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && (
+                <Well>
+                    <Flex direction="column" gap="size-100">
+                        <Flex gap="size-200" alignItems="center">
+                            <CheckmarkCircle UNSAFE_className="text-green-600" />
+                            <Text><strong>Authenticated</strong></Text>
+                        </Flex>
+                        {state.adobeOrg && (
+                            <Text UNSAFE_className="text-sm">
+                                Organization: <strong>{state.adobeOrg.name}</strong>
+                            </Text>
+                        )}
+                    </Flex>
                 </Well>
+            )}
+
+            {!state.adobeAuth.isChecking && !state.adobeAuth.isAuthenticated && (
+                <Well>
+                    <Flex gap="size-200" alignItems="center">
+                        <AlertCircle UNSAFE_className="text-yellow-600" />
+                        <Flex direction="column" gap="size-50">
+                            <Text><strong>Authentication Required</strong></Text>
+                            <Text UNSAFE_className="text-sm text-gray-700">
+                                {state.adobeAuth.error || 'Please sign in to continue'}
+                            </Text>
+                        </Flex>
+                    </Flex>
+                </Well>
+            )}
+
+            {/* Action Buttons */}
+            {!state.adobeAuth.isAuthenticated && !state.adobeAuth.isChecking && (
+                <Button
+                    variant="accent"
+                    onPress={() => handleLogin(false)}
+                    marginTop="size-300"
+                >
+                    Sign In with Adobe
+                </Button>
+            )}
+
+            {state.adobeAuth.isAuthenticated && state.adobeOrg && (
+                <Button
+                    variant="secondary"
+                    onPress={() => handleLogin(true)}
+                    marginTop="size-200"
+                >
+                    Switch to Different Organization
+                </Button>
             )}
         </div>
     );

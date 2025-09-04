@@ -16,18 +16,8 @@
       "enabled": true
     },
     {
-      "id": "adobe-auth",
-      "name": "Authentication",
-      "enabled": true
-    },
-    {
-      "id": "org-selection",
-      "name": "Organization",
-      "enabled": true
-    },
-    {
-      "id": "project-selection",
-      "name": "Project",
+      "id": "adobe-setup",
+      "name": "Adobe Setup",
       "enabled": true
     },
     {
