@@ -1849,7 +1849,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             await this.sendMessage('auth-status', {
                 isAuthenticated: false,
                 isChecking: true,
-                message: 'Browser opened. Please complete sign-in...'
+                message: 'Opening browser... Please complete sign-in...'
             });
             
             // Add delay to let browser open before polling
