@@ -137,7 +137,7 @@ export function AdobeContextStep({ state, updateState, setCanProceed }: AdobeCon
         setWorkspaces([]); // Clear previous workspaces
         setSelectedWorkspaceId(null);
         updateState({ adobeWorkspace: undefined });
-        vscode.postMessage({ type: "get-workspaces", payload: { projectId } });
+        vscode.postMessage("get-workspaces", { projectId });
     };
 
     const selectProject = (project: Project) => {

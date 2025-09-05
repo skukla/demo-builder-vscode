@@ -218,7 +218,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
 
     private async handleWebviewMessage(message: any): Promise<void> {
         const { type, payload } = message;
-        this.logger.info(`Received message from webview: ${type}`);
+        this.logger.info(`Received message from webview: type=${type}, payload=${JSON.stringify(payload)}`);
 
         switch (type) {
             case 'ready':
