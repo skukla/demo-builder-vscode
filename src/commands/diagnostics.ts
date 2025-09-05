@@ -4,6 +4,7 @@ import { promisify } from 'util';
 import * as os from 'os';
 import * as path from 'path';
 import { getLogger, CommandResult } from '../utils/debugLogger';
+import { execWithFnm, execWithEnhancedPath } from '../utils/shellHelper';
 
 const execAsync = promisify(exec);
 
@@ -215,7 +216,16 @@ export class DiagnosticsCommand {
     private async checkCommand(command: string): Promise<any> {
         const startTime = Date.now();
         try {
-            const { stdout, stderr } = await execAsync(command);
+            // Use appropriate wrapper based on command type
+            let execResult;
+            if (command.includes('node') || command.includes('npm')) {
+                execResult = await execWithFnm(command);
+            } else if (command.includes('aio')) {
+                execResult = await execWithEnhancedPath(command);
+            } else {
+                execResult = await execAsync(command);
+            }
+            const { stdout, stderr } = execResult;
             const duration = Date.now() - startTime;
             
             const result: CommandResult = {

@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import { Logger } from './logger';
 import { getLogger, CommandResult } from './debugLogger';
+import { execWithEnhancedPath } from './shellHelper';
 
 const execAsync = promisify(exec);
 
@@ -44,7 +45,7 @@ export class AdobeAuthManager {
             // Check for access token in the config
             const command = 'aio config get ims.contexts.cli.access_token.token';
             this.debugLogger.debug(`Executing: ${command}`);
-            const { stdout: token, stderr } = await execAsync(command);
+            const { stdout: token, stderr } = await execWithEnhancedPath(command);
             
             const result: CommandResult = {
                 stdout: token,
@@ -65,7 +66,7 @@ export class AdobeAuthManager {
             try {
                 const expiryCommand = 'aio config get ims.contexts.cli.access_token.expiry';
                 this.debugLogger.debug(`Checking token expiry with: ${expiryCommand}`);
-                const { stdout: expiry, stderr: expiryStderr } = await execAsync(expiryCommand);
+                const { stdout: expiry, stderr: expiryStderr } = await execWithEnhancedPath(expiryCommand);
                 
                 this.debugLogger.logCommand(expiryCommand, {
                     stdout: expiry,
@@ -126,11 +127,10 @@ export class AdobeAuthManager {
             
             const command = 'aio auth login -f';
             this.debugLogger.debug(`Executing (non-blocking): ${command}`);
-            this.debugLogger.debug('Environment PATH:', process.env.PATH?.split(':'));
             
-            // Don't await - let it run in background as browser opens
-            // Use -f flag to force browser to open
-            exec(command, { env: process.env }, (error, stdout, stderr) => {
+            // Execute with enhanced PATH to find aio
+            const fullCommand = `eval "$(fnm env)" 2>/dev/null; ${command}`;
+            exec(fullCommand, { shell: '/bin/zsh' }, (error, stdout, stderr) => {
                 // This callback happens after browser opens
                 // Error is expected as the command waits for auth
                 const result: CommandResult = {
@@ -169,7 +169,7 @@ export class AdobeAuthManager {
             // Force logout first, then login with force flag
             const logoutCommand = 'aio auth logout --force';
             this.debugLogger.debug(`Executing logout: ${logoutCommand}`);
-            const { stdout: logoutOut, stderr: logoutErr } = await execAsync(logoutCommand);
+            const { stdout: logoutOut, stderr: logoutErr } = await execWithEnhancedPath(logoutCommand);
             
             this.debugLogger.logCommand(logoutCommand, {
                 stdout: logoutOut,
@@ -186,7 +186,8 @@ export class AdobeAuthManager {
             this.debugLogger.debug(`Executing (non-blocking): ${loginCommand}`);
             
             // Don't await - let it run in background as browser opens
-            exec(loginCommand, { env: process.env }, (error, stdout, stderr) => {
+            const fullLoginCommand = `eval "$(fnm env)" 2>/dev/null; ${loginCommand}`;
+            exec(fullLoginCommand, { shell: '/bin/zsh' }, (error, stdout, stderr) => {
                 // This callback happens after browser opens
                 // Error is expected as the command waits for auth
                 const result: CommandResult = {
@@ -219,7 +220,7 @@ export class AdobeAuthManager {
 
     public async logout(): Promise<void> {
         try {
-            await execAsync('aio auth logout');
+            await execWithEnhancedPath('aio auth logout');
             this.logger.info('Adobe logout successful');
         } catch (error) {
             this.logger.warn('Adobe logout failed:', error);
@@ -229,7 +230,7 @@ export class AdobeAuthManager {
     public async verifyAccess(): Promise<boolean> {
         try {
             // Try to list organizations as a verification step
-            const { stdout } = await execAsync('aio console org list');
+            const { stdout } = await execWithEnhancedPath('aio console org list');
             return stdout.includes('Org ID') || stdout.includes('Org Name');
         } catch (error) {
             this.logger.warn('Failed to verify Adobe access');
@@ -239,7 +240,7 @@ export class AdobeAuthManager {
 
     public async getOrganizations(): Promise<AdobeOrg[]> {
         try {
-            const { stdout } = await execAsync('aio console org list --json');
+            const { stdout } = await execWithEnhancedPath('aio console org list --json');
             // Parse JSON, removing any status messages
             const jsonStr = stdout.split('\n').find(line => line.startsWith('['));
             if (!jsonStr) return [];
@@ -252,7 +253,7 @@ export class AdobeAuthManager {
 
     public async selectOrganization(orgCode: string): Promise<boolean> {
         try {
-            await execAsync(`aio console org select ${orgCode}`);
+            await execWithEnhancedPath(`aio console org select ${orgCode}`);
             this.logger.info(`Selected Adobe organization: ${orgCode}`);
             return true;
         } catch (error) {
@@ -264,7 +265,7 @@ export class AdobeAuthManager {
     public async getProjects(orgId?: string): Promise<AdobeProject[]> {
         try {
             const orgFlag = orgId ? `--orgId ${orgId}` : '';
-            const { stdout } = await execAsync(`aio console project list --json ${orgFlag}`);
+            const { stdout } = await execWithEnhancedPath(`aio console project list --json ${orgFlag}`);
             // Parse JSON, removing any status messages
             const jsonStr = stdout.split('\n').find(line => line.startsWith('['));
             if (!jsonStr) return [];
@@ -277,7 +278,7 @@ export class AdobeAuthManager {
 
     public async selectProject(projectId: string): Promise<boolean> {
         try {
-            await execAsync(`aio console project select ${projectId}`);
+            await execWithEnhancedPath(`aio console project select ${projectId}`);
             this.logger.info(`Selected Adobe project: ${projectId}`);
             return true;
         } catch (error) {
@@ -289,7 +290,7 @@ export class AdobeAuthManager {
     public async getWorkspaces(projectId?: string): Promise<AdobeWorkspace[]> {
         try {
             const projectFlag = projectId ? `--projectId ${projectId}` : '';
-            const { stdout } = await execAsync(`aio console workspace list --json ${projectFlag}`);
+            const { stdout } = await execWithEnhancedPath(`aio console workspace list --json ${projectFlag}`);
             // Parse JSON, removing any status messages
             const jsonStr = stdout.split('\n').find(line => line.startsWith('['));
             if (!jsonStr) return [];
@@ -302,7 +303,7 @@ export class AdobeAuthManager {
 
     public async selectWorkspace(workspaceId: string): Promise<boolean> {
         try {
-            await execAsync(`aio console workspace select ${workspaceId}`);
+            await execWithEnhancedPath(`aio console workspace select ${workspaceId}`);
             this.logger.info(`Selected Adobe workspace: ${workspaceId}`);
             return true;
         } catch (error) {

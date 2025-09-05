@@ -4,6 +4,7 @@ import * as os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { Logger } from './logger';
+import { execWithFnm, execWithEnhancedPath } from './shellHelper';
 
 const execAsync = promisify(exec);
 
@@ -180,7 +181,16 @@ export class PrerequisitesManager {
         };
 
         try {
-            const { stdout } = await execAsync(prereq.check.command);
+            // Use fnm wrapper for Node.js checks, enhanced path for others
+            let checkResult;
+            if (prereq.id === 'node' || prereq.id === 'npm' || prereq.perNodeVersion) {
+                checkResult = await execWithFnm(prereq.check.command);
+            } else if (prereq.id === 'aio-cli') {
+                checkResult = await execWithEnhancedPath(prereq.check.command);
+            } else {
+                checkResult = await execAsync(prereq.check.command);
+            }
+            const { stdout } = checkResult;
             
             // Check if installed
             if (prereq.check.parseVersion) {
@@ -214,7 +224,8 @@ export class PrerequisitesManager {
 
     private async checkPlugin(plugin: PrerequisitePlugin): Promise<{id: string; name: string; installed: boolean}> {
         try {
-            const { stdout } = await execAsync(plugin.check.command);
+            // Use enhanced path for Adobe CLI plugins
+            const { stdout } = await execWithEnhancedPath(plugin.check.command);
             const installed = plugin.check.contains ? 
                 stdout.includes(plugin.check.contains) : true;
             
