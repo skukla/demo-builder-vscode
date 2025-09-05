@@ -269,7 +269,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
     // Show login screen if not authenticated
     if (!state.adobeAuth.isAuthenticated && !state.adobeAuth.isChecking) {
         return (
-            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '16px' }}>
                 <Heading level={2} marginBottom="size-300">
                     Adobe Setup
                 </Heading>
@@ -302,7 +302,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
     // Show checking status
     if (state.adobeAuth.isChecking) {
         return (
-            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '16px' }}>
                 <Heading level={2} marginBottom="size-300">
                     Adobe Setup
                 </Heading>
@@ -325,7 +325,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
     // Show loading projects
     if (isLoadingProjects) {
         return (
-            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '16px' }}>
                 <View>
                     <Heading level={2} marginBottom="size-300">
                         Adobe Setup
@@ -340,19 +340,19 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
     }
 
     return (
-        <div ref={scrollContainerRef} style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
-            <Heading level={2} marginBottom="size-300">
+        <div ref={scrollContainerRef} style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '16px' }}>
+            <Heading level={2} marginBottom="size-200">
                 Adobe Setup
             </Heading>
             
-            <Text marginBottom="size-400">
-                Select your Adobe project and workspace for deployment.
+            <Text marginBottom="size-200">
+                Select your Adobe I/O project and workspace for deployment.
             </Text>
 
             {/* Combined auth status and organization display */}
             {state.adobeAuth.isAuthenticated && state.adobeOrg && (
                 <div ref={organizationRef}>
-                    <Well marginBottom="size-400">
+                    <Well marginBottom="size-200">
                         <Flex direction="column" gap="size-100">
                             {/* Authentication status row */}
                             <Flex gap="size-200" alignItems="center">
@@ -384,11 +384,11 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
 
             {/* Project Selection Section */}
             <div ref={projectRef}>
-                <View marginBottom="size-400">
-                    <Heading level={3} marginBottom="size-200">
+                <View marginBottom="size-300">
+                    <Heading level={3} marginBottom="size-100">
                         <Flex gap="size-100" alignItems="center">
                             <Folder size="S" />
-                            <Text>Project</Text>
+                            <Text>Adobe I/O Project</Text>
                         </Flex>
                     </Heading>
 
@@ -432,7 +432,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                                             if (project) selectProject(project);
                                         }
                                     }}
-                                    height="size-2400"
+                                    height="size-3600"
                                     width="100%"
                                     marginBottom="size-200"
                                 >
@@ -522,7 +522,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                                         if (workspace) selectWorkspace(workspace);
                                     }
                                 }}
-                                height="size-2400"
+                                height="size-3000"
                                 width="100%"
                                 marginBottom="size-200"
                             >
@@ -552,7 +552,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
 
             {/* Selected Context Summary */}
             {state.adobeProject && state.adobeWorkspace && (
-                <Well backgroundColor="positive" marginTop="size-400">
+                <Well backgroundColor="positive" marginTop="size-200">
                     <Flex gap="size-200" alignItems="center">
                         <CheckmarkCircle color="positive" />
                         <View flex>
