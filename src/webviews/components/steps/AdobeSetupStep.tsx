@@ -57,6 +57,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [isTransitioningToProjects, setIsTransitioningToProjects] = useState(false);
+    const [shouldShowAuthSuccess, setShouldShowAuthSuccess] = useState(false);
 
     useEffect(() => {
         // Always check authentication on mount
@@ -71,8 +72,12 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
         }
         
         // Auto-advance steps based on state
-        if (state.adobeAuth.isAuthenticated && !state.adobeProject?.id && currentStep === 'auth') {
-            transitionToStep('project');
+        // But don't auto-advance if we should show auth success first
+        if (state.adobeAuth.isAuthenticated && !state.adobeProject?.id && currentStep === 'auth' && !shouldShowAuthSuccess) {
+            // Only auto-advance if we're not showing the success message
+            if (!isTransitioningToProjects) {
+                transitionToStep('project');
+            }
         } else if (state.adobeProject?.id && !state.adobeWorkspace?.id && currentStep !== 'workspace') {
             transitionToStep('workspace');
         }
@@ -101,15 +106,32 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
             
             // Auto-advance if authenticated
             if (data.isAuthenticated && currentStep === 'auth') {
-                setIsLoggingIn(false);
-                setIsTransitioningToProjects(true);
-                // Always load projects after authentication (for fresh login or org switch)
-                loadProjects();
-                // Show success state for comfortable reading time then transition
-                setTimeout(() => {
-                    transitionToStep('project');
-                    setIsTransitioningToProjects(false);
-                }, 2000);
+                const isInitialAuthCheck = isInitialCheck || (!isLoggingIn && !isTransitioningToProjects);
+                
+                if (isInitialAuthCheck) {
+                    // First time checking and already authenticated - show success message
+                    setShouldShowAuthSuccess(true);
+                    setIsTransitioningToProjects(true);
+                    // Always load projects after authentication
+                    loadProjects();
+                    // Show success state for comfortable reading time then transition
+                    setTimeout(() => {
+                        transitionToStep('project');
+                        setIsTransitioningToProjects(false);
+                        setShouldShowAuthSuccess(false);
+                    }, 2000);
+                } else if (isLoggingIn) {
+                    // User just logged in - show success message
+                    setIsLoggingIn(false);
+                    setIsTransitioningToProjects(true);
+                    // Always load projects after authentication (for fresh login or org switch)
+                    loadProjects();
+                    // Show success state for comfortable reading time then transition
+                    setTimeout(() => {
+                        transitionToStep('project');
+                        setIsTransitioningToProjects(false);
+                    }, 2000);
+                }
             } else if (!data.isAuthenticated && data.error) {
                 // Clear logging in state if there was an error
                 setIsLoggingIn(false);
@@ -153,7 +175,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
             unsubscribeProjects();
             unsubscribeWorkspaces();
         };
-    }, [state.adobeAuth.isAuthenticated, state.adobeOrg, state.adobeProject, currentStep, isInitialCheck, projects.length, isLoadingProjects, isLoggingIn]);
+    }, [state.adobeAuth.isAuthenticated, state.adobeOrg, state.adobeProject, currentStep, isInitialCheck, projects.length, isLoadingProjects, isLoggingIn, shouldShowAuthSuccess, isTransitioningToProjects]);
 
     useEffect(() => {
         // Update proceed state when selections change
@@ -241,6 +263,14 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
         
         // Persist workspace selection globally for CLI
         vscode.postMessage('select-workspace', { workspaceId: workspace.id });
+        
+        // Auto-advance to the next step in the wizard after workspace selection
+        // This matches the behavior of project selection for consistency
+        setTimeout(() => {
+            if (onNext) {
+                onNext();
+            }
+        }, 500); // Small delay to let the user see the selection
     };
 
     const editStep = (step: SetupStep) => {
@@ -354,9 +384,6 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                             <Flex direction="column" gap="size-300" alignItems="center" justifyContent="center" height="100%">
                                 <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
                                 <Text UNSAFE_className="text-lg">Authentication successful</Text>
-                                <Text UNSAFE_className="text-sm text-gray-600">
-                                    Loading your projects...
-                                </Text>
                             </Flex>
                         )}
                     </div>
@@ -615,17 +642,17 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                 {isComplete && (
                     <>
                         <Divider size="S" />
-                        <Well marginTop="size-300" UNSAFE_className="ready-well">
-                            <Flex gap="size-200" alignItems="center">
-                                <CheckmarkCircle size="M" UNSAFE_className="text-green-600" />
-                                <View>
-                                    <Text UNSAFE_className="font-semibold">Ready to proceed</Text>
-                                    <Text UNSAFE_className="text-xs text-gray-600">
-                                        All configurations complete
-                                    </Text>
-                                </View>
+                        <View marginTop="size-200">
+                            <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')} marginBottom="size-100">
+                                Status
+                            </Text>
+                            <Flex gap="size-100" alignItems="center">
+                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                                <Text UNSAFE_className="text-sm">
+                                    All configurations complete
+                                </Text>
                             </Flex>
-                        </Well>
+                        </View>
                     </>
                 )}
             </View>
@@ -697,11 +724,6 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
 
                 .edit-button:hover {
                     color: var(--spectrum-global-color-blue-600);
-                }
-
-                .ready-well {
-                    background-color: var(--spectrum-global-color-green-100);
-                    border: 1px solid var(--spectrum-global-color-green-400);
                 }
 
                 .text-uppercase {
