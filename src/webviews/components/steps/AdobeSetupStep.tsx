@@ -290,7 +290,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                     </Flex>
                 </Well>
 
-                <Flex marginTop="size-400" justifyContent="center">
+                <Flex marginTop="size-400" >
                     <Button variant="cta" onPress={() => handleLogin(false)}>
                         Login with Adobe ID
                     </Button>
