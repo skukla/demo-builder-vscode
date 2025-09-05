@@ -76,6 +76,14 @@ demo-builder-vscode/
 - **Solution**: Use standard HTML div with flex styles for critical layouts
 - **Details**: See `src/webviews/CLAUDE.md`
 
+### Adobe Setup Redesign (Two-Column Layout)
+- **Unified Experience**: Single step replaces separate auth/org/project steps
+- **Two-Column Design**: Active content (60%) + persistent summary (40%)
+- **Progressive Disclosure**: Auth → Projects → Workspaces flow
+- **Fast Feedback**: 1-second polling (3x faster than before)
+- **Always-Visible Controls**: Edit buttons shown at all times for transparency
+- **Details**: See `docs/architecture/adobe-setup.md`
+
 ### Prerequisites UI
 - **Scrollable Container**: Fixed height (360px) with internal scrolling
 - **Auto-scroll**: Intelligent scrolling during prerequisite checking
@@ -86,6 +94,7 @@ demo-builder-vscode/
 - Extension state persisted via StateManager
 - Webview state managed with React hooks
 - Message passing for state synchronization
+- Clear dependent state when parent selection changes
 
 ## Key Files to Understand
 

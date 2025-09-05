@@ -302,9 +302,135 @@ export function WidthDebugger() {
 3. **Test with plain HTML elements** to isolate the issue
 4. **Document the solution** for future reference
 
+## Adobe Setup Two-Column Design
+
+### Problem
+The original Adobe Setup used separate steps for authentication, organization selection, and project selection. This created a disjointed experience with unclear progress indication and required excessive navigation.
+
+### Solution
+Implemented a two-column layout with progressive disclosure:
+- **Left Column (60%)**: Active step content
+- **Right Column (40%)**: Persistent configuration summary
+
+### Implementation Details
+
+#### Layout Structure
+```tsx
+// Use standard div instead of Spectrum Flex for proper width
+<div style={{ display: 'flex', height: '100%', width: '100%' }}>
+    <div style={{ flex: '1 1 60%', padding: '24px' }}>
+        {renderLeftColumn()}
+    </div>
+    <div style={{ 
+        flex: '0 0 40%', 
+        backgroundColor: 'var(--spectrum-global-color-gray-75)',
+        borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
+    }}>
+        {renderRightColumn()}
+    </div>
+</div>
+```
+
+#### Progressive Steps
+1. **Authentication**: Check status, show login if needed
+2. **Project Selection**: List with search for 5+ items
+3. **Workspace Selection**: Auto-load after project selection
+
+#### Key UX Improvements
+
+##### Always-Visible Edit Buttons
+```css
+/* Old: Hidden until hover */
+.edit-button {
+    opacity: 0;
+}
+.edit-button:hover {
+    opacity: 1;
+}
+
+/* New: Always visible with subtle styling */
+.edit-button {
+    color: var(--spectrum-global-color-gray-600);
+    transition: color 0.2s ease;
+}
+.edit-button:hover {
+    color: var(--spectrum-global-color-blue-600);
+}
+```
+
+##### Loading State Management
+```typescript
+// Different messages for different contexts
+const loadingMessage = isLoggingIn 
+    ? 'Opening browser for authentication...' 
+    : 'Checking authentication status...';
+
+// Context-aware loading with organization/project info
+<Text>Loading your Adobe projects...</Text>
+<Text>Fetching from organization: {state.adobeOrg.name}</Text>
+```
+
+##### Timing Optimizations
+- **Auth polling**: Reduced from 3s to 1s (3x faster feedback)
+- **Success display**: 2 seconds (was 800ms - too brief)
+- **Transition animation**: 200ms for smooth step changes
+
+### State Management Pattern
+
+#### Clearing Dependent State
+When switching organizations, clear all dependent data:
+```typescript
+const editStep = (step: SetupStep) => {
+    if (step === 'auth') {
+        // Clear ALL state when switching orgs
+        setProjects([]);
+        setWorkspaces([]);
+        setSelectedProjectId(null);
+        setSelectedWorkspaceId(null);
+        // ... initiate re-authentication
+    }
+};
+```
+
+#### Immediate Loading
+Start loading next data during success message display:
+```typescript
+if (data.isAuthenticated) {
+    loadProjects(); // Start immediately
+    setTimeout(() => {
+        transitionToStep('project'); // Transition after delay
+    }, 2000);
+}
+```
+
+### Visual Design Patterns
+
+#### Selection Highlighting
+```css
+.adobe-project-list [aria-selected="true"] {
+    background-color: var(--spectrum-global-color-blue-100);
+    border-left: 3px solid var(--spectrum-global-color-blue-600);
+    padding-left: 13px;
+}
+```
+
+#### Summary Panel Sections
+- Clear section headers with uppercase text
+- Checkmark icons for completed selections
+- Edit buttons aligned to the right
+- Dividers between sections
+
+### Lessons from Implementation
+1. **Immediate feedback is crucial**: Users need to see something happening within 1 second
+2. **Context prevents confusion**: Show what's being loaded from where
+3. **Progressive disclosure reduces overwhelm**: Show options only when relevant
+4. **Persistent summary provides confidence**: Users always see their configuration
+
 ## Future Considerations
 
 - Consider creating a custom Picker wrapper component with our standard props
 - Investigate React Spectrum theming for more systematic customization
 - Monitor React Spectrum updates that might provide better native solutions
 - Create standard layout components that avoid Spectrum Flex constraints
+- Implement caching for projects/workspaces to improve performance
+- Add keyboard navigation for accessibility

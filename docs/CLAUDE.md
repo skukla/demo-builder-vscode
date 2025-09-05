@@ -224,6 +224,67 @@ function WidthDebugger() {
 - Test all color choices in both themes
 - Ensure sufficient contrast for readability
 
+### Authentication and Polling Optimization
+
+#### Fast Feedback Loop
+- **Problem**: 3-second polling interval created poor UX with 3-10 second waits
+- **Solution**: Reduced polling to 1 second for 3x faster response
+- **Implementation**: Modified `authPollingInterval` in `createProjectWebview.ts`
+- **Impact**: Users see authentication success within 1 second of browser completion
+
+#### Loading State Persistence
+- **Problem**: Loading states disappeared due to intermediate status messages
+- **Solution**: Track `isLoggingIn` state separately from `isChecking`
+- **Pattern**: Only clear loading state when action completes or errors
+```typescript
+// Don't clear isChecking if actively logging in
+isChecking: isLoggingIn ? state.adobeAuth.isChecking : false
+```
+
+### Two-Column Layout Pattern
+
+#### When to Use
+Complex multi-step configurations where users need to:
+- See their current selections while making new ones
+- Edit previous choices without losing context
+- Understand progress through the workflow
+
+#### Implementation Pattern
+```tsx
+// Use standard div for proper width inheritance
+<div style={{ display: 'flex', height: '100%', width: '100%' }}>
+    <div style={{ flex: '1 1 60%' }}>
+        {/* Active content */}
+    </div>
+    <div style={{ flex: '0 0 40%' }}>
+        {/* Persistent summary */}
+    </div>
+</div>
+```
+
+#### Key Design Decisions
+- **Edit buttons always visible**: Transparency over aesthetics
+- **Progressive disclosure**: Reveal complexity gradually
+- **Immediate feedback**: Every action shows loading state
+- **Context in loading**: Show what's being loaded from where
+
+### State Clearing Patterns
+
+#### Dependent State Management
+When changing a parent selection, clear all dependent state:
+```typescript
+// Example: Switching organizations
+setProjects([]);        // Clear child data
+setWorkspaces([]);      // Clear grandchild data
+setSelectedProjectId(null);  // Clear selections
+setSelectedWorkspaceId(null);
+```
+
+#### Why This Matters
+- Prevents showing stale data from previous context
+- Ensures clean state for new selections
+- Avoids confusing mixed states
+
 ## Contributing Guidelines
 
 ### Code Review Criteria
@@ -234,6 +295,8 @@ function WidthDebugger() {
 - Updates relevant documentation
 - Tests width inheritance in layouts
 - Verifies scroll behavior
+- Ensures sub-second feedback for user actions
+- Clears dependent state appropriately
 
 ### Commit Messages
 - Use conventional commits format
