@@ -11,7 +11,7 @@ export class AutoUpdater {
     private context: vscode.ExtensionContext;
     private logger: Logger;
     private updateCheckInterval: NodeJS.Timeout | undefined;
-    private readonly UPDATE_CHECK_URL = 'https://api.github.com/repos/adobe/demo-builder-vscode/releases/latest';
+    private readonly UPDATE_CHECK_URL = 'https://api.github.com/repos/skukla/demo-builder-vscode/releases/latest';
 
     constructor(context: vscode.ExtensionContext, logger: Logger) {
         this.context = context;
@@ -69,8 +69,13 @@ export class AutoUpdater {
             this.logger.info('No updates available');
             return undefined;
 
-        } catch (error) {
-            this.logger.error('Failed to check for updates', error as Error);
+        } catch (error: any) {
+            // Silently handle 404 errors (repository doesn't exist yet)
+            if (error.response?.status === 404) {
+                this.logger.debug('Update repository not available yet');
+            } else {
+                this.logger.error('Failed to check for updates', error as Error);
+            }
             return undefined;
         }
     }
