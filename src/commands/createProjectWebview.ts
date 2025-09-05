@@ -322,12 +322,24 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 await this.getOrganizations();
                 break;
 
+            case 'select-organization':
+                await this.selectOrganization(payload.orgCode);
+                break;
+
             case 'get-projects':
                 await this.getProjects(payload.orgId);
                 break;
             
+            case 'select-project':
+                await this.selectProject(payload.projectId);
+                break;
+            
             case 'get-workspaces':
                 await this.getWorkspaces(payload.projectId);
+                break;
+            
+            case 'select-workspace':
+                await this.selectWorkspace(payload.workspaceId);
                 break;
 
             case 'validate':
@@ -1911,7 +1923,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     });
                 } else {
                     // Send periodic status updates with elapsed time
-                    const timeElapsed = attempts * 3;
+                    const timeElapsed = attempts;  // Now in seconds since polling every 1s
                     
                     await this.sendMessage('auth-status', {
                         isAuthenticated: false,
@@ -1921,7 +1933,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     
                     this.logger.info(`Authentication polling attempt ${attempts}/${maxAttempts}`);
                 }
-            }, 3000); // Check every 3 seconds
+            }, 1000); // Check every second for faster feedback
         } catch (error) {
             // Clean up on error
             if (this.authPollingInterval) {
@@ -1946,14 +1958,41 @@ export class CreateProjectWebviewCommand extends BaseCommand {
         await this.sendMessage('organizations', orgs);
     }
 
+    private async selectOrganization(orgCode: string): Promise<void> {
+        const success = await this.authManager.selectOrganization(orgCode);
+        if (success) {
+            this.logger.info(`Organization selected and persisted: ${orgCode}`);
+        } else {
+            this.logger.warn(`Failed to persist organization selection: ${orgCode}`);
+        }
+    }
+
     private async getProjects(orgId: string): Promise<void> {
         const projects = await this.authManager.getProjects(orgId);
         await this.sendMessage('projects', projects);
     }
 
+    private async selectProject(projectId: string): Promise<void> {
+        const success = await this.authManager.selectProject(projectId);
+        if (success) {
+            this.logger.info(`Project selected and persisted: ${projectId}`);
+        } else {
+            this.logger.warn(`Failed to persist project selection: ${projectId}`);
+        }
+    }
+
     private async getWorkspaces(projectId: string): Promise<void> {
         const workspaces = await this.authManager.getWorkspaces(projectId);
         await this.sendMessage('workspaces', workspaces);
+    }
+
+    private async selectWorkspace(workspaceId: string): Promise<void> {
+        const success = await this.authManager.selectWorkspace(workspaceId);
+        if (success) {
+            this.logger.info(`Workspace selected and persisted: ${workspaceId}`);
+        } else {
+            this.logger.warn(`Failed to persist workspace selection: ${workspaceId}`);
+        }
     }
 
     private async validateField(field: string, value: string): Promise<void> {
