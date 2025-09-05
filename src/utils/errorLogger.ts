@@ -1,15 +1,21 @@
 import * as vscode from 'vscode';
+import { getLogger, DebugLogger } from './debugLogger';
 
 export class ErrorLogger {
-    private outputChannel: vscode.OutputChannel;
+    private debugLogger: DebugLogger | undefined;
     private statusBarItem: vscode.StatusBarItem;
     private diagnostics: vscode.DiagnosticCollection;
     private errorCount = 0;
     private warningCount = 0;
     
     constructor(context: vscode.ExtensionContext) {
-        // Create output channel for detailed logs
-        this.outputChannel = vscode.window.createOutputChannel('Demo Builder Logs');
+        // Use the unified DebugLogger instead of creating own channel
+        try {
+            this.debugLogger = getLogger();
+        } catch {
+            // DebugLogger not initialized yet - this shouldn't happen in normal use
+            console.error('ErrorLogger: DebugLogger not initialized');
+        }
         
         // Create status bar item for quick error/warning indicator
         this.statusBarItem = vscode.window.createStatusBarItem(
@@ -34,18 +40,20 @@ export class ErrorLogger {
      * Log an informational message
      */
     logInfo(message: string, context?: string): void {
-        const timestamp = new Date().toISOString();
+        if (!this.debugLogger) return;
+        
         const contextStr = context ? ` [${context}]` : '';
-        this.outputChannel.appendLine(`[${timestamp}] INFO${contextStr}: ${message}`);
+        this.debugLogger.info(`${contextStr}${message}`);
     }
     
     /**
      * Log a warning message
      */
     logWarning(message: string, context?: string): void {
-        const timestamp = new Date().toISOString();
+        if (!this.debugLogger) return;
+        
         const contextStr = context ? ` [${context}]` : '';
-        this.outputChannel.appendLine(`[${timestamp}] WARNING${contextStr}: ${message}`);
+        this.debugLogger.warn(`${contextStr}${message}`);
         
         this.warningCount++;
         this.updateStatusBar();
@@ -55,48 +63,29 @@ export class ErrorLogger {
      * Log an error message with optional detailed information
      */
     logError(error: Error | string, context?: string, critical: boolean = false, details?: string): void {
-        const timestamp = new Date().toISOString();
+        if (!this.debugLogger) return;
+        
         const contextStr = context ? ` [${context}]` : '';
         const errorMessage = error instanceof Error ? error.message : error;
-        const stackTrace = error instanceof Error ? error.stack : '';
         
-        // Log to output channel
-        this.outputChannel.appendLine(`[${timestamp}] ERROR${contextStr}: ${errorMessage}`);
+        // Log to main channel
+        this.debugLogger.error(`${contextStr}${errorMessage}`, error instanceof Error ? error : undefined);
         
-        // Add detailed error information if provided
+        // Log details to debug channel if provided
         if (details) {
-            this.outputChannel.appendLine(`  ╔══════════════════════════════════════════════╗`);
-            this.outputChannel.appendLine(`  ║ Error Details                                ║`);
-            this.outputChannel.appendLine(`  ╚══════════════════════════════════════════════╝`);
-            details.split('\n').forEach(line => {
-                this.outputChannel.appendLine(`  │ ${line}`);
-            });
-            this.outputChannel.appendLine(`  └──────────────────────────────────────────────`);
+            this.debugLogger.debug(`Error details for: ${errorMessage}`, { details, critical });
         }
         
-        if (stackTrace) {
-            this.outputChannel.appendLine(`  Stack Trace:`);
-            stackTrace.split('\n').slice(1).forEach(line => {
-                this.outputChannel.appendLine(`    ${line}`);
-            });
-        }
-        this.outputChannel.appendLine(''); // Empty line for readability
-        
-        // Update counts and status bar
         this.errorCount++;
         this.updateStatusBar();
         
-        // For critical errors, add to Problems panel and show notification
+        // Show notification for critical errors
         if (critical) {
-            this.addToProblemPanel(errorMessage, context);
-            this.showNotification(errorMessage);
-        } else if (details) {
-            // For non-critical errors with details, show option to view
             vscode.window.showErrorMessage(
-                `${contextStr}: ${errorMessage}`,
-                'View Details'
+                `Demo Builder Error: ${errorMessage}`,
+                'Show Logs'
             ).then(selection => {
-                if (selection === 'View Details') {
+                if (selection === 'Show Logs') {
                     this.show();
                 }
             });
@@ -104,76 +93,12 @@ export class ErrorLogger {
     }
     
     /**
-     * Update the status bar with current error/warning counts
-     */
-    private updateStatusBar(): void {
-        if (this.errorCount > 0 || this.warningCount > 0) {
-            const errorText = this.errorCount > 0 ? `${this.errorCount} error${this.errorCount > 1 ? 's' : ''}` : '';
-            const warningText = this.warningCount > 0 ? `${this.warningCount} warning${this.warningCount > 1 ? 's' : ''}` : '';
-            const separator = errorText && warningText ? ', ' : '';
-            
-            this.statusBarItem.text = `$(issues) Demo Builder: ${errorText}${separator}${warningText}`;
-            
-            if (this.errorCount > 0) {
-                this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-            } else {
-                this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-            }
-            
-            this.statusBarItem.tooltip = 'Click to view Demo Builder logs';
-            this.statusBarItem.show();
-        } else {
-            this.statusBarItem.hide();
-        }
-    }
-    
-    /**
-     * Add an error to the Problems panel
-     */
-    private addToProblemPanel(message: string, context?: string): void {
-        // Create a virtual URI for the problem
-        const uri = vscode.Uri.file(context || 'demo-builder-prerequisites');
-        
-        const diagnostic = new vscode.Diagnostic(
-            new vscode.Range(0, 0, 0, 0),
-            message,
-            vscode.DiagnosticSeverity.Error
-        );
-        
-        diagnostic.source = 'Demo Builder';
-        
-        // Get existing diagnostics and add new one
-        const existingDiagnostics = this.diagnostics.get(uri) || [];
-        this.diagnostics.set(uri, [...existingDiagnostics, diagnostic]);
-    }
-    
-    /**
-     * Show a notification for critical errors
-     */
-    private showNotification(message: string): void {
-        vscode.window.showErrorMessage(
-            `Demo Builder: ${message}`,
-            'View Logs',
-            'Dismiss'
-        ).then(selection => {
-            if (selection === 'View Logs') {
-                this.show();
-            }
-        });
-    }
-    
-    /**
-     * Show the output channel
-     */
-    show(): void {
-        this.outputChannel.show(true); // true = preserve focus
-    }
-    
-    /**
-     * Clear all logs and reset counters
+     * Clear the log output channel and reset counters
      */
     clear(): void {
-        this.outputChannel.clear();
+        if (this.debugLogger) {
+            this.debugLogger.clear();
+        }
         this.errorCount = 0;
         this.warningCount = 0;
         this.diagnostics.clear();
@@ -181,10 +106,52 @@ export class ErrorLogger {
     }
     
     /**
-     * Dispose of all resources
+     * Show the output channel
+     */
+    show(): void {
+        if (this.debugLogger) {
+            this.debugLogger.show(false);
+        }
+    }
+    
+    /**
+     * Update the status bar with error/warning counts
+     */
+    private updateStatusBar(): void {
+        if (this.errorCount > 0 || this.warningCount > 0) {
+            const errorText = this.errorCount > 0 ? `$(error) ${this.errorCount}` : '';
+            const warningText = this.warningCount > 0 ? `$(warning) ${this.warningCount}` : '';
+            this.statusBarItem.text = `${errorText} ${warningText}`.trim();
+            this.statusBarItem.tooltip = 'Click to show Demo Builder logs';
+            this.statusBarItem.show();
+        } else {
+            this.statusBarItem.hide();
+        }
+    }
+    
+    /**
+     * Add a diagnostic (error/warning) to the Problems panel
+     */
+    addDiagnostic(
+        uri: vscode.Uri,
+        message: string,
+        severity: vscode.DiagnosticSeverity = vscode.DiagnosticSeverity.Error,
+        range?: vscode.Range
+    ): void {
+        const diagnostic = new vscode.Diagnostic(
+            range || new vscode.Range(0, 0, 0, 0),
+            message,
+            severity
+        );
+        
+        const existingDiagnostics = this.diagnostics.get(uri) || [];
+        this.diagnostics.set(uri, [...existingDiagnostics, diagnostic]);
+    }
+    
+    /**
+     * Dispose of resources
      */
     dispose(): void {
-        this.outputChannel.dispose();
         this.statusBarItem.dispose();
         this.diagnostics.dispose();
     }

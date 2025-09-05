@@ -42,15 +42,14 @@ export class ViewStatusCommand extends BaseCommand {
                 `- **Installed:** ${project.inspector?.installed ? 'Yes' : 'No'}`,
             ].join('\n');
 
-            // Show in output channel
-            const outputChannel = vscode.window.createOutputChannel('Demo Builder Status');
-            outputChannel.clear();
-            outputChannel.appendLine('='.repeat(50));
-            outputChannel.appendLine('Demo Builder Project Status');
-            outputChannel.appendLine('='.repeat(50));
-            outputChannel.appendLine('');
-            outputChannel.appendLine(status);
-            outputChannel.show();
+            // Show in output channel using the main logger
+            this.logger.info('='.repeat(50));
+            this.logger.info('Demo Builder Project Status');
+            this.logger.info('='.repeat(50));
+            this.logger.info('');
+            status.split('\n').forEach(line => {
+                this.logger.info(line);
+            });
 
             // Show quick actions
             const actions = [];

@@ -2,6 +2,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import { Logger } from './logger';
+import { getLogger, CommandResult } from './debugLogger';
 
 const execAsync = promisify(exec);
 
@@ -28,37 +29,78 @@ export interface AdobeWorkspace {
 
 export class AdobeAuthManager {
     private logger: Logger;
+    private debugLogger = getLogger();
 
     constructor(logger: Logger) {
         this.logger = logger;
     }
 
     public async isAuthenticated(): Promise<boolean> {
+        const startTime = Date.now();
         try {
+            this.debugLogger.debug('Starting Adobe authentication check');
+            
             // IMPORTANT: Only check for token existence, don't run any commands that might trigger login
             // Check for access token in the config
-            const { stdout: token } = await execAsync('aio config get ims.contexts.cli.access_token.token');
+            const command = 'aio config get ims.contexts.cli.access_token.token';
+            this.debugLogger.debug(`Executing: ${command}`);
+            const { stdout: token, stderr } = await execAsync(command);
+            
+            const result: CommandResult = {
+                stdout: token,
+                stderr,
+                code: 0,
+                duration: Date.now() - startTime,
+                cwd: process.cwd()
+            };
+            this.debugLogger.logCommand(command, result);
             
             if (!token || !token.trim() || token.trim() === 'undefined' || token.trim() === 'null') {
                 // No token found
+                this.debugLogger.debug('Auth check result: No token found or token is undefined/null');
                 return false;
             }
             
             // We have a token, try to check expiry if available
             try {
-                const { stdout: expiry } = await execAsync('aio config get ims.contexts.cli.access_token.expiry');
+                const expiryCommand = 'aio config get ims.contexts.cli.access_token.expiry';
+                this.debugLogger.debug(`Checking token expiry with: ${expiryCommand}`);
+                const { stdout: expiry, stderr: expiryStderr } = await execAsync(expiryCommand);
+                
+                this.debugLogger.logCommand(expiryCommand, {
+                    stdout: expiry,
+                    stderr: expiryStderr,
+                    code: 0,
+                    duration: Date.now() - startTime
+                });
+                
                 if (expiry && expiry.trim() && expiry.trim() !== 'undefined') {
+                    this.debugLogger.debug(`Raw expiry value: '${expiry.trim()}'`);
                     const expiryTime = parseInt(expiry.trim());
+                    
                     if (!isNaN(expiryTime)) {
                         const now = Date.now();
-                        // Check if token hasn't expired yet
                         const isValid = expiryTime > now;
+                        
+                        this.debugLogger.debug('Token expiry check:', {
+                            expiryTime,
+                            currentTime: now,
+                            expiresAt: new Date(expiryTime).toISOString(),
+                            currentAt: new Date(now).toISOString(),
+                            isValid
+                        });
+                        
                         this.logger.info(`Token expiry check: expires at ${expiryTime}, now ${now}, valid: ${isValid}`);
                         return isValid;
+                    } else {
+                        this.debugLogger.debug('Failed to parse expiry time as integer');
                     }
+                } else {
+                    this.debugLogger.debug('No expiry value found or value is undefined');
                 }
-            } catch {
+            } catch (expiryError) {
                 // Expiry check failed, but we have a token
+                this.debugLogger.debug('Expiry check failed:', expiryError);
                 this.logger.info('Have token but cannot verify expiry, assuming valid');
             }
             
@@ -68,26 +110,52 @@ export class AdobeAuthManager {
             
         } catch (error) {
             // Config check failed - not authenticated
+            this.debugLogger.debug('Auth check failed with error:', error);
             this.logger.warn('Adobe auth check failed - not authenticated');
             return false;
+        } finally {
+            const totalDuration = Date.now() - startTime;
+            this.debugLogger.debug(`Total auth check duration: ${totalDuration}ms`);
         }
     }
 
     public async login(): Promise<boolean> {
         try {
             this.logger.info('Starting Adobe login...');
+            this.debugLogger.debug('Initiating Adobe login with browser');
+            
+            const command = 'aio auth login -f';
+            this.debugLogger.debug(`Executing (non-blocking): ${command}`);
+            this.debugLogger.debug('Environment PATH:', process.env.PATH?.split(':'));
+            
             // Don't await - let it run in background as browser opens
             // Use -f flag to force browser to open
-            exec('aio auth login -f', (_error, stdout, stderr) => {
+            exec(command, { env: process.env }, (error, stdout, stderr) => {
                 // This callback happens after browser opens
                 // Error is expected as the command waits for auth
+                const result: CommandResult = {
+                    stdout: stdout || '',
+                    stderr: stderr || '',
+                    code: error?.code || 0,
+                    env: process.env
+                };
+                
+                this.debugLogger.logCommand(`${command} (callback)`, result);
+                
                 if (stdout) this.logger.info(`Login output: ${stdout}`);
                 if (stderr && !stderr.includes('Opening browser')) {
                     this.logger.warn(`Login stderr: ${stderr}`);
                 }
+                
+                if (error) {
+                    this.debugLogger.debug('Login command error (may be expected):', error);
+                }
             });
+            
+            this.debugLogger.debug('Login command initiated, browser should open');
             return true; // Return true to indicate login was initiated
         } catch (error) {
+            this.debugLogger.debug('Login initiation failed:', error);
             this.logger.error('Adobe login failed', error as Error);
             return false;
         }
@@ -96,23 +164,54 @@ export class AdobeAuthManager {
     public async forceLogin(): Promise<boolean> {
         try {
             this.logger.info('Forcing fresh Adobe login...');
+            this.debugLogger.debug('Starting force login process');
+            
             // Force logout first, then login with force flag
-            await execAsync('aio auth logout --force');
+            const logoutCommand = 'aio auth logout --force';
+            this.debugLogger.debug(`Executing logout: ${logoutCommand}`);
+            const { stdout: logoutOut, stderr: logoutErr } = await execAsync(logoutCommand);
+            
+            this.debugLogger.logCommand(logoutCommand, {
+                stdout: logoutOut,
+                stderr: logoutErr,
+                code: 0,
+                duration: 0
+            });
             
             // Longer delay to ensure logout completes and token is fully cleared
+            this.debugLogger.debug('Waiting 1.5s for logout to complete...');
             await new Promise(resolve => setTimeout(resolve, 1500));
             
+            const loginCommand = 'aio auth login -f';
+            this.debugLogger.debug(`Executing (non-blocking): ${loginCommand}`);
+            
             // Don't await - let it run in background as browser opens
-            exec('aio auth login -f', (_error, stdout, stderr) => {
+            exec(loginCommand, { env: process.env }, (error, stdout, stderr) => {
                 // This callback happens after browser opens
                 // Error is expected as the command waits for auth
+                const result: CommandResult = {
+                    stdout: stdout || '',
+                    stderr: stderr || '',
+                    code: error?.code || 0,
+                    env: process.env
+                };
+                
+                this.debugLogger.logCommand(`${loginCommand} (callback)`, result);
+                
                 if (stdout) this.logger.info(`Force login output: ${stdout}`);
                 if (stderr && !stderr.includes('Opening browser')) {
                     this.logger.warn(`Force login stderr: ${stderr}`);
                 }
+                
+                if (error) {
+                    this.debugLogger.debug('Force login command error (may be expected):', error);
+                }
             });
+            
+            this.debugLogger.debug('Force login command initiated, browser should open');
             return true; // Return true to indicate login was initiated
         } catch (error) {
+            this.debugLogger.debug('Force login initiation failed:', error);
             this.logger.error('Adobe force login failed', error as Error);
             return false;
         }
