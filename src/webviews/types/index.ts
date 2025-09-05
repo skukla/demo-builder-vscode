@@ -6,8 +6,9 @@ export type WizardStep =
     | 'welcome'
     | 'component-selection'
     | 'prerequisites'
-    | 'adobe-auth'
-    | 'adobe-context'
+    | 'adobe-setup'  // New consolidated Adobe configuration step
+    | 'adobe-auth'  // Kept for compatibility
+    | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
     | 'commerce-config'

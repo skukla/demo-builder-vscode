@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
     View,
     Heading,
@@ -10,17 +10,15 @@ import {
     ProgressCircle,
     Flex,
     Button,
-    Content,
     ActionButton,
-    Badge,
     Divider
 } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import Folder from '@spectrum-icons/workflow/Folder';
-import Layers from '@spectrum-icons/workflow/Layers';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import Edit from '@spectrum-icons/workflow/Edit';
 import { WizardState } from '../../types';
 import { vscode } from '../../app/vscodeApi';
+import { cn } from '../../utils/classNames';
 
 interface Project {
     id: string;
@@ -42,7 +40,10 @@ interface AdobeSetupStepProps {
     setCanProceed: (canProceed: boolean) => void;
 }
 
+type SetupStep = 'auth' | 'project' | 'workspace';
+
 export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetupStepProps) {
+    const [currentStep, setCurrentStep] = useState<SetupStep>('auth');
     const [projects, setProjects] = useState<Project[]>([]);
     const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
     const [isLoadingProjects, setIsLoadingProjects] = useState(false);
@@ -52,36 +53,37 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
     const [projectSearchQuery, setProjectSearchQuery] = useState('');
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(state.adobeProject?.id || null);
     const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(state.adobeWorkspace?.id || null);
-    const [authStatus, setAuthStatus] = useState<string>('');
-    const isSwitchingRef = useRef(false);
-    
-    // Refs for scrolling
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
-    const organizationRef = useRef<HTMLDivElement>(null);
-    const projectRef = useRef<HTMLDivElement>(null);
-    const workspaceRef = useRef<HTMLDivElement>(null);
+    const [isInitialCheck, setIsInitialCheck] = useState(true);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const [isLoggingIn, setIsLoggingIn] = useState(false);
+    const [isTransitioningToProjects, setIsTransitioningToProjects] = useState(false);
 
     useEffect(() => {
-        // Check authentication on mount if not already checked
-        if (state.adobeAuth.isAuthenticated === undefined && !state.adobeAuth.isChecking) {
+        // Always check authentication on mount
+        if (isInitialCheck) {
             checkAuthentication();
+            setIsInitialCheck(false);
         }
         
         // Load projects when authenticated and have org
-        if (state.adobeAuth.isAuthenticated && state.adobeOrg?.id) {
+        if (state.adobeAuth.isAuthenticated && state.adobeOrg?.id && projects.length === 0 && !isLoadingProjects) {
             loadProjects();
+        }
+        
+        // Auto-advance steps based on state
+        if (state.adobeAuth.isAuthenticated && !state.adobeProject?.id && currentStep === 'auth') {
+            transitionToStep('project');
+        } else if (state.adobeProject?.id && !state.adobeWorkspace?.id && currentStep !== 'workspace') {
+            transitionToStep('workspace');
         }
 
         // Listen for auth status updates
         const unsubscribeAuth = vscode.onMessage('auth-status', (data) => {
-            if (data.isAuthenticated && isSwitchingRef.current) {
-                isSwitchingRef.current = false;
-            }
-            
             updateState({
                 adobeAuth: {
                     isAuthenticated: data.isAuthenticated,
-                    isChecking: data.isChecking !== undefined ? data.isChecking : false,
+                    // Only clear isChecking if we're not actively logging in
+                    isChecking: isLoggingIn ? state.adobeAuth.isChecking : false,
                     email: data.email,
                     error: data.error
                 },
@@ -92,11 +94,26 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                 } : undefined
             });
             
-            if (data.message) {
-                setAuthStatus(data.message);
+            // If we have a new organization, persist it
+            if (data.organization && (!state.adobeOrg || state.adobeOrg.code !== data.organization.code)) {
+                vscode.postMessage('select-organization', { orgCode: data.organization.code });
             }
             
-            setCanProceed(data.isAuthenticated && !!state.adobeProject?.id && !!state.adobeWorkspace?.id);
+            // Auto-advance if authenticated
+            if (data.isAuthenticated && currentStep === 'auth') {
+                setIsLoggingIn(false);
+                setIsTransitioningToProjects(true);
+                // Always load projects after authentication (for fresh login or org switch)
+                loadProjects();
+                // Show success state for comfortable reading time then transition
+                setTimeout(() => {
+                    transitionToStep('project');
+                    setIsTransitioningToProjects(false);
+                }, 2000);
+            } else if (!data.isAuthenticated && data.error) {
+                // Clear logging in state if there was an error
+                setIsLoggingIn(false);
+            }
         });
 
         // Listen for projects from extension
@@ -106,7 +123,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                 setProjectError(null);
                 
                 // Auto-select if only one project
-                if (data.length === 1) {
+                if (data.length === 1 && !selectedProjectId) {
                     selectProject(data[0]);
                 }
             } else {
@@ -122,15 +139,8 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                 setWorkspaceError(null);
                 
                 // Auto-select if only one workspace
-                if (data.length === 1) {
+                if (data.length === 1 && !selectedWorkspaceId) {
                     selectWorkspace(data[0]);
-                }
-                
-                // Auto-scroll to workspace section when workspaces load
-                if (data.length > 0) {
-                    setTimeout(() => {
-                        scrollToSection('workspace');
-                    }, 300);
                 }
             } else {
                 setWorkspaceError('Failed to load workspaces');
@@ -143,25 +153,25 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
             unsubscribeProjects();
             unsubscribeWorkspaces();
         };
-    }, [state.adobeAuth.isAuthenticated, state.adobeOrg]);
+    }, [state.adobeAuth.isAuthenticated, state.adobeOrg, state.adobeProject, currentStep, isInitialCheck, projects.length, isLoadingProjects, isLoggingIn]);
 
     useEffect(() => {
-        // Load workspaces when a project is selected
-        if (selectedProjectId && selectedProjectId !== state.adobeProject?.id) {
-            loadWorkspaces(selectedProjectId);
-        }
-    }, [selectedProjectId]);
-
-    useEffect(() => {
-        // Can proceed if authenticated and both project and workspace are selected
-        setCanProceed(!!(state.adobeAuth.isAuthenticated && state.adobeProject?.id && state.adobeWorkspace?.id));
+        // Update proceed state when selections change
+        const canProceed = !!state.adobeAuth.isAuthenticated && 
+                          !!state.adobeProject?.id && 
+                          !!state.adobeWorkspace?.id;
+        setCanProceed(canProceed);
     }, [state.adobeAuth.isAuthenticated, state.adobeProject, state.adobeWorkspace, setCanProceed]);
 
+    const transitionToStep = (step: SetupStep) => {
+        setIsTransitioning(true);
+        setTimeout(() => {
+            setCurrentStep(step);
+            setIsTransitioning(false);
+        }, 200);
+    };
+
     const checkAuthentication = () => {
-        if (state.adobeAuth.isChecking) {
-            return;
-        }
-        setAuthStatus('Checking Adobe authentication...');
         updateState({
             adobeAuth: { ...state.adobeAuth, isChecking: true }
         });
@@ -169,10 +179,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
     };
 
     const handleLogin = (force: boolean = false) => {
-        if (force) {
-            isSwitchingRef.current = true;
-        }
-        
+        setIsLoggingIn(true);  // Track that user initiated login
         updateState({
             adobeAuth: { 
                 ...state.adobeAuth, 
@@ -185,8 +192,6 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                 adobeWorkspace: undefined
             })
         });
-        setAuthStatus(force ? 'Starting fresh login...' : 'Opening browser for login...');
-        
         vscode.requestAuth(force);
     };
 
@@ -201,9 +206,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
     const loadWorkspaces = (projectId: string) => {
         setIsLoadingWorkspaces(true);
         setWorkspaceError(null);
-        setWorkspaces([]); // Clear previous workspaces
-        setSelectedWorkspaceId(null);
-        updateState({ adobeWorkspace: undefined });
+        setWorkspaces([]);
         vscode.postMessage("get-workspaces", { projectId });
     };
 
@@ -217,14 +220,13 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                 description: project.description
             }
         });
-        loadWorkspaces(project.id);
         
-        // Show loading state and scroll hint
-        setTimeout(() => {
-            if (!isLoadingWorkspaces) {
-                scrollToSection('workspace');
-            }
-        }, 500);
+        // Persist project selection globally for CLI
+        vscode.postMessage('select-project', { projectId: project.id });
+        
+        // Auto-advance to workspace step
+        transitionToStep('workspace');
+        loadWorkspaces(project.id);
     };
 
     const selectWorkspace = (workspace: Workspace) => {
@@ -236,6 +238,51 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                 title: workspace.title
             }
         });
+        
+        // Persist workspace selection globally for CLI
+        vscode.postMessage('select-workspace', { workspaceId: workspace.id });
+    };
+
+    const editStep = (step: SetupStep) => {
+        if (step === 'auth') {
+            // Clear ALL state including projects list when switching orgs
+            setProjects([]);
+            setWorkspaces([]);
+            setSelectedProjectId(null);
+            setSelectedWorkspaceId(null);
+            setProjectSearchQuery('');
+            
+            // Set loading state BEFORE transitioning to show immediate feedback
+            setIsLoggingIn(true);
+            updateState({
+                adobeAuth: { 
+                    ...state.adobeAuth, 
+                    isChecking: true,
+                    // Clear authenticated state when switching orgs
+                    isAuthenticated: false
+                },
+                adobeOrg: undefined,
+                adobeProject: undefined,
+                adobeWorkspace: undefined
+            });
+            
+            // Now transition to show the loading state
+            transitionToStep('auth');
+            
+            // Then actually initiate the re-authentication
+            setTimeout(() => {
+                vscode.requestAuth(true);
+            }, 250);  // Small delay to allow transition to complete
+        } else {
+            // Clear dependent selections when going back
+            if (step === 'project') {
+                // Clear workspace when going back to project selection
+                setSelectedWorkspaceId(null);
+                updateState({ adobeWorkspace: undefined });
+                setWorkspaces([]);
+            }
+            transitionToStep(step);
+        }
     };
 
     // Filter projects based on search query
@@ -252,266 +299,174 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
         );
     }, [projects, projectSearchQuery]);
 
-    // Scroll to section function
-    const scrollToSection = (section: 'org' | 'project' | 'workspace') => {
-        const refs = {
-            org: organizationRef,
-            project: projectRef,
-            workspace: workspaceRef
-        };
-        
-        refs[section].current?.scrollIntoView({ 
-            behavior: 'smooth', 
-            block: 'start'
-        });
-    };
-
-    // Show login screen if not authenticated
-    if (!state.adobeAuth.isAuthenticated && !state.adobeAuth.isChecking) {
-        return (
-            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '16px' }}>
-                <Heading level={2} marginBottom="size-300">
-                    Adobe Setup
-                </Heading>
-                
-                <Text marginBottom="size-400">
-                    Sign in to Adobe to select your organization, project, and workspace for deployment.
-                </Text>
-
-                <Well>
-                    <Flex gap="size-200" alignItems="center">
-                        <AlertCircle UNSAFE_className="text-yellow-600" />
-                        <Flex direction="column" gap="size-50" flex>
-                            <Text><strong>Not signed in</strong></Text>
-                            <Text UNSAFE_className="text-sm">
-                                You need to authenticate with Adobe to continue.
-                            </Text>
-                        </Flex>
-                    </Flex>
-                </Well>
-
-                <Flex marginTop="size-400" >
-                    <Button variant="cta" onPress={() => handleLogin(false)}>
-                        Login with Adobe ID
-                    </Button>
-                </Flex>
-            </div>
+    const renderLeftColumn = () => {
+        const stepContent = cn(
+            'step-content',
+            isTransitioning && 'transitioning'
         );
-    }
 
-    // Show checking status
-    if (state.adobeAuth.isChecking) {
-        return (
-            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '16px' }}>
-                <Heading level={2} marginBottom="size-300">
-                    Adobe Setup
-                </Heading>
-                
-                <Well>
-                    <Flex gap="size-200" alignItems="center">
-                        <ProgressCircle size="S" isIndeterminate />
-                        <Flex direction="column" gap="size-50">
-                            <Text>{authStatus}</Text>
-                            <Text UNSAFE_className="text-sm text-gray-600">
-                                Please complete sign-in in your browser
-                            </Text>
-                        </Flex>
-                    </Flex>
-                </Well>
-            </div>
-        );
-    }
-
-    // Show loading projects
-    if (isLoadingProjects) {
-        return (
-            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '16px' }}>
-                <View>
-                    <Heading level={2} marginBottom="size-300">
-                        Adobe Setup
-                    </Heading>
-                    <Flex gap="size-200" alignItems="center">
-                        <ProgressCircle size="S" isIndeterminate />
-                        <Text>Loading projects...</Text>
-                    </Flex>
-                </View>
-            </div>
-        );
-    }
-
-    return (
-        <div ref={scrollContainerRef} style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '16px' }}>
-            <Heading level={2} marginBottom="size-200">
-                Adobe Setup
-            </Heading>
-            
-            <Text marginBottom="size-200">
-                Select your Adobe I/O project and workspace for deployment.
-            </Text>
-
-            {/* Combined auth status and organization display */}
-            {state.adobeAuth.isAuthenticated && state.adobeOrg && (
-                <div ref={organizationRef}>
-                    <Well marginBottom="size-200">
-                        <Flex direction="column" gap="size-100">
-                            {/* Authentication status row */}
-                            <Flex gap="size-200" alignItems="center">
-                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                                <Text>
-                                    <strong>Signed in</strong>
-                                    {state.adobeAuth.email && ` as ${state.adobeAuth.email}`}
+        switch (currentStep) {
+            case 'auth':
+                return (
+                    <div className={stepContent}>
+                        <Heading level={2} marginBottom="size-300">
+                            Adobe Authentication
+                        </Heading>
+                        
+                        {state.adobeAuth.isChecking ? (
+                            <Flex direction="column" gap="size-200" alignItems="center" justifyContent="center" height="100%">
+                                <ProgressCircle size="L" isIndeterminate />
+                                <Text UNSAFE_className="text-lg">
+                                    {isLoggingIn ? 'Opening browser for authentication...' : 'Checking authentication status...'}
                                 </Text>
-                            </Flex>
-                            
-                            {/* Organization row */}
-                            <Flex gap="size-200" alignItems="center">
-                                <Text marginStart="size-325">
-                                    Organization: <strong>{state.adobeOrg.name}</strong>
-                                </Text>
-                                <Button
-                                    variant="secondary"
-                                    onPress={() => handleLogin(true)}
-                                    marginStart="auto"
-                                    UNSAFE_style={{ minWidth: 'auto' }}
-                                >
-                                    Switch Organization
-                                </Button>
-                            </Flex>
-                        </Flex>
-                    </Well>
-                </div>
-            )}
-
-            {/* Project Selection Section */}
-            <div ref={projectRef}>
-                <View marginBottom="size-300">
-                    <Heading level={3} marginBottom="size-100">
-                        <Flex gap="size-100" alignItems="center">
-                            <Folder size="S" />
-                            <Text>Adobe I/O Project</Text>
-                        </Flex>
-                    </Heading>
-
-                    {projectError ? (
-                        <Well>
-                            <Flex gap="size-200" alignItems="center">
-                                <AlertCircle UNSAFE_className="text-red-600" />
-                                <View flex>
-                                    <Text><strong>Error Loading Projects</strong></Text>
-                                    <Text UNSAFE_className="text-sm text-gray-700">{projectError}</Text>
-                                </View>
-                                <Button variant="secondary" onPress={loadProjects}>
-                                    Retry
-                                </Button>
-                            </Flex>
-                        </Well>
-                    ) : projects.length > 0 ? (
-                        <>
-                            {/* Search Field */}
-                            {projects.length > 3 && (
-                                <SearchField
-                                    label="Search projects"
-                                    placeholder="Type to filter projects..."
-                                    value={projectSearchQuery}
-                                    onChange={setProjectSearchQuery}
-                                    width="100%"
-                                    marginBottom="size-200"
-                                />
-                            )}
-
-                            {/* Projects List */}
-                            {filteredProjects.length > 0 ? (
-                                <ListView
-                                    items={filteredProjects}
-                                    selectionMode="single"
-                                    selectedKeys={selectedProjectId ? [selectedProjectId] : []}
-                                    onSelectionChange={(keys) => {
-                                        const selectedId = Array.from(keys)[0];
-                                        if (selectedId) {
-                                            const project = projects.find(p => p.id === selectedId);
-                                            if (project) selectProject(project);
-                                        }
-                                    }}
-                                    height="size-3600"
-                                    width="100%"
-                                    marginBottom="size-200"
-                                >
-                                    {(item) => (
-                                        <Item key={item.id} textValue={item.title}>
-                                            <Folder />
-                                            <Text>{item.title}</Text>
-                                            <Text slot="description" UNSAFE_className="text-sm">
-                                                {item.description || item.name}
-                                            </Text>
-                                            {selectedProjectId === item.id && (
-                                                <Badge variant="positive" marginStart="auto">
-                                                    Selected
-                                                </Badge>
-                                            )}
-                                        </Item>
-                                    )}
-                                </ListView>
-                            ) : (
-                                <Well>
-                                    <Flex gap="size-200" alignItems="center">
-                                        <AlertCircle UNSAFE_className="text-yellow-600" />
-                                        <Text>
-                                            No projects found matching "{projectSearchQuery}". Try a different search term.
+                                {isLoggingIn && (
+                                    <>
+                                        <Text UNSAFE_className="text-sm text-gray-600">
+                                            Please complete the login process in your browser
                                         </Text>
-                                    </Flex>
-                                </Well>
-                            )}
-                        </>
-                    ) : (
-                        <Well>
-                            <Flex gap="size-200" alignItems="center">
-                                <AlertCircle color="notice" />
-                                <Text>No projects found in this organization. You may need to create a project in the Adobe Console first.</Text>
-                            </Flex>
-                        </Well>
-                    )}
-                </View>
-                
-                {/* Removed jump to workspaces button - workspace section appears immediately below */}
-            </div>
-
-            {/* Workspace Selection Section - Only show when project is selected */}
-            {selectedProjectId && (
-                <div ref={workspaceRef}>
-                    <Divider size="S" marginY="size-300" />
-                    <View marginBottom="size-400">
-                        <Heading level={3} marginBottom="size-200">
-                            <Flex gap="size-100" alignItems="center">
-                                <Layers size="S" />
-                                <Text>Workspace</Text>
-                                {state.adobeProject && (
-                                    <Badge variant="neutral" marginStart="size-100">
-                                        {state.adobeProject.title}
-                                    </Badge>
+                                        <Text UNSAFE_className="text-xs text-gray-600" marginTop="size-100">
+                                            This window will update automatically when complete
+                                        </Text>
+                                    </>
                                 )}
                             </Flex>
+                        ) : !state.adobeAuth.isAuthenticated ? (
+                            <Flex direction="column" gap="size-300" alignItems="center" justifyContent="center" height="100%">
+                                <AlertCircle size="L" UNSAFE_className="text-yellow-600" />
+                                <Text UNSAFE_className="text-lg">Sign in to continue</Text>
+                                <Text UNSAFE_className="text-sm text-gray-600">
+                                    You need to authenticate with Adobe to create projects
+                                </Text>
+                                <Button variant="cta" onPress={() => handleLogin(false)}>
+                                    Sign In with Adobe
+                                </Button>
+                            </Flex>
+                        ) : isTransitioningToProjects ? (
+                            <Flex direction="column" gap="size-300" alignItems="center" justifyContent="center" height="100%">
+                                <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                                <Text UNSAFE_className="text-lg">Authentication successful</Text>
+                                <Text UNSAFE_className="text-sm text-gray-600">
+                                    Loading your projects...
+                                </Text>
+                                <ProgressCircle size="S" isIndeterminate marginTop="size-200" />
+                            </Flex>
+                        ) : (
+                            <Flex direction="column" gap="size-300" alignItems="center" justifyContent="center" height="100%">
+                                <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                                <Text UNSAFE_className="text-lg">Authentication successful</Text>
+                                <Text UNSAFE_className="text-sm text-gray-600">
+                                    Loading your projects...
+                                </Text>
+                            </Flex>
+                        )}
+                    </div>
+                );
+
+            case 'project':
+                return (
+                    <div className={stepContent}>
+                        <Heading level={2} marginBottom="size-200">
+                            Select Adobe Project
+                        </Heading>
+                        
+                        {projects.length > 5 && (
+                            <SearchField
+                                label="Search projects"
+                                placeholder="Type to filter projects..."
+                                value={projectSearchQuery}
+                                onChange={setProjectSearchQuery}
+                                width="100%"
+                                marginBottom="size-200"
+                                isQuiet
+                            />
+                        )}
+
+                        {isLoadingProjects ? (
+                            <Flex direction="column" gap="size-200" alignItems="center" justifyContent="center" height="100%">
+                                <ProgressCircle size="L" isIndeterminate />
+                                <Text UNSAFE_className="text-lg">Loading your Adobe projects...</Text>
+                                {state.adobeOrg && (
+                                    <Text UNSAFE_className="text-sm text-gray-600">
+                                        Fetching from organization: {state.adobeOrg.name}
+                                    </Text>
+                                )}
+                            </Flex>
+                        ) : projectError ? (
+                            <Well>
+                                <Flex direction="column" gap="size-200" alignItems="center">
+                                    <AlertCircle size="L" UNSAFE_className="text-red-600" />
+                                    <Text>{projectError}</Text>
+                                    <Button variant="secondary" onPress={loadProjects}>
+                                        Retry
+                                    </Button>
+                                </Flex>
+                            </Well>
+                        ) : filteredProjects.length > 0 ? (
+                            <ListView
+                                UNSAFE_className="adobe-project-list"
+                                items={filteredProjects}
+                                selectionMode="single"
+                                selectedKeys={selectedProjectId ? [selectedProjectId] : []}
+                                onSelectionChange={(keys) => {
+                                    const selectedId = Array.from(keys)[0];
+                                    if (selectedId) {
+                                        const project = projects.find(p => p.id === selectedId);
+                                        if (project) selectProject(project);
+                                    }
+                                }}
+                                height="100%"
+                                width="100%"
+                            >
+                                {(item) => (
+                                    <Item key={item.id} textValue={item.title}>
+                                        <Text>{item.title}</Text>
+                                        <Text slot="description" UNSAFE_className="text-sm">
+                                            {item.description || item.name}
+                                        </Text>
+                                    </Item>
+                                )}
+                            </ListView>
+                        ) : (
+                            <Flex alignItems="center" justifyContent="center" height="100%">
+                                <Text UNSAFE_className="text-gray-600">No projects found</Text>
+                            </Flex>
+                        )}
+                    </div>
+                );
+
+            case 'workspace':
+                return (
+                    <div className={stepContent}>
+                        <Heading level={2} marginBottom="size-300">
+                            Select Workspace
                         </Heading>
 
                         {isLoadingWorkspaces ? (
-                            <Flex gap="size-200" alignItems="center">
-                                <ProgressCircle size="S" isIndeterminate />
-                                <Text>Loading workspaces...</Text>
+                            <Flex direction="column" gap="size-200" alignItems="center" justifyContent="center" height="100%">
+                                <ProgressCircle size="L" isIndeterminate />
+                                <Text UNSAFE_className="text-lg">Loading workspaces...</Text>
+                                {state.adobeProject && (
+                                    <Text UNSAFE_className="text-sm text-gray-600">
+                                        Fetching from project: {state.adobeProject.title}
+                                    </Text>
+                                )}
                             </Flex>
                         ) : workspaceError ? (
                             <Well>
-                                <Flex gap="size-200" alignItems="center">
-                                    <AlertCircle UNSAFE_className="text-red-600" />
-                                    <View flex>
-                                        <Text><strong>Error Loading Workspaces</strong></Text>
-                                        <Text UNSAFE_className="text-sm text-gray-700">{workspaceError}</Text>
-                                    </View>
-                                    <Button variant="secondary" onPress={() => loadWorkspaces(selectedProjectId)}>
+                                <Flex direction="column" gap="size-200" alignItems="center">
+                                    <AlertCircle size="L" UNSAFE_className="text-red-600" />
+                                    <Text>{workspaceError}</Text>
+                                    <Button 
+                                        variant="secondary" 
+                                        onPress={() => selectedProjectId && loadWorkspaces(selectedProjectId)}
+                                    >
                                         Retry
                                     </Button>
                                 </Flex>
                             </Well>
                         ) : workspaces.length > 0 ? (
                             <ListView
+                                UNSAFE_className="adobe-workspace-list"
                                 items={workspaces}
                                 selectionMode="single"
                                 selectedKeys={selectedWorkspaceId ? [selectedWorkspaceId] : []}
@@ -522,48 +477,281 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                                         if (workspace) selectWorkspace(workspace);
                                     }
                                 }}
-                                height="size-3000"
+                                height="100%"
                                 width="100%"
-                                marginBottom="size-200"
                             >
                                 {(item) => (
                                     <Item key={item.id} textValue={item.name}>
-                                        <Layers />
                                         <Text>{item.title || item.name}</Text>
-                                        {selectedWorkspaceId === item.id && (
-                                            <Badge variant="positive" marginStart="auto">
-                                                Selected
-                                            </Badge>
-                                        )}
                                     </Item>
                                 )}
                             </ListView>
                         ) : (
-                            <Well>
-                                <Flex gap="size-200" alignItems="center">
-                                    <AlertCircle color="notice" />
-                                    <Text>No workspaces found for this project.</Text>
-                                </Flex>
-                            </Well>
+                            <Flex alignItems="center" justifyContent="center" height="100%">
+                                <Text UNSAFE_className="text-gray-600">No workspaces found</Text>
+                            </Flex>
                         )}
-                    </View>
-                </div>
-            )}
+                    </div>
+                );
+        }
+    };
 
-            {/* Selected Context Summary */}
-            {state.adobeProject && state.adobeWorkspace && (
-                <Well backgroundColor="positive" marginTop="size-200">
-                    <Flex gap="size-200" alignItems="center">
-                        <CheckmarkCircle color="positive" />
-                        <View flex>
-                            <Text><strong>Ready to proceed</strong></Text>
-                            <Text UNSAFE_className="text-sm">
-                                Project: {state.adobeProject.title} | Workspace: {state.adobeWorkspace.title || state.adobeWorkspace.name}
-                            </Text>
-                        </View>
+    const renderRightColumn = () => {
+        const isComplete = state.adobeAuth.isAuthenticated && 
+                          state.adobeProject?.id && 
+                          state.adobeWorkspace?.id;
+
+        return (
+            <View height="100%" UNSAFE_className={cn('adobe-summary-panel')}>
+                <Heading level={3} marginBottom="size-300">
+                    Configuration Summary
+                </Heading>
+
+                {/* Authentication Status */}
+                <View marginBottom="size-200">
+                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
+                        <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
+                            Authentication
+                        </Text>
+                        {state.adobeAuth.isAuthenticated && (
+                            <ActionButton
+                                isQuiet
+                                onPress={() => editStep('auth')}
+                                UNSAFE_className="edit-button"
+                            >
+                                <Edit size="XS" />
+                            </ActionButton>
+                        )}
                     </Flex>
-                </Well>
-            )}
+                    {state.adobeAuth.isAuthenticated ? (
+                        <Flex gap="size-100" alignItems="center">
+                            <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            <View>
+                                <Text UNSAFE_className="text-sm">{state.adobeAuth.email}</Text>
+                                {state.adobeOrg && (
+                                    <Text UNSAFE_className="text-xs text-gray-600">
+                                        {state.adobeOrg.name}
+                                    </Text>
+                                )}
+                            </View>
+                        </Flex>
+                    ) : (
+                        <Text UNSAFE_className="text-sm text-gray-600">Not authenticated</Text>
+                    )}
+                </View>
+
+                <Divider size="S" />
+
+                {/* Project Selection */}
+                <View marginTop="size-200" marginBottom="size-200">
+                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
+                        <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
+                            Project
+                        </Text>
+                        {state.adobeProject?.id && (
+                            <ActionButton
+                                isQuiet
+                                onPress={() => editStep('project')}
+                                UNSAFE_className="edit-button"
+                            >
+                                <Edit size="XS" />
+                            </ActionButton>
+                        )}
+                    </Flex>
+                    {state.adobeProject ? (
+                        <Flex gap="size-100" alignItems="flex-start">
+                            <CheckmarkCircle size="S" UNSAFE_className="text-green-600" marginTop="size-50" />
+                            <View>
+                                <Text UNSAFE_className="text-sm font-medium">
+                                    {state.adobeProject.title}
+                                </Text>
+                                {state.adobeProject.description && (
+                                    <Text UNSAFE_className="text-xs text-gray-600">
+                                        {state.adobeProject.description}
+                                    </Text>
+                                )}
+                            </View>
+                        </Flex>
+                    ) : (
+                        <Text UNSAFE_className="text-sm text-gray-600">
+                            {state.adobeAuth.isAuthenticated ? 'No project selected' : 'Authenticate first'}
+                        </Text>
+                    )}
+                </View>
+
+                <Divider size="S" />
+
+                {/* Workspace Selection */}
+                <View marginTop="size-200" marginBottom="size-200">
+                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
+                        <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
+                            Workspace
+                        </Text>
+                        {state.adobeWorkspace?.id && (
+                            <ActionButton
+                                isQuiet
+                                onPress={() => editStep('workspace')}
+                                UNSAFE_className="edit-button"
+                            >
+                                <Edit size="XS" />
+                            </ActionButton>
+                        )}
+                    </Flex>
+                    {state.adobeWorkspace ? (
+                        <Flex gap="size-100" alignItems="center">
+                            <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            <Text UNSAFE_className="text-sm">
+                                {state.adobeWorkspace.title || state.adobeWorkspace.name}
+                            </Text>
+                        </Flex>
+                    ) : (
+                        <Text UNSAFE_className="text-sm text-gray-600">
+                            {state.adobeProject?.id ? 'No workspace selected' : 'Select project first'}
+                        </Text>
+                    )}
+                </View>
+
+                {/* Ready Status */}
+                {isComplete && (
+                    <>
+                        <Divider size="S" />
+                        <Well marginTop="size-300" UNSAFE_className="ready-well">
+                            <Flex gap="size-200" alignItems="center">
+                                <CheckmarkCircle size="M" UNSAFE_className="text-green-600" />
+                                <View>
+                                    <Text UNSAFE_className="font-semibold">Ready to proceed</Text>
+                                    <Text UNSAFE_className="text-xs text-gray-600">
+                                        All configurations complete
+                                    </Text>
+                                </View>
+                            </Flex>
+                        </Well>
+                    </>
+                )}
+            </View>
+        );
+    };
+
+    return (
+        <div className="adobe-setup-two-column" style={{ width: '100%', height: '100%', margin: 0, padding: 0 }}>
+            {/* Use standard div with flex for layout to avoid Spectrum width constraints */}
+            <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0' }}>
+                {/* Left Column - Active Step (60%) */}
+                <div style={{ flex: '1 1 60%', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+                    {renderLeftColumn()}
+                </div>
+
+                {/* Right Column - Summary (40%) */}
+                <div style={{ 
+                    flex: '0 0 40%', 
+                    padding: '24px', 
+                    backgroundColor: 'var(--spectrum-global-color-gray-75)',
+                    borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
+                }}>
+                    {renderRightColumn()}
+                </div>
+            </div>
+
+            <style>{`
+                .adobe-setup-two-column {
+                    overflow: hidden;
+                }
+
+                .step-content {
+                    height: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    opacity: 1;
+                    transform: translateX(0);
+                    transition: opacity 0.2s ease, transform 0.2s ease;
+                }
+                
+                .step-content.transitioning {
+                    opacity: 0;
+                    transform: translateX(-10px);
+                }
+
+                .adobe-project-list,
+                .adobe-workspace-list {
+                    border: 1px solid var(--spectrum-global-color-gray-200);
+                    border-radius: 4px;
+                    background: var(--spectrum-global-color-gray-50);
+                }
+
+                .adobe-project-list [aria-selected="true"],
+                .adobe-workspace-list [aria-selected="true"] {
+                    background-color: var(--spectrum-global-color-blue-100) !important;
+                    border-left: 3px solid var(--spectrum-global-color-blue-600) !important;
+                    padding-left: 13px !important;
+                }
+
+                .adobe-summary-panel {
+                    position: sticky;
+                    top: 0;
+                }
+
+                .edit-button {
+                    color: var(--spectrum-global-color-gray-600);
+                    transition: color 0.2s ease;
+                }
+
+                .edit-button:hover {
+                    color: var(--spectrum-global-color-blue-600);
+                }
+
+                .ready-well {
+                    background-color: var(--spectrum-global-color-green-100);
+                    border: 1px solid var(--spectrum-global-color-green-400);
+                }
+
+                .text-uppercase {
+                    text-transform: uppercase;
+                }
+
+                .letter-spacing-05 {
+                    letter-spacing: 0.05em;
+                }
+
+                .font-semibold {
+                    font-weight: 600;
+                }
+
+                .text-xs {
+                    font-size: 11px;
+                }
+
+                .text-sm {
+                    font-size: 13px;
+                }
+
+                .text-lg {
+                    font-size: 18px;
+                }
+
+                .text-gray-600 {
+                    color: var(--spectrum-global-color-gray-600);
+                }
+
+                .text-gray-700 {
+                    color: var(--spectrum-global-color-gray-700);
+                }
+
+                .text-green-600 {
+                    color: var(--spectrum-global-color-green-600);
+                }
+
+                .text-yellow-600 {
+                    color: var(--spectrum-global-color-yellow-600);
+                }
+
+                .text-red-600 {
+                    color: var(--spectrum-global-color-red-600);
+                }
+
+                .font-medium {
+                    font-weight: 500;
+                }
+            `}</style>
         </div>
     );
 }

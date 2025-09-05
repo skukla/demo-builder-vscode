@@ -22,9 +22,7 @@ const DEFAULT_WIZARD_STEPS: { id: WizardStep; name: string }[] = [
     { id: 'welcome', name: 'Project Details' },
     { id: 'component-selection', name: 'Components' },
     { id: 'prerequisites', name: 'Prerequisites' },
-    { id: 'adobe-auth', name: 'Adobe Auth' },
-    { id: 'org-selection', name: 'Organization' },
-    { id: 'project-selection', name: 'Project' },
+    { id: 'adobe-setup', name: 'Adobe Setup' },
     { id: 'commerce-config', name: 'Commerce' },
     { id: 'review', name: 'Review' },
     { id: 'creating', name: 'Creating' }
