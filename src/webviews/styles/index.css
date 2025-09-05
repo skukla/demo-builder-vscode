@@ -1,3 +1,6 @@
+/* Import component-specific styles */
+@import './adobe-setup.css';
+
 /* Base styles for the webview */
 * {
     box-sizing: border-box;
