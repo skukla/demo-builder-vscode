@@ -4,6 +4,7 @@ import { CommandManager } from './commands/commandManager';
 import { StatusBarManager } from './providers/statusBar';
 import { AutoUpdater } from './utils/autoUpdater';
 import { Logger } from './utils/logger';
+import { initializeLogger } from './utils/debugLogger';
 import { StateManager } from './utils/stateManager';
 import { ProjectTreeProvider } from './providers/projectTreeProvider';
 
@@ -13,6 +14,9 @@ let stateManager: StateManager;
 let autoUpdater: AutoUpdater;
 
 export async function activate(context: vscode.ExtensionContext) {
+    // Initialize the debug logger first
+    initializeLogger(context);
+    
     logger = new Logger('Demo Builder');
     logger.info('Adobe Demo Builder extension is activating...');
 
@@ -89,11 +93,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register file watchers
         registerFileWatchers(context);
-
-        // Create output channel
-        const outputChannel = vscode.window.createOutputChannel('Demo Builder');
-        context.subscriptions.push(outputChannel);
-        logger.setOutputChannel(outputChannel);
 
         logger.info('Adobe Demo Builder extension activated successfully!');
 

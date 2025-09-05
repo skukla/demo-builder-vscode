@@ -1,0 +1,359 @@
+import * as vscode from 'vscode';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import * as os from 'os';
+import * as path from 'path';
+import { getLogger, CommandResult } from '../utils/debugLogger';
+
+const execAsync = promisify(exec);
+
+export class DiagnosticsCommand {
+    private logger = getLogger();
+
+    public async execute(): Promise<void> {
+        this.logger.info('Running Demo Builder diagnostics...');
+        this.logger.showDebug(true);
+        
+        // Clear debug channel for fresh diagnostics
+        this.logger.clearDebug();
+        
+        const report: any = {
+            timestamp: new Date().toISOString(),
+            system: {},
+            vscode: {},
+            tools: {},
+            adobe: {},
+            environment: {},
+            tests: {}
+        };
+
+        try {
+            // System information
+            this.logger.debug('Collecting system information...');
+            report.system = await this.getSystemInfo();
+            
+            // VS Code information
+            this.logger.debug('Collecting VS Code information...');
+            report.vscode = this.getVSCodeInfo();
+            
+            // Tool versions
+            this.logger.debug('Checking tool versions...');
+            report.tools = await this.checkTools();
+            
+            // Adobe CLI status
+            this.logger.debug('Checking Adobe CLI...');
+            report.adobe = await this.checkAdobeCLI();
+            
+            // Environment variables
+            this.logger.debug('Collecting environment variables...');
+            report.environment = this.getEnvironment();
+            
+            // Run diagnostic tests
+            this.logger.debug('Running diagnostic tests...');
+            report.tests = await this.runTests();
+            
+            // Log the full report
+            this.logger.debug('DIAGNOSTIC REPORT', report);
+            
+            // Show summary in main output
+            this.showSummary(report);
+            
+            // Offer to export
+            const action = await vscode.window.showInformationMessage(
+                'Diagnostics complete. Check the Debug output for details.',
+                'Show Debug Output',
+                'Export Log'
+            );
+            
+            if (action === 'Show Debug Output') {
+                this.logger.showDebug(false);
+            } else if (action === 'Export Log') {
+                await this.logger.exportDebugLog();
+            }
+            
+        } catch (error) {
+            this.logger.error('Diagnostics failed', error as Error);
+            throw error;
+        }
+    }
+
+    private async getSystemInfo(): Promise<any> {
+        return {
+            platform: os.platform(),
+            release: os.release(),
+            arch: os.arch(),
+            cpus: os.cpus().length,
+            memory: `${Math.round(os.totalmem() / (1024 * 1024 * 1024))}GB`,
+            homedir: os.homedir(),
+            tmpdir: os.tmpdir(),
+            shell: process.env.SHELL || 'unknown'
+        };
+    }
+
+    private getVSCodeInfo(): any {
+        return {
+            version: vscode.version,
+            appName: vscode.env.appName,
+            language: vscode.env.language,
+            machineId: vscode.env.machineId.substring(0, 8) + '...',
+            sessionId: vscode.env.sessionId.substring(0, 8) + '...'
+        };
+    }
+
+    private async checkTools(): Promise<any> {
+        const tools: any = {};
+        
+        // Check Node.js
+        tools.node = await this.checkCommand('node --version');
+        
+        // Check npm
+        tools.npm = await this.checkCommand('npm --version');
+        
+        // Check fnm
+        tools.fnm = await this.checkCommand('fnm --version');
+        if (tools.fnm.installed) {
+            // List fnm installations
+            const fnmList = await this.checkCommand('fnm list');
+            if (fnmList.installed) {
+                tools.fnm.versions = fnmList.output.split('\n').filter((l: string) => l.trim());
+            }
+        }
+        
+        // Check git
+        tools.git = await this.checkCommand('git --version');
+        
+        // Check Adobe CLI
+        tools.aio = await this.checkCommand('aio --version');
+        
+        return tools;
+    }
+
+    private async checkAdobeCLI(): Promise<any> {
+        const adobe: any = {};
+        
+        // Check if Adobe CLI is installed
+        const aioVersion = await this.checkCommand('aio --version');
+        adobe.installed = aioVersion.installed;
+        adobe.version = aioVersion.output;
+        
+        if (adobe.installed) {
+            // Check authentication status
+            const authCheck = await this.checkCommand('aio config get ims.contexts.aio-cli-plugin-auth');
+            adobe.authConfigured = authCheck.installed && authCheck.output.length > 0;
+            
+            if (adobe.authConfigured) {
+                // Try to parse the auth config
+                try {
+                    const authData = JSON.parse(authCheck.output);
+                    adobe.hasToken = !!authData.access_token;
+                    adobe.hasRefreshToken = !!authData.refresh_token;
+                    adobe.expiresIn = authData.expires_in;
+                    
+                    // Check if token is expired
+                    if (adobe.expiresIn) {
+                        const expiryTime = parseInt(adobe.expiresIn);
+                        const now = Date.now();
+                        adobe.tokenExpired = expiryTime < now;
+                        adobe.expiryDate = new Date(expiryTime).toISOString();
+                    }
+                } catch (e) {
+                    adobe.authParseError = (e as Error).message;
+                    this.logger.debug('Failed to parse auth config', authCheck.output);
+                }
+            }
+            
+            // Check current context
+            const ctxCheck = await this.checkCommand('aio auth ctx');
+            adobe.currentContext = ctxCheck.output;
+            
+            // Try to list organizations
+            const orgCheck = await this.checkCommand('aio console org list');
+            adobe.canListOrgs = orgCheck.installed && !orgCheck.output.includes('Error');
+            
+            // Check selected org
+            const selectedOrg = await this.checkCommand('aio console org select');
+            adobe.selectedOrg = selectedOrg.output;
+        }
+        
+        return adobe;
+    }
+
+    private getEnvironment(): any {
+        const env = process.env;
+        return {
+            PATH: env.PATH?.split(path.delimiter) || [],
+            HOME: env.HOME,
+            USER: env.USER,
+            SHELL: env.SHELL,
+            NODE_PATH: env.NODE_PATH,
+            npm_config_prefix: env.npm_config_prefix,
+            FNM_DIR: env.FNM_DIR,
+            FNM_MULTISHELL_PATH: env.FNM_MULTISHELL_PATH,
+            FNM_NODE_DIST_MIRROR: env.FNM_NODE_DIST_MIRROR,
+            FNM_LOGLEVEL: env.FNM_LOGLEVEL
+        };
+    }
+
+    private async runTests(): Promise<any> {
+        const tests: any = {};
+        
+        // Test browser launch capability
+        this.logger.debug('Testing browser launch...');
+        tests.browserLaunch = await this.testBrowserLaunch();
+        
+        // Test Adobe login command
+        this.logger.debug('Testing Adobe login command...');
+        tests.adobeLoginCommand = await this.testAdobeLogin();
+        
+        // Test file system access
+        this.logger.debug('Testing file system access...');
+        tests.fileSystem = await this.testFileSystem();
+        
+        return tests;
+    }
+
+    private async checkCommand(command: string): Promise<any> {
+        const startTime = Date.now();
+        try {
+            const { stdout, stderr } = await execAsync(command);
+            const duration = Date.now() - startTime;
+            
+            const result: CommandResult = {
+                stdout: stdout.trim(),
+                stderr: stderr.trim(),
+                code: 0,
+                duration,
+                cwd: process.cwd()
+            };
+            
+            this.logger.logCommand(command, result);
+            
+            return {
+                installed: true,
+                output: stdout.trim(),
+                error: stderr.trim(),
+                duration
+            };
+        } catch (error: any) {
+            const duration = Date.now() - startTime;
+            
+            const result: CommandResult = {
+                stdout: error.stdout || '',
+                stderr: error.stderr || error.message,
+                code: error.code || -1,
+                duration,
+                cwd: process.cwd()
+            };
+            
+            this.logger.logCommand(command, result);
+            
+            return {
+                installed: false,
+                error: error.message,
+                code: error.code,
+                duration
+            };
+        }
+    }
+
+    private async testBrowserLaunch(): Promise<any> {
+        // Test if we can open a URL (won't actually open, just test the command)
+        const platform = os.platform();
+        let command: string;
+        
+        switch (platform) {
+            case 'darwin':
+                command = 'open --help';
+                break;
+            case 'win32':
+                command = 'start /?';
+                break;
+            default:
+                command = 'xdg-open --help';
+        }
+        
+        const result = await this.checkCommand(command);
+        return {
+            platform,
+            command: command.split(' ')[0],
+            available: result.installed
+        };
+    }
+
+    private async testAdobeLogin(): Promise<any> {
+        // Test if Adobe login command is available (without actually running it)
+        const result = await this.checkCommand('aio auth login --help');
+        return {
+            available: result.installed,
+            supportsForceFlag: result.installed && result.output.includes('-f')
+        };
+    }
+
+    private async testFileSystem(): Promise<any> {
+        const tempDir = os.tmpdir();
+        const testFile = path.join(tempDir, 'demo-builder-test.txt');
+        
+        try {
+            const fs = require('fs').promises;
+            
+            // Test write
+            await fs.writeFile(testFile, 'test');
+            
+            // Test read
+            const content = await fs.readFile(testFile, 'utf8');
+            
+            // Clean up
+            await fs.unlink(testFile);
+            
+            return {
+                canWrite: true,
+                canRead: content === 'test',
+                tempDir
+            };
+        } catch (error) {
+            return {
+                canWrite: false,
+                canRead: false,
+                error: (error as Error).message,
+                tempDir
+            };
+        }
+    }
+
+    private showSummary(report: any): void {
+        this.logger.info('=== DIAGNOSTICS SUMMARY ===');
+        this.logger.info(`System: ${report.system.platform} ${report.system.release}`);
+        this.logger.info(`VS Code: ${report.vscode.version}`);
+        
+        // Tools summary
+        this.logger.info('');
+        this.logger.info('Tools Status:');
+        Object.entries(report.tools).forEach(([tool, info]: [string, any]) => {
+            const status = info.installed ? '✅' : '❌';
+            const version = info.installed ? info.output : 'Not installed';
+            this.logger.info(`  ${status} ${tool}: ${version}`);
+        });
+        
+        // Adobe CLI summary
+        if (report.adobe.installed) {
+            this.logger.info('');
+            this.logger.info('Adobe CLI Status:');
+            this.logger.info(`  Version: ${report.adobe.version}`);
+            this.logger.info(`  Authenticated: ${report.adobe.authConfigured ? 'Yes' : 'No'}`);
+            if (report.adobe.authConfigured) {
+                this.logger.info(`  Token Valid: ${!report.adobe.tokenExpired ? 'Yes' : 'No'}`);
+                this.logger.info(`  Can List Orgs: ${report.adobe.canListOrgs ? 'Yes' : 'No'}`);
+            }
+        }
+        
+        // Test results
+        this.logger.info('');
+        this.logger.info('Diagnostic Tests:');
+        this.logger.info(`  Browser Launch: ${report.tests.browserLaunch.available ? 'Available' : 'Not available'}`);
+        this.logger.info(`  Adobe Login Command: ${report.tests.adobeLoginCommand.available ? 'Available' : 'Not available'}`);
+        this.logger.info(`  File System Access: ${report.tests.fileSystem.canWrite ? 'OK' : 'Failed'}`);
+        
+        this.logger.info('');
+        this.logger.info('Full details available in Demo Builder - Debug output channel');
+    }
+}

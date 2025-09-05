@@ -8,6 +8,7 @@ import { ViewStatusCommand } from './viewStatus';
 import { ConfigureCommand } from './configure';
 import { CheckUpdatesCommand } from './checkUpdates';
 import { ResetAllCommand } from './resetAll';
+import { DiagnosticsCommand } from './diagnostics';
 import { StateManager } from '../utils/stateManager';
 import { StatusBarManager } from '../providers/statusBar';
 import { Logger } from '../utils/logger';
@@ -118,7 +119,12 @@ export class CommandManager {
             this.registerCommand('demoBuilder.resetAll', () => resetAll.execute());
         }
 
+        // Diagnostics
+        const diagnostics = new DiagnosticsCommand();
+        this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
+
         this.logger.info(`Registered ${this.commands.size} commands`);
+        this.logger.debug('Commands registered:', Array.from(this.commands.keys()));
     }
 
     private registerCommand(command: string, callback: (...args: any[]) => any): void {
