@@ -71,6 +71,11 @@
         "command": "demoBuilder.resetAll",
         "title": "Demo Builder: Reset All (Dev Only)",
         "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.diagnostics",
+        "title": "Demo Builder: Diagnostics",
+        "category": "Demo Builder"
       }
     ],
     "configuration": {
