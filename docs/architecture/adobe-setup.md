@@ -180,6 +180,28 @@ const filteredProjects = useMemo(() => {
 ### 3. Conditional Rendering
 Search field only shown when needed (>5 projects)
 
+## Recent UX Improvements (v1.3.0)
+
+### Consistent Auto-Advance Behavior
+**Previous Issue**: Project selection auto-advanced but workspace selection required manual Continue  
+**Solution**: Workspace selection now auto-advances after 500ms delay  
+**Impact**: Consistent, predictable flow through all selection steps
+
+### Authentication Success Display
+**Previous Issue**: Success message skipped when already authenticated on initial load  
+**Solution**: Added `shouldShowAuthSuccess` flag to ensure 2-second display  
+**Impact**: Users always see clear authentication confirmation
+
+### Eliminated Double-Loader
+**Previous Issue**: "Loading your projects..." shown in success screen, then another loader  
+**Solution**: Removed intermediate loading text from authentication success  
+**Impact**: Cleaner transition without redundant loading states
+
+### Improved Status Section
+**Previous Issue**: "Ready to proceed" had inconsistent green background styling  
+**Solution**: Redesigned to match other sections with consistent styling  
+**Impact**: Unified visual design throughout Configuration Summary
+
 ## Known Issues and Solutions
 
 ### Issue: Projects Not Loading for Authenticated Users

@@ -6,11 +6,122 @@ This guide provides solutions to common issues encountered during development of
 
 ## Table of Contents
 
-1. [Width Constraint Issues](#width-constraint-issues)
-2. [Scroll Behavior Problems](#scroll-behavior-problems)
-3. [UI Consistency Challenges](#ui-consistency-challenges)
-4. [React Spectrum Component Issues](#react-spectrum-component-issues)
-5. [Prerequisites UI Issues](#prerequisites-ui-issues)
+1. [Using Diagnostics](#using-diagnostics)
+2. [Platform-Specific Issues](#platform-specific-issues)
+3. [Authentication Issues](#authentication-issues)
+4. [Width Constraint Issues](#width-constraint-issues)
+5. [Scroll Behavior Problems](#scroll-behavior-problems)
+6. [UI Consistency Challenges](#ui-consistency-challenges)
+7. [React Spectrum Component Issues](#react-spectrum-component-issues)
+8. [Prerequisites UI Issues](#prerequisites-ui-issues)
+
+## Using Diagnostics
+
+### Running the Diagnostics Command
+
+**When to Use:**
+- Extension behaves differently on different systems
+- Authentication or browser launch issues
+- Tool detection problems
+- Before reporting bugs
+
+**How to Run:**
+1. Open Command Palette (Cmd+Shift+P / Ctrl+Shift+P)
+2. Run "Demo Builder: Diagnostics"
+3. Check output in both channels:
+   - "Demo Builder: Logs" - Summary information
+   - "Demo Builder: Debug" - Detailed diagnostic data
+
+**What It Checks:**
+- System information (OS, architecture, memory)
+- VS Code version and environment
+- Tool installations (Node.js, npm, fnm, git, Adobe CLI)
+- Adobe authentication status and token validity
+- Environment variables and PATH
+- Browser launch capability
+- File system permissions
+
+**Exporting Logs:**
+- Choose "Export Log" when prompted after diagnostics
+- Save the file for sharing with support
+- Includes all Debug channel content
+
+## Platform-Specific Issues
+
+### Node.js Not Detected Despite Being Installed
+
+**Symptoms:**
+- Prerequisites show Node.js as not installed
+- `node --version` works in terminal but not in extension
+
+**Diagnosis:**
+1. Run diagnostics to check PATH
+2. Look in Debug channel for exact command output
+3. Check if version manager (fnm/nvm) is configured
+
+**Solutions:**
+- Ensure PATH includes Node.js location
+- For fnm: Check shell configuration (.zshrc/.bashrc)
+- Restart VS Code after PATH changes
+- Try launching VS Code from terminal: `code .`
+
+### Adobe CLI Browser Not Opening
+
+**Symptoms:**
+- Clicking "Sign In with Adobe" doesn't open browser
+- Authentication hangs indefinitely
+
+**Diagnosis:**
+1. Run diagnostics to check Adobe CLI
+2. Review Debug channel for `aio auth login -f` execution
+3. Check browser launch test results
+
+**Solutions:**
+- Verify `aio` CLI is in PATH
+- Check if `-f` flag is supported: `aio auth login --help`
+- macOS: Check Gatekeeper permissions
+- Windows: Verify default browser settings
+- Linux: Check xdg-open configuration
+
+## Authentication Issues
+
+### Authentication Check Shows Not Authenticated
+
+**Symptoms:**
+- Already logged in but extension shows not authenticated
+- Token exists but not recognized
+
+**Diagnosis:**
+1. Check Debug channel for token parsing
+2. Look for expiry time calculations
+3. Verify token context path
+
+**Debug Output Example:**
+```
+[2025-01-10T15:30:00.123Z] DEBUG: Starting Adobe authentication check
+[2025-01-10T15:30:00.125Z] DEBUG: Executing: aio config get ims.contexts.cli.access_token.token
+[2025-01-10T15:30:00.500Z] DEBUG: Token expiry check:
+{
+  "expiryTime": 1704935445000,
+  "currentTime": 1704892245000,
+  "isValid": false
+}
+```
+
+**Solutions:**
+- Force re-authentication: Switch organizations
+- Check system time is correct
+- Clear Adobe CLI cache: `aio auth logout --force`
+- Verify correct context: `aio auth ctx`
+
+### Authentication Success Not Showing
+
+**Symptoms:**
+- No success message when already authenticated
+- Quick flash then immediate project loading
+
+**Solution:**
+This has been fixed in v1.3.0. Update to the latest version.
 
 ## Width Constraint Issues
 

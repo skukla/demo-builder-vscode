@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-01-10
+
+### Added
+- **Enhanced Debugging System**: 
+  - New diagnostics command (`Demo Builder: Diagnostics`) for comprehensive system analysis
+  - Dual output channel architecture: "Demo Builder: Logs" for user messages, "Demo Builder: Debug" for detailed diagnostics
+  - Command execution logging with stdout, stderr, exit codes, and timing information
+  - Environment variable and PATH logging for troubleshooting platform-specific issues
+  - Export debug log capability for sharing diagnostic reports
+- **Adobe Authentication Debugging**:
+  - Detailed logging of `aio config` commands and responses
+  - Token expiry parsing with step-by-step debugging
+  - Browser launch command tracing with environment context
+
+### Changed
+- **Adobe Setup UX Improvements**:
+  - Workspace selection now auto-advances to next step (consistent with project selection behavior)
+  - Authentication success message always displays for 2 seconds on initial load
+  - Removed redundant "Loading your projects..." text from authentication success screen
+  - Redesigned "Ready to proceed" section to match UI consistency (removed green background)
+- **Unified Logging System**:
+  - Consolidated from 4 output channels to 2 clean channels
+  - Logger class now wraps DebugLogger for backward compatibility
+  - ErrorLogger uses unified DebugLogger while maintaining status bar features
+  - viewStatus command uses main logger instead of creating separate channel
+
+### Fixed
+- **Adobe Setup Flow Issues**:
+  - Fixed inconsistent auto-advance behavior between project and workspace selection
+  - Fixed authentication success message not showing when already authenticated on initial load
+  - Eliminated double-loader display after authentication success
+  - Fixed "Ready to proceed" styling to be consistent with rest of UI
+- **Logging System Issues**:
+  - Eliminated duplicate "Demo Builder" output channels
+  - Fixed ErrorLogger creating redundant output channel
+  - Resolved Logger class initialization issues
+
+## [1.2.0] - 2025-01-09
+
 ### Added
 - **Unified Progress Tracking System**: Real-time progress bars during prerequisite installation with different strategies:
   - Exact progress parsing for fnm (shows actual download percentages)

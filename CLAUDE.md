@@ -118,6 +118,11 @@ demo-builder-vscode/
 ### Adding New Commands
 → See `src/commands/CLAUDE.md`
 
+### Debugging Issues
+→ Run "Demo Builder: Diagnostics" command
+→ Check "Demo Builder: Debug" output channel
+→ See `docs/systems/debugging.md`
+
 ## Technology Stack
 
 - **Extension**: TypeScript, VS Code Extension API
@@ -135,6 +140,14 @@ demo-builder-vscode/
 
 ## Recent Improvements
 
+### v1.3.0 (2025-01-10)
+- **Enhanced Debugging System**: Dual output channels ("Demo Builder: Logs" and "Demo Builder: Debug")
+- **Diagnostics Command**: Comprehensive system analysis for troubleshooting
+- **Unified Logging**: Consolidated from 4 channels to 2 clean channels
+- **Adobe Setup UX**: Consistent auto-advance, proper success display, eliminated double-loader
+- **Command Execution Logging**: Full stdout/stderr/timing capture for debugging
+
+### Previous Updates
 - Fixed wizard width inconsistencies (450px → 800px)
 - Improved prerequisites UI with scrollable container
 - Standardized status message displays

@@ -61,6 +61,7 @@ See [build documentation](docs/build.md) for detailed build instructions.
 - `Demo Builder: Delete Project` - Remove the current project
 - `Demo Builder: View Status` - Display detailed project status
 - `Demo Builder: Check for Updates` - Manually check for extension updates
+- `Demo Builder: Diagnostics` - Run comprehensive system diagnostics
 
 ## Configuration
 
@@ -75,6 +76,34 @@ Configure Demo Builder through VSCode settings:
   "demoBuilder.logLevel": "info"
 }
 ```
+
+## Debugging and Troubleshooting
+
+### Running Diagnostics
+
+If you encounter issues, especially on different systems:
+
+1. Open Command Palette (`Cmd+Shift+P`)
+2. Run: `Demo Builder: Diagnostics`
+3. Check the output in:
+   - **Demo Builder: Logs** - User-friendly summary
+   - **Demo Builder: Debug** - Detailed diagnostic information
+
+### Output Channels
+
+The extension uses two output channels:
+- **Demo Builder: Logs** - General information, warnings, and errors
+- **Demo Builder: Debug** - Detailed debugging information for troubleshooting
+
+Access them via: View → Output → Select channel from dropdown
+
+### Common Issues
+
+- **Node.js not detected**: Run diagnostics to check PATH configuration
+- **Adobe CLI browser not opening**: Check Debug channel for command execution details
+- **Authentication issues**: Review token parsing in Debug channel
+
+For detailed troubleshooting, see the [Troubleshooting Guide](docs/troubleshooting.md).
 
 ## License Key
 

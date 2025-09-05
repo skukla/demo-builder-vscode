@@ -86,12 +86,52 @@ vscode.postMessage({
 - Command-line style interaction
 - Minimal UI involvement
 
+### diagnostics
+
+**Purpose**: Comprehensive system diagnostics
+- Collects system and tool information
+- Tests Adobe CLI authentication
+- Verifies browser launch capability
+- Exports debug logs for sharing
+
+**Implementation**:
+```typescript
+class DiagnosticsCommand {
+    async execute() {
+        // Collect system info
+        const system = await this.getSystemInfo();
+        
+        // Check tool versions
+        const tools = await this.checkTools();
+        
+        // Test Adobe CLI
+        const adobe = await this.checkAdobeCLI();
+        
+        // Run diagnostic tests
+        const tests = await this.runTests();
+        
+        // Log full report to debug channel
+        logger.debug('DIAGNOSTIC REPORT', report);
+        
+        // Show summary in main output
+        this.showSummary(report);
+    }
+}
+```
+
+**Output**:
+- System information (OS, architecture, VS Code version)
+- Tool versions (Node.js, npm, fnm, git, Adobe CLI)
+- Adobe authentication status and configuration
+- Environment variables (PATH, HOME, etc.)
+- Test results (browser launch, file system access)
+
 ### showLogs
 
 **Purpose**: Display extension logs
-- Opens output channel
-- Shows debug information
-- Helpful for troubleshooting
+- Opens "Demo Builder: Logs" output channel
+- Shows user-facing messages
+- Quick access to error/warning information
 
 ### clearCache
 

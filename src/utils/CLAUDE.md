@@ -12,7 +12,9 @@ utils/
 ├── progressUnifier.ts         # Unified progress tracking
 ├── stateManager.ts            # Persistent state storage
 ├── componentRegistry.ts       # Component definitions manager
-├── errorLogger.ts             # Centralized error handling
+├── debugLogger.ts             # Central debug logging system
+├── logger.ts                  # Backward-compatible logger wrapper
+├── errorLogger.ts             # Error tracking with UI integration
 ├── shellExecutor.ts           # Shell command execution
 ├── fileSystemUtils.ts         # File operations
 ├── loadingHTML.ts             # Webview loading states
@@ -180,36 +182,107 @@ class ComponentRegistry {
 }
 ```
 
-### Error Logger
+### Debug Logger
 
-**Purpose**: Centralized error logging and reporting
+**Purpose**: Central debug logging system with dual output channels
+
+**Architecture**:
+- **"Demo Builder: Logs"** - User-facing messages
+- **"Demo Builder: Debug"** - Detailed diagnostic information
+
+**Key Features**:
+- Singleton pattern for global access
+- Command execution logging with timing
+- Environment variable logging
+- Export debug log capability
+
+**Implementation**:
+```typescript
+class DebugLogger {
+    private outputChannel: vscode.OutputChannel;  // User-facing
+    private debugChannel: vscode.OutputChannel;   // Debug info
+    
+    // User-facing methods
+    info(message: string): void
+    warn(message: string): void
+    error(message: string, error?: Error): void
+    
+    // Debug methods
+    debug(message: string, data?: any): void
+    logCommand(command: string, result: CommandResult): void
+    logEnvironment(label: string, env: ProcessEnv): void
+    
+    // Utilities
+    show(preserveFocus?: boolean): void
+    showDebug(preserveFocus?: boolean): void
+    exportDebugLog(): Promise<string | undefined>
+}
+
+// Singleton access
+const logger = getLogger();
+```
+
+**Command Logging**:
+```typescript
+logger.logCommand('npm install', {
+    stdout: result.stdout,
+    stderr: result.stderr,
+    code: result.code,
+    duration: elapsed,
+    cwd: process.cwd()
+});
+```
+
+### Logger
+
+**Purpose**: Backward-compatible wrapper around DebugLogger
 
 **Features**:
-- Structured error logging
-- Output channel integration
-- Error categorization
-- User-friendly messages
+- Maintains existing API for compatibility
+- Delegates all calls to DebugLogger
+- No separate output channel creation
+
+**Usage**:
+```typescript
+const logger = new Logger('Demo Builder');
+logger.info('Message');  // Goes to "Demo Builder: Logs"
+logger.debug('Details'); // Goes to "Demo Builder: Debug"
+```
+
+### Error Logger
+
+**Purpose**: Error tracking with UI integration
+
+**Features**:
+- Uses DebugLogger for output
+- Status bar error/warning counts
+- Problems panel integration
+- Critical error notifications
 
 **Usage Pattern**:
 ```typescript
 class ErrorLogger {
-    // Log error with context
-    error(message: string, error: Error, context?: any): void {
-        // Log to output channel
-        this.outputChannel.appendLine(`[ERROR] ${message}`);
-        this.outputChannel.appendLine(error.stack);
+    private debugLogger: DebugLogger;
+    private statusBarItem: vscode.StatusBarItem;
+    private diagnostics: vscode.DiagnosticCollection;
+    
+    // Log with UI integration
+    logError(error: Error | string, context?: string, critical?: boolean): void {
+        // Logs to DebugLogger
+        this.debugLogger.error(message, error);
         
-        // Log context if provided
-        if (context) {
-            this.outputChannel.appendLine(JSON.stringify(context, null, 2));
+        // Updates status bar count
+        this.errorCount++;
+        this.updateStatusBar();
+        
+        // Shows notification if critical
+        if (critical) {
+            vscode.window.showErrorMessage(...);
         }
     }
     
-    // Log warning
-    warn(message: string, details?: any): void
-    
-    // Log info
-    info(message: string): void
+    // Add diagnostic to Problems panel
+    addDiagnostic(uri: Uri, message: string, severity: DiagnosticSeverity): void
 }
 ```
 

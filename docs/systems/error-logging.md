@@ -1,316 +1,254 @@
-# Error Logging Strategy
+# Unified Logging System
 
 ## Overview
 
-This document outlines the error logging and notification strategy for the Demo Builder VS Code extension. The goal is to provide users with clear, actionable error information while maintaining a clean separation between command execution, status display, and error diagnostics.
+The Demo Builder extension uses a unified logging system that provides clean separation between user-facing messages and detailed debugging information. This system replaced the previous multi-channel approach with a streamlined dual-channel architecture.
 
 ## Architecture
 
-### Three-Channel Approach
+### Dual Output Channel Design
 
-1. **Terminal (Right Panel)** - Command Execution
-   - Shows actual commands being run
-   - Displays real command output
-   - Provides transparency and trust
-   - No formatting or status indicators
+The logging system uses two VS Code output channels:
 
-2. **Webview (Left Panel)** - Status Display
-   - Shows prerequisite check status
-   - Visual indicators (✓, ✗, ⟳)
-   - User-friendly progress tracking
-   - Action buttons for installation
+1. **Demo Builder: Logs** - User-facing messages
+   - Info, warning, and error messages
+   - High-level operation status  
+   - User-friendly feedback
+   - What end users need for getting help
 
-3. **Output Channel + Status Bar** - Error Logging
-   - Detailed error logs with timestamps
-   - Stack traces for debugging
-   - System information
-   - Persistent and searchable
+2. **Demo Builder: Debug** - Detailed diagnostic information
+   - Command execution logs with stdout/stderr
+   - Environment variables and PATH
+   - Token parsing details
+   - Timing information
+   - Raw API responses
+   - Stack traces and error details
 
-## Error Notification Levels
-
-### Level 1: Informational
-- **Where**: Output Channel only
-- **When**: Non-critical information, debugging details
-- **User Notification**: None
-- **Example**: "Checking prerequisite version"
-
-### Level 2: Warning
-- **Where**: Output Channel + Status Bar
-- **When**: Non-blocking issues, optional prerequisites missing
-- **User Notification**: Status bar shows warning count
-- **Example**: "Optional tool Docker not installed"
-
-### Level 3: Error
-- **Where**: Output Channel + Status Bar + Webview
-- **When**: Blocking errors that prevent continuation
-- **User Notification**: 
-  - Status bar shows error count with red background
-  - Webview shows error state for affected item
-- **Example**: "Required prerequisite Node.js not found"
-
-### Level 4: Critical Error
-- **Where**: All channels + Problems Panel + Notification
-- **When**: System failures, unrecoverable errors
-- **User Notification**:
-  - VS Code notification popup
-  - Problems panel entry (with badge counter)
-  - Status bar error indicator
-  - Webview error state
-- **Example**: "Failed to connect to Adobe I/O services"
-
-## Implementation
-
-### ErrorLogger Class
+### Core Components
 
 ```typescript
-export class ErrorLogger {
-    private outputChannel: vscode.OutputChannel;
+// Central debug logging system
+class DebugLogger {
+    private outputChannel: vscode.OutputChannel;  // "Demo Builder: Logs"
+    private debugChannel: vscode.OutputChannel;   // "Demo Builder: Debug"
+    
+    // User-facing logging
+    info(message: string): void
+    warn(message: string): void
+    error(message: string, error?: Error): void
+    
+    // Debug logging
+    debug(message: string, data?: any): void
+    logCommand(command: string, result: CommandResult): void
+}
+
+// Backward-compatible wrapper
+class Logger {
+    private debugLogger: DebugLogger;
+    // Delegates all calls to DebugLogger
+}
+
+// Error tracking with UI integration
+class ErrorLogger {
+    private debugLogger: DebugLogger;
     private statusBarItem: vscode.StatusBarItem;
     private diagnostics: vscode.DiagnosticCollection;
-    private errorCount = 0;
-    private warningCount = 0;
-    
-    constructor(context: vscode.ExtensionContext) {
-        // Create output channel for detailed logs
-        this.outputChannel = vscode.window.createOutputChannel('Demo Builder Logs');
-        
-        // Create status bar item for quick error/warning indicator
-        this.statusBarItem = vscode.window.createStatusBarItem(
-            vscode.StatusBarAlignment.Left,
-            100
-        );
-        this.statusBarItem.command = 'demoBuilder.showLogs';
-        context.subscriptions.push(this.statusBarItem);
-        
-        // Create diagnostic collection for Problems panel
-        this.diagnostics = vscode.languages.createDiagnosticCollection('demo-builder');
-        context.subscriptions.push(this.diagnostics);
-    }
-    
-    logInfo(message: string, context?: string): void {
-        const timestamp = new Date().toISOString();
-        const contextStr = context ? ` [${context}]` : '';
-        this.outputChannel.appendLine(`[${timestamp}] INFO${contextStr}: ${message}`);
-    }
-    
-    logWarning(message: string, context?: string): void {
-        const timestamp = new Date().toISOString();
-        const contextStr = context ? ` [${context}]` : '';
-        this.outputChannel.appendLine(`[${timestamp}] WARNING${contextStr}: ${message}`);
-        
-        this.warningCount++;
-        this.updateStatusBar();
-    }
-    
-    logError(error: Error | string, context?: string, critical: boolean = false): void {
-        const timestamp = new Date().toISOString();
-        const contextStr = context ? ` [${context}]` : '';
-        const errorMessage = error instanceof Error ? error.message : error;
-        const stackTrace = error instanceof Error ? error.stack : '';
-        
-        // Log to output channel
-        this.outputChannel.appendLine(`[${timestamp}] ERROR${contextStr}: ${errorMessage}`);
-        if (stackTrace) {
-            this.outputChannel.appendLine(`  Stack Trace:`);
-            stackTrace.split('\n').forEach(line => {
-                this.outputChannel.appendLine(`    ${line}`);
-            });
-        }
-        this.outputChannel.appendLine(''); // Empty line for readability
-        
-        // Update counts and status bar
-        this.errorCount++;
-        this.updateStatusBar();
-        
-        // For critical errors, add to Problems panel
-        if (critical) {
-            this.addToProblemPanel(errorMessage, context);
-            this.showNotification(errorMessage);
-        }
-    }
-    
-    private updateStatusBar(): void {
-        if (this.errorCount > 0 || this.warningCount > 0) {
-            const errorText = this.errorCount > 0 ? `${this.errorCount} error${this.errorCount > 1 ? 's' : ''}` : '';
-            const warningText = this.warningCount > 0 ? `${this.warningCount} warning${this.warningCount > 1 ? 's' : ''}` : '';
-            const separator = errorText && warningText ? ', ' : '';
-            
-            this.statusBarItem.text = `$(issues) Demo Builder: ${errorText}${separator}${warningText}`;
-            
-            if (this.errorCount > 0) {
-                this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-            } else {
-                this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
-            }
-            
-            this.statusBarItem.tooltip = 'Click to view Demo Builder logs';
-            this.statusBarItem.show();
-        } else {
-            this.statusBarItem.hide();
-        }
-    }
-    
-    private addToProblemPanel(message: string, context?: string): void {
-        // Create a virtual URI for the problem
-        const uri = vscode.Uri.file(context || 'demo-builder-prerequisites');
-        
-        const diagnostic = new vscode.Diagnostic(
-            new vscode.Range(0, 0, 0, 0),
-            message,
-            vscode.DiagnosticSeverity.Error
-        );
-        
-        diagnostic.source = 'Demo Builder';
-        
-        // Get existing diagnostics and add new one
-        const existingDiagnostics = this.diagnostics.get(uri) || [];
-        this.diagnostics.set(uri, [...existingDiagnostics, diagnostic]);
-    }
-    
-    private showNotification(message: string): void {
-        vscode.window.showErrorMessage(
-            `Demo Builder: ${message}`,
-            'View Logs',
-            'Dismiss'
-        ).then(selection => {
-            if (selection === 'View Logs') {
-                this.show();
-            }
-        });
-    }
-    
-    show(): void {
-        this.outputChannel.show(true); // true = preserve focus
-    }
-    
-    clear(): void {
-        this.outputChannel.clear();
-        this.errorCount = 0;
-        this.warningCount = 0;
-        this.diagnostics.clear();
-        this.updateStatusBar();
-    }
-    
-    dispose(): void {
-        this.outputChannel.dispose();
-        this.statusBarItem.dispose();
-        this.diagnostics.dispose();
-    }
+    // Uses DebugLogger for output, adds UI features
 }
 ```
 
-## Usage Examples
+## Logging Levels and Channels
 
-### Basic Logging
+### Info Level
+- **Channel**: Demo Builder: Logs
+- **Purpose**: General information for users
+- **Format**: `[HH:MM:SS] Message`
+- **Example**: `[14:30:45] Checking prerequisites...`
+
+### Warning Level
+- **Channel**: Demo Builder: Logs
+- **Purpose**: Non-critical issues users should know about
+- **Format**: `[HH:MM:SS] ⚠️ Message`
+- **Example**: `[14:30:45] ⚠️ Optional tool Docker not installed`
+- **UI Integration**: Warning count in status bar
+
+### Error Level
+- **Channel**: Demo Builder: Logs (message) + Debug (details)
+- **Purpose**: Problems that need attention
+- **Format**: `[HH:MM:SS] ❌ Message`
+- **Example**: `[14:30:45] ❌ Failed to install Node.js`
+- **UI Integration**: 
+  - Error count in status bar
+  - Problems panel entry
+  - Optional notification for critical errors
+
+### Debug Level
+- **Channel**: Demo Builder: Debug
+- **Purpose**: Detailed information for troubleshooting
+- **Format**: `[ISO-8601] DEBUG: Message + JSON data`
+- **Example**: 
+  ```
+  [2025-01-10T14:30:45.123Z] DEBUG: Parsing auth token
+  {
+    "hasToken": true,
+    "expiresIn": "3600000",
+    "expiryTime": 1704896445000
+  }
+  ```
+
+## Command Execution Logging
+
+All shell command executions are logged to the Debug channel:
+
+```
+================================================================================
+[2025-01-10T14:30:45.123Z] COMMAND EXECUTION
+================================================================================
+Command: npm install
+Working Directory: /Users/username/project
+Duration: 5234ms
+Exit Code: 0
+
+--- STDOUT ---
+added 150 packages in 5s
+
+--- STDERR ---
+(empty)
+================================================================================
+```
+
+## Error Tracking Features
+
+### Status Bar Integration
+- Shows error/warning counts
+- Click to open logs
+- Auto-hides when no issues
+- Format: `$(error) 2 $(warning) 1`
+
+### Problems Panel Integration
+- Creates diagnostic entries for errors
+- Links to relevant files
+- Shows error severity
+- Allows quick navigation
+
+### Critical Error Notifications
+- Modal dialog for blocking errors
+- "Show Logs" action button
+- Only for errors requiring immediate attention
+
+## Usage Patterns
+
+### For Extension Code
 
 ```typescript
-const logger = new ErrorLogger(context);
+import { getLogger } from './utils/debugLogger';
 
-// Info logging (no user notification)
-logger.logInfo('Starting prerequisite checks', 'Prerequisites');
+const logger = getLogger();
 
-// Warning (shows in status bar)
-logger.logWarning('Optional tool Docker not found', 'Prerequisites');
+// Simple logging
+logger.info('Starting prerequisite check');
+logger.warn('Node.js 18 is deprecated');
+logger.error('Installation failed', error);
 
-// Error (shows in status bar with red background)
-logger.logError(new Error('Failed to install Node.js'), 'Prerequisites');
+// Debug with data
+logger.debug('Checking tool version', {
+    tool: 'node',
+    expectedVersion: '20.x',
+    foundVersion: '18.12.0'
+});
 
-// Critical error (shows notification + problems panel + status bar)
-logger.logError(
-    new Error('Cannot connect to Adobe I/O services'), 
-    'Authentication',
-    true // critical flag
+// Command logging
+const result = await exec('npm install');
+logger.logCommand('npm install', {
+    stdout: result.stdout,
+    stderr: result.stderr,
+    code: result.code,
+    duration: Date.now() - startTime
+});
+```
+
+### For Error Tracking
+
+```typescript
+const errorLogger = new ErrorLogger(context);
+
+// Log with context
+errorLogger.logInfo('Installing Node.js', 'Prerequisites');
+errorLogger.logWarning('Retry attempt 2/3', 'Network');
+errorLogger.logError(error, 'Installation', true); // true = critical
+
+// Add to Problems panel
+errorLogger.addDiagnostic(
+    uri,
+    'Missing required dependency',
+    vscode.DiagnosticSeverity.Error
 );
 ```
 
-### Integration with Prerequisites Check
+## Migration from Previous System
 
-```typescript
-try {
-    const status = await this.prereqManager.checkPrerequisite(prereq);
-    
-    if (status.installed) {
-        logger.logInfo(`${prereq.name} found: ${status.version}`, 'Prerequisites');
-    } else {
-        logger.logWarning(`${prereq.name} not installed`, 'Prerequisites');
-    }
-} catch (error) {
-    logger.logError(error as Error, 'Prerequisites', true);
-}
-```
+### Before (4 channels)
+- "Demo Builder" (extension.ts)
+- "Demo Builder" (debugLogger duplicate)
+- "Demo Builder Logs" (errorLogger)
+- "Demo Builder - Debug" (debugLogger)
 
-## User Experience Flow
+### After (2 channels)
+- "Demo Builder: Logs" - All user-facing messages
+- "Demo Builder: Debug" - All debug information
 
-### Normal Operation
-1. User initiates prerequisite check
-2. Terminal shows commands being executed
-3. Webview shows status for each prerequisite
-4. Info messages logged to Output Channel (not visible unless opened)
-
-### When Warning Occurs
-1. Warning logged to Output Channel with timestamp
-2. Status bar shows: "$(issues) Demo Builder: 1 warning"
-3. Status bar has yellow background
-4. User can click status bar to view logs
-
-### When Error Occurs
-1. Error logged to Output Channel with full stack trace
-2. Status bar shows: "$(issues) Demo Builder: 1 error"
-3. Status bar has red background
-4. Webview shows error state for affected prerequisite
-5. User can click status bar to view detailed logs
-
-### When Critical Error Occurs
-1. All of the above, plus:
-2. VS Code notification popup appears
-3. Entry added to Problems panel (with badge counter)
-4. User can:
-   - Click notification to view logs
-   - Open Problems panel to see error
-   - Click status bar to view detailed logs
-   - Copy logs from Output Channel for bug reports
-
-## Benefits
-
-### For Users
-- **Multiple notification levels** ensure important errors aren't missed
-- **Detailed logs** available for troubleshooting
-- **Easy sharing** - can copy entire Output Channel content
-- **Non-intrusive** for normal operations
-- **Clear visual indicators** when attention needed
-
-### For Developers
-- **Centralized logging** system
-- **Consistent error handling** across extension
-- **Debugging information** preserved
-- **Flexible severity levels**
-- **Integration with VS Code's built-in UI elements**
+### Code Changes
+- `Logger` class now wraps `DebugLogger`
+- `ErrorLogger` uses `DebugLogger` for output
+- No more manual output channel creation
+- Centralized in `debugLogger.ts`
 
 ## Best Practices
 
-1. **Use appropriate severity levels**
-   - Don't mark everything as critical
-   - Info for debugging/trace information
-   - Warning for optional/recoverable issues
-   - Error for blocking issues
-   - Critical only for system failures
+### DO
+- ✅ Use appropriate log level for the message importance
+- ✅ Include context in error messages
+- ✅ Log command execution with full details
+- ✅ Add structured data to debug messages
+- ✅ Use error tracking for user-facing errors
 
-2. **Provide context**
-   - Always include context parameter (e.g., "Prerequisites", "Authentication")
-   - Include relevant state information in error messages
+### DON'T
+- ❌ Log sensitive information (tokens, passwords)
+- ❌ Create new output channels
+- ❌ Use console.log in production code
+- ❌ Show technical details to users
+- ❌ Spam logs with repetitive messages
 
-3. **Clear logs appropriately**
-   - Clear logs at the start of new operations
-   - Preserve logs during error states for debugging
+## Configuration
 
-4. **Include actionable information**
-   - Error messages should suggest solutions when possible
-   - Include system information for bug reports
+Future settings will allow users to control logging:
 
-## Future Enhancements
+```json
+{
+  "demoBuilder.enableDebugLogging": true,
+  "demoBuilder.logLevel": "info" // error | warn | info | debug
+}
+```
 
-1. **Log to file** - Option to save logs to a file for persistent storage
-2. **Log levels** - User-configurable verbosity levels
-3. **Structured logging** - JSON format for automated processing
-4. **Remote logging** - Send critical errors to telemetry service (with user consent)
-5. **Quick fixes** - Integrate with VS Code's Quick Fix functionality for common errors
+## Troubleshooting
+
+### Missing Output Channels
+- Check extension activated: `initializeLogger(context)` called
+- Restart VS Code if channels don't appear
+- Verify no errors in Developer Console
+
+### No Debug Output
+- Ensure using `getLogger()` not creating new instance
+- Check debug logging enabled (future setting)
+- Verify logger initialized before use
+
+### Status Bar Not Updating
+- ErrorLogger must be instantiated with context
+- Check status bar item registered in subscriptions
+- Verify error/warning counts incrementing
+
+## See Also
+
+- [Debugging System](./debugging.md) - Comprehensive debugging features
+- [Prerequisites System](./prerequisites-system.md) - Logging during installation
+- [Troubleshooting Guide](../troubleshooting.md) - Common issues and solutions
