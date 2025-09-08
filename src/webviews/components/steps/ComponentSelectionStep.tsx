@@ -192,9 +192,6 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         });
     };
 
-    // Classes for dropdowns
-    const dropdownClasses = 'dropdown-container';
-
     return (
         <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
             {/* Two column layout for Frontend and Backend */}
@@ -205,27 +202,25 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         Frontend
                     </Text>
                     
-                    <View UNSAFE_className={dropdownClasses}>
-                        <Picker
-                            width="100%"
-                            selectedKey={selectedFrontend}
-                            onSelectionChange={(key) => setSelectedFrontend(key as string)}
-                            placeholder="Select frontend system"
-                            isQuiet
-                            align="start"
-                            direction="bottom"
-                            shouldFlip={false}
-                            menuWidth="size-4600"
-                            UNSAFE_className={cn('custom-picker', 'cursor-pointer')}
-                        >
+                    <Picker
+                        width="100%"
+                        selectedKey={selectedFrontend}
+                        onSelectionChange={(key) => setSelectedFrontend(key as string)}
+                        placeholder="Select frontend system"
+                        isQuiet={false}
+                        align="start"
+                        direction="bottom"
+                        shouldFlip={false}
+                        menuWidth="size-4600"
+                        UNSAFE_className={cn('cursor-pointer')}
+                    >
                             {frontendOptions.map(option => (
                                 <Item key={option.id} textValue={option.name}>
                                     <Text>{option.name}</Text>
                                     <Text slot="description">{option.description}</Text>
                                 </Item>
                             ))}
-                        </Picker>
-                    </View>
+                    </Picker>
 
                     {/* Frontend Dependencies */}
                     {selectedFrontend && frontendDependencies.length > 0 && (
@@ -258,27 +253,25 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         Backend
                     </Text>
                     
-                    <View UNSAFE_className={dropdownClasses}>
-                        <Picker
-                            width="100%"
-                            selectedKey={selectedBackend}
-                            onSelectionChange={(key) => setSelectedBackend(key as string)}
-                            placeholder="Select backend system"
-                            isQuiet
-                            align="start"
-                            direction="bottom"
-                            shouldFlip={false}
-                            menuWidth="size-4600"
-                            UNSAFE_className={cn('custom-picker', 'cursor-pointer')}
-                        >
+                    <Picker
+                        width="100%"
+                        selectedKey={selectedBackend}
+                        onSelectionChange={(key) => setSelectedBackend(key as string)}
+                        placeholder="Select backend system"
+                        isQuiet={false}
+                        align="start"
+                        direction="bottom"
+                        shouldFlip={false}
+                        menuWidth="size-4600"
+                        UNSAFE_className={cn('cursor-pointer')}
+                    >
                             {backendOptions.map(option => (
                                 <Item key={option.id} textValue={option.name}>
                                     <Text>{option.name}</Text>
                                     <Text slot="description">{option.description}</Text>
                                 </Item>
                             ))}
-                        </Picker>
-                    </View>
+                    </Picker>
 
                     {/* Backend Services */}
                     {selectedBackend && backendServices.length > 0 && (
