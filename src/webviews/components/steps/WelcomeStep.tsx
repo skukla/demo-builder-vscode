@@ -5,9 +5,7 @@ import {
     Form,
     TextField,
     Heading,
-    Text,
-    Well,
-    Content
+    Text
 } from '@adobe/react-spectrum';
 import { WizardState } from '../../types';
 
@@ -46,64 +44,49 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                     </Heading>
                     
                     <Text marginBottom="size-400" UNSAFE_className="welcome-step-subtitle">
-                        Let's create a new demo project. We'll guide you through selecting components, 
-                        configuring your environment, and deploying your demo.
+                        Let's create a new demo project. We'll guide you through the setup process.
                     </Text>
                 </View>
 
-                <Well>
-                    <Content>
-                        <Heading level={3} marginBottom="size-200">
-                            Project Information
-                        </Heading>
-                        
-                        <Text marginBottom="size-300" UNSAFE_className="welcome-step-description">
-                            Enter a unique name for your demo project. This will be used to identify your Commerce environment 
-                            and organize your project files.
+                <View>
+                    <Heading level={3} marginBottom="size-200">
+                        Name Your Demo
+                    </Heading>
+                    
+                    <Text marginBottom="size-300" UNSAFE_className="welcome-step-description">
+                        Choose a unique name to identify your demo project.
+                    </Text>
+
+                    <Form necessityIndicator="icon">
+                        <TextField
+                            label="Name"
+                            value={state.projectName}
+                            onChange={(value) => updateState({ projectName: value })}
+                            placeholder="my-commerce-demo"
+                            description="Lowercase letters, numbers, and hyphens only"
+                            validationState={
+                                state.projectName && validateProjectName(state.projectName) 
+                                    ? 'invalid' 
+                                    : state.projectName && !validateProjectName(state.projectName)
+                                    ? 'valid'
+                                    : undefined
+                            }
+                            errorMessage={
+                                state.projectName 
+                                    ? validateProjectName(state.projectName) 
+                                    : undefined
+                            }
+                            isRequired
+                            width="size-3600"
+                            autoFocus
+                        />
+                    </Form>
+                    
+                    <View marginTop="size-200">
+                        <Text UNSAFE_className="info-tip-text" UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                            💡 <strong>Next:</strong> Select components and configure your Adobe workspace.
                         </Text>
-
-                        <Form necessityIndicator="icon">
-                            <TextField
-                                label="Project Name"
-                                value={state.projectName}
-                                onChange={(value) => updateState({ projectName: value })}
-                                placeholder="my-commerce-demo"
-                                description="Lowercase letters, numbers, and hyphens only"
-                                validationState={
-                                    state.projectName && validateProjectName(state.projectName) 
-                                        ? 'invalid' 
-                                        : state.projectName && !validateProjectName(state.projectName)
-                                        ? 'valid'
-                                        : undefined
-                                }
-                                errorMessage={
-                                    state.projectName 
-                                        ? validateProjectName(state.projectName) 
-                                        : undefined
-                                }
-                                isRequired
-                                width="100%"
-                                autoFocus
-                            />
-                        </Form>
-                    </Content>
-                </Well>
-
-                <View 
-                    padding="size-300"
-                    backgroundColor="blue-100"
-                    borderRadius="medium"
-                    marginTop="size-200"
-                >
-                    <Flex gap="size-100" alignItems="flex-start">
-                        <Text UNSAFE_className="info-tip-icon">💡</Text>
-                        <View flex>
-                            <Text UNSAFE_className="info-tip-text">
-                                <strong>Next Steps:</strong> After naming your project, you'll select your frontend framework, 
-                                backend system, and any additional components you need for your demo.
-                            </Text>
-                        </View>
-                    </Flex>
+                    </View>
                 </View>
             </Flex>
         </div>
