@@ -309,8 +309,25 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 await this.authenticate(payload.force);
                 break;
 
+            case 'cancel-auth-polling':
+                // Explicitly cancel authentication polling
+                if (this.authPollingInterval) {
+                    clearInterval(this.authPollingInterval);
+                    this.authPollingInterval = undefined;
+                    this.logger.info('Authentication polling cancelled by user');
+                }
+                this.isAuthenticating = false;
+                // Send status update to clear loading state
+                await this.sendMessage('auth-status', {
+                    isAuthenticated: false,
+                    isChecking: false,
+                    message: 'Authentication cancelled'
+                });
+                break;
+
             // Component selection messages
             case 'loadComponents':
+            case 'get-components-data':
             case 'checkCompatibility':
             case 'loadDependencies':
             case 'loadPreset':
@@ -324,6 +341,10 @@ export class CreateProjectWebviewCommand extends BaseCommand {
 
             case 'select-organization':
                 await this.selectOrganization(payload.orgCode);
+                break;
+            
+            case 'ensure-org-selected':
+                await this.ensureOrgSelected(payload.orgCode);
                 break;
 
             case 'get-projects':
@@ -351,6 +372,14 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 break;
 
             case 'cancel':
+                // Clean up any authentication polling first
+                if (this.authPollingInterval) {
+                    clearInterval(this.authPollingInterval);
+                    this.authPollingInterval = undefined;
+                    this.logger.info('Cleaned up authentication polling on cancel');
+                }
+                this.isAuthenticating = false;
+                
                 // Dispose the wizard panel
                 this.panel?.dispose();
                 this.panel = undefined;
@@ -1810,12 +1839,15 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             message: isAuth ? 'Authenticated' : 'Not authenticated'
         };
         
-        // If authenticated, get current organization
+        // If authenticated, just get the current organization (don't auto-select)
         if (isAuth) {
-            const orgs = await this.authManager.getOrganizations();
-            if (orgs.length > 0) {
-                // Get the first org (usually the selected one)
-                authData.organization = orgs[0];
+            const currentOrg = await this.authManager.getCurrentOrg();
+            if (currentOrg) {
+                authData.organization = currentOrg;
+                this.logger.info(`Current organization from CLI: ${currentOrg.code}`);
+            } else {
+                // No org selected yet - that's fine, let the user choose
+                this.logger.info('No organization currently selected in CLI');
             }
         }
         
@@ -1864,14 +1896,13 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 message: 'Opening browser... Please complete sign-in...'
             });
             
-            // Add delay to let browser open before polling
-            // Longer delay for force login to ensure logout is fully complete
-            const pollDelay = force ? 5000 : 2000;
-            await new Promise(resolve => setTimeout(resolve, pollDelay));
+            // Brief delay to let browser start opening
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
             // Now poll for authentication completion
             let attempts = 0;
-            const maxAttempts = 40; // 2 minutes max (40 * 3 seconds)
+            // Longer timeout for org switching (2 minutes) vs regular login (1 minute)
+            const maxAttempts = force ? 120 : 60;
             let firstAuthIgnored = false; // For force login, ignore first auth detection as it might be residual
             
             this.authPollingInterval = setInterval(async () => {
@@ -1908,6 +1939,16 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     // Small delay for user to see the success message
                     await new Promise(resolve => setTimeout(resolve, 800));
                     
+                    // After force login, ensure we explicitly select an organization
+                    if (force) {
+                        // For force login (org switch), we need to ensure proper org selection
+                        const orgs = await this.authManager.getOrganizations();
+                        if (orgs.length > 0) {
+                            // Let the user select the org through the UI, but ensure one is selected
+                            this.logger.info(`Force login complete, ${orgs.length} organizations available`);
+                        }
+                    }
+                    
                     // Get new organization info
                     await this.checkAuthentication();
                 } else if (attempts >= maxAttempts) {
@@ -1925,11 +1966,17 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     // Send periodic status updates with elapsed time
                     const timeElapsed = attempts;  // Now in seconds since polling every 1s
                     
-                    await this.sendMessage('auth-status', {
-                        isAuthenticated: false,
-                        isChecking: true,
-                        message: `Waiting for authentication... (${timeElapsed}s)`
-                    });
+                    // Update message every 10 seconds to avoid too much noise
+                    if (attempts % 10 === 0) {
+                        const remainingTime = maxAttempts - attempts;
+                        await this.sendMessage('auth-status', {
+                            isAuthenticated: false,
+                            isChecking: true,
+                            message: force 
+                                ? `Waiting for organization switch... (${remainingTime}s remaining)`
+                                : `Waiting for authentication... (${timeElapsed}s)`
+                        });
+                    }
                     
                     this.logger.info(`Authentication polling attempt ${attempts}/${maxAttempts}`);
                 }
@@ -1966,6 +2013,19 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             this.logger.warn(`Failed to persist organization selection: ${orgCode}`);
         }
     }
+    
+    private async ensureOrgSelected(orgCode: string): Promise<void> {
+        this.logger.info(`Ensuring organization ${orgCode} is properly selected in CLI context...`);
+        const success = await this.authManager.ensureOrgSelected(orgCode);
+        if (success) {
+            this.logger.info(`Organization ${orgCode} is now active in CLI context`);
+            // Send confirmation back to frontend
+            await this.sendMessage('org-selection-confirmed', { orgCode, success: true });
+        } else {
+            this.logger.error(`Failed to ensure organization ${orgCode} is selected`);
+            await this.sendMessage('org-selection-confirmed', { orgCode, success: false });
+        }
+    }
 
     private async getProjects(orgId: string): Promise<void> {
         const projects = await this.authManager.getProjects(orgId);
@@ -1982,8 +2042,20 @@ export class CreateProjectWebviewCommand extends BaseCommand {
     }
 
     private async getWorkspaces(projectId: string): Promise<void> {
-        const workspaces = await this.authManager.getWorkspaces(projectId);
-        await this.sendMessage('workspaces', workspaces);
+        const result = await this.authManager.getWorkspaces(projectId);
+        
+        // Check if result is an error
+        if (result && 'error' in result) {
+            // Send error message to frontend
+            await this.sendMessage('workspaces-error', {
+                error: result.error,
+                type: result.type,
+                projectId
+            });
+        } else {
+            // Send workspaces list
+            await this.sendMessage('workspaces', result);
+        }
     }
 
     private async selectWorkspace(workspaceId: string): Promise<void> {
