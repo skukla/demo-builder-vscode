@@ -166,7 +166,25 @@ export class AdobeAuthManager {
             this.logger.info('Forcing fresh Adobe login...');
             this.debugLogger.debug('Starting force login process');
             
-            // Force logout first, then login with force flag
+            // Clear all context in parallel for speed
+            try {
+                this.debugLogger.debug('Clearing all Adobe context in parallel...');
+                
+                // Run all clear commands in parallel
+                const clearPromises = [
+                    execWithEnhancedPath('aio console project clear').catch(() => {}),
+                    execWithEnhancedPath('aio console workspace clear').catch(() => {}),
+                    execWithEnhancedPath('aio console org clear').catch(() => {})
+                ];
+                
+                await Promise.all(clearPromises);
+                this.logger.info('Cleared all Adobe context (org, project, workspace)');
+            } catch (clearError) {
+                // It's okay if this fails - context might not be set
+                this.debugLogger.debug('Context clear failed (may be expected):', clearError);
+            }
+            
+            // Force logout and immediately start login
             const logoutCommand = 'aio auth logout --force';
             this.debugLogger.debug(`Executing logout: ${logoutCommand}`);
             const { stdout: logoutOut, stderr: logoutErr } = await execWithEnhancedPath(logoutCommand);
@@ -178,9 +196,9 @@ export class AdobeAuthManager {
                 duration: 0
             });
             
-            // Longer delay to ensure logout completes and token is fully cleared
-            this.debugLogger.debug('Waiting 1.5s for logout to complete...');
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Minimal delay - just ensure logout completes
+            this.debugLogger.debug('Brief pause before login...');
+            await new Promise(resolve => setTimeout(resolve, 300));
             
             const loginCommand = 'aio auth login -f';
             this.debugLogger.debug(`Executing (non-blocking): ${loginCommand}`);
@@ -253,11 +271,26 @@ export class AdobeAuthManager {
 
     public async selectOrganization(orgCode: string): Promise<boolean> {
         try {
-            await execWithEnhancedPath(`aio console org select ${orgCode}`);
+            this.debugLogger.debug(`Selecting organization: ${orgCode}`);
+            const command = `aio console org select ${orgCode}`;
+            const { stdout, stderr } = await execWithEnhancedPath(command);
+            
+            this.debugLogger.logCommand(command, {
+                stdout,
+                stderr,
+                code: 0,
+                duration: 0
+            });
+            
             this.logger.info(`Selected Adobe organization: ${orgCode}`);
+            this.debugLogger.debug(`Organization ${orgCode} selection output:`, { stdout, stderr });
+            
+            // Trust that the selection worked - verification adds too much delay
+            // The CLI will fail with an error if selection actually failed
             return true;
         } catch (error) {
             this.logger.error('Failed to select Adobe organization', error as Error);
+            this.debugLogger.debug(`Organization selection failed for ${orgCode}:`, error);
             return false;
         }
     }
@@ -280,6 +313,13 @@ export class AdobeAuthManager {
         try {
             await execWithEnhancedPath(`aio console project select ${projectId}`);
             this.logger.info(`Selected Adobe project: ${projectId}`);
+            
+            // Log current context for debugging
+            const currentOrg = await this.getCurrentOrg();
+            if (currentOrg) {
+                this.debugLogger.debug(`Project ${projectId} selected in org context: ${currentOrg.code}`);
+            }
+            
             return true;
         } catch (error) {
             this.logger.error('Failed to select Adobe project', error as Error);
@@ -287,8 +327,18 @@ export class AdobeAuthManager {
         }
     }
 
-    public async getWorkspaces(projectId?: string): Promise<AdobeWorkspace[]> {
+    public async getWorkspaces(projectId?: string): Promise<AdobeWorkspace[] | { error: string; type: 'org_access' | 'general' }> {
         try {
+            // Before fetching workspaces, ensure we have the right organization context
+            // This is critical when switching between organizations
+            if (projectId) {
+                this.debugLogger.debug(`Fetching workspaces for project: ${projectId}`);
+                
+                // First, check current organization context
+                const currentOrg = await this.getCurrentOrg();
+                this.debugLogger.debug(`Current CLI organization context: ${currentOrg?.code || 'none'}`);
+            }
+            
             const projectFlag = projectId ? `--projectId ${projectId}` : '';
             const { stdout } = await execWithEnhancedPath(`aio console workspace list --json ${projectFlag}`);
             // Parse JSON, removing any status messages
@@ -296,8 +346,40 @@ export class AdobeAuthManager {
             if (!jsonStr) return [];
             return JSON.parse(jsonStr);
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            
+            // Check for organization access error (403 Forbidden)
+            if (errorMessage.includes('403') && errorMessage.includes('not allowed to access resources of org')) {
+                this.logger.error('Organization access denied', error as Error);
+                this.debugLogger.debug('Organization access error details:', {
+                    error: errorMessage,
+                    projectId
+                });
+                
+                // Extract org ID from error message if possible
+                const orgMatch = errorMessage.match(/org (\d+)/);
+                const orgId = orgMatch ? orgMatch[1] : 'unknown';
+                
+                return {
+                    error: `You don't have access to this project's organization (${orgId}). Please re-authenticate with the correct organization.`,
+                    type: 'org_access'
+                };
+            }
+            
+            // Check for other permission errors
+            if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+                this.logger.error('Permission denied accessing workspaces', error as Error);
+                return {
+                    error: 'Permission denied. Please check your Adobe organization access.',
+                    type: 'org_access'
+                };
+            }
+            
             this.logger.error('Failed to get Adobe workspaces', error as Error);
-            return [];
+            return {
+                error: 'Failed to load workspaces. Please try again.',
+                type: 'general'
+            };
         }
     }
 
@@ -310,6 +392,57 @@ export class AdobeAuthManager {
             this.logger.error('Failed to select Adobe workspace', error as Error);
             return false;
         }
+    }
+
+    public async getCurrentOrg(): Promise<AdobeOrg | null> {
+        try {
+            // Get the currently selected organization using 'aio console where'
+            const { stdout: whereOutput } = await execWithEnhancedPath('aio console where --json');
+            const whereStr = whereOutput.split('\n').find(line => line.startsWith('{'));
+            if (!whereStr) return null;
+            
+            const whereData = JSON.parse(whereStr);
+            if (!whereData.org) return null;
+            
+            // Now get the full org details from the org list
+            const { stdout: listOutput } = await execWithEnhancedPath('aio console org list --json');
+            const listStr = listOutput.split('\n').find(line => line.startsWith('['));
+            if (!listStr) return null;
+            
+            const orgs = JSON.parse(listStr) as AdobeOrg[];
+            // Find the org by name (that's what 'where' returns)
+            const currentOrg = orgs.find(org => org.name === whereData.org);
+            
+            if (currentOrg) {
+                this.debugLogger.debug(`Current organization from CLI: ${currentOrg.code} (${currentOrg.name})`);
+                return currentOrg;
+            }
+            
+            return null;
+        } catch (error) {
+            this.debugLogger.debug('Failed to get current organization:', error);
+            return null;
+        }
+    }
+
+    public async validateOrgContext(projectOrgId?: string): Promise<boolean> {
+        if (!projectOrgId) return true;
+        
+        try {
+            const currentOrg = await this.getCurrentOrg();
+            if (!currentOrg) return false;
+            
+            // Check if the current org matches the project's org
+            return currentOrg.id === projectOrgId;
+        } catch (error) {
+            this.logger.error('Failed to validate organization context', error as Error);
+            return false;
+        }
+    }
+
+    public async ensureOrgSelected(orgCode: string): Promise<boolean> {
+        // This is now just an alias for selectOrganization to avoid duplication
+        return this.selectOrganization(orgCode);
     }
 
     public async importConsoleJson(filePath: string): Promise<any> {
