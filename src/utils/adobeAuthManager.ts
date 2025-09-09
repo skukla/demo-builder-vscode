@@ -41,6 +41,21 @@ export class AdobeAuthManager {
         try {
             this.debugLogger.debug('Starting Adobe authentication check');
             
+            // First verify Adobe CLI is accessible
+            try {
+                const versionCmd = 'aio --version';
+                this.debugLogger.debug(`Verifying Adobe CLI availability: ${versionCmd}`);
+                const { stdout: versionOut } = await execWithEnhancedPath(versionCmd);
+                this.debugLogger.debug(`Adobe CLI version: ${versionOut.trim()}`);
+            } catch (versionError: any) {
+                this.debugLogger.debug('Adobe CLI not found or not accessible:', {
+                    error: versionError.message,
+                    PATH: process.env.PATH
+                });
+                // If we can't find aio, we're definitely not authenticated
+                return false;
+            }
+            
             // IMPORTANT: Only check for token existence, don't run any commands that might trigger login
             // Check for access token in the config
             const command = 'aio config get ims.contexts.cli.access_token.token';

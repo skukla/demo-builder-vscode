@@ -20,25 +20,90 @@ export async function execWithFnm(command: string): Promise<{ stdout: string; st
 }
 
 /**
+ * Find all possible npm global binary paths
+ */
+function findNpmGlobalPaths(): string[] {
+    const paths: string[] = [];
+    const homeDir = os.homedir();
+    
+    // Check fnm paths - where fnm installs global npm packages
+    const fnmBase = path.join(homeDir, '.local/share/fnm/node-versions');
+    if (fs.existsSync(fnmBase)) {
+        try {
+            const versions = fs.readdirSync(fnmBase);
+            for (const version of versions) {
+                const binPath = path.join(fnmBase, version, 'installation/bin');
+                if (fs.existsSync(binPath)) {
+                    paths.push(binPath);
+                }
+                // Also check lib directory for npm global installs
+                const libBinPath = path.join(fnmBase, version, 'installation/lib/node_modules/.bin');
+                if (fs.existsSync(libBinPath)) {
+                    paths.push(libBinPath);
+                }
+            }
+        } catch (e) {
+            // Ignore errors reading directory
+        }
+    }
+    
+    // Check nvm paths
+    const nvmBase = path.join(homeDir, '.nvm/versions/node');
+    if (fs.existsSync(nvmBase)) {
+        try {
+            const versions = fs.readdirSync(nvmBase);
+            for (const version of versions) {
+                const binPath = path.join(nvmBase, version, 'bin');
+                if (fs.existsSync(binPath)) {
+                    paths.push(binPath);
+                }
+            }
+        } catch (e) {
+            // Ignore errors reading directory
+        }
+    }
+    
+    // Check common npm global locations
+    const commonPaths = [
+        path.join(homeDir, '.npm-global', 'bin'),
+        path.join(homeDir, '.npm', 'bin'),
+        '/usr/local/lib/node_modules/.bin',
+        '/usr/local/bin',
+        '/opt/homebrew/bin'
+    ];
+    
+    for (const p of commonPaths) {
+        if (fs.existsSync(p)) {
+            paths.push(p);
+        }
+    }
+    
+    return paths;
+}
+
+/**
  * Execute a command with enhanced PATH for finding tools like Adobe CLI
  * Adds common npm global locations to PATH
  */
 export async function execWithEnhancedPath(command: string): Promise<{ stdout: string; stderr: string }> {
-    const homeDir = os.homedir();
-    const extraPaths = [
-        path.join(homeDir, '.npm-global', 'bin'),
-        path.join(homeDir, '.npm', 'bin'),
-        '/usr/local/bin',
-        '/opt/homebrew/bin'
-    ].filter(p => fs.existsSync(p));
-
+    // Find all possible npm global paths
+    const extraPaths = findNpmGlobalPaths();
+    
+    // Build enhanced environment
     const env = { ...process.env };
     if (extraPaths.length > 0) {
+        // Add discovered paths to the beginning of PATH
         env.PATH = `${extraPaths.join(':')}:${env.PATH || ''}`;
     }
 
-    // Also try with fnm environment for npm-installed tools
-    const fullCommand = `eval "$(fnm env)" 2>/dev/null; ${command}`;
+    // Try with fnm environment if available, but don't suppress errors for debugging
+    let fullCommand = command;
+    const fnmAvailable = await isFnmAvailable();
+    
+    if (fnmAvailable) {
+        // Use fnm env but capture any errors for debugging
+        fullCommand = `eval "$(fnm env)" && ${command}`;
+    }
     
     return execAsync(fullCommand, { 
         env,
@@ -79,4 +144,59 @@ export async function commandExists(command: string): Promise<boolean> {
     } catch {
         return false;
     }
+}
+
+/**
+ * Find Adobe CLI in the system and return its path
+ */
+export async function findAdobeCLI(): Promise<string | null> {
+    try {
+        // First try with enhanced PATH
+        const { stdout } = await execWithEnhancedPath('which aio');
+        const aioPath = stdout.trim();
+        if (aioPath) {
+            return aioPath;
+        }
+    } catch {
+        // Continue searching
+    }
+    
+    // Search in all npm global paths directly
+    const paths = findNpmGlobalPaths();
+    for (const dir of paths) {
+        const aioPath = path.join(dir, 'aio');
+        if (fs.existsSync(aioPath)) {
+            try {
+                // Verify it's executable
+                fs.accessSync(aioPath, fs.constants.X_OK);
+                return aioPath;
+            } catch {
+                // Not executable, continue searching
+            }
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Get diagnostic information about the PATH and tool locations
+ */
+export async function getPathDiagnostics(): Promise<{
+    fnmAvailable: boolean;
+    npmGlobalPaths: string[];
+    currentPATH: string;
+    adobeCLIPath: string | null;
+}> {
+    const fnmAvailable = await isFnmAvailable();
+    const npmGlobalPaths = findNpmGlobalPaths();
+    const currentPATH = process.env.PATH || '';
+    const adobeCLIPath = await findAdobeCLI();
+    
+    return {
+        fnmAvailable,
+        npmGlobalPaths,
+        currentPATH,
+        adobeCLIPath
+    };
 }
