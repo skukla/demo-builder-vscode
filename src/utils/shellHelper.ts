@@ -180,6 +180,100 @@ export async function findAdobeCLI(): Promise<string | null> {
 }
 
 /**
+ * Find which Node version has Adobe CLI installed
+ */
+async function findAdobeCLINodeVersion(): Promise<string | null> {
+    const homeDir = os.homedir();
+    const fnmBase = path.join(homeDir, '.local/share/fnm/node-versions');
+    
+    if (fs.existsSync(fnmBase)) {
+        try {
+            const versions = fs.readdirSync(fnmBase);
+            for (const version of versions) {
+                const aioPath = path.join(fnmBase, version, 'installation/bin/aio');
+                if (fs.existsSync(aioPath)) {
+                    return version; // e.g., "v20.19.5"
+                }
+            }
+        } catch (e) {
+            // Ignore errors
+        }
+    }
+    
+    // Also check nvm
+    const nvmBase = path.join(homeDir, '.nvm/versions/node');
+    if (fs.existsSync(nvmBase)) {
+        try {
+            const versions = fs.readdirSync(nvmBase);
+            for (const version of versions) {
+                const aioPath = path.join(nvmBase, version, 'bin/aio');
+                if (fs.existsSync(aioPath)) {
+                    return version;
+                }
+            }
+        } catch (e) {
+            // Ignore errors
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Execute Adobe CLI command with the correct Node version
+ * This ensures Adobe CLI runs with a compatible Node version
+ */
+export async function execAdobeCLI(command: string): Promise<{ stdout: string; stderr: string }> {
+    const aioNodeVersion = await findAdobeCLINodeVersion();
+    
+    if (aioNodeVersion && await isFnmAvailable()) {
+        // Use fnm use to set the version for the session, then run the command
+        // Suppress fnm output to avoid cluttering the results
+        const fullCommand = `fnm use ${aioNodeVersion} > /dev/null 2>&1 && ${command}`;
+        
+        return execAsync(fullCommand, {
+            shell: '/bin/zsh',
+            encoding: 'utf8'
+        }) as Promise<{ stdout: string; stderr: string }>;
+    }
+    
+    // Fallback to enhanced path method if fnm not available or Adobe CLI version not found
+    return execWithEnhancedPath(command);
+}
+
+/**
+ * Ensure fnm is using the correct Node version for Adobe CLI
+ * This will switch the active Node version if needed and persist it for the session
+ */
+export async function ensureAdobeCLINodeVersion(): Promise<string | null> {
+    const aioNodeVersion = await findAdobeCLINodeVersion();
+    if (!aioNodeVersion || !await isFnmAvailable()) {
+        return null;
+    }
+    
+    try {
+        // Switch to the correct version using fnm
+        // This will affect the current shell session
+        await execAsync(`fnm use ${aioNodeVersion}`, {
+            shell: '/bin/zsh',
+            encoding: 'utf8'
+        });
+        
+        // Also set it as the default so new terminal sessions will use it
+        // This persists the selection for the user
+        await execAsync(`fnm default ${aioNodeVersion}`, {
+            shell: '/bin/zsh',
+            encoding: 'utf8'
+        });
+        
+        return aioNodeVersion;
+    } catch (error) {
+        console.error('Failed to switch Node version:', error);
+        return null;
+    }
+}
+
+/**
  * Get diagnostic information about the PATH and tool locations
  */
 export async function getPathDiagnostics(): Promise<{

@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import { Logger } from './logger';
 import { getLogger, CommandResult } from './debugLogger';
-import { execWithEnhancedPath } from './shellHelper';
+import { execWithEnhancedPath, execAdobeCLI } from './shellHelper';
 
 const execAsync = promisify(exec);
 
@@ -40,6 +40,13 @@ export class AdobeAuthManager {
         const startTime = Date.now();
         try {
             this.debugLogger.debug('Starting Adobe authentication check');
+            
+            // Ensure we're using the correct Node version for Adobe CLI
+            const { ensureAdobeCLINodeVersion } = await import('./shellHelper');
+            const nodeVersion = await ensureAdobeCLINodeVersion();
+            if (nodeVersion) {
+                this.debugLogger.debug(`Switched to Node ${nodeVersion} for Adobe CLI compatibility`);
+            }
             
             // First verify Adobe CLI is accessible
             try {
@@ -187,9 +194,9 @@ export class AdobeAuthManager {
                 
                 // Run all clear commands in parallel
                 const clearPromises = [
-                    execWithEnhancedPath('aio console project clear').catch(() => {}),
-                    execWithEnhancedPath('aio console workspace clear').catch(() => {}),
-                    execWithEnhancedPath('aio console org clear').catch(() => {})
+                    execAdobeCLI('aio console project clear').catch(() => {}),
+                    execAdobeCLI('aio console workspace clear').catch(() => {}),
+                    execAdobeCLI('aio console org clear').catch(() => {})
                 ];
                 
                 await Promise.all(clearPromises);
@@ -202,7 +209,7 @@ export class AdobeAuthManager {
             // Force logout and immediately start login
             const logoutCommand = 'aio auth logout --force';
             this.debugLogger.debug(`Executing logout: ${logoutCommand}`);
-            const { stdout: logoutOut, stderr: logoutErr } = await execWithEnhancedPath(logoutCommand);
+            const { stdout: logoutOut, stderr: logoutErr } = await execAdobeCLI(logoutCommand);
             
             this.debugLogger.logCommand(logoutCommand, {
                 stdout: logoutOut,
@@ -253,7 +260,7 @@ export class AdobeAuthManager {
 
     public async logout(): Promise<void> {
         try {
-            await execWithEnhancedPath('aio auth logout');
+            await execAdobeCLI('aio auth logout');
             this.logger.info('Adobe logout successful');
         } catch (error) {
             this.logger.warn('Adobe logout failed:', error);
@@ -263,7 +270,7 @@ export class AdobeAuthManager {
     public async verifyAccess(): Promise<boolean> {
         try {
             // Try to list organizations as a verification step
-            const { stdout } = await execWithEnhancedPath('aio console org list');
+            const { stdout } = await execAdobeCLI('aio console org list');
             return stdout.includes('Org ID') || stdout.includes('Org Name');
         } catch (error) {
             this.logger.warn('Failed to verify Adobe access');
@@ -273,7 +280,7 @@ export class AdobeAuthManager {
 
     public async getOrganizations(): Promise<AdobeOrg[]> {
         try {
-            const { stdout } = await execWithEnhancedPath('aio console org list --json');
+            const { stdout } = await execAdobeCLI('aio console org list --json');
             // Parse JSON, removing any status messages
             const jsonStr = stdout.split('\n').find(line => line.startsWith('['));
             if (!jsonStr) return [];
@@ -288,7 +295,7 @@ export class AdobeAuthManager {
         try {
             this.debugLogger.debug(`Selecting organization: ${orgCode}`);
             const command = `aio console org select ${orgCode}`;
-            const { stdout, stderr } = await execWithEnhancedPath(command);
+            const { stdout, stderr } = await execAdobeCLI(command);
             
             this.debugLogger.logCommand(command, {
                 stdout,
@@ -313,7 +320,7 @@ export class AdobeAuthManager {
     public async getProjects(orgId?: string): Promise<AdobeProject[]> {
         try {
             const orgFlag = orgId ? `--orgId ${orgId}` : '';
-            const { stdout } = await execWithEnhancedPath(`aio console project list --json ${orgFlag}`);
+            const { stdout } = await execAdobeCLI(`aio console project list --json ${orgFlag}`);
             // Parse JSON, removing any status messages
             const jsonStr = stdout.split('\n').find(line => line.startsWith('['));
             if (!jsonStr) return [];
@@ -326,7 +333,7 @@ export class AdobeAuthManager {
 
     public async selectProject(projectId: string): Promise<boolean> {
         try {
-            await execWithEnhancedPath(`aio console project select ${projectId}`);
+            await execAdobeCLI(`aio console project select ${projectId}`);
             this.logger.info(`Selected Adobe project: ${projectId}`);
             
             // Log current context for debugging
@@ -355,7 +362,7 @@ export class AdobeAuthManager {
             }
             
             const projectFlag = projectId ? `--projectId ${projectId}` : '';
-            const { stdout } = await execWithEnhancedPath(`aio console workspace list --json ${projectFlag}`);
+            const { stdout } = await execAdobeCLI(`aio console workspace list --json ${projectFlag}`);
             // Parse JSON, removing any status messages
             const jsonStr = stdout.split('\n').find(line => line.startsWith('['));
             if (!jsonStr) return [];
@@ -400,7 +407,7 @@ export class AdobeAuthManager {
 
     public async selectWorkspace(workspaceId: string): Promise<boolean> {
         try {
-            await execWithEnhancedPath(`aio console workspace select ${workspaceId}`);
+            await execAdobeCLI(`aio console workspace select ${workspaceId}`);
             this.logger.info(`Selected Adobe workspace: ${workspaceId}`);
             return true;
         } catch (error) {
@@ -412,7 +419,7 @@ export class AdobeAuthManager {
     public async getCurrentOrg(): Promise<AdobeOrg | null> {
         try {
             // Get the currently selected organization using 'aio console where'
-            const { stdout: whereOutput } = await execWithEnhancedPath('aio console where --json');
+            const { stdout: whereOutput } = await execAdobeCLI('aio console where --json');
             const whereStr = whereOutput.split('\n').find(line => line.startsWith('{'));
             if (!whereStr) return null;
             
@@ -420,7 +427,7 @@ export class AdobeAuthManager {
             if (!whereData.org) return null;
             
             // Now get the full org details from the org list
-            const { stdout: listOutput } = await execWithEnhancedPath('aio console org list --json');
+            const { stdout: listOutput } = await execAdobeCLI('aio console org list --json');
             const listStr = listOutput.split('\n').find(line => line.startsWith('['));
             if (!listStr) return null;
             
