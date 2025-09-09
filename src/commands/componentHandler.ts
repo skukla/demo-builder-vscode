@@ -15,6 +15,9 @@ export class ComponentHandler {
             case 'loadComponents':
                 await this.loadComponents(panel);
                 break;
+            case 'get-components-data':
+                await this.getComponentsData(panel);
+                break;
             case 'checkCompatibility':
                 await this.checkCompatibility(message.payload, panel);
                 break;
@@ -45,27 +48,32 @@ export class ComponentHandler {
                     name: f.name,
                     description: f.description,
                     features: f.features,
+                    configuration: f.configuration,
                     recommended: f.id === 'citisignal-nextjs'
                 })),
                 backends: backends.map(b => ({
                     id: b.id,
                     name: b.name,
-                    description: b.description
+                    description: b.description,
+                    configuration: b.configuration
                 })),
                 externalSystems: externalSystems.map(e => ({
                     id: e.id,
                     name: e.name,
-                    description: e.description
+                    description: e.description,
+                    configuration: e.configuration
                 })),
                 appBuilder: appBuilder.map(a => ({
                     id: a.id,
                     name: a.name,
-                    description: a.description
+                    description: a.description,
+                    configuration: a.configuration
                 })),
                 dependencies: dependencies.map(d => ({
                     id: d.id,
                     name: d.name,
-                    description: d.description
+                    description: d.description,
+                    configuration: d.configuration
                 })),
                 presets
             };
@@ -86,6 +94,63 @@ export class ComponentHandler {
                 type: 'error',
                 payload: {
                     message: 'Failed to load components',
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                }
+            });
+        }
+    }
+
+    private async getComponentsData(panel: vscode.WebviewPanel) {
+        try {
+            const frontends = await this.registryManager.getFrontends();
+            const backends = await this.registryManager.getBackends();
+            const externalSystems = await this.registryManager.getExternalSystems();
+            const appBuilder = await this.registryManager.getAppBuilder();
+            const dependencies = await this.registryManager.getDependencies();
+
+            const componentsData = {
+                frontends: frontends.map(f => ({
+                    id: f.id,
+                    name: f.name,
+                    description: f.description,
+                    configuration: f.configuration
+                })),
+                backends: backends.map(b => ({
+                    id: b.id,
+                    name: b.name,
+                    description: b.description,
+                    configuration: b.configuration
+                })),
+                externalSystems: externalSystems.map(e => ({
+                    id: e.id,
+                    name: e.name,
+                    description: e.description,
+                    configuration: e.configuration
+                })),
+                appBuilder: appBuilder.map(a => ({
+                    id: a.id,
+                    name: a.name,
+                    description: a.description,
+                    configuration: a.configuration
+                })),
+                dependencies: dependencies.map(d => ({
+                    id: d.id,
+                    name: d.name,
+                    description: d.description,
+                    configuration: d.configuration
+                }))
+            };
+
+            // Send components data to webview
+            panel.webview.postMessage({
+                type: 'components-data',
+                payload: componentsData
+            });
+        } catch (error) {
+            panel.webview.postMessage({
+                type: 'error',
+                payload: {
+                    message: 'Failed to load component configurations',
                     error: error instanceof Error ? error.message : 'Unknown error'
                 }
             });
