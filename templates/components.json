@@ -20,9 +20,86 @@
         "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-saas"],
         "configuration": {
           "envVars": [
-            "MESH_ENDPOINT",
-            "ADOBE_COMMERCE_URL",
-            "DEMO_INSPECTOR_ENABLED"
+            {
+              "key": "MESH_ENDPOINT",
+              "label": "API Mesh Endpoint",
+              "type": "url",
+              "required": true,
+              "placeholder": "https://edge-sandbox-graph.adobe.io/api/your-mesh-id/graphql",
+              "description": "The GraphQL endpoint for your Adobe API Mesh"
+            },
+            {
+              "key": "ADOBE_COMMERCE_URL",
+              "label": "Adobe Commerce URL",
+              "type": "url",
+              "required": true,
+              "placeholder": "https://your-instance.adobedemo.com",
+              "description": "Base URL of your Adobe Commerce instance"
+            },
+            {
+              "key": "ADOBE_ASSETS_URL",
+              "label": "Adobe Assets URL",
+              "type": "url",
+              "required": false,
+              "placeholder": "https://delivery-p57319-e1619941.adobeaemcloud.com",
+              "description": "URL for Adobe Experience Manager assets delivery"
+            },
+            {
+              "key": "ADOBE_COMMERCE_ENVIRONMENT_ID",
+              "label": "Environment ID",
+              "type": "text",
+              "required": true,
+              "placeholder": "your-environment-id",
+              "description": "Adobe Commerce environment identifier"
+            },
+            {
+              "key": "ADOBE_COMMERCE_STORE_VIEW_CODE",
+              "label": "Store View Code",
+              "type": "text",
+              "required": true,
+              "default": "default",
+              "description": "Store view code for multi-store setup"
+            },
+            {
+              "key": "ADOBE_COMMERCE_WEBSITE_CODE",
+              "label": "Website Code",
+              "type": "text",
+              "required": true,
+              "default": "base",
+              "description": "Website code for multi-website setup"
+            },
+            {
+              "key": "ADOBE_COMMERCE_STORE_CODE",
+              "label": "Store Code",
+              "type": "text",
+              "required": true,
+              "default": "main_website_store",
+              "description": "Store code identifier"
+            },
+            {
+              "key": "ADOBE_CATALOG_API_KEY",
+              "label": "Catalog Service API Key",
+              "type": "text",
+              "required": true,
+              "placeholder": "your-catalog-service-staging-or-public-key",
+              "description": "API key for Adobe Catalog Service (staging or production)"
+            },
+            {
+              "key": "ADOBE_COMMERCE_CUSTOMER_GROUP",
+              "label": "Customer Group ID",
+              "type": "text",
+              "required": false,
+              "placeholder": "customer-group-id-hash",
+              "description": "Customer group ID for price and catalog rules"
+            },
+            {
+              "key": "USE_MESH",
+              "label": "Use API Mesh",
+              "type": "boolean",
+              "required": false,
+              "default": "true",
+              "description": "Enable API Mesh for GraphQL operations"
+            }
           ],
           "port": 3000,
           "nodeVersion": "24"
@@ -99,7 +176,77 @@
         "configuration": {
           "nodeVersion": "20",
           "requiresDeployment": true,
-          "deploymentTarget": "adobe-io"
+          "deploymentTarget": "adobe-io",
+          "envVars": [
+            {
+              "key": "ADOBE_COMMERCE_GRAPHQL_ENDPOINT",
+              "label": "Commerce GraphQL Endpoint",
+              "type": "url",
+              "required": true,
+              "placeholder": "https://your-instance.adobedemo.com/graphql",
+              "description": "GraphQL endpoint of your Adobe Commerce instance"
+            },
+            {
+              "key": "ADOBE_SANDBOX_CATALOG_SERVICE_ENDPOINT",
+              "label": "Catalog Service Endpoint",
+              "type": "select",
+              "required": true,
+              "default": "https://catalog-service-sandbox.adobe.io/graphql",
+              "options": [
+                { "value": "https://catalog-service-sandbox.adobe.io/graphql", "label": "Sandbox" },
+                { "value": "https://catalog-service.adobe.io/graphql", "label": "Production" }
+              ],
+              "description": "Adobe Catalog Service endpoint (sandbox or production)"
+            },
+            {
+              "key": "ADOBE_CATALOG_API_KEY",
+              "label": "Catalog API Key",
+              "type": "text",
+              "required": true,
+              "placeholder": "your_catalog_api_key_here",
+              "description": "API key for Adobe Catalog Service"
+            },
+            {
+              "key": "ADOBE_PRODUCTION_CATALOG_API_KEY",
+              "label": "Production Catalog API Key",
+              "type": "text",
+              "required": false,
+              "placeholder": "your_production_api_key_here",
+              "description": "Production API key (if using production endpoint)"
+            },
+            {
+              "key": "ADOBE_COMMERCE_ENVIRONMENT_ID",
+              "label": "Environment ID",
+              "type": "text",
+              "required": true,
+              "placeholder": "your_environment_id_here",
+              "description": "Adobe Commerce environment identifier"
+            },
+            {
+              "key": "ADOBE_COMMERCE_WEBSITE_CODE",
+              "label": "Website Code",
+              "type": "text",
+              "required": true,
+              "default": "base",
+              "description": "Website code for API Mesh configuration"
+            },
+            {
+              "key": "ADOBE_COMMERCE_STORE_CODE",
+              "label": "Store Code",
+              "type": "text",
+              "required": true,
+              "default": "main_website_store",
+              "description": "Store code for API Mesh configuration"
+            },
+            {
+              "key": "ADOBE_COMMERCE_STORE_VIEW_CODE",
+              "label": "Store View Code",
+              "type": "text",
+              "required": true,
+              "default": "default",
+              "description": "Store view code for API Mesh configuration"
+            }
+          ]
         },
         "providesEndpoint": true
       },
@@ -130,10 +277,24 @@
         "requiresApiKey": true,
         "endpoint": "https://platform.adobe.io",
         "configuration": {
-          "datastream": {
-            "type": "string",
-            "required": true
-          }
+          "envVars": [
+            {
+              "key": "EXPERIENCE_PLATFORM_DATASTREAM_ID",
+              "label": "Datastream ID",
+              "type": "text",
+              "required": true,
+              "placeholder": "your-datastream-id",
+              "description": "Adobe Experience Platform datastream identifier"
+            },
+            {
+              "key": "EXPERIENCE_PLATFORM_API_KEY",
+              "label": "Platform API Key",
+              "type": "text",
+              "required": true,
+              "placeholder": "your-platform-api-key",
+              "description": "API key for Adobe Experience Platform access"
+            }
+          ]
         }
       }
     ],
@@ -150,7 +311,49 @@
         "configuration": {
           "runtime": "nodejs:22",
           "nodeVersion": "22",
-          "actions": ["browse-files", "get-products", "download-file", "delete-file"]
+          "actions": ["browse-files", "get-products", "download-file", "delete-file"],
+          "envVars": [
+            {
+              "key": "COMMERCE_BASE_URL",
+              "label": "Commerce Base URL",
+              "type": "url",
+              "required": true,
+              "placeholder": "https://your-commerce-instance.adobedemo.com",
+              "description": "Base URL of your Adobe Commerce instance"
+            },
+            {
+              "key": "COMMERCE_ADMIN_USERNAME",
+              "label": "Admin Username",
+              "type": "text",
+              "required": true,
+              "placeholder": "admin",
+              "description": "Username for Commerce admin panel access"
+            },
+            {
+              "key": "COMMERCE_ADMIN_PASSWORD",
+              "label": "Admin Password",
+              "type": "password",
+              "required": true,
+              "placeholder": "your_admin_password",
+              "description": "Password for Commerce admin panel access"
+            },
+            {
+              "key": "AWS_ACCESS_KEY_ID",
+              "label": "AWS Access Key ID",
+              "type": "text",
+              "required": false,
+              "placeholder": "your_aws_access_key_id",
+              "description": "AWS access key for S3 integration (optional)"
+            },
+            {
+              "key": "AWS_SECRET_ACCESS_KEY",
+              "label": "AWS Secret Access Key",
+              "type": "password",
+              "required": false,
+              "placeholder": "your_aws_secret_access_key",
+              "description": "AWS secret key for S3 integration (optional)"
+            }
+          ]
         }
       }
     ]
