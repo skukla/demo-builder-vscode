@@ -11,7 +11,7 @@ import { WelcomeStep } from '../steps/WelcomeStep';
 import { ComponentSelectionStep } from '../steps/ComponentSelectionStep';
 import { PrerequisitesStep } from '../steps/PrerequisitesStep';
 import { AdobeSetupStep } from '../steps/AdobeSetupStep';
-import { CommerceConfigStep } from '../steps/CommerceConfigStep';
+import { ComponentConfigStep } from '../steps/ComponentConfigStep';
 import { ReviewStep } from '../steps/ReviewStep';
 import { CreatingStep } from '../steps/CreatingStep';
 import { vscode } from '../../app/vscodeApi';
@@ -23,7 +23,7 @@ const DEFAULT_WIZARD_STEPS: { id: WizardStep; name: string }[] = [
     { id: 'component-selection', name: 'Components' },
     { id: 'prerequisites', name: 'Prerequisites' },
     { id: 'adobe-setup', name: 'Adobe Setup' },
-    { id: 'commerce-config', name: 'Commerce' },
+    { id: 'component-config', name: 'Configuration' },
     { id: 'review', name: 'Review' },
     { id: 'creating', name: 'Creating' }
 ];
@@ -42,6 +42,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         currentStep: 'welcome',
         projectName: '',
         projectTemplate: 'commerce-paas',
+        componentConfigs: {},
         adobeAuth: {
             isAuthenticated: false,
             isChecking: false
@@ -206,8 +207,11 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             case 'project-selection':
                 // Legacy step, merged into adobe-setup
                 return <AdobeSetupStep {...props} />;
+            case 'component-config':
+                return <ComponentConfigStep {...props} />;
             case 'commerce-config':
-                return <CommerceConfigStep {...props} />;
+                // Legacy step, now replaced by component-config
+                return <ComponentConfigStep {...props} />;
             case 'review':
                 return <ReviewStep {...props} />;
             case 'creating':

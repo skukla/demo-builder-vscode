@@ -21,8 +21,8 @@
       "enabled": true
     },
     {
-      "id": "commerce-config",
-      "name": "Commerce",
+      "id": "component-config",
+      "name": "Configuration",
       "enabled": true
     },
     {

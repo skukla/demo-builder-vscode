@@ -11,7 +11,8 @@ export type WizardStep =
     | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
-    | 'commerce-config'
+    | 'component-config'  // Component-specific configuration
+    | 'commerce-config'  // Kept for compatibility
     | 'review'
     | 'creating';
 
@@ -20,11 +21,12 @@ export interface WizardState {
     projectName: string;
     projectTemplate: ProjectTemplate;
     components?: ComponentSelection;
+    componentConfigs?: ComponentConfigs;  // Component-specific environment configurations
     adobeAuth: AdobeAuthState;
     adobeOrg?: Organization;  // Renamed for consistency
     adobeProject?: Project;  // Renamed for consistency
     adobeWorkspace?: Workspace;  // New field for workspace
-    commerceConfig?: CommerceConfig;
+    commerceConfig?: CommerceConfig;  // Kept for compatibility
     creationProgress?: CreationProgress;
 }
 
@@ -133,5 +135,31 @@ export interface ComponentSelection {
     frontend?: string;
     backend?: string;
     dependencies?: string[];
+    services?: string[];
+    externalSystems?: string[];
+    appBuilderApps?: string[];
     preset?: string;
+}
+
+export interface ComponentConfigs {
+    [componentId: string]: ComponentConfig;
+}
+
+export interface ComponentConfig {
+    [key: string]: string | boolean | number | undefined;
+}
+
+export interface ComponentEnvVar {
+    key: string;
+    label: string;
+    type: 'text' | 'password' | 'url' | 'select' | 'boolean';
+    required?: boolean;
+    default?: string;
+    placeholder?: string;
+    description?: string;
+    options?: Array<{ value: string; label: string }>;
+    validation?: {
+        pattern?: string;
+        message?: string;
+    };
 }
