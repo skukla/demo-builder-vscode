@@ -56,8 +56,9 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
     const [isInitialCheck, setIsInitialCheck] = useState(true);
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
-    const [isTransitioningToProjects, setIsTransitioningToProjects] = useState(false);
     const [shouldShowAuthSuccess, setShouldShowAuthSuccess] = useState(false);
+    const [showReauthOption, setShowReauthOption] = useState(false);
+    const [isSelectingProject, setIsSelectingProject] = useState(false);
 
     useEffect(() => {
         // Always check authentication on mount
@@ -75,10 +76,11 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
         // But don't auto-advance if we should show auth success first
         if (state.adobeAuth.isAuthenticated && !state.adobeProject?.id && currentStep === 'auth' && !shouldShowAuthSuccess) {
             // Only auto-advance if we're not showing the success message
-            if (!isTransitioningToProjects) {
+            if (!isTransitioning) {
                 transitionToStep('project');
             }
-        } else if (state.adobeProject?.id && !state.adobeWorkspace?.id && currentStep !== 'workspace') {
+        } else if (state.adobeProject?.id && !state.adobeWorkspace?.id && currentStep !== 'workspace' && !isSelectingProject) {
+            // Only auto-advance if we're not manually selecting a project
             transitionToStep('workspace');
         }
 
@@ -101,36 +103,35 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
             
             // If we have a new organization, persist it
             if (data.organization && (!state.adobeOrg || state.adobeOrg.code !== data.organization.code)) {
+                // Only call select-organization once (ensure-org-selected is redundant)
                 vscode.postMessage('select-organization', { orgCode: data.organization.code });
             }
             
             // Auto-advance if authenticated
             if (data.isAuthenticated && currentStep === 'auth') {
-                const isInitialAuthCheck = isInitialCheck || (!isLoggingIn && !isTransitioningToProjects);
+                const isInitialAuthCheck = isInitialCheck || !isLoggingIn;
                 
                 if (isInitialAuthCheck) {
                     // First time checking and already authenticated - show success message
                     setShouldShowAuthSuccess(true);
-                    setIsTransitioningToProjects(true);
                     // Always load projects after authentication
                     loadProjects();
-                    // Show success state for comfortable reading time then transition
+                    // Give user time to see the success message
                     setTimeout(() => {
                         transitionToStep('project');
-                        setIsTransitioningToProjects(false);
                         setShouldShowAuthSuccess(false);
-                    }, 2000);
+                    }, 1500);
                 } else if (isLoggingIn) {
                     // User just logged in - show success message
                     setIsLoggingIn(false);
-                    setIsTransitioningToProjects(true);
+                    setShouldShowAuthSuccess(true);
                     // Always load projects after authentication (for fresh login or org switch)
                     loadProjects();
-                    // Show success state for comfortable reading time then transition
+                    // Give user time to see the success message
                     setTimeout(() => {
                         transitionToStep('project');
-                        setIsTransitioningToProjects(false);
-                    }, 2000);
+                        setShouldShowAuthSuccess(false);
+                    }, 1500);
                 }
             } else if (!data.isAuthenticated && data.error) {
                 // Clear logging in state if there was an error
@@ -169,13 +170,43 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
             }
             setIsLoadingWorkspaces(false);
         });
+        
+        // Listen for workspace errors (organization access issues)
+        const unsubscribeWorkspaceError = vscode.onMessage('workspaces-error', (data) => {
+            setIsLoadingWorkspaces(false);
+            
+            if (data.type === 'org_access') {
+                // Organization access error - user needs to re-authenticate
+                setWorkspaceError(data.error);
+                // Set a flag to show the re-authenticate option
+                setShowReauthOption(true);
+            } else {
+                // General error
+                setWorkspaceError(data.error || 'Failed to load workspaces');
+            }
+        });
+        
+        // Listen for organization selection confirmation
+        const unsubscribeOrgConfirm = vscode.onMessage('org-selection-confirmed', (data) => {
+            if (data.success) {
+                // Organization successfully selected, load projects if needed
+                if (state.adobeOrg?.id && projects.length === 0 && !isLoadingProjects) {
+                    loadProjects();
+                }
+            } else {
+                // Failed to select org, show error
+                setProjectError(`Failed to select organization ${data.orgCode}. Please try re-authenticating.`);
+            }
+        });
 
         return () => {
             unsubscribeAuth();
             unsubscribeProjects();
             unsubscribeWorkspaces();
+            unsubscribeWorkspaceError();
+            unsubscribeOrgConfirm();
         };
-    }, [state.adobeAuth.isAuthenticated, state.adobeOrg, state.adobeProject, currentStep, isInitialCheck, projects.length, isLoadingProjects, isLoggingIn, shouldShowAuthSuccess, isTransitioningToProjects]);
+    }, [state.adobeAuth.isAuthenticated, state.adobeOrg, state.adobeProject, currentStep, isInitialCheck, projects.length, isLoadingProjects, isLoggingIn, shouldShowAuthSuccess]);
 
     useEffect(() => {
         // Update proceed state when selections change
@@ -184,6 +215,17 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                           !!state.adobeWorkspace?.id;
         setCanProceed(canProceed);
     }, [state.adobeAuth.isAuthenticated, state.adobeProject, state.adobeWorkspace, setCanProceed]);
+
+    // Cleanup on unmount - stop authentication polling if we're leaving the step
+    useEffect(() => {
+        return () => {
+            // Tell the backend to stop polling when this component unmounts
+            // This handles cases where user navigates away via Back button or step change
+            if (isLoggingIn || state.adobeAuth.isChecking) {
+                vscode.postMessage('cancel-auth-polling');
+            }
+        };
+    }, []);
 
     const transitionToStep = (step: SetupStep) => {
         setIsTransitioning(true);
@@ -233,6 +275,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
     };
 
     const selectProject = (project: Project) => {
+        setIsSelectingProject(true); // Flag to prevent auto-advance in useEffect
         setSelectedProjectId(project.id);
         updateState({
             adobeProject: {
@@ -246,9 +289,12 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
         // Persist project selection globally for CLI
         vscode.postMessage('select-project', { projectId: project.id });
         
-        // Auto-advance to workspace step
-        transitionToStep('workspace');
-        loadWorkspaces(project.id);
+        // Delay before auto-advancing to let user see the selection
+        setTimeout(() => {
+            transitionToStep('workspace');
+            loadWorkspaces(project.id); // Load workspaces after transition to avoid double loading
+            setIsSelectingProject(false); // Clear flag after transition
+        }, 1000); // 1 second delay to see selection
     };
 
     const selectWorkspace = (workspace: Workspace) => {
@@ -266,11 +312,8 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
         
         // Auto-advance to the next step in the wizard after workspace selection
         // This matches the behavior of project selection for consistency
-        setTimeout(() => {
-            if (onNext) {
-                onNext();
-            }
-        }, 500); // Small delay to let the user see the selection
+        // The parent wizard will handle navigation based on the updated state
+        setCanProceed(true);
     };
 
     const editStep = (step: SetupStep) => {
@@ -281,6 +324,8 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
             setSelectedProjectId(null);
             setSelectedWorkspaceId(null);
             setProjectSearchQuery('');
+            setWorkspaceError(null);
+            setShowReauthOption(false);
             
             // Set loading state BEFORE transitioning to show immediate feedback
             setIsLoggingIn(true);
@@ -299,10 +344,8 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
             // Now transition to show the loading state
             transitionToStep('auth');
             
-            // Then actually initiate the re-authentication
-            setTimeout(() => {
-                vscode.requestAuth(true);
-            }, 250);  // Small delay to allow transition to complete
+            // Immediately initiate the re-authentication with force flag to clear org context
+            vscode.requestAuth(true);
         } else {
             // Clear dependent selections when going back
             if (step === 'project') {
@@ -370,15 +413,6 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                                 <Button variant="cta" onPress={() => handleLogin(false)}>
                                     Sign In with Adobe
                                 </Button>
-                            </Flex>
-                        ) : isTransitioningToProjects ? (
-                            <Flex direction="column" gap="size-300" alignItems="center" justifyContent="center" height="100%">
-                                <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
-                                <Text UNSAFE_className="text-lg">Authentication successful</Text>
-                                <Text UNSAFE_className="text-sm text-gray-600">
-                                    Loading your projects...
-                                </Text>
-                                <ProgressCircle size="S" isIndeterminate marginTop="size-200" />
                             </Flex>
                         ) : (
                             <Flex direction="column" gap="size-300" alignItems="center" justifyContent="center" height="100%">
@@ -483,12 +517,26 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                                 <Flex direction="column" gap="size-200" alignItems="center">
                                     <AlertCircle size="L" UNSAFE_className="text-red-600" />
                                     <Text>{workspaceError}</Text>
-                                    <Button 
-                                        variant="secondary" 
-                                        onPress={() => selectedProjectId && loadWorkspaces(selectedProjectId)}
-                                    >
-                                        Retry
-                                    </Button>
+                                    <Flex gap="size-200">
+                                        {showReauthOption ? (
+                                            <Button 
+                                                variant="cta" 
+                                                onPress={() => {
+                                                    setShowReauthOption(false);
+                                                    editStep('auth');
+                                                }}
+                                            >
+                                                Switch Organization
+                                            </Button>
+                                        ) : (
+                                            <Button 
+                                                variant="secondary" 
+                                                onPress={() => selectedProjectId && loadWorkspaces(selectedProjectId)}
+                                            >
+                                                Retry
+                                            </Button>
+                                        )}
+                                    </Flex>
                                 </Flex>
                             </Well>
                         ) : workspaces.length > 0 ? (
