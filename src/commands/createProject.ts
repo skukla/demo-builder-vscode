@@ -12,7 +12,7 @@ import { FrontendInstaller } from '../utils/frontendInstaller';
 export class CreateProjectCommand extends BaseCommand {
     public async execute(): Promise<void> {
         try {
-            this.logger.info('Starting project creation wizard...');
+            this.logger.info('[Project] Starting creation wizard (CLI mode)...');
             
             // Check if project already exists
             if (await this.stateManager.hasProject()) {
@@ -171,7 +171,7 @@ export class CreateProjectCommand extends BaseCommand {
 
     private async configureAdobe(): Promise<any> {
         return this.withProgress('Configuring Adobe services...', async (progress) => {
-            const authManager = new AdobeAuthManager(this.logger);
+            const authManager = new AdobeAuthManager(this.context.extensionPath, this.logger);
             
             progress.report({ message: 'Checking authentication...' });
             const isAuthenticated = await authManager.isAuthenticated();

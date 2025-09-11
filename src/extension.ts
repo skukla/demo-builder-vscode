@@ -7,23 +7,34 @@ import { Logger } from './utils/logger';
 import { initializeLogger } from './utils/debugLogger';
 import { StateManager } from './utils/stateManager';
 import { ProjectTreeProvider } from './providers/projectTreeProvider';
+import { ExternalCommandManager } from './utils/externalCommandManager';
+import { StateCoordinator } from './utils/stateCoordinator';
 
 let logger: Logger;
 let statusBar: StatusBarManager;
 let stateManager: StateManager;
 let autoUpdater: AutoUpdater;
+let externalCommandManager: ExternalCommandManager;
+let stateCoordinator: StateCoordinator;
 
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
     initializeLogger(context);
     
     logger = new Logger('Demo Builder');
-    logger.info('Adobe Demo Builder extension is activating...');
+    const version = context.extension.packageJSON.version || '1.0.0';
+    logger.info(`[Extension] Adobe Demo Builder v${version} starting...`);
 
     try {
         // Initialize state manager
         stateManager = new StateManager(context);
         await stateManager.initialize();
+
+        // Initialize external command manager
+        externalCommandManager = new ExternalCommandManager();
+        
+        // Initialize state coordinator
+        stateCoordinator = new StateCoordinator(context, externalCommandManager);
 
         // Check workspace trust
         if (!vscode.workspace.isTrusted) {
@@ -74,7 +85,7 @@ export async function activate(context: vscode.ExtensionContext) {
             const project = await stateManager.getCurrentProject();
             if (project) {
                 statusBar.updateProject(project);
-                logger.info(`Loaded existing project: ${project.name}`);
+                logger.info(`[Extension] Loaded existing project: ${project.name}`);
                 
                 // Show welcome back message
                 vscode.window.showInformationMessage(
@@ -97,7 +108,7 @@ export async function activate(context: vscode.ExtensionContext) {
         // Register file watchers
         registerFileWatchers(context);
 
-        logger.info('Adobe Demo Builder extension activated successfully!');
+        logger.info('[Extension] Ready');
 
     } catch (error) {
         logger.error(`Failed to activate extension: ${error}`);
@@ -114,8 +125,19 @@ export function deactivate() {
     statusBar?.dispose();
     autoUpdater?.dispose();
     stateManager?.dispose();
+    externalCommandManager?.dispose();
+    stateCoordinator?.dispose();
     
     logger?.info('Adobe Demo Builder extension deactivated.');
+}
+
+// Export managers for use in commands
+export function getExternalCommandManager(): ExternalCommandManager {
+    return externalCommandManager;
+}
+
+export function getStateCoordinator(): StateCoordinator {
+    return stateCoordinator;
 }
 
 async function promptForLicense(): Promise<string | undefined> {

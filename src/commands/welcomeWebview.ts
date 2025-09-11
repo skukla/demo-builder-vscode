@@ -9,7 +9,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
 
     public async execute(): Promise<void> {
         try {
-            this.logger.info('Showing Demo Builder Welcome screen...');
+            this.logger.info('[UI] Showing Demo Builder Welcome screen...');
 
             // Check if panel already exists
             if (this.panel) {
@@ -43,7 +43,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
             // Handle messages from webview
             this.panel.webview.onDidReceiveMessage(
                 async message => {
-                    this.logger.info(`Raw message received from webview: ${JSON.stringify(message)}`);
+                    this.logger.debug(`Welcome screen message:`, message);
                     await this.handleWebviewMessage(message);
                 },
                 undefined,
@@ -58,9 +58,6 @@ export class WelcomeWebviewCommand extends BaseCommand {
                 undefined,
                 this.context.subscriptions
             );
-
-            // Send initial data
-            await this.sendInitialData();
 
         } catch (error) {
             await this.showError('Failed to show welcome screen', error as Error);
@@ -194,7 +191,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
         const isLicensed = await licenseValidator.checkLicense();
         */
         
-        this.logger.info(`License check result: ${isLicensed} (bypassed for testing)`);
+        this.logger.info(`[License] Check result: ${isLicensed} (bypassed for testing)`);
 
         // Send initialization data
         await this.sendMessage('init', {
@@ -203,12 +200,12 @@ export class WelcomeWebviewCommand extends BaseCommand {
             isLicensed
         });
         
-        this.logger.info('Initial data sent to webview');
+        this.logger.debug('Initial data sent to webview');
     }
 
     private async handleWebviewMessage(message: any): Promise<void> {
         const { type, payload } = message;
-        this.logger.info(`Welcome screen message: ${type}`);
+        this.logger.debug(`Welcome screen action: ${type}`);
 
         switch (type) {
             case 'ready':
@@ -217,7 +214,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
 
             case 'create-new':
                 // Open wizard (welcome panel stays in background)
-                this.logger.info('Create new project button clicked');
+                this.logger.info('[Project Setup] Starting new project creation');
                 await vscode.commands.executeCommand('demoBuilder.createProject');
                 // Don't dispose the welcome panel - keep it available for navigation back
                 break;

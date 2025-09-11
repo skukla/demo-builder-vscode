@@ -34,7 +34,8 @@ export class CommandManager {
     }
 
     public registerCommands(): void {
-        this.logger.info('Registering Demo Builder commands...');
+        // Move to debug logging - this is an implementation detail
+        this.logger.debug('Registering Demo Builder commands...');
 
         // Welcome Screen
         const welcomeScreen = new WelcomeWebviewCommand(
@@ -123,7 +124,7 @@ export class CommandManager {
         const diagnostics = new DiagnosticsCommand();
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
 
-        this.logger.info(`Registered ${this.commands.size} commands`);
+        this.logger.debug(`Registered ${this.commands.size} commands`);
         this.logger.debug('Commands registered:', Array.from(this.commands.keys()));
     }
 

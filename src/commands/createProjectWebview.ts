@@ -12,6 +12,7 @@ import { ComponentHandler } from './componentHandler';
 import { ErrorLogger } from '../utils/errorLogger';
 import { ComponentRegistryManager } from '../utils/componentRegistry';
 import { ProgressUnifier, UnifiedProgress } from '../utils/progressUnifier';
+import { StepLogger } from '../utils/stepLogger';
 
 const execAsync = promisify(exec);
 
@@ -23,6 +24,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
     private componentHandler: ComponentHandler;
     private errorLogger: ErrorLogger;
     private progressUnifier: ProgressUnifier;
+    private stepLogger: StepLogger;
     private currentComponentSelection?: any;
     private componentsData?: any;
     private currentPrerequisites?: any[];  // Store resolved prerequisites for the session
@@ -39,20 +41,36 @@ export class CreateProjectWebviewCommand extends BaseCommand {
         super(context, stateManager, statusBar, logger);
         this.prereqChecker = new PrerequisitesChecker(logger);
         this.prereqManager = new PrerequisitesManager(context.extensionPath, logger);
-        this.authManager = new AdobeAuthManager(logger);
+        this.authManager = new AdobeAuthManager(context.extensionPath, logger);
         this.componentHandler = new ComponentHandler(context);
         this.errorLogger = new ErrorLogger(context);
         this.progressUnifier = new ProgressUnifier(logger);
+        
+        // Initialize StepLogger with configuration
+        const templatesPath = path.join(context.extensionPath, 'templates', 'logging.json');
+        this.stepLogger = new StepLogger(logger, undefined, templatesPath);
+        
+        // Load wizard steps configuration for step names
+        try {
+            const stepsPath = path.join(context.extensionPath, 'templates', 'wizard-steps.json');
+            if (fs.existsSync(stepsPath)) {
+                const stepsContent = fs.readFileSync(stepsPath, 'utf8');
+                const stepsConfig = JSON.parse(stepsContent);
+                this.stepLogger = new StepLogger(logger, stepsConfig.steps, templatesPath);
+            }
+        } catch (error) {
+            // StepLogger will use defaults if config loading fails
+            this.logger.debug('Could not load wizard steps for logging, using defaults');
+        }
     }
 
     public async execute(): Promise<void> {
         try {
-            this.logger.info('CreateProjectWebviewCommand.execute() called');
-            this.logger.info('Starting project creation wizard (webview)...');
+            this.logger.info('[Project] Starting creation wizard (webview mode)...');
             
             // Check if panel already exists
             if (this.panel) {
-                this.logger.info('Panel already exists, revealing it');
+                this.logger.debug('Panel already exists, revealing it');
                 this.panel.reveal();
                 return;
             }
@@ -218,12 +236,13 @@ export class CreateProjectWebviewCommand extends BaseCommand {
 
     private async handleWebviewMessage(message: any): Promise<void> {
         const { type, payload } = message;
-        this.logger.info(`Received message from webview: type=${type}, payload=${JSON.stringify(payload)}`);
+        // Move technical message details to debug channel
+        this.logger.debug(`Message from webview: type=${type}`, payload);
 
         switch (type) {
             case 'ready':
                 // Send initialization data
-                this.logger.info('Webview ready, sending init message');
+                this.logger.debug('Webview ready, sending init message');
                 
                 // Load defaults if available
                 let componentDefaults = null;
@@ -233,10 +252,10 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         const defaultsContent = fs.readFileSync(defaultsPath, 'utf8');
                         const defaults = JSON.parse(defaultsContent);
                         componentDefaults = defaults.componentSelection;
-                        this.logger.info('Loaded component defaults from defaults.json');
+                        this.logger.debug('Loaded component defaults from defaults.json');
                     }
                 } catch (error) {
-                    this.logger.info('No defaults.json found or error loading it, using empty defaults');
+                    this.logger.debug('No defaults.json found or error loading it, using empty defaults');
                 }
                 
                 // Load wizard steps configuration
@@ -248,10 +267,10 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         const stepsConfig = JSON.parse(stepsContent);
                         // Filter enabled steps only
                         wizardSteps = stepsConfig.steps.filter((step: any) => step.enabled);
-                        this.logger.info(`Loaded wizard steps configuration: ${wizardSteps.length} steps enabled`);
+                        this.logger.debug(`Loaded wizard steps configuration: ${wizardSteps.length} steps enabled`);
                     }
                 } catch (error) {
-                    this.logger.info('Error loading wizard-steps.json, will use default steps');
+                    this.logger.debug('Error loading wizard-steps.json, will use default steps');
                 }
                 
                 await this.sendMessage('init', {
@@ -265,7 +284,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             case 'check-prerequisites':
                 // Clear previous logs and start checking
                 this.errorLogger.clear();
-                this.errorLogger.logInfo('Starting prerequisite checks', 'Prerequisites');
+                this.stepLogger.logStepStart('prerequisites');
                 // Clear cached prerequisites for a fresh check
                 this.currentPrerequisites = undefined;
                 this.currentPrerequisiteStates = undefined;
@@ -275,7 +294,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             case 'continue-prerequisites':
                 // Continue checking from a specific index
                 const fromIndex = payload?.fromIndex || 0;
-                this.errorLogger.logInfo(`Continuing prerequisite checks from index ${fromIndex}`, 'Prerequisites');
+                this.stepLogger.logTemplate('prerequisites', 'continuing', { item: `checks from index ${fromIndex}` });
                 await this.checkPrerequisitesWithManager(fromIndex);
                 break;
             
@@ -348,6 +367,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 break;
 
             case 'get-projects':
+                this.stepLogger.logTemplate('adobe-setup', 'fetching', { item: `projects for org ${payload.orgId}` });
                 await this.getProjects(payload.orgId);
                 break;
             
@@ -356,6 +376,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 break;
             
             case 'get-workspaces':
+                this.stepLogger.logTemplate('adobe-setup', 'fetching', { item: `workspaces for project ${payload.projectId}` });
                 await this.getWorkspaces(payload.projectId);
                 break;
             
@@ -368,6 +389,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 break;
 
             case 'create-project':
+                this.stepLogger.logTemplate('creating', 'starting', { item: `project: ${payload.projectName || 'Untitled'}` });
                 await this.createProject(payload);
                 break;
 
@@ -513,7 +535,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 const prereq = prerequisites[i];
                 
                 // Log to error logger
-                this.errorLogger.logInfo(`Checking ${prereq.name}`, 'Prerequisites');
+                this.stepLogger.logTemplate('prerequisites', 'checking', { item: prereq.name });
                 
                 // Send checking status to UI
                 await this.sendMessage('prerequisite-status', {
@@ -569,7 +591,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                                 }
                             }
                         } catch (error) {
-                            this.errorLogger.logInfo('Could not query fnm for installed versions', 'Prerequisites');
+                            this.stepLogger.log('prerequisites', 'Could not query fnm for installed versions', 'debug');
                         }
                         
                         // Check each required Node version
@@ -592,7 +614,12 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                                     let isInstalled = false;
                                     if (prereq.check.parseVersion) {
                                         const versionRegex = new RegExp(prereq.check.parseVersion);
-                                        isInstalled = versionRegex.test(stdout);
+                                        const versionMatch = stdout.match(versionRegex);
+                                        isInstalled = !!versionMatch;
+                                        // Capture version if found and not already set
+                                        if (versionMatch && !status.version) {
+                                            status.version = versionMatch[1];
+                                        }
                                     } else if (prereq.check.contains) {
                                         isInstalled = stdout.includes(prereq.check.contains);
                                     } else {
@@ -729,7 +756,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                                 }
                             }
                         } catch (error) {
-                            this.errorLogger.logInfo('Could not query fnm for installed versions', 'Prerequisites');
+                            this.stepLogger.log('prerequisites', 'Could not query fnm for installed versions', 'debug');
                         }
                         
                         // Check which required versions are missing
@@ -808,9 +835,9 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 
                 // Log result
                 if (status.installed) {
-                    this.errorLogger.logInfo(`${prereq.name} found: ${status.version || 'version unknown'}`, 'Prerequisites');
+                    this.stepLogger.logTemplate('prerequisites', 'found-version', { item: prereq.name, version: status.version || 'version unknown' });
                 } else {
-                    this.errorLogger.logInfo(`${prereq.name} not installed${status.message ? ': ' + status.message : ''}`, 'Prerequisites');
+                    this.stepLogger.logTemplate('prerequisites', 'not-installed', { item: prereq.name + (status.message ? ': ' + status.message : '') });
                 }
                 
                 // Send result to UI
@@ -830,10 +857,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 
                 // Stop checking if this prerequisite failed and is not optional
                 if (!status.installed && !prereq.optional) {
-                    this.errorLogger.logInfo(
-                        `Prerequisite ${prereq.name} needs to be installed`,
-                        'Prerequisites'
-                    );
+                    this.stepLogger.logTemplate('prerequisites', 'missing', { item: prereq.name });
                     
                     // Send a message to UI that we're stopping
                     await this.sendMessage('prerequisite-check-stopped', {
@@ -856,6 +880,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             }
         } catch (error) {
             this.logger.error('Error checking prerequisites:', error as Error);
+            this.stepLogger.log('prerequisites', `Failed: ${(error as Error).message}`, 'error');
             this.errorLogger.logError(error as Error, 'Prerequisites', true); // Critical error
             await this.sendMessage('prerequisite-error', {
                 error: (error as Error).message
@@ -932,7 +957,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             // Start installation
             
             // Log installation start
-            this.errorLogger.logInfo(`Installing ${prereq.name}`, 'Prerequisites');
+            this.stepLogger.logTemplate('prerequisites', 'installing', { item: prereq.name });
             
             // Get install commands
             let nodeVersions: string[] = [];
@@ -962,9 +987,9 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                             installedMajorVersions.push(versionMatch[1]);
                         }
                     }
-                    this.errorLogger.logInfo(`Already installed Node versions: ${installedMajorVersions.join(', ')}`, 'Prerequisites');
+                    this.stepLogger.log('prerequisites', `Already installed Node versions: ${installedMajorVersions.join(', ')}`);
                 } catch (error) {
-                    this.errorLogger.logWarning('Could not query fnm for installed versions', 'Prerequisites');
+                    this.stepLogger.log('prerequisites', 'Could not query fnm for installed versions', 'warn');
                 }
                 
                 // Filter out already installed version families
@@ -973,15 +998,15 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     // Check if this version family is already installed
                     if (!installedMajorVersions.includes(versionFamily)) {
                         versionsToInstall.push(versionFamily);
-                        this.errorLogger.logInfo(`Will install Node.js ${versionFamily}.x`, 'Prerequisites');
+                        this.stepLogger.logTemplate('prerequisites', 'installing', { item: `Node.js ${versionFamily}.x` });
                     } else {
-                        this.errorLogger.logInfo(`Node.js ${versionFamily}.x already installed`, 'Prerequisites');
+                        this.stepLogger.logTemplate('prerequisites', 'installed', { item: `Node.js ${versionFamily}.x`, version: '' });
                     }
                 }
                 
                 if (versionsToInstall.length === 0) {
                     // All required versions are already installed
-                    this.errorLogger.logInfo(`All required Node versions are already installed`, 'Prerequisites');
+                    this.stepLogger.log('prerequisites', 'All required Node versions are already installed');
                     
                     await this.sendMessage('prerequisite-status', {
                         index,
@@ -1010,16 +1035,16 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                             // Remove codename if present (e.g., "20.19.4 (Iron)" -> "20.19.4")
                             fullVersion = fullVersion.replace(/\s*\([^)]+\).*$/, '');
                             resolvedVersions.push(fullVersion);
-                            this.errorLogger.logInfo(`Resolved Node.js ${majorVersion} to ${fullVersion}`, 'Prerequisites');
+                            this.stepLogger.log('prerequisites', `Resolved Node.js ${majorVersion} to ${fullVersion}`);
                         } else {
                             // Fallback to major version if resolution fails
                             resolvedVersions.push(majorVersion);
-                            this.errorLogger.logWarning(`Could not resolve Node.js ${majorVersion}, using major version`, 'Prerequisites');
+                            this.stepLogger.log('prerequisites', `Could not resolve Node.js ${majorVersion}, using major version`, 'warn');
                         }
                     } catch (error) {
                         // If fnm list-remote fails, fall back to major version
                         resolvedVersions.push(majorVersion);
-                        this.errorLogger.logWarning(`Failed to resolve Node.js ${majorVersion}: ${error}`, 'Prerequisites');
+                        this.stepLogger.log('prerequisites', `Failed to resolve Node.js ${majorVersion}: ${error}`, 'warn');
                     }
                 }
                 
@@ -1038,7 +1063,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             });
             
             if (!installInfo) {
-                this.errorLogger.logWarning(`No installation method available for ${prereq.name}`, 'Prerequisites');
+                this.stepLogger.logTemplate('prerequisites', 'warning', { item: `No installation method available for ${prereq.name}` }, 'warn');
                 await this.sendMessage('prerequisite-status', {
                     index,
                     id: prereqId,
@@ -1050,7 +1075,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             
             if (installInfo.manual) {
                 // Manual installation required
-                this.errorLogger.logWarning(`Manual installation required for ${prereq.name}`, 'Prerequisites');
+                this.stepLogger.logTemplate('prerequisites', 'warning', { item: `Manual installation required for ${prereq.name}` }, 'warn');
                 
                 await this.sendMessage('prerequisite-status', {
                     index,
@@ -1073,7 +1098,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 // Get the versions that actually need AIO CLI based on component requirements
                 // This uses the same logic that determines where AIO CLI will be installed
                 const versionsNeedingAioCli = await this.getNodeVersionsForPrerequisite('aio-cli');
-                this.errorLogger.logInfo(`Node versions needing AIO CLI: ${Array.from(versionsNeedingAioCli).join(', ')}`, 'Prerequisites');
+                this.stepLogger.log('prerequisites', `Node versions needing AIO CLI: ${Array.from(versionsNeedingAioCli).join(', ')}`);
                 
                 // Find installed versions that match the requirements
                 const installedVersionsNeedingAioCli = nodeVersions.filter(version => {
@@ -1096,7 +1121,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         if (currentParts[2] > latestParts[2]) return current;
                         return latest;
                     });
-                    this.errorLogger.logInfo(`Will set Node.js ${versionToSetAsDefault} as default (will be used with AIO CLI)`, 'Prerequisites');
+                    this.stepLogger.log('prerequisites', `Will set Node.js ${versionToSetAsDefault} as default (will be used with AIO CLI)`);
                 } else {
                     // No specific AIO CLI requirements, use the latest version
                     versionToSetAsDefault = nodeVersions.reduce((latest, current) => {
@@ -1109,7 +1134,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         if (currentParts[2] > latestParts[2]) return current;
                         return latest;
                     });
-                    this.errorLogger.logInfo(`No specific AIO CLI requirements, will set ${versionToSetAsDefault} as default (latest version)`, 'Prerequisites');
+                    this.stepLogger.log('prerequisites', `No specific AIO CLI requirements, will set ${versionToSetAsDefault} as default (latest version)`);
                 }
                 
                 // Now install all Node versions, including "Set as default" for the selected one
@@ -1201,7 +1226,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                             };
                             
                             // Log the step
-                            this.errorLogger.logInfo(`Node.js ${currentVersion} - Step ${stepIndex + 1}/${totalStepsForVersion}: ${step.name}`, 'Prerequisites');
+                            this.stepLogger.log('prerequisites', `Node.js ${currentVersion} - Step ${stepIndex + 1}/${totalStepsForVersion}: ${step.name}`);
                             
                             // Execute the step with progress tracking
                             await this.progressUnifier.executeStep(
@@ -1310,7 +1335,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         };
                         
                         // Log the step
-                        this.errorLogger.logInfo(`Executing step ${stepIndex + 1}/${totalSteps}: ${step.name}`, 'Prerequisites');
+                        this.stepLogger.log('prerequisites', `Executing step ${stepIndex + 1}/${totalSteps}: ${step.name}`);
                         
                         // Execute the step with progress tracking
                         await this.progressUnifier.executeStep(
@@ -1334,7 +1359,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         throw error;
                     }
                     
-                    this.errorLogger.logWarning(`Step failed but continuing: ${step.name}`, 'Prerequisites');
+                    this.stepLogger.log('prerequisites', `Step failed but continuing: ${step.name}`, 'warn');
                 }
             }
             }
@@ -1362,7 +1387,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                             }
                         }
                     } catch (error) {
-                        this.errorLogger.logWarning('Could not query fnm for installed versions', 'Prerequisites');
+                        this.stepLogger.log('prerequisites', 'Could not query fnm for installed versions', 'warn');
                     }
                     
                     // Build detailed message with component mappings
@@ -1374,9 +1399,9 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         successMessage += `\n${v}${component ? ` (${component})` : ''}`;
                     });
                 }
-                this.errorLogger.logInfo(successMessage, 'Prerequisites');
+                this.stepLogger.log('prerequisites', successMessage);
             } else {
-                this.errorLogger.logError(`Failed to install ${prereq.name}`, 'Prerequisites');
+                this.stepLogger.logTemplate('prerequisites', 'failed', { item: prereq.name }, 'error');
             }
             
             await this.sendMessage('prerequisite-status', {
@@ -1407,7 +1432,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     message: successMessage
                 });
                 
-                this.errorLogger.logInfo(`${prereq.name} installed successfully, continuing prerequisite checks`, 'Prerequisites');
+                this.stepLogger.logTemplate('prerequisites', 'completed', { item: `${prereq.name} installation` });
                 await this.sendMessage('prerequisite-install-complete', {
                     index,
                     id: prereqId,
@@ -1441,9 +1466,9 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         installedNodeVersions.push(versionMatch[1]);
                     }
                 }
-                this.errorLogger.logInfo(`Found Node versions for ${prereq.name} installation: ${installedNodeVersions.join(', ')}`, 'Prerequisites');
+                this.stepLogger.log('prerequisites', `Found Node versions for ${prereq.name} installation: ${installedNodeVersions.join(', ')}`);
             } catch (error) {
-                this.errorLogger.logError(new Error('No Node versions found for per-version installation'), 'Prerequisites');
+                this.stepLogger.log('prerequisites', 'No Node versions found for per-version installation', 'error');
                 await this.sendMessage('prerequisite-status', {
                     index,
                     id: prereqId,
@@ -1468,7 +1493,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             }
             
             if (versionsToInstallIn.length === 0) {
-                this.errorLogger.logInfo(`${prereq.name} not needed by any selected components`, 'Prerequisites');
+                this.stepLogger.log('prerequisites', `${prereq.name} not needed by any selected components`);
                 await this.sendMessage('prerequisite-status', {
                     index,
                     id: prereqId,
@@ -1482,7 +1507,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             const installInfo = this.prereqManager.getInstallSteps(prereq);
             
             if (!installInfo || installInfo.manual) {
-                this.errorLogger.logWarning(`Cannot install ${prereq.name} per Node version`, 'Prerequisites');
+                this.stepLogger.log('prerequisites', `Cannot install ${prereq.name} per Node version`, 'warn');
                 await this.sendMessage('prerequisite-status', {
                     index,
                     id: prereqId,
@@ -1538,7 +1563,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                             });
                         };
                         
-                        this.errorLogger.logInfo(`Executing step ${stepIndex + 1}/${totalSteps} in Node ${nodeVersion}: ${step.name}`, 'Prerequisites');
+                        this.stepLogger.log('prerequisites', `Executing step ${stepIndex + 1}/${totalSteps} in Node ${nodeVersion}: ${step.name}`);
                         
                         try {
                             // Use ProgressUnifier for better progress tracking
@@ -1557,9 +1582,9 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                                         const checkCmd = `eval "$(fnm env)" && fnm use ${nodeVersion} && which aio`;
                                         await execAsync(checkCmd);
                                         binaryInstalled = true;
-                                        this.errorLogger.logInfo(`Verified aio CLI is available in Node ${nodeVersion}`, 'Prerequisites');
+                                        this.stepLogger.log('prerequisites', `Verified aio CLI is available in Node ${nodeVersion}`);
                                     } catch {
-                                        this.errorLogger.logWarning(`Could not verify aio CLI in Node ${nodeVersion}`, 'Prerequisites');
+                                        this.stepLogger.log('prerequisites', `Could not verify aio CLI in Node ${nodeVersion}`, 'warn');
                                     }
                                 }
                         } catch (stepError: any) {
@@ -1585,7 +1610,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     }
                     
                     successCount++;
-                    this.errorLogger.logInfo(`${prereq.name} installed successfully in Node ${nodeVersion}`, 'Prerequisites');
+                    this.stepLogger.logTemplate('prerequisites', 'completed', { item: `${prereq.name} in Node ${nodeVersion}` });
                     
                 } catch (error) {
                     this.errorLogger.logError(
@@ -1718,7 +1743,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             }
         }
         
-        this.errorLogger.logInfo(`Prerequisite ${prereqId} needed in Node versions: ${Array.from(nodeVersions).join(', ')} (for components: ${relevantComponents.join(', ')})`, 'Prerequisites');
+        this.stepLogger.log('prerequisites', `Prerequisite ${prereqId} needed in Node versions: ${Array.from(nodeVersions).join(', ')} (for components: ${relevantComponents.join(', ')})`);
         
         return nodeVersions;
     }
@@ -1748,7 +1773,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     appBuilder
                 };
             } catch (error) {
-                this.errorLogger.logWarning('Could not load components data for mapping', 'Prerequisites');
+                this.stepLogger.log('prerequisites', 'Could not load components data for mapping', 'warn');
                 return versionMap;
             }
         }
@@ -1832,23 +1857,58 @@ export class CreateProjectWebviewCommand extends BaseCommand {
     }
 
     private async checkAuthentication(): Promise<void> {
+        // Send initial checking message
+        await this.sendMessage('auth-status', {
+            isAuthenticated: false,
+            isChecking: true,
+            message: 'Verifying Adobe CLI installation...'
+        });
+        
         const isAuth = await this.authManager.isAuthenticated();
         
+        // If NOT authenticated, send status immediately and return
+        // This prevents any org operations that might trigger browser
+        if (!isAuth) {
+            this.logger.info('User is not authenticated');
+            await this.sendMessage('auth-status', {
+                isAuthenticated: false,
+                isChecking: false,
+                message: 'Not authenticated'
+            });
+            return;
+        }
+        
+        // Update message to show we're loading organization
+        await this.sendMessage('auth-status', {
+            isAuthenticated: false,
+            isChecking: true,
+            message: 'Loading organization details...'
+        });
+        
+        // Only proceed with org operations if authenticated
         let authData: any = {
-            isAuthenticated: isAuth,
-            message: isAuth ? 'Authenticated' : 'Not authenticated'
+            isAuthenticated: true,
+            isChecking: false
         };
         
-        // If authenticated, just get the current organization (don't auto-select)
-        if (isAuth) {
+        try {
             const currentOrg = await this.authManager.getCurrentOrg();
             if (currentOrg) {
                 authData.organization = currentOrg;
+                authData.message = 'Authentication confirmed';
                 this.logger.info(`Current organization from CLI: ${currentOrg.code}`);
             } else {
-                // No org selected yet - that's fine, let the user choose
-                this.logger.info('No organization currently selected in CLI');
+                // No org selected yet - but don't try to get organizations here
+                // as it might trigger browser. Wait for explicit authentication.
+                this.logger.info('Authenticated but no organization selected');
+                authData.needsOrgSelection = true;
+                authData.message = 'Please select an organization';
             }
+        } catch (error) {
+            // If we can't get the current org, don't fail the auth check
+            this.logger.warn('Could not retrieve current organization', error);
+            authData.needsOrgSelection = true;
+            authData.message = 'Please select an organization';
         }
         
         await this.sendMessage('auth-status', authData);
@@ -1893,7 +1953,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             await this.sendMessage('auth-status', {
                 isAuthenticated: false,
                 isChecking: true,
-                message: 'Opening browser... Please complete sign-in...'
+                message: 'Opening browser for authentication...'
             });
             
             // Brief delay to let browser start opening
@@ -1918,7 +1978,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     await this.sendMessage('auth-status', {
                         isAuthenticated: false,
                         isChecking: true,
-                        message: `Waiting for new authentication... (${attempts * 3}s)`
+                        message: 'Waiting for authentication...'
                     });
                     return;
                 }
@@ -1933,24 +1993,93 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                     await this.sendMessage('auth-status', {
                         isAuthenticated: false,  // Keep checking state briefly
                         isChecking: true,
-                        message: 'Authentication successful! Loading organization...'
+                        message: 'Authentication successful! Loading organizations...'
                     });
                     
                     // Small delay for user to see the success message
                     await new Promise(resolve => setTimeout(resolve, 800));
                     
-                    // After force login, ensure we explicitly select an organization
+                    // After force login, handle organization selection
                     if (force) {
                         // For force login (org switch), we need to ensure proper org selection
                         const orgs = await this.authManager.getOrganizations();
-                        if (orgs.length > 0) {
-                            // Let the user select the org through the UI, but ensure one is selected
-                            this.logger.info(`Force login complete, ${orgs.length} organizations available`);
+                        if (orgs.length === 0) {
+                            // No organizations available - shouldn't happen but handle it
+                            this.logger.error('No organizations available after force login');
+                            await this.sendMessage('auth-status', {
+                                isAuthenticated: true,
+                                isChecking: false,
+                                error: 'No organizations available for this account'
+                            });
+                        } else if (orgs.length === 1) {
+                            // Auto-select the only organization
+                            this.stepLogger.logTemplate('adobe-setup', 'selected', { item: `organization: ${orgs[0].code}` });
+                            
+                            // Send message about auto-selecting
+                            await this.sendMessage('auth-status', {
+                                isAuthenticated: false,
+                                isChecking: true,
+                                message: 'Selecting organization...'
+                            });
+                            
+                            await this.authManager.selectOrganization(orgs[0].code);
+                            // Now check authentication to get the org context
+                            await this.checkAuthentication();
+                        } else {
+                            // Multiple organizations - send them to frontend for selection
+                            this.stepLogger.logTemplate('adobe-setup', 'found', { count: orgs.length, item: 'organizations' });
+                            await this.sendMessage('auth-status', {
+                                isAuthenticated: true,
+                                isChecking: false,
+                                message: 'Authentication successful'
+                            });
+                            // Send organizations list for user selection
+                            await this.sendMessage('organizations-for-selection', orgs);
+                        }
+                    } else {
+                        // Regular login - get organizations if needed
+                        const currentOrg = await this.authManager.getCurrentOrg();
+                        if (!currentOrg) {
+                            // No org selected yet - get organizations for selection
+                            const orgs = await this.authManager.getOrganizations();
+                            if (orgs.length === 0) {
+                                // No organizations available
+                                await this.sendMessage('auth-status', {
+                                    isAuthenticated: true,
+                                    isChecking: false,
+                                    error: 'No organizations available for this account'
+                                });
+                            } else if (orgs.length === 1) {
+                                // Auto-select the only organization
+                                this.stepLogger.logTemplate('adobe-setup', 'selected', { item: `organization: ${orgs[0].code}` });
+                                
+                                // Send message about auto-selecting
+                                await this.sendMessage('auth-status', {
+                                    isAuthenticated: false,
+                                    isChecking: true,
+                                    message: 'Selecting organization...'
+                                });
+                                
+                                await this.authManager.selectOrganization(orgs[0].code);
+                                // Now check authentication to get the org context
+                                await this.checkAuthentication();
+                            } else {
+                                // Multiple organizations - send them for selection
+                                this.logger.info(`${orgs.length} organizations available for selection`);
+                                await this.sendMessage('auth-status', {
+                                    isAuthenticated: true,
+                                    isChecking: false,
+                                    needsOrgSelection: true,
+                                    message: 'Please select an organization'
+                                });
+                                // Send organizations list for user selection
+                                await this.sendMessage('organizations-for-selection', orgs);
+                            }
+                        } else {
+                            // Org already selected - just check authentication status
+                            await this.checkAuthentication();
                         }
                     }
-                    
-                    // Get new organization info
-                    await this.checkAuthentication();
                 } else if (attempts >= maxAttempts) {
                     if (this.authPollingInterval) {
                         clearInterval(this.authPollingInterval);
@@ -1963,18 +2092,13 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                         message: 'Authentication timed out'
                     });
                 } else {
-                    // Send periodic status updates with elapsed time
-                    const timeElapsed = attempts;  // Now in seconds since polling every 1s
-                    
-                    // Update message every 10 seconds to avoid too much noise
-                    if (attempts % 10 === 0) {
-                        const remainingTime = maxAttempts - attempts;
+                    // Send periodic status updates
+                    // Update message every 5 seconds to avoid too much noise
+                    if (attempts % 5 === 0) {
                         await this.sendMessage('auth-status', {
                             isAuthenticated: false,
                             isChecking: true,
-                            message: force 
-                                ? `Waiting for organization switch... (${remainingTime}s remaining)`
-                                : `Waiting for authentication... (${timeElapsed}s)`
+                            message: 'Waiting for sign-in completion...'
                         });
                     }
                     
@@ -2009,8 +2133,12 @@ export class CreateProjectWebviewCommand extends BaseCommand {
         const success = await this.authManager.selectOrganization(orgCode);
         if (success) {
             this.logger.info(`Organization selected and persisted: ${orgCode}`);
+            // Send confirmation back to frontend so it can load projects
+            await this.sendMessage('org-selection-confirmed', { orgCode, success: true });
         } else {
             this.logger.warn(`Failed to persist organization selection: ${orgCode}`);
+            // Send failure notification to frontend
+            await this.sendMessage('org-selection-confirmed', { orgCode, success: false });
         }
     }
     
@@ -2028,42 +2156,55 @@ export class CreateProjectWebviewCommand extends BaseCommand {
     }
 
     private async getProjects(orgId: string): Promise<void> {
-        const projects = await this.authManager.getProjects(orgId);
-        await this.sendMessage('projects', projects);
+        try {
+            const projects = await this.authManager.getProjects(orgId);
+            this.stepLogger.logTemplate('adobe-setup', 'sending', { count: projects.length, item: 'projects' });
+            await this.sendMessage('projects', projects);
+        } catch (error) {
+            this.stepLogger.logTemplate('adobe-setup', 'failed', { item: `Project fetch: ${(error as Error).message}` }, 'error');
+            await this.sendMessage('projects', []);
+        }
     }
 
     private async selectProject(projectId: string): Promise<void> {
         const success = await this.authManager.selectProject(projectId);
         if (success) {
-            this.logger.info(`Project selected and persisted: ${projectId}`);
+            this.stepLogger.logTemplate('adobe-setup', 'selected', { item: `project: ${projectId}` });
         } else {
-            this.logger.warn(`Failed to persist project selection: ${projectId}`);
+            this.stepLogger.logTemplate('adobe-setup', 'warning', { item: `Failed to persist project selection: ${projectId}` }, 'warn');
         }
     }
 
     private async getWorkspaces(projectId: string): Promise<void> {
-        const result = await this.authManager.getWorkspaces(projectId);
-        
-        // Check if result is an error
-        if (result && 'error' in result) {
-            // Send error message to frontend
-            await this.sendMessage('workspaces-error', {
-                error: result.error,
-                type: result.type,
-                projectId
-            });
-        } else {
-            // Send workspaces list
-            await this.sendMessage('workspaces', result);
+        try {
+            const result = await this.authManager.getWorkspaces(projectId);
+            
+            // Check if result is an error
+            if (result && 'error' in result) {
+                this.stepLogger.logTemplate('adobe-setup', 'error', { item: 'workspaces', error: result.error }, 'error');
+                // Send error message to frontend
+                await this.sendMessage('workspaces-error', {
+                    error: result.error,
+                    type: result.type,
+                    projectId
+                });
+            } else {
+                // Send workspaces list
+                this.stepLogger.logTemplate('adobe-setup', 'sending', { count: result.length, item: 'workspaces' });
+                await this.sendMessage('workspaces', result);
+            }
+        } catch (error) {
+            this.stepLogger.logTemplate('adobe-setup', 'failed', { item: `Workspace fetch: ${(error as Error).message}` }, 'error');
+            await this.sendMessage('workspaces', []);
         }
     }
 
     private async selectWorkspace(workspaceId: string): Promise<void> {
         const success = await this.authManager.selectWorkspace(workspaceId);
         if (success) {
-            this.logger.info(`Workspace selected and persisted: ${workspaceId}`);
+            this.stepLogger.logTemplate('adobe-setup', 'selected', { item: `workspace: ${workspaceId}` });
         } else {
-            this.logger.warn(`Failed to persist workspace selection: ${workspaceId}`);
+            this.stepLogger.logTemplate('adobe-setup', 'warning', { item: `Failed to persist workspace selection: ${workspaceId}` }, 'warn');
         }
     }
 
@@ -2101,7 +2242,7 @@ export class CreateProjectWebviewCommand extends BaseCommand {
 
     private async configureFnmShell(index: number, prereqId: string): Promise<void> {
         try {
-            this.errorLogger.logInfo('Configuring fnm for shell environment', 'Prerequisites');
+            this.stepLogger.logTemplate('prerequisites', 'configuring', { item: 'fnm for shell environment' });
             
             await this.sendMessage('prerequisite-status', {
                 index,
@@ -2132,12 +2273,12 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             try {
                 const { stdout: fileContent } = await execAsync(`cat ${configFile}`);
                 if (fileContent.includes('fnm env')) {
-                    this.errorLogger.logInfo('fnm already configured in shell profile', 'Prerequisites');
+                    this.stepLogger.log('prerequisites', 'fnm already configured in shell profile');
                     return;
                 }
             } catch {
                 // File might not exist, that's okay
-                this.errorLogger.logInfo(`Shell config file ${configFile} not found, will create`, 'Prerequisites');
+                this.stepLogger.log('prerequisites', `Shell config file ${configFile} not found, will create`);
             }
             
             // Add fnm to shell configuration
@@ -2150,9 +2291,9 @@ export class CreateProjectWebviewCommand extends BaseCommand {
             for (const command of commands) {
                 try {
                     await execAsync(command);
-                    this.errorLogger.logInfo(`Executed: ${command}`, 'Prerequisites');
+                    this.stepLogger.log('prerequisites', `Executed: ${command}`, 'debug');
                 } catch (error: any) {
-                    this.errorLogger.logWarning(`Failed to execute: ${command}`, 'Prerequisites');
+                    this.stepLogger.log('prerequisites', `Failed to execute: ${command}`, 'warn');
                 }
             }
             
@@ -2170,11 +2311,11 @@ export class CreateProjectWebviewCommand extends BaseCommand {
                 await execAsync(`source ${configFile}`);
             } catch {
                 // Expected to fail in some contexts, that's okay
-                this.errorLogger.logInfo('Could not source shell config in current context', 'Prerequisites');
+                this.stepLogger.log('prerequisites', 'Could not source shell config in current context', 'debug');
             }
             
         } catch (error: any) {
-            this.errorLogger.logWarning(`Error configuring fnm shell: ${error.message}`, 'Prerequisites');
+            this.stepLogger.log('prerequisites', `Error configuring fnm shell: ${error.message}`, 'warn');
             // Don't fail the installation, just log the warning
         }
     }
