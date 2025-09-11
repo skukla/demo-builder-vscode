@@ -45,7 +45,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         componentConfigs: {},
         adobeAuth: {
             isAuthenticated: false,
-            isChecking: false
+            isChecking: true  // Start with checking state to avoid showing false login screen
         },
         components: componentDefaults || undefined
     });

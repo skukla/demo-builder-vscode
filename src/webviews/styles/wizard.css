@@ -86,6 +86,15 @@ input::placeholder {
     opacity: 0.5 !important;
 }
 
+/* SearchField Input Padding - Account for magnifying glass icon */
+.spectrum-SearchField-input,
+.spectrum-SearchField input {
+    padding-left: 36px !important;  /* Space for magnifying glass icon */
+    padding-right: 14px !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+}
+
 /* SearchField Placeholder */
 .spectrum-SearchField-input::placeholder {
     color: var(--spectrum-global-color-gray-500) !important;

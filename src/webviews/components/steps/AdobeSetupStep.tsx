@@ -43,7 +43,25 @@ interface AdobeSetupStepProps {
 type SetupStep = 'auth' | 'project' | 'workspace';
 
 export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetupStepProps) {
-    const [currentStep, setCurrentStep] = useState<SetupStep>('auth');
+    // Track if we're returning to the step (has actual selections) vs initial mount
+    const [isReturning] = useState(!!state.adobeProject?.id || !!state.adobeWorkspace?.id);
+    
+    // Determine initial step based on existing state
+    const getInitialStep = (): SetupStep => {
+        // Only jump ahead if we're actually returning with selections
+        if (isReturning) {
+            if (state.adobeWorkspace?.id) {
+                return 'workspace';
+            } else if (state.adobeProject?.id) {
+                return 'workspace'; // Go to workspace selection if project is selected
+            }
+        }
+        // For initial flow, start at auth even if authenticated
+        // The component will auto-advance as needed
+        return 'auth';
+    };
+    
+    const [currentStep, setCurrentStep] = useState<SetupStep>(getInitialStep());
     const [projects, setProjects] = useState<Project[]>([]);
     const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
     const [isLoadingProjects, setIsLoadingProjects] = useState(false);
@@ -59,38 +77,62 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
     const [shouldShowAuthSuccess, setShouldShowAuthSuccess] = useState(false);
     const [showReauthOption, setShowReauthOption] = useState(false);
     const [isSelectingProject, setIsSelectingProject] = useState(false);
+    const [organizations, setOrganizations] = useState<any[]>([]);
+    const [needsOrgSelection, setNeedsOrgSelection] = useState(false);
+    const [authStatusMessage, setAuthStatusMessage] = useState<string | null>(null);
+    const [hasAttemptedProjectLoad, setHasAttemptedProjectLoad] = useState(false);
 
     useEffect(() => {
-        // Always check authentication on mount
-        if (isInitialCheck) {
+        // Only check authentication if we don't already know the status (not returning)
+        if (isInitialCheck && !isReturning) {
             checkAuthentication();
+            // Don't set isInitialCheck to false here - wait for auth response
+        } else if (isInitialCheck && isReturning) {
+            // We're returning to the step with existing auth - no need to check
             setIsInitialCheck(false);
-        }
-        
-        // Load projects when authenticated and have org
-        if (state.adobeAuth.isAuthenticated && state.adobeOrg?.id && projects.length === 0 && !isLoadingProjects) {
-            loadProjects();
-        }
-        
-        // Auto-advance steps based on state
-        // But don't auto-advance if we should show auth success first
-        if (state.adobeAuth.isAuthenticated && !state.adobeProject?.id && currentStep === 'auth' && !shouldShowAuthSuccess) {
-            // Only auto-advance if we're not showing the success message
-            if (!isTransitioning) {
-                transitionToStep('project');
+            
+            // Load projects if needed and we're on the project step
+            if (currentStep === 'project' && state.adobeOrg?.id && projects.length === 0 && !isLoadingProjects) {
+                loadProjects();
             }
-        } else if (state.adobeProject?.id && !state.adobeWorkspace?.id && currentStep !== 'workspace' && !isSelectingProject) {
-            // Only auto-advance if we're not manually selecting a project
-            transitionToStep('workspace');
+            // Load workspaces if needed and we're on the workspace step
+            else if (currentStep === 'workspace' && state.adobeProject?.id && workspaces.length === 0 && !isLoadingWorkspaces) {
+                loadWorkspaces(state.adobeProject.id);
+            }
+        }
+        
+        // Auto-advance steps only when NOT returning to the component
+        if (!isReturning) {
+            // Auto-advance from auth to project if authenticated
+            if (state.adobeAuth.isAuthenticated && !state.adobeProject?.id && currentStep === 'auth' && !shouldShowAuthSuccess) {
+                // Only auto-advance if we're not showing the success message
+                if (!isTransitioning) {
+                    transitionToStep('project');
+                }
+            } else if (state.adobeProject?.id && !state.adobeWorkspace?.id && currentStep !== 'workspace' && !isSelectingProject) {
+                // Only auto-advance if we're not manually selecting a project
+                transitionToStep('workspace');
+            }
         }
 
         // Listen for auth status updates
         const unsubscribeAuth = vscode.onMessage('auth-status', (data) => {
+            // Mark initial check as complete when we get the first auth status
+            const wasInitialCheck = isInitialCheck;
+            if (isInitialCheck) {
+                setIsInitialCheck(false);
+            }
+            
+            // Update the status message if provided
+            if (data.message) {
+                setAuthStatusMessage(data.message);
+            }
+            
             updateState({
                 adobeAuth: {
                     isAuthenticated: data.isAuthenticated,
-                    // Only clear isChecking if we're not actively logging in
-                    isChecking: isLoggingIn ? state.adobeAuth.isChecking : false,
+                    // Use the isChecking value from backend when provided, otherwise keep current state
+                    isChecking: data.isChecking !== undefined ? data.isChecking : state.adobeAuth.isChecking,
                     email: data.email,
                     error: data.error
                 },
@@ -107,49 +149,80 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                 vscode.postMessage('select-organization', { orgCode: data.organization.code });
             }
             
-            // Auto-advance if authenticated
-            if (data.isAuthenticated && currentStep === 'auth') {
-                const isInitialAuthCheck = isInitialCheck || !isLoggingIn;
+            // Handle authentication success
+            if (data.isAuthenticated) {
+                const isInitialAuthCheck = wasInitialCheck || !isLoggingIn;
                 
-                if (isInitialAuthCheck) {
-                    // First time checking and already authenticated - show success message
-                    setShouldShowAuthSuccess(true);
-                    // Always load projects after authentication
-                    loadProjects();
-                    // Give user time to see the success message
-                    setTimeout(() => {
-                        transitionToStep('project');
-                        setShouldShowAuthSuccess(false);
-                    }, 1500);
-                } else if (isLoggingIn) {
-                    // User just logged in - show success message
+                // Check if we need organization selection
+                if (data.needsOrgSelection) {
+                    // Multiple orgs available - need user to select
                     setIsLoggingIn(false);
                     setShouldShowAuthSuccess(true);
-                    // Always load projects after authentication (for fresh login or org switch)
-                    loadProjects();
-                    // Give user time to see the success message
-                    setTimeout(() => {
-                        transitionToStep('project');
-                        setShouldShowAuthSuccess(false);
-                    }, 1500);
+                    // Don't load projects yet - wait for org selection
+                    // Organizations list will come in separate message
+                } else if (data.organization) {
+                    // Organization is set - load projects if we're already on the project step
+                    // Otherwise wait until we transition to project step
+                    if (currentStep === 'project' && !isLoadingProjects && projects.length === 0) {
+                        loadProjects(data.organization.id);
+                    }
+                    
+                    // Handle step transitions if we're on auth step
+                    if (currentStep === 'auth') {
+                        if (isInitialAuthCheck) {
+                            // First time checking and already authenticated - show success message
+                            setShouldShowAuthSuccess(true);
+                            // Give user time to see the success message
+                            setTimeout(() => {
+                                transitionToStep('project');
+                                setShouldShowAuthSuccess(false);
+                            }, 1500);
+                        } else if (isLoggingIn) {
+                            // User just logged in - show success message
+                            setIsLoggingIn(false);
+                            setShouldShowAuthSuccess(true);
+                            // Give user time to see the success message
+                            setTimeout(() => {
+                                transitionToStep('project');
+                                setShouldShowAuthSuccess(false);
+                            }, 1500);
+                        }
+                    }
+                } else if (!data.error) {
+                    // Authenticated but no org and no error - shouldn't happen but handle gracefully
+                    setIsLoggingIn(false);
+                    if (currentStep === 'auth') {
+                        setShouldShowAuthSuccess(true);
+                    }
                 }
-            } else if (!data.isAuthenticated && data.error) {
-                // Clear logging in state if there was an error
+            } else if (!data.isAuthenticated) {
+                // Not authenticated - clear all auth-related states
                 setIsLoggingIn(false);
+                setShouldShowAuthSuccess(false);
+                
+                // Clear status message when auth check completes
+                if (!data.isChecking) {
+                    setAuthStatusMessage(null);
+                }
             }
         });
 
         // Listen for projects from extension
         const unsubscribeProjects = vscode.onMessage('projects', (data) => {
+            console.log('[AdobeSetupStep] Received projects from backend:', data);
+            
             if (Array.isArray(data)) {
+                console.log(`[AdobeSetupStep] Setting ${data.length} projects`);
                 setProjects(data);
                 setProjectError(null);
                 
                 // Auto-select if only one project
                 if (data.length === 1 && !selectedProjectId) {
+                    console.log('[AdobeSetupStep] Auto-selecting single project:', data[0].title);
                     selectProject(data[0]);
                 }
             } else {
+                console.error('[AdobeSetupStep] Invalid projects data received:', data);
                 setProjectError('Failed to load projects');
             }
             setIsLoadingProjects(false);
@@ -189,13 +262,41 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
         // Listen for organization selection confirmation
         const unsubscribeOrgConfirm = vscode.onMessage('org-selection-confirmed', (data) => {
             if (data.success) {
-                // Organization successfully selected, load projects if needed
-                if (state.adobeOrg?.id && projects.length === 0 && !isLoadingProjects) {
-                    loadProjects();
+                // Organization successfully selected
+                // Load projects if we're on the project step
+                if (currentStep === 'project' && !isLoadingProjects && state.adobeOrg?.id) {
+                    loadProjects(state.adobeOrg.id);
                 }
             } else {
                 // Failed to select org, show error
                 setProjectError(`Failed to select organization ${data.orgCode}. Please try re-authenticating.`);
+            }
+        });
+        
+        // Listen for organizations list when multiple orgs available
+        const unsubscribeOrgsForSelection = vscode.onMessage('organizations-for-selection', (orgs) => {
+            if (Array.isArray(orgs)) {
+                setOrganizations(orgs);
+                setNeedsOrgSelection(true);
+                // Show organization selection UI
+                // For now, auto-select the first one
+                // TODO: Add proper UI for org selection
+                if (orgs.length > 0) {
+                    const firstOrg = orgs[0];
+                    updateState({
+                        adobeOrg: {
+                            id: firstOrg.id,
+                            code: firstOrg.code,
+                            name: firstOrg.name
+                        }
+                    });
+                    vscode.postMessage('select-organization', { orgCode: firstOrg.code });
+                    // Transition to project step after org selection
+                    setTimeout(() => {
+                        transitionToStep('project');
+                        setNeedsOrgSelection(false);
+                    }, 1000);
+                }
             }
         });
 
@@ -205,8 +306,9 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
             unsubscribeWorkspaces();
             unsubscribeWorkspaceError();
             unsubscribeOrgConfirm();
+            unsubscribeOrgsForSelection();
         };
-    }, [state.adobeAuth.isAuthenticated, state.adobeOrg, state.adobeProject, currentStep, isInitialCheck, projects.length, isLoadingProjects, isLoggingIn, shouldShowAuthSuccess]);
+    }, [state.adobeAuth.isAuthenticated, state.adobeOrg, state.adobeProject, currentStep, isInitialCheck, projects.length, isLoadingProjects, isLoggingIn, shouldShowAuthSuccess, isReturning, workspaces.length, isLoadingWorkspaces]);
 
     useEffect(() => {
         // Update proceed state when selections change
@@ -229,6 +331,12 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
 
     const transitionToStep = (step: SetupStep) => {
         setIsTransitioning(true);
+        
+        // If transitioning to project step and we don't have projects yet, start loading them
+        if (step === 'project' && projects.length === 0 && !isLoadingProjects && state.adobeOrg?.id) {
+            loadProjects(state.adobeOrg.id);
+        }
+        
         setTimeout(() => {
             setCurrentStep(step);
             setIsTransitioning(false);
@@ -259,12 +367,26 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
         vscode.requestAuth(force);
     };
 
-    const loadProjects = () => {
-        if (!state.adobeOrg?.id) return;
+    const loadProjects = (orgId?: string) => {
+        // Use provided orgId or fall back to state
+        const organizationId = orgId || state.adobeOrg?.id;
         
+        console.log('[AdobeSetupStep] loadProjects called with:', {
+            providedOrgId: orgId,
+            stateOrgId: state.adobeOrg?.id,
+            finalOrgId: organizationId
+        });
+        
+        if (!organizationId) {
+            console.warn('[AdobeSetupStep] Cannot load projects - no organization ID');
+            return;
+        }
+        
+        console.log('[AdobeSetupStep] Requesting projects from backend for org:', organizationId);
+        setHasAttemptedProjectLoad(true); // Set immediately to prevent "No projects found" flash
         setIsLoadingProjects(true);
         setProjectError(null);
-        vscode.requestProjects(state.adobeOrg.id);
+        vscode.requestProjects(organizationId);
     };
 
     const loadWorkspaces = (projectId: string) => {
@@ -326,6 +448,7 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
             setProjectSearchQuery('');
             setWorkspaceError(null);
             setShowReauthOption(false);
+            setHasAttemptedProjectLoad(false); // Reset the flag when re-authenticating
             
             // Set loading state BEFORE transitioning to show immediate feedback
             setIsLoggingIn(true);
@@ -390,9 +513,9 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                             <Flex direction="column" gap="size-200" alignItems="center" justifyContent="center" height="100%">
                                 <ProgressCircle size="L" isIndeterminate />
                                 <Text UNSAFE_className="text-lg">
-                                    {isLoggingIn ? 'Opening browser for authentication...' : 'Checking authentication status...'}
+                                    {authStatusMessage || (isLoggingIn ? 'Opening browser for authentication...' : 'Checking authentication status...')}
                                 </Text>
-                                {isLoggingIn && (
+                                {isLoggingIn && !authStatusMessage && (
                                     <>
                                         <Text UNSAFE_className="text-sm text-gray-600">
                                             Please complete the login process in your browser
@@ -442,7 +565,8 @@ export function AdobeSetupStep({ state, updateState, setCanProceed }: AdobeSetup
                             />
                         )}
 
-                        {isLoadingProjects ? (
+                        {/* Show loading by default when we have an org but haven't attempted to load projects yet */}
+                        {(isLoadingProjects || (projects.length === 0 && !hasAttemptedProjectLoad && !projectError && state.adobeOrg?.id)) ? (
                             <Flex direction="column" gap="size-200" alignItems="center" justifyContent="center" height="100%">
                                 <ProgressCircle size="L" isIndeterminate />
                                 <Text UNSAFE_className="text-lg">Loading your Adobe projects...</Text>
