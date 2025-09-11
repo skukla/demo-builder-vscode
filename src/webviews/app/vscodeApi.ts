@@ -1,4 +1,4 @@
-// VSCode API wrapper for webview communication
+// VSCode API wrapper for webview communication with handshake protocol
 
 declare global {
     interface Window {
@@ -12,14 +12,45 @@ interface VSCodeApi {
     setState(state: any): void;
 }
 
+interface Message {
+    id: string;
+    type: string;
+    payload?: any;
+    timestamp: number;
+    isResponse?: boolean;
+    responseToId?: string;
+    error?: string;
+    expectsResponse?: boolean;
+}
+
+interface PendingRequest {
+    resolve: (value: any) => void;
+    reject: (error: Error) => void;
+    timeout: number; // Browser setTimeout returns number
+}
+
 class VSCodeAPIWrapper {
     private vscodeApi: VSCodeApi | null = null;
     private listeners: Map<string, Set<(data: any) => void>>;
     private initialized = false;
+    private handshakeComplete = false;
+    private readyPromise: Promise<void>;
+    private readyResolve?: () => void;
+    private messageQueue: Message[] = [];
+    private pendingRequests = new Map<string, PendingRequest>();
+    private messageIdCounter = 0;
 
     constructor() {
         // Initialize listeners map immediately
         this.listeners = new Map<string, Set<(data: any) => void>>();
+        
+        // Create ready promise
+        this.readyPromise = new Promise<void>((resolve) => {
+            this.readyResolve = resolve;
+        });
+        
+        // Initialize immediately to set up handshake
+        this.initialize();
     }
 
     private initialize(): void {
@@ -31,12 +62,75 @@ class VSCodeAPIWrapper {
 
         // Set up message listener
         window.addEventListener('message', (event) => {
-            const message = event.data;
+            const message = event.data as Message;
+            
+            // Handle handshake protocol
+            if (message.type === '__extension_ready__') {
+                // Extension is ready, send webview ready signal
+                this.sendRawMessage({
+                    id: this.generateMessageId(),
+                    type: '__webview_ready__',
+                    timestamp: Date.now()
+                });
+                return;
+            }
+            
+            if (message.type === '__handshake_complete__') {
+                this.handshakeComplete = true;
+                if (this.readyResolve) {
+                    this.readyResolve();
+                }
+                // Flush queued messages
+                this.flushMessageQueue();
+                return;
+            }
+            
+            // Handle response messages
+            if (message.isResponse && message.responseToId) {
+                const pending = this.pendingRequests.get(message.responseToId);
+                if (pending) {
+                    clearTimeout(pending.timeout);
+                    this.pendingRequests.delete(message.responseToId);
+                    
+                    if (message.error) {
+                        pending.reject(new Error(message.error));
+                    } else {
+                        pending.resolve(message.payload);
+                    }
+                }
+                return;
+            }
+            
+            // Handle regular messages
             if (message.type && this.listeners) {
                 const handlers = this.listeners.get(message.type);
                 if (handlers) {
-                    handlers.forEach(handler => handler(message.payload));
+                    handlers.forEach(handler => {
+                        const result = handler(message.payload);
+                        
+                        // Send response if expected
+                        if (message.expectsResponse && message.id) {
+                            this.sendRawMessage({
+                                id: this.generateMessageId(),
+                                type: '__response__',
+                                payload: result,
+                                timestamp: Date.now(),
+                                isResponse: true,
+                                responseToId: message.id
+                            });
+                        }
+                    });
                 }
+            }
+            
+            // Send acknowledgment
+            if (!message.isResponse && message.id) {
+                this.sendRawMessage({
+                    id: this.generateMessageId(),
+                    type: '__acknowledge__',
+                    timestamp: Date.now(),
+                    responseToId: message.id
+                });
             }
         });
     }
@@ -48,9 +142,76 @@ class VSCodeAPIWrapper {
         return this.vscodeApi!;
     }
 
+    // Wait for handshake to complete
+    public ready(): Promise<void> {
+        return this.readyPromise;
+    }
+    
     // Send message to extension
     public postMessage(type: string, payload?: any): void {
-        this.getApi().postMessage({ type, payload });
+        const message: Message = {
+            id: this.generateMessageId(),
+            type,
+            payload,
+            timestamp: Date.now()
+        };
+        
+        if (!this.handshakeComplete) {
+            this.messageQueue.push(message);
+            return;
+        }
+        
+        this.sendRawMessage(message);
+    }
+    
+    // Send request and wait for response
+    public async request<T = any>(type: string, payload?: any): Promise<T> {
+        const message: Message = {
+            id: this.generateMessageId(),
+            type,
+            payload,
+            timestamp: Date.now(),
+            expectsResponse: true
+        };
+        
+        if (!this.handshakeComplete) {
+            await this.ready();
+        }
+        
+        return new Promise((resolve, reject) => {
+            // Set up timeout
+            const timeout = setTimeout(() => {
+                this.pendingRequests.delete(message.id);
+                reject(new Error(`Request timeout: ${type}`));
+            }, 30000);
+            
+            // Track pending request
+            this.pendingRequests.set(message.id, {
+                resolve,
+                reject,
+                timeout
+            });
+            
+            // Send the request
+            this.sendRawMessage(message);
+        });
+    }
+    
+    // Internal: Send raw message
+    private sendRawMessage(message: Message): void {
+        this.getApi().postMessage(message);
+    }
+    
+    // Internal: Generate unique message ID
+    private generateMessageId(): string {
+        return `msg_${Date.now()}_${++this.messageIdCounter}`;
+    }
+    
+    // Internal: Flush queued messages after handshake
+    private flushMessageQueue(): void {
+        const messages = [...this.messageQueue];
+        this.messageQueue = [];
+        messages.forEach(msg => this.sendRawMessage(msg));
     }
 
     // Subscribe to messages from extension
