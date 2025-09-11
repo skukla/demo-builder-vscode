@@ -19,7 +19,15 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation of A
 │  ├── Prerequisites System (JSON-driven)                  │
 │  ├── Component Registry (templates/)                     │
 │  ├── Progress Tracking (ProgressUnifier)                 │
-│  └── Error Logging System                                │
+│  ├── Error Logging System                                │
+│  ├── StepLogger (Configuration-driven logging)           │
+│  ├── ExternalCommandManager (Race-safe commands)         │
+│  └── StateCoordinator (Adobe CLI state sync)             │
+├─────────────────────────────────────────────────────────┤
+│          Communication & Messaging Layer                 │
+│  ├── WebviewCommunicationManager (Handshake protocol)    │
+│  ├── BaseWebviewCommand (Standardized patterns)          │
+│  └── Message queuing & retry logic                       │
 ├─────────────────────────────────────────────────────────┤
 │              Webview Layer (React)                       │
 │  ├── Wizard UI (Adobe Spectrum)                          │
@@ -65,9 +73,23 @@ demo-builder-vscode/
 - Dynamic configuration based on selections
 
 ### 4. **Webview Communication**
-- Bidirectional message passing
-- Type-safe message protocol
+- Bidirectional message passing with handshake protocol
+- Type-safe message protocol with request-response pattern
 - State synchronization between extension and UI
+- Message queuing until both sides ready
+- Automatic retry with exponential backoff
+
+### 5. **Logging System**
+- Configuration-driven logging via StepLogger
+- Template-based messages from logging.json
+- Smart context switching for operational logs
+- Consistent formatting across all components
+
+### 6. **Race Condition Management**
+- ExternalCommandManager for command queuing
+- Mutual exclusion for resource access
+- Smart polling with exponential backoff
+- StateCoordinator for Adobe CLI consistency
 
 ## Critical Design Decisions
 
@@ -139,6 +161,21 @@ demo-builder-vscode/
 5. Package: `npm run package`
 
 ## Recent Improvements
+
+### v1.4.0 (2025-01-11)
+- **Race Condition Solutions**: Comprehensive 4-phase implementation
+  - WebviewCommunicationManager with handshake protocol
+  - ExternalCommandManager for command queuing and mutual exclusion
+  - StateCoordinator for Adobe CLI state consistency
+  - BaseWebviewCommand for standardized patterns
+- **Configuration-Driven Logging**: StepLogger with templates
+  - Step names from wizard-steps.json
+  - Message templates from logging.json
+  - Smart context switching for operations
+- **Improved Reliability**: Eliminated brittle setTimeout delays
+  - Smart polling with exponential backoff
+  - Condition-based waiting
+  - Automatic retry logic
 
 ### v1.3.0 (2025-01-10)
 - **Enhanced Debugging System**: Dual output channels ("Demo Builder: Logs" and "Demo Builder: Debug")

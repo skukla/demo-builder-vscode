@@ -131,6 +131,41 @@ if (itemTop + itemHeight > containerScrollTop + containerHeight) {
 
 ## Message Protocol
 
+### With Handshake Protocol (Recommended)
+
+The new vscodeApi.ts includes handshake protocol support:
+
+```typescript
+// In webview - Wait for handshake before sending messages
+import { vscode } from './vscodeApi';
+
+// Wait for handshake to complete
+await vscode.ready();
+
+// Send message (fire-and-forget)
+vscode.postMessage('action', { data: 'value' });
+
+// Send request and wait for response
+const result = await vscode.request<ResponseType>('getData', { id: 123 });
+```
+
+**Message Structure with IDs**:
+```typescript
+interface Message {
+    id: string;              // Unique message ID
+    type: string;            // Message type
+    payload?: any;           // Message data
+    timestamp: number;       // When sent
+    isResponse?: boolean;    // Is this a response
+    responseToId?: string;   // ID of message being responded to
+    expectsResponse?: boolean; // Does sender expect response
+}
+```
+
+### Legacy Message Protocol
+
+For components not yet migrated:
+
 ### Extension → Webview
 ```typescript
 // In extension
@@ -170,6 +205,15 @@ panel.webview.onDidReceiveMessage(message => {
     }
 });
 ```
+
+### Handshake Protocol Flow
+
+1. **Extension Ready**: Extension sends `__extension_ready__` when webview loads
+2. **Webview Ready**: Webview responds with `__webview_ready__` when React initializes
+3. **Handshake Complete**: Extension confirms with `__handshake_complete__`
+4. **Message Queue**: Messages sent before handshake are queued and sent after
+
+This ensures no messages are lost during initialization and both sides are ready to communicate.
 
 ## Styling System
 

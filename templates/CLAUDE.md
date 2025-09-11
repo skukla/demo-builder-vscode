@@ -13,6 +13,7 @@ templates/
 ├── components.json         # Available project components
 ├── defaults.json          # Default component selections
 ├── wizard-steps.json      # Wizard timeline configuration
+├── logging.json           # Logging message templates (NEW)
 ├── project-templates/      # Project scaffolding templates
 └── scripts/               # Installation and setup scripts
 ```
@@ -223,6 +224,72 @@ Simply change the order of objects in the array. The wizard will follow the sequ
 - Invalid step IDs are ignored (fallback to defaults)
 - All steps must have corresponding React components
 - The timeline dynamically adjusts to show only enabled steps
+
+## Logging Templates
+
+### logging.json Structure
+
+The `logging.json` file provides consistent, reusable message templates for the StepLogger system:
+
+```json
+{
+  "operations": {
+    "checking": "Checking {item}...",
+    "fetching": "Fetching {item}...",
+    "installing": "Installing {item}...",
+    "creating": "Creating {item}...",
+    "authenticating": "Authenticating with {item}..."
+  },
+  "statuses": {
+    "found": "Found {count} {item}",
+    "found-version": "{item} found: {version}",
+    "installed": "{item} installed: {version}",
+    "authenticated": "Authenticated: {organization}",
+    "selected": "Selected: {item}"
+  }
+}
+```
+
+### Template Usage
+
+Templates support parameter substitution using `{placeholder}` syntax:
+
+```typescript
+// In code
+stepLogger.logTemplate('adobe-auth', 'operations.fetching', { item: 'organizations' });
+// Output: [Adobe Setup] Fetching organizations...
+
+stepLogger.logTemplate('prerequisites', 'statuses.found-version', { 
+    item: 'Node.js', 
+    version: '20.11.0' 
+});
+// Output: [Prerequisites] Node.js found: 20.11.0
+```
+
+### Adding New Templates
+
+1. **Add to operations** for actions in progress:
+```json
+"operations": {
+  "validating": "Validating {item}...",
+  "deploying": "Deploying {item} to {environment}..."
+}
+```
+
+2. **Add to statuses** for state descriptions:
+```json
+"statuses": {
+  "deployed": "Successfully deployed to {environment}",
+  "validation-failed": "Validation failed: {reason}"
+}
+```
+
+### Benefits
+
+- **Consistency**: All messages follow the same format
+- **Maintainability**: Change wording in one place
+- **Localization Ready**: Templates can be swapped for different languages
+- **Reduced Duplication**: No hardcoded strings throughout codebase
 
 ## Components System
 

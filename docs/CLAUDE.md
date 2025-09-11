@@ -268,6 +268,98 @@ Complex multi-step configurations where users need to:
 - **Immediate feedback**: Every action shows loading state
 - **Context in loading**: Show what's being loaded from where
 
+### Race Condition Solutions
+
+#### The Problem
+We experienced numerous race conditions:
+- Webview messages sent before React was ready
+- Commands executing simultaneously on shared resources
+- Adobe CLI state getting out of sync with VS Code
+- Brittle setTimeout delays causing intermittent failures
+
+#### The Comprehensive Solution (4-Phase Implementation)
+
+**Phase 1: WebviewCommunicationManager**
+- Two-way handshake protocol ensures both sides ready
+- Message queuing until handshake completes
+- Request-response pattern with unique IDs
+- Automatic retry with exponential backoff
+
+```typescript
+// Before: Messages could be lost
+panel.webview.postMessage({ type: 'init', data });
+
+// After: Messages guaranteed delivery
+await communicationManager.sendMessage('init', data);
+```
+
+**Phase 2: ExternalCommandManager**
+- Command queuing for sequential execution
+- Mutual exclusion for resource access
+- Smart polling replaces setTimeout delays
+- Retry strategies for different failure types
+
+```typescript
+// Before: Race conditions with concurrent commands
+exec('aio auth login');
+exec('aio console org list');
+
+// After: Guaranteed sequential execution
+await commandManager.executeExclusive('adobe-cli', async () => {
+    await commandManager.executeCommand('aio auth login');
+    await commandManager.executeCommand('aio console org list');
+});
+```
+
+**Phase 3: StateCoordinator**
+- Synchronizes Adobe CLI state with VS Code
+- Atomic state updates prevent partial changes
+- Cache with TTL reduces CLI calls
+- State change events for reactive updates
+
+**Phase 4: Migration to New Patterns**
+- BaseWebviewCommand for standardized communication
+- AdobeAuthManagerV2 using new managers
+- Eliminated all setTimeout polling loops
+
+### Configuration-Driven Logging
+
+#### The Problem
+- Hardcoded log messages throughout codebase
+- Step names didn't match configuration
+- Inconsistent message formatting
+- Difficult to maintain and update
+
+#### The Solution: StepLogger with Templates
+
+**Configuration-driven step names** (wizard-steps.json):
+```json
+{
+  "id": "adobe-auth",
+  "name": "Adobe Setup"  // Used in all logs for this step
+}
+```
+
+**Template-based messages** (logging.json):
+```json
+{
+  "operations": {
+    "fetching": "Fetching {item}..."
+  }
+}
+```
+
+**Smart context switching**:
+```typescript
+// Wizard step context
+stepLogger.log('adobe-auth', 'Checking auth');
+// Output: [Adobe Setup] Checking auth
+
+// Operational context
+logger.info('[Extension] Checking for updates');
+// Output: [Extension] Checking for updates
+```
+
 ### State Clearing Patterns
 
 #### Dependent State Management

@@ -15,6 +15,12 @@ utils/
 ├── debugLogger.ts             # Central debug logging system
 ├── logger.ts                  # Backward-compatible logger wrapper
 ├── errorLogger.ts             # Error tracking with UI integration
+├── stepLogger.ts              # Configuration-driven logging (NEW)
+├── externalCommandManager.ts  # Command execution with race protection (NEW)
+├── stateCoordinator.ts        # Adobe CLI state management (NEW)
+├── webviewCommunicationManager.ts # Robust webview messaging (NEW)
+├── baseWebviewCommand.ts      # Base class for webview commands (NEW)
+├── adobeAuthManagerV2.ts      # Migrated Adobe CLI operations (NEW)
 ├── shellExecutor.ts           # Shell command execution
 ├── fileSystemUtils.ts         # File operations
 ├── loadingHTML.ts             # Webview loading states
@@ -348,6 +354,183 @@ export function getLoadingHTML(message: string): string {
     `;
 }
 ```
+
+### StepLogger
+
+**Purpose**: Configuration-driven logging with consistent formatting
+
+**Key Features**:
+- Reads step names from wizard-steps.json
+- Uses message templates from logging.json
+- Smart context switching for operations
+- Maintains consistent format across logs
+
+**Implementation**:
+```typescript
+class StepLogger {
+    // Log with step context
+    log(stepId: string, message: string, level: LogLevel): void
+    
+    // Log using template
+    logTemplate(stepId: string, templateKey: string, params: Record<string, any>): void
+}
+```
+
+**Usage**:
+```typescript
+// Use configuration-driven step name
+stepLogger.log('adobe-auth', 'Checking authentication');
+
+// Use template with parameters
+stepLogger.logTemplate('adobe-auth', 'operations.fetching', { item: 'organizations' });
+// Output: [Adobe Setup] Fetching organizations...
+```
+
+### ExternalCommandManager
+
+**Purpose**: Manages external command execution with race condition protection
+
+**Key Features**:
+- Command queuing for sequential execution
+- Mutual exclusion for resource access
+- Smart polling with exponential backoff
+- Retry strategies for failed commands
+- File system change detection
+
+**Implementation**:
+```typescript
+class ExternalCommandManager {
+    // Execute with exclusive resource access
+    async executeExclusive<T>(resource: string, operation: () => Promise<T>): Promise<T>
+    
+    // Execute command with retry logic
+    async executeCommand(command: string, options?: ExecOptions, retryStrategy?: RetryStrategy): Promise<CommandResult>
+    
+    // Poll until condition met
+    async pollUntilCondition(checkFn: () => Promise<boolean>, options: PollOptions): Promise<void>
+    
+    // Execute multiple commands in sequence
+    async executeSequence(commands: CommandConfig[], stopOnError?: boolean): Promise<CommandResult[]>
+}
+```
+
+**Retry Strategies**:
+- **Network**: Retry on network errors with exponential backoff
+- **File System**: Retry on busy/locked files
+- **Adobe CLI**: Retry on token/session errors
+
+### StateCoordinator
+
+**Purpose**: Coordinates state between Adobe CLI, VS Code, and project operations
+
+**Key Features**:
+- Adobe CLI state synchronization
+- Project state tracking
+- State change events
+- Conflict resolution
+- Cache management with TTL
+- Atomic state updates
+
+**Implementation**:
+```typescript
+class StateCoordinator {
+    // Get Adobe CLI state
+    async getAdobeState(forceRefresh?: boolean): Promise<AdobeCliState>
+    
+    // Set Adobe organization
+    async setAdobeOrganization(orgId: string, orgName: string, orgCode: string): Promise<void>
+    
+    // Create project with tracking
+    async createProject(name: string, path: string, components: string[]): Promise<ProjectState>
+    
+    // Listen for state changes
+    onStateChange(type: StateChangeType, listener: (event: StateChangeEvent) => void): Disposable
+    
+    // Validate consistency
+    async validateStateConsistency(): Promise<ValidationResult>
+}
+```
+
+### WebviewCommunicationManager
+
+**Purpose**: Robust bidirectional communication between extension and webview
+
+**Key Features**:
+- Two-way handshake protocol
+- Message queuing until ready
+- Request-response pattern with timeouts
+- Automatic retry with exponential backoff
+- State version tracking
+- Comprehensive logging
+
+**Implementation**:
+```typescript
+class WebviewCommunicationManager {
+    // Initialize with handshake
+    async initialize(): Promise<void>
+    
+    // Send message (fire-and-forget)
+    async sendMessage(type: string, payload?: any): Promise<void>
+    
+    // Send request and await response
+    async request<T>(type: string, payload?: any): Promise<T>
+    
+    // Register message handler
+    on(type: string, handler: (payload: any) => any): void
+}
+```
+
+**Handshake Protocol**:
+1. Extension sends `__extension_ready__`
+2. Webview responds with `__webview_ready__`
+3. Extension confirms with `__handshake_complete__`
+4. Messages queued until handshake complete
+
+### BaseWebviewCommand
+
+**Purpose**: Base class for commands that use webviews with robust communication
+
+**Key Features**:
+- Standardized webview creation
+- Automatic communication manager setup
+- Loading state management
+- Error recovery
+- Consistent logging
+
+**Implementation**:
+```typescript
+abstract class BaseWebviewCommand extends BaseCommand {
+    // Webview lifecycle
+    protected abstract getWebviewId(): string
+    protected abstract getWebviewTitle(): string
+    protected abstract getWebviewContent(): Promise<string>
+    
+    // Communication setup
+    protected abstract initializeMessageHandlers(comm: WebviewCommunicationManager): void
+    protected abstract getInitialData(): Promise<any>
+    
+    // Helper methods
+    protected async sendMessage(type: string, payload?: any): Promise<void>
+    protected async request<T>(type: string, payload?: any): Promise<T>
+}
+```
+
+### AdobeAuthManagerV2
+
+**Purpose**: Adobe CLI operations with race condition protection
+
+**Key Features**:
+- Uses ExternalCommandManager for all CLI operations
+- StateCoordinator for state consistency
+- Polling-based authentication checks
+- Atomic organization/project selection
+- Comprehensive error handling
+
+**Migration from V1**:
+- Replace direct `exec()` calls with `executeCommand()`
+- Use `executeExclusive()` for authentication operations
+- Replace `setTimeout` polling with `pollUntilCondition()`
+- Use StateCoordinator for all state updates
 
 ## Integration Patterns
 

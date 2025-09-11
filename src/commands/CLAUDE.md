@@ -142,7 +142,69 @@ class DiagnosticsCommand {
 
 ## Command Patterns
 
-### Webview Command Pattern
+### BaseWebviewCommand Pattern (Recommended)
+
+The new BaseWebviewCommand provides standardized webview handling with robust communication:
+
+```typescript
+import { BaseWebviewCommand } from './baseWebviewCommand';
+import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
+
+class MyWebviewCommand extends BaseWebviewCommand {
+    protected getWebviewId(): string {
+        return 'myWebview';
+    }
+    
+    protected getWebviewTitle(): string {
+        return 'My Webview';
+    }
+    
+    protected async getWebviewContent(): Promise<string> {
+        // Return HTML with React app
+        return getHtmlContent(this.panel!, this.context);
+    }
+    
+    protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
+        // Register message handlers
+        comm.on('action', async (data) => {
+            // Handle action
+            return { success: true };
+        });
+        
+        comm.on('getData', async () => {
+            return await this.fetchData();
+        });
+    }
+    
+    protected async getInitialData(): Promise<any> {
+        return {
+            config: await this.loadConfig(),
+            state: await this.stateManager.getState()
+        };
+    }
+    
+    async execute(): Promise<void> {
+        // Create panel
+        await this.createOrRevealPanel();
+        
+        // Initialize communication with handshake
+        await this.initializeCommunication();
+        
+        // Webview is ready for interaction
+    }
+}
+```
+
+**Key Benefits**:
+- Automatic handshake protocol
+- Message queuing until ready
+- Built-in retry logic
+- Standardized error handling
+- Consistent logging
+
+### Legacy Webview Pattern
+
+For existing commands not yet migrated:
 
 ```typescript
 class WebviewCommand {
