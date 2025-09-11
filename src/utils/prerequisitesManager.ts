@@ -186,7 +186,11 @@ export class PrerequisitesManager {
             if (prereq.id === 'node' || prereq.id === 'npm' || prereq.perNodeVersion) {
                 checkResult = await execWithFnm(prereq.check.command);
             } else if (prereq.id === 'aio-cli') {
-                checkResult = await execWithEnhancedPath(prereq.check.command);
+                // Adobe CLI needs special handling to use the correct Node version
+                const { execAdobeCLI } = await import('./shellHelper');
+                checkResult = await execAdobeCLI(prereq.check.command);
+                // Log raw output for debugging version detection
+                this.logger.debug(`Adobe CLI version check output: ${checkResult.stdout}`);
             } else {
                 checkResult = await execAsync(prereq.check.command);
             }

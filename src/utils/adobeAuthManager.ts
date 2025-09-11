@@ -4,6 +4,8 @@ import * as fs from 'fs/promises';
 import { Logger } from './logger';
 import { getLogger, CommandResult } from './debugLogger';
 import { execWithEnhancedPath, execAdobeCLI } from './shellHelper';
+import { StepLogger } from './stepLogger';
+import * as path from 'path';
 
 const execAsync = promisify(exec);
 
@@ -31,9 +33,14 @@ export interface AdobeWorkspace {
 export class AdobeAuthManager {
     private logger: Logger;
     private debugLogger = getLogger();
+    private stepLogger: StepLogger;
 
-    constructor(logger: Logger) {
+    constructor(extensionPath: string, logger: Logger) {
         this.logger = logger;
+        
+        // Initialize StepLogger with templates
+        const templatesPath = path.join(extensionPath, 'templates', 'logging.json');
+        this.stepLogger = new StepLogger(logger, undefined, templatesPath);
     }
 
     public async isAuthenticated(): Promise<boolean> {
@@ -279,14 +286,46 @@ export class AdobeAuthManager {
     }
 
     public async getOrganizations(): Promise<AdobeOrg[]> {
+        // User-facing log
+        this.stepLogger.logTemplate('adobe-setup', 'fetching', { item: 'organizations' });
+        const startTime = Date.now();
+        
         try {
-            const { stdout } = await execAdobeCLI('aio console org list --json');
+            // First check if we have a valid token to prevent browser opening
+            const hasToken = await this.hasValidToken();
+            if (!hasToken) {
+                this.debugLogger.debug('No valid token, cannot get organizations');
+                this.stepLogger.log('adobe-setup', 'No valid authentication token', 'warn');
+                return [];
+            }
+            
+            const command = 'aio console org list --json';
+            const { stdout, stderr } = await execAdobeCLI(command);
+            
+            // Debug log with full command
+            this.debugLogger.logCommand(command, {
+                stdout,
+                stderr,
+                code: 0,
+                duration: Date.now() - startTime
+            });
+            
             // Parse JSON, removing any status messages
             const jsonStr = stdout.split('\n').find(line => line.startsWith('['));
-            if (!jsonStr) return [];
-            return JSON.parse(jsonStr);
+            if (!jsonStr) {
+                this.stepLogger.logTemplate('adobe-setup', 'no-items', { item: 'organizations' });
+                return [];
+            }
+            
+            const orgs = JSON.parse(jsonStr);
+            
+            // User-facing result
+            this.stepLogger.logTemplate('adobe-setup', 'found', { count: orgs.length, item: 'organization' + (orgs.length !== 1 ? 's' : '') });
+            
+            return orgs;
         } catch (error) {
-            this.logger.error('Failed to get Adobe organizations', error as Error);
+            this.stepLogger.logTemplate('adobe-setup', 'failed', { item: `Fetch organizations: ${(error as Error).message}` }, 'error');
+            this.debugLogger.error('Full error:', error as Error);
             return [];
         }
     }
@@ -294,7 +333,8 @@ export class AdobeAuthManager {
     public async selectOrganization(orgCode: string): Promise<boolean> {
         try {
             this.debugLogger.debug(`Selecting organization: ${orgCode}`);
-            const command = `aio console org select ${orgCode}`;
+            // Quote the orgCode to handle spaces and special characters
+            const command = `aio console org select '${orgCode}'`;
             const { stdout, stderr } = await execAdobeCLI(command);
             
             this.debugLogger.logCommand(command, {
@@ -318,22 +358,48 @@ export class AdobeAuthManager {
     }
 
     public async getProjects(orgId?: string): Promise<AdobeProject[]> {
+        // User-facing log
+        this.stepLogger.logTemplate('adobe-setup', 'fetching', { item: `projects${orgId ? ' for organization' : ''}` });
+        const startTime = Date.now();
+        
         try {
-            const orgFlag = orgId ? `--orgId ${orgId}` : '';
-            const { stdout } = await execAdobeCLI(`aio console project list --json ${orgFlag}`);
+            // Quote the orgId to handle spaces and special characters
+            const orgFlag = orgId ? `--orgId '${orgId}'` : '';
+            const command = `aio console project list --json ${orgFlag}`;
+            const { stdout, stderr } = await execAdobeCLI(command);
+            
+            // Debug log with full command
+            this.debugLogger.logCommand(command, {
+                stdout,
+                stderr,
+                code: 0,
+                duration: Date.now() - startTime
+            });
+            
             // Parse JSON, removing any status messages
             const jsonStr = stdout.split('\n').find(line => line.startsWith('['));
-            if (!jsonStr) return [];
-            return JSON.parse(jsonStr);
+            if (!jsonStr) {
+                this.stepLogger.logTemplate('adobe-setup', 'no-items', { item: 'projects' });
+                return [];
+            }
+            
+            const projects = JSON.parse(jsonStr);
+            
+            // User-facing result
+            this.stepLogger.logTemplate('adobe-setup', 'found', { count: projects.length, item: 'project' + (projects.length !== 1 ? 's' : '') });
+            
+            return projects;
         } catch (error) {
-            this.logger.error('Failed to get Adobe projects', error as Error);
+            this.stepLogger.logTemplate('adobe-setup', 'failed', { item: `Fetch projects: ${(error as Error).message}` }, 'error');
+            this.debugLogger.error('Full error:', error as Error);
             return [];
         }
     }
 
     public async selectProject(projectId: string): Promise<boolean> {
         try {
-            await execAdobeCLI(`aio console project select ${projectId}`);
+            // Quote the projectId to handle spaces and special characters
+            await execAdobeCLI(`aio console project select '${projectId}'`);
             this.logger.info(`Selected Adobe project: ${projectId}`);
             
             // Log current context for debugging
@@ -350,6 +416,10 @@ export class AdobeAuthManager {
     }
 
     public async getWorkspaces(projectId?: string): Promise<AdobeWorkspace[] | { error: string; type: 'org_access' | 'general' }> {
+        // User-facing log
+        this.stepLogger.logTemplate('adobe-setup', 'fetching', { item: `workspaces${projectId ? ' for project' : ''}` });
+        const startTime = Date.now();
+        
         try {
             // Before fetching workspaces, ensure we have the right organization context
             // This is critical when switching between organizations
@@ -361,12 +431,32 @@ export class AdobeAuthManager {
                 this.debugLogger.debug(`Current CLI organization context: ${currentOrg?.code || 'none'}`);
             }
             
-            const projectFlag = projectId ? `--projectId ${projectId}` : '';
-            const { stdout } = await execAdobeCLI(`aio console workspace list --json ${projectFlag}`);
+            // Quote the projectId to handle spaces and special characters
+            const projectFlag = projectId ? `--projectId '${projectId}'` : '';
+            const command = `aio console workspace list --json ${projectFlag}`;
+            const { stdout, stderr } = await execAdobeCLI(command);
+            
+            // Debug log with full command
+            this.debugLogger.logCommand(command, {
+                stdout,
+                stderr,
+                code: 0,
+                duration: Date.now() - startTime
+            });
+            
             // Parse JSON, removing any status messages
             const jsonStr = stdout.split('\n').find(line => line.startsWith('['));
-            if (!jsonStr) return [];
-            return JSON.parse(jsonStr);
+            if (!jsonStr) {
+                this.stepLogger.logTemplate('adobe-setup', 'no-items', { item: 'workspaces' });
+                return [];
+            }
+            
+            const workspaces = JSON.parse(jsonStr);
+            
+            // User-facing result
+            this.stepLogger.logTemplate('adobe-setup', 'found', { count: workspaces.length, item: 'workspace' + (workspaces.length !== 1 ? 's' : '') });
+            
+            return workspaces;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             
@@ -407,7 +497,8 @@ export class AdobeAuthManager {
 
     public async selectWorkspace(workspaceId: string): Promise<boolean> {
         try {
-            await execAdobeCLI(`aio console workspace select ${workspaceId}`);
+            // Quote the workspaceId to handle spaces and special characters
+            await execAdobeCLI(`aio console workspace select '${workspaceId}'`);
             this.logger.info(`Selected Adobe workspace: ${workspaceId}`);
             return true;
         } catch (error) {
@@ -418,7 +509,16 @@ export class AdobeAuthManager {
 
     public async getCurrentOrg(): Promise<AdobeOrg | null> {
         try {
+            // First check if we're authenticated - if not, don't proceed
+            // This prevents triggering browser opens
+            const hasToken = await this.hasValidToken();
+            if (!hasToken) {
+                this.debugLogger.debug('No valid token, cannot get current org');
+                return null;
+            }
+            
             // Get the currently selected organization using 'aio console where'
+            // This command doesn't trigger browser opens
             const { stdout: whereOutput } = await execAdobeCLI('aio console where --json');
             const whereStr = whereOutput.split('\n').find(line => line.startsWith('{'));
             if (!whereStr) return null;
@@ -426,24 +526,71 @@ export class AdobeAuthManager {
             const whereData = JSON.parse(whereStr);
             if (!whereData.org) return null;
             
-            // Now get the full org details from the org list
-            const { stdout: listOutput } = await execAdobeCLI('aio console org list --json');
-            const listStr = listOutput.split('\n').find(line => line.startsWith('['));
-            if (!listStr) return null;
+            // The 'where' command returns the org NAME, not the CODE
+            // We need to get the full org list to find the matching org by name
+            const orgName = whereData.org;
             
-            const orgs = JSON.parse(listStr) as AdobeOrg[];
-            // Find the org by name (that's what 'where' returns)
-            const currentOrg = orgs.find(org => org.name === whereData.org);
-            
-            if (currentOrg) {
-                this.debugLogger.debug(`Current organization from CLI: ${currentOrg.code} (${currentOrg.name})`);
-                return currentOrg;
+            // Get the full list of organizations to find the correct code
+            const orgs = await this.getOrganizations();
+            if (orgs.length === 0) {
+                this.debugLogger.debug('No organizations found when looking up current org');
+                return null;
             }
             
-            return null;
+            // Find the org that matches the name from 'where' command
+            const currentOrg = orgs.find(org => org.name === orgName);
+            
+            if (currentOrg) {
+                this.debugLogger.debug(`Current organization: ${currentOrg.code} (${currentOrg.name})`);
+                return currentOrg;
+            } else {
+                // Fallback: if we can't find exact match, return minimal info
+                // This shouldn't happen but provides graceful degradation
+                this.debugLogger.debug(`Warning: Could not find org code for '${orgName}'`);
+                const minimalOrg: AdobeOrg = {
+                    id: whereData.org_id || '',
+                    code: orgName, // Use name as fallback - might work for some orgs
+                    name: orgName
+                };
+                return minimalOrg;
+            }
         } catch (error) {
             this.debugLogger.debug('Failed to get current organization:', error);
             return null;
+        }
+    }
+    
+    /**
+     * Check if we have a valid authentication token without triggering any interactive commands
+     */
+    private async hasValidToken(): Promise<boolean> {
+        try {
+            // Check for access token in the config
+            const command = 'aio config get ims.contexts.cli.access_token.token';
+            const { stdout: token } = await execWithEnhancedPath(command);
+            
+            if (!token || !token.trim() || token.trim() === 'undefined' || token.trim() === 'null') {
+                return false;
+            }
+            
+            // Check expiry if available
+            try {
+                const expiryCommand = 'aio config get ims.contexts.cli.access_token.expiry';
+                const { stdout: expiry } = await execWithEnhancedPath(expiryCommand);
+                
+                if (expiry && expiry.trim() && expiry.trim() !== 'undefined') {
+                    const expiryTime = parseInt(expiry.trim());
+                    if (!isNaN(expiryTime)) {
+                        return expiryTime > Date.now();
+                    }
+                }
+            } catch {
+                // Expiry check failed, assume token is valid
+            }
+            
+            return true;
+        } catch {
+            return false;
         }
     }
 

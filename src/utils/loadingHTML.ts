@@ -97,7 +97,7 @@ export async function setLoadingState(
     panel: vscode.WebviewPanel,
     getContent: () => Promise<string>,
     message: string = 'Loading...',
-    logger?: { info: (msg: string) => void }
+    logger?: { info: (msg: string) => void; debug?: (msg: string) => void }
 ): Promise<void> {
     // Give VSCode a moment to fully initialize the panel
     // This helps prevent the "Initializing web view..." message
@@ -105,8 +105,8 @@ export async function setLoadingState(
     
     // Set loading HTML
     panel.webview.html = getLoadingHTML(message);
-    if (logger) {
-        logger.info(`Loading HTML set with message: "${message}"`);
+    if (logger && logger.debug) {
+        logger.debug(`Loading HTML set with message: "${message}"`);
     }
     
     // Track load time to ensure minimum display time for spinner
@@ -117,19 +117,19 @@ export async function setLoadingState(
     // Ensure spinner is visible for minimum time (prevents jarring instant transitions)
     if (elapsed < MIN_DISPLAY_TIME) {
         const remainingTime = MIN_DISPLAY_TIME - elapsed;
-        if (logger) {
-            logger.info(`Content loaded in ${elapsed}ms, waiting ${remainingTime}ms more for better UX`);
+        if (logger && logger.debug) {
+            logger.debug(`Content loaded in ${elapsed}ms, waiting ${remainingTime}ms more for better UX`);
         }
         await new Promise(resolve => setTimeout(resolve, remainingTime));
     } else {
-        if (logger) {
-            logger.info(`Content loaded in ${elapsed}ms (no additional delay needed)`);
+        if (logger && logger.debug) {
+            logger.debug(`Content loaded in ${elapsed}ms (no additional delay needed)`);
         }
     }
     
     // Set actual HTML content
     panel.webview.html = contentHTML;
-    if (logger) {
-        logger.info('Actual content HTML set for webview');
+    if (logger && logger.debug) {
+        logger.debug('Actual content HTML set for webview');
     }
 }

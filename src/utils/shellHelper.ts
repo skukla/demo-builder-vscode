@@ -224,21 +224,61 @@ async function findAdobeCLINodeVersion(): Promise<string | null> {
  * This ensures Adobe CLI runs with a compatible Node version
  */
 export async function execAdobeCLI(command: string): Promise<{ stdout: string; stderr: string }> {
+    // Import logger only when needed to avoid circular dependencies
+    const { getLogger } = await import('./debugLogger');
+    const logger = getLogger();
+    
+    // Extract operation name for user-facing message (e.g., "console project list" from "aio console project list --json")
+    const operationMatch = command.match(/aio\s+([\w\s]+?)(\s+--|\s*$)/);
+    const operation = operationMatch ? operationMatch[1] : 'Adobe CLI command';
+    
+    // Don't log the full command to user (may contain sensitive data), just the operation
+    logger.debug(`Executing Adobe CLI: ${command}`);
+    
+    const startTime = Date.now();
     const aioNodeVersion = await findAdobeCLINodeVersion();
     
-    if (aioNodeVersion && await isFnmAvailable()) {
-        // Use fnm use to set the version for the session, then run the command
-        // Suppress fnm output to avoid cluttering the results
-        const fullCommand = `fnm use ${aioNodeVersion} > /dev/null 2>&1 && ${command}`;
+    try {
+        let result: { stdout: string; stderr: string };
         
-        return execAsync(fullCommand, {
-            shell: '/bin/zsh',
-            encoding: 'utf8'
-        }) as Promise<{ stdout: string; stderr: string }>;
+        if (aioNodeVersion && await isFnmAvailable()) {
+            // Use fnm use to set the version for the session, then run the command
+            // Suppress fnm output to avoid cluttering the results
+            const fullCommand = `fnm use ${aioNodeVersion} > /dev/null 2>&1 && ${command}`;
+            
+            result = await execAsync(fullCommand, {
+                shell: '/bin/zsh',
+                encoding: 'utf8'
+            });
+        } else {
+            // Fallback to enhanced path method if fnm not available or Adobe CLI version not found
+            result = await execWithEnhancedPath(command);
+        }
+        
+        // Log command execution details to debug channel
+        const duration = Date.now() - startTime;
+        logger.logCommand(command, {
+            stdout: result.stdout,
+            stderr: result.stderr,
+            code: 0,
+            duration
+        });
+        
+        return result;
+    } catch (error: any) {
+        const duration = Date.now() - startTime;
+        
+        // Log error details to debug channel
+        logger.logCommand(command, {
+            stdout: error.stdout || '',
+            stderr: error.stderr || error.message,
+            code: error.code || 1,
+            duration
+        });
+        
+        // Re-throw the error for proper handling upstream
+        throw error;
     }
-    
-    // Fallback to enhanced path method if fnm not available or Adobe CLI version not found
-    return execWithEnhancedPath(command);
 }
 
 /**
