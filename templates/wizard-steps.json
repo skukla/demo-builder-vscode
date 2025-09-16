@@ -2,12 +2,12 @@
   "steps": [
     {
       "id": "welcome",
-      "name": "Project Setup",
+      "name": "Demo Setup",
       "enabled": true
     },
     {
       "id": "component-selection",
-      "name": "Components",
+      "name": "Component Selection",
       "enabled": true
     },
     {
@@ -22,7 +22,7 @@
     },
     {
       "id": "adobe-project",
-      "name": "Project Selection",
+      "name": "I/O Project Selection",
       "enabled": true
     },
     {
@@ -42,7 +42,7 @@
     },
     {
       "id": "creating",
-      "name": "Project Creation",
+      "name": "Demo Creation",
       "enabled": true
     }
   ]
