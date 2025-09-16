@@ -4,13 +4,18 @@ import {
     Heading,
     Text,
     Button,
-    Well,
-    ProgressCircle
+    ProgressCircle,
+    View
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
+import Alert from '@spectrum-icons/workflow/Alert';
+import Key from '@spectrum-icons/workflow/Key';
+import Login from '@spectrum-icons/workflow/Login';
+import Refresh from '@spectrum-icons/workflow/Refresh';
 import { WizardState } from '../../types';
 import { vscode } from '../../app/vscodeApi';
+import { LoadingDisplay } from '../shared/LoadingDisplay';
 
 interface AdobeAuthStepProps {
     state: WizardState;
@@ -20,29 +25,35 @@ interface AdobeAuthStepProps {
 
 export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthStepProps) {
     const [authStatus, setAuthStatus] = useState<string>('');
+    const [authSubMessage, setAuthSubMessage] = useState<string>('');
     const isSwitchingRef = useRef(false);
 
     useEffect(() => {
-        // Only check authentication if we don't already have a known state
-        // AND we're not currently checking/switching
-        // This prevents re-checking when switching orgs
-        if (state.adobeAuth.isAuthenticated === undefined && !state.adobeAuth.isChecking) {
+        // Always check authentication when entering the step to ensure fresh data
+        // This ensures we get updated messages including subMessage
+        if (!state.adobeAuth.isChecking) {
             checkAuthentication();
         }
 
         // Listen for auth status updates
         const unsubscribe = vscode.onMessage('auth-status', (data) => {
+            // Debug logging to see what we're receiving
+            console.log('Auth status received:', data);
+            console.log('Message:', data.message);
+            console.log('SubMessage:', data.subMessage);
+
             // Reset the switching flag when authentication completes
             if (data.isAuthenticated && isSwitchingRef.current) {
                 isSwitchingRef.current = false;
             }
-            
+
             updateState({
                 adobeAuth: {
                     isAuthenticated: data.isAuthenticated,
                     isChecking: data.isChecking !== undefined ? data.isChecking : false,
                     email: data.email,
-                    error: data.error
+                    error: data.error,
+                    requiresOrgSelection: data.requiresOrgSelection
                 },
                 // Always update org - set to undefined when null/undefined
                 adobeOrg: data.organization ? {
@@ -52,14 +63,16 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 } : undefined
             });
             setAuthStatus(data.message || '');
+            setAuthSubMessage(data.subMessage || '');
         });
 
         return unsubscribe;
     }, []);
 
     useEffect(() => {
-        setCanProceed(state.adobeAuth.isAuthenticated);
-    }, [state.adobeAuth.isAuthenticated, setCanProceed]);
+        // Can only proceed if authenticated AND has organization selected
+        setCanProceed(state.adobeAuth.isAuthenticated && !!state.adobeOrg?.name);
+    }, [state.adobeAuth.isAuthenticated, state.adobeOrg, setCanProceed]);
 
     const checkAuthentication = () => {
         // Don't check if we're already in the process of switching organizations
@@ -111,71 +124,135 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 We need to authenticate with Adobe to deploy your API Mesh and access Adobe services.
             </Text>
 
-            {/* Authentication Status */}
+            {/* Authentication Status - Checking */}
             {state.adobeAuth.isChecking && (
-                <Well>
-                    <Flex gap="size-200" alignItems="center">
-                        <ProgressCircle size="S" isIndeterminate />
-                        <Flex direction="column" gap="size-50">
-                            <Text>{authStatus}</Text>
-                            <Text UNSAFE_className="text-sm text-gray-600">
-                                Please complete sign-in in your browser
-                            </Text>
-                        </Flex>
-                    </Flex>
-                </Well>
-            )}
-
-            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && (
-                <Well>
-                    <Flex direction="column" gap="size-100">
-                        <Flex gap="size-200" alignItems="center">
-                            <CheckmarkCircle UNSAFE_className="text-green-600" />
-                            <Text><strong>Authenticated</strong></Text>
-                        </Flex>
-                        {state.adobeOrg && (
-                            <Text UNSAFE_className="text-sm">
-                                Organization: <strong>{state.adobeOrg.name}</strong>
+                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                    <View marginBottom="size-200">
+                        <ProgressCircle size="L" isIndeterminate />
+                    </View>
+                    <Flex direction="column" gap="size-50" alignItems="center">
+                        <Text UNSAFE_className="text-lg font-medium">
+                            {authStatus || 'Connecting to Adobe services...'}
+                        </Text>
+                        {authSubMessage && (
+                            <Text UNSAFE_className="text-sm text-gray-500 text-center" UNSAFE_style={{maxWidth: '400px'}}>
+                                {authSubMessage}
                             </Text>
                         )}
                     </Flex>
-                </Well>
+                </Flex>
             )}
 
-            {!state.adobeAuth.isChecking && !state.adobeAuth.isAuthenticated && (
-                <Well>
-                    <Flex gap="size-200" alignItems="center">
-                        <AlertCircle UNSAFE_className="text-yellow-600" />
-                        <Flex direction="column" gap="size-50">
-                            <Text><strong>Authentication Required</strong></Text>
-                            <Text UNSAFE_className="text-sm text-gray-700">
-                                {state.adobeAuth.error || 'Please sign in to continue'}
+            {/* Authenticated with valid organization */}
+            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && state.adobeOrg && (
+                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                    <Flex direction="column" gap="size-200" alignItems="center">
+                        <CheckmarkCircle UNSAFE_className="text-green-600" size="L" />
+                        <Flex direction="column" gap="size-50" alignItems="center">
+                            <Text UNSAFE_className="text-lg font-medium">
+                                Connected
+                            </Text>
+                            <Text UNSAFE_className="text-sm text-gray-600">
+                                {state.adobeOrg.name}
                             </Text>
                         </Flex>
+                        <Button
+                            variant="secondary"
+                            onPress={() => handleLogin(true)}
+                            marginTop="size-200"
+                        >
+                            Switch Organizations
+                        </Button>
                     </Flex>
-                </Well>
+                </Flex>
             )}
 
-            {/* Action Buttons */}
-            {!state.adobeAuth.isAuthenticated && !state.adobeAuth.isChecking && (
-                <Button
-                    variant="accent"
-                    onPress={() => handleLogin(false)}
-                    marginTop="size-300"
-                >
-                    Sign In with Adobe
-                </Button>
+            {/* Authenticated but organization selection required */}
+            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && !state.adobeOrg && (
+                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                    <Flex direction="column" gap="size-200" alignItems="center">
+                        <AlertCircle UNSAFE_className="text-orange-500" size="L" />
+                        <Flex direction="column" gap="size-100" alignItems="center">
+                            <Text UNSAFE_className="text-xl font-medium">
+                                Select Your Organization
+                            </Text>
+                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
+                                {state.adobeAuth.requiresOrgSelection
+                                    ? "Your previous organization is no longer accessible. Please select a new organization to continue with your project."
+                                    : "You're signed in to Adobe, but haven't selected an organization yet. Choose your organization to access App Builder projects."}
+                            </Text>
+                        </Flex>
+                        <Button
+                            variant="accent"
+                            onPress={() => handleLogin(true)}
+                            marginTop="size-300"
+                            size="L"
+                        >
+                            <Key size="S" marginEnd="size-100" />
+                            Select Organization
+                        </Button>
+                    </Flex>
+                </Flex>
             )}
 
-            {state.adobeAuth.isAuthenticated && state.adobeOrg && (
-                <Button
-                    variant="secondary"
-                    onPress={() => handleLogin(true)}
-                    marginTop="size-200"
-                >
-                    Switch to Different Organization
-                </Button>
+            {/* Not authenticated - normal state */}
+            {!state.adobeAuth.isChecking && !state.adobeAuth.isAuthenticated && !state.adobeAuth.error && (
+                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                    <Flex direction="column" gap="size-200" alignItems="center">
+                        <Key UNSAFE_className="text-gray-500" size="L" />
+                        <Flex direction="column" gap="size-100" alignItems="center">
+                            <Text UNSAFE_className="text-xl font-medium">
+                                {authStatus || 'Sign in to Adobe'}
+                            </Text>
+                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
+                                {authSubMessage || "Connect your Adobe account to create and deploy App Builder applications. You'll be redirected to sign in through your browser."}
+                            </Text>
+                        </Flex>
+                        <Button
+                            variant="accent"
+                            onPress={() => handleLogin(false)}
+                            marginTop="size-300"
+                            size="L"
+                        >
+                            <Login size="S" marginEnd="size-100" />
+                            Sign In with Adobe
+                        </Button>
+                    </Flex>
+                </Flex>
             )}
+
+            {/* Error state with helpful guidance */}
+            {!state.adobeAuth.isChecking && state.adobeAuth.error && (
+                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                    <Flex direction="column" gap="size-200" alignItems="center">
+                        <Alert UNSAFE_className="text-red-500" size="L" />
+                        <Flex direction="column" gap="size-100" alignItems="center">
+                            <Text UNSAFE_className="text-xl font-medium">
+                                Connection Issue
+                            </Text>
+                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
+                                {authSubMessage || "We couldn't connect to Adobe services. Please check your internet connection and try again."}
+                            </Text>
+                        </Flex>
+                        <Flex direction="row" gap="size-200" marginTop="size-300">
+                            <Button variant="secondary" onPress={() => checkAuthentication()}>
+                                <Refresh size="S" marginEnd="size-100" />
+                                Try Again
+                            </Button>
+                            <Button variant="accent" onPress={() => handleLogin(false)}>
+                                <Login size="S" marginEnd="size-100" />
+                                Sign In Again
+                            </Button>
+                        </Flex>
+                    </Flex>
+                </Flex>
+            )}
+
+            <style>{`
+                .text-center {
+                    text-align: center;
+                }
+            `}</style>
         </div>
     );
 }

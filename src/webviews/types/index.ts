@@ -6,8 +6,10 @@ export type WizardStep =
     | 'welcome'
     | 'component-selection'
     | 'prerequisites'
-    | 'adobe-setup'  // New consolidated Adobe configuration step
-    | 'adobe-auth'  // Kept for compatibility
+    | 'adobe-setup'  // Kept for backward compatibility
+    | 'adobe-auth'  // Adobe authentication step
+    | 'adobe-project'  // Adobe project selection step
+    | 'adobe-workspace'  // Adobe workspace selection step
     | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
@@ -37,6 +39,7 @@ export interface AdobeAuthState {
     isChecking: boolean;
     email?: string;
     error?: string;
+    requiresOrgSelection?: boolean;
 }
 
 export interface Organization {
