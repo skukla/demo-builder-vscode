@@ -65,7 +65,9 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
             setChecks(prerequisites);
             
             // Store the version to component mapping
-            if (data.versionComponentMapping) {
+            if (data.nodeVersionMapping) {
+                setVersionComponentMapping(data.nodeVersionMapping);
+            } else if (data.versionComponentMapping) {
                 setVersionComponentMapping(data.versionComponentMapping);
             }
             
@@ -185,8 +187,19 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
             }
         });
 
+        // Listen for prerequisites complete message
+        const unsubscribeComplete = vscode.onMessage('prerequisites-complete', (data) => {
+            const { allInstalled } = data;
+            setIsChecking(false);
+            
+            // Don't update individual statuses here - they should already be set by prerequisite-status messages
+            // Just log the completion
+            console.log(`Prerequisites check complete. All installed: ${allInstalled}`);
+        });
+
         return () => {
             unsubscribe();
+            unsubscribeComplete();
             unsubscribeInstallComplete();
             unsubscribeCheckStopped();
         };
@@ -216,15 +229,9 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
     const checkPrerequisites = () => {
         setIsChecking(true);
         vscode.postMessage('check-prerequisites');
-
-        // Set all to checking status with placeholder message
-        setChecks(prev => prev.map(check => ({
-            ...check,
-            status: 'checking',
-            message: 'Verifying installation...'
-        })));
         
-        // Scroll container to top to show first item being checked
+        // Don't set all to checking - let the backend control status individually
+        // Just scroll container to top to show first item being checked
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTo({
                 top: 0,
@@ -275,7 +282,7 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
                 Checking required tools. Missing tools can be installed automatically.
             </Text>
 
-            <div 
+            <div
                 ref={scrollContainerRef}
                 className="prerequisites-container">
                 <Flex direction="column" gap="size-150">
@@ -457,7 +464,7 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
                             variant="secondary"
                             onPress={checkPrerequisites}
                             isDisabled={isChecking || installingIndex !== null}
-                                            UNSAFE_className={cn('btn-standard', 'text-base')}
+                            UNSAFE_className={cn('btn-standard', 'text-base')}
                         >
                             Recheck
                         </Button>

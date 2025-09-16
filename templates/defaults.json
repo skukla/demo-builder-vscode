@@ -2,7 +2,7 @@
   "componentSelection": {
     "frontend": "citisignal-nextjs",
     "backend": "adobe-commerce-paas",
-    "dependencies": [],
+    "dependencies": ["demo-inspector"],
     "services": [],
     "externalSystems": [],
     "appBuilderApps": []

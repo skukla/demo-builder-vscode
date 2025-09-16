@@ -8,14 +8,12 @@ import { initializeLogger } from './utils/debugLogger';
 import { StateManager } from './utils/stateManager';
 import { ProjectTreeProvider } from './providers/projectTreeProvider';
 import { ExternalCommandManager } from './utils/externalCommandManager';
-import { StateCoordinator } from './utils/stateCoordinator';
 
 let logger: Logger;
 let statusBar: StatusBarManager;
 let stateManager: StateManager;
 let autoUpdater: AutoUpdater;
 let externalCommandManager: ExternalCommandManager;
-let stateCoordinator: StateCoordinator;
 
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
@@ -33,8 +31,6 @@ export async function activate(context: vscode.ExtensionContext) {
         // Initialize external command manager
         externalCommandManager = new ExternalCommandManager();
         
-        // Initialize state coordinator
-        stateCoordinator = new StateCoordinator(context, externalCommandManager);
 
         // Check workspace trust
         if (!vscode.workspace.isTrusted) {
@@ -102,7 +98,13 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         } else {
             // First time or no project - show welcome screen
-            vscode.commands.executeCommand('demoBuilder.showWelcome');
+            vscode.commands.executeCommand('demoBuilder.showWelcome').then(
+                () => logger.info('[Extension] Welcome screen shown successfully'),
+                (err) => {
+                    logger.error('[Extension] Failed to show welcome screen:', err);
+                    vscode.window.showErrorMessage(`Failed to show welcome screen: ${err?.message || err}`);
+                }
+            );
         }
 
         // Register file watchers
@@ -126,7 +128,6 @@ export function deactivate() {
     autoUpdater?.dispose();
     stateManager?.dispose();
     externalCommandManager?.dispose();
-    stateCoordinator?.dispose();
     
     logger?.info('Adobe Demo Builder extension deactivated.');
 }
@@ -136,9 +137,6 @@ export function getExternalCommandManager(): ExternalCommandManager {
     return externalCommandManager;
 }
 
-export function getStateCoordinator(): StateCoordinator {
-    return stateCoordinator;
-}
 
 async function promptForLicense(): Promise<string | undefined> {
     const key = await vscode.window.showInputBox({

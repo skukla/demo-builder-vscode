@@ -16,23 +16,33 @@
       "enabled": true
     },
     {
-      "id": "adobe-setup",
-      "name": "Adobe Setup",
+      "id": "adobe-auth",
+      "name": "Adobe Authentication",
+      "enabled": true
+    },
+    {
+      "id": "adobe-project",
+      "name": "Project Selection",
+      "enabled": true
+    },
+    {
+      "id": "adobe-workspace",
+      "name": "Workspace Selection",
       "enabled": true
     },
     {
       "id": "component-config",
-      "name": "Configuration",
+      "name": "Component Configuration",
       "enabled": true
     },
     {
       "id": "review",
-      "name": "Review",
+      "name": "Final Review",
       "enabled": true
     },
     {
       "id": "creating",
-      "name": "Creating",
+      "name": "Project Creation",
       "enabled": true
     }
   ]

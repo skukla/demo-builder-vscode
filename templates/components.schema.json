@@ -111,7 +111,7 @@
             "envVars": {
               "type": "array",
               "items": {
-                "type": "string"
+                "$ref": "#/definitions/envVar"
               }
             },
             "port": {
@@ -184,7 +184,24 @@
           "$ref": "#/definitions/source"
         },
         "configuration": {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "nodeVersion": {
+              "type": "string"
+            },
+            "requiresDeployment": {
+              "type": "boolean"
+            },
+            "deploymentTarget": {
+              "type": "string"
+            },
+            "envVars": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/envVar"
+              }
+            }
+          }
         },
         "providesEndpoint": {
           "type": "boolean"
@@ -323,7 +340,15 @@
           "type": "string"
         },
         "configuration": {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "envVars": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/envVar"
+              }
+            }
+          }
         },
         "requiresApiKey": {
           "type": "boolean"
@@ -351,10 +376,72 @@
           "$ref": "#/definitions/source"
         },
         "configuration": {
-          "type": "object"
+          "type": "object",
+          "properties": {
+            "runtime": {
+              "type": "string"
+            },
+            "nodeVersion": {
+              "type": "string"
+            },
+            "actions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "envVars": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/envVar"
+              }
+            }
+          }
         },
         "requiresDeployment": {
           "type": "boolean"
+        }
+      }
+    },
+    "envVar": {
+      "type": "object",
+      "required": ["key", "label", "type"],
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "type": {
+          "enum": ["text", "url", "password", "boolean", "select"]
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "default": {
+          "type": ["string", "boolean"]
+        },
+        "placeholder": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["value", "label"],
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     }

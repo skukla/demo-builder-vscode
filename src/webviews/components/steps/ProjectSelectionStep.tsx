@@ -19,6 +19,7 @@ import Folder from '@spectrum-icons/workflow/Folder';
 import Building from '@spectrum-icons/workflow/Building';
 import { WizardState } from '../../types';
 import { vscode } from '../../app/vscodeApi';
+import { LoadingDisplay } from '../shared/LoadingDisplay';
 
 interface Project {
     id: string;
@@ -112,10 +113,11 @@ export function ProjectSelectionStep({ state, updateState, setCanProceed }: Proj
                 <Heading level={2} marginBottom="size-300">
                     Select Project
                 </Heading>
-                <Flex gap="size-200" alignItems="center">
-                    <ProgressCircle size="S" isIndeterminate />
-                    <Text>Loading projects...</Text>
-                </Flex>
+                <LoadingDisplay 
+                    size="S" 
+                    message="Loading projects..."
+                    centered={false}
+                />
                 </View>
             </div>
         );

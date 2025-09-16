@@ -18,6 +18,7 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Building from '@spectrum-icons/workflow/Building';
 import { WizardState } from '../../types';
 import { vscode } from '../../app/vscodeApi';
+import { LoadingDisplay } from '../shared/LoadingDisplay';
 
 interface Organization {
     id: string;
@@ -103,10 +104,11 @@ export function OrgSelectionStep({ state, updateState, setCanProceed }: OrgSelec
                 <Heading level={2} marginBottom="size-300">
                     Select Organization
                 </Heading>
-                <Flex gap="size-200" alignItems="center">
-                    <ProgressCircle size="S" isIndeterminate />
-                    <Text>Loading organizations...</Text>
-                </Flex>
+                <LoadingDisplay 
+                    size="S" 
+                    message="Loading organizations..."
+                    centered={false}
+                />
                 </View>
             </div>
         );
