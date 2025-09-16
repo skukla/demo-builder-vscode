@@ -55,6 +55,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     const [canProceed, setCanProceed] = useState(false);
     const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
     const [completedSteps, setCompletedSteps] = useState<WizardStep[]>([]);
+    const [highestCompletedStepIndex, setHighestCompletedStepIndex] = useState(-1);
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [isConfirmingSelection, setIsConfirmingSelection] = useState(false);
@@ -107,28 +108,71 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         console.log('goToStep called with:', step);
         const currentIndex = getCurrentStepIndex();
         const targetIndex = WIZARD_STEPS.findIndex(s => s.id === step);
-        
+
         setAnimationDirection(targetIndex > currentIndex ? 'forward' : 'backward');
         setIsTransitioning(true);
-        
-        // Update state after animation starts
-        setTimeout(() => {
+
+        // If moving backward, remove completions for the target step and all steps after it
+        if (targetIndex < currentIndex) {
+            // Special case for first step - clear all completions
+            if (targetIndex === 0) {
+                setCompletedSteps([]);
+            } else {
+                // Normal backward navigation logic
+                setCompletedSteps(prev => {
+                    const filtered = prev.filter(completedStep => {
+                        // For the target step, always remove it
+                        if (completedStep === step) {
+                            return false;
+                        }
+
+                        // For other steps, keep only those before the target
+                        const stepIndex = WIZARD_STEPS.findIndex(ws => ws.id === completedStep);
+                        return stepIndex < targetIndex;
+                    });
+
+                    return filtered;
+                });
+            }
+
+            // For backward navigation, update currentStep immediately to avoid double transition
+            // Clear dependent state and update currentStep simultaneously
             setState(prev => {
-                console.log('Setting new step:', step, 'from:', prev.currentStep);
-                return { ...prev, currentStep: step };
+                const newState = { ...prev, currentStep: step };
+
+                // If going back before workspace selection, clear workspace
+                const workspaceIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-workspace');
+                if (workspaceIndex !== -1 && targetIndex < workspaceIndex) {
+                    newState.adobeWorkspace = undefined;
+                }
+
+                // If going back before project selection, clear project
+                const projectIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-project');
+                if (projectIndex !== -1 && targetIndex < projectIndex) {
+                    newState.adobeProject = undefined;
+                }
+
+                return newState;
             });
-            setIsTransitioning(false);
-        }, 300);
+
+            // For backward navigation, only use setTimeout for transition animation end
+            setTimeout(() => {
+                setIsTransitioning(false);
+            }, 300);
+        } else {
+            // For forward navigation, keep original behavior with delayed state update
+            setTimeout(() => {
+                setState(prev => ({ ...prev, currentStep: step }));
+                setIsTransitioning(false);
+            }, 300);
+        }
     }, [getCurrentStepIndex]);
 
     const goNext = useCallback(async () => {
-        console.log('goNext called, current step:', state.currentStep, 'canProceed:', canProceed);
         const currentIndex = getCurrentStepIndex();
-        console.log('Current index:', currentIndex, 'Total steps:', WIZARD_STEPS.length);
 
         if (currentIndex < WIZARD_STEPS.length - 1) {
             const nextStep = WIZARD_STEPS[currentIndex + 1];
-            console.log('Moving to next step:', nextStep.id);
 
             // BACKEND CALL ON CONTINUE PATTERN:
             // User selections update UI state immediately (in step components)
@@ -159,6 +203,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 // Mark current step as completed only after successful backend operation
                 if (!completedSteps.includes(state.currentStep)) {
                     setCompletedSteps(prev => [...prev, state.currentStep]);
+                    // Track the highest completed step index for navigation purposes
+                    setHighestCompletedStepIndex(Math.max(highestCompletedStepIndex, currentIndex));
                 }
 
                 // Clear loading overlay before transition
@@ -279,9 +325,9 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             case 'adobe-auth':
                 return <AdobeAuthStep {...props} />;
             case 'adobe-project':
-                return <AdobeProjectStep {...props} />;
+                return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
             case 'adobe-workspace':
-                return <AdobeWorkspaceStep {...props} />;
+                return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
             case 'component-config':
                 return <ComponentConfigStep {...props} />;
             case 'review':
@@ -316,6 +362,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                         steps={WIZARD_STEPS}
                         currentStep={state.currentStep}
                         completedSteps={completedSteps}
+                        highestCompletedStepIndex={highestCompletedStepIndex}
                         onStepClick={goToStep}
                     />
                 </View>

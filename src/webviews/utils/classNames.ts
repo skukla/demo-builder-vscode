@@ -258,9 +258,9 @@ export function getButtonClasses(
 /**
  * Helper function to build timeline step dot classes based on status
  */
-export function getTimelineStepDotClasses(status: 'completed' | 'current' | 'upcoming'): string {
+export function getTimelineStepDotClasses(status: 'completed' | 'current' | 'upcoming' | 'completed-current'): string {
     const baseClasses = 'timeline-step-dot';
-    const statusClass = status === 'completed' 
+    const statusClass = status === 'completed' || status === 'completed-current'
         ? 'timeline-step-dot-completed'
         : status === 'current'
         ? 'timeline-step-dot-current'
@@ -271,10 +271,10 @@ export function getTimelineStepDotClasses(status: 'completed' | 'current' | 'upc
 /**
  * Helper function to build timeline step label classes based on status
  */
-export function getTimelineStepLabelClasses(status: 'completed' | 'current' | 'upcoming'): string {
+export function getTimelineStepLabelClasses(status: 'completed' | 'current' | 'upcoming' | 'completed-current'): string {
     const fontSize = 'text-base';
-    const fontWeight = status === 'current' ? 'font-semibold' : 'font-normal';
-    const color = status === 'current' 
+    const fontWeight = status === 'current' || status === 'completed-current' ? 'font-semibold' : 'font-normal';
+    const color = status === 'current' || status === 'completed-current'
         ? 'text-blue-700'
         : status === 'completed'
         ? 'text-gray-800'
