@@ -123,15 +123,8 @@ class VSCodeAPIWrapper {
                 }
             }
             
-            // Send acknowledgment
-            if (!message.isResponse && message.id) {
-                this.sendRawMessage({
-                    id: this.generateMessageId(),
-                    type: '__acknowledge__',
-                    timestamp: Date.now(),
-                    responseToId: message.id
-                });
-            }
+            // Note: Acknowledgment is sent by the extension side (webviewCommunicationManager)
+            // to avoid duplicate acknowledgements
         });
     }
 
@@ -257,9 +250,6 @@ class VSCodeAPIWrapper {
         this.postMessage('authenticate', { force });
     }
 
-    public requestOrganizations(): void {
-        this.postMessage('get-organizations');
-    }
 
     public requestProjects(orgId: string): void {
         this.postMessage('get-projects', { orgId });

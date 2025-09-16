@@ -242,7 +242,7 @@ export class WebviewCommunicationManager {
     /**
      * Handle incoming message from webview
      */
-    private handleWebviewMessage(message: any): void {
+    private async handleWebviewMessage(message: any): Promise<void> {
         if (this.config.enableLogging) {
             this.logger.debug(`[WebviewComm] Received: ${message.type}`);
         }
@@ -251,7 +251,7 @@ export class WebviewCommunicationManager {
         if (message.type === '__webview_ready__') {
             const handler = this.messageHandlers.get('__webview_ready__');
             if (handler) {
-                handler(message.payload);
+                await handler(message.payload);
             }
             return;
         }
@@ -267,7 +267,7 @@ export class WebviewCommunicationManager {
             if (pending) {
                 clearTimeout(pending.timeout);
                 this.pendingRequests.delete(message.responseToId);
-                
+
                 if (message.error) {
                     pending.reject(new Error(message.error));
                 } else {
@@ -281,8 +281,11 @@ export class WebviewCommunicationManager {
         const handler = this.messageHandlers.get(message.type);
         if (handler) {
             try {
-                const result = handler(message.payload);
-                
+                // CRITICAL FIX (v1.5.0): Properly await async handler results
+                // Previously, Promise objects were being sent to UI instead of resolved values
+                // This caused "Error Loading Projects" despite successful backend operations
+                const result = await handler(message.payload);
+
                 // If the message has an ID, send a response
                 if (message.id && message.expectsResponse) {
                     this.sendRawMessage({
