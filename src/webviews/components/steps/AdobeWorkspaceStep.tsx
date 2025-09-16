@@ -13,15 +13,16 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import { vscode } from '../../app/vscodeApi';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
 import { ConfigurationSummary } from '../shared/ConfigurationSummary';
-import { WizardState, Workspace } from '../../types';
+import { WizardState, Workspace, WizardStep } from '../../types';
 
 interface AdobeWorkspaceStepProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
     setCanProceed: (canProceed: boolean) => void;
+    completedSteps?: WizardStep[];
 }
 
-export function AdobeWorkspaceStep({ state, updateState, setCanProceed }: AdobeWorkspaceStepProps) {
+export function AdobeWorkspaceStep({ state, updateState, setCanProceed, completedSteps = [] }: AdobeWorkspaceStepProps) {
     const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -176,7 +177,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed }: AdobeW
                 backgroundColor: 'var(--spectrum-global-color-gray-75)',
                 borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
             }}>
-                <ConfigurationSummary state={state} />
+                <ConfigurationSummary state={state} completedSteps={completedSteps} />
             </div>
         </div>
     );

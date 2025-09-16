@@ -1,14 +1,16 @@
 import React from 'react';
 import { View, Heading, Text, Flex, Divider } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import { WizardState } from '../../types';
+import Clock from '@spectrum-icons/workflow/Clock';
+import { WizardState, WizardStep } from '../../types';
 import { cn } from '../../utils/classNames';
 
 interface ConfigurationSummaryProps {
     state: WizardState;
+    completedSteps?: WizardStep[];
 }
 
-export function ConfigurationSummary({ state }: ConfigurationSummaryProps) {
+export function ConfigurationSummary({ state, completedSteps = [] }: ConfigurationSummaryProps) {
     return (
         <View height="100%">
             <Heading level={3} marginBottom="size-300">
@@ -48,7 +50,11 @@ export function ConfigurationSummary({ state }: ConfigurationSummaryProps) {
                 <View marginTop="size-100">
                     {state.adobeProject ? (
                         <Flex gap="size-100" alignItems="center">
-                            <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            {completedSteps.includes('adobe-project') ? (
+                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            ) : (
+                                <Clock size="S" UNSAFE_className="text-blue-600" />
+                            )}
                             <View>
                                 <Text UNSAFE_className="text-sm">
                                     {state.adobeProject.title || state.adobeProject.name}
@@ -76,10 +82,16 @@ export function ConfigurationSummary({ state }: ConfigurationSummaryProps) {
                 <View marginTop="size-100">
                     {state.adobeWorkspace ? (
                         <Flex gap="size-100" alignItems="center">
-                            <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                            <Text UNSAFE_className="text-sm">
-                                {state.adobeWorkspace.title || state.adobeWorkspace.name}
-                            </Text>
+                            {completedSteps.includes('adobe-workspace') ? (
+                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            ) : (
+                                <Clock size="S" UNSAFE_className="text-blue-600" />
+                            )}
+                            <View>
+                                <Text UNSAFE_className="text-sm">
+                                    {state.adobeWorkspace.title || state.adobeWorkspace.name}
+                                </Text>
+                            </View>
                         </Flex>
                     ) : (
                         <Text UNSAFE_className="text-sm text-gray-600">Not selected</Text>
@@ -118,6 +130,10 @@ export function ConfigurationSummary({ state }: ConfigurationSummaryProps) {
                 
                 .text-green-600 {
                     color: var(--spectrum-global-color-green-600);
+                }
+
+                .text-orange-600 {
+                    color: var(--spectrum-global-color-orange-600);
                 }
             `}</style>
         </View>
