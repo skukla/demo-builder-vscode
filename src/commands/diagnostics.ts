@@ -1,12 +1,9 @@
 import * as vscode from 'vscode';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as os from 'os';
 import * as path from 'path';
 import { getLogger, CommandResult } from '../utils/debugLogger';
-import { execWithFnm, execWithEnhancedPath } from '../utils/shellHelper';
-
-const execAsync = promisify(exec);
+import { ExternalCommandManager } from '../utils/externalCommandManager';
+import { getExternalCommandManager } from '../extension';
 
 export class DiagnosticsCommand {
     private logger = getLogger();
@@ -163,17 +160,32 @@ export class DiagnosticsCommand {
                 }
             }
             
-            // Check current context
-            const ctxCheck = await this.checkCommand('aio auth ctx');
-            adobe.currentContext = ctxCheck.output;
+            // Check current context using 'aio console where'
+            const whereCheck = await this.checkCommand('aio console where --json');
+            if (whereCheck.installed && whereCheck.output) {
+                try {
+                    const context = JSON.parse(whereCheck.output);
+                    adobe.currentContext = {
+                        org: context.org?.name || 'Not selected',
+                        project: context.project?.name || 'Not selected',
+                        workspace: context.workspace?.name || 'Not selected'
+                    };
+                } catch (e) {
+                    adobe.currentContext = whereCheck.output;
+                }
+            }
             
             // Try to list organizations
-            const orgCheck = await this.checkCommand('aio console org list');
+            const orgCheck = await this.checkCommand('aio console org list --json');
             adobe.canListOrgs = orgCheck.installed && !orgCheck.output.includes('Error');
-            
-            // Check selected org
-            const selectedOrg = await this.checkCommand('aio console org select');
-            adobe.selectedOrg = selectedOrg.output;
+            if (adobe.canListOrgs && orgCheck.output) {
+                try {
+                    const orgs = JSON.parse(orgCheck.output);
+                    adobe.organizationCount = Array.isArray(orgs) ? orgs.length : 0;
+                } catch (e) {
+                    // Fallback to raw output
+                }
+            }
         }
         
         return adobe;
@@ -215,15 +227,22 @@ export class DiagnosticsCommand {
 
     private async checkCommand(command: string): Promise<any> {
         const startTime = Date.now();
+        const commandManager = getExternalCommandManager();
         try {
-            // Use appropriate wrapper based on command type
+            // Use appropriate options based on command type
             let execResult;
             if (command.includes('node') || command.includes('npm')) {
-                execResult = await execWithFnm(command);
+                execResult = await commandManager.execute(command, {
+                    useNodeVersion: 'current'
+                });
             } else if (command.includes('aio')) {
-                execResult = await execWithEnhancedPath(command);
+                execResult = await commandManager.execute(command, {
+                    enhancePath: true,
+                    configureTelemetry: true,
+                    useNodeVersion: 'auto'
+                });
             } else {
-                execResult = await execAsync(command);
+                execResult = await commandManager.execute(command);
             }
             const { stdout, stderr } = execResult;
             const duration = Date.now() - startTime;

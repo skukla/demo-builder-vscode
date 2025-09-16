@@ -45,6 +45,11 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     protected abstract getInitialData(): Promise<any>;
 
     /**
+     * Get the loading message to display while initializing
+     */
+    protected abstract getLoadingMessage(): string;
+
+    /**
      * Create or reveal the webview panel
      */
     protected async createOrRevealPanel(): Promise<vscode.WebviewPanel> {
@@ -90,7 +95,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         await setLoadingState(
             this.panel,
             () => this.getWebviewContent(),
-            'Initializing...',
+            this.getLoadingMessage(),
             this.logger
         );
 

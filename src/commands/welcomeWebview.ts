@@ -6,6 +6,8 @@ import { setLoadingState } from '../utils/loadingHTML';
 
 export class WelcomeWebviewCommand extends BaseCommand {
     private panel: vscode.WebviewPanel | undefined;
+    private messageIdCounter = 0;
+    private handshakeComplete = false;
 
     public async execute(): Promise<void> {
         try {
@@ -13,10 +15,12 @@ export class WelcomeWebviewCommand extends BaseCommand {
 
             // Check if panel already exists
             if (this.panel) {
+                this.logger.debug('[UI] Panel already exists, revealing it');
                 this.panel.reveal();
                 return;
             }
 
+            this.logger.debug('[UI] Creating new webview panel');
             // Create webview panel
             this.panel = vscode.window.createWebviewPanel(
                 'demoBuilderWelcome',
@@ -30,25 +34,51 @@ export class WelcomeWebviewCommand extends BaseCommand {
                     ]
                 }
             );
+            this.logger.debug('[UI] Panel created successfully');
 
             // Use the loading utility to manage the loading state and content transition
             // Call it IMMEDIATELY after panel creation
+            this.logger.debug('[UI] Setting loading state...');
             await setLoadingState(
                 this.panel,
                 () => this.getWebviewContent(),
                 'Loading Demo Builder...',
                 this.logger
             );
+            this.logger.debug('[UI] Loading state set, content should be loaded');
             
             // Handle messages from webview
             this.panel.webview.onDidReceiveMessage(
                 async message => {
                     this.logger.debug(`Welcome screen message:`, message);
+                    
+                    // Handle handshake protocol
+                    if (message.type === '__webview_ready__') {
+                        this.logger.debug('[UI] Received webview ready signal');
+                        // Send handshake complete
+                        await this.sendRawMessage({
+                            id: this.generateMessageId(),
+                            type: '__handshake_complete__',
+                            timestamp: Date.now()
+                        });
+                        this.handshakeComplete = true;
+                        this.logger.debug('[UI] Handshake complete');
+                        return;
+                    }
+                    
                     await this.handleWebviewMessage(message);
                 },
                 undefined,
                 this.context.subscriptions
             );
+            
+            // Initiate handshake protocol
+            this.logger.debug('[UI] Initiating handshake protocol');
+            await this.sendRawMessage({
+                id: this.generateMessageId(),
+                type: '__extension_ready__',
+                timestamp: Date.now()
+            });
 
             // Clean up on dispose
             this.panel.onDidDispose(
@@ -65,18 +95,28 @@ export class WelcomeWebviewCommand extends BaseCommand {
     }
 
     private async getWebviewContent(): Promise<string> {
+        this.logger.debug('[UI] getWebviewContent called');
         const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
         
         // Get URI for bundle
-        const bundleUri = this.panel!.webview.asWebviewUri(
-            vscode.Uri.file(path.join(webviewPath, 'welcome-bundle.js'))
+        const bundlePath = path.join(webviewPath, 'welcome-bundle.js');
+        this.logger.debug(`[UI] Bundle path: ${bundlePath}`);
+        
+        if (!this.panel) {
+            this.logger.error('[UI] Panel is undefined in getWebviewContent!');
+            throw new Error('Panel is undefined');
+        }
+        
+        const bundleUri = this.panel.webview.asWebviewUri(
+            vscode.Uri.file(bundlePath)
         );
+        this.logger.debug(`[UI] Bundle URI: ${bundleUri}`);
         
         const nonce = this.getNonce();
         const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
         
         // Build the HTML content
-        return `<!DOCTYPE html>
+        const html = `<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
@@ -169,6 +209,9 @@ export class WelcomeWebviewCommand extends BaseCommand {
             <script nonce="${nonce}" src="${bundleUri}"></script>
         </body>
         </html>`;
+        
+        this.logger.debug('[UI] getWebviewContent completed, returning HTML');
+        return html;
     }
 
     private getNonce(): string {
@@ -214,7 +257,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
 
             case 'create-new':
                 // Open wizard (welcome panel stays in background)
-                this.logger.info('[Project Setup] Starting new project creation');
+                this.logger.info('[Project Creation] Starting wizard from welcome screen');
                 await vscode.commands.executeCommand('demoBuilder.createProject');
                 // Don't dispose the welcome panel - keep it available for navigation back
                 break;
@@ -261,9 +304,25 @@ export class WelcomeWebviewCommand extends BaseCommand {
         }
     }
 
+    private generateMessageId(): string {
+        return `ext-${Date.now()}-${++this.messageIdCounter}`;
+    }
+    
+    private async sendRawMessage(message: any): Promise<void> {
+        if (this.panel) {
+            await this.panel.webview.postMessage(message);
+        }
+    }
+    
     private async sendMessage(type: string, payload?: any): Promise<void> {
         if (this.panel) {
-            await this.panel.webview.postMessage({ type, payload });
+            // Send message with proper format for new vscodeApi
+            await this.sendRawMessage({
+                id: this.generateMessageId(),
+                type,
+                payload,
+                timestamp: Date.now()
+            });
         }
     }
 

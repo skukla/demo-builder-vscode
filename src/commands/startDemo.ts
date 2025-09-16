@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
-import { ProcessManager } from '../utils/processManager';
+import { getExternalCommandManager } from '../extension';
 
 export class StartDemoCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -27,11 +27,11 @@ export class StartDemoCommand extends BaseCommand {
             await this.withProgress('Starting demo...', async (progress) => {
                 progress.report({ message: 'Checking port availability...' });
                 
-                const processManager = new ProcessManager(this.logger);
+                const commandManager = getExternalCommandManager();
                 const port = project.frontend?.port || 3000;
                 
                 // Check port availability
-                const portAvailable = await processManager.isPortAvailable(port);
+                const portAvailable = await commandManager.isPortAvailable(port);
                 if (!portAvailable) {
                     await this.showError(`Port ${port} is already in use`);
                     return;
