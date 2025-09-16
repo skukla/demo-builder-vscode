@@ -8,23 +8,34 @@ interface TimelineNavProps {
     steps: { id: WizardStep; name: string }[];
     currentStep: WizardStep;
     completedSteps: WizardStep[];
+    highestCompletedStepIndex: number;
     onStepClick?: (step: WizardStep) => void;
 }
 
-export function TimelineNav({ steps, currentStep, completedSteps, onStepClick }: TimelineNavProps) {
+export function TimelineNav({ steps, currentStep, completedSteps, highestCompletedStepIndex, onStepClick }: TimelineNavProps) {
     const currentStepIndex = steps.findIndex(s => s.id === currentStep);
 
     const getStepStatus = (step: WizardStep, index: number) => {
-        if (completedSteps.includes(step)) return 'completed';
-        if (step === currentStep) return 'current';
-        if (index < currentStepIndex) return 'completed';
+        const isCompleted = completedSteps.includes(step);
+        const isCurrent = step === currentStep;
+
+
+        if (isCurrent && isCompleted) return 'completed-current';
+        if (isCurrent && !isCompleted) return 'current';
+        if (isCompleted) return 'completed';
         return 'upcoming';
     };
 
+    const isStepClickable = (step: WizardStep, index: number) => {
+        // Can click on current step, completed steps, or any step up to the highest completed
+        return completedSteps.includes(step) ||
+               step === currentStep ||
+               index <= highestCompletedStepIndex;
+    };
+
     const handleStepClick = (step: WizardStep, index: number) => {
-        const status = getStepStatus(step.id, index);
-        if (onStepClick && (status === 'completed' || status === 'current')) {
-            onStepClick(step.id);
+        if (onStepClick && isStepClickable(step, index)) {
+            onStepClick(step);
         }
     };
 
@@ -44,19 +55,21 @@ export function TimelineNav({ steps, currentStep, completedSteps, onStepClick }:
                 {/* Steps */}
                 {steps.map((step, index) => {
                     const status = getStepStatus(step.id, index);
-                    const isClickable = status === 'completed' || status === 'current';
+                    const isClickable = isStepClickable(step.id, index);
                     
                     return (
                         <View key={step.id} position="relative">
                             {/* Step item */}
-                            <View
-                                marginBottom={index < steps.length - 1 ? "size-400" : undefined}
-                                UNSAFE_className={cn(
+                            <div
+                                style={{
+                                    marginBottom: index < steps.length - 1 ? 'var(--spectrum-global-dimension-size-400)' : undefined
+                                }}
+                                className={cn(
                                     isClickable ? 'cursor-pointer' : 'cursor-default',
                                     status === 'upcoming' ? 'opacity-50' : 'opacity-100',
                                     'transition-opacity'
                                 )}
-                                UNSAFE_onClick={() => handleStepClick(step, index)}
+                                onClick={() => handleStepClick(step.id, index)}
                             >
                                 <View
                                     UNSAFE_className={cn('flex', 'items-center', 'gap-3')}
@@ -67,7 +80,7 @@ export function TimelineNav({ steps, currentStep, completedSteps, onStepClick }:
                                         height="size-300"
                                         UNSAFE_className={getTimelineStepDotClasses(status)}
                                     >
-                                        {status === 'completed' ? (
+                                        {status === 'completed' || status === 'completed-current' ? (
                                             <CheckmarkCircle size="XS" UNSAFE_className={cn('text-white', 'icon-xs')} />
                                         ) : status === 'current' ? (
                                             <View
@@ -91,7 +104,7 @@ export function TimelineNav({ steps, currentStep, completedSteps, onStepClick }:
                                         {step.name}
                                     </Text>
                                 </View>
-                            </View>
+                            </div>
                             
                             {/* Dotted line connector after each step except last */}
                             {index < steps.length - 1 && (
