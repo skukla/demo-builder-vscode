@@ -94,6 +94,13 @@ export class DebugLogger {
         
         if (result.duration) {
             this.debugChannel.appendLine(`Duration: ${result.duration}ms`);
+            
+            // Warn about slow commands
+            if (result.duration > 3000) {
+                const warningMsg = `⚠️ WARNING: Slow command detected - took ${result.duration}ms`;
+                this.debugChannel.appendLine(warningMsg);
+                this.debug(warningMsg);
+            }
         }
         
         this.debugChannel.appendLine(`Exit Code: ${result.code ?? 'null'}`);

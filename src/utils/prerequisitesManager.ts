@@ -1,12 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { Logger } from './logger';
-import { execWithFnm, execWithEnhancedPath } from './shellHelper';
-
-const execAsync = promisify(exec);
+import { ExternalCommandManager } from './externalCommandManager';
+import { getExternalCommandManager } from '../extension';
 
 export interface PrerequisiteCheck {
     command: string;
@@ -181,18 +178,22 @@ export class PrerequisitesManager {
         };
 
         try {
+            const commandManager = getExternalCommandManager();
             // Use fnm wrapper for Node.js checks, enhanced path for others
             let checkResult;
             if (prereq.id === 'node' || prereq.id === 'npm' || prereq.perNodeVersion) {
-                checkResult = await execWithFnm(prereq.check.command);
+                checkResult = await commandManager.execute(prereq.check.command, {
+                    useNodeVersion: 'current'
+                });
             } else if (prereq.id === 'aio-cli') {
-                // Adobe CLI needs special handling to use the correct Node version
-                const { execAdobeCLI } = await import('./shellHelper');
-                checkResult = await execAdobeCLI(prereq.check.command);
+                // Use executeAdobeCLI for proper Node version management and caching
+                checkResult = await commandManager.executeAdobeCLI(prereq.check.command, {
+                    timeout: 5000  // 5 second timeout for version check
+                });
                 // Log raw output for debugging version detection
                 this.logger.debug(`Adobe CLI version check output: ${checkResult.stdout}`);
             } else {
-                checkResult = await execAsync(prereq.check.command);
+                checkResult = await commandManager.execute(prereq.check.command);
             }
             const { stdout } = checkResult;
             
@@ -228,8 +229,9 @@ export class PrerequisitesManager {
 
     private async checkPlugin(plugin: PrerequisitePlugin): Promise<{id: string; name: string; installed: boolean}> {
         try {
-            // Use enhanced path for Adobe CLI plugins
-            const { stdout } = await execWithEnhancedPath(plugin.check.command);
+            const commandManager = getExternalCommandManager();
+            // Use executeAdobeCLI for proper Node version management and caching
+            const { stdout } = await commandManager.executeAdobeCLI(plugin.check.command);
             const installed = plugin.check.contains ? 
                 stdout.includes(plugin.check.contains) : true;
             
@@ -318,7 +320,8 @@ export class PrerequisitesManager {
         // Get the actual installed version for a version family
         // This is used for display purposes after installation
         try {
-            const { stdout } = await execAsync(`fnm list-remote | grep "^v${versionFamily}\\." | head -1`);
+            const commandManager = getExternalCommandManager();
+            const { stdout } = await commandManager.execute(`fnm list-remote | grep "^v${versionFamily}\\." | head -1`);
             if (stdout) {
                 return stdout.trim().replace('v', '');
             }
@@ -339,6 +342,59 @@ export class PrerequisitesManager {
         // Node versions should come from components.json, not prerequisites.json
         // This method is deprecated - use ComponentRegistryManager.getRequiredNodeVersions() instead
         return ['20']; // Return LTS as default
+    }
+
+    async checkMultipleNodeVersions(
+        versionToComponentMapping: { [version: string]: string }
+    ): Promise<{ version: string; component: string; installed: boolean }[]> {
+        const results: { version: string; component: string; installed: boolean }[] = [];
+
+        try {
+            const commandManager = getExternalCommandManager();
+            const { stdout } = await commandManager.execute('fnm list');
+
+            // Parse installed versions from fnm list output
+            // Create mapping of major version to full version
+            const majorToFullVersion = new Map<string, string>();
+            const lines = stdout.split('\n');
+            for (const line of lines) {
+                // Match patterns like "* v20.19.5 default" or "v18.17.0"
+                const match = line.match(/\*?\s*v?(\d+)\.([\d.]+)/);
+                if (match) {
+                    const majorVersion = match[1];
+                    const fullVersion = `${match[1]}.${match[2]}`;
+
+                    // Store the full version for this major version
+                    // If there's already one, keep the default one (marked with *) or the first one
+                    if (!majorToFullVersion.has(majorVersion) || line.includes('*')) {
+                        majorToFullVersion.set(majorVersion, fullVersion);
+                    }
+                }
+            }
+
+            // Check each required version
+            for (const [version, componentName] of Object.entries(versionToComponentMapping)) {
+                const fullVersion = majorToFullVersion.get(version);
+                results.push({
+                    version: fullVersion ? `Node ${fullVersion}` : `Node ${version}`,
+                    component: componentName,
+                    installed: majorToFullVersion.has(version)
+                });
+            }
+
+        } catch (error) {
+            this.logger.warn(`Could not check installed Node versions: ${error}`);
+            // Return all as not installed if we can't check
+            for (const [version, componentName] of Object.entries(versionToComponentMapping)) {
+                results.push({
+                    version: `Node ${version}`,
+                    component: componentName,
+                    installed: false
+                });
+            }
+        }
+
+        return results;
     }
 
     async checkAllPrerequisites(

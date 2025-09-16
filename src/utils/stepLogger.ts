@@ -101,7 +101,23 @@ export class StepLogger {
      * Get the display name for a step ID
      */
     public getStepName(stepId: string): string {
-        return this.stepNames.get(stepId) || stepId;
+        // Normalize step ID (adobe-auth -> adobe-setup)
+        const normalizedId = stepId === 'adobe-auth' ? 'adobe-setup' : stepId;
+        
+        // Get the step name or create a fallback
+        const stepName = this.stepNames.get(normalizedId);
+        if (stepName) {
+            return stepName;
+        }
+        
+        // Create a readable fallback from the ID
+        const fallback = normalizedId
+            .replace(/-/g, ' ')
+            .split(' ')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+        
+        return fallback;
     }
     
     /**
@@ -154,18 +170,44 @@ export class StepLogger {
      * Log using a template with parameter substitution
      */
     public logTemplate(stepId: string, templateKey: string, params: Record<string, any> = {}, level: 'info' | 'debug' | 'error' | 'warn' = 'info') {
-        // Find template in operations or statuses
-        let template = this.templates.operations[templateKey] || 
-                      this.templates.statuses[templateKey] || 
-                      templateKey;
+        // Try to find template in both sections
+        const templatePath = templateKey.includes('.') ? templateKey.split('.') : [templateKey];
+        
+        let template: string | undefined;
+        if (templatePath.length === 2) {
+            // Path like 'operations.fetching'
+            const [section, key] = templatePath;
+            template = this.templates[section]?.[key];
+        } else {
+            // Single key - search both sections
+            template = this.templates.operations[templateKey] || 
+                      this.templates.statuses[templateKey];
+        }
+        
+        // Fallback: if template not found, log the key itself as a warning in debug
+        if (!template) {
+            this.logger.debug(`[StepLogger] Template not found: ${templateKey}, using fallback`);
+            // Create a reasonable fallback message
+            template = templateKey.replace(/-/g, ' ').replace(/_/g, ' ');
+            // Capitalize first letter
+            template = template.charAt(0).toUpperCase() + template.slice(1);
+            // Add any item parameter if provided
+            if (params.item) {
+                template = `${template}: ${params.item}`;
+            }
+        }
         
         // Replace all parameters in template
+        let finalMessage = template;
         Object.entries(params).forEach(([key, value]) => {
             const placeholder = `{${key}}`;
-            template = template.replace(new RegExp(placeholder, 'g'), value);
+            finalMessage = finalMessage.replace(new RegExp(placeholder, 'g'), value ?? '');
         });
         
-        this.log(stepId, template, level);
+        // Clean up any remaining placeholders
+        finalMessage = finalMessage.replace(/\{\w+\}/g, '');
+        
+        this.log(stepId, finalMessage, level);
     }
     
     /**

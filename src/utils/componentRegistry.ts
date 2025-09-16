@@ -85,7 +85,7 @@ export class ComponentRegistryManager {
         appBuilder?: string[]
     ): Promise<Set<string>> {
         const nodeVersions = new Set<string>();
-        
+
         // Check frontend node version
         if (frontendId) {
             const frontend = await this.getComponentById(frontendId);
@@ -93,7 +93,7 @@ export class ComponentRegistryManager {
                 nodeVersions.add(frontend.configuration.nodeVersion);
             }
         }
-        
+
         // Check backend node version
         if (backendId) {
             const backend = await this.getComponentById(backendId);
@@ -101,7 +101,7 @@ export class ComponentRegistryManager {
                 nodeVersions.add(backend.configuration.nodeVersion);
             }
         }
-        
+
         // Check dependencies node versions (e.g., API Mesh requires Node 18)
         if (dependencies) {
             for (const depId of dependencies) {
@@ -111,7 +111,7 @@ export class ComponentRegistryManager {
                 }
             }
         }
-        
+
         // Check app builder node versions (typically Node 22)
         if (appBuilder) {
             for (const appId of appBuilder) {
@@ -121,8 +121,56 @@ export class ComponentRegistryManager {
                 }
             }
         }
-        
+
         return nodeVersions;
+    }
+
+    async getNodeVersionToComponentMapping(
+        frontendId?: string,
+        backendId?: string,
+        dependencies?: string[],
+        externalSystems?: string[],
+        appBuilder?: string[]
+    ): Promise<{ [version: string]: string }> {
+        const mapping: { [version: string]: string } = {};
+
+        // Check frontend node version
+        if (frontendId) {
+            const frontend = await this.getComponentById(frontendId);
+            if (frontend?.configuration?.nodeVersion) {
+                mapping[frontend.configuration.nodeVersion] = frontend.name;
+            }
+        }
+
+        // Check backend node version
+        if (backendId) {
+            const backend = await this.getComponentById(backendId);
+            if (backend?.configuration?.nodeVersion) {
+                mapping[backend.configuration.nodeVersion] = backend.name;
+            }
+        }
+
+        // Check dependencies node versions
+        if (dependencies) {
+            for (const depId of dependencies) {
+                const dep = await this.getComponentById(depId);
+                if (dep?.configuration?.nodeVersion) {
+                    mapping[dep.configuration.nodeVersion] = dep.name;
+                }
+            }
+        }
+
+        // Check app builder node versions
+        if (appBuilder) {
+            for (const appId of appBuilder) {
+                const app = await this.getComponentById(appId);
+                if (app?.configuration?.nodeVersion) {
+                    mapping[app.configuration.nodeVersion] = app.name;
+                }
+            }
+        }
+
+        return mapping;
     }
 }
 

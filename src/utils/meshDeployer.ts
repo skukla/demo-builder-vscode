@@ -1,11 +1,9 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { Project } from '../types';
 import { Logger } from './logger';
-
-const execAsync = promisify(exec);
+import { getExternalCommandManager } from '../extension';
+import { ExternalCommandManager } from './externalCommandManager';
 
 export class MeshDeployer {
     private logger: Logger;
@@ -26,7 +24,8 @@ export class MeshDeployer {
 
             // Deploy mesh
             this.logger.info('Deploying API Mesh...');
-            const { stdout } = await execAsync(`aio api-mesh:create mesh.json`, {
+            const commandManager = getExternalCommandManager();
+            const { stdout } = await commandManager.executeAdobeCLI(`aio api-mesh:create mesh.json`, {
                 cwd: project.path
             });
 
@@ -105,7 +104,8 @@ export class MeshDeployer {
             
             await fs.writeFile(meshPath, JSON.stringify(meshConfig, null, 2));
             
-            const { stdout } = await execAsync(`aio api-mesh:update mesh.json`, {
+            const commandManager = getExternalCommandManager();
+            const { stdout } = await commandManager.executeAdobeCLI(`aio api-mesh:update mesh.json`, {
                 cwd: project.path
             });
 
@@ -126,7 +126,8 @@ export class MeshDeployer {
 
     public async delete(meshId: string): Promise<boolean> {
         try {
-            await execAsync(`aio api-mesh:delete ${meshId}`);
+            const commandManager = getExternalCommandManager();
+            await commandManager.executeAdobeCLI(`aio api-mesh:delete ${meshId}`);
             this.logger.info(`Mesh ${meshId} deleted`);
             return true;
         } catch (error) {

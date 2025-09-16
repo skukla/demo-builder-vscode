@@ -1,11 +1,9 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { Project } from '../types';
 import { Logger } from './logger';
-
-const execAsync = promisify(exec);
+import { getExternalCommandManager } from '../extension';
+import { ExternalCommandManager } from './externalCommandManager';
 
 export class FrontendInstaller {
     private logger: Logger;
@@ -24,7 +22,8 @@ export class FrontendInstaller {
 
             // Clone repository
             this.logger.info('Cloning frontend repository...');
-            await execAsync(`git clone ${this.FRONTEND_REPO} "${frontendPath}"`);
+            const commandManager = getExternalCommandManager();
+            await commandManager.execute(`git clone ${this.FRONTEND_REPO} "${frontendPath}"`);
             
             // Copy environment file
             const projectEnv = path.join(project.path, '.env');
@@ -50,9 +49,11 @@ export class FrontendInstaller {
 
             // Pull latest changes
             if (version) {
-                await execAsync(`git checkout ${version}`, { cwd: frontendPath });
+                const commandManager = getExternalCommandManager();
+                await commandManager.execute(`git checkout ${version}`, { cwd: frontendPath });
             } else {
-                await execAsync('git pull', { cwd: frontendPath });
+                const commandManager = getExternalCommandManager();
+                await commandManager.execute('git pull', { cwd: frontendPath });
             }
             
             this.logger.info('Frontend updated successfully');
@@ -70,7 +71,8 @@ export class FrontendInstaller {
             }
 
             this.logger.info('Installing frontend dependencies...');
-            await execAsync('npm install', { 
+            const commandManager = getExternalCommandManager();
+            await commandManager.execute('npm install', { 
                 cwd: frontendPath,
                 env: { ...process.env, NODE_ENV: 'development' }
             });
@@ -91,7 +93,8 @@ export class FrontendInstaller {
 
             // Install demo inspector package
             this.logger.info('Installing Demo Inspector...');
-            await execAsync('npm install @adobe/demo-inspector', { 
+            const commandManager = getExternalCommandManager();
+            await commandManager.execute('npm install @adobe/demo-inspector', { 
                 cwd: frontendPath 
             });
             
