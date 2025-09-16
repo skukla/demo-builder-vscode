@@ -52,12 +52,11 @@ webviews/
 1. **WelcomeStep**: Project name and template selection
 2. **ComponentSelectionStep**: Choose project components
 3. **PrerequisitesStep**: Check and install requirements
-4. **AdobeAuthStep**: Adobe authentication
-5. **OrgSelectionStep**: Select Adobe organization
-6. **ProjectSelectionStep**: Choose Adobe project
-7. **CommerceConfigStep**: Commerce-specific settings
-8. **ReviewStep**: Review selections
-9. **CreatingStep**: Project creation progress
+4. **AdobeAuthStep**: Adobe authentication (organization is selected during sign-in)
+5. **AdobeProjectStep**: Select Adobe project within authenticated organization
+6. **CommerceConfigStep**: Commerce-specific settings
+7. **ReviewStep**: Review selections
+8. **CreatingStep**: Project creation progress
 
 ### PrerequisitesStep Implementation
 
@@ -262,6 +261,119 @@ const updateExtensionState = (updates: Partial<WizardState>) => {
         state: { ...state, ...updates }
     });
 };
+```
+
+## Selection Pattern: Backend Call on Continue
+
+### Overview
+The Demo Builder uses a consistent "Backend Call on Continue" pattern for all selection steps (Project, Workspace, etc.). This pattern provides instant UI feedback while maintaining reliable backend synchronization.
+
+### Pattern Implementation
+
+#### 1. **Selection Handler - UI Only**
+```typescript
+const selectProject = (project: Project) => {
+    // Update UI state immediately - no backend call
+    updateState({
+        adobeProject: {
+            id: project.id,
+            name: project.name,
+            title: project.title,
+            description: project.description
+        }
+    });
+};
+```
+
+#### 2. **Backend Call on Continue**
+Backend operations happen in the wizard container when Continue is clicked:
+
+```typescript
+// In WizardContainer.tsx
+const goNext = async () => {
+    try {
+        setIsConfirmingSelection(true);
+
+        if (state.currentStep === 'adobe-project' && state.adobeProject?.id) {
+            const result = await vscode.request('select-project', {
+                projectId: state.adobeProject.id
+            });
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to select project');
+            }
+        }
+
+        setIsConfirmingSelection(false);
+        goToStep(nextStep.id);
+    } catch (error) {
+        setIsConfirmingSelection(false);
+        // Show error feedback
+    }
+};
+```
+
+#### 3. **Loading States**
+- **`isConfirmingSelection`**: Shows overlay during backend operations
+- **Content remains visible**: No blank screens during loading
+- **All buttons disabled**: Prevents user navigation during operations
+
+### Benefits
+1. **Instant Feedback**: Clicking selections gives immediate visual response
+2. **Clear Commitment**: Continue button is the confirmation point
+3. **Resilient Error Handling**: Errors happen at expected moments
+4. **Simple State Management**: No background operations to track
+5. **Consistent UX**: Same pattern across all selection steps
+
+### Layout Standardization
+All selection steps use consistent layout:
+
+```typescript
+// Left panel - content area (constrained to 800px)
+<div style={{
+    maxWidth: '800px',
+    width: '100%',
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column'
+}}>
+
+// Right panel - configuration summary (flexible)
+<div style={{
+    flex: '1',
+    padding: '24px',
+    backgroundColor: 'var(--spectrum-global-color-gray-75)',
+    borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
+}}>
+```
+
+### Loading Overlay Pattern
+Clean loading feedback without verbose text:
+
+```typescript
+{isConfirmingSelection && (
+    <div style={{
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000
+    }}>
+        <div style={{
+            backgroundColor: 'var(--spectrum-global-color-gray-50)',
+            padding: '24px',
+            borderRadius: '50%',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        }}>
+            {/* Simple spinner - no text */}
+            <div className="spinner"></div>
+        </div>
+    </div>
+)}
 ```
 
 ## Performance Optimizations

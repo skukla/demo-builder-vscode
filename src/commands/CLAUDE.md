@@ -63,8 +63,18 @@ class CreateProjectWebviewCommand {
 }
 ```
 
-**Message Protocol**:
+**Message Protocol Evolution**:
+
+Starting with v1.5.0, the message handling was fundamentally improved to fix critical async handler resolution issues.
+
+**Legacy Pattern (Pre v1.5.0)**:
 ```typescript
+// ❌ Problematic - handlers not awaited
+panel.webview.onDidReceiveMessage(message => {
+    // This returned Promise objects to UI instead of resolved values
+    return this.handleMessage(message);
+});
+
 // Extension → Webview
 panel.webview.postMessage({
     type: 'prerequisiteStatus',
@@ -76,6 +86,52 @@ vscode.postMessage({
     type: 'installPrerequisite',
     prereqId: 'node',
     version: '20.11.0'
+});
+```
+
+**Modern Pattern (v1.5.0+)**:
+```typescript
+// ✅ Fixed - handlers properly awaited via WebviewCommunicationManager
+class CreateProjectWebviewCommand extends BaseWebviewCommand {
+    protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
+        // Now properly handles async responses
+        comm.on('get-projects', async (payload) => {
+            return await this.adobeAuth.getProjects(payload.orgId);
+        });
+
+        comm.on('select-project', async (payload) => {
+            return await this.adobeAuth.selectProject(payload.projectId);
+        });
+    }
+}
+```
+
+**Backend Call on Continue Pattern**:
+The major UX change in v1.5.0 implements the "Backend Call on Continue" pattern, where:
+
+1. **Selection UI Updates**: Immediate visual feedback on selection
+2. **Backend Calls Deferred**: Actual backend operations happen when user clicks Continue
+3. **Loading Overlay**: Simple spinner during backend confirmation
+4. **Error Recovery**: Clear error handling at the commitment point
+
+```typescript
+// UI-only selection handlers
+comm.on('project-selected', (payload) => {
+    // Immediate UI update - no backend call
+    this.updateUIState({
+        selectedProject: payload.project
+    });
+});
+
+// Backend calls during Continue action
+comm.on('continue-step', async (payload) => {
+    if (payload.step === 'adobe-project' && payload.selectedProject) {
+        // Now make the actual backend call
+        const result = await this.adobeAuth.selectProject(payload.selectedProject.id);
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to select project');
+        }
+    }
 });
 ```
 
@@ -319,6 +375,41 @@ try {
 }
 ```
 
+## Timeout Handling in Commands
+
+**Critical Issue**: Adobe CLI commands often succeed but timeout due to restrictive timeout values.
+
+**Solution Pattern**:
+```typescript
+import { TIMEOUT_CONFIG } from '../utils/timeoutConfig';
+
+class CreateProjectWebviewCommand extends BaseWebviewCommand {
+    protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
+        comm.on('select-project', async (payload) => {
+            try {
+                // Use appropriate timeout for operation
+                const result = await this.adobeAuth.selectProject(payload.projectId, {
+                    timeout: TIMEOUT_CONFIG.CONFIG_WRITE  // 10 seconds
+                });
+                return { success: true, data: result };
+            } catch (error) {
+                // Check for success despite timeout
+                if (error.stdout && error.stdout.includes('Project selected :')) {
+                    return { success: true, message: 'Project selected successfully' };
+                }
+                throw error;
+            }
+        });
+    }
+}
+```
+
+**Key Patterns**:
+1. **Use TIMEOUT_CONFIG**: Centralized timeout management
+2. **Success Detection**: Check stdout for success indicators in catch blocks
+3. **Graceful Degradation**: Continue operation even if timeout occurred but command succeeded
+4. **User Feedback**: Clear loading states during potentially slow operations
+
 ## Testing Commands
 
 ### Manual Testing Checklist
@@ -329,6 +420,7 @@ try {
 - [ ] Progress shown correctly
 - [ ] Cancellation works
 - [ ] State persisted properly
+- [ ] Timeout scenarios handled (Adobe CLI commands)
 
 ### Common Issues
 

@@ -162,6 +162,26 @@ demo-builder-vscode/
 
 ## Recent Improvements
 
+### v1.5.0 (2025-01-16) - Backend Call on Continue & Critical Fixes
+- **Backend Call on Continue Pattern**: Major UX improvement for selection steps
+  - UI updates immediate, backend calls deferred to Continue button
+  - Eliminates loading delays during exploration
+  - Clear error handling at commitment points
+  - Consistent pattern across project/workspace selection
+- **Critical Async Handler Fix**: Resolved "Error Loading Projects" issue
+  - WebviewCommunicationManager now properly awaits async handlers
+  - Fixed Promise objects being sent to UI instead of resolved values
+  - Eliminates UI errors despite successful backend operations
+- **Adobe CLI Timeout Solutions**: Addressed frequent timeout failures
+  - Increased CONFIG_WRITE timeout from 5000ms to 10000ms
+  - Added success detection in timeout scenarios via stdout parsing
+  - Commands now succeed reliably despite Adobe CLI slowness
+- **UI/UX Standardization**: Consistent layout and interaction patterns
+  - Standardized 800px content width across selection steps
+  - Simple spinner overlays replace verbose loading text
+  - Disabled buttons during loading operations
+  - Eliminated blank screens during transitions
+
 ### v1.4.0 (2025-01-11)
 - **Race Condition Solutions**: Comprehensive 4-phase implementation
   - WebviewCommunicationManager with handshake protocol
@@ -191,11 +211,23 @@ demo-builder-vscode/
 - Enhanced error message parsing for Adobe I/O CLI
 - Comprehensive documentation updates
 
+## New Documentation (v1.5.0)
+
+### Design Patterns
+- **[Backend Call on Continue Pattern](docs/patterns/selection-pattern.md)**: Complete guide to the new selection UX pattern
+- **[State Management Patterns](docs/patterns/state-management.md)**: Comprehensive state handling strategies
+- **[Adobe CLI Timeout Troubleshooting](docs/troubleshooting/adobe-cli-timeouts.md)**: Debugging and fixing timeout issues
+
+### Key Implementation Files
+- **[WebView Integration](src/webviews/CLAUDE.md)**: Updated with Backend Call on Continue documentation
+- **[Utilities](src/utils/CLAUDE.md)**: Added async handler resolution and timeout configuration docs
+- **[Commands](src/commands/CLAUDE.md)**: Updated message handling patterns and timeout strategies
+
 ## Future Enhancements
 
 - Automated testing framework
 - Performance monitoring
-- Enhanced error reporting  
+- Enhanced error reporting
 - Accessibility improvements
 - Windows/Linux platform support
 

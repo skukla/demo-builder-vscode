@@ -463,18 +463,40 @@ class StateCoordinator {
 - State version tracking
 - Comprehensive logging
 
-**Implementation**:
+**Critical Fix - Async Handler Resolution**:
+Prior to v1.5.0, message handlers that returned Promises were not being awaited, causing the UI to receive Promise objects instead of resolved values. This led to "Error Loading Projects" despite successful backend operations.
+
+**Fixed Implementation**:
 ```typescript
 class WebviewCommunicationManager {
+    // CRITICAL: Now properly awaits async handlers
+    private async handleWebviewMessage(message: any): Promise<void> {
+        const handler = this.messageHandlers.get(message.type);
+        if (handler) {
+            try {
+                // ✅ Fixed: Now awaits the handler result
+                const result = await handler(message.payload);
+
+                if (message.expectsResponse && message.id) {
+                    this.sendResponse(message.id, result);
+                }
+            } catch (error) {
+                if (message.expectsResponse && message.id) {
+                    this.sendError(message.id, error);
+                }
+            }
+        }
+    }
+
     // Initialize with handshake
     async initialize(): Promise<void>
-    
+
     // Send message (fire-and-forget)
     async sendMessage(type: string, payload?: any): Promise<void>
-    
+
     // Send request and await response
     async request<T>(type: string, payload?: any): Promise<T>
-    
+
     // Register message handler
     on(type: string, handler: (payload: any) => any): void
 }
@@ -485,6 +507,19 @@ class WebviewCommunicationManager {
 2. Webview responds with `__webview_ready__`
 3. Extension confirms with `__handshake_complete__`
 4. Messages queued until handshake complete
+
+**Common Issue Pattern**:
+```typescript
+// ❌ Before fix - returned Promise object
+this.manager.on('get-projects', (payload) => {
+    return this.adobeAuth.getProjects(payload.orgId); // Returns Promise
+});
+
+// ✅ After fix - properly awaited
+this.manager.on('get-projects', async (payload) => {
+    return await this.adobeAuth.getProjects(payload.orgId); // Returns actual data
+});
+```
 
 ### BaseWebviewCommand
 
@@ -623,6 +658,68 @@ jest.mock('./shellExecutor', () => ({
 4. Document usage patterns
 5. Add unit tests
 6. Update this documentation
+
+---
+
+## Timeout Configuration
+
+**Purpose**: Centralized timeout management for Adobe CLI operations
+
+**Key File**: `timeoutConfig.ts`
+
+**Configuration Values**:
+```typescript
+export const TIMEOUT_CONFIG = {
+    // Adobe CLI operations
+    AUTH_CHECK: 8000,        // Checking authentication status
+    ORG_FETCH: 12000,        // Fetching organizations
+    PROJECT_FETCH: 15000,    // Fetching projects
+    WORKSPACE_FETCH: 10000,  // Fetching workspaces
+    CONFIG_WRITE: 10000,     // Writing config values (increased for project selection)
+
+    // Command execution
+    QUICK_COMMAND: 5000,     // Fast commands (version checks)
+    LONG_COMMAND: 30000,     // Installation/setup commands
+
+    // Network operations
+    DOWNLOAD: 60000,         // File downloads
+    API_REQUEST: 8000,       // API requests
+
+    // UI operations
+    UI_RESPONSE: 3000,       // UI responsiveness
+    LOADING_MIN: 1500        // Minimum loading display time
+};
+```
+
+**Critical Adobe CLI Timeout Issue**:
+Adobe CLI commands (`aio console project select`) often succeed but timeout at 5 seconds despite taking 8-10 seconds to complete. The fix involves:
+
+1. **Increased Timeout**: Raised CONFIG_WRITE from 5000ms to 10000ms
+2. **Success Detection**: Check stdout for success indicators even in timeout scenarios
+
+**Success Detection Pattern**:
+```typescript
+// In catch block - detect success despite timeout
+catch (error) {
+    const err = error as any;
+    if (err.stdout && err.stdout.includes('Project selected :')) {
+        // Command succeeded despite timeout
+        logger.info('Project selection succeeded (detected via stdout)');
+        return true;
+    }
+    throw error;
+}
+```
+
+**Usage Pattern**:
+```typescript
+import { TIMEOUT_CONFIG } from './timeoutConfig';
+
+// Use appropriate timeout for operation type
+const result = await executeCommand(command, {
+    timeout: TIMEOUT_CONFIG.CONFIG_WRITE
+});
+```
 
 ---
 
