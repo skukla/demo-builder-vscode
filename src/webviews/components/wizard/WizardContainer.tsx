@@ -328,7 +328,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
             case 'adobe-workspace':
                 return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
-            case 'component-config':
+            case 'settings':
                 return <ComponentConfigStep {...props} />;
             case 'review':
                 return <ReviewStep {...props} />;

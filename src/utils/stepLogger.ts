@@ -32,7 +32,7 @@ export class StepLogger {
             'adobe-context': 'Adobe Setup',
             'org-selection': 'Adobe Setup',
             'project-selection': 'Adobe Setup',
-            'component-config': 'Configuration',
+            'settings': 'Settings Collection',
             'commerce-config': 'Configuration',  // Legacy
             'review': 'Review',
             'creating': 'Creating'

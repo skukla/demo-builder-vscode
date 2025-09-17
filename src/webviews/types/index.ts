@@ -13,7 +13,7 @@ export type WizardStep =
     | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
-    | 'component-config'  // Component-specific configuration
+    | 'settings'  // Component-specific settings collection
     | 'commerce-config'  // Kept for compatibility
     | 'review'
     | 'creating';

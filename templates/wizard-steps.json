@@ -31,8 +31,8 @@
       "enabled": true
     },
     {
-      "id": "component-config",
-      "name": "Component Configuration",
+      "id": "settings",
+      "name": "Settings Collection",
       "enabled": true
     },
     {
