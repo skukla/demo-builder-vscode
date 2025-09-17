@@ -321,7 +321,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             case 'component-selection':
                 return <ComponentSelectionStep {...props} componentsData={componentsData} />;
             case 'prerequisites':
-                return <PrerequisitesStep {...props} requiredNodeVersions={getRequiredNodeVersions()} componentsData={componentsData} />;
+                return <PrerequisitesStep {...props} requiredNodeVersions={getRequiredNodeVersions()} componentsData={componentsData} currentStep={state.currentStep} />;
             case 'adobe-auth':
                 return <AdobeAuthStep {...props} />;
             case 'adobe-project':

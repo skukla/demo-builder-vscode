@@ -22,6 +22,7 @@ interface PrerequisitesStepProps {
     onBack: () => void;
     setCanProceed: (canProceed: boolean) => void;
     componentsData?: any;
+    currentStep?: string;
 }
 
 // This function is now deprecated - prerequisites come from the backend
@@ -39,7 +40,7 @@ const getDefaultPrerequisites = (): PrerequisiteCheck[] => {
     ];
 };
 
-export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
+export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesStepProps) {
     const [checks, setChecks] = useState<PrerequisiteCheck[]>(getDefaultPrerequisites());
     const [isChecking, setIsChecking] = useState(false);
     const [installingIndex, setInstallingIndex] = useState<number | null>(null);
@@ -211,7 +212,7 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
             .filter(check => !check.isOptional)
             .every(check => check.status === 'success' || check.status === 'warning');
         setCanProceed(allRequired);
-        
+
         // Auto-scroll to bottom of container when all prerequisites succeed
         const allSuccess = checks.length > 0 && checks.every(check => check.status === 'success');
         if (allSuccess && scrollContainerRef.current) {
@@ -225,6 +226,19 @@ export function PrerequisitesStep({ setCanProceed }: PrerequisitesStepProps) {
             }, 200);
         }
     }, [checks, setCanProceed]);
+
+    // Trigger prerequisites check when navigating back to this step
+    useEffect(() => {
+        // When navigating back to prerequisites, restart the check
+        if (currentStep === 'prerequisites' && !isChecking) {
+            // Small delay to ensure UI has settled
+            const timer = setTimeout(() => {
+                checkPrerequisites();
+            }, 100);
+
+            return () => clearTimeout(timer);
+        }
+    }, [currentStep]);  // Re-run when currentStep changes
 
     const checkPrerequisites = () => {
         setIsChecking(true);
