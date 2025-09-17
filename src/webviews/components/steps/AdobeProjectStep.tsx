@@ -168,6 +168,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                                             marginBottom="size-200"
                                             width="100%"
                                             isQuiet
+                                            autoFocus
                                             UNSAFE_className="search-field-custom"
                                         />
                                         <style>{`

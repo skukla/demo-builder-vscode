@@ -52,6 +52,19 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                 if (data.length === 1 && !state.adobeWorkspace?.id) {
                     selectWorkspace(data[0]);
                 }
+
+                // Auto-select Stage workspace if available and nothing selected
+                if (!state.adobeWorkspace?.id && data.length > 1) {
+                    // Look for Stage workspace (case-insensitive)
+                    const stageWorkspace = data.find(ws =>
+                        ws.name?.toLowerCase().includes('stage') ||
+                        ws.title?.toLowerCase().includes('stage')
+                    );
+
+                    if (stageWorkspace) {
+                        selectWorkspace(stageWorkspace);
+                    }
+                }
             } else if (data && data.error) {
                 setError(data.error);
                 setIsLoading(false);

@@ -79,6 +79,7 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
                                         width="size-300"
                                         height="size-300"
                                         UNSAFE_className={getTimelineStepDotClasses(status)}
+                                        UNSAFE_style={{ flexShrink: 0 }}
                                     >
                                         {status === 'completed' || status === 'completed-current' ? (
                                             <CheckmarkCircle size="XS" UNSAFE_className={cn('text-white', 'icon-xs')} />
