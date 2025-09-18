@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
     View, 
     Heading, 
@@ -27,16 +27,22 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoadingProjects, setIsLoadingProjects] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [searchQuery, setSearchQuery] = useState('');
-    
+    const [searchQuery, setSearchQuery] = useState(state.projectSearchFilter || '');
+
     useEffect(() => {
         // Always load projects since organization is set during authentication
         loadProjects();
     }, []);
-    
+
+    // Save search query to wizard state for persistence across navigation and reloads
+    useEffect(() => {
+        updateState({ projectSearchFilter: searchQuery });
+    }, [searchQuery, updateState]);
+
     useEffect(() => {
         setCanProceed(!!state.adobeProject?.id);
     }, [state.adobeProject, setCanProceed]);
+
     
     // Listen for projects from extension
     useEffect(() => {
@@ -115,7 +121,8 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                 width: '100%',
                 padding: '24px',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
+                minWidth: 0  // Prevent flex shrinking issues
             }}>
                 <Heading level={2} marginBottom="size-300">
                     {state.adobeOrg?.name ? `Projects in ${state.adobeOrg.name}` : 'Select Adobe Project'}
@@ -159,46 +166,51 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                     </Well>
                 ) : (
                     <>
-                                {projects.length > 5 && (
-                                    <div style={{ position: 'relative' }}>
-                                        <SearchField
-                                            placeholder="Type to filter projects..."
-                                            value={searchQuery}
-                                            onChange={setSearchQuery}
-                                            marginBottom="size-200"
-                                            width="100%"
-                                            isQuiet
-                                            autoFocus
-                                            UNSAFE_className="search-field-custom"
-                                        />
-                                        <style>{`
-                                            .search-field-custom .spectrum-Textfield-input {
-                                                padding-left: 40px !important;
-                                            }
-                                            .search-field-custom input[type="search"] {
-                                                padding-left: 40px !important;
-                                            }
-                                            .search-field-custom .spectrum-Search-input {
-                                                padding-left: 40px !important;
-                                            }
-                                        `}</style>
-                                    </div>
+                        {projects.length > 5 && (
+                            <div style={{ position: 'relative' }}>
+                                <SearchField
+                                    placeholder="Type to filter projects..."
+                                    value={searchQuery}
+                                    onChange={setSearchQuery}
+                                    marginBottom="size-200"
+                                    width="100%"
+                                    isQuiet
+                                    autoFocus={!state.adobeProject?.id}
+                                    UNSAFE_className="search-field-custom"
+                                />
+                                <style>{`
+                                    .search-field-custom .spectrum-Textfield-input {
+                                        padding-left: 40px !important;
+                                    }
+                                    .search-field-custom input[type="search"] {
+                                        padding-left: 40px !important;
+                                    }
+                                    .search-field-custom .spectrum-Search-input {
+                                        padding-left: 40px !important;
+                                    }
+                                `}</style>
+                                {searchQuery && (
+                                    <Text UNSAFE_className="text-sm text-gray-600" marginBottom="size-100">
+                                        Showing {filteredProjects.length} of {projects.length} projects
+                                    </Text>
                                 )}
+                            </div>
+                        )}
 
-                                <ListView
-                                    items={filteredProjects}
-                                    selectionMode="single"
-                                    selectedKeys={state.adobeProject?.id ? [state.adobeProject.id] : []}
-                                    onSelectionChange={(keys) => {
-                                        const projectId = Array.from(keys)[0] as string;
-                                        const project = projects.find(p => p.id === projectId);
-                                        if (project) {
-                                            selectProject(project);
-                                        }
-                                    }}
-                                    height="100%"
-                                    UNSAFE_style={{ flex: 1 }}
-                                >
+                        <ListView
+                            items={filteredProjects}
+                            selectionMode="single"
+                            selectedKeys={state.adobeProject?.id ? [state.adobeProject.id] : []}
+                            onSelectionChange={(keys) => {
+                                const projectId = Array.from(keys)[0] as string;
+                                const project = projects.find(p => p.id === projectId);
+                                if (project) {
+                                    selectProject(project);
+                                }
+                            }}
+                            height="100%"
+                            UNSAFE_style={{ flex: 1 }}
+                        >
                                     {(item) => (
                                         <Item key={item.id} textValue={item.title || item.name}>
                                             <Text>{item.title || item.name}</Text>
@@ -209,15 +221,15 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                                             )}
                                         </Item>
                                     )}
-                                </ListView>
+                        </ListView>
 
-                                {filteredProjects.length === 0 && searchQuery && (
-                                    <Text UNSAFE_className="text-sm text-gray-600" marginTop="size-200">
-                                        No projects match "{searchQuery}"
-                                    </Text>
-                                )}
-                            </>
+                        {filteredProjects.length === 0 && searchQuery && (
+                            <Text UNSAFE_className="text-sm text-gray-600" marginTop="size-200">
+                                No projects match "{searchQuery}"
+                            </Text>
                         )}
+                    </>
+                )}
 
             </div>
             
