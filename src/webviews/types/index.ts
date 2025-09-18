@@ -30,6 +30,7 @@ export interface WizardState {
     adobeWorkspace?: Workspace;  // New field for workspace
     commerceConfig?: CommerceConfig;  // Kept for compatibility
     creationProgress?: CreationProgress;
+    projectSearchFilter?: string;  // Filter persistence for project selection
 }
 
 export type ProjectTemplate = 'commerce-paas' | 'commerce-saas' | 'aem-commerce';
