@@ -27,10 +27,9 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
     };
 
     const isStepClickable = (step: WizardStep, index: number) => {
-        // Can click on current step, completed steps, or any step up to the highest completed
-        return completedSteps.includes(step) ||
-               step === currentStep ||
-               index <= highestCompletedStepIndex;
+        // Only allow clicking on current step or backward navigation
+        // Forward navigation must use Continue button
+        return index <= currentStepIndex;
     };
 
     const handleStepClick = (step: WizardStep, index: number) => {
