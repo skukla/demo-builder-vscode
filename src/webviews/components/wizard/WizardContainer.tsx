@@ -104,11 +104,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         return WIZARD_STEPS.findIndex(step => step.id === state.currentStep);
     }, [state.currentStep]);
 
-    const goToStep = useCallback((step: WizardStep) => {
-        console.log('goToStep called with:', step);
-        const currentIndex = getCurrentStepIndex();
-        const targetIndex = WIZARD_STEPS.findIndex(s => s.id === step);
-
+    // Internal navigation function used by both timeline and Continue button
+    const navigateToStep = useCallback((step: WizardStep, targetIndex: number, currentIndex: number) => {
         setAnimationDirection(targetIndex > currentIndex ? 'forward' : 'backward');
         setIsTransitioning(true);
 
@@ -140,14 +137,16 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             setState(prev => {
                 const newState = { ...prev, currentStep: step };
 
-                // If going back before workspace selection, clear workspace
+                // Clear selections only when going BEFORE selection steps (not TO them)
                 const workspaceIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-workspace');
+                const projectIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-project');
+
+                // Clear workspace when going before workspace step
                 if (workspaceIndex !== -1 && targetIndex < workspaceIndex) {
                     newState.adobeWorkspace = undefined;
                 }
 
-                // If going back before project selection, clear project
-                const projectIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-project');
+                // Clear project when going before project step
                 if (projectIndex !== -1 && targetIndex < projectIndex) {
                     newState.adobeProject = undefined;
                 }
@@ -166,7 +165,23 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 setIsTransitioning(false);
             }, 300);
         }
-    }, [getCurrentStepIndex]);
+    }, []);
+
+    // Timeline navigation (backward only)
+    const goToStepViaTimeline = useCallback((step: WizardStep) => {
+        console.log('Timeline navigation to:', step);
+        const currentIndex = getCurrentStepIndex();
+        const targetIndex = WIZARD_STEPS.findIndex(s => s.id === step);
+
+        // Only allow backward navigation via timeline
+        if (targetIndex > currentIndex) {
+            console.log('Forward navigation must use Continue button');
+            return;
+        }
+
+        // Use internal navigation function
+        navigateToStep(step, targetIndex, currentIndex);
+    }, [getCurrentStepIndex, navigateToStep]);
 
     const goNext = useCallback(async () => {
         const currentIndex = getCurrentStepIndex();
@@ -211,7 +226,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 setIsConfirmingSelection(false);
 
                 // Proceed to next step now that backend is synchronized
-                goToStep(nextStep.id);
+                navigateToStep(nextStep.id, currentIndex + 1, currentIndex);
 
             } catch (error) {
                 console.error('Failed to proceed to next step:', error);
@@ -225,7 +240,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         } else {
             console.log('Already at last step');
         }
-    }, [state.currentStep, state.adobeProject, state.adobeWorkspace, completedSteps, canProceed, getCurrentStepIndex, goToStep]);
+    }, [state.currentStep, state.adobeProject, state.adobeWorkspace, completedSteps, canProceed, getCurrentStepIndex, navigateToStep]);
 
     const handleCancel = useCallback(() => {
         vscode.postMessage('cancel');
@@ -237,9 +252,10 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             // On first step, go back means cancel and return to welcome
             handleCancel();
         } else if (currentIndex > 0) {
-            goToStep(WIZARD_STEPS[currentIndex - 1].id);
+            const targetIndex = currentIndex - 1;
+            navigateToStep(WIZARD_STEPS[targetIndex].id, targetIndex, currentIndex);
         }
-    }, [getCurrentStepIndex, goToStep, handleCancel]);
+    }, [getCurrentStepIndex, navigateToStep, handleCancel]);
 
     const updateState = useCallback((updates: Partial<WizardState>) => {
         setState(prev => ({ ...prev, ...updates }));
@@ -363,7 +379,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                         currentStep={state.currentStep}
                         completedSteps={completedSteps}
                         highestCompletedStepIndex={highestCompletedStepIndex}
-                        onStepClick={goToStep}
+                        onStepClick={goToStepViaTimeline}
                     />
                 </View>
 
