@@ -92,15 +92,23 @@ export class ProgressUnifier {
     }
     
     private resolveCommands(step: InstallStep, options?: { nodeVersion?: string }): string[] {
+        let commands: string[] = [];
         if (step.commands) {
-            return step.commands;
+            commands = step.commands;
+        } else if (step.commandTemplate && options?.nodeVersion) {
+            commands = [step.commandTemplate.replace(/{version}/g, options.nodeVersion)];
         }
-        
-        if (step.commandTemplate && options?.nodeVersion) {
-            return [step.commandTemplate.replace(/{version}/g, options.nodeVersion)];
+
+        // If a specific Node version is requested and the command isn't already using fnm,
+        // run the command under that version using `fnm exec --using <version>`.
+        if (options?.nodeVersion && commands.length > 0) {
+            commands = commands.map(cmd => {
+                if (cmd.startsWith('fnm ')) return cmd;
+                return `fnm exec --using ${options.nodeVersion} ${cmd}`;
+            });
         }
-        
-        return [];
+
+        return commands;
     }
     
     private resolveStepName(step: InstallStep, options?: { nodeVersion?: string }): string {

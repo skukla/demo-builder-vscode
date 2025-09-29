@@ -232,14 +232,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             return { success: true };
         });
 
-        comm.on('continue-prerequisites', async () => {
+        comm.on('continue-prerequisites', async (data: any) => {
             this.logger.debug('Continuing with prerequisites');
-            await this.continueWithPrerequisites();
+            await this.continueWithPrerequisites(data?.fromIndex);
             return { success: true };
         });
 
         comm.on('install-prerequisite', async (data: any) => {
-            await this.handleInstallPrerequisite(data.prereqId, data.version);
+            // Webview sends { index, id, name }
+            await this.handleInstallPrerequisite(data.index, data.version);
             return { success: true };
         });
 
@@ -460,8 +461,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
             // Load config and get prerequisites
             const config = await this.prereqManager.loadConfig();
-            // Get prerequisites based on component selection or use all
-            const prerequisites = config.prerequisites || [];
+            // Get prerequisites and resolve dependency order
+            const prerequisites = this.prereqManager.resolveDependencies(config.prerequisites || []);
             this.currentPrerequisites = prerequisites;
 
             // Initialize state tracking
@@ -519,17 +520,45 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 // Check prerequisite
                 const checkResult = await this.prereqManager.checkPrerequisite(prereq);
 
-                // Store state for this prerequisite
-                this.currentPrerequisiteStates.set(i, {
-                    prereq,
-                    result: checkResult
-                });
-
                 // For Node.js, check multiple versions if we have a mapping
                 let nodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
                 if (prereq.id === 'node' && Object.keys(nodeVersionMapping).length > 0) {
                     nodeVersionStatus = await this.prereqManager.checkMultipleNodeVersions(nodeVersionMapping);
                 }
+
+                // For per-node-version prerequisites (e.g., Adobe I/O CLI), detect partial installs across required Node majors
+                let perNodeVariantMissing = false;
+                let missingVariantMajors: string[] = [];
+                let perNodeVersionStatus: { version: string; component: string; installed: boolean }[] = [];
+                if (prereq.perNodeVersion && Object.keys(nodeVersionMapping).length > 0) {
+                    const requiredMajors = Object.keys(nodeVersionMapping);
+                    const commandManager = getExternalCommandManager();
+                    for (const major of requiredMajors) {
+                        try {
+                            const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
+                            // Parse CLI version if regex provided
+                            let cliVersion = '';
+                            if (prereq.check.parseVersion) {
+                                try {
+                                    const match = stdout.match(new RegExp(prereq.check.parseVersion));
+                                    if (match) cliVersion = match[1] || '';
+                                } catch {}
+                            }
+                            perNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: true });
+                        } catch {
+                            perNodeVariantMissing = true;
+                            missingVariantMajors.push(major);
+                            perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+                        }
+                    }
+                }
+
+                // Store state for this prerequisite (include nodeVersionStatus if available)
+                this.currentPrerequisiteStates.set(i, {
+                    prereq,
+                    result: checkResult,
+                    nodeVersionStatus: prereq.id === 'node' ? nodeVersionStatus : perNodeVersionStatus
+                });
 
                 // Log the result
                 if (checkResult.installed) {
@@ -538,21 +567,63 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     this.stepLogger.log('prerequisites', `✗ ${prereq.name} is not installed`, 'warn');
                 }
 
+                // Compute dependency gating (disable install until deps are installed)
+                let depsInstalled = true;
+                if (prereq.depends && prereq.depends.length > 0) {
+                    depsInstalled = prereq.depends.every(depId => {
+                        for (const entry of this.currentPrerequisiteStates!.values()) {
+                            if (entry.prereq.id === depId) {
+                                // Special handling: if dependency is Node and required majors missing, treat as not installed
+                                if (depId === 'node' && entry.nodeVersionStatus && entry.nodeVersionStatus.length > 0) {
+                                    const missing = entry.nodeVersionStatus.some((v: any) => !v.installed);
+                                    if (missing) return false;
+                                }
+                                return !!entry.result?.installed;
+                            }
+                        }
+                        return false;
+                    });
+                }
+
+                // Determine overall status for Node when specific required versions are missing
+                let overallStatus: 'success' | 'error' | 'warning' = checkResult.installed ? 'success' : (!prereq.optional ? 'error' : 'warning');
+                let nodeMissing = false;
+                if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {
+                    nodeMissing = nodeVersionStatus.some(v => !v.installed);
+                    if (nodeMissing) {
+                        overallStatus = 'error';
+                    }
+                }
+                if (prereq.perNodeVersion && perNodeVariantMissing) {
+                    overallStatus = 'error';
+                }
+
                 // Send result with proper status values
                 await this.sendMessage('prerequisite-status', {
                     index: i,
                     name: prereq.name,
-                    status: checkResult.installed ? 'success' : (!prereq.optional ? 'error' : 'warning'),
+                    status: overallStatus,
                     description: prereq.description,
                     required: !prereq.optional,
                     installed: checkResult.installed,
                     version: checkResult.version,
-                    message: checkResult.installed
-                        ? `${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`
-                        : `${prereq.name} is not installed`,
-                    canInstall: checkResult.canInstall,
-                    plugins: checkResult.plugins,  // Add plugins data for success messages
-                    nodeVersionStatus  // Add multi-version Node.js status
+                    message: (prereq.perNodeVersion && perNodeVersionStatus && perNodeVersionStatus.length > 0)
+                        ? `Installed for versions:`
+                        : (prereq.perNodeVersion && perNodeVariantMissing)
+                            ? `${prereq.name} is missing in Node ${missingVariantMajors.join(', ')}. Plugin status will be checked after CLI is installed.`
+                            : (checkResult.installed
+                                ? `${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`
+                                : `${prereq.name} is not installed`),
+                    // Enable install only when dependencies are satisfied AND this prerequisite is incomplete
+                    // Node: missing majors; perNodeVersion: missing any variant; Otherwise: not installed
+                    canInstall: depsInstalled && (
+                        (prereq.id === 'node' && nodeMissing)
+                        || (prereq.perNodeVersion && perNodeVariantMissing)
+                        || (!checkResult.installed && checkResult.canInstall)
+                    ),
+                    // Suppress plugin list until CLI is present on all required Node majors to avoid confusion
+                    plugins: (prereq.perNodeVersion && perNodeVariantMissing) ? undefined : checkResult.plugins,
+                    nodeVersionStatus: prereq.id === 'node' ? nodeVersionStatus : perNodeVersionStatus
                 });
             }
             
@@ -585,10 +656,139 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
-    private async continueWithPrerequisites(): Promise<void> {
-        // This is called when user chooses to continue despite missing optional prerequisites
-        this.logger.info('User chose to continue with missing optional prerequisites');
-        // The UI will handle navigation
+    private async continueWithPrerequisites(fromIndex?: number): Promise<void> {
+        // Resume checking remaining prerequisites (used after an install)
+        try {
+            if (!this.currentPrerequisites || !this.currentPrerequisiteStates) return;
+
+            const start = typeof fromIndex === 'number' ? fromIndex : 0;
+
+            // Recompute Node version mapping if we have a component selection (for variant checks)
+            let nodeVersionMapping: { [version: string]: string } = {};
+            if (this.currentComponentSelection) {
+                try {
+                    const { ComponentRegistryManager } = await import('../utils/componentRegistry');
+                    const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+                    nodeVersionMapping = await registryManager.getNodeVersionToComponentMapping(
+                        this.currentComponentSelection.frontend,
+                        this.currentComponentSelection.backend,
+                        this.currentComponentSelection.dependencies,
+                        this.currentComponentSelection.externalSystems,
+                        this.currentComponentSelection.appBuilder
+                    );
+                } catch (error) {
+                    this.logger.warn('Failed to get Node version mapping (continue):', error as Error);
+                }
+            }
+
+            for (let i = start; i < this.currentPrerequisites.length; i++) {
+                const prereq = this.currentPrerequisites[i];
+                await this.sendMessage('prerequisite-status', {
+                    index: i,
+                    name: prereq.name,
+                    status: 'checking',
+                    description: prereq.description,
+                    required: !prereq.optional
+                });
+
+                const checkResult = await this.prereqManager.checkPrerequisite(prereq);
+
+                this.currentPrerequisiteStates.set(i, { prereq, result: checkResult });
+
+                // Variant checks
+                let nodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
+                if (prereq.id === 'node' && Object.keys(nodeVersionMapping).length > 0) {
+                    nodeVersionStatus = await this.prereqManager.checkMultipleNodeVersions(nodeVersionMapping);
+                }
+
+                let perNodeVariantMissing = false;
+                let missingVariantMajors: string[] = [];
+                let perNodeVersionStatus: { version: string; component: string; installed: boolean }[] = [];
+                if (prereq.perNodeVersion && Object.keys(nodeVersionMapping).length > 0) {
+                    const requiredMajors = Object.keys(nodeVersionMapping);
+                    const commandManager = getExternalCommandManager();
+                    for (const major of requiredMajors) {
+                        try {
+                            const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
+                            // Parse CLI version if regex provided
+                            let cliVersion = '';
+                            if (prereq.check.parseVersion) {
+                                try {
+                                    const match = stdout.match(new RegExp(prereq.check.parseVersion));
+                                    if (match) cliVersion = match[1] || '';
+                                } catch {}
+                            }
+                            perNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: true });
+                        } catch {
+                            perNodeVariantMissing = true;
+                            missingVariantMajors.push(major);
+                            perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+                        }
+                    }
+                }
+
+                // Dependency gating
+                let depsInstalled = true;
+                if (prereq.depends && prereq.depends.length > 0) {
+                    depsInstalled = prereq.depends.every((depId: string) => {
+                        for (const entry of this.currentPrerequisiteStates!.values()) {
+                            if (entry.prereq.id === depId) {
+                                if (depId === 'node' && entry.nodeVersionStatus && entry.nodeVersionStatus.length > 0) {
+                                    const missing = entry.nodeVersionStatus.some((v: any) => !v.installed);
+                                    if (missing) return false;
+                                }
+                                return !!entry.result?.installed;
+                            }
+                        }
+                        return false;
+                    });
+                }
+
+                // Overall status and canInstall
+                let overallStatus: 'success' | 'error' | 'warning' = checkResult.installed ? 'success' : (!prereq.optional ? 'error' : 'warning');
+                let nodeMissing = false;
+                if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {
+                    nodeMissing = nodeVersionStatus.some(v => !v.installed);
+                    if (nodeMissing) overallStatus = 'error';
+                }
+                if (prereq.perNodeVersion && perNodeVariantMissing) overallStatus = 'error';
+
+                // Persist nodeVersionStatus to state for downstream gating
+                this.currentPrerequisiteStates.set(i, { prereq, result: checkResult, nodeVersionStatus });
+
+                await this.sendMessage('prerequisite-status', {
+                    index: i,
+                    name: prereq.name,
+                    status: overallStatus,
+                    description: prereq.description,
+                    required: !prereq.optional,
+                    installed: checkResult.installed,
+                    version: checkResult.version,
+                    message: (prereq.perNodeVersion && perNodeVariantMissing)
+                        ? `${prereq.name} is missing in Node ${missingVariantMajors.join(', ')}`
+                        : (checkResult.installed
+                            ? `${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`
+                            : `${prereq.name} is not installed`),
+                    canInstall: depsInstalled && (
+                        (prereq.id === 'node' && nodeMissing)
+                        || (prereq.perNodeVersion && perNodeVariantMissing)
+                        || (!checkResult.installed && checkResult.canInstall)
+                    ),
+                    plugins: checkResult.plugins,
+                    nodeVersionStatus
+                });
+            }
+
+            const allRequiredInstalled = Array.from(this.currentPrerequisiteStates.values())
+                .filter(state => !state.prereq.optional)
+                .every(state => state.result.installed);
+
+            await this.sendMessage('prerequisites-complete', {
+                allInstalled: allRequiredInstalled
+            });
+        } catch (error) {
+            this.logger.error('Failed to continue prerequisites:', error as Error);
+        }
     }
 
     private async handleInstallPrerequisite(prereqId: number, version?: string): Promise<void> {
@@ -599,64 +799,251 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
             
             const { prereq, result } = state;
-            this.logger.info(`Installing prerequisite: ${prereq.name}`);
+            // High-level log (user-facing Logs channel)
+            this.logger.info(`[Prerequisites] User initiated install for: ${prereq.name}`);
+            // Debug channel detail
+            this.debugLogger.debug(`[Prerequisites] install-prerequisite payload`, { id: prereqId, name: prereq.name, version });
             
-            // Create progress tracker for this installation
-            const progressId = `install-${prereq.id}-${Date.now()}`;
-            
-            // Send initial installing status
-            await this.sendMessage('prerequisiteStatus', {
-                id: prereqId,
-                name: prereq.name,
-                status: 'installing',
-                description: `Installing ${prereq.name}...`,
-                required: !prereq.optional,
-                progress: 0
+            // Resolve install steps from config
+            const nodeVersions = this.currentComponentSelection
+                ? await (async () => {
+                    try {
+                        const { ComponentRegistryManager } = await import('../utils/componentRegistry');
+                        const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+                        const mapping = await registryManager.getRequiredNodeVersions(
+                            this.currentComponentSelection.frontend,
+                            this.currentComponentSelection.backend,
+                            this.currentComponentSelection.dependencies,
+                            this.currentComponentSelection.externalSystems,
+                            this.currentComponentSelection.appBuilder
+                        );
+                        return Array.from(mapping);
+                    } catch {
+                        return [] as string[];
+                    }
+                })()
+                : [];
+
+            const installPlan = this.prereqManager.getInstallSteps(prereq, {
+                nodeVersions: prereq.perNodeVersion
+                    ? (nodeVersions.length ? nodeVersions : [version || '20'])
+                    : (prereq.id === 'node' ? (version ? [version] : undefined) : undefined)
             });
-            
-            // For now, simulate installation since PrerequisitesManager doesn't have installPrerequisite
-            // TODO: Implement actual installation
-            await this.sendMessage('prerequisiteStatus', {
-                id: prereqId,
-                name: prereq.name,
-                status: 'installing',
-                description: `Installing ${prereq.name}...`,
-                required: !prereq.optional,
-                progress: 50
-            });
-            
-            // Simulate installation delay
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            // Check again after "installation"
+
+            if (!installPlan) {
+                throw new Error(`No installation steps defined for ${prereq.name}`);
+            }
+
+            if (installPlan.manual && installPlan.url) {
+                await this.sendMessage('prerequisite-status', {
+                    index: prereqId,
+                    name: prereq.name,
+                    status: 'warning',
+                    message: `Manual installation required. Open: ${installPlan.url}`,
+                    required: !prereq.optional
+                });
+                await vscode.env.openExternal(vscode.Uri.parse(installPlan.url));
+                return;
+            }
+
+            const steps = installPlan.steps || [];
+
+            // If Node requires additional versions (multi-version case), surface Install when any required version missing
+            if (prereq.id === 'node') {
+                const mapping = this.currentComponentSelection
+                    ? await (async () => {
+                        try {
+                            const { ComponentRegistryManager } = await import('../utils/componentRegistry');
+                            const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+                            return await registryManager.getNodeVersionToComponentMapping(
+                                this.currentComponentSelection.frontend,
+                                this.currentComponentSelection.backend,
+                                this.currentComponentSelection.dependencies,
+                                this.currentComponentSelection.externalSystems,
+                                this.currentComponentSelection.appBuilder
+                            );
+                        } catch {
+                            return {} as { [version: string]: string };
+                        }
+                    })()
+                    : {};
+                const requiredMajors = Object.keys(mapping);
+                if (requiredMajors.length > 0) {
+                    // ensure steps include per required version when not installed; ProgressUnifier handles template replacement
+                }
+            }
+
+            // Execute steps with unified progress. For Node multi-version, iterate missing majors.
+            let targetVersions: string[] | undefined = undefined;
+            if (prereq.id === 'node') {
+                // Determine missing majors from mapping
+                let mapping: { [version: string]: string } = {};
+                try {
+                    const { ComponentRegistryManager } = await import('../utils/componentRegistry');
+                    const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+                    mapping = await registryManager.getNodeVersionToComponentMapping(
+                        this.currentComponentSelection?.frontend,
+                        this.currentComponentSelection?.backend,
+                        this.currentComponentSelection?.dependencies,
+                        this.currentComponentSelection?.externalSystems,
+                        this.currentComponentSelection?.appBuilder
+                    );
+                } catch {}
+                const nodeStatus = Object.keys(mapping).length > 0
+                    ? await this.prereqManager.checkMultipleNodeVersions(mapping)
+                    : undefined;
+                const missingMajors = nodeStatus
+                    ? Object.keys(mapping).filter(m => !nodeStatus.some(s => s.version.startsWith(`Node ${m}`) && s.installed))
+                    : [];
+                targetVersions = missingMajors.length > 0 ? missingMajors : (version ? [version] : undefined);
+            } else if (prereq.perNodeVersion) {
+                targetVersions = nodeVersions.length ? nodeVersions : (version ? [version] : []);
+            }
+
+            const total = steps.length * (targetVersions && targetVersions.length ? targetVersions.length : 1);
+            let counter = 0;
+            const run = async (step: InstallStep, ver?: string) => {
+                // Debug before step
+                this.debugLogger.debug(`[Prerequisites] Executing step: ${step.name}${ver ? ` (Node ${ver})` : ''}`);
+                await this.progressUnifier.executeStep(
+                    step,
+                    counter,
+                    total,
+                    async (progress) => {
+                        await this.sendMessage('prerequisite-status', {
+                            index: prereqId,
+                            name: prereq.name,
+                            status: 'checking',
+                            message: ver ? `${step.message} for Node ${ver}` : step.message,
+                            required: !prereq.optional,
+                            unifiedProgress: progress
+                        });
+                    },
+                    ver ? { nodeVersion: ver } : undefined
+                );
+                counter++;
+                // Debug after step
+                this.debugLogger.debug(`[Prerequisites] Completed step: ${step.name}${ver ? ` (Node ${ver})` : ''}`);
+            };
+
+            if (targetVersions && targetVersions.length) {
+                for (const ver of targetVersions) {
+                    for (const step of steps) {
+                        await run(step, ver);
+                    }
+                }
+            } else {
+                for (const step of steps) {
+                    await run(step);
+                }
+            }
+
+            // Re-check after installation and include variant details/messages
             const installResult = await this.prereqManager.checkPrerequisite(prereq);
-            
-            // Update state with new result
-            this.currentPrerequisiteStates!.set(prereqId, {
-                prereq,
-                result: installResult
-            });
-            
-            // Send final status
-            await this.sendMessage('prerequisiteStatus', {
-                id: prereqId,
+
+            let finalNodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
+            let finalPerNodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
+            if (prereq.id === 'node') {
+                // Build mapping and check installed status per required major
+                let mapping: { [version: string]: string } = {};
+                try {
+                    const { ComponentRegistryManager } = await import('../utils/componentRegistry');
+                    const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+                    mapping = await registryManager.getNodeVersionToComponentMapping(
+                        this.currentComponentSelection?.frontend,
+                        this.currentComponentSelection?.backend,
+                        this.currentComponentSelection?.dependencies,
+                        this.currentComponentSelection?.externalSystems,
+                        this.currentComponentSelection?.appBuilder
+                    );
+                } catch {}
+                if (Object.keys(mapping).length > 0) {
+                    finalNodeVersionStatus = await this.prereqManager.checkMultipleNodeVersions(mapping);
+                }
+            } else if (prereq.perNodeVersion) {
+                // For per-node-version prerequisites (e.g., Adobe I/O CLI), re-check under each required Node major
+                let mapping: { [version: string]: string } = {};
+                try {
+                    const { ComponentRegistryManager } = await import('../utils/componentRegistry');
+                    const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+                    mapping = await registryManager.getNodeVersionToComponentMapping(
+                        this.currentComponentSelection?.frontend,
+                        this.currentComponentSelection?.backend,
+                        this.currentComponentSelection?.dependencies,
+                        this.currentComponentSelection?.externalSystems,
+                        this.currentComponentSelection?.appBuilder
+                    );
+                } catch {}
+                const requiredMajors = Object.keys(mapping);
+                if (requiredMajors.length > 0) {
+                    finalPerNodeVersionStatus = [];
+                    const commandManager = getExternalCommandManager();
+                    for (const major of requiredMajors) {
+                        try {
+                            const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
+                            // Parse CLI version if regex provided
+                            let cliVersion = '';
+                            if (prereq.check.parseVersion) {
+                                try {
+                                    const match = stdout.match(new RegExp(prereq.check.parseVersion));
+                                    if (match) cliVersion = match[1] || '';
+                                } catch {}
+                            }
+                            finalPerNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: true });
+                        } catch {
+                            finalPerNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+                        }
+                    }
+                }
+            }
+
+            this.currentPrerequisiteStates!.set(prereqId, { prereq, result: installResult, nodeVersionStatus: finalNodeVersionStatus });
+
+            const finalMessage = (prereq.id === 'node' && finalNodeVersionStatus && finalNodeVersionStatus.length > 0)
+                ? finalNodeVersionStatus.every(s => s.installed)
+                    ? `${prereq.name} is installed: ${finalNodeVersionStatus.map(s => s.version).join(', ')}`
+                    : `${prereq.name} is missing in ${finalNodeVersionStatus.filter(s => !s.installed).map(s => s.version.replace('Node ', 'Node ')).join(', ')}`
+                : (installResult.installed
+                    ? `${prereq.name} is installed${installResult.version ? ': ' + installResult.version : ''}`
+                    : `${prereq.name} is not installed`);
+
+            // Summarize result in both channels
+            if (installResult.installed) {
+                this.logger.info(`[Prerequisites] ${prereq.name} installation succeeded`);
+                this.debugLogger.debug(`[Prerequisites] ${prereq.name} installation succeeded`, { nodeVersionStatus: finalNodeVersionStatus });
+            } else {
+                this.logger.warn(`[Prerequisites] ${prereq.name} installation did not complete`);
+                this.debugLogger.debug(`[Prerequisites] ${prereq.name} installation incomplete`, { nodeVersionStatus: finalNodeVersionStatus });
+            }
+
+            await this.sendMessage('prerequisite-status', {
+                index: prereqId,
                 name: prereq.name,
-                status: installResult.installed ? 'installed' : 'failed',
+                status: installResult.installed ? 'success' : (!prereq.optional ? 'error' : 'warning'),
                 description: prereq.description,
                 required: !prereq.optional,
                 installed: installResult.installed,
                 version: installResult.version,
-                canInstall: false  // Already attempted install
+                message: finalMessage,
+                canInstall: !installResult.installed,
+                plugins: installResult.plugins,
+                // Include per-node-version status for CLI and per-version status for Node
+                nodeVersionStatus: prereq.id === 'node' ? finalNodeVersionStatus : finalPerNodeVersionStatus
             });
-            
-            this.logger.info(`Prerequisite ${prereq.name} installation ${installResult.installed ? 'succeeded' : 'failed'}`);
+
+            // Continue checking remaining prerequisites from the next index
+            await this.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
             
         } catch (error) {
             this.logger.error(`Failed to install prerequisite ${prereqId}:`, error as Error);
-            await this.sendMessage('prerequisiteStatus', {
-                id: prereqId,
-                status: 'failed',
-                error: error instanceof Error ? error.message : String(error)
+            // Surface to error channel with context
+            try {
+                this.errorLogger.logError(error as Error, 'Prerequisite Installation', true);
+            } catch {}
+            await this.sendMessage('prerequisite-status', {
+                index: prereqId,
+                status: 'error',
+                message: error instanceof Error ? error.message : String(error)
             });
         }
     }
