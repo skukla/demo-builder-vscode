@@ -917,7 +917,23 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     : [];
                 targetVersions = missingMajors.length > 0 ? missingMajors : (version ? [version] : undefined);
             } else if (prereq.perNodeVersion) {
-                targetVersions = nodeVersions.length ? nodeVersions : (version ? [version] : []);
+                // For per-node-version prerequisites, check which Node versions are missing this prereq
+                const commandManager = getExternalCommandManager();
+                const missingNodeVersions: string[] = [];
+                
+                for (const nodeVer of nodeVersions) {
+                    try {
+                        await commandManager.execute(prereq.check.command, { useNodeVersion: nodeVer });
+                        // Already installed for this Node version
+                        this.debugLogger.debug(`[Prerequisites] ${prereq.name} already installed for Node ${nodeVer}, skipping`);
+                    } catch {
+                        // Missing for this Node version
+                        this.debugLogger.debug(`[Prerequisites] ${prereq.name} not found for Node ${nodeVer}, will install`);
+                        missingNodeVersions.push(nodeVer);
+                    }
+                }
+                
+                targetVersions = missingNodeVersions.length > 0 ? missingNodeVersions : (version ? [version] : []);
             }
 
             const total = steps.length * (targetVersions && targetVersions.length ? targetVersions.length : 1);
