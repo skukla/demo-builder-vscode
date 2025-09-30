@@ -11,15 +11,19 @@ import {
     Item,
     Form,
     Divider,
-    ActionButton
+    Button
 } from '@adobe/react-spectrum';
 import Settings from '@spectrum-icons/workflow/Settings';
 import Link from '@spectrum-icons/workflow/Link';
 import App from '@spectrum-icons/workflow/App';
 import DataMapping from '@spectrum-icons/workflow/DataMapping';
+import Info from '@spectrum-icons/workflow/Info';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import Clock from '@spectrum-icons/workflow/Clock';
 import { WizardState, ComponentConfigs, ComponentEnvVar } from '../../types';
 import { vscode } from '../../app/vscodeApi';
 import { cn } from '../../utils/classNames';
+import { ConfigurationSummary } from '../shared/ConfigurationSummary';
 
 interface ComponentConfigStepProps {
     state: WizardState;
@@ -49,6 +53,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     const [componentsData, setComponentsData] = useState<ComponentsData>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [isLoading, setIsLoading] = useState(true);
+    const [activeComponentId, setActiveComponentId] = useState<string | null>(null);
 
     // Load components data
     useEffect(() => {
@@ -323,6 +328,14 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         componentConfigs['citisignal-nextjs']?.ADOBE_COMMERCE_ENVIRONMENT_ID,
         componentConfigs['citisignal-nextjs']?.ADOBE_CATALOG_API_KEY]);
 
+    useEffect(() => {
+        if (selectedComponents.length > 0 && !activeComponentId) {
+            setActiveComponentId(selectedComponents[0].id);
+        } else if (activeComponentId && !selectedComponents.some(component => component.id === activeComponentId)) {
+            setActiveComponentId(selectedComponents[0]?.id ?? null);
+        }
+    }, [selectedComponents, activeComponentId]);
+
     // Show loading state while fetching data
     if (isLoading) {
         return (
@@ -337,100 +350,134 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         );
     }
 
-    return (
-        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
-            <Heading level={2} marginBottom="size-300">
-                Component Configuration
-            </Heading>
-            
-            <Text marginBottom="size-400">
-                Configure environment variables for your selected components. Required fields are marked with an asterisk.
-            </Text>
+    const renderComponentList = () => (
+        <View>
+            <Heading level={3} marginBottom="size-200">Components</Heading>
+            <Flex direction="column" gap="size-100">
+                {selectedComponents.map(({ id, data, type }) => {
+                    const config = componentConfigs[id] || {};
+                    const envVars = data.configuration?.envVars?.filter(env => env.key !== 'MESH_ENDPOINT') || [];
+                    const requiredCount = envVars.filter(env => env.required).length;
+                    const completedCount = envVars.filter(env => env.required && !!config[env.key]).length;
+                    const isComplete = requiredCount === 0 || completedCount === requiredCount;
 
-            {selectedComponents.length === 0 ? (
+                    return (
+                        <Button
+                            key={id}
+                            variant={activeComponentId === id ? 'accent' : 'secondary'}
+                            isQuiet
+                            onPress={() => setActiveComponentId(id)}
+                            UNSAFE_style={{ justifyContent: 'flex-start' }}
+                        >
+                            <Flex justifyContent="space-between" alignItems="center" width="100%">
+                                <Flex gap="size-100" alignItems="center">
+                                    {getIconForType(type)}
+                                    <Text UNSAFE_className={cn('font-medium')}>{data.name}</Text>
+                                </Flex>
+                                <Flex gap="size-75" alignItems="center">
+                                    {isComplete ? (
+                                        <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                                    ) : (
+                                        <Clock size="S" UNSAFE_className="text-blue-600" />
+                                    )}
+                                    <Text UNSAFE_className="text-xs text-gray-600">
+                                        {completedCount}/{requiredCount || '-'}
+                                    </Text>
+                                </Flex>
+                            </Flex>
+                        </Button>
+                    );
+                })}
+            </Flex>
+        </View>
+    );
+
+    const renderActiveComponentForm = () => {
+        const activeComponent = selectedComponents.find(component => component.id === activeComponentId) || selectedComponents[0];
+        if (!activeComponent) {
+            return (
                 <Well>
                     <Text>No components requiring configuration were selected.</Text>
                 </Well>
-            ) : (
-                <Form>
-                    {selectedComponents.map(({ id, data, type }, index) => {
-                        const hasRequiredFields = data.configuration?.envVars?.some(e => e.required);
-                        
-                        return (
-                            <View key={id} marginBottom="size-300">
-                                {index > 0 && <Divider size="S" marginBottom="size-200" />}
-                                <Flex gap="size-100" alignItems="center" width="100%" UNSAFE_className={cn('component-section-header-static')}>
-                                    {getIconForType(type)}
-                                    <Text UNSAFE_className={cn('font-medium')}>
-                                        {data.name}
-                                    </Text>
-                                    <Text UNSAFE_className={cn('text-sm', 'text-gray-600')}>
-                                        ({type})
-                                    </Text>
-                                    {hasRequiredFields && (
-                                        <Text UNSAFE_className={cn('text-xs', 'text-red-600', 'ml-auto')}>
-                                            * Required fields
-                                        </Text>
-                                    )}
-                                </Flex>
-                                <Well>
-                                    <Flex direction="column" gap="size-200">
-                                        {data.configuration?.envVars?.map(envVar => 
-                                            renderField(id, envVar)
-                                        )}
-                                    </Flex>
-                                </Well>
-                            </View>
-                        );
-                    })}
-                </Form>
-            )}
+            );
+        }
 
-            {state.adobeProject && (
-                <Well marginTop="size-400">
-                    <Text UNSAFE_className="text-sm text-gray-700">
-                        These configurations will be used for project: <strong>{state.adobeProject.title}</strong>
-                    </Text>
+        const { id, data, type } = activeComponent;
+        const hasRequiredFields = data.configuration?.envVars?.some(env => env.required && env.key !== 'MESH_ENDPOINT');
+
+        return (
+            <View>
+                <Flex gap="size-100" alignItems="center" UNSAFE_className={cn('component-section-header-static')}>
+                    {getIconForType(type)}
+                    <Text UNSAFE_className={cn('font-medium')}>{data.name}</Text>
+                    <Text UNSAFE_className={cn('text-sm', 'text-gray-600')}>({type})</Text>
+                    {hasRequiredFields && (
+                        <Text UNSAFE_className={cn('text-xs', 'text-red-600', 'ml-auto')}>
+                            * Required fields
+                        </Text>
+                    )}
+                </Flex>
+                <Well>
+                    <Flex direction="column" gap="size-200">
+                        {data.configuration?.envVars?.map(envVar => renderField(id, envVar))}
+                    </Flex>
                 </Well>
-            )}
+            </View>
+        );
+    };
 
-            <style>{`
-                .component-section-header-static {
-                    justify-content: flex-start;
-                    padding: 12px;
-                    background-color: var(--spectrum-global-color-gray-100);
-                    border-radius: 4px;
-                    margin-bottom: 12px;
-                }
-                
-                .ml-auto {
-                    margin-left: auto;
-                }
-                
-                .font-medium {
-                    font-weight: 500;
-                }
-                
-                .text-sm {
-                    font-size: 13px;
-                }
-                
-                .text-xs {
-                    font-size: 11px;
-                }
-                
-                .text-gray-600 {
-                    color: var(--spectrum-global-color-gray-600);
-                }
-                
-                .text-gray-700 {
-                    color: var(--spectrum-global-color-gray-700);
-                }
-                
-                .text-red-600 {
-                    color: var(--spectrum-global-color-red-600);
-                }
-            `}</style>
+    return (
+        <div style={{ display: 'flex', height: '100%', width: '100%' }}>
+            <div style={{
+                maxWidth: '800px',
+                width: '100%',
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '24px'
+            }}>
+                <Heading level={2} marginBottom="size-300">Settings Collection</Heading>
+                <Text>
+                    Provide configuration values for each selected component. Required fields are marked with an asterisk. All values will be written to component-specific .env files when the code is downloaded.
+                </Text>
+
+                {selectedComponents.length === 0 ? (
+                    <Well>
+                        <Flex direction="column" gap="size-100" alignItems="center">
+                            <Info size="L" UNSAFE_className="text-gray-500" />
+                            <Text>No components requiring configuration were selected.</Text>
+                        </Flex>
+                    </Well>
+                ) : (
+                    <Flex gap="size-300" alignItems="flex-start" wrap>
+                        <View flex>
+                            <Form>
+                                {renderActiveComponentForm()}
+                            </Form>
+                        </View>
+                        <View width="260px">
+                            {renderComponentList()}
+                        </View>
+                    </Flex>
+                )}
+
+                {state.adobeProject && (
+                    <Well>
+                        <Text UNSAFE_className="text-sm text-gray-700">
+                            These settings apply to the project <strong>{state.adobeProject.title}</strong>.
+                        </Text>
+                    </Well>
+                )}
+            </div>
+
+            <div style={{
+                flex: '1',
+                padding: '24px',
+                backgroundColor: 'var(--spectrum-global-color-gray-75)',
+                borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
+            }}>
+                <ConfigurationSummary state={state} />
+            </div>
         </div>
     );
 }
