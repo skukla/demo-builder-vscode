@@ -99,6 +99,42 @@ export function ConfigurationSummary({ state, completedSteps = [] }: Configurati
                 </View>
             </View>
 
+            {/* Workspace APIs (subsection under Workspace) */}
+            {state.adobeWorkspace && (
+                <View marginTop="size-200" UNSAFE_style={{ paddingLeft: '12px', borderLeft: '2px solid var(--spectrum-global-color-gray-200)' }}>
+                    <Text UNSAFE_className={cn('text-xs', 'font-medium', 'text-gray-600')}>
+                        Workspace APIs
+                    </Text>
+                    <View marginTop="size-75">
+                        {/* API Mesh status - inline with a small icon */}
+                        <Flex gap="size-150" alignItems="center">
+                            <Text UNSAFE_className="text-sm">API Mesh</Text>
+                            {state.apiVerification?.isChecking ? (
+                                <Flex gap="size-100" alignItems="center">
+                                    <Clock size="S" UNSAFE_className="text-blue-600" />
+                                    <Text UNSAFE_className="text-sm text-gray-600">Pending</Text>
+                                </Flex>
+                            ) : state.apiVerification?.hasMesh === true ? (
+                                <Flex gap="size-100" alignItems="center">
+                                    <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                                    <Text UNSAFE_className="text-sm text-green-600">Verified</Text>
+                                </Flex>
+                            ) : state.apiVerification?.hasMesh === false ? (
+                                <Flex gap="size-100" alignItems="center">
+                                    <Text UNSAFE_className="text-orange-600">✗</Text>
+                                    <Text UNSAFE_className="text-sm text-orange-600">Missing</Text>
+                                </Flex>
+                            ) : (
+                                <Flex gap="size-100" alignItems="center">
+                                    <Clock size="S" UNSAFE_className="text-blue-600" />
+                                    <Text UNSAFE_className="text-sm text-gray-600">Pending</Text>
+                                </Flex>
+                            )}
+                        </Flex>
+                    </View>
+                </View>
+            )}
+
             <style>{`
                 .text-uppercase {
                     text-transform: uppercase;
@@ -108,9 +144,8 @@ export function ConfigurationSummary({ state, completedSteps = [] }: Configurati
                     letter-spacing: 0.05em;
                 }
                 
-                .font-semibold {
-                    font-weight: 600;
-                }
+                .font-semibold { font-weight: 600; }
+                .font-medium { font-weight: 500; }
                 
                 .text-xs {
                     font-size: 0.75rem;
@@ -131,11 +166,10 @@ export function ConfigurationSummary({ state, completedSteps = [] }: Configurati
                 .text-green-600 {
                     color: var(--spectrum-global-color-green-600);
                 }
-
-                .text-orange-600 {
-                    color: var(--spectrum-global-color-orange-600);
-                }
-            `}</style>
-        </View>
-    );
-}
+ 
+                .text-orange-600 { color: var(--spectrum-global-color-orange-600); }
+                
+             `}</style>
+         </View>
+     );
+ }
