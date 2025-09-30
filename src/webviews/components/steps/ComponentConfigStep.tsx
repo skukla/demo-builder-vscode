@@ -1,33 +1,26 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    View,
     Heading,
     Text,
     TextField,
     Checkbox,
-    Well,
     Flex,
     Picker,
     Item,
     Form,
-    Divider,
-    Button
+    Divider
 } from '@adobe/react-spectrum';
-import Settings from '@spectrum-icons/workflow/Settings';
-import Link from '@spectrum-icons/workflow/Link';
-import App from '@spectrum-icons/workflow/App';
-import DataMapping from '@spectrum-icons/workflow/DataMapping';
-import Info from '@spectrum-icons/workflow/Info';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import Clock from '@spectrum-icons/workflow/Clock';
-import { WizardState, ComponentConfigs, ComponentEnvVar } from '../../types';
+import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
+import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
+import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '../../types';
 import { vscode } from '../../app/vscodeApi';
-import { cn } from '../../utils/classNames';
+import { LoadingDisplay } from '../shared/LoadingDisplay';
 
 interface ComponentConfigStepProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
     setCanProceed: (canProceed: boolean) => void;
+    completedSteps?: WizardStep[];
 }
 
 interface ComponentData {
@@ -47,12 +40,23 @@ interface ComponentsData {
     appBuilder?: ComponentData[];
 }
 
-export function ComponentConfigStep({ state, updateState, setCanProceed }: ComponentConfigStepProps) {
+interface UniqueField extends ComponentEnvVar {
+    componentIds: string[]; // Which components need this field
+}
+
+interface ServiceGroup {
+    id: string;
+    label: string;
+    fields: UniqueField[];
+}
+
+export function ComponentConfigStep({ state, updateState, setCanProceed, completedSteps = [] }: ComponentConfigStepProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(state.componentConfigs || {});
     const [componentsData, setComponentsData] = useState<ComponentsData>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [isLoading, setIsLoading] = useState(true);
-    const [activeComponentId, setActiveComponentId] = useState<string | null>(null);
+    const [expandedNavSections, setExpandedNavSections] = useState<Set<string>>(new Set());
+    const [activeSection, setActiveSection] = useState<string | null>(null);
 
     // Load components data
     useEffect(() => {
@@ -63,7 +67,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             setIsLoading(false);
         });
         
-        // Also listen for componentsLoaded as a fallback
         const unsubscribeLoaded = vscode.onMessage('componentsLoaded', (data) => {
             setComponentsData(data);
             setIsLoading(false);
@@ -109,7 +112,156 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         return components;
     }, [state.components, componentsData]);
 
-    // Initialize configs for selected components
+    // Deduplicate fields and organize by service
+    const serviceGroups = useMemo(() => {
+        const fieldMap = new Map<string, UniqueField>();
+        
+        // Collect all unique fields by key
+        selectedComponents.forEach(({ id, data }) => {
+            data.configuration?.envVars?.forEach(envVar => {
+                if (!fieldMap.has(envVar.key)) {
+                    fieldMap.set(envVar.key, {
+                        ...envVar,
+                        componentIds: [id]
+                    });
+                } else {
+                    const existing = fieldMap.get(envVar.key)!;
+                    if (!existing.componentIds.includes(id)) {
+                        existing.componentIds.push(id);
+                    }
+                }
+            });
+        });
+
+        // Group fields by service using the 'group' metadata from configuration
+        const groups: Record<string, UniqueField[]> = {};
+
+        fieldMap.forEach((field) => {
+            // Use the 'group' metadata from JSON configuration
+            const metadata = field as any;
+            const groupKey = metadata.group || 'other';
+            
+            if (!groups[groupKey]) {
+                groups[groupKey] = [];
+            }
+            groups[groupKey].push(field);
+        });
+
+        // Define service group labels and order
+        // This maps the 'group' values from JSON to user-friendly labels
+        const serviceGroupDefs: Array<{ id: string; label: string; order: number; fieldOrder?: string[] }> = [
+            { id: 'adobe-commerce', label: 'Adobe Commerce', order: 1 },
+            { 
+                id: 'catalog-service', 
+                label: 'Catalog Service', 
+                order: 2,
+                fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_ENVIRONMENT', 'ADOBE_CATALOG_API_KEY', 'ADOBE_PRODUCTION_CATALOG_API_KEY']
+            },
+            { 
+                id: 'live-search', 
+                label: 'Live Search Service', 
+                order: 3,
+                fieldOrder: ['ADOBE_LIVE_SEARCH_ENDPOINT']
+            },
+            { id: 'mesh', label: 'API Mesh', order: 4 },
+            { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
+            { id: 'headless-citisignal', label: 'Headless CitiSignal', order: 6 },
+            { id: 'other', label: 'Additional Settings', order: 99 }
+        ];
+
+        // Build final service groups with fields, ordered and filtered
+        const orderedGroups: ServiceGroup[] = serviceGroupDefs
+            .map(def => {
+                const fields = groups[def.id] || [];
+                
+                // Apply custom field ordering if specified
+                const sortedFields = def.fieldOrder
+                    ? fields.sort((a, b) => {
+                        const aIndex = def.fieldOrder!.indexOf(a.key);
+                        const bIndex = def.fieldOrder!.indexOf(b.key);
+                        const aPos = aIndex === -1 ? 999 : aIndex;
+                        const bPos = bIndex === -1 ? 999 : bIndex;
+                        return aPos - bPos;
+                    })
+                    : fields;
+                
+                return {
+                    id: def.id,
+                    label: def.label,
+                    fields: sortedFields
+                };
+            })
+            .filter(group => group.fields.length > 0)
+            .sort((a, b) => {
+                const aOrder = serviceGroupDefs.find(d => d.id === a.id)?.order || 99;
+                const bOrder = serviceGroupDefs.find(d => d.id === b.id)?.order || 99;
+                return aOrder - bOrder;
+            });
+
+        return orderedGroups;
+    }, [selectedComponents]);
+
+    // Track active section with IntersectionObserver
+    useEffect(() => {
+        if (isLoading || serviceGroups.length === 0) return;
+
+        const observerOptions = {
+            root: null,
+            rootMargin: '-10% 0px -80% 0px', // More strict: only trigger when section header is clearly visible
+            threshold: 0
+        };
+
+        const observerCallback = (entries: IntersectionObserverEntry[]) => {
+            // Find the section that's most visible
+            const visibleEntries = entries.filter(entry => entry.isIntersecting);
+            if (visibleEntries.length > 0) {
+                // Sort by position to ensure we get the topmost section
+                visibleEntries.sort((a, b) => {
+                    const rectA = a.target.getBoundingClientRect();
+                    const rectB = b.target.getBoundingClientRect();
+                    return rectA.top - rectB.top;
+                });
+                
+                // Get the topmost visible section
+                const topSection = visibleEntries[0];
+                const sectionId = topSection.target.id.replace('section-', '');
+                setActiveSection(sectionId);
+                
+                // Auto-expand the active section
+                setExpandedNavSections(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add(sectionId);
+                    return newSet;
+                });
+            }
+        };
+
+        const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+        // Observe all section elements
+        serviceGroups.forEach(group => {
+            const element = document.getElementById(`section-${group.id}`);
+            if (element) {
+                observer.observe(element);
+            }
+        });
+
+        return () => {
+            observer.disconnect();
+        };
+    }, [isLoading, serviceGroups]);
+
+    // Auto-scroll navigation panel to keep active section visible
+    useEffect(() => {
+        if (!activeSection) return;
+
+        const navElement = document.getElementById(`nav-${activeSection}`);
+        if (navElement) {
+            navElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [activeSection]);
+
+    // Initialize configs for selected components with intelligent pre-population
     useEffect(() => {
         const newConfigs = { ...componentConfigs };
         
@@ -137,31 +289,90 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         let allValid = true;
         const errors: Record<string, string> = {};
         
-        selectedComponents.forEach(({ id, data }) => {
-            data.configuration?.envVars?.forEach(envVar => {
-                // Skip requiring MESH_ENDPOINT at this step; it is provided by the Mesh selection/deploy step
-                const isDeferredField = envVar.key === 'MESH_ENDPOINT';
-                if (envVar.required && !isDeferredField && !componentConfigs[id]?.[envVar.key]) {
-                    allValid = false;
-                    errors[`${id}.${envVar.key}`] = `${envVar.label} is required`;
+        serviceGroups.forEach(group => {
+            group.fields.forEach(field => {
+                const isDeferredField = field.key === 'MESH_ENDPOINT';
+                
+                // Special validation for Catalog API Keys - only validate the relevant key based on environment
+                if (field.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' || field.key === 'ADOBE_CATALOG_API_KEY') {
+                    const catalogEnvironmentField = serviceGroups
+                        .flatMap(g => g.fields)
+                        .find(f => f.key === 'ADOBE_CATALOG_ENVIRONMENT');
+                    
+                    if (catalogEnvironmentField) {
+                        const environmentValue = catalogEnvironmentField.componentIds
+                            .map(compId => componentConfigs[compId]?.[catalogEnvironmentField.key])
+                            .find(val => val);
+                        
+                        const isProduction = environmentValue === 'production';
+                        
+                        // Only validate Production key if Production is selected
+                        if (field.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' && !isProduction) {
+                            return; // Skip validation for production key when sandbox is selected
+                        }
+                        
+                        // Only validate Sandbox key if Sandbox is selected
+                        if (field.key === 'ADOBE_CATALOG_API_KEY' && isProduction) {
+                            return; // Skip validation for sandbox key when production is selected
+                        }
+                        
+                        // Validate the active key
+                        if (field.required) {
+                            const hasValue = field.componentIds.some(compId => 
+                                componentConfigs[compId]?.[field.key]
+                            );
+                            
+                            if (!hasValue) {
+                                allValid = false;
+                                errors[field.key] = `${field.label} is required`;
+                            }
+                        }
+                    }
+                    return; // Skip default validation
                 }
                 
-                // URL validation
-                if (envVar.type === 'url' && componentConfigs[id]?.[envVar.key]) {
-                    try {
-                        new URL(componentConfigs[id][envVar.key] as string);
-                    } catch {
+                if (field.required && !isDeferredField) {
+                    // Check if ANY component that needs this field has it filled
+                    const hasValue = field.componentIds.some(compId => 
+                        componentConfigs[compId]?.[field.key]
+                    );
+                    
+                    if (!hasValue) {
                         allValid = false;
-                        errors[`${id}.${envVar.key}`] = 'Please enter a valid URL';
+                        errors[field.key] = `${field.label} is required`;
+                    }
+                }
+                
+                // URL validation (check first component that has a value)
+                if (field.type === 'url') {
+                    const firstComponentWithValue = field.componentIds.find(compId => 
+                        componentConfigs[compId]?.[field.key]
+                    );
+                    
+                    if (firstComponentWithValue) {
+                        const value = componentConfigs[firstComponentWithValue][field.key] as string;
+                        try {
+                            new URL(value);
+                        } catch {
+                            allValid = false;
+                            errors[field.key] = 'Please enter a valid URL';
+                        }
                     }
                 }
                 
                 // Custom validation
-                if (envVar.validation?.pattern && componentConfigs[id]?.[envVar.key]) {
-                    const pattern = new RegExp(envVar.validation.pattern);
-                    if (!pattern.test(componentConfigs[id][envVar.key] as string)) {
-                        allValid = false;
-                        errors[`${id}.${envVar.key}`] = envVar.validation.message || 'Invalid format';
+                if (field.validation?.pattern) {
+                    const firstComponentWithValue = field.componentIds.find(compId => 
+                        componentConfigs[compId]?.[field.key]
+                    );
+                    
+                    if (firstComponentWithValue) {
+                        const value = componentConfigs[firstComponentWithValue][field.key] as string;
+                        const pattern = new RegExp(field.validation.pattern);
+                        if (!pattern.test(value)) {
+                            allValid = false;
+                            errors[field.key] = field.validation.message || 'Invalid format';
+                        }
                     }
                 }
             });
@@ -169,99 +380,248 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         
         setValidationErrors(errors);
         setCanProceed(allValid);
-    }, [componentConfigs, selectedComponents, updateState, setCanProceed]);
+    }, [componentConfigs, serviceGroups, updateState, setCanProceed]);
 
-    const updateConfig = (componentId: string, key: string, value: any) => {
-        setComponentConfigs(prev => ({
-            ...prev,
-            [componentId]: {
-                ...prev[componentId],
-                [key]: value
-            }
-        }));
+    const updateField = (field: UniqueField, value: any) => {
+        // Update the field value for ALL components that need it
+        setComponentConfigs(prev => {
+            const newConfigs = { ...prev };
+            
+            field.componentIds.forEach(componentId => {
+                if (!newConfigs[componentId]) {
+                    newConfigs[componentId] = {};
+                }
+                newConfigs[componentId][field.key] = value;
+            });
+            
+            return newConfigs;
+        });
     };
 
-    const renderField = (componentId: string, envVar: ComponentEnvVar) => {
-        const value = componentConfigs[componentId]?.[envVar.key] || '';
-        const errorKey = `${componentId}.${envVar.key}`;
-        const error = validationErrors[errorKey];
+    const getFieldValue = (field: UniqueField): any => {
+        // Get value from first component that has it
+        for (const componentId of field.componentIds) {
+            const value = componentConfigs[componentId]?.[field.key];
+            if (value !== undefined && value !== '') {
+                return value;
+            }
+        }
+        return '';
+    };
 
-        // Special-case: defer MESH_ENDPOINT input; it's set after Mesh selection/deployment
-        if (envVar.key === 'MESH_ENDPOINT') {
+    const getSectionCompletion = (group: ServiceGroup) => {
+        const requiredFields = group.fields.filter(f => {
+            // Handle conditional fields
+            if (f.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' || f.key === 'ADOBE_CATALOG_API_KEY') {
+                const catalogEnvironmentField = serviceGroups
+                    .flatMap(g => g.fields)
+                    .find(field => field.key === 'ADOBE_CATALOG_ENVIRONMENT');
+                
+                if (catalogEnvironmentField) {
+                    const environmentValue = getFieldValue(catalogEnvironmentField);
+                    const isProduction = environmentValue === 'production';
+                    
+                    if (f.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' && !isProduction) {
+                        return false; // Not required
+                    }
+                    if (f.key === 'ADOBE_CATALOG_API_KEY' && isProduction) {
+                        return false; // Not required
+                    }
+                }
+            }
+            
+            return f.required;
+        });
+        
+        const completedFields = requiredFields.filter(f => {
+            // MESH_ENDPOINT is auto-filled later, so consider it complete if it's deferred
+            if (f.key === 'MESH_ENDPOINT') {
+                return true; // Mark as complete since it's auto-populated
+            }
+            
+            const value = getFieldValue(f);
+            return value !== undefined && value !== '';
+        });
+        
+        return {
+            total: requiredFields.length,
+            completed: completedFields.length,
+            isComplete: requiredFields.length === 0 || completedFields.length === requiredFields.length
+        };
+    };
+
+    const navigateToSection = (sectionId: string) => {
+        const element = document.getElementById(`section-${sectionId}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
+    const navigateToField = (fieldKey: string) => {
+        const element = document.getElementById(`field-${fieldKey}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Focus the input element
+            const input = element.querySelector('input, select, textarea');
+            if (input instanceof HTMLElement) {
+                setTimeout(() => input.focus(), 300);
+            }
+        }
+    };
+
+    const toggleNavSection = (sectionId: string) => {
+        setExpandedNavSections(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(sectionId)) {
+                newSet.delete(sectionId);
+            } else {
+                newSet.add(sectionId);
+            }
+            return newSet;
+        });
+    };
+
+    const isFieldComplete = (field: UniqueField): boolean => {
+        if (field.key === 'MESH_ENDPOINT') return true; // Auto-populated
+        const value = getFieldValue(field);
+        return value !== undefined && value !== '';
+    };
+
+    const renderField = (field: UniqueField) => {
+        const value = getFieldValue(field);
+        const error = validationErrors[field.key];
+
+        // Special-case: defer MESH_ENDPOINT input
+        if (field.key === 'MESH_ENDPOINT') {
             return (
-                <TextField
-                    key={envVar.key}
-                    label={envVar.label}
-                    value={value as string}
-                    onChange={(val) => updateConfig(componentId, envVar.key, val)}
-                    placeholder={envVar.placeholder}
-                    description={envVar.description || 'This will be set automatically after Mesh selection or deployment.'}
-                    isDisabled
-                    width="100%"
-                />
+                <div key={field.key} id={`field-${field.key}`}>
+                    <TextField
+                        label={field.label}
+                        value={value as string}
+                        onChange={(val) => updateField(field, val)}
+                        placeholder={field.placeholder}
+                        description={field.description || 'This will be set automatically after Mesh deployment.'}
+                        isDisabled
+                        width="100%"
+                        marginBottom="size-200"
+                    />
+                </div>
             );
         }
 
-        switch (envVar.type) {
+        // Conditional rendering: Show only the relevant API key based on environment selection
+        const catalogEnvironmentField = serviceGroups
+            .flatMap(g => g.fields)
+            .find(f => f.key === 'ADOBE_CATALOG_ENVIRONMENT');
+        
+        if (catalogEnvironmentField) {
+            const environmentValue = getFieldValue(catalogEnvironmentField);
+            const isProduction = environmentValue === 'production';
+            
+            // Only show Production key when Production is selected
+            if (field.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' && !isProduction) {
+                return null;
+            }
+            
+            // Only show Sandbox key when Sandbox is selected
+            if (field.key === 'ADOBE_CATALOG_API_KEY' && isProduction) {
+                return null;
+            }
+        }
+
+        // Determine if field should be marked as required
+        const isFieldRequired = field.required;
+
+        switch (field.type) {
             case 'text':
             case 'url':
                 return (
-                    <TextField
-                        key={envVar.key}
-                        label={envVar.label}
-                        value={value as string}
-                        onChange={(val) => updateConfig(componentId, envVar.key, val)}
-                        placeholder={envVar.placeholder}
-                        description={envVar.description}
-                        isRequired={envVar.required}
-                        validationState={error ? 'invalid' : undefined}
-                        errorMessage={error}
-                        width="100%"
-                    />
+                    <div key={field.key} id={`field-${field.key}`}>
+                        <TextField
+                            label={field.label}
+                            value={value as string}
+                            onChange={(val) => updateField(field, val)}
+                            placeholder={field.placeholder}
+                            description={field.helpText || field.description}
+                            isRequired={isFieldRequired}
+                            validationState={error ? 'invalid' : undefined}
+                            errorMessage={error}
+                            width="100%"
+                            marginBottom="size-200"
+                        />
+                    </div>
                 );
             
             case 'password':
                 return (
-                    <TextField
-                        key={envVar.key}
-                        label={envVar.label}
-                        type="password"
-                        value={value as string}
-                        onChange={(val) => updateConfig(componentId, envVar.key, val)}
-                        placeholder={envVar.placeholder}
-                        description={envVar.description}
-                        isRequired={envVar.required}
-                        validationState={error ? 'invalid' : undefined}
-                        errorMessage={error}
-                        width="100%"
-                    />
+                    <div key={field.key} id={`field-${field.key}`}>
+                        <TextField
+                            label={field.label}
+                            type="password"
+                            value={value as string}
+                            onChange={(val) => updateField(field, val)}
+                            placeholder={field.placeholder}
+                            description={field.helpText || field.description}
+                            isRequired={isFieldRequired}
+                            validationState={error ? 'invalid' : undefined}
+                            errorMessage={error}
+                            width="100%"
+                            marginBottom="size-200"
+                        />
+                    </div>
                 );
             
             case 'select':
+                // Special styling for environment selectors (subsection headers)
+                const isEnvironmentSelector = field.key === 'ADOBE_CATALOG_ENVIRONMENT';
+                
                 return (
-                    <Picker
-                        key={envVar.key}
-                        label={envVar.label}
-                        selectedKey={value as string}
-                        onSelectionChange={(key) => updateConfig(componentId, envVar.key, key)}
-                        width="100%"
-                        isRequired={envVar.required}
-                    >
-                        {envVar.options?.map(option => (
-                            <Item key={option.value}>{option.label}</Item>
-                        )) || []}
-                    </Picker>
+                    <div key={field.key} id={`field-${field.key}`}>
+                        {isEnvironmentSelector ? (
+                            <>
+                                <Text UNSAFE_className="text-sm font-medium text-gray-700" marginTop="size-300" marginBottom="size-150">
+                                    {field.label} {field.required && <span style={{ color: 'var(--spectrum-global-color-red-600)' }}>*</span>}
+                                </Text>
+                                <Picker
+                                    selectedKey={value as string}
+                                    onSelectionChange={(key) => updateField(field, key)}
+                                    width="100%"
+                                    marginBottom="size-300"
+                                    aria-label={field.label}
+                                >
+                                    {field.options?.map(option => (
+                                        <Item key={option.value}>{option.label}</Item>
+                                    )) || []}
+                                </Picker>
+                            </>
+                        ) : (
+                            <Picker
+                                label={field.label}
+                                selectedKey={value as string}
+                                onSelectionChange={(key) => updateField(field, key)}
+                                width="100%"
+                                isRequired={field.required}
+                                marginBottom="size-200"
+                            >
+                                {field.options?.map(option => (
+                                    <Item key={option.value}>{option.label}</Item>
+                                )) || []}
+                            </Picker>
+                        )}
+                    </div>
                 );
             
             case 'boolean':
                 return (
-                    <Checkbox
-                        key={envVar.key}
-                        isSelected={value as boolean}
-                        onChange={(val) => updateConfig(componentId, envVar.key, val)}
-                    >
-                        {envVar.label}
-                    </Checkbox>
+                    <div key={field.key} id={`field-${field.key}`}>
+                        <Checkbox
+                            isSelected={value as boolean}
+                            onChange={(val) => updateField(field, val)}
+                            marginBottom="size-200"
+                        >
+                            {field.label}
+                        </Checkbox>
+                    </div>
                 );
             
             default:
@@ -269,251 +629,184 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         }
     };
 
-    const getIconForType = (type: string) => {
-        switch (type) {
-            case 'Frontend':
-            case 'Backend':
-                return <Link size="S" />;
-            case 'Dependency':
-                return <DataMapping size="S" />;
-            case 'App Builder':
-                return <App size="S" />;
-            case 'External System':
-                return <Settings size="S" />;
-            default:
-                return <Settings size="S" />;
-        }
-    };
+    return (
+        <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0', overflow: 'hidden' }}>
+            {/* Left: Settings Configuration */}
+            <div style={{
+                maxWidth: '800px',
+                width: '100%',
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                minWidth: 0,
+                overflow: 'hidden'
+            }}>
+                <Heading level={2} marginBottom="size-300">Settings Collection</Heading>
+                <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
+                    Configure the settings for your selected components. Required fields are marked with an asterisk.
+                </Text>
 
-    // Auto-fill shared values when Commerce URL is entered
-    useEffect(() => {
-        const frontendConfig = componentConfigs['citisignal-nextjs'];
-        const meshConfig = componentConfigs['commerce-mesh'];
-        const integrationConfig = componentConfigs['integration-service'];
-        
-        // Share Commerce URL across components
-        if (frontendConfig?.ADOBE_COMMERCE_URL && !meshConfig?.ADOBE_COMMERCE_GRAPHQL_ENDPOINT) {
-            const commerceUrl = frontendConfig.ADOBE_COMMERCE_URL as string;
-            updateConfig('commerce-mesh', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT', `${commerceUrl}/graphql`);
-        }
-        
-        if (frontendConfig?.ADOBE_COMMERCE_URL && !integrationConfig?.COMMERCE_BASE_URL) {
-            updateConfig('integration-service', 'COMMERCE_BASE_URL', frontendConfig.ADOBE_COMMERCE_URL);
-        }
-        
-        // Share Environment ID across components
-        if (frontendConfig?.ADOBE_COMMERCE_ENVIRONMENT_ID && !meshConfig?.ADOBE_COMMERCE_ENVIRONMENT_ID) {
-            updateConfig('commerce-mesh', 'ADOBE_COMMERCE_ENVIRONMENT_ID', frontendConfig.ADOBE_COMMERCE_ENVIRONMENT_ID);
-        }
-        
-        // Share store codes across components
-        if (frontendConfig?.ADOBE_COMMERCE_STORE_VIEW_CODE && !meshConfig?.ADOBE_COMMERCE_STORE_VIEW_CODE) {
-            updateConfig('commerce-mesh', 'ADOBE_COMMERCE_STORE_VIEW_CODE', frontendConfig.ADOBE_COMMERCE_STORE_VIEW_CODE);
-        }
-        
-        if (frontendConfig?.ADOBE_COMMERCE_WEBSITE_CODE && !meshConfig?.ADOBE_COMMERCE_WEBSITE_CODE) {
-            updateConfig('commerce-mesh', 'ADOBE_COMMERCE_WEBSITE_CODE', frontendConfig.ADOBE_COMMERCE_WEBSITE_CODE);
-        }
-        
-        if (frontendConfig?.ADOBE_COMMERCE_STORE_CODE && !meshConfig?.ADOBE_COMMERCE_STORE_CODE) {
-            updateConfig('commerce-mesh', 'ADOBE_COMMERCE_STORE_CODE', frontendConfig.ADOBE_COMMERCE_STORE_CODE);
-        }
-        
-        // Share Catalog API Key
-        if (frontendConfig?.ADOBE_CATALOG_API_KEY && !meshConfig?.ADOBE_CATALOG_API_KEY) {
-            updateConfig('commerce-mesh', 'ADOBE_CATALOG_API_KEY', frontendConfig.ADOBE_CATALOG_API_KEY);
-        }
-    }, [componentConfigs['citisignal-nextjs']?.ADOBE_COMMERCE_URL, 
-        componentConfigs['citisignal-nextjs']?.ADOBE_COMMERCE_ENVIRONMENT_ID,
-        componentConfigs['citisignal-nextjs']?.ADOBE_CATALOG_API_KEY]);
+                {isLoading ? (
+                    <Flex justifyContent="center" alignItems="center" height="100%">
+                        <LoadingDisplay 
+                            size="L"
+                            message="Loading component configurations..."
+                        />
+                    </Flex>
+                ) : serviceGroups.length === 0 ? (
+                    <Text UNSAFE_className="text-gray-600">
+                        No components requiring configuration were selected.
+                    </Text>
+                ) : (
+                    <Form UNSAFE_style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+                        {serviceGroups.map((group, index) => {
+                            const completion = getSectionCompletion(group);
+                            
+                            return (
+                                <React.Fragment key={group.id}>
+                                    {index > 0 && <Divider size="S" marginTop="size-200" marginBottom="size-200" />}
+                                    
+                                    <div id={`section-${group.id}`} style={{ scrollMarginTop: index > 0 ? '16px' : '0' }}>
+                                        {/* Section Header */}
+                                        <Flex alignItems="center" justifyContent="space-between" marginBottom="size-300">
+                                            <Heading level={3}>{group.label}</Heading>
+                                            <Text UNSAFE_className={`text-sm ${completion.isComplete ? 'text-green-600' : 'text-gray-600'}`}>
+                                                {completion.total === 0 ? 'Optional' : `${completion.completed}/${completion.total}`}
+                                            </Text>
+                                        </Flex>
+                                        
+                                        {/* Section Content */}
+                                        <Flex direction="column" marginBottom="size-200">
+                                            {group.fields.map(field => renderField(field))}
+                                        </Flex>
+                                    </div>
+                                </React.Fragment>
+                            );
+                        })}
+                    </Form>
+                )}
+            </div>
+            
+                {/* Right: Navigation Panel */}
+                <div style={{
+                    flex: '1',
+                    padding: '24px',
+                    backgroundColor: 'var(--spectrum-global-color-gray-75)',
+                    borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
+                }}>
+                    <Heading level={3} marginBottom="size-200">Configuration</Heading>
+                    
+                    <Flex direction="column" gap="size-150" UNSAFE_style={{ overflowY: 'auto', flex: 1 }}>
+                        {serviceGroups.map((group) => {
+                            const completion = getSectionCompletion(group);
+                            const isExpanded = expandedNavSections.has(group.id);
+                            const isActive = activeSection === group.id;
 
-    useEffect(() => {
-        if (selectedComponents.length > 0 && !activeComponentId) {
-            setActiveComponentId(selectedComponents[0].id);
-        } else if (activeComponentId && !selectedComponents.some(component => component.id === activeComponentId)) {
-            setActiveComponentId(selectedComponents[0]?.id ?? null);
-        }
-    }, [selectedComponents, activeComponentId]);
+                            return (
+                                <div key={group.id} style={{ width: '100%' }}>
+                                    {/* Section Header */}
+                                    <button
+                                        id={`nav-${group.id}`}
+                                        onClick={() => toggleNavSection(group.id)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px',
+                                            background: isActive ? 'var(--spectrum-global-color-gray-200)' : 'transparent',
+                                            border: '1px solid var(--spectrum-global-color-gray-300)',
+                                            borderLeft: isActive ? '3px solid var(--spectrum-global-color-blue-500)' : '1px solid var(--spectrum-global-color-gray-300)',
+                                            borderRadius: '4px',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'flex-start',
+                                            gap: '4px',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isActive) {
+                                                e.currentTarget.style.background = 'var(--spectrum-global-color-gray-200)';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isActive) {
+                                                e.currentTarget.style.background = 'transparent';
+                                            }
+                                        }}
+                                    >
+                                    <Flex width="100%" justifyContent="space-between" alignItems="center">
+                                        <Flex gap="size-100" alignItems="center">
+                                            {isExpanded ? <ChevronDown size="S" /> : <ChevronRight size="S" />}
+                                            <Text UNSAFE_className={`text-sm ${isActive ? 'font-bold' : 'font-medium'}`}>{group.label}</Text>
+                                        </Flex>
+                                        {completion.isComplete ? (
+                                            <Text UNSAFE_className="text-green-600" UNSAFE_style={{ fontSize: '16px', lineHeight: '16px' }}>✓</Text>
+                                        ) : (
+                                            <Text UNSAFE_className="text-xs text-gray-600">
+                                                {completion.total === 0 ? 'Optional' : `${completion.completed}/${completion.total}`}
+                                            </Text>
+                                        )}
+                                    </Flex>
+                                </button>
 
-    // Show loading state while fetching data
-    if (isLoading) {
-        return (
-            <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
-                <Heading level={2} marginBottom="size-300">
-                    Component Configuration
-                </Heading>
-                <Flex alignItems="center" justifyContent="center" height="200px">
-                    <Text>Loading component configurations...</Text>
+                                {/* Expandable Field List */}
+                                {isExpanded && (
+                                    <div style={{
+                                        marginTop: '4px',
+                                        marginLeft: '12px',
+                                        paddingLeft: '12px',
+                                        borderLeft: '2px solid var(--spectrum-global-color-gray-300)'
+                                    }}>
+                                        {group.fields.map((field) => {
+                                            const isComplete = isFieldComplete(field);
+                                            const isVisible = !(
+                                                (field.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' && getFieldValue(
+                                                    serviceGroups.flatMap(g => g.fields).find(f => f.key === 'ADOBE_CATALOG_ENVIRONMENT')!
+                                                ) !== 'production') ||
+                                                (field.key === 'ADOBE_CATALOG_API_KEY' && getFieldValue(
+                                                    serviceGroups.flatMap(g => g.fields).find(f => f.key === 'ADOBE_CATALOG_ENVIRONMENT')!
+                                                ) === 'production')
+                                            );
+
+                                            if (!isVisible) return null;
+
+                                            return (
+                                                <button
+                                                    key={field.key}
+                                                    onClick={() => navigateToField(field.key)}
+                                                    style={{
+                                                        width: '100%',
+                                                        padding: '8px 12px',
+                                                        background: 'transparent',
+                                                        border: 'none',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'space-between',
+                                                        textAlign: 'left',
+                                                        transition: 'background 0.2s'
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = 'var(--spectrum-global-color-gray-200)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = 'transparent';
+                                                    }}
+                                                >
+                                                    <Text UNSAFE_className="text-xs text-gray-700">{field.label}</Text>
+                                                    {isComplete && <Text UNSAFE_className="text-green-600" UNSAFE_style={{ fontSize: '14px', lineHeight: '14px' }}>✓</Text>}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </Flex>
             </div>
-        );
-    }
-
-    const renderComponentList = () => (
-        <View>
-            <Heading level={3} marginBottom="size-200">Components</Heading>
-            <Flex direction="column" gap="size-100">
-                {selectedComponents.map(({ id, data, type }) => {
-                    const config = componentConfigs[id] || {};
-                    const envVars = data.configuration?.envVars?.filter(env => env.key !== 'MESH_ENDPOINT') || [];
-                    const requiredCount = envVars.filter(env => env.required).length;
-                    const completedCount = envVars.filter(env => env.required && !!config[env.key]).length;
-                    const isComplete = requiredCount === 0 || completedCount === requiredCount;
-
-                    return (
-                        <Button
-                            key={id}
-                            variant={activeComponentId === id ? 'accent' : 'secondary'}
-                            isQuiet
-                            onPress={() => setActiveComponentId(id)}
-                            UNSAFE_style={{ justifyContent: 'flex-start' }}
-                        >
-                            <Flex justifyContent="space-between" alignItems="center" width="100%">
-                                <Flex gap="size-100" alignItems="center">
-                                    {getIconForType(type)}
-                                    <Text UNSAFE_className={cn('font-medium')}>{data.name}</Text>
-                                </Flex>
-                                <Flex gap="size-75" alignItems="center">
-                                    {isComplete ? (
-                                        <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                                    ) : (
-                                        <Clock size="S" UNSAFE_className="text-blue-600" />
-                                    )}
-                                    <Text UNSAFE_className="text-xs text-gray-600">
-                                        {completedCount}/{requiredCount || '-'}
-                                    </Text>
-                                </Flex>
-                            </Flex>
-                        </Button>
-                    );
-                })}
-            </Flex>
-        </View>
-    );
-
-    const renderActiveComponentForm = () => {
-        const activeComponent = selectedComponents.find(component => component.id === activeComponentId) || selectedComponents[0];
-        if (!activeComponent) {
-            return (
-                <Well>
-                    <Text>No components requiring configuration were selected.</Text>
-                </Well>
-            );
-        }
-
-        const { id, data, type } = activeComponent;
-        const hasRequiredFields = data.configuration?.envVars?.some(env => env.required && env.key !== 'MESH_ENDPOINT');
-
-        return (
-            <View>
-                <Flex gap="size-100" alignItems="center" UNSAFE_className={cn('component-section-header-static')}>
-                    {getIconForType(type)}
-                    <Text UNSAFE_className={cn('font-medium')}>{data.name}</Text>
-                    <Text UNSAFE_className={cn('text-sm', 'text-gray-600')}>({type})</Text>
-                    {hasRequiredFields && (
-                        <Text UNSAFE_className={cn('text-xs', 'text-red-600', 'ml-auto')}>
-                            * Required fields
-                        </Text>
-                    )}
-                </Flex>
-                <Well>
-                    <Flex direction="column" gap="size-200">
-                        {data.configuration?.envVars?.map(envVar => renderField(id, envVar))}
-                    </Flex>
-                </Well>
-            </View>
-        );
-    };
-
-    return (
-        <div style={{ maxWidth: '960px', width: '100%', margin: '0 auto', padding: '24px' }}>
-            <Flex justifyContent="space-between" alignItems="center" marginBottom="size-300">
-                <Heading level={2}>Settings Collection</Heading>
-                {selectedComponents.length > 0 && (
-                    <Flex direction="column" alignItems="flex-end" gap="size-50">
-                        <Text UNSAFE_className="text-xs text-gray-600">Required fields complete</Text>
-                        <Text UNSAFE_className="text-lg font-medium">
-                            {(() => {
-                                const totals = selectedComponents.reduce((acc, component) => {
-                                    const config = componentConfigs[component.id] || {};
-                                    const envVars = component.data.configuration?.envVars?.filter(env => env.key !== 'MESH_ENDPOINT') || [];
-                                    const required = envVars.filter(env => env.required);
-                                    const completed = required.filter(env => !!config[env.key]);
-                                    return {
-                                        required: acc.required + required.length,
-                                        completed: acc.completed + completed.length
-                                    };
-                                }, { required: 0, completed: 0 });
-                                if (totals.required === 0) return '—';
-                                return `${totals.completed}/${totals.required}`;
-                            })()}
-                        </Text>
-                    </Flex>
-                )}
-            </Flex>
-
-            <Text UNSAFE_className="text-sm text-gray-600" marginBottom="size-300">
-                Provide configuration values for each selected component. Required fields are marked with an asterisk. Values will populate component-specific .env files when code is downloaded.
-            </Text>
-
-            {selectedComponents.length === 0 ? (
-                <Well>
-                    <Flex direction="column" gap="size-100" alignItems="center">
-                        <Info size="L" UNSAFE_className="text-gray-500" />
-                        <Text>No components requiring configuration were selected.</Text>
-                    </Flex>
-                </Well>
-            ) : (
-                <Flex gap="size-300" alignItems="flex-start" wrap>
-                    <View flex>
-                        <Form>
-                            {renderActiveComponentForm()}
-                        </Form>
-                    </View>
-                    <View width="260px">
-                        <Well>
-                            {renderComponentList()}
-                        </Well>
-
-                        <Well marginTop="size-300">
-                            <Flex direction="column" gap="size-100">
-                                <Text UNSAFE_className="text-xs text-gray-600 text-uppercase letter-spacing-05">Project</Text>
-                                <Text UNSAFE_className="text-sm font-medium">
-                                    {state.adobeProject?.title || state.adobeProject?.name || 'Not selected'}
-                                </Text>
-                            </Flex>
-
-                            <Divider size="S" marginY="size-200" />
-
-                            <Flex direction="column" gap="size-100">
-                                <Text UNSAFE_className="text-xs text-gray-600 text-uppercase letter-spacing-05">Workspace</Text>
-                                <Text UNSAFE_className="text-sm font-medium">
-                                    {state.adobeWorkspace?.title || state.adobeWorkspace?.name || 'Not selected'}
-                                </Text>
-                                <Flex gap="size-75" alignItems="center">
-                                    {state.apiVerification?.hasMesh ? (
-                                        <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                                    ) : (
-                                        <Clock size="S" UNSAFE_className="text-blue-600" />
-                                    )}
-                                    <Text UNSAFE_className="text-sm text-gray-600">API Mesh access</Text>
-                                </Flex>
-                            </Flex>
-                        </Well>
-
-                        <Well marginTop="size-300">
-                            <Flex direction="column" gap="size-100">
-                                <Text UNSAFE_className="text-xs text-gray-600 text-uppercase letter-spacing-05">Guidance</Text>
-                                <Text UNSAFE_className="text-sm text-gray-600">
-                                    {state.adobeProject
-                                        ? `Values saved here will be written to .env files under the ${state.adobeProject.title || state.adobeProject.name} project folder during download.`
-                                        : 'Once a project is selected, .env files will be generated alongside downloaded code.'}
-                                </Text>
-                            </Flex>
-                        </Well>
-                    </View>
-                </Flex>
-            )}
         </div>
     );
 }
