@@ -23,7 +23,6 @@ import Clock from '@spectrum-icons/workflow/Clock';
 import { WizardState, ComponentConfigs, ComponentEnvVar } from '../../types';
 import { vscode } from '../../app/vscodeApi';
 import { cn } from '../../utils/classNames';
-import { ConfigurationSummary } from '../shared/ConfigurationSummary';
 
 interface ComponentConfigStepProps {
     state: WizardState;
@@ -427,57 +426,94 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     };
 
     return (
-        <div style={{ display: 'flex', height: '100%', width: '100%' }}>
-            <div style={{
-                maxWidth: '800px',
-                width: '100%',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '24px'
-            }}>
-                <Heading level={2} marginBottom="size-300">Settings Collection</Heading>
-                <Text>
-                    Provide configuration values for each selected component. Required fields are marked with an asterisk. All values will be written to component-specific .env files when the code is downloaded.
-                </Text>
-
-                {selectedComponents.length === 0 ? (
-                    <Well>
-                        <Flex direction="column" gap="size-100" alignItems="center">
-                            <Info size="L" UNSAFE_className="text-gray-500" />
-                            <Text>No components requiring configuration were selected.</Text>
-                        </Flex>
-                    </Well>
-                ) : (
-                    <Flex gap="size-300" alignItems="flex-start" wrap>
-                        <View flex>
-                            <Form>
-                                {renderActiveComponentForm()}
-                            </Form>
-                        </View>
-                        <View width="260px">
-                            {renderComponentList()}
-                        </View>
+        <div style={{ maxWidth: '960px', width: '100%', margin: '0 auto', padding: '24px' }}>
+            <Flex justifyContent="space-between" alignItems="center" marginBottom="size-300">
+                <Heading level={2}>Settings Collection</Heading>
+                {selectedComponents.length > 0 && (
+                    <Flex direction="column" alignItems="flex-end" gap="size-50">
+                        <Text UNSAFE_className="text-xs text-gray-600">Required fields complete</Text>
+                        <Text UNSAFE_className="text-lg font-medium">
+                            {(() => {
+                                const totals = selectedComponents.reduce((acc, component) => {
+                                    const config = componentConfigs[component.id] || {};
+                                    const envVars = component.data.configuration?.envVars?.filter(env => env.key !== 'MESH_ENDPOINT') || [];
+                                    const required = envVars.filter(env => env.required);
+                                    const completed = required.filter(env => !!config[env.key]);
+                                    return {
+                                        required: acc.required + required.length,
+                                        completed: acc.completed + completed.length
+                                    };
+                                }, { required: 0, completed: 0 });
+                                if (totals.required === 0) return '—';
+                                return `${totals.completed}/${totals.required}`;
+                            })()}
+                        </Text>
                     </Flex>
                 )}
+            </Flex>
 
-                {state.adobeProject && (
-                    <Well>
-                        <Text UNSAFE_className="text-sm text-gray-700">
-                            These settings apply to the project <strong>{state.adobeProject.title}</strong>.
-                        </Text>
-                    </Well>
-                )}
-            </div>
+            <Text UNSAFE_className="text-sm text-gray-600" marginBottom="size-300">
+                Provide configuration values for each selected component. Required fields are marked with an asterisk. Values will populate component-specific .env files when code is downloaded.
+            </Text>
 
-            <div style={{
-                flex: '1',
-                padding: '24px',
-                backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
-            }}>
-                <ConfigurationSummary state={state} />
-            </div>
+            {selectedComponents.length === 0 ? (
+                <Well>
+                    <Flex direction="column" gap="size-100" alignItems="center">
+                        <Info size="L" UNSAFE_className="text-gray-500" />
+                        <Text>No components requiring configuration were selected.</Text>
+                    </Flex>
+                </Well>
+            ) : (
+                <Flex gap="size-300" alignItems="flex-start" wrap>
+                    <View flex>
+                        <Form>
+                            {renderActiveComponentForm()}
+                        </Form>
+                    </View>
+                    <View width="260px">
+                        <Well>
+                            {renderComponentList()}
+                        </Well>
+
+                        <Well marginTop="size-300">
+                            <Flex direction="column" gap="size-100">
+                                <Text UNSAFE_className="text-xs text-gray-600 text-uppercase letter-spacing-05">Project</Text>
+                                <Text UNSAFE_className="text-sm font-medium">
+                                    {state.adobeProject?.title || state.adobeProject?.name || 'Not selected'}
+                                </Text>
+                            </Flex>
+
+                            <Divider size="S" marginY="size-200" />
+
+                            <Flex direction="column" gap="size-100">
+                                <Text UNSAFE_className="text-xs text-gray-600 text-uppercase letter-spacing-05">Workspace</Text>
+                                <Text UNSAFE_className="text-sm font-medium">
+                                    {state.adobeWorkspace?.title || state.adobeWorkspace?.name || 'Not selected'}
+                                </Text>
+                                <Flex gap="size-75" alignItems="center">
+                                    {state.apiVerification?.hasMesh ? (
+                                        <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                                    ) : (
+                                        <Clock size="S" UNSAFE_className="text-blue-600" />
+                                    )}
+                                    <Text UNSAFE_className="text-sm text-gray-600">API Mesh access</Text>
+                                </Flex>
+                            </Flex>
+                        </Well>
+
+                        <Well marginTop="size-300">
+                            <Flex direction="column" gap="size-100">
+                                <Text UNSAFE_className="text-xs text-gray-600 text-uppercase letter-spacing-05">Guidance</Text>
+                                <Text UNSAFE_className="text-sm text-gray-600">
+                                    {state.adobeProject
+                                        ? `Values saved here will be written to .env files under the ${state.adobeProject.title || state.adobeProject.name} project folder during download.`
+                                        : 'Once a project is selected, .env files will be generated alongside downloaded code.'}
+                                </Text>
+                            </Flex>
+                        </Well>
+                    </View>
+                </Flex>
+            )}
         </div>
     );
 }
