@@ -13,8 +13,6 @@ import {
     Divider,
     ActionButton
 } from '@adobe/react-spectrum';
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import Settings from '@spectrum-icons/workflow/Settings';
 import Link from '@spectrum-icons/workflow/Link';
 import App from '@spectrum-icons/workflow/App';
@@ -48,7 +46,6 @@ interface ComponentsData {
 
 export function ComponentConfigStep({ state, updateState, setCanProceed }: ComponentConfigStepProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(state.componentConfigs || {});
-    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
     const [componentsData, setComponentsData] = useState<ComponentsData>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [isLoading, setIsLoading] = useState(true);
@@ -108,7 +105,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         return components;
     }, [state.components, componentsData]);
 
-    // Initialize configs for selected components and auto-expand first section
+    // Initialize configs for selected components
     useEffect(() => {
         const newConfigs = { ...componentConfigs };
         
@@ -126,11 +123,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         });
         
         setComponentConfigs(newConfigs);
-        
-        // Auto-expand first section for better UX
-        if (selectedComponents.length > 0 && expandedSections.size === 0) {
-            setExpandedSections(new Set([selectedComponents[0].id]));
-        }
     }, [selectedComponents]);
 
     // Update parent state and validation
@@ -143,7 +135,9 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         
         selectedComponents.forEach(({ id, data }) => {
             data.configuration?.envVars?.forEach(envVar => {
-                if (envVar.required && !componentConfigs[id]?.[envVar.key]) {
+                // Skip requiring MESH_ENDPOINT at this step; it is provided by the Mesh selection/deploy step
+                const isDeferredField = envVar.key === 'MESH_ENDPOINT';
+                if (envVar.required && !isDeferredField && !componentConfigs[id]?.[envVar.key]) {
                     allValid = false;
                     errors[`${id}.${envVar.key}`] = `${envVar.label} is required`;
                 }
@@ -173,16 +167,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         setCanProceed(allValid);
     }, [componentConfigs, selectedComponents, updateState, setCanProceed]);
 
-    const toggleSection = (componentId: string) => {
-        const newExpanded = new Set(expandedSections);
-        if (newExpanded.has(componentId)) {
-            newExpanded.delete(componentId);
-        } else {
-            newExpanded.add(componentId);
-        }
-        setExpandedSections(newExpanded);
-    };
-
     const updateConfig = (componentId: string, key: string, value: any) => {
         setComponentConfigs(prev => ({
             ...prev,
@@ -197,6 +181,22 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         const value = componentConfigs[componentId]?.[envVar.key] || '';
         const errorKey = `${componentId}.${envVar.key}`;
         const error = validationErrors[errorKey];
+
+        // Special-case: defer MESH_ENDPOINT input; it's set after Mesh selection/deployment
+        if (envVar.key === 'MESH_ENDPOINT') {
+            return (
+                <TextField
+                    key={envVar.key}
+                    label={envVar.label}
+                    value={value as string}
+                    onChange={(val) => updateConfig(componentId, envVar.key, val)}
+                    placeholder={envVar.placeholder}
+                    description={envVar.description || 'This will be set automatically after Mesh selection or deployment.'}
+                    isDisabled
+                    width="100%"
+                />
+            );
+        }
 
         switch (envVar.type) {
             case 'text':
@@ -354,52 +354,32 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             ) : (
                 <Form>
                     {selectedComponents.map(({ id, data, type }, index) => {
-                        const isExpanded = expandedSections.has(id);
                         const hasRequiredFields = data.configuration?.envVars?.some(e => e.required);
                         
                         return (
                             <View key={id} marginBottom="size-300">
                                 {index > 0 && <Divider size="S" marginBottom="size-200" />}
-                                
-                                <ActionButton
-                                    onPress={() => toggleSection(id)}
-                                    isQuiet
-                                    width="100%"
-                                    UNSAFE_className={cn('component-section-header')}
-                                    UNSAFE_style={{ 
-                                        justifyContent: 'flex-start',
-                                        padding: '12px',
-                                        backgroundColor: 'var(--spectrum-global-color-gray-100)',
-                                        borderRadius: '4px',
-                                        marginBottom: '12px'
-                                    }}
-                                >
-                                    <Flex gap="size-100" alignItems="center" width="100%">
-                                        {isExpanded ? <ChevronDown /> : <ChevronRight />}
-                                        {getIconForType(type)}
-                                        <Text UNSAFE_className={cn('font-medium')}>
-                                            {data.name}
+                                <Flex gap="size-100" alignItems="center" width="100%" UNSAFE_className={cn('component-section-header-static')}>
+                                    {getIconForType(type)}
+                                    <Text UNSAFE_className={cn('font-medium')}>
+                                        {data.name}
+                                    </Text>
+                                    <Text UNSAFE_className={cn('text-sm', 'text-gray-600')}>
+                                        ({type})
+                                    </Text>
+                                    {hasRequiredFields && (
+                                        <Text UNSAFE_className={cn('text-xs', 'text-red-600', 'ml-auto')}>
+                                            * Required fields
                                         </Text>
-                                        <Text UNSAFE_className={cn('text-sm', 'text-gray-600')}>
-                                            ({type})
-                                        </Text>
-                                        {hasRequiredFields && (
-                                            <Text UNSAFE_className={cn('text-xs', 'text-red-600', 'ml-auto')}>
-                                                * Required fields
-                                            </Text>
+                                    )}
+                                </Flex>
+                                <Well>
+                                    <Flex direction="column" gap="size-200">
+                                        {data.configuration?.envVars?.map(envVar => 
+                                            renderField(id, envVar)
                                         )}
                                     </Flex>
-                                </ActionButton>
-                                
-                                {isExpanded && (
-                                    <Well>
-                                        <Flex direction="column" gap="size-200">
-                                            {data.configuration?.envVars?.map(envVar => 
-                                                renderField(id, envVar)
-                                            )}
-                                        </Flex>
-                                    </Well>
-                                )}
+                                </Well>
                             </View>
                         );
                     })}
@@ -415,8 +395,12 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             )}
 
             <style>{`
-                .component-section-header:hover {
-                    background-color: var(--spectrum-global-color-gray-200) !important;
+                .component-section-header-static {
+                    justify-content: flex-start;
+                    padding: 12px;
+                    background-color: var(--spectrum-global-color-gray-100);
+                    border-radius: 4px;
+                    margin-bottom: 12px;
                 }
                 
                 .ml-auto {
