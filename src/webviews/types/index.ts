@@ -10,6 +10,7 @@ export type WizardStep =
     | 'adobe-auth'  // Adobe authentication step
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
+    | 'api-verification'  // New: API verification step
     | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
@@ -31,6 +32,13 @@ export interface WizardState {
     commerceConfig?: CommerceConfig;  // Kept for compatibility
     creationProgress?: CreationProgress;
     projectSearchFilter?: string;  // Filter persistence for project selection
+    apiVerification?: {
+        isChecking: boolean;
+        message?: string;
+        subMessage?: string;
+        hasMesh?: boolean;
+        error?: string;
+    };
 }
 
 export type ProjectTemplate = 'commerce-paas' | 'commerce-saas' | 'aem-commerce';

@@ -14,6 +14,7 @@ import { PrerequisitesStep } from '../steps/PrerequisitesStep';
 import { AdobeAuthStep } from '../steps/AdobeAuthStep';
 import { AdobeProjectStep } from '../steps/AdobeProjectStep';
 import { AdobeWorkspaceStep } from '../steps/AdobeWorkspaceStep';
+import { ApiVerificationStep } from '../steps/ApiVerificationStep';
 import { ComponentConfigStep } from '../steps/ComponentConfigStep';
 import { ReviewStep } from '../steps/ReviewStep';
 import { CreatingStep } from '../steps/CreatingStep';
@@ -344,6 +345,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
             case 'adobe-workspace':
                 return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
+            case 'api-verification':
+                return <ApiVerificationStep {...props} completedSteps={completedSteps} />;
             case 'settings':
                 return <ComponentConfigStep {...props} />;
             case 'review':

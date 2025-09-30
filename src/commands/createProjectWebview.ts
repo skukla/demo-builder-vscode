@@ -320,6 +320,26 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             return { success: true };
         });
 
+        // Check required APIs (e.g., API Mesh) for the currently selected project
+        comm.on('check-project-apis', async (data: any) => {
+            try {
+                const result = await this.handleCheckProjectApis();
+                return { success: true, ...result };
+            } catch (error) {
+                return { success: false, error: error instanceof Error ? error.message : String(error) };
+            }
+        });
+
+        // Open Adobe Console in browser
+        comm.on('open-adobe-console', async () => {
+            try {
+                await vscode.env.openExternal(vscode.Uri.parse('https://console.adobe.io'));
+                return { success: true };
+            } catch (error) {
+                return { success: false };
+            }
+        });
+
         comm.on('select-project', async (data: any) => {
             this.debugLogger.debug('[Project] select-project handler called with data:', data);
             try {
@@ -1389,6 +1409,93 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 details: error instanceof Error ? error.message : String(error)
             });
             // Re-throw so the handler can send proper response
+            throw error;
+        }
+    }
+
+    private async handleCheckProjectApis(): Promise<{ hasMesh: boolean }> {
+        this.logger.info('[Adobe Setup] Checking required APIs for selected project');
+        this.debugLogger.debug('[Adobe Setup] handleCheckProjectApis invoked');
+        try {
+            const commandManager = getExternalCommandManager();
+
+            // Step 1: Verify CLI has the API Mesh plugin installed (so commands exist)
+            try {
+                const { stdout } = await commandManager.executeAdobeCLI('aio plugins --json');
+                const plugins = JSON.parse(stdout || '[]');
+                const hasPlugin = Array.isArray(plugins)
+                    ? plugins.some((p: any) => (p.name || p.id || '').includes('api-mesh'))
+                    : JSON.stringify(plugins).includes('api-mesh');
+                if (!hasPlugin) {
+                    this.logger.warn('[Adobe Setup] API Mesh CLI plugin not installed');
+                    return { hasMesh: false };
+                }
+            } catch (e) {
+                this.debugLogger.debug('[Adobe Setup] Failed to verify plugins; continuing', { error: String(e) });
+            }
+
+            // Step 2: Confirm project context is selected (best effort)
+            try {
+                await commandManager.executeAdobeCLI('aio console projects get --json');
+            } catch (e) {
+                this.debugLogger.debug('[Adobe Setup] Could not confirm project context (non-fatal)', { error: String(e) });
+            }
+
+            // Step 3: Probe access by calling a safe mesh command that lists or describes
+            // CLI variants differ; try a few options and infer permissions from errors
+            // Preferred probe: get active mesh (succeeds only if API enabled; returns 404-style when none exists)
+            try {
+                const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:get --active --json');
+                this.debugLogger.debug('[Adobe Setup] api-mesh:get --active output', { stdout });
+                this.logger.info('[Adobe Setup] API Mesh access confirmed (active mesh or readable config)');
+                return { hasMesh: true };
+            } catch (cliError: any) {
+                const combined = `${cliError?.message || ''}\n${cliError?.stderr || ''}\n${cliError?.stdout || ''}`;
+                this.debugLogger.debug('[Adobe Setup] api-mesh:get --active error', { combined });
+                const forbidden = /403|forbidden|not authorized|not enabled|no access/i.test(combined);
+                if (forbidden) {
+                    this.logger.warn('[Adobe Setup] API Mesh not enabled for selected project');
+                    return { hasMesh: false };
+                }
+                // If error indicates no active mesh or not found, treat as enabled but empty
+                const noActive = /no active|not found|404/i.test(combined);
+                if (noActive) {
+                    this.logger.info('[Adobe Setup] API Mesh enabled; no active mesh found');
+                    return { hasMesh: true };
+                }
+            }
+
+            const probes = [
+                'aio api-mesh:get --help',
+                'aio api-mesh --help'
+            ];
+
+            for (const cmd of probes) {
+                try {
+                    const { stdout } = await commandManager.executeAdobeCLI(cmd);
+                    this.debugLogger.debug('[Adobe Setup] Mesh probe success', { cmd, stdout });
+                    // If any mesh command runs, assume access exists
+                    this.logger.info('[Adobe Setup] API Mesh access confirmed');
+                    return { hasMesh: true };
+                } catch (cliError: any) {
+                    const combined = `${cliError?.message || ''}\n${cliError?.stderr || ''}\n${cliError?.stdout || ''}`;
+                    this.debugLogger.debug('[Adobe Setup] Mesh probe error', { cmd, combined });
+                    const forbidden = /403|forbidden|not authorized|not enabled|no access|missing permission/i.test(combined);
+                    if (forbidden) {
+                        this.logger.warn('[Adobe Setup] API Mesh not enabled for selected project');
+                        return { hasMesh: false };
+                    }
+                    // If the error indicates unknown command, try next variant
+                    const unknown = /is not a aio command|Unknown argument|Did you mean/i.test(combined);
+                    if (unknown) continue;
+                }
+            }
+
+            // If all probes failed without a definitive permission error, return false to prompt user
+            this.logger.warn('[Adobe Setup] Unable to confirm API Mesh access (CLI variant mismatch)');
+            return { hasMesh: false };
+        } catch (error) {
+            this.logger.error('[Adobe Setup] Failed to check project APIs', error as Error);
             throw error;
         }
     }
