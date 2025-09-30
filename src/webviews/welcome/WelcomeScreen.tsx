@@ -89,6 +89,59 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
         vscode.postMessage('open-settings');
     };
 
+    // Focus trap for Tab navigation — matches wizard implementation
+    useEffect(() => {
+        const selector = 'button:not([disabled]):not([tabindex="-1"]), ' +
+            'input:not([disabled]):not([tabindex="-1"]), ' +
+            'select:not([disabled]):not([tabindex="-1"]), ' +
+            'textarea:not([disabled]):not([tabindex="-1"]), ' +
+            '[tabindex]:not([tabindex="-1"]):not([tabindex="0"])';
+
+        const focusFirstElement = () => {
+            const focusableElements = document.querySelectorAll(selector);
+            if (focusableElements.length > 0) {
+                const first = focusableElements[0] as HTMLElement;
+                if (document.activeElement === document.body || !document.activeElement) {
+                    first.focus();
+                }
+            }
+        };
+
+        // Ensure focus starts inside the webview
+        const focusTimeout = window.setTimeout(focusFirstElement, 0);
+        window.addEventListener('focus', focusFirstElement);
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Tab') {
+                const focusableElements = document.querySelectorAll(selector);
+
+                const focusableArray = Array.from(focusableElements) as HTMLElement[];
+                if (focusableArray.length === 0) {
+                    return;
+                }
+
+                const currentIndex = focusableArray.indexOf(document.activeElement as HTMLElement);
+
+                e.preventDefault();
+
+                if (e.shiftKey) {
+                    const nextIndex = currentIndex <= 0 ? focusableArray.length - 1 : currentIndex - 1;
+                    focusableArray[nextIndex].focus();
+                } else {
+                    const nextIndex = currentIndex >= focusableArray.length - 1 ? 0 : currentIndex + 1;
+                    focusableArray[nextIndex].focus();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.clearTimeout(focusTimeout);
+            window.removeEventListener('focus', focusFirstElement);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isLicensed]);
+
     // Show license prompt if not licensed
     if (isLicensed === false) {
         return (
