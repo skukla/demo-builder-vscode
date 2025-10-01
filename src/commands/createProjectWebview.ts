@@ -1458,13 +1458,20 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const commandManager = getExternalCommandManager();
         const fs = require('fs').promises;
         const path = require('path');
-        const os = require('os');
 
         try {
             // LAYER 1: Download workspace configuration (most reliable)
             this.logger.info('[API Mesh] Layer 1: Downloading workspace configuration');
-            const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'aio-workspace-'));
+            
+            // Use extension's global storage instead of OS temp for better control and isolation
+            // This keeps all extension files organized and makes debugging easier
+            const extensionTempPath = path.join(this.context.globalStorageUri.fsPath, 'temp');
+            await fs.mkdir(extensionTempPath, { recursive: true });
+            
+            const tempDir = await fs.mkdtemp(path.join(extensionTempPath, 'aio-workspace-'));
             const configPath = path.join(tempDir, 'workspace-config.json');
+            
+            this.debugLogger.debug('[API Mesh] Using extension temp path', { tempDir });
             
             try {
                 await commandManager.executeAdobeCLI(
