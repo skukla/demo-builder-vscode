@@ -112,7 +112,7 @@ export function ApiVerificationStep({ state, updateState, onNext, onBack, setCan
                 backgroundColor: 'var(--spectrum-global-color-gray-75)',
                 borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
             }}>
-                <ConfigurationSummary state={state} completedSteps={completedSteps} showWorkspaceApis />
+                <ConfigurationSummary state={state} completedSteps={completedSteps} />
             </div>
         </div>
     );

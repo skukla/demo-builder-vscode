@@ -9,10 +9,9 @@ import { cn } from '../../utils/classNames';
 interface ConfigurationSummaryProps {
     state: WizardState;
     completedSteps?: WizardStep[];
-    showWorkspaceApis?: boolean;
 }
 
-export function ConfigurationSummary({ state, completedSteps = [], showWorkspaceApis = false }: ConfigurationSummaryProps) {
+export function ConfigurationSummary({ state, completedSteps = [] }: ConfigurationSummaryProps) {
     return (
         <View height="100%">
             <Heading level={3} marginBottom="size-300">
@@ -101,47 +100,48 @@ export function ConfigurationSummary({ state, completedSteps = [], showWorkspace
                 </View>
             </View>
 
-            {/* API Mesh (now a full section) */}
-            {showWorkspaceApis && state.adobeWorkspace && (
-                <>
-                    <Divider size="S" />
-                    <View marginTop="size-200" marginBottom="size-200">
-                        <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
-                            API Mesh
-                        </Text>
-                        <View marginTop="size-100">
-                        {state.apiMesh?.isChecking || (!state.apiMesh && completedSteps.includes('adobe-workspace')) ? (
-                            <Flex gap="size-100" alignItems="center">
-                                <Clock size="S" UNSAFE_className="text-blue-600" />
-                                <Text UNSAFE_className="text-sm text-gray-600">Checking...</Text>
-                            </Flex>
-                        ) : state.apiMesh?.apiEnabled && state.apiMesh?.meshExists ? (
-                            <Flex gap="size-100" alignItems="center">
-                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                                <Text UNSAFE_className="text-sm">
-                                    {state.apiMesh?.meshId || 'Mesh Found'}
-                                </Text>
-                            </Flex>
-                        ) : state.apiMesh?.apiEnabled && !state.apiMesh?.meshExists ? (
-                            <Flex gap="size-100" alignItems="center">
-                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                                <Text UNSAFE_className="text-sm text-gray-600">Ready for creation</Text>
-                            </Flex>
-                        ) : state.apiMesh?.apiEnabled === false ? (
-                            <Flex gap="size-100" alignItems="center">
-                                <AlertCircle size="S" UNSAFE_className="text-red-600" />
-                                <Text UNSAFE_className="text-sm text-red-600">Not enabled</Text>
-                            </Flex>
-                        ) : (
-                            <Flex gap="size-100" alignItems="center">
-                                <Clock size="S" UNSAFE_className="text-blue-600" />
-                                <Text UNSAFE_className="text-sm text-gray-600">Pending</Text>
-                            </Flex>
-                        )}
-                    </View>
+            <Divider size="S" />
+
+            {/* API Mesh */}
+            <View marginTop="size-200" marginBottom="size-200">
+                <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
+                    API Mesh
+                </Text>
+                <View marginTop="size-100">
+                    {!state.adobeWorkspace ? (
+                        <Text UNSAFE_className="text-sm text-gray-600">Pending workspace</Text>
+                    ) : state.apiMesh?.isChecking ? (
+                        <Flex gap="size-100" alignItems="center">
+                            <Clock size="S" UNSAFE_className="text-blue-600" />
+                            <Text UNSAFE_className="text-sm text-gray-600">Checking...</Text>
+                        </Flex>
+                    ) : state.apiMesh?.apiEnabled && state.apiMesh?.meshExists ? (
+                        <Flex gap="size-100" alignItems="center">
+                            <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            <Text UNSAFE_className="text-sm">
+                                {state.apiMesh?.meshId || 'Mesh Found'}
+                            </Text>
+                        </Flex>
+                    ) : state.apiMesh?.apiEnabled && !state.apiMesh?.meshExists ? (
+                        <Flex gap="size-100" alignItems="center">
+                            <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            <Text UNSAFE_className="text-sm text-gray-600">Ready for creation</Text>
+                        </Flex>
+                    ) : state.apiMesh?.apiEnabled === false ? (
+                        <Flex gap="size-100" alignItems="center">
+                            <AlertCircle size="S" UNSAFE_className="text-red-600" />
+                            <Text UNSAFE_className="text-sm text-red-600">Not enabled</Text>
+                        </Flex>
+                    ) : completedSteps.includes('adobe-workspace') ? (
+                        <Flex gap="size-100" alignItems="center">
+                            <Clock size="S" UNSAFE_className="text-blue-600" />
+                            <Text UNSAFE_className="text-sm text-gray-600">Pending check</Text>
+                        </Flex>
+                    ) : (
+                        <Text UNSAFE_className="text-sm text-gray-600">Pending workspace</Text>
+                    )}
                 </View>
-                </>
-            )}
+            </View>
 
             <style>{`
                 .text-uppercase {
