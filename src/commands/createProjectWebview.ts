@@ -362,18 +362,22 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         // Open Adobe Console in browser (with optional direct workspace link)
         comm.on('open-adobe-console', async (data: any) => {
             try {
-                let consoleUrl = 'https://console.adobe.io';
+                let consoleUrl = 'https://developer.adobe.com/console';
                 
                 // Construct direct link to workspace if IDs are provided
-                if (data?.projectId && data?.workspaceId) {
-                    consoleUrl = `https://console.adobe.io/projects/${data.projectId}/workspaces/${data.workspaceId}/overview`;
+                if (data?.orgId && data?.projectId && data?.workspaceId) {
+                    consoleUrl = `https://developer.adobe.com/console/projects/${data.orgId}/${data.projectId}/workspaces/${data.workspaceId}/details`;
                     this.logger.info('[Adobe Console] Opening workspace-specific URL', { 
+                        orgId: data.orgId,
                         projectId: data.projectId, 
                         workspaceId: data.workspaceId 
                     });
-                } else if (data?.projectId) {
-                    consoleUrl = `https://console.adobe.io/projects/${data.projectId}`;
-                    this.logger.info('[Adobe Console] Opening project-specific URL', { projectId: data.projectId });
+                } else if (data?.orgId && data?.projectId) {
+                    consoleUrl = `https://developer.adobe.com/console/projects/${data.orgId}/${data.projectId}/overview`;
+                    this.logger.info('[Adobe Console] Opening project-specific URL', { 
+                        orgId: data.orgId,
+                        projectId: data.projectId 
+                    });
                 } else {
                     this.logger.info('[Adobe Console] Opening generic console URL');
                 }
