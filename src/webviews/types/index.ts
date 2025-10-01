@@ -49,6 +49,7 @@ export interface WizardState {
         meshStatus?: 'deployed' | 'not-deployed' | 'pending';
         endpoint?: string;
         error?: string;
+        setupInstructions?: Array<{ step: string; details: string; important?: boolean }>;
     };
 }
 

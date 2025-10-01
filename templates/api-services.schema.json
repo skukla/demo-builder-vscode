@@ -50,6 +50,53 @@
             "description": {
               "type": "string",
               "description": "Service description"
+            },
+            "setupInstructions": {
+              "type": "array",
+              "description": "Step-by-step setup instructions for manual API configuration",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "step": {
+                    "type": "string",
+                    "description": "The instruction step title"
+                  },
+                  "details": {
+                    "type": "string",
+                    "description": "Detailed explanation of the step (supports {{VARIABLE}} placeholders)"
+                  },
+                  "important": {
+                    "type": "boolean",
+                    "description": "Whether this step is particularly important (highlighted in UI)"
+                  },
+                  "dynamicValues": {
+                    "type": "object",
+                    "description": "Dynamic value substitutions for placeholders in details",
+                    "patternProperties": {
+                      "^[A-Z_]+$": {
+                        "type": "object",
+                        "properties": {
+                          "source": {
+                            "type": "string",
+                            "enum": ["selectedComponents", "configuration", "static"],
+                            "description": "Where to get the value from"
+                          },
+                          "filter": {
+                            "type": "string",
+                            "description": "Optional filter (e.g., 'frontends', 'backends')"
+                          },
+                          "format": {
+                            "type": "string",
+                            "description": "Format string with {{field}} placeholders"
+                          }
+                        },
+                        "required": ["source"]
+                      }
+                    }
+                  }
+                },
+                "required": ["step", "details"]
+              }
             }
           },
           "required": ["displayName", "detection"]

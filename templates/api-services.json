@@ -8,7 +8,25 @@
         "codes": ["MeshAPI"],
         "codeNames": ["MeshAPI"]
       },
-      "description": "API Mesh enables GraphQL federation and API aggregation"
+      "description": "API Mesh enables GraphQL federation and API aggregation",
+      "setupInstructions": [
+        {
+          "step": "Add the API Mesh API to your workspace",
+          "details": "Click 'Add API' and select 'API Mesh for Adobe Developer App Builder'"
+        },
+        {
+          "step": "Configure Allowed Domains",
+          "details": "In the API configuration, add '{{ALLOWED_DOMAINS}}' to the Allowed Domains list",
+          "important": true,
+          "dynamicValues": {
+            "ALLOWED_DOMAINS": {
+              "source": "selectedComponents",
+              "filter": "frontends",
+              "format": "localhost:{{port}}"
+            }
+          }
+        }
+      ]
     }
   }
 }

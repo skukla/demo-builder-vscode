@@ -56,7 +56,8 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
 
         try {
             const result = await vscode.request('check-api-mesh', { 
-                workspaceId: state.adobeWorkspace?.id 
+                workspaceId: state.adobeWorkspace?.id,
+                selectedComponents: state.selectedComponents || []
             });
 
             if (result?.success && result.apiEnabled) {
@@ -159,31 +160,44 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                     </Flex>
                 ) : error ? (
                     <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
-                        <Flex direction="column" gap="size-200" alignItems="center">
+                        <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
                             <AlertCircle size="L" UNSAFE_className="text-red-600" />
                             <Flex direction="column" gap="size-100" alignItems="center">
                                 <Text UNSAFE_className="text-xl font-medium">API Mesh API Not Enabled</Text>
                                 <Text UNSAFE_className="text-sm text-gray-600">{error}</Text>
                             </Flex>
+                            
+                            {/* Setup Instructions */}
+                            {state.apiMesh?.setupInstructions && state.apiMesh.setupInstructions.length > 0 && (
+                                <Flex direction="column" gap="size-150" marginTop="size-200" width="100%">
+                                    <Text UNSAFE_className="text-sm font-semibold">Setup Steps:</Text>
+                                    {state.apiMesh.setupInstructions.map((instruction, index) => (
+                                        <Flex key={index} direction="column" gap="size-50" UNSAFE_style={{ 
+                                            padding: '12px',
+                                            backgroundColor: instruction.important ? 'var(--spectrum-global-color-orange-100)' : 'var(--spectrum-global-color-gray-100)',
+                                            borderRadius: '4px',
+                                            borderLeft: instruction.important ? '3px solid var(--spectrum-global-color-orange-600)' : 'none'
+                                        }}>
+                                            <Text UNSAFE_className={instruction.important ? "text-sm font-semibold" : "text-sm font-medium"}>
+                                                {index + 1}. {instruction.step}
+                                            </Text>
+                                            <Text UNSAFE_className="text-sm text-gray-600">
+                                                {instruction.details}
+                                            </Text>
+                                        </Flex>
+                                    ))}
+                                </Flex>
+                            )}
+                            
                             <Flex gap="size-150" marginTop="size-300">
                                 <Button 
                                     variant="secondary" 
                                     onPress={() => {
-                                        const payload = {
+                                        vscode.postMessage('open-adobe-console', {
                                             orgId: state.adobeProject?.org_id,
                                             projectId: state.adobeProject?.id,
                                             workspaceId: state.adobeWorkspace?.id
-                                        };
-                                        console.log('[ApiMeshStep] Button clicked!');
-                                        console.log('[ApiMeshStep] state.adobeProject:', state.adobeProject);
-                                        console.log('[ApiMeshStep] state.adobeWorkspace:', state.adobeWorkspace);
-                                        console.log('[ApiMeshStep] Payload to send:', payload);
-                                        console.log('[ApiMeshStep] All values defined?', {
-                                            hasOrgId: payload.orgId !== undefined,
-                                            hasProjectId: payload.projectId !== undefined,
-                                            hasWorkspaceId: payload.workspaceId !== undefined
                                         });
-                                        vscode.postMessage('open-adobe-console', payload);
                                     }}
                                 >
                                     Open Workspace in Console

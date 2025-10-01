@@ -346,7 +346,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         // Check API Mesh API availability (new enhanced check)
         comm.on('check-api-mesh', async (data: any) => {
             try {
-                const result = await this.handleCheckApiMesh(data.workspaceId);
+                const result = await this.handleCheckApiMesh(data.workspaceId, data.selectedComponents);
                 return { success: true, ...result };
             } catch (error) {
                 this.logger.error('[API Mesh Check] Failed', error as Error);
@@ -1488,12 +1488,55 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
-    private async handleCheckApiMesh(workspaceId: string): Promise<{
+    private getSetupInstructions(selectedComponents: string[] = []): Array<{ step: string; details: string; important?: boolean }> | undefined {
+        const meshConfig = this.apiServicesConfig?.services?.apiMesh;
+        const rawInstructions = meshConfig?.setupInstructions;
+        
+        if (!rawInstructions || !Array.isArray(rawInstructions)) {
+            return undefined;
+        }
+
+        // Process dynamic values in instructions
+        return rawInstructions.map((instruction: any) => {
+            let details = instruction.details;
+            
+            // Process {{ALLOWED_DOMAINS}} substitution
+            if (instruction.dynamicValues?.ALLOWED_DOMAINS) {
+                const config = instruction.dynamicValues.ALLOWED_DOMAINS;
+                
+                // Get frontends from selected components
+                const frontends = selectedComponents.filter((comp: string) => {
+                    // Check if it's a frontend by looking it up in components data
+                    const componentsData = this.componentsData?.components;
+                    return componentsData?.frontends?.some((f: any) => f.id === comp);
+                });
+                
+                // Get ports from frontends
+                const allowedDomains = frontends.map((compId: string) => {
+                    const componentsData = this.componentsData?.components;
+                    const frontend = componentsData?.frontends?.find((f: any) => f.id === compId);
+                    const port = frontend?.configuration?.port || 3000;
+                    return `localhost:${port}`;
+                }).join(', ');
+                
+                details = details.replace('{{ALLOWED_DOMAINS}}', allowedDomains || 'localhost:3000');
+            }
+            
+            return {
+                step: instruction.step,
+                details,
+                important: instruction.important
+            };
+        });
+    }
+
+    private async handleCheckApiMesh(workspaceId: string, selectedComponents: string[] = []): Promise<{
         apiEnabled: boolean;
         meshExists: boolean;
         meshId?: string;
         meshStatus?: 'deployed' | 'not-deployed';
         endpoint?: string;
+        setupInstructions?: Array<{ step: string; details: string; important?: boolean }>;
     }> {
         this.logger.info('[API Mesh] Checking API Mesh availability for workspace', { workspaceId });
         this.debugLogger.debug('[API Mesh] Starting multi-layer check');
@@ -1547,7 +1590,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     this.debugLogger.debug('[API Mesh] Available services', { serviceNames: services.map((s: any) => s.name || s.code) });
                     return {
                         apiEnabled: false,
-                        meshExists: false
+                        meshExists: false,
+                        setupInstructions: this.getSetupInstructions(selectedComponents)
                     };
                 }
                 
