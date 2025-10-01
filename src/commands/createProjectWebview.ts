@@ -1512,30 +1512,46 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 } catch {}
             }
 
-            // LAYER 2: Try to describe mesh (confirms API access and checks for existing mesh)
+            // LAYER 2: Try to get active mesh (confirms API access and checks for existing mesh)
             this.logger.info('[API Mesh] Layer 2: Checking for existing mesh');
             
             try {
-                const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh describe --json');
-                const meshData = JSON.parse(stdout);
+                const { stdout, stderr } = await commandManager.executeAdobeCLI('aio api-mesh get --active');
+                const combined = `${stdout}\n${stderr}`;
                 
-                this.logger.info('[API Mesh] Existing mesh found', { meshId: meshData.meshId });
-                this.debugLogger.debug('[API Mesh] Mesh details', { meshData });
+                this.debugLogger.debug('[API Mesh] get --active output', { stdout, stderr });
+                
+                // Check for "No mesh found" message (API enabled, no mesh exists)
+                const noMesh = /no mesh found|unable to get mesh config/i.test(combined);
+                if (noMesh) {
+                    this.logger.info('[API Mesh] API enabled, no mesh exists yet');
+                    return {
+                        apiEnabled: true,
+                        meshExists: false
+                    };
+                }
+                
+                // If we got here without error, mesh exists
+                // Try to extract mesh ID from output (best effort)
+                const meshIdMatch = combined.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
+                const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
+                
+                this.logger.info('[API Mesh] Existing mesh found', { meshId });
                 
                 return {
                     apiEnabled: true,
                     meshExists: true,
-                    meshId: meshData.meshId,
-                    meshStatus: meshData.status === 'success' ? 'deployed' : 'not-deployed',
-                    endpoint: meshData.endpoint
+                    meshId,
+                    meshStatus: 'deployed', // If we can get it, it's deployed
+                    endpoint: undefined // Would need to parse from output
                 };
                 
             } catch (meshError: any) {
                 const combined = `${meshError?.message || ''}\n${meshError?.stderr || ''}\n${meshError?.stdout || ''}`;
-                this.debugLogger.debug('[API Mesh] Mesh describe error', { combined });
+                this.debugLogger.debug('[API Mesh] Mesh get error', { combined });
                 
                 // Check for permission errors (API not enabled)
-                const forbidden = /403|forbidden|not authorized|not enabled|no access/i.test(combined);
+                const forbidden = /403|forbidden|not authorized|not enabled|no access|missing permission/i.test(combined);
                 if (forbidden) {
                     this.logger.warn('[API Mesh] API Mesh API not enabled (permission denied)');
                     return {
@@ -1544,8 +1560,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     };
                 }
                 
-                // Check for no mesh exists (API enabled, just no mesh yet)
-                const noMesh = /404|not found|no mesh/i.test(combined);
+                // Check for "No mesh found" in error output
+                const noMesh = /no mesh found|unable to get mesh config/i.test(combined);
                 if (noMesh) {
                     this.logger.info('[API Mesh] API enabled, no mesh exists yet');
                     return {

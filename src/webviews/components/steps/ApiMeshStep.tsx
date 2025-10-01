@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Heading, Text, Flex, Button, Well } from '@adobe/react-spectrum';
+import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Info from '@spectrum-icons/workflow/Info';
@@ -145,12 +145,12 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                 minWidth: 0
             }}>
                 <Heading level={2} marginBottom="size-300">API Mesh</Heading>
-                <Text UNSAFE_className="text-gray-700">
+                <Text marginBottom="size-400">
                     Verifying API Mesh API availability for your selected workspace.
                 </Text>
 
                 {isChecking ? (
-                    <Flex justifyContent="center" alignItems="center" height="100%">
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
                         <LoadingDisplay 
                             size="L"
                             message={message}
@@ -158,76 +158,73 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                         />
                     </Flex>
                 ) : error ? (
-                    <Flex direction="column" gap="size-300" marginTop="size-200">
-                        <Well>
-                            <Flex gap="size-200" alignItems="center">
-                                <AlertCircle size="L" UNSAFE_className="text-red-600" />
-                                <Flex direction="column" gap="size-100">
-                                    <Text UNSAFE_className="text-lg font-medium">API Mesh API Not Enabled</Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600">{error}</Text>
-                                </Flex>
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                        <Flex direction="column" gap="size-200" alignItems="center">
+                            <AlertCircle size="L" UNSAFE_className="text-red-600" />
+                            <Flex direction="column" gap="size-100" alignItems="center">
+                                <Text UNSAFE_className="text-xl font-medium">API Mesh API Not Enabled</Text>
+                                <Text UNSAFE_className="text-sm text-gray-600">{error}</Text>
                             </Flex>
-                            <Flex gap="size-150" marginTop="size-200">
+                            <Flex gap="size-150" marginTop="size-300">
                                 <Button variant="secondary" onPress={() => vscode.postMessage('open-adobe-console')}>
                                     Open Adobe Console
                                 </Button>
                                 <Button variant="accent" onPress={runCheck}>Retry</Button>
                                 <Button variant="secondary" onPress={onBack}>Back</Button>
                             </Flex>
-                        </Well>
+                        </Flex>
                     </Flex>
                 ) : meshData ? (
                     // Mesh exists
-                    <Flex direction="column" gap="size-300" marginTop="size-200">
-                        <Well>
-                            <Flex gap="size-200" alignItems="center">
-                                <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
-                                <Flex direction="column" gap="size-100">
-                                    <Text UNSAFE_className="text-lg font-medium">API Mesh Found</Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600">
-                                        An existing mesh was detected. It will be updated during deployment.
-                                    </Text>
-                                </Flex>
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                        <Flex direction="column" gap="size-200" alignItems="center">
+                            <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                            <Flex direction="column" gap="size-100" alignItems="center">
+                                <Text UNSAFE_className="text-xl font-medium">API Mesh Found</Text>
+                                <Text UNSAFE_className="text-sm text-gray-600">
+                                    An existing mesh was detected. It will be updated during deployment.
+                                </Text>
                             </Flex>
                             
-                            <Flex direction="column" gap="size-100" marginTop="size-200">
-                                <Flex gap="size-100">
-                                    <Text UNSAFE_className="text-sm font-medium">Mesh ID:</Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600">{meshData.meshId}</Text>
-                                </Flex>
-                                <Flex gap="size-100">
-                                    <Text UNSAFE_className="text-sm font-medium">Status:</Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600">
-                                        {meshData.status === 'deployed' ? 'Deployed' : 'Not Deployed'}
-                                    </Text>
-                                </Flex>
-                                {meshData.endpoint && (
+                            {meshData.meshId && (
+                                <Flex direction="column" gap="size-100" marginTop="size-200" alignItems="center">
                                     <Flex gap="size-100">
-                                        <Text UNSAFE_className="text-sm font-medium">Endpoint:</Text>
-                                        <Text UNSAFE_className="text-sm text-gray-600" UNSAFE_style={{ 
-                                            wordBreak: 'break-all' 
-                                        }}>
-                                            {meshData.endpoint}
+                                        <Text UNSAFE_className="text-sm font-medium">Mesh ID:</Text>
+                                        <Text UNSAFE_className="text-sm text-gray-600">{meshData.meshId}</Text>
+                                    </Flex>
+                                    <Flex gap="size-100">
+                                        <Text UNSAFE_className="text-sm font-medium">Status:</Text>
+                                        <Text UNSAFE_className="text-sm text-gray-600">
+                                            {meshData.status === 'deployed' ? 'Deployed' : 'Not Deployed'}
                                         </Text>
                                     </Flex>
-                                )}
-                            </Flex>
-                        </Well>
+                                    {meshData.endpoint && (
+                                        <Flex gap="size-100">
+                                            <Text UNSAFE_className="text-sm font-medium">Endpoint:</Text>
+                                            <Text UNSAFE_className="text-sm text-gray-600" UNSAFE_style={{ 
+                                                wordBreak: 'break-all',
+                                                maxWidth: '400px'
+                                            }}>
+                                                {meshData.endpoint}
+                                            </Text>
+                                        </Flex>
+                                    )}
+                                </Flex>
+                            )}
+                        </Flex>
                     </Flex>
                 ) : (
                     // API enabled, no mesh
-                    <Flex direction="column" gap="size-300" marginTop="size-200">
-                        <Well>
-                            <Flex gap="size-200" alignItems="center">
-                                <Info size="L" UNSAFE_className="text-blue-600" />
-                                <Flex direction="column" gap="size-100">
-                                    <Text UNSAFE_className="text-lg font-medium">Ready for Mesh Creation</Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600">
-                                        API Mesh API is enabled. A mesh will be created during deployment.
-                                    </Text>
-                                </Flex>
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                        <Flex direction="column" gap="size-200" alignItems="center">
+                            <Info size="L" UNSAFE_className="text-blue-600" />
+                            <Flex direction="column" gap="size-100" alignItems="center">
+                                <Text UNSAFE_className="text-xl font-medium">Ready for Mesh Creation</Text>
+                                <Text UNSAFE_className="text-sm text-gray-600" UNSAFE_style={{ textAlign: 'center', maxWidth: '450px' }}>
+                                    API Mesh API is enabled. A mesh will be created during deployment.
+                                </Text>
                             </Flex>
-                        </Well>
+                        </Flex>
                     </Flex>
                 )}
             </div>

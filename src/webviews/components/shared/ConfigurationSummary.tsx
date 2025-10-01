@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Heading, Text, Flex, Divider } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
+import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import { WizardState, WizardStep } from '../../types';
 import { cn } from '../../utils/classNames';
 
@@ -100,38 +101,41 @@ export function ConfigurationSummary({ state, completedSteps = [], showWorkspace
                 </View>
             </View>
 
-            {/* Workspace APIs (subsection under Workspace) */}
+            {/* API Mesh (now a full section) */}
             {showWorkspaceApis && state.adobeWorkspace && (
-                <View marginTop="size-200" UNSAFE_style={{ paddingLeft: '12px', borderLeft: '2px solid var(--spectrum-global-color-gray-200)' }}>
-                    <Text UNSAFE_className={cn('text-xs', 'font-medium', 'text-gray-600')}>
-                        Workspace APIs
+                <View marginTop="size-300">
+                    <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-400', 'uppercase', 'tracking-wide')}>
+                        API Mesh
                     </Text>
-                    <View marginTop="size-75">
-                        {/* API Mesh status - inline with a small icon */}
-                        <Flex gap="size-150" alignItems="center">
-                            <Text UNSAFE_className="text-sm">API Mesh</Text>
-                            {state.apiVerification?.isChecking ? (
-                                <Flex gap="size-100" alignItems="center">
-                                    <Clock size="S" UNSAFE_className="text-blue-600" />
-                                    <Text UNSAFE_className="text-sm text-gray-600">Pending</Text>
-                                </Flex>
-                            ) : state.apiVerification?.hasMesh === true ? (
-                                <Flex gap="size-100" alignItems="center">
-                                    <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                                    <Text UNSAFE_className="text-sm text-green-600">Verified</Text>
-                                </Flex>
-                            ) : state.apiVerification?.hasMesh === false ? (
-                                <Flex gap="size-100" alignItems="center">
-                                    <Text UNSAFE_className="text-orange-600">✗</Text>
-                                    <Text UNSAFE_className="text-sm text-orange-600">Missing</Text>
-                                </Flex>
-                            ) : (
-                                <Flex gap="size-100" alignItems="center">
-                                    <Clock size="S" UNSAFE_className="text-blue-600" />
-                                    <Text UNSAFE_className="text-sm text-gray-600">Pending</Text>
-                                </Flex>
-                            )}
-                        </Flex>
+                    <View marginTop="size-100">
+                        {state.apiMesh?.isChecking || (!state.apiMesh && completedSteps.includes('adobe-workspace')) ? (
+                            <Flex gap="size-100" alignItems="center">
+                                <Clock size="S" UNSAFE_className="text-blue-600" />
+                                <Text UNSAFE_className="text-sm text-gray-600">Checking...</Text>
+                            </Flex>
+                        ) : state.apiMesh?.apiEnabled && state.apiMesh?.meshExists ? (
+                            <Flex gap="size-100" alignItems="center">
+                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                                <Text UNSAFE_className="text-sm">
+                                    {state.apiMesh?.meshId || 'Mesh Found'}
+                                </Text>
+                            </Flex>
+                        ) : state.apiMesh?.apiEnabled && !state.apiMesh?.meshExists ? (
+                            <Flex gap="size-100" alignItems="center">
+                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                                <Text UNSAFE_className="text-sm text-gray-600">Ready for creation</Text>
+                            </Flex>
+                        ) : state.apiMesh?.apiEnabled === false ? (
+                            <Flex gap="size-100" alignItems="center">
+                                <AlertCircle size="S" UNSAFE_className="text-red-600" />
+                                <Text UNSAFE_className="text-sm text-red-600">Not enabled</Text>
+                            </Flex>
+                        ) : (
+                            <Flex gap="size-100" alignItems="center">
+                                <Clock size="S" UNSAFE_className="text-blue-600" />
+                                <Text UNSAFE_className="text-sm text-gray-600">Pending</Text>
+                            </Flex>
+                        )}
                     </View>
                 </View>
             )}
