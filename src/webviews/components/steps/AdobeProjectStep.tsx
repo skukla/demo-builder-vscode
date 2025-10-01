@@ -95,7 +95,8 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                 id: project.id,
                 name: project.name,
                 title: project.title,
-                description: project.description
+                description: project.description,
+                org_id: project.org_id  // Include numeric org ID for Adobe Console URLs
             },
             // Clear dependent state when parent selection changes
             // This maintains state consistency in the UI layer
