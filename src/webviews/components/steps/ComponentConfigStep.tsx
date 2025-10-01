@@ -677,7 +677,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                                         }}
                                         onMouseEnter={(e) => {
                                             if (!isActive) {
-                                                e.currentTarget.style.background = 'var(--spectrum-global-color-gray-200)';
+                                                e.currentTarget.style.background = 'var(--spectrum-global-color-gray-100)';
                                             }
                                         }}
                                         onMouseLeave={(e) => {
@@ -735,7 +735,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         if (!isActiveField) {
-                                                            e.currentTarget.style.background = 'var(--spectrum-global-color-gray-200)';
+                                                            e.currentTarget.style.background = 'var(--spectrum-global-color-gray-100)';
                                                         }
                                                     }}
                                                     onMouseLeave={(e) => {
