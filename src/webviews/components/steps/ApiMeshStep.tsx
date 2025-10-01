@@ -168,8 +168,7 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                             <Flex gap="size-150" marginTop="size-300">
                                 <Button 
                                     variant="secondary" 
-                                    onPress={() => vscode.postMessage({
-                                        type: 'open-adobe-console',
+                                    onPress={() => vscode.postMessage('open-adobe-console', {
                                         projectId: state.adobeProject?.id,
                                         workspaceId: state.adobeWorkspace?.id
                                     })}
