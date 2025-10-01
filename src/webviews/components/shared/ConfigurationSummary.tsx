@@ -142,8 +142,11 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                 <View marginTop="size-100">
                     {!state.adobeWorkspace ? (
                         <Text UNSAFE_className="text-sm text-gray-600">Not selected</Text>
-                    ) : !isStepCompleted('api-mesh') && getCurrentStepIndex() < stepOrder.indexOf('api-mesh') ? (
-                        // If we haven't reached the api-mesh step yet, always show waiting
+                    ) : getCurrentStepIndex() < stepOrder.indexOf('api-mesh') && !completedSteps.includes('api-mesh') ? (
+                        // Never been to api-mesh step yet - show "Not selected"
+                        <Text UNSAFE_className="text-sm text-gray-600">Not selected</Text>
+                    ) : getCurrentStepIndex() < stepOrder.indexOf('api-mesh') && completedSteps.includes('api-mesh') ? (
+                        // We've been there before, but now we're before it - show "Waiting"
                         <Flex gap="size-100" alignItems="center">
                             <Clock size="S" UNSAFE_className="text-blue-600" />
                             <Text UNSAFE_className="text-sm text-gray-600">Waiting</Text>
