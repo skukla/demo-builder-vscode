@@ -8,9 +8,10 @@ import { cn } from '../../utils/classNames';
 interface ConfigurationSummaryProps {
     state: WizardState;
     completedSteps?: WizardStep[];
+    showWorkspaceApis?: boolean;
 }
 
-export function ConfigurationSummary({ state, completedSteps = [] }: ConfigurationSummaryProps) {
+export function ConfigurationSummary({ state, completedSteps = [], showWorkspaceApis = false }: ConfigurationSummaryProps) {
     return (
         <View height="100%">
             <Heading level={3} marginBottom="size-300">
@@ -100,7 +101,7 @@ export function ConfigurationSummary({ state, completedSteps = [] }: Configurati
             </View>
 
             {/* Workspace APIs (subsection under Workspace) */}
-            {state.adobeWorkspace && (
+            {showWorkspaceApis && state.adobeWorkspace && (
                 <View marginTop="size-200" UNSAFE_style={{ paddingLeft: '12px', borderLeft: '2px solid var(--spectrum-global-color-gray-200)' }}>
                     <Text UNSAFE_className={cn('text-xs', 'font-medium', 'text-gray-600')}>
                         Workspace APIs
@@ -170,6 +171,6 @@ export function ConfigurationSummary({ state, completedSteps = [] }: Configurati
                 .text-orange-600 { color: var(--spectrum-global-color-orange-600); }
                 
              `}</style>
-         </View>
-     );
- }
+        </View>
+    );
+}

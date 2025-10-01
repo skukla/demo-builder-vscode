@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Heading, Text, Flex, Button, ProgressCircle } from '@adobe/react-spectrum';
+import { View, Heading, Text, Flex, Button, Well } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
+import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import { vscode } from '../../app/vscodeApi';
 import { WizardState, WizardStep } from '../../types';
 import { ConfigurationSummary } from '../shared/ConfigurationSummary';
+import { LoadingDisplay } from '../shared/LoadingDisplay';
 
 interface ApiVerificationStepProps {
     state: WizardState;
@@ -68,30 +69,31 @@ export function ApiVerificationStep({ state, updateState, onNext, onBack, setCan
                 <Heading level={2} marginBottom="size-300">API Verification</Heading>
                 <Text UNSAFE_className="text-gray-700">We will verify that your Adobe I/O project has API Mesh enabled.</Text>
 
-                {/* Center the verification content within the left column */}
-                <Flex direction="column" gap="size-300" alignItems="center" justifyContent="center" UNSAFE_style={{ flex: 1 }}>
-                    {isChecking ? (
-                        <Flex direction="column" gap="size-200" alignItems="center">
-                            <ProgressCircle size="L" isIndeterminate />
-                            <Flex direction="column" gap="size-50" alignItems="center">
-                                <Text>{message}</Text>
-                                <Text UNSAFE_className="text-sm text-gray-600">{subMessage}</Text>
+                {isChecking ? (
+                    <Flex justifyContent="center" alignItems="center" height="100%">
+                        <LoadingDisplay 
+                            size="L"
+                            message={message}
+                            subMessage={subMessage}
+                        />
+                    </Flex>
+                ) : error ? (
+                    <Well marginTop="size-200">
+                        <Flex gap="size-200" alignItems="center">
+                            <AlertCircle UNSAFE_className="text-red-600" />
+                            <Flex direction="column" gap="size-50">
+                                <Text><strong>API Mesh Not Enabled</strong></Text>
+                                <Text UNSAFE_className="text-sm">{error}</Text>
                             </Flex>
                         </Flex>
-                    ) : error ? (
-                        <Flex direction="column" gap="size-200" alignItems="center">
-                            <Flex gap="size-150" alignItems="center">
-                                <CloseCircle size="S" UNSAFE_className="text-red-600" />
-                                <Text UNSAFE_className="text-red-600"><strong>API Mesh not enabled</strong></Text>
-                            </Flex>
-                            <Text UNSAFE_className="text-sm text-red-600" UNSAFE_style={{ textAlign: 'center' }}>{error}</Text>
-                            <Flex gap="size-150">
-                                <Button variant="secondary" onPress={() => vscode.postMessage('open-adobe-console')}>Open Adobe Console</Button>
-                                <Button variant="accent" onPress={runCheck}>Recheck</Button>
-                                <Button variant="secondary" onPress={onBack}>Back</Button>
-                            </Flex>
+                        <Flex gap="size-150" marginTop="size-200">
+                            <Button variant="secondary" onPress={() => vscode.postMessage('open-adobe-console')}>Open Adobe Console</Button>
+                            <Button variant="accent" onPress={runCheck}>Retry</Button>
+                            <Button variant="secondary" onPress={onBack}>Back</Button>
                         </Flex>
-                    ) : (
+                    </Well>
+                ) : (
+                    <Flex direction="column" gap="size-300" alignItems="center" justifyContent="center" UNSAFE_style={{ flex: 1 }}>
                         <Flex direction="column" gap="size-200" alignItems="center">
                             <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
                             <Flex direction="column" gap="size-50" alignItems="center">
@@ -99,8 +101,8 @@ export function ApiVerificationStep({ state, updateState, onNext, onBack, setCan
                                 <Text UNSAFE_className="text-sm text-gray-600">You can continue to the next step.</Text>
                             </Flex>
                         </Flex>
-                    )}
-                </Flex>
+                    </Flex>
+                )}
             </div>
 
             {/* Right: Summary Panel - positioned after main content */}
@@ -110,7 +112,7 @@ export function ApiVerificationStep({ state, updateState, onNext, onBack, setCan
                 backgroundColor: 'var(--spectrum-global-color-gray-75)',
                 borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
             }}>
-                <ConfigurationSummary state={state} completedSteps={completedSteps} />
+                <ConfigurationSummary state={state} completedSteps={completedSteps} showWorkspaceApis />
             </div>
         </div>
     );
