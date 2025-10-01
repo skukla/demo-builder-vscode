@@ -158,22 +158,24 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                         />
                     </Flex>
                 ) : error ? (
-                    <Well marginTop="size-200">
-                        <Flex gap="size-200" alignItems="center">
-                            <AlertCircle UNSAFE_className="text-red-600" />
-                            <Flex direction="column" gap="size-50">
-                                <Text><strong>API Mesh API Not Enabled</strong></Text>
-                                <Text UNSAFE_className="text-sm">{error}</Text>
+                    <Flex direction="column" gap="size-300" marginTop="size-200">
+                        <Well>
+                            <Flex gap="size-200" alignItems="center">
+                                <AlertCircle size="L" UNSAFE_className="text-red-600" />
+                                <Flex direction="column" gap="size-100">
+                                    <Text UNSAFE_className="text-lg font-medium">API Mesh API Not Enabled</Text>
+                                    <Text UNSAFE_className="text-sm text-gray-600">{error}</Text>
+                                </Flex>
                             </Flex>
-                        </Flex>
-                        <Flex gap="size-150" marginTop="size-200">
-                            <Button variant="secondary" onPress={() => vscode.postMessage('open-adobe-console')}>
-                                Open Adobe Console
-                            </Button>
-                            <Button variant="accent" onPress={runCheck}>Retry</Button>
-                            <Button variant="secondary" onPress={onBack}>Back</Button>
-                        </Flex>
-                    </Well>
+                            <Flex gap="size-150" marginTop="size-200">
+                                <Button variant="secondary" onPress={() => vscode.postMessage('open-adobe-console')}>
+                                    Open Adobe Console
+                                </Button>
+                                <Button variant="accent" onPress={runCheck}>Retry</Button>
+                                <Button variant="secondary" onPress={onBack}>Back</Button>
+                            </Flex>
+                        </Well>
+                    </Flex>
                 ) : meshData ? (
                     // Mesh exists
                     <Flex direction="column" gap="size-300" marginTop="size-200">
