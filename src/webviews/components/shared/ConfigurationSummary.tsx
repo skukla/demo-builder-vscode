@@ -103,11 +103,13 @@ export function ConfigurationSummary({ state, completedSteps = [], showWorkspace
 
             {/* API Mesh (now a full section) */}
             {showWorkspaceApis && state.adobeWorkspace && (
-                <View marginTop="size-300">
-                    <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-400', 'uppercase', 'tracking-wide')}>
-                        API Mesh
-                    </Text>
-                    <View marginTop="size-100">
+                <>
+                    <Divider size="S" />
+                    <View marginTop="size-200">
+                        <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
+                            API Mesh
+                        </Text>
+                        <View marginTop="size-100">
                         {state.apiMesh?.isChecking || (!state.apiMesh && completedSteps.includes('adobe-workspace')) ? (
                             <Flex gap="size-100" alignItems="center">
                                 <Clock size="S" UNSAFE_className="text-blue-600" />
@@ -138,6 +140,7 @@ export function ConfigurationSummary({ state, completedSteps = [], showWorkspace
                         )}
                     </View>
                 </View>
+                </>
             )}
 
             <style>{`
