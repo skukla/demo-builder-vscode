@@ -29,6 +29,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private currentPrerequisites?: any[];  // Store resolved prerequisites for the session
     private currentPrerequisiteStates?: Map<number, any>;  // Track state of each prerequisite
     private isAuthenticating = false;  // Prevent multiple simultaneous auth attempts
+    private apiServicesConfig?: any;  // API services detection configuration
 
     constructor(
         context: vscode.ExtensionContext,
@@ -63,6 +64,18 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         } catch (error) {
             // StepLogger will use defaults if config loading fails
             this.logger.debug('Could not load wizard steps for logging, using defaults');
+        }
+
+        // Load API services configuration
+        try {
+            const apiServicesPath = path.join(context.extensionPath, 'templates', 'api-services.json');
+            if (fs.existsSync(apiServicesPath)) {
+                const servicesContent = fs.readFileSync(apiServicesPath, 'utf8');
+                this.apiServicesConfig = JSON.parse(servicesContent);
+                this.logger.debug('Loaded API services configuration');
+            }
+        } catch (error) {
+            this.logger.debug('Could not load API services configuration:', error);
         }
     }
 
@@ -1484,10 +1497,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 
                 this.debugLogger.debug('[API Mesh] Workspace services', { services });
                 
+                // Use configuration for service detection with fallback to hardcoded values
+                const meshConfig = this.apiServicesConfig?.services?.apiMesh;
+                const namePatterns = meshConfig?.detection?.namePatterns || ['API Mesh'];
+                const codes = meshConfig?.detection?.codes || ['MeshAPI'];
+                const codeNames = meshConfig?.detection?.codeNames || ['MeshAPI'];
+                
                 const hasMeshApi = services.some((s: any) => 
-                    s.name?.includes('API Mesh') || 
-                    s.code === 'MeshAPI' ||
-                    s.code_name === 'MeshAPI'
+                    namePatterns.some((pattern: string) => s.name?.includes(pattern)) ||
+                    codes.some((code: string) => s.code === code) ||
+                    codeNames.some((codeName: string) => s.code_name === codeName)
                 );
                 
                 // Cleanup temp directory

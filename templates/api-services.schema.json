@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "API Services Configuration",
+  "description": "Configuration for Adobe API service detection and metadata",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "services": {
+      "type": "object",
+      "description": "Map of service configurations",
+      "patternProperties": {
+        "^[a-zA-Z0-9]+$": {
+          "type": "object",
+          "properties": {
+            "displayName": {
+              "type": "string",
+              "description": "Human-readable service name"
+            },
+            "detection": {
+              "type": "object",
+              "description": "Service detection configuration",
+              "properties": {
+                "namePatterns": {
+                  "type": "array",
+                  "description": "Partial match patterns for service name field",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "codes": {
+                  "type": "array",
+                  "description": "Exact match patterns for service code field",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "codeNames": {
+                  "type": "array",
+                  "description": "Exact match patterns for service code_name field",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["namePatterns"]
+            },
+            "description": {
+              "type": "string",
+              "description": "Service description"
+            }
+          },
+          "required": ["displayName", "detection"]
+        }
+      }
+    }
+  },
+  "required": ["services"]
+}
+

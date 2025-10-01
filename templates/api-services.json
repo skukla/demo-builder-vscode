@@ -1,0 +1,15 @@
+{
+  "$schema": "./api-services.schema.json",
+  "services": {
+    "apiMesh": {
+      "displayName": "API Mesh for Adobe Developer App Builder",
+      "detection": {
+        "namePatterns": ["API Mesh"],
+        "codes": ["MeshAPI"],
+        "codeNames": ["MeshAPI"]
+      },
+      "description": "API Mesh enables GraphQL federation and API aggregation"
+    }
+  }
+}
+
