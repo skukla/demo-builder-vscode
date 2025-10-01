@@ -109,7 +109,7 @@ export function ConfigurationSummary({ state, completedSteps = [] }: Configurati
                 </Text>
                 <View marginTop="size-100">
                     {!state.adobeWorkspace ? (
-                        <Text UNSAFE_className="text-sm text-gray-600">Pending workspace</Text>
+                        <Text UNSAFE_className="text-sm text-gray-600">Not selected</Text>
                     ) : state.apiMesh?.isChecking ? (
                         <Flex gap="size-100" alignItems="center">
                             <Clock size="S" UNSAFE_className="text-blue-600" />
@@ -138,7 +138,10 @@ export function ConfigurationSummary({ state, completedSteps = [] }: Configurati
                             <Text UNSAFE_className="text-sm text-gray-600">Pending check</Text>
                         </Flex>
                     ) : (
-                        <Text UNSAFE_className="text-sm text-gray-600">Pending workspace</Text>
+                        <Flex gap="size-100" alignItems="center">
+                            <Clock size="S" UNSAFE_className="text-blue-600" />
+                            <Text UNSAFE_className="text-sm text-gray-600">Pending</Text>
+                        </Flex>
                     )}
                 </View>
             </View>
