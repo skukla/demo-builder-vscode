@@ -166,7 +166,14 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                                 <Text UNSAFE_className="text-sm text-gray-600">{error}</Text>
                             </Flex>
                             <Flex gap="size-150" marginTop="size-300">
-                                <Button variant="secondary" onPress={() => vscode.postMessage('open-adobe-console')}>
+                                <Button 
+                                    variant="secondary" 
+                                    onPress={() => vscode.postMessage({
+                                        type: 'open-adobe-console',
+                                        projectId: state.adobeProject?.id,
+                                        workspaceId: state.adobeWorkspace?.id
+                                    })}
+                                >
                                     Open Adobe Console
                                 </Button>
                                 <Button variant="accent" onPress={runCheck}>Retry</Button>

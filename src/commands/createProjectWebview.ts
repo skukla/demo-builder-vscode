@@ -359,10 +359,26 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
         });
 
-        // Open Adobe Console in browser
-        comm.on('open-adobe-console', async () => {
+        // Open Adobe Console in browser (with optional direct workspace link)
+        comm.on('open-adobe-console', async (data: any) => {
             try {
-                await vscode.env.openExternal(vscode.Uri.parse('https://console.adobe.io'));
+                let consoleUrl = 'https://console.adobe.io';
+                
+                // Construct direct link to workspace if IDs are provided
+                if (data?.projectId && data?.workspaceId) {
+                    consoleUrl = `https://console.adobe.io/projects/${data.projectId}/workspaces/${data.workspaceId}/overview`;
+                    this.logger.info('[Adobe Console] Opening workspace-specific URL', { 
+                        projectId: data.projectId, 
+                        workspaceId: data.workspaceId 
+                    });
+                } else if (data?.projectId) {
+                    consoleUrl = `https://console.adobe.io/projects/${data.projectId}`;
+                    this.logger.info('[Adobe Console] Opening project-specific URL', { projectId: data.projectId });
+                } else {
+                    this.logger.info('[Adobe Console] Opening generic console URL');
+                }
+                
+                await vscode.env.openExternal(vscode.Uri.parse(consoleUrl));
                 return { success: true };
             } catch (error) {
                 return { success: false };
