@@ -1687,6 +1687,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 // Unknown error
                 throw meshError;
             }
+        }
             
         } catch (error) {
             this.logger.error('[API Mesh] Check failed', error as Error);
