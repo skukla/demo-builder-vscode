@@ -660,6 +660,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                                     <button
                                         id={`nav-${group.id}`}
                                         onClick={() => toggleNavSection(group.id)}
+                                        tabIndex={-1}
                                         style={{
                                             width: '100%',
                                             padding: '12px',
@@ -717,6 +718,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                                                     key={field.key}
                                                     id={`nav-field-${field.key}`}
                                                     onClick={() => navigateToField(field.key)}
+                                                    tabIndex={-1}
                                                     style={{
                                                         width: '100%',
                                                         padding: '8px 12px',
