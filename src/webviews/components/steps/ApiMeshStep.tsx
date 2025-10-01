@@ -174,7 +174,7 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                                         workspaceId: state.adobeWorkspace?.id
                                     })}
                                 >
-                                    Open Adobe Console
+                                    Open Workspace in Console
                                 </Button>
                                 <Button variant="accent" onPress={runCheck}>Retry</Button>
                                 <Button variant="secondary" onPress={onBack}>Back</Button>
