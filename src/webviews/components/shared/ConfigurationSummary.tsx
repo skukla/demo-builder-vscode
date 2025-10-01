@@ -20,7 +20,7 @@ export function ConfigurationSummary({ state, completedSteps = [], showWorkspace
             </Heading>
 
             {/* Authentication Status */}
-            <View marginBottom="size-200">
+            <View marginTop="size-200" marginBottom="size-200">
                 <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
                     Organization
                 </Text>
@@ -77,7 +77,7 @@ export function ConfigurationSummary({ state, completedSteps = [], showWorkspace
             <Divider size="S" />
 
             {/* Workspace Selection */}
-            <View marginTop="size-200">
+            <View marginTop="size-200" marginBottom="size-200">
                 <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
                     Workspace
                 </Text>
@@ -105,7 +105,7 @@ export function ConfigurationSummary({ state, completedSteps = [], showWorkspace
             {showWorkspaceApis && state.adobeWorkspace && (
                 <>
                     <Divider size="S" />
-                    <View marginTop="size-200">
+                    <View marginTop="size-200" marginBottom="size-200">
                         <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
                             API Mesh
                         </Text>
