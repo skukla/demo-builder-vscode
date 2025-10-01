@@ -174,7 +174,15 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                                             projectId: state.adobeProject?.id,
                                             workspaceId: state.adobeWorkspace?.id
                                         };
-                                        console.log('[ApiMeshStep] Opening console with:', payload);
+                                        console.log('[ApiMeshStep] Button clicked!');
+                                        console.log('[ApiMeshStep] state.adobeProject:', state.adobeProject);
+                                        console.log('[ApiMeshStep] state.adobeWorkspace:', state.adobeWorkspace);
+                                        console.log('[ApiMeshStep] Payload to send:', payload);
+                                        console.log('[ApiMeshStep] All values defined?', {
+                                            hasOrgId: payload.orgId !== undefined,
+                                            hasProjectId: payload.projectId !== undefined,
+                                            hasWorkspaceId: payload.workspaceId !== undefined
+                                        });
                                         vscode.postMessage('open-adobe-console', payload);
                                     }}
                                 >

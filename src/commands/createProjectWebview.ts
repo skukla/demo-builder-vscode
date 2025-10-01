@@ -364,7 +364,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             try {
                 let consoleUrl = 'https://developer.adobe.com/console';
                 
-                this.debugLogger.debug('[Adobe Console] Received data:', data);
+                this.logger.info('[Adobe Console] Received data from webview', { 
+                    data,
+                    hasOrgId: !!data?.orgId,
+                    hasProjectId: !!data?.projectId,
+                    hasWorkspaceId: !!data?.workspaceId
+                });
                 
                 // Construct direct link to workspace if IDs are provided
                 if (data?.orgId && data?.projectId && data?.workspaceId) {
