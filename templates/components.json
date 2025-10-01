@@ -227,18 +227,6 @@
           "deploymentTarget": "adobe-io",
           "envVars": [
             {
-              "key": "ADOBE_LIVE_SEARCH_ENDPOINT",
-              "label": "Live Search Service Endpoint",
-              "type": "url",
-              "required": true,
-              "placeholder": "https://catalog-service-sandbox.adobe.io/graphql",
-              "description": "Adobe Live Search service endpoint",
-              "helpText": "The Live Search GraphQL endpoint configured in API Mesh (same as Catalog Service).",
-              "providedBy": "adobe-commerce-paas",
-              "usedBy": ["commerce-mesh"],
-              "group": "live-search"
-            },
-            {
               "key": "ADOBE_COMMERCE_GRAPHQL_ENDPOINT",
               "label": "Commerce GraphQL Endpoint",
               "type": "url",
@@ -256,8 +244,8 @@
               "type": "url",
               "required": true,
               "placeholder": "https://catalog-service-sandbox.adobe.io/graphql",
-              "description": "Adobe Catalog Service GraphQL endpoint",
-              "helpText": "The Catalog Service endpoint configured in API Mesh.",
+              "description": "Adobe Catalog Service GraphQL endpoint (shared with Live Search)",
+              "helpText": "The Catalog Service endpoint used by both Catalog Service and Live Search in API Mesh.",
               "providedBy": "adobe-commerce-paas",
               "usedBy": ["commerce-mesh"],
               "group": "catalog-service"
