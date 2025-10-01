@@ -64,7 +64,13 @@
   "definitions": {
     "frontend": {
       "type": "object",
-      "required": ["id", "name", "source", "dependencies", "compatibleBackends"],
+      "required": [
+        "id",
+        "name",
+        "source",
+        "dependencies",
+        "compatibleBackends"
+      ],
       "properties": {
         "id": {
           "type": "string",
@@ -253,6 +259,12 @@
         },
         "validation": {
           "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "helpText": {
+          "type": "string"
         }
       }
     },
@@ -427,6 +439,21 @@
         },
         "description": {
           "type": "string"
+        },
+        "helpText": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "providedBy": {
+          "type": "string"
+        },
+        "usedBy": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         },
         "options": {
           "type": "array",

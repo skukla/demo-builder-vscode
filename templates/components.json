@@ -26,7 +26,11 @@
               "type": "url",
               "required": true,
               "placeholder": "https://edge-sandbox-graph.adobe.io/api/your-mesh-id/graphql",
-              "description": "The GraphQL endpoint for your Adobe API Mesh"
+              "description": "The GraphQL endpoint for your Adobe API Mesh",
+              "helpText": "Automatically supplied after API Mesh deployment; no manual input required.",
+              "providedBy": "commerce-mesh",
+              "usedBy": ["citisignal-nextjs"],
+              "group": "mesh"
             },
             {
               "key": "ADOBE_COMMERCE_URL",
@@ -34,7 +38,15 @@
               "type": "url",
               "required": true,
               "placeholder": "https://your-instance.adobedemo.com",
-              "description": "Base URL of your Adobe Commerce instance"
+              "description": "Base URL of your Adobe Commerce instance",
+              "helpText": "Same URL is reused by API Mesh, Headless CitiSignal, and integration services.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": [
+                "citisignal-nextjs",
+                "commerce-mesh",
+                "integration-service"
+              ],
+              "group": "adobe-commerce"
             },
             {
               "key": "ADOBE_ASSETS_URL",
@@ -42,7 +54,11 @@
               "type": "url",
               "required": false,
               "placeholder": "https://delivery-p57319-e1619941.adobeaemcloud.com",
-              "description": "URL for Adobe Experience Manager assets delivery"
+              "description": "URL for Adobe Experience Manager assets delivery",
+              "helpText": "Optional: supply if the storefront should load assets from AEM.",
+              "providedBy": "citisignal-nextjs",
+              "usedBy": ["citisignal-nextjs"],
+              "group": "headless-citisignal"
             },
             {
               "key": "ADOBE_COMMERCE_ENVIRONMENT_ID",
@@ -50,7 +66,15 @@
               "type": "text",
               "required": true,
               "placeholder": "your-environment-id",
-              "description": "Adobe Commerce environment identifier"
+              "description": "Adobe Commerce environment identifier",
+              "helpText": "Matches the Commerce environment you selected during setup.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": [
+                "citisignal-nextjs",
+                "commerce-mesh",
+                "integration-service"
+              ],
+              "group": "catalog-service"
             },
             {
               "key": "ADOBE_COMMERCE_STORE_VIEW_CODE",
@@ -58,7 +82,15 @@
               "type": "text",
               "required": true,
               "default": "default",
-              "description": "Store view code for multi-store setup"
+              "description": "Store view code for multi-store setup",
+              "helpText": "Commerce store view code shared across storefront and services.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": [
+                "citisignal-nextjs",
+                "commerce-mesh",
+                "integration-service"
+              ],
+              "group": "adobe-commerce"
             },
             {
               "key": "ADOBE_COMMERCE_WEBSITE_CODE",
@@ -66,7 +98,15 @@
               "type": "text",
               "required": true,
               "default": "base",
-              "description": "Website code for multi-website setup"
+              "description": "Website code for multi-website setup",
+              "helpText": "Commerce website code reused by API Mesh and integration service.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": [
+                "citisignal-nextjs",
+                "commerce-mesh",
+                "integration-service"
+              ],
+              "group": "adobe-commerce"
             },
             {
               "key": "ADOBE_COMMERCE_STORE_CODE",
@@ -74,15 +114,27 @@
               "type": "text",
               "required": true,
               "default": "main_website_store",
-              "description": "Store code identifier"
+              "description": "Store code identifier",
+              "helpText": "Commerce store code used for mesh configuration and integration service.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": [
+                "citisignal-nextjs",
+                "commerce-mesh",
+                "integration-service"
+              ],
+              "group": "adobe-commerce"
             },
             {
               "key": "ADOBE_CATALOG_API_KEY",
-              "label": "Catalog Service API Key",
+              "label": "Sandbox Catalog API Key",
               "type": "text",
               "required": true,
-              "placeholder": "your-catalog-service-staging-or-public-key",
-              "description": "API key for Adobe Catalog Service (staging or production)"
+              "placeholder": "your-sandbox-catalog-api-key",
+              "description": "Sandbox API key for Adobe Catalog Service",
+              "helpText": "Same key used by Catalog Service and Live Search sources in API Mesh.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["citisignal-nextjs", "commerce-mesh"],
+              "group": "catalog-service"
             },
             {
               "key": "ADOBE_COMMERCE_CUSTOMER_GROUP",
@@ -90,15 +142,11 @@
               "type": "text",
               "required": false,
               "placeholder": "customer-group-id-hash",
-              "description": "Customer group ID for price and catalog rules"
-            },
-            {
-              "key": "USE_MESH",
-              "label": "Use API Mesh",
-              "type": "boolean",
-              "required": false,
-              "default": "true",
-              "description": "Enable API Mesh for GraphQL operations"
+              "description": "Customer group ID for price and catalog rules",
+              "helpText": "Optional override if you want the storefront to impersonate a specific customer group.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["citisignal-nextjs", "commerce-mesh"],
+              "group": "adobe-commerce"
             }
           ],
           "port": 3000,
@@ -179,40 +227,86 @@
           "deploymentTarget": "adobe-io",
           "envVars": [
             {
+              "key": "ADOBE_LIVE_SEARCH_ENDPOINT",
+              "label": "Live Search Service Endpoint",
+              "type": "url",
+              "required": true,
+              "placeholder": "https://catalog-service-sandbox.adobe.io/graphql",
+              "description": "Adobe Live Search service endpoint",
+              "helpText": "The Live Search GraphQL endpoint configured in API Mesh (same as Catalog Service).",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["commerce-mesh"],
+              "group": "live-search"
+            },
+            {
               "key": "ADOBE_COMMERCE_GRAPHQL_ENDPOINT",
               "label": "Commerce GraphQL Endpoint",
               "type": "url",
               "required": true,
               "placeholder": "https://your-instance.adobedemo.com/graphql",
-              "description": "GraphQL endpoint of your Adobe Commerce instance"
+              "description": "GraphQL endpoint of your Adobe Commerce instance",
+              "helpText": "This is the /graphql endpoint of your Commerce instance.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["commerce-mesh"],
+              "group": "adobe-commerce"
             },
             {
-              "key": "ADOBE_SANDBOX_CATALOG_SERVICE_ENDPOINT",
+              "key": "ADOBE_CATALOG_SERVICE_ENDPOINT",
               "label": "Catalog Service Endpoint",
+              "type": "url",
+              "required": true,
+              "placeholder": "https://catalog-service-sandbox.adobe.io/graphql",
+              "description": "Adobe Catalog Service GraphQL endpoint",
+              "helpText": "The Catalog Service endpoint configured in API Mesh.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["commerce-mesh"],
+              "group": "catalog-service"
+            },
+            {
+              "key": "ADOBE_CATALOG_ENVIRONMENT",
+              "label": "Catalog Service Environment",
               "type": "select",
               "required": true,
-              "default": "https://catalog-service-sandbox.adobe.io/graphql",
+              "default": "sandbox",
               "options": [
-                { "value": "https://catalog-service-sandbox.adobe.io/graphql", "label": "Sandbox" },
-                { "value": "https://catalog-service.adobe.io/graphql", "label": "Production" }
+                {
+                  "value": "sandbox",
+                  "label": "Sandbox"
+                },
+                {
+                  "value": "production",
+                  "label": "Production"
+                }
               ],
-              "description": "Adobe Catalog Service endpoint (sandbox or production)"
+              "description": "Select which Catalog Service environment you're using",
+              "helpText": "Choose Sandbox for testing or Production for live demos. This determines which API key to provide.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["commerce-mesh"],
+              "group": "catalog-service"
             },
             {
               "key": "ADOBE_CATALOG_API_KEY",
-              "label": "Catalog API Key",
+              "label": "Sandbox Catalog API Key",
               "type": "text",
               "required": true,
               "placeholder": "your_catalog_api_key_here",
-              "description": "API key for Adobe Catalog Service"
+              "description": "Sandbox API key for Adobe Catalog Service",
+              "helpText": "Same key used by both Catalog Service and Live Search sources.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["commerce-mesh"],
+              "group": "catalog-service"
             },
             {
               "key": "ADOBE_PRODUCTION_CATALOG_API_KEY",
               "label": "Production Catalog API Key",
               "type": "text",
-              "required": false,
+              "required": true,
               "placeholder": "your_production_api_key_here",
-              "description": "Production API key (if using production endpoint)"
+              "description": "Production API key for Catalog Service",
+              "helpText": "Required when using the production Catalog Service endpoint.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["commerce-mesh"],
+              "group": "catalog-service"
             },
             {
               "key": "ADOBE_COMMERCE_ENVIRONMENT_ID",
@@ -220,7 +314,11 @@
               "type": "text",
               "required": true,
               "placeholder": "your_environment_id_here",
-              "description": "Adobe Commerce environment identifier"
+              "description": "Adobe Commerce environment identifier",
+              "helpText": "Find this in your Commerce Cloud project settings.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["commerce-mesh"],
+              "group": "catalog-service"
             },
             {
               "key": "ADOBE_COMMERCE_WEBSITE_CODE",
@@ -228,7 +326,11 @@
               "type": "text",
               "required": true,
               "default": "base",
-              "description": "Website code for API Mesh configuration"
+              "description": "Website code for API Mesh configuration",
+              "helpText": "Typically 'base' for default Commerce installations.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["commerce-mesh"],
+              "group": "adobe-commerce"
             },
             {
               "key": "ADOBE_COMMERCE_STORE_CODE",
@@ -236,7 +338,11 @@
               "type": "text",
               "required": true,
               "default": "main_website_store",
-              "description": "Store code for API Mesh configuration"
+              "description": "Store code for API Mesh configuration",
+              "helpText": "Usually 'main_website_store' for default setups.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["commerce-mesh"],
+              "group": "adobe-commerce"
             },
             {
               "key": "ADOBE_COMMERCE_STORE_VIEW_CODE",
@@ -244,7 +350,11 @@
               "type": "text",
               "required": true,
               "default": "default",
-              "description": "Store view code for API Mesh configuration"
+              "description": "Store view code for API Mesh configuration",
+              "helpText": "Typically 'default' for the default store view.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["commerce-mesh"],
+              "group": "adobe-commerce"
             }
           ]
         },
@@ -284,7 +394,11 @@
               "type": "text",
               "required": true,
               "placeholder": "your-datastream-id",
-              "description": "Adobe Experience Platform datastream identifier"
+              "description": "Adobe Experience Platform datastream identifier",
+              "helpText": "Create a datastream in the Adobe Experience Platform Data Collection UI.",
+              "providedBy": "experience-platform",
+              "usedBy": ["citisignal-nextjs"],
+              "group": "identifiers"
             },
             {
               "key": "EXPERIENCE_PLATFORM_API_KEY",
@@ -292,7 +406,11 @@
               "type": "text",
               "required": true,
               "placeholder": "your-platform-api-key",
-              "description": "API key for Adobe Experience Platform access"
+              "description": "API key for Adobe Experience Platform access",
+              "helpText": "Generate this in Adobe Developer Console for your Experience Platform project.",
+              "providedBy": "experience-platform",
+              "usedBy": ["citisignal-nextjs"],
+              "group": "credentials"
             }
           ]
         }
@@ -311,7 +429,12 @@
         "configuration": {
           "runtime": "nodejs:22",
           "nodeVersion": "22",
-          "actions": ["browse-files", "get-products", "download-file", "delete-file"],
+          "actions": [
+            "browse-files",
+            "get-products",
+            "download-file",
+            "delete-file"
+          ],
           "envVars": [
             {
               "key": "COMMERCE_BASE_URL",
@@ -319,7 +442,11 @@
               "type": "url",
               "required": true,
               "placeholder": "https://your-commerce-instance.adobedemo.com",
-              "description": "Base URL of your Adobe Commerce instance"
+              "description": "Base URL of your Adobe Commerce instance",
+              "helpText": "Same as ADOBE_COMMERCE_URL used elsewhere.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["integration-service"],
+              "group": "adobe-commerce"
             },
             {
               "key": "COMMERCE_ADMIN_USERNAME",
@@ -327,7 +454,11 @@
               "type": "text",
               "required": true,
               "placeholder": "admin",
-              "description": "Username for Commerce admin panel access"
+              "description": "Username for Commerce admin panel access",
+              "helpText": "Admin user must have API access permissions.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["integration-service"],
+              "group": "adobe-commerce"
             },
             {
               "key": "COMMERCE_ADMIN_PASSWORD",
@@ -335,7 +466,11 @@
               "type": "password",
               "required": true,
               "placeholder": "your_admin_password",
-              "description": "Password for Commerce admin panel access"
+              "description": "Password for Commerce admin panel access",
+              "helpText": "Ensure this password is secure and stored safely.",
+              "providedBy": "adobe-commerce-paas",
+              "usedBy": ["integration-service"],
+              "group": "adobe-commerce"
             },
             {
               "key": "AWS_ACCESS_KEY_ID",
@@ -343,7 +478,11 @@
               "type": "text",
               "required": false,
               "placeholder": "your_aws_access_key_id",
-              "description": "AWS access key for S3 integration (optional)"
+              "description": "AWS access key for S3 integration (optional)",
+              "helpText": "Only needed if your integration uses AWS S3 for asset storage.",
+              "providedBy": "integration-service",
+              "usedBy": ["integration-service"],
+              "group": "integration-service"
             },
             {
               "key": "AWS_SECRET_ACCESS_KEY",
@@ -351,7 +490,11 @@
               "type": "password",
               "required": false,
               "placeholder": "your_aws_secret_access_key",
-              "description": "AWS secret key for S3 integration (optional)"
+              "description": "AWS secret key for S3 integration (optional)",
+              "helpText": "Pair this with your AWS Access Key ID for S3 access.",
+              "providedBy": "integration-service",
+              "usedBy": ["integration-service"],
+              "group": "integration-service"
             }
           ]
         }

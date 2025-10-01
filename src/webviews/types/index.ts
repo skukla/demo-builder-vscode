@@ -166,9 +166,13 @@ export interface ComponentEnvVar {
     label: string;
     type: 'text' | 'password' | 'url' | 'select' | 'boolean';
     required?: boolean;
-    default?: string;
+    default?: string | boolean;
     placeholder?: string;
     description?: string;
+    helpText?: string;
+    group?: string;
+    providedBy?: string;
+    usedBy?: string[];
     options?: Array<{ value: string; label: string }>;
     validation?: {
         pattern?: string;
