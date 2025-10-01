@@ -1551,7 +1551,54 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     };
                 }
                 
-                this.logger.info('[API Mesh] API Mesh API is enabled');
+                this.logger.info('[API Mesh] API Mesh API is enabled (confirmed via workspace config)');
+                
+                // LAYER 2: Now check if a mesh exists (API is already confirmed as enabled)
+                this.logger.info('[API Mesh] Layer 2: Checking for existing mesh');
+                
+                try {
+                    const { stdout, stderr } = await commandManager.executeAdobeCLI('aio api-mesh get --active');
+                    const combined = `${stdout}\n${stderr}`;
+                    
+                    this.debugLogger.debug('[API Mesh] get --active output', { stdout, stderr });
+                    
+                    // Check for "no mesh found" or "unable to get mesh config" (both mean no mesh exists yet)
+                    const noMesh = /no mesh found|unable to get mesh config/i.test(combined);
+                    if (noMesh) {
+                        this.logger.info('[API Mesh] API enabled, no mesh exists yet');
+                        return {
+                            apiEnabled: true,  // Layer 1 confirmed this
+                            meshExists: false
+                        };
+                    }
+                    
+                    // If we got here without error, mesh exists
+                    // Try to extract mesh ID from output (best effort)
+                    const meshIdMatch = combined.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
+                    const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
+                    
+                    this.logger.info('[API Mesh] Existing mesh found', { meshId });
+                    
+                    return {
+                        apiEnabled: true,
+                        meshExists: true,
+                        meshId,
+                        meshStatus: 'deployed', // If we can get it, it's deployed
+                        endpoint: undefined // Would need to parse from output
+                    };
+                    
+                } catch (meshError: any) {
+                    const combined = `${meshError?.message || ''}\n${meshError?.stderr || ''}\n${meshError?.stdout || ''}`;
+                    this.debugLogger.debug('[API Mesh] Mesh check error (non-fatal)', { combined });
+                    
+                    // API is already confirmed as enabled by Layer 1
+                    // Any error here just means no mesh exists yet
+                    this.logger.info('[API Mesh] API enabled, no mesh exists (mesh check failed)');
+                    return {
+                        apiEnabled: true,  // Layer 1 confirmed this
+                        meshExists: false
+                    };
+                }
                 
             } catch (configError) {
                 this.debugLogger.debug('[API Mesh] Layer 1 failed, falling back to Layer 2', { error: String(configError) });
@@ -1559,75 +1606,73 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 try {
                     await fs.rm(tempDir, { recursive: true, force: true });
                 } catch {}
-            }
-
-            // LAYER 2: Try to get active mesh (confirms API access and checks for existing mesh)
-            this.logger.info('[API Mesh] Layer 2: Checking for existing mesh');
-            
-            try {
-                const { stdout, stderr } = await commandManager.executeAdobeCLI('aio api-mesh get --active');
-                const combined = `${stdout}\n${stderr}`;
                 
-                this.debugLogger.debug('[API Mesh] get --active output', { stdout, stderr });
+                // FALLBACK: Layer 1 failed, use Layer 2 to check both API status and mesh existence
+                this.logger.info('[API Mesh] Layer 2 (fallback): Checking API status and mesh');
                 
-                // "Unable to get mesh config" indicates API is NOT enabled
-                const unableToGet = /unable to get mesh config/i.test(combined);
-                if (unableToGet) {
-                    this.logger.warn('[API Mesh] API Mesh API not enabled (unable to get mesh config)');
-                    return {
-                        apiEnabled: false,
-                        meshExists: false
-                    };
-                }
-                
-                // Check for "No mesh found" without "unable to get" (API enabled, no mesh exists)
-                const noMeshOnly = /no mesh found/i.test(combined) && !unableToGet;
-                if (noMeshOnly) {
-                    this.logger.info('[API Mesh] API enabled, no mesh exists yet');
+                try {
+                    const { stdout, stderr } = await commandManager.executeAdobeCLI('aio api-mesh get --active');
+                    const combined = `${stdout}\n${stderr}`;
+                    
+                    this.debugLogger.debug('[API Mesh] get --active output (fallback)', { stdout, stderr });
+                    
+                    // "Unable to get mesh config" indicates API is NOT enabled
+                    const unableToGet = /unable to get mesh config/i.test(combined);
+                    if (unableToGet) {
+                        this.logger.warn('[API Mesh] API Mesh API not enabled (unable to get mesh config)');
+                        return {
+                            apiEnabled: false,
+                            meshExists: false
+                        };
+                    }
+                    
+                    // Check for "No mesh found" without "unable to get" (API enabled, no mesh exists)
+                    const noMeshOnly = /no mesh found/i.test(combined) && !unableToGet;
+                    if (noMeshOnly) {
+                        this.logger.info('[API Mesh] API enabled, no mesh exists yet (fallback check)');
+                        return {
+                            apiEnabled: true,
+                            meshExists: false
+                        };
+                    }
+                    
+                    // If we got here without error, mesh exists
+                    const meshIdMatch = combined.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
+                    const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
+                    
+                    this.logger.info('[API Mesh] Existing mesh found (fallback check)', { meshId });
+                    
                     return {
                         apiEnabled: true,
-                        meshExists: false
+                        meshExists: true,
+                        meshId,
+                        meshStatus: 'deployed',
+                        endpoint: undefined
                     };
-                }
-                
-                // If we got here without error, mesh exists
-                // Try to extract mesh ID from output (best effort)
-                const meshIdMatch = combined.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
-                const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
-                
-                this.logger.info('[API Mesh] Existing mesh found', { meshId });
-                
-                return {
-                    apiEnabled: true,
-                    meshExists: true,
-                    meshId,
-                    meshStatus: 'deployed', // If we can get it, it's deployed
-                    endpoint: undefined // Would need to parse from output
-                };
-                
-            } catch (meshError: any) {
-                const combined = `${meshError?.message || ''}\n${meshError?.stderr || ''}\n${meshError?.stdout || ''}`;
-                this.debugLogger.debug('[API Mesh] Mesh get error', { combined });
-                
-                // Check for permission errors (API not enabled)
-                const forbidden = /403|forbidden|not authorized|not enabled|no access|missing permission/i.test(combined);
-                if (forbidden) {
-                    this.logger.warn('[API Mesh] API Mesh API not enabled (permission denied)');
-                    return {
-                        apiEnabled: false,
-                        meshExists: false
-                    };
-                }
-                
-                // "Unable to get mesh config" indicates API is NOT enabled
-                const unableToGet = /unable to get mesh config/i.test(combined);
-                if (unableToGet) {
-                    this.logger.warn('[API Mesh] API Mesh API not enabled (unable to get mesh config)');
-                    return {
-                        apiEnabled: false,
-                        meshExists: false
-                    };
-                }
+                    
+                } catch (meshError: any) {
+                    const combined = `${meshError?.message || ''}\n${meshError?.stderr || ''}\n${meshError?.stdout || ''}`;
+                    this.debugLogger.debug('[API Mesh] Mesh get error (fallback)', { combined });
+                    
+                    // Check for permission errors (API not enabled)
+                    const forbidden = /403|forbidden|not authorized|not enabled|no access|missing permission/i.test(combined);
+                    if (forbidden) {
+                        this.logger.warn('[API Mesh] API Mesh API not enabled (permission denied)');
+                        return {
+                            apiEnabled: false,
+                            meshExists: false
+                        };
+                    }
+                    
+                    // "Unable to get mesh config" indicates API is NOT enabled
+                    const unableToGet = /unable to get mesh config/i.test(combined);
+                    if (unableToGet) {
+                        this.logger.warn('[API Mesh] API Mesh API not enabled (unable to get mesh config)');
+                        return {
+                            apiEnabled: false,
+                            meshExists: false
+                        };
+                    }
                 
                 // Check for "No mesh found" (API enabled, just no mesh)
                 const noMesh = /no mesh found/i.test(combined);
