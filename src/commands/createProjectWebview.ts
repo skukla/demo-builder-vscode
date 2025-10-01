@@ -359,6 +359,20 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
         });
 
+        // Create a new API Mesh
+        comm.on('create-api-mesh', async (data: any) => {
+            try {
+                const result = await this.handleCreateApiMesh(data.workspaceId);
+                return result;
+            } catch (error) {
+                this.logger.error('[API Mesh Create] Failed', error as Error);
+                return { 
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error) 
+                };
+            }
+        });
+
         // Open Adobe Console in browser (with optional direct workspace link)
         comm.on('open-adobe-console', async (data: any) => {
             try {
@@ -1735,6 +1749,49 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
         } catch (error) {
             this.logger.error('[API Mesh] Check failed', error as Error);
+            throw error;
+        }
+    }
+
+    private async handleCreateApiMesh(workspaceId: string): Promise<{
+        meshId?: string;
+        success: boolean;
+        message?: string;
+    }> {
+        this.logger.info('[API Mesh] Creating new mesh for workspace', { workspaceId });
+        
+        const commandManager = getExternalCommandManager();
+
+        try {
+            // Create a minimal mesh configuration
+            // For MVP, we'll create an empty mesh that can be configured later
+            this.logger.info('[API Mesh] Executing mesh creation command');
+            
+            const createResult = await commandManager.executeAdobeCLI(
+                'aio api-mesh create'
+            );
+            
+            if (createResult.code !== 0) {
+                const errorMsg = createResult.stderr || 'Failed to create mesh';
+                this.logger.error('[API Mesh] Creation failed', new Error(errorMsg));
+                throw new Error(errorMsg);
+            }
+            
+            this.logger.info('[API Mesh] Mesh created successfully');
+            this.debugLogger.debug('[API Mesh] Create output', { stdout: createResult.stdout });
+            
+            // Try to extract mesh ID from output
+            const meshIdMatch = createResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
+            const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
+            
+            return {
+                success: true,
+                meshId,
+                message: 'Mesh created successfully'
+            };
+            
+        } catch (error) {
+            this.logger.error('[API Mesh] Creation failed', error as Error);
             throw error;
         }
     }

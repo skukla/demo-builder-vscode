@@ -254,9 +254,60 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                             <Flex direction="column" gap="size-100" alignItems="center">
                                 <Text UNSAFE_className="text-xl font-medium">Ready for Mesh Creation</Text>
                                 <Text UNSAFE_className="text-sm text-gray-600" UNSAFE_style={{ textAlign: 'center', maxWidth: '450px' }}>
-                                    API Mesh API is enabled. A mesh will be created during deployment.
+                                    API Mesh API is enabled. Click below to create a new mesh.
                                 </Text>
                             </Flex>
+                            <Button 
+                                variant="accent" 
+                                marginTop="size-300"
+                                onPress={async () => {
+                                    setIsChecking(true);
+                                    setMessage('Creating API Mesh...');
+                                    setSubMessage('Setting up mesh infrastructure');
+                                    updateState({ 
+                                        apiMesh: { 
+                                            ...state.apiMesh,
+                                            isChecking: true 
+                                        } 
+                                    });
+
+                                    try {
+                                        const result = await vscode.request('create-api-mesh', {
+                                            workspaceId: state.adobeWorkspace?.id
+                                        });
+
+                                        if (result?.success && result.meshId) {
+                                            updateState({ 
+                                                apiMesh: { 
+                                                    isChecking: false,
+                                                    apiEnabled: true,
+                                                    meshExists: true,
+                                                    meshId: result.meshId,
+                                                    meshStatus: 'deployed'
+                                                } 
+                                            });
+                                            setCanProceed(true);
+                                        } else {
+                                            throw new Error(result?.error || 'Failed to create mesh');
+                                        }
+                                    } catch (e) {
+                                        const err = e instanceof Error ? e.message : 'Failed to create mesh';
+                                        setError(err);
+                                        updateState({ 
+                                            apiMesh: { 
+                                                isChecking: false,
+                                                apiEnabled: true,
+                                                meshExists: false,
+                                                error: err
+                                            } 
+                                        });
+                                    } finally {
+                                        setIsChecking(false);
+                                    }
+                                }}
+                            >
+                                Create Mesh
+                            </Button>
                         </Flex>
                     </Flex>
                 )}
