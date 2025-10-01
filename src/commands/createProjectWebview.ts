@@ -364,10 +364,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             try {
                 let consoleUrl = 'https://developer.adobe.com/console';
                 
+                this.debugLogger.debug('[Adobe Console] Received data:', data);
+                
                 // Construct direct link to workspace if IDs are provided
                 if (data?.orgId && data?.projectId && data?.workspaceId) {
                     consoleUrl = `https://developer.adobe.com/console/projects/${data.orgId}/${data.projectId}/workspaces/${data.workspaceId}/details`;
                     this.logger.info('[Adobe Console] Opening workspace-specific URL', { 
+                        url: consoleUrl,
                         orgId: data.orgId,
                         projectId: data.projectId, 
                         workspaceId: data.workspaceId 
@@ -375,16 +378,18 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 } else if (data?.orgId && data?.projectId) {
                     consoleUrl = `https://developer.adobe.com/console/projects/${data.orgId}/${data.projectId}/overview`;
                     this.logger.info('[Adobe Console] Opening project-specific URL', { 
+                        url: consoleUrl,
                         orgId: data.orgId,
                         projectId: data.projectId 
                     });
                 } else {
-                    this.logger.info('[Adobe Console] Opening generic console URL');
+                    this.logger.info('[Adobe Console] Opening generic console URL (missing IDs)', { data });
                 }
                 
                 await vscode.env.openExternal(vscode.Uri.parse(consoleUrl));
                 return { success: true };
             } catch (error) {
+                this.logger.error('[Adobe Console] Failed to open URL', error as Error);
                 return { success: false };
             }
         });

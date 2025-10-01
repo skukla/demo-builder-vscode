@@ -168,11 +168,15 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                             <Flex gap="size-150" marginTop="size-300">
                                 <Button 
                                     variant="secondary" 
-                                    onPress={() => vscode.postMessage('open-adobe-console', {
-                                        orgId: state.adobeOrg?.id,
-                                        projectId: state.adobeProject?.id,
-                                        workspaceId: state.adobeWorkspace?.id
-                                    })}
+                                    onPress={() => {
+                                        const payload = {
+                                            orgId: state.adobeProject?.org_id,
+                                            projectId: state.adobeProject?.id,
+                                            workspaceId: state.adobeWorkspace?.id
+                                        };
+                                        console.log('[ApiMeshStep] Opening console with:', payload);
+                                        vscode.postMessage('open-adobe-console', payload);
+                                    }}
                                 >
                                     Open Workspace in Console
                                 </Button>

@@ -73,6 +73,7 @@ export interface Project {
     name: string;
     title?: string;
     description?: string;
+    org_id?: number;  // Numeric organization ID from Adobe Console
 }
 
 export interface Workspace {
