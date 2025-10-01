@@ -1488,7 +1488,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             try {
                 await commandManager.executeAdobeCLI(
-                    `aio console workspace download ${configPath} --workspaceId ${workspaceId}`
+                    `aio console workspace download "${configPath}" --workspaceId ${workspaceId}`
                 );
                 
                 const configContent = await fs.readFile(configPath, 'utf-8');
@@ -1540,9 +1540,19 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 
                 this.debugLogger.debug('[API Mesh] get --active output', { stdout, stderr });
                 
-                // Check for "No mesh found" message (API enabled, no mesh exists)
-                const noMesh = /no mesh found|unable to get mesh config/i.test(combined);
-                if (noMesh) {
+                // "Unable to get mesh config" indicates API is NOT enabled
+                const unableToGet = /unable to get mesh config/i.test(combined);
+                if (unableToGet) {
+                    this.logger.warn('[API Mesh] API Mesh API not enabled (unable to get mesh config)');
+                    return {
+                        apiEnabled: false,
+                        meshExists: false
+                    };
+                }
+                
+                // Check for "No mesh found" without "unable to get" (API enabled, no mesh exists)
+                const noMeshOnly = /no mesh found/i.test(combined) && !unableToGet;
+                if (noMeshOnly) {
                     this.logger.info('[API Mesh] API enabled, no mesh exists yet');
                     return {
                         apiEnabled: true,
@@ -1579,8 +1589,18 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     };
                 }
                 
-                // Check for "No mesh found" in error output
-                const noMesh = /no mesh found|unable to get mesh config/i.test(combined);
+                // "Unable to get mesh config" indicates API is NOT enabled
+                const unableToGet = /unable to get mesh config/i.test(combined);
+                if (unableToGet) {
+                    this.logger.warn('[API Mesh] API Mesh API not enabled (unable to get mesh config)');
+                    return {
+                        apiEnabled: false,
+                        meshExists: false
+                    };
+                }
+                
+                // Check for "No mesh found" (API enabled, just no mesh)
+                const noMesh = /no mesh found/i.test(combined);
                 if (noMesh) {
                     this.logger.info('[API Mesh] API enabled, no mesh exists yet');
                     return {
