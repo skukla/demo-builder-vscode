@@ -241,7 +241,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                 backgroundColor: 'var(--spectrum-global-color-gray-75)',
                 borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
             }}>
-                <ConfigurationSummary state={state} completedSteps={completedSteps} />
+                <ConfigurationSummary state={state} completedSteps={completedSteps} currentStep={state.currentStep} />
             </div>
         </div>
     );

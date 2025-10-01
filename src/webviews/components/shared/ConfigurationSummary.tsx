@@ -9,9 +9,41 @@ import { cn } from '../../utils/classNames';
 interface ConfigurationSummaryProps {
     state: WizardState;
     completedSteps?: WizardStep[];
+    currentStep?: WizardStep;
 }
 
-export function ConfigurationSummary({ state, completedSteps = [] }: ConfigurationSummaryProps) {
+export function ConfigurationSummary({ state, completedSteps = [], currentStep }: ConfigurationSummaryProps) {
+    // Define step order for determining if a step is "ahead" of current step
+    const stepOrder: WizardStep[] = [
+        'welcome',
+        'component-selection',
+        'prerequisites',
+        'adobe-auth',
+        'adobe-project',
+        'adobe-workspace',
+        'api-mesh',
+        'settings',
+        'review',
+        'creating'
+    ];
+    
+    const getCurrentStepIndex = () => {
+        if (!currentStep) return -1;
+        return stepOrder.indexOf(currentStep);
+    };
+    
+    const isStepCompleted = (step: WizardStep) => {
+        const currentIndex = getCurrentStepIndex();
+        const stepIndex = stepOrder.indexOf(step);
+        
+        // If we're before this step, it's pending (not completed)
+        if (currentIndex >= 0 && stepIndex > currentIndex) {
+            return false;
+        }
+        
+        // Otherwise, check completedSteps array
+        return completedSteps.includes(step);
+    };
     return (
         <View height="100%">
             <Heading level={3} marginBottom="size-300">
@@ -51,7 +83,7 @@ export function ConfigurationSummary({ state, completedSteps = [] }: Configurati
                 <View marginTop="size-100">
                     {state.adobeProject ? (
                         <Flex gap="size-100" alignItems="center">
-                            {completedSteps.includes('adobe-project') ? (
+                            {isStepCompleted('adobe-project') ? (
                                 <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
                             ) : (
                                 <Clock size="S" UNSAFE_className="text-blue-600" />
@@ -83,7 +115,7 @@ export function ConfigurationSummary({ state, completedSteps = [] }: Configurati
                 <View marginTop="size-100">
                     {state.adobeWorkspace ? (
                         <Flex gap="size-100" alignItems="center">
-                            {completedSteps.includes('adobe-workspace') ? (
+                            {isStepCompleted('adobe-workspace') ? (
                                 <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
                             ) : (
                                 <Clock size="S" UNSAFE_className="text-blue-600" />
@@ -117,14 +149,22 @@ export function ConfigurationSummary({ state, completedSteps = [] }: Configurati
                         </Flex>
                     ) : state.apiMesh?.apiEnabled && state.apiMesh?.meshExists ? (
                         <Flex gap="size-100" alignItems="center">
-                            <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            {isStepCompleted('api-mesh') ? (
+                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            ) : (
+                                <Clock size="S" UNSAFE_className="text-blue-600" />
+                            )}
                             <Text UNSAFE_className="text-sm">
                                 {state.apiMesh?.meshId || 'Mesh Found'}
                             </Text>
                         </Flex>
                     ) : state.apiMesh?.apiEnabled && !state.apiMesh?.meshExists ? (
                         <Flex gap="size-100" alignItems="center">
-                            <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            {isStepCompleted('api-mesh') ? (
+                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            ) : (
+                                <Clock size="S" UNSAFE_className="text-blue-600" />
+                            )}
                             <Text UNSAFE_className="text-sm text-gray-600">Ready for creation</Text>
                         </Flex>
                     ) : state.apiMesh?.apiEnabled === false ? (
@@ -132,7 +172,7 @@ export function ConfigurationSummary({ state, completedSteps = [] }: Configurati
                             <AlertCircle size="S" UNSAFE_className="text-red-600" />
                             <Text UNSAFE_className="text-sm text-red-600">Not enabled</Text>
                         </Flex>
-                    ) : completedSteps.includes('adobe-workspace') ? (
+                    ) : isStepCompleted('adobe-workspace') ? (
                         <Flex gap="size-100" alignItems="center">
                             <Clock size="S" UNSAFE_className="text-blue-600" />
                             <Text UNSAFE_className="text-sm text-gray-600">Pending check</Text>
