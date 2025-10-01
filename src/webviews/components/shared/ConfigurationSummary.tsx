@@ -142,6 +142,12 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                 <View marginTop="size-100">
                     {!state.adobeWorkspace ? (
                         <Text UNSAFE_className="text-sm text-gray-600">Not selected</Text>
+                    ) : !isStepCompleted('api-mesh') && getCurrentStepIndex() < stepOrder.indexOf('api-mesh') ? (
+                        // If we haven't reached the api-mesh step yet, always show waiting
+                        <Flex gap="size-100" alignItems="center">
+                            <Clock size="S" UNSAFE_className="text-blue-600" />
+                            <Text UNSAFE_className="text-sm text-gray-600">Waiting</Text>
+                        </Flex>
                     ) : state.apiMesh?.isChecking ? (
                         <Flex gap="size-100" alignItems="center">
                             <Clock size="S" UNSAFE_className="text-blue-600" />
@@ -171,11 +177,6 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                         <Flex gap="size-100" alignItems="center">
                             <AlertCircle size="S" UNSAFE_className="text-red-600" />
                             <Text UNSAFE_className="text-sm text-red-600">Not enabled</Text>
-                        </Flex>
-                    ) : isStepCompleted('adobe-workspace') ? (
-                        <Flex gap="size-100" alignItems="center">
-                            <Clock size="S" UNSAFE_className="text-blue-600" />
-                            <Text UNSAFE_className="text-sm text-gray-600">Pending check</Text>
                         </Flex>
                     ) : (
                         <Flex gap="size-100" alignItems="center">
