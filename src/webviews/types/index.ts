@@ -10,7 +10,6 @@ export type WizardStep =
     | 'adobe-auth'  // Adobe authentication step
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
-    | 'api-verification'  // Kept for compatibility, renamed to api-mesh
     | 'api-mesh'  // API Mesh verification and setup step
     | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
