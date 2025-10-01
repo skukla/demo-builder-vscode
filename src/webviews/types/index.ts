@@ -10,7 +10,8 @@ export type WizardStep =
     | 'adobe-auth'  // Adobe authentication step
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
-    | 'api-verification'  // New: API verification step
+    | 'api-verification'  // Kept for compatibility, renamed to api-mesh
+    | 'api-mesh'  // API Mesh verification and setup step
     | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
@@ -37,6 +38,17 @@ export interface WizardState {
         message?: string;
         subMessage?: string;
         hasMesh?: boolean;
+        error?: string;
+    };
+    apiMesh?: {
+        isChecking: boolean;
+        message?: string;
+        subMessage?: string;
+        apiEnabled: boolean;
+        meshExists: boolean;
+        meshId?: string;
+        meshStatus?: 'deployed' | 'not-deployed' | 'pending';
+        endpoint?: string;
         error?: string;
     };
 }

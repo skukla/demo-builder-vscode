@@ -330,6 +330,22 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
         });
 
+        // Check API Mesh API availability (new enhanced check)
+        comm.on('check-api-mesh', async (data: any) => {
+            try {
+                const result = await this.handleCheckApiMesh(data.workspaceId);
+                return { success: true, ...result };
+            } catch (error) {
+                this.logger.error('[API Mesh Check] Failed', error as Error);
+                return { 
+                    success: false, 
+                    apiEnabled: false,
+                    meshExists: false,
+                    error: error instanceof Error ? error.message : String(error) 
+                };
+            }
+        });
+
         // Open Adobe Console in browser
         comm.on('open-adobe-console', async () => {
             try {
@@ -1425,6 +1441,118 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 details: error instanceof Error ? error.message : String(error)
             });
             // Re-throw so the handler can send proper response
+            throw error;
+        }
+    }
+
+    private async handleCheckApiMesh(workspaceId: string): Promise<{
+        apiEnabled: boolean;
+        meshExists: boolean;
+        meshId?: string;
+        meshStatus?: 'deployed' | 'not-deployed';
+        endpoint?: string;
+    }> {
+        this.logger.info('[API Mesh] Checking API Mesh availability for workspace', { workspaceId });
+        this.debugLogger.debug('[API Mesh] Starting multi-layer check');
+        
+        const commandManager = getExternalCommandManager();
+        const fs = require('fs').promises;
+        const path = require('path');
+        const os = require('os');
+
+        try {
+            // LAYER 1: Download workspace configuration (most reliable)
+            this.logger.info('[API Mesh] Layer 1: Downloading workspace configuration');
+            const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'aio-workspace-'));
+            const configPath = path.join(tempDir, 'workspace-config.json');
+            
+            try {
+                await commandManager.executeAdobeCLI(
+                    `aio console workspace download ${configPath} --workspaceId ${workspaceId}`
+                );
+                
+                const configContent = await fs.readFile(configPath, 'utf-8');
+                const config = JSON.parse(configContent);
+                const services = config.project?.workspace?.details?.services || [];
+                
+                this.debugLogger.debug('[API Mesh] Workspace services', { services });
+                
+                const hasMeshApi = services.some((s: any) => 
+                    s.name?.includes('API Mesh') || 
+                    s.code === 'MeshAPI' ||
+                    s.code_name === 'MeshAPI'
+                );
+                
+                // Cleanup temp directory
+                await fs.rm(tempDir, { recursive: true, force: true });
+                
+                if (!hasMeshApi) {
+                    this.logger.warn('[API Mesh] API Mesh API not found in workspace services');
+                    this.debugLogger.debug('[API Mesh] Available services', { serviceNames: services.map((s: any) => s.name || s.code) });
+                    return {
+                        apiEnabled: false,
+                        meshExists: false
+                    };
+                }
+                
+                this.logger.info('[API Mesh] API Mesh API is enabled');
+                
+            } catch (configError) {
+                this.debugLogger.debug('[API Mesh] Layer 1 failed, falling back to Layer 2', { error: String(configError) });
+                // Cleanup temp directory on error
+                try {
+                    await fs.rm(tempDir, { recursive: true, force: true });
+                } catch {}
+            }
+
+            // LAYER 2: Try to describe mesh (confirms API access and checks for existing mesh)
+            this.logger.info('[API Mesh] Layer 2: Checking for existing mesh');
+            
+            try {
+                const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh describe --json');
+                const meshData = JSON.parse(stdout);
+                
+                this.logger.info('[API Mesh] Existing mesh found', { meshId: meshData.meshId });
+                this.debugLogger.debug('[API Mesh] Mesh details', { meshData });
+                
+                return {
+                    apiEnabled: true,
+                    meshExists: true,
+                    meshId: meshData.meshId,
+                    meshStatus: meshData.status === 'success' ? 'deployed' : 'not-deployed',
+                    endpoint: meshData.endpoint
+                };
+                
+            } catch (meshError: any) {
+                const combined = `${meshError?.message || ''}\n${meshError?.stderr || ''}\n${meshError?.stdout || ''}`;
+                this.debugLogger.debug('[API Mesh] Mesh describe error', { combined });
+                
+                // Check for permission errors (API not enabled)
+                const forbidden = /403|forbidden|not authorized|not enabled|no access/i.test(combined);
+                if (forbidden) {
+                    this.logger.warn('[API Mesh] API Mesh API not enabled (permission denied)');
+                    return {
+                        apiEnabled: false,
+                        meshExists: false
+                    };
+                }
+                
+                // Check for no mesh exists (API enabled, just no mesh yet)
+                const noMesh = /404|not found|no mesh/i.test(combined);
+                if (noMesh) {
+                    this.logger.info('[API Mesh] API enabled, no mesh exists yet');
+                    return {
+                        apiEnabled: true,
+                        meshExists: false
+                    };
+                }
+                
+                // Unknown error
+                throw meshError;
+            }
+            
+        } catch (error) {
+            this.logger.error('[API Mesh] Check failed', error as Error);
             throw error;
         }
     }

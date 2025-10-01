@@ -31,8 +31,8 @@
       "enabled": true
     },
     {
-      "id": "api-verification",
-      "name": "API Verification",
+      "id": "api-mesh",
+      "name": "API Mesh",
       "enabled": true
     },
     {
