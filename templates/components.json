@@ -81,7 +81,7 @@
               "label": "Store View Code",
               "type": "text",
               "required": true,
-              "default": "default",
+              "placeholder": "default",
               "description": "Store view code for multi-store setup",
               "helpText": "Commerce store view code shared across storefront and services.",
               "providedBy": "adobe-commerce-paas",
@@ -97,7 +97,7 @@
               "label": "Website Code",
               "type": "text",
               "required": true,
-              "default": "base",
+              "placeholder": "base",
               "description": "Website code for multi-website setup",
               "helpText": "Commerce website code reused by API Mesh and integration service.",
               "providedBy": "adobe-commerce-paas",
@@ -113,7 +113,7 @@
               "label": "Store Code",
               "type": "text",
               "required": true,
-              "default": "main_website_store",
+              "placeholder": "main_website_store",
               "description": "Store code identifier",
               "helpText": "Commerce store code used for mesh configuration and integration service.",
               "providedBy": "adobe-commerce-paas",
@@ -251,47 +251,13 @@
               "group": "catalog-service"
             },
             {
-              "key": "ADOBE_CATALOG_ENVIRONMENT",
-              "label": "Catalog Service Environment",
-              "type": "select",
-              "required": true,
-              "default": "sandbox",
-              "options": [
-                {
-                  "value": "sandbox",
-                  "label": "Sandbox"
-                },
-                {
-                  "value": "production",
-                  "label": "Production"
-                }
-              ],
-              "description": "Select which Catalog Service environment you're using",
-              "helpText": "Choose Sandbox for testing or Production for live demos. This determines which API key to provide.",
-              "providedBy": "adobe-commerce-paas",
-              "usedBy": ["commerce-mesh"],
-              "group": "catalog-service"
-            },
-            {
               "key": "ADOBE_CATALOG_API_KEY",
-              "label": "Sandbox Catalog API Key",
+              "label": "Catalog API Key",
               "type": "text",
               "required": true,
               "placeholder": "your_catalog_api_key_here",
-              "description": "Sandbox API key for Adobe Catalog Service",
+              "description": "API key for Adobe Catalog Service (Sandbox)",
               "helpText": "Same key used by both Catalog Service and Live Search sources.",
-              "providedBy": "adobe-commerce-paas",
-              "usedBy": ["commerce-mesh"],
-              "group": "catalog-service"
-            },
-            {
-              "key": "ADOBE_PRODUCTION_CATALOG_API_KEY",
-              "label": "Production Catalog API Key",
-              "type": "text",
-              "required": true,
-              "placeholder": "your_production_api_key_here",
-              "description": "Production API key for Catalog Service",
-              "helpText": "Required when using the production Catalog Service endpoint.",
               "providedBy": "adobe-commerce-paas",
               "usedBy": ["commerce-mesh"],
               "group": "catalog-service"
@@ -313,7 +279,7 @@
               "label": "Website Code",
               "type": "text",
               "required": true,
-              "default": "base",
+              "placeholder": "base",
               "description": "Website code for API Mesh configuration",
               "helpText": "Typically 'base' for default Commerce installations.",
               "providedBy": "adobe-commerce-paas",
@@ -325,7 +291,7 @@
               "label": "Store Code",
               "type": "text",
               "required": true,
-              "default": "main_website_store",
+              "placeholder": "main_website_store",
               "description": "Store code for API Mesh configuration",
               "helpText": "Usually 'main_website_store' for default setups.",
               "providedBy": "adobe-commerce-paas",
@@ -337,7 +303,7 @@
               "label": "Store View Code",
               "type": "text",
               "required": true,
-              "default": "default",
+              "placeholder": "default",
               "description": "Store view code for API Mesh configuration",
               "helpText": "Typically 'default' for the default store view.",
               "providedBy": "adobe-commerce-paas",
