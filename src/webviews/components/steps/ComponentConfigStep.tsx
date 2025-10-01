@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
     Heading,
     Text,
@@ -57,6 +57,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
     const [isLoading, setIsLoading] = useState(true);
     const [expandedNavSections, setExpandedNavSections] = useState<Set<string>>(new Set());
     const [activeSection, setActiveSection] = useState<string | null>(null);
+    const [activeField, setActiveField] = useState<string | null>(null);
+    const lastFocusedSectionRef = useRef<string | null>(null);
 
     // Load components data
     useEffect(() => {
@@ -150,12 +152,17 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
         // Define service group labels and order
         // This maps the 'group' values from JSON to user-friendly labels
         const serviceGroupDefs: Array<{ id: string; label: string; order: number; fieldOrder?: string[] }> = [
-            { id: 'adobe-commerce', label: 'Adobe Commerce', order: 1 },
+            { 
+                id: 'adobe-commerce', 
+                label: 'Adobe Commerce', 
+                order: 1,
+                fieldOrder: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_WEBSITE_CODE', 'ADOBE_COMMERCE_STORE_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', 'ADOBE_COMMERCE_CUSTOMER_GROUP', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT']
+            },
             { 
                 id: 'catalog-service', 
                 label: 'Catalog Service', 
                 order: 2,
-                fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_ENVIRONMENT', 'ADOBE_CATALOG_API_KEY', 'ADOBE_PRODUCTION_CATALOG_API_KEY']
+                fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_API_KEY']
             },
             { 
                 id: 'live-search', 
@@ -201,65 +208,91 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
         return orderedGroups;
     }, [selectedComponents]);
 
-    // Track active section with IntersectionObserver
+    // Note: activeSection is controlled ONLY by field focus for predictable tab navigation
+
+    // Handle field focus to scroll section header into view when entering new section
     useEffect(() => {
         if (isLoading || serviceGroups.length === 0) return;
 
-        const observerOptions = {
-            root: null,
-            rootMargin: '-10% 0px -80% 0px', // More strict: only trigger when section header is clearly visible
-            threshold: 0
-        };
-
-        const observerCallback = (entries: IntersectionObserverEntry[]) => {
-            // Find the section that's most visible
-            const visibleEntries = entries.filter(entry => entry.isIntersecting);
-            if (visibleEntries.length > 0) {
-                // Sort by position to ensure we get the topmost section
-                visibleEntries.sort((a, b) => {
-                    const rectA = a.target.getBoundingClientRect();
-                    const rectB = b.target.getBoundingClientRect();
-                    return rectA.top - rectB.top;
-                });
+        const handleFieldFocus = (event: FocusEvent) => {
+            const target = event.target as HTMLElement;
+            
+            // Find the field wrapper div
+            const fieldWrapper = target.closest('[id^="field-"]');
+            if (!fieldWrapper) return;
+            
+            const fieldId = fieldWrapper.id.replace('field-', '');
+            
+            // Find which section this field belongs to
+            const section = serviceGroups.find(group => 
+                group.fields.some(f => f.key === fieldId)
+            );
+            
+            if (!section) return;
+            
+            // Track the active field for navigation highlighting
+            setActiveField(fieldId);
+            
+            // Check if we're entering a different section
+            const isNewSection = lastFocusedSectionRef.current !== section.id;
+            lastFocusedSectionRef.current = section.id;
+            
+            // Update active section (for highlighting)
+            setActiveSection(section.id);
+            
+            // Auto-expand the section in navigation
+            setExpandedNavSections(prev => {
+                const newSet = new Set(prev);
+                newSet.add(section.id);
+                return newSet;
+            });
+            
+            // Scroll navigation panel to show section when entering new section
+            if (isNewSection) {
+                const navSectionElement = document.getElementById(`nav-${section.id}`);
+                if (navSectionElement) {
+                    navSectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
                 
-                // Get the topmost visible section
-                const topSection = visibleEntries[0];
-                const sectionId = topSection.target.id.replace('section-', '');
-                setActiveSection(sectionId);
+                // Scroll to show the section header at the top in left column
+                const sectionElement = document.getElementById(`section-${section.id}`);
+                if (sectionElement) {
+                    sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
                 
-                // Auto-expand the active section
-                setExpandedNavSections(prev => {
-                    const newSet = new Set(prev);
-                    newSet.add(sectionId);
-                    return newSet;
-                });
+                // Also scroll the field node into view after section scroll
+                setTimeout(() => {
+                    const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
+                    if (navFieldElement) {
+                        navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }, 150);
+            } else {
+                // Within same section, scroll the field itself with margin
+                fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Scroll the navigation field node into view
+                setTimeout(() => {
+                    const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
+                    if (navFieldElement) {
+                        navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }, 150);
             }
         };
 
-        const observer = new IntersectionObserver(observerCallback, observerOptions);
-
-        // Observe all section elements
-        serviceGroups.forEach(group => {
-            const element = document.getElementById(`section-${group.id}`);
-            if (element) {
-                observer.observe(element);
-            }
+        // Add focus listeners to all input elements
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.addEventListener('focus', handleFieldFocus as EventListener);
         });
 
         return () => {
-            observer.disconnect();
+            inputs.forEach(input => {
+                input.removeEventListener('focus', handleFieldFocus as EventListener);
+            });
         };
     }, [isLoading, serviceGroups]);
-
-    // Auto-scroll navigation panel to keep active section visible
-    useEffect(() => {
-        if (!activeSection) return;
-
-        const navElement = document.getElementById(`nav-${activeSection}`);
-        if (navElement) {
-            navElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-    }, [activeSection]);
 
     // Initialize configs for selected components with intelligent pre-population
     useEffect(() => {
@@ -293,44 +326,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
             group.fields.forEach(field => {
                 const isDeferredField = field.key === 'MESH_ENDPOINT';
                 
-                // Special validation for Catalog API Keys - only validate the relevant key based on environment
-                if (field.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' || field.key === 'ADOBE_CATALOG_API_KEY') {
-                    const catalogEnvironmentField = serviceGroups
-                        .flatMap(g => g.fields)
-                        .find(f => f.key === 'ADOBE_CATALOG_ENVIRONMENT');
-                    
-                    if (catalogEnvironmentField) {
-                        const environmentValue = catalogEnvironmentField.componentIds
-                            .map(compId => componentConfigs[compId]?.[catalogEnvironmentField.key])
-                            .find(val => val);
-                        
-                        const isProduction = environmentValue === 'production';
-                        
-                        // Only validate Production key if Production is selected
-                        if (field.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' && !isProduction) {
-                            return; // Skip validation for production key when sandbox is selected
-                        }
-                        
-                        // Only validate Sandbox key if Sandbox is selected
-                        if (field.key === 'ADOBE_CATALOG_API_KEY' && isProduction) {
-                            return; // Skip validation for sandbox key when production is selected
-                        }
-                        
-                        // Validate the active key
-                        if (field.required) {
-                            const hasValue = field.componentIds.some(compId => 
-                                componentConfigs[compId]?.[field.key]
-                            );
-                            
-                            if (!hasValue) {
-                                allValid = false;
-                                errors[field.key] = `${field.label} is required`;
-                            }
-                        }
-                    }
-                    return; // Skip default validation
-                }
-                
                 if (field.required && !isDeferredField) {
                     // Check if ANY component that needs this field has it filled
                     const hasValue = field.componentIds.some(compId => 
@@ -338,7 +333,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                     );
                     
                     if (!hasValue) {
-                        allValid = false;
+                    allValid = false;
                         errors[field.key] = `${field.label} is required`;
                     }
                 }
@@ -353,8 +348,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
                         try {
                             new URL(value);
-                        } catch {
-                            allValid = false;
+                    } catch {
+                        allValid = false;
                             errors[field.key] = 'Please enter a valid URL';
                         }
                     }
@@ -370,7 +365,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
                         const pattern = new RegExp(field.validation.pattern);
                         if (!pattern.test(value)) {
-                            allValid = false;
+                        allValid = false;
                             errors[field.key] = field.validation.message || 'Invalid format';
                         }
                     }
@@ -410,28 +405,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
     };
 
     const getSectionCompletion = (group: ServiceGroup) => {
-        const requiredFields = group.fields.filter(f => {
-            // Handle conditional fields
-            if (f.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' || f.key === 'ADOBE_CATALOG_API_KEY') {
-                const catalogEnvironmentField = serviceGroups
-                    .flatMap(g => g.fields)
-                    .find(field => field.key === 'ADOBE_CATALOG_ENVIRONMENT');
-                
-                if (catalogEnvironmentField) {
-                    const environmentValue = getFieldValue(catalogEnvironmentField);
-                    const isProduction = environmentValue === 'production';
-                    
-                    if (f.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' && !isProduction) {
-                        return false; // Not required
-                    }
-                    if (f.key === 'ADOBE_CATALOG_API_KEY' && isProduction) {
-                        return false; // Not required
-                    }
-                }
-            }
-            
-            return f.required;
-        });
+        const requiredFields = group.fields.filter(f => f.required);
         
         const completedFields = requiredFields.filter(f => {
             // MESH_ENDPOINT is auto-filled later, so consider it complete if it's deferred
@@ -458,18 +432,19 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
     };
 
     const navigateToField = (fieldKey: string) => {
-        const element = document.getElementById(`field-${fieldKey}`);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Focus the input element
-            const input = element.querySelector('input, select, textarea');
-            if (input instanceof HTMLElement) {
-                setTimeout(() => input.focus(), 300);
-            }
+        const fieldElement = document.getElementById(`field-${fieldKey}`);
+        if (!fieldElement) return;
+        
+        // Focus the input element (the focus listener will handle scrolling)
+        const input = fieldElement.querySelector('input, select, textarea');
+        if (input instanceof HTMLElement) {
+            input.focus();
         }
     };
 
     const toggleNavSection = (sectionId: string) => {
+        const wasExpanded = expandedNavSections.has(sectionId);
+        
         setExpandedNavSections(prev => {
             const newSet = new Set(prev);
             if (newSet.has(sectionId)) {
@@ -479,6 +454,11 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
             }
             return newSet;
         });
+        
+        // Only scroll to section when EXPANDING, not when collapsing
+        if (!wasExpanded) {
+            navigateToSection(sectionId);
+        }
     };
 
     const isFieldComplete = (field: UniqueField): boolean => {
@@ -494,39 +474,19 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
         // Special-case: defer MESH_ENDPOINT input
         if (field.key === 'MESH_ENDPOINT') {
             return (
-                <div key={field.key} id={`field-${field.key}`}>
-                    <TextField
+                <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
+                <TextField
                         label={field.label}
-                        value={value as string}
+                    value={value as string}
                         onChange={(val) => updateField(field, val)}
                         placeholder={field.placeholder}
                         description={field.description || 'This will be set automatically after Mesh deployment.'}
-                        isDisabled
-                        width="100%"
+                        isReadOnly
+                    width="100%"
                         marginBottom="size-200"
-                    />
+                />
                 </div>
             );
-        }
-
-        // Conditional rendering: Show only the relevant API key based on environment selection
-        const catalogEnvironmentField = serviceGroups
-            .flatMap(g => g.fields)
-            .find(f => f.key === 'ADOBE_CATALOG_ENVIRONMENT');
-        
-        if (catalogEnvironmentField) {
-            const environmentValue = getFieldValue(catalogEnvironmentField);
-            const isProduction = environmentValue === 'production';
-            
-            // Only show Production key when Production is selected
-            if (field.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' && !isProduction) {
-                return null;
-            }
-            
-            // Only show Sandbox key when Sandbox is selected
-            if (field.key === 'ADOBE_CATALOG_API_KEY' && isProduction) {
-                return null;
-            }
         }
 
         // Determine if field should be marked as required
@@ -536,91 +496,69 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
             case 'text':
             case 'url':
                 return (
-                    <div key={field.key} id={`field-${field.key}`}>
-                        <TextField
+                    <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
+                    <TextField
                             label={field.label}
-                            value={value as string}
+                        value={value as string}
                             onChange={(val) => updateField(field, val)}
                             placeholder={field.placeholder}
                             description={field.helpText || field.description}
                             isRequired={isFieldRequired}
-                            validationState={error ? 'invalid' : undefined}
-                            errorMessage={error}
-                            width="100%"
+                        validationState={error ? 'invalid' : undefined}
+                        errorMessage={error}
+                        width="100%"
                             marginBottom="size-200"
-                        />
+                    />
                     </div>
                 );
             
             case 'password':
                 return (
-                    <div key={field.key} id={`field-${field.key}`}>
-                        <TextField
+                    <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
+                    <TextField
                             label={field.label}
-                            type="password"
-                            value={value as string}
+                        type="password"
+                        value={value as string}
                             onChange={(val) => updateField(field, val)}
                             placeholder={field.placeholder}
                             description={field.helpText || field.description}
                             isRequired={isFieldRequired}
-                            validationState={error ? 'invalid' : undefined}
-                            errorMessage={error}
-                            width="100%"
+                        validationState={error ? 'invalid' : undefined}
+                        errorMessage={error}
+                        width="100%"
                             marginBottom="size-200"
-                        />
+                    />
                     </div>
                 );
             
             case 'select':
-                // Special styling for environment selectors (subsection headers)
-                const isEnvironmentSelector = field.key === 'ADOBE_CATALOG_ENVIRONMENT';
-                
                 return (
-                    <div key={field.key} id={`field-${field.key}`}>
-                        {isEnvironmentSelector ? (
-                            <>
-                                <Text UNSAFE_className="text-sm font-medium text-gray-700" marginTop="size-300" marginBottom="size-150">
-                                    {field.label} {field.required && <span style={{ color: 'var(--spectrum-global-color-red-600)' }}>*</span>}
-                                </Text>
-                                <Picker
-                                    selectedKey={value as string}
-                                    onSelectionChange={(key) => updateField(field, key)}
-                                    width="100%"
-                                    marginBottom="size-300"
-                                    aria-label={field.label}
-                                >
-                                    {field.options?.map(option => (
-                                        <Item key={option.value}>{option.label}</Item>
-                                    )) || []}
-                                </Picker>
-                            </>
-                        ) : (
-                            <Picker
-                                label={field.label}
-                                selectedKey={value as string}
-                                onSelectionChange={(key) => updateField(field, key)}
-                                width="100%"
-                                isRequired={field.required}
-                                marginBottom="size-200"
-                            >
-                                {field.options?.map(option => (
-                                    <Item key={option.value}>{option.label}</Item>
-                                )) || []}
-                            </Picker>
-                        )}
+                    <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
+                    <Picker
+                            label={field.label}
+                        selectedKey={value as string}
+                            onSelectionChange={(key) => updateField(field, key)}
+                        width="100%"
+                            isRequired={field.required}
+                            marginBottom="size-200"
+                    >
+                            {field.options?.map(option => (
+                            <Item key={option.value}>{option.label}</Item>
+                        )) || []}
+                    </Picker>
                     </div>
                 );
             
             case 'boolean':
                 return (
-                    <div key={field.key} id={`field-${field.key}`}>
-                        <Checkbox
-                            isSelected={value as boolean}
+                    <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
+                    <Checkbox
+                        isSelected={value as boolean}
                             onChange={(val) => updateField(field, val)}
                             marginBottom="size-200"
-                        >
+                    >
                             {field.label}
-                        </Checkbox>
+                    </Checkbox>
                     </div>
                 );
             
@@ -664,21 +602,32 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                             
                             return (
                                 <React.Fragment key={group.id}>
-                                    {index > 0 && <Divider size="S" marginTop="size-200" marginBottom="size-200" />}
+                                    {index > 0 && (
+                                        <Divider 
+                                            size="S" 
+                                            marginTop="size-100" 
+                                            marginBottom="size-100"
+                                        />
+                                    )}
                                     
-                                    <div id={`section-${group.id}`} style={{ scrollMarginTop: index > 0 ? '16px' : '0' }}>
+                                    <div id={`section-${group.id}`} style={{ 
+                                        scrollMarginTop: '-16px',
+                                        paddingTop: index > 0 ? '4px' : '0',
+                                        paddingBottom: '4px'
+                                    }}>
                                         {/* Section Header */}
-                                        <Flex alignItems="center" justifyContent="space-between" marginBottom="size-300">
+                                        <div style={{
+                                            paddingBottom: '4px',
+                                            marginBottom: '12px',
+                                            borderBottom: '1px solid var(--spectrum-global-color-gray-200)'
+                                        }}>
                                             <Heading level={3}>{group.label}</Heading>
-                                            <Text UNSAFE_className={`text-sm ${completion.isComplete ? 'text-green-600' : 'text-gray-600'}`}>
-                                                {completion.total === 0 ? 'Optional' : `${completion.completed}/${completion.total}`}
-                                            </Text>
-                                        </Flex>
+                                        </div>
                                         
                                         {/* Section Content */}
-                                        <Flex direction="column" marginBottom="size-200">
+                                        <Flex direction="column" marginBottom="size-100">
                                             {group.fields.map(field => renderField(field))}
-                                        </Flex>
+                </Flex>
                                     </div>
                                 </React.Fragment>
                             );
@@ -704,8 +653,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                             const completion = getSectionCompletion(group);
                             const isExpanded = expandedNavSections.has(group.id);
                             const isActive = activeSection === group.id;
-
-                            return (
+                        
+                        return (
                                 <div key={group.id} style={{ width: '100%' }}>
                                     {/* Section Header */}
                                     <button
@@ -744,9 +693,9 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                                         {completion.isComplete ? (
                                             <Text UNSAFE_className="text-green-600" UNSAFE_style={{ fontSize: '16px', lineHeight: '16px' }}>✓</Text>
                                         ) : (
-                                            <Text UNSAFE_className="text-xs text-gray-600">
+                                            <Text UNSAFE_className="text-gray-600" UNSAFE_style={{ fontSize: '14px', lineHeight: '14px' }}>
                                                 {completion.total === 0 ? 'Optional' : `${completion.completed}/${completion.total}`}
-                                            </Text>
+                                        </Text>
                                         )}
                                     </Flex>
                                 </button>
@@ -761,41 +710,39 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                                     }}>
                                         {group.fields.map((field) => {
                                             const isComplete = isFieldComplete(field);
-                                            const isVisible = !(
-                                                (field.key === 'ADOBE_PRODUCTION_CATALOG_API_KEY' && getFieldValue(
-                                                    serviceGroups.flatMap(g => g.fields).find(f => f.key === 'ADOBE_CATALOG_ENVIRONMENT')!
-                                                ) !== 'production') ||
-                                                (field.key === 'ADOBE_CATALOG_API_KEY' && getFieldValue(
-                                                    serviceGroups.flatMap(g => g.fields).find(f => f.key === 'ADOBE_CATALOG_ENVIRONMENT')!
-                                                ) === 'production')
-                                            );
-
-                                            if (!isVisible) return null;
+                                            const isActiveField = activeField === field.key;
 
                                             return (
                                                 <button
                                                     key={field.key}
+                                                    id={`nav-field-${field.key}`}
                                                     onClick={() => navigateToField(field.key)}
                                                     style={{
                                                         width: '100%',
                                                         padding: '8px 12px',
-                                                        background: 'transparent',
+                                                        background: isActiveField ? 'var(--spectrum-global-color-blue-100)' : 'transparent',
                                                         border: 'none',
+                                                        borderLeft: isActiveField ? '2px solid var(--spectrum-global-color-blue-500)' : 'none',
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'space-between',
                                                         textAlign: 'left',
-                                                        transition: 'background 0.2s'
+                                                        transition: 'all 0.2s',
+                                                        borderRadius: '4px'
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        e.currentTarget.style.background = 'var(--spectrum-global-color-gray-200)';
+                                                        if (!isActiveField) {
+                                                            e.currentTarget.style.background = 'var(--spectrum-global-color-gray-200)';
+                                                        }
                                                     }}
                                                     onMouseLeave={(e) => {
-                                                        e.currentTarget.style.background = 'transparent';
+                                                        if (!isActiveField) {
+                                                            e.currentTarget.style.background = 'transparent';
+                                                        }
                                                     }}
                                                 >
-                                                    <Text UNSAFE_className="text-xs text-gray-700">{field.label}</Text>
+                                                    <Text UNSAFE_className={`text-xs ${isActiveField ? 'text-blue-600 font-medium' : 'text-gray-700'}`}>{field.label}</Text>
                                                     {isComplete && <Text UNSAFE_className="text-green-600" UNSAFE_style={{ fontSize: '14px', lineHeight: '14px' }}>✓</Text>}
                                                 </button>
                                             );
