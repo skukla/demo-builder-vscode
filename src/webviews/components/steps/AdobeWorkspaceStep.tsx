@@ -14,6 +14,7 @@ import { vscode } from '../../app/vscodeApi';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
 import { ConfigurationSummary } from '../shared/ConfigurationSummary';
 import { WizardState, Workspace, WizardStep } from '../../types';
+import { useDebouncedLoading } from '../../utils/useDebouncedLoading';
 
 interface AdobeWorkspaceStepProps {
     state: WizardState;
@@ -26,6 +27,10 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
     const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    
+    // Debounce loading state: only show loading UI if operation takes >300ms
+    // This prevents flash of loading state for fast SDK operations
+    const showLoading = useDebouncedLoading(isLoading);
     
     useEffect(() => {
         if (state.adobeProject?.id) {
@@ -120,7 +125,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                 </Text>
 
 
-                {isLoading ? (
+                {showLoading ? (
                     <Flex justifyContent="center" alignItems="center" height="100%">
                         <LoadingDisplay 
                             size="L"

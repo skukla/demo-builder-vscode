@@ -15,6 +15,7 @@ import { vscode } from '../../app/vscodeApi';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
 import { ConfigurationSummary } from '../shared/ConfigurationSummary';
 import { WizardState, Project, AdobeOrg, WizardStep } from '../../types';
+import { useDebouncedLoading } from '../../utils/useDebouncedLoading';
 
 interface AdobeProjectStepProps {
     state: WizardState;
@@ -28,6 +29,10 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
     const [isLoadingProjects, setIsLoadingProjects] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState(state.projectSearchFilter || '');
+    
+    // Debounce loading state: only show loading UI if operation takes >300ms
+    // This prevents flash of loading state for fast SDK operations
+    const showLoading = useDebouncedLoading(isLoadingProjects);
 
     useEffect(() => {
         // Always load projects since organization is set during authentication
@@ -129,7 +134,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                     {state.adobeOrg?.name ? `Projects in ${state.adobeOrg.name}` : 'Select Adobe Project'}
                 </Heading>
 
-                {isLoadingProjects ? (
+                {showLoading ? (
                     <Flex justifyContent="center" alignItems="center" height="100%">
                         <LoadingDisplay
                             size="L"
