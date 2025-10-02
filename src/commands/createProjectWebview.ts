@@ -1201,8 +1201,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     await this.sendMessage('auth-status', {
                         isChecking: true,
                         message: 'Authentication verified',
-                        subMessage: 'Loading your organization details...',
-                        isAuthenticated: true
+                        subMessage: 'Loading your organization details...'
+                        // Don't set isAuthenticated here - prevents flash of success state
                     });
                 }, 200);
 
@@ -1224,8 +1224,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         await this.sendMessage('auth-status', {
                             isChecking: true,
                             message: 'Organization confirmed',
-                            subMessage: `Loading projects for ${orgName}...`,
-                            isAuthenticated: true
+                            subMessage: `Loading projects for ${orgName}...`
+                            // Don't set isAuthenticated here - prevents flash of success state
                         });
                     }, 200);
 
@@ -1376,8 +1376,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     await this.sendMessage('auth-status', {
                         isChecking: true,
                         message: 'Authentication successful',
-                        subMessage: force ? 'Setting up organization access...' : 'Loading your details...',
-                        isAuthenticated: true
+                        subMessage: force ? 'Setting up organization access...' : 'Loading your details...'
+                        // Don't set isAuthenticated here - prevents flash of success state
                     });
                 }, 200);
 
