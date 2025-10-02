@@ -1174,8 +1174,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         await this.sendMessage('auth-status', {
             isChecking: true,
             message: 'Connecting to Adobe services...',
-            subMessage: 'Verifying your credentials',
-            isAuthenticated: false
+            subMessage: 'Verifying your credentials'
+            // Don't set isAuthenticated here - leave it undefined while checking
         });
 
         try {
