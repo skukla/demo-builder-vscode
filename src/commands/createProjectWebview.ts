@@ -1189,48 +1189,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             let currentProject: AdobeProject | undefined = undefined;
 
             if (isAuthenticated) {
-                // Step 2: If authenticated, check organization with progress
-                // Only send progress messages if operation is taking time (> 200ms)
+                // Step 2: If authenticated, check organization (no intermediate messages)
                 const orgCheckStart = Date.now();
-                
-                // Start org check without message (will send if it takes time)
-                const orgCheckPromise = this.authManager.getCurrentOrganization();
-                
-                // Set a timer to send progress message only if org check takes > 200ms
-                const orgProgressTimer = setTimeout(async () => {
-                    await this.sendMessage('auth-status', {
-                        isChecking: true,
-                        message: 'Authentication verified',
-                        subMessage: 'Loading your organization details...'
-                        // Don't set isAuthenticated here - prevents flash of success state
-                    });
-                }, 200);
-
-                currentOrg = await orgCheckPromise;
-                clearTimeout(orgProgressTimer);
+                currentOrg = await this.authManager.getCurrentOrganization();
                 
                 if (currentOrg) {
                     this.logger.info(`[Auth] Current organization: ${currentOrg.name} (took ${Date.now() - orgCheckStart}ms)`);
 
                     // Step 3: Check project if org exists
                     const projectCheckStart = Date.now();
-                    const projectCheckPromise = this.authManager.getCurrentProject();
-                    
-                    // Capture org name for closure
-                    const orgName = currentOrg.name;
-                    
-                    // Only send progress message if project check takes > 200ms
-                    const projectProgressTimer = setTimeout(async () => {
-                        await this.sendMessage('auth-status', {
-                            isChecking: true,
-                            message: 'Organization confirmed',
-                            subMessage: `Loading projects for ${orgName}...`
-                            // Don't set isAuthenticated here - prevents flash of success state
-                        });
-                    }, 200);
-
-                    currentProject = await projectCheckPromise;
-                    clearTimeout(projectProgressTimer);
+                    currentProject = await this.authManager.getCurrentProject();
                     
                     if (currentProject) {
                         this.logger.info(`[Auth] Current project: ${currentProject.name} (took ${Date.now() - projectCheckStart}ms)`);
@@ -1333,23 +1301,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Start authentication - pass force flag to authManager
             this.logger.debug(`[Auth] Initiating browser-based login${force ? ' with force flag' : ''}`);
             
-            // Start login process
+            // Start login process (no intermediate "opening browser" message)
             const loginPromise = this.authManager.login(force);
-            
-            // Only send "Opening browser" message if browser opening takes > 100ms
-            // (shorter debounce than usual because user needs to know to look for browser)
-            const browserOpenTimer = setTimeout(async () => {
-                await this.sendMessage('auth-status', {
-                    isChecking: true,
-                    message: 'Opening browser for authentication...',
-                    subMessage: force ? 'Starting fresh login...' : 'If you\'re already logged in, the browser will complete automatically.',
-                    isAuthenticated: false
-                });
-            }, 100);
             
             // The login method already handles polling internally
             const loginSuccess = await loginPromise;
-            clearTimeout(browserOpenTimer);
             
             const loginDuration = Date.now() - authStartTime;
             this.isAuthenticating = false;
@@ -1368,26 +1324,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 // Skip the redundant getCurrentOrganization() call and go directly to auto-selection
                 this.logger.info('[Auth] Organization empty after fresh login - attempting auto-selection');
 
-                // Start the overall post-login setup
+                // Start the overall post-login setup (no intermediate messages)
                 const setupStart = Date.now();
                 
-                // Only send "Authentication successful" message if the overall setup takes > 200ms
-                const setupTimer = setTimeout(async () => {
-                    await this.sendMessage('auth-status', {
-                        isChecking: true,
-                        message: 'Authentication successful',
-                        subMessage: force ? 'Setting up organization access...' : 'Loading your details...'
-                        // Don't set isAuthenticated here - prevents flash of success state
-                    });
-                }, 200);
-
                 // Start org auto-selection
                 const autoSelectStart = Date.now();
-                const autoSelectPromise = this.authManager.autoSelectOrganizationIfNeeded(true);
-
-                // Attempt auto-selection, skip the redundant current org check for performance
-                let currentOrg = await autoSelectPromise;
-                clearTimeout(setupTimer);  // Clear the setup timer once we have results
+                let currentOrg = await this.authManager.autoSelectOrganizationIfNeeded(true);
 
                 if (currentOrg) {
                     this.logger.info(`[Auth] Auto-selected organization: ${currentOrg.name} (took ${Date.now() - autoSelectStart}ms)`);
@@ -1406,7 +1348,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
                 // Log total post-login setup time
                 const totalSetupTime = Date.now() - setupStart;
-                this.logger.info(`[Auth] Post-login setup completed in ${totalSetupTime}ms (${totalSetupTime < 200 ? 'fast - no progress message shown' : 'progress message shown after 200ms'})`);
+                this.logger.info(`[Auth] Post-login setup completed in ${totalSetupTime}ms`);
 
                 // Handle the case where organization wasn't set during browser login (expected for forced login)
                 if (!currentOrg && force) {
