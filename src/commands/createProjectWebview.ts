@@ -1301,11 +1301,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Start authentication - pass force flag to authManager
             this.logger.debug(`[Auth] Initiating browser-based login${force ? ' with force flag' : ''}`);
             
-            // Start login process (no intermediate "opening browser" message)
-            const loginPromise = this.authManager.login(force);
+            // Show "opening browser" message immediately to inform user
+            await this.sendMessage('auth-status', {
+                isChecking: true,
+                message: 'Opening browser for authentication...',
+                subMessage: force ? 'Starting fresh login...' : 'If you\'re already logged in, the browser will complete automatically.',
+                isAuthenticated: false
+            });
             
-            // The login method already handles polling internally
-            const loginSuccess = await loginPromise;
+            // Start login process
+            const loginSuccess = await this.authManager.login(force);
             
             const loginDuration = Date.now() - authStartTime;
             this.isAuthenticating = false;
