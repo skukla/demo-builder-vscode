@@ -109,8 +109,8 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             adobeAuth: { 
                 ...state.adobeAuth, 
                 isChecking: true,
-                // Set authenticated to false when switching orgs to hide the current state
-                isAuthenticated: force ? false : state.adobeAuth.isAuthenticated
+                // Keep isAuthenticated as-is - we're switching orgs, not logging out
+                // The checking state will show appropriate loading UI
             },
             // Clear organization-related state when switching
             ...(force && {
