@@ -1,0 +1,21 @@
+{
+  "$schema": "./mesh-config.schema.json",
+  "meshConfig": {
+    "sources": [
+      {
+        "name": "Commerce",
+        "handler": {
+          "graphql": {
+            "endpoint": "https://example.com/graphql/",
+            "operationHeaders": {
+              "Store": "default"
+            },
+            "schemaHeaders": {
+              "Store": "default"
+            }
+          }
+        }
+      }
+    ]
+  }
+}
