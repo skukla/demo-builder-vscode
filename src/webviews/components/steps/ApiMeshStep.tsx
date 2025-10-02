@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Heading, Text, Flex, Button, ActionButton, DialogTrigger, Dialog, Content, Divider } from '@adobe/react-spectrum';
+import { Heading, Text, Flex, Button, ActionButton, DialogTrigger, Dialog, Content, Divider, ButtonGroup } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Info from '@spectrum-icons/workflow/Info';
@@ -17,6 +17,39 @@ interface ApiMeshStepProps {
     setCanProceed: (canProceed: boolean) => void;
     completedSteps?: WizardStep[];
 }
+
+// Helper function to render text with code highlighting for quoted content
+const renderInstructionText = (text: string) => {
+    // Split by single quotes to find code snippets
+    const parts = text.split(/('.*?')/g);
+    
+    return (
+        <>
+            {parts.map((part, i) => {
+                // If the part starts and ends with single quotes, it's code
+                if (part.startsWith("'") && part.endsWith("'")) {
+                    // Remove the quotes and wrap in styled code element
+                    return (
+                        <code 
+                            key={i} 
+                            style={{ 
+                                fontFamily: 'var(--spectrum-alias-body-text-font-family, monospace)',
+                                fontSize: '0.9em',
+                                backgroundColor: 'var(--spectrum-global-color-gray-200)',
+                                padding: '2px 6px',
+                                borderRadius: '3px',
+                                color: 'var(--spectrum-global-color-gray-900)'
+                            }}
+                        >
+                            {part.slice(1, -1)}
+                        </code>
+                    );
+                }
+                return <span key={i}>{part}</span>;
+            })}
+        </>
+    );
+};
 
 export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed, completedSteps = [] }: ApiMeshStepProps) {
     const [message, setMessage] = useState<string>('Checking API Mesh API...');
@@ -196,49 +229,56 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                                             <InfoOutline />
                                             <Text>View Setup Instructions</Text>
                                         </ActionButton>
-                                        <Dialog size="M">
-                                            <Heading>API Mesh Setup Guide</Heading>
-                                            <Divider />
-                                            <Content>
-                                                <Flex direction="column" gap="size-200">
-                                                    <Text>
-                                                        Complete these steps to enable API Mesh for your workspace:
-                                                    </Text>
-                                                    {state.apiMesh.setupInstructions.map((instruction, index) => (
-                                                        <Flex key={index} direction="column" gap="size-75" UNSAFE_style={{ 
-                                                            padding: '12px',
-                                                            backgroundColor: instruction.important ? 'var(--spectrum-global-color-orange-100)' : 'var(--spectrum-global-color-gray-100)',
-                                                            borderRadius: '4px',
-                                                            borderLeft: instruction.important ? '3px solid var(--spectrum-global-color-orange-600)' : 'none'
-                                                        }}>
-                                                            <Text UNSAFE_className={instruction.important ? "font-semibold" : "font-medium"}>
-                                                                {index + 1}. {instruction.step}
-                                                            </Text>
-                                                            <Text UNSAFE_className="text-sm text-gray-600">
-                                                                {instruction.details}
-                                                            </Text>
-                                                        </Flex>
-                                                    ))}
-                                                </Flex>
-                                            </Content>
-                                        </Dialog>
+                                        {(close) => (
+                                            <Dialog size="M">
+                                                <Heading>API Mesh Setup Guide</Heading>
+                                                <Divider />
+                                                <Content>
+                                                    <Flex direction="column" gap="size-200">
+                                                        <Text>
+                                                            Complete these steps to enable API Mesh for your workspace:
+                                                        </Text>
+                                                        {state.apiMesh.setupInstructions.map((instruction, index) => (
+                                                            <Flex key={index} direction="column" gap="size-75" UNSAFE_style={{ 
+                                                                padding: '12px',
+                                                                backgroundColor: instruction.important ? 'var(--spectrum-global-color-orange-100)' : 'var(--spectrum-global-color-gray-100)',
+                                                                borderRadius: '4px',
+                                                                borderLeft: instruction.important ? '3px solid var(--spectrum-global-color-orange-600)' : 'none'
+                                                            }}>
+                                                                <Text UNSAFE_className={instruction.important ? "font-semibold" : "font-medium"}>
+                                                                    {index + 1}. {instruction.step}
+                                                                </Text>
+                                                                <Text UNSAFE_className="text-sm text-gray-600">
+                                                                    {renderInstructionText(instruction.details)}
+                                                                </Text>
+                                                            </Flex>
+                                                        ))}
+                                                    </Flex>
+                                                </Content>
+                                                <ButtonGroup>
+                                                    <Button 
+                                                        variant="secondary" 
+                                                        onPress={() => {
+                                                            vscode.postMessage('open-adobe-console', {
+                                                                orgId: state.adobeProject?.org_id,
+                                                                projectId: state.adobeProject?.id,
+                                                                workspaceId: state.adobeWorkspace?.id
+                                                            });
+                                                        }}
+                                                    >
+                                                        Open Workspace in Console
+                                                    </Button>
+                                                    <Button variant="secondary" onPress={close}>
+                                                        Close
+                                                    </Button>
+                                                </ButtonGroup>
+                                            </Dialog>
+                                        )}
                                     </DialogTrigger>
                                 </Flex>
                             )}
                             
                             <Flex gap="size-150" marginTop="size-300">
-                                <Button 
-                                    variant="secondary" 
-                                    onPress={() => {
-                                        vscode.postMessage('open-adobe-console', {
-                                            orgId: state.adobeProject?.org_id,
-                                            projectId: state.adobeProject?.id,
-                                            workspaceId: state.adobeWorkspace?.id
-                                        });
-                                    }}
-                                >
-                                    Open Workspace in Console
-                                </Button>
                                 <Button variant="accent" onPress={runCheck}>Retry</Button>
                                 <Button variant="secondary" onPress={onBack}>Back</Button>
                             </Flex>
