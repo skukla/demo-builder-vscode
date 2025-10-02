@@ -19,6 +19,8 @@ export const TIMEOUTS = {
                                     // Adobe CLI project/workspace selection often takes 8-10 seconds
     API_CALL: 10000,                // API-based commands (console where, org list)
     BROWSER_AUTH: 120000,           // Browser-based authentication flow (2 minutes)
+    API_MESH_CREATE: 180000,        // API Mesh creation (3 minutes)
+    API_MESH_UPDATE: 180000,        // API Mesh update/deployment (3 minutes)
 
     // Default fallbacks
     COMMAND_DEFAULT: 30000,         // Default command timeout
@@ -35,6 +37,6 @@ export const CACHE_TTL = {
 
     // API response caches (shorter TTLs for fresher data)
     ORG_LIST: 60 * 1000,            // 1 minute - organization list
-    CONSOLE_WHERE: 30 * 1000,       // 30 seconds - current console context
+    CONSOLE_WHERE: 3 * 60 * 1000,   // 3 minutes - current console context (expensive 2s+ calls)
     PLUGIN_LIST: 5 * 60 * 1000,     // 5 minutes - installed plugins
 } as const;
