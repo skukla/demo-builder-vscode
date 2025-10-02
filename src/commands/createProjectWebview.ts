@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import { BaseWebviewCommand } from './baseWebviewCommand';
 import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
 // Prerequisites checking is handled by PrerequisitesManager
@@ -14,6 +15,7 @@ import { StepLogger } from '../utils/stepLogger';
 import { getExternalCommandManager } from '../extension';
 import { ExternalCommandManager } from '../utils/externalCommandManager';
 import { getLogger } from '../utils/debugLogger';
+import { TIMEOUTS } from '../utils/timeoutConfig';
 
 export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     // Prerequisites are handled by PrerequisitesManager
@@ -362,7 +364,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         // Create a new API Mesh
         comm.on('create-api-mesh', async (data: any) => {
             try {
-                const result = await this.handleCreateApiMesh(data.workspaceId);
+                // Create progress callback to send updates to webview
+                const onProgress = (message: string, subMessage?: string) => {
+                    comm.sendMessage('api-mesh-progress', { message, subMessage });
+                };
+                
+                const result = await this.handleCreateApiMesh(data.workspaceId, onProgress);
                 return result;
             } catch (error) {
                 this.logger.error('[API Mesh Create] Failed', error as Error);
@@ -1753,48 +1760,110 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
-    private async handleCreateApiMesh(workspaceId: string): Promise<{
-        meshId?: string;
-        success: boolean;
-        message?: string;
-    }> {
-        this.logger.info('[API Mesh] Creating new mesh for workspace', { workspaceId });
-        
-        const commandManager = getExternalCommandManager();
+	private async handleCreateApiMesh(
+		workspaceId: string,
+		onProgress?: (message: string, subMessage?: string) => void
+	): Promise<{
+		meshId?: string;
+		success: boolean;
+		message?: string;
+	}> {
+		this.logger.info('[API Mesh] Creating new mesh for workspace', { workspaceId });
+		
+		const commandManager = getExternalCommandManager();
+		const storagePath = this.context.globalStorageUri.fsPath;
+		let meshConfigPath: string | undefined;
 
-        try {
-            // Create a minimal mesh configuration
-            // For MVP, we'll create an empty mesh that can be configured later
-            this.logger.info('[API Mesh] Executing mesh creation command');
-            
-            const createResult = await commandManager.executeAdobeCLI(
-                'aio api-mesh create'
-            );
-            
-            if (createResult.code !== 0) {
-                const errorMsg = createResult.stderr || 'Failed to create mesh';
-                this.logger.error('[API Mesh] Creation failed', new Error(errorMsg));
-                throw new Error(errorMsg);
-            }
-            
-            this.logger.info('[API Mesh] Mesh created successfully');
-            this.debugLogger.debug('[API Mesh] Create output', { stdout: createResult.stdout });
-            
-            // Try to extract mesh ID from output
-            const meshIdMatch = createResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
-            const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
-            
-            return {
-                success: true,
-                meshId,
-                message: 'Mesh created successfully'
-            };
-            
-        } catch (error) {
-            this.logger.error('[API Mesh] Creation failed', error as Error);
-            throw error;
-        }
-    }
+		try {
+			// Ensure storage directory exists
+			await fsPromises.mkdir(storagePath, { recursive: true });
+			
+			// Load minimal mesh configuration from template
+			onProgress?.('Creating API Mesh...', 'Loading mesh configuration template');
+			const templatePath = path.join(this.context.extensionPath, 'templates', 'mesh-config.json');
+			const templateContent = await fsPromises.readFile(templatePath, 'utf-8');
+			const minimalMeshConfig = JSON.parse(templateContent);
+			
+			// Write mesh config to temporary file in extension storage
+			meshConfigPath = path.join(storagePath, `mesh-config-${Date.now()}.json`);
+			await fsPromises.writeFile(meshConfigPath, JSON.stringify(minimalMeshConfig, null, 2), 'utf-8');
+			
+			this.logger.info('[API Mesh] Created minimal mesh configuration from template', { 
+				templatePath, 
+				outputPath: meshConfigPath 
+			});
+			this.debugLogger.debug('[API Mesh] Mesh config content', minimalMeshConfig);
+			
+			// Create mesh with the configuration file
+			onProgress?.('Creating API Mesh...', 'Submitting configuration to Adobe');
+			this.logger.info('[API Mesh] Executing mesh creation command');
+			
+			let lastOutput = '';
+			const createResult = await commandManager.execute(
+				`aio api-mesh create "${meshConfigPath}"`,
+				{
+					streaming: true,
+					timeout: TIMEOUTS.API_MESH_CREATE,
+					onOutput: (data: string) => {
+						lastOutput += data;
+						
+						// Parse output for progress indicators
+						const output = data.toLowerCase();
+						if (output.includes('validating')) {
+							onProgress?.('Creating API Mesh...', 'Validating configuration');
+						} else if (output.includes('creating')) {
+							onProgress?.('Creating API Mesh...', 'Provisioning mesh infrastructure');
+						} else if (output.includes('deploying')) {
+							onProgress?.('Creating API Mesh...', 'Deploying mesh');
+						} else if (output.includes('success')) {
+							onProgress?.('Creating API Mesh...', 'Finalizing mesh setup');
+						} else if (data.trim()) {
+							// Show any other non-empty output as progress
+							onProgress?.('Creating API Mesh...', data.trim().substring(0, 80));
+						}
+					},
+					configureTelemetry: false,
+					useNodeVersion: null,
+					enhancePath: true
+				}
+			);
+			
+			if (createResult.code !== 0) {
+				const errorMsg = createResult.stderr || lastOutput || 'Failed to create mesh';
+				this.logger.error('[API Mesh] Creation failed', new Error(errorMsg));
+				throw new Error(errorMsg);
+			}
+			
+			this.logger.info('[API Mesh] Mesh created successfully');
+			this.debugLogger.debug('[API Mesh] Create output', { stdout: createResult.stdout });
+			
+			// Try to extract mesh ID from output
+			const meshIdMatch = createResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
+			const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
+			
+			onProgress?.('API Mesh Created', meshId ? `Mesh ID: ${meshId}` : 'Mesh ready');
+			
+			return {
+				success: true,
+				meshId,
+				message: 'Mesh created successfully'
+			};
+			
+		} catch (error) {
+			this.logger.error('[API Mesh] Creation failed', error as Error);
+			throw error;
+		} finally {
+			// Clean up temporary mesh config file
+			if (meshConfigPath) {
+				try {
+					await fsPromises.rm(meshConfigPath, { force: true });
+					this.logger.info('[API Mesh] Cleaned up temporary mesh config file');
+				} catch (cleanupError) {
+					this.logger.warn('[API Mesh] Failed to clean up mesh config file', cleanupError as Error);
+				}
+			}
+		}
+	}
 
     private async handleCheckProjectApis(): Promise<{ hasMesh: boolean }> {
         this.logger.info('[Adobe Setup] Checking required APIs for selected project');

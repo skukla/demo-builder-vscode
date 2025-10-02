@@ -24,6 +24,22 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
     const [error, setError] = useState<string | undefined>(undefined);
     const [meshData, setMeshData] = useState<any>(null);
 
+    // Listen for progress updates during mesh creation
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.type === 'api-mesh-progress') {
+                setMessage(message.message);
+                if (message.subMessage) {
+                    setSubMessage(message.subMessage);
+                }
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
+
     const runCheck = async () => {
         setIsChecking(true);
         setError(undefined);
