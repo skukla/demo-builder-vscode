@@ -34,9 +34,9 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     const showChecking = useDebouncedLoading(state.adobeAuth.isChecking);
 
     useEffect(() => {
-        // Always check authentication when entering the step to ensure fresh data
-        // This ensures we get updated messages including subMessage
-        if (!state.adobeAuth.isChecking) {
+        // Only check authentication if status is unknown (undefined) or explicitly failed
+        // Don't re-check if already authenticated - prevents unnecessary flickering when navigating back
+        if (!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated === undefined) {
             checkAuthentication();
         }
 

@@ -157,7 +157,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                             </Button>
                         </Well>
                     </Flex>
-                ) : projects.length === 0 ? (
+                ) : projects.length === 0 && !isLoadingProjects ? (
                     <Flex justifyContent="center" alignItems="center" height="100%">
                         <Well>
                             <Flex gap="size-200" alignItems="center">

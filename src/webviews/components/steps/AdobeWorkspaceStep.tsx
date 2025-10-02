@@ -148,7 +148,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                             </Button>
                         </Well>
                     </Flex>
-                ) : workspaces.length === 0 ? (
+                ) : workspaces.length === 0 && !isLoading ? (
                     <Flex justifyContent="center" alignItems="center" height="100%">
                         <Well>
                             <Flex gap="size-200" alignItems="center">
