@@ -1350,14 +1350,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             if (loginSuccess) {
                 this.logger.info(`[Auth] Authentication completed successfully after ${loginDuration}ms`);
 
-                // Send update that authentication is complete and we're setting up
-                await this.sendMessage('auth-status', {
-                    isChecking: true,
-                    message: 'Authentication successful',
-                    subMessage: force ? 'Setting up organization access...' : 'Loading your details...',
-                    isAuthenticated: true
-                });
-
                 // Clear cache if this was a forced login (organization switch)
                 if (force) {
                     this.authManager.clearCache();
@@ -1369,23 +1361,26 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 // Skip the redundant getCurrentOrganization() call and go directly to auto-selection
                 this.logger.info('[Auth] Organization empty after fresh login - attempting auto-selection');
 
-                // Start org auto-selection without immediate message (debounced)
-                const autoSelectStart = Date.now();
-                const autoSelectPromise = this.authManager.autoSelectOrganizationIfNeeded(true);
+                // Start the overall post-login setup
+                const setupStart = Date.now();
                 
-                // Only send progress message if auto-selection takes > 200ms
-                const autoSelectTimer = setTimeout(async () => {
+                // Only send "Authentication successful" message if the overall setup takes > 200ms
+                const setupTimer = setTimeout(async () => {
                     await this.sendMessage('auth-status', {
                         isChecking: true,
-                        message: 'Authentication verified',
-                        subMessage: 'Checking available organizations...',
+                        message: 'Authentication successful',
+                        subMessage: force ? 'Setting up organization access...' : 'Loading your details...',
                         isAuthenticated: true
                     });
                 }, 200);
 
+                // Start org auto-selection
+                const autoSelectStart = Date.now();
+                const autoSelectPromise = this.authManager.autoSelectOrganizationIfNeeded(true);
+
                 // Attempt auto-selection, skip the redundant current org check for performance
                 let currentOrg = await autoSelectPromise;
-                clearTimeout(autoSelectTimer);
+                clearTimeout(setupTimer);  // Clear the setup timer once we have results
 
                 if (currentOrg) {
                     this.logger.info(`[Auth] Auto-selected organization: ${currentOrg.name} (took ${Date.now() - autoSelectStart}ms)`);
@@ -1401,6 +1396,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 } else {
                     this.logger.debug(`[Auth] No current project (took ${Date.now() - projectCheckStart}ms)`);
                 }
+
+                // Log total post-login setup time
+                const totalSetupTime = Date.now() - setupStart;
+                this.logger.info(`[Auth] Post-login setup completed in ${totalSetupTime}ms (${totalSetupTime < 200 ? 'fast - no progress message shown' : 'progress message shown after 200ms'})`);
 
                 // Handle the case where organization wasn't set during browser login (expected for forced login)
                 if (!currentOrg && force) {
