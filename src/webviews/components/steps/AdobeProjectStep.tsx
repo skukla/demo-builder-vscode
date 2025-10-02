@@ -26,7 +26,7 @@ interface AdobeProjectStepProps {
 
 export function AdobeProjectStep({ state, updateState, setCanProceed, completedSteps = [] }: AdobeProjectStepProps) {
     const [projects, setProjects] = useState<Project[]>([]);
-    const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+    const [isLoadingProjects, setIsLoadingProjects] = useState(true); // Start as true to prevent flash on mount
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState(state.projectSearchFilter || '');
     
@@ -158,20 +158,22 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                         </Well>
                     </Flex>
                 ) : projects.length === 0 ? (
-                    <Well marginTop="size-200">
-                        <Flex gap="size-200" alignItems="center">
-                            <AlertCircle UNSAFE_className="text-yellow-600" />
-                            <Flex direction="column" gap="size-50">
-                                <Text><strong>No Projects Found</strong></Text>
-                                <Text UNSAFE_className="text-sm">
-                                    {state.adobeOrg?.name
-                                        ? `No projects found in organization ${state.adobeOrg.name}. Please create a project in Adobe Console first.`
-                                        : 'No projects found. Please create a project in Adobe Console first.'
-                                    }
-                                </Text>
+                    <Flex justifyContent="center" alignItems="center" height="100%">
+                        <Well>
+                            <Flex gap="size-200" alignItems="center">
+                                <AlertCircle UNSAFE_className="text-yellow-600" />
+                                <Flex direction="column" gap="size-50">
+                                    <Text><strong>No Projects Found</strong></Text>
+                                    <Text UNSAFE_className="text-sm">
+                                        {state.adobeOrg?.name
+                                            ? `No projects found in organization ${state.adobeOrg.name}. Please create a project in Adobe Console first.`
+                                            : 'No projects found. Please create a project in Adobe Console first.'
+                                        }
+                                    </Text>
+                                </Flex>
                             </Flex>
-                        </Flex>
-                    </Well>
+                        </Well>
+                    </Flex>
                 ) : (
                     <>
                         {projects.length > 5 && (

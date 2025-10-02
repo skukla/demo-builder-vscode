@@ -149,18 +149,20 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                         </Well>
                     </Flex>
                 ) : workspaces.length === 0 ? (
-                    <Well marginTop="size-200">
-                        <Flex gap="size-200" alignItems="center">
-                            <AlertCircle UNSAFE_className="text-yellow-600" />
-                            <Flex direction="column" gap="size-50">
-                                <Text><strong>No Workspaces Found</strong></Text>
-                                <Text UNSAFE_className="text-sm">
-                                    No workspaces found in project {state.adobeProject?.title || state.adobeProject?.name}.
-                                    Please create a workspace in Adobe Console first.
-                                </Text>
+                    <Flex justifyContent="center" alignItems="center" height="100%">
+                        <Well>
+                            <Flex gap="size-200" alignItems="center">
+                                <AlertCircle UNSAFE_className="text-yellow-600" />
+                                <Flex direction="column" gap="size-50">
+                                    <Text><strong>No Workspaces Found</strong></Text>
+                                    <Text UNSAFE_className="text-sm">
+                                        No workspaces found in project {state.adobeProject?.title || state.adobeProject?.name}.
+                                        Please create a workspace in Adobe Console first.
+                                    </Text>
+                                </Flex>
                             </Flex>
-                        </Flex>
-                    </Well>
+                        </Well>
+                    </Flex>
                 ) : (
                     <ListView
                         items={workspaces}
