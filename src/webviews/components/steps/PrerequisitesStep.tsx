@@ -225,7 +225,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 if (scrollContainerRef.current) {
                     scrollContainerRef.current.scrollTo({
                         top: scrollContainerRef.current.scrollHeight,
-                        behavior: 'smooth'
+                        behavior: 'auto'  // Instant scroll to prevent shudder during content changes
                     });
                 }
             }, 200);
