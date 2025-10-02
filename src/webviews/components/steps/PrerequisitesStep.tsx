@@ -47,6 +47,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
     const [versionComponentMapping, setVersionComponentMapping] = useState<{ [key: string]: string }>({});
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+    const hasAutoScrolled = useRef<boolean>(false);
 
     useEffect(() => {
         // Listen for prerequisites loaded from backend
@@ -216,9 +217,10 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
             .every(check => check.status === 'success' || check.status === 'warning');
         setCanProceed(allRequired);
 
-        // Auto-scroll to bottom of container when all prerequisites succeed
+        // Auto-scroll to bottom of container when all prerequisites succeed (only once)
         const allSuccess = checks.length > 0 && checks.every(check => check.status === 'success');
-        if (allSuccess && scrollContainerRef.current) {
+        if (allSuccess && !hasAutoScrolled.current && scrollContainerRef.current) {
+            hasAutoScrolled.current = true; // Mark as scrolled to prevent repeated scrolling
             setTimeout(() => {
                 if (scrollContainerRef.current) {
                     scrollContainerRef.current.scrollTo({
@@ -234,6 +236,9 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
     useEffect(() => {
         // When navigating back to prerequisites, restart the check
         if (currentStep === 'prerequisites' && !isChecking) {
+            // Reset auto-scroll flag so it can work again on fresh check
+            hasAutoScrolled.current = false;
+            
             // Small delay to ensure UI has settled
             const timer = setTimeout(() => {
                 checkPrerequisites();
