@@ -129,8 +129,8 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 We need to authenticate with Adobe to deploy your API Mesh and access Adobe services.
             </Text>
 
-            {/* Authentication Status - Checking */}
-            {showChecking && (
+            {/* Authentication Status - Checking (or not yet checked) */}
+            {(showChecking || state.adobeAuth.isAuthenticated === undefined) && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
                     <View marginBottom="size-200">
                         <ProgressCircle size="L" isIndeterminate />
@@ -201,7 +201,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Not authenticated - normal state */}
-            {!showChecking && !state.adobeAuth.isAuthenticated && !state.adobeAuth.error && (
+            {!showChecking && state.adobeAuth.isAuthenticated === false && !state.adobeAuth.error && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Key UNSAFE_className="text-gray-500" size="L" />

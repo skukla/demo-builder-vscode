@@ -47,8 +47,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         projectTemplate: 'commerce-paas',
         componentConfigs: {},
         adobeAuth: {
-            isAuthenticated: undefined,  // Start as undefined to trigger auth check
-            isChecking: true  // Start as true to prevent flash of "not authenticated" state on mount
+            isAuthenticated: undefined,  // Start as undefined to indicate not yet checked
+            isChecking: false  // Allow the check to proceed
         },
         components: componentDefaults || undefined
     });
