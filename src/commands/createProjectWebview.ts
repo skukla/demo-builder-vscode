@@ -1365,35 +1365,42 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     this.logger.info('[Auth] Cleared caches after forced login - checking for organization selection');
                 }
 
-                // Send update that we're loading organization details
-                await this.sendMessage('auth-status', {
-                    isChecking: true,
-                    message: 'Authentication verified',
-                    subMessage: 'Loading organization details...',
-                    isAuthenticated: true
-                });
-
                 // After fresh authentication, we know org is empty (console context was cleared)
                 // Skip the redundant getCurrentOrganization() call and go directly to auto-selection
                 this.logger.info('[Auth] Organization empty after fresh login - attempting auto-selection');
 
-                await this.sendMessage('auth-status', {
-                    isChecking: true,
-                    message: 'Authentication verified',
-                    subMessage: 'Checking available organizations...',
-                    isAuthenticated: true
-                });
+                // Start org auto-selection without immediate message (debounced)
+                const autoSelectStart = Date.now();
+                const autoSelectPromise = this.authManager.autoSelectOrganizationIfNeeded(true);
+                
+                // Only send progress message if auto-selection takes > 200ms
+                const autoSelectTimer = setTimeout(async () => {
+                    await this.sendMessage('auth-status', {
+                        isChecking: true,
+                        message: 'Authentication verified',
+                        subMessage: 'Checking available organizations...',
+                        isAuthenticated: true
+                    });
+                }, 200);
 
                 // Attempt auto-selection, skip the redundant current org check for performance
-                let currentOrg = await this.authManager.autoSelectOrganizationIfNeeded(true);
+                let currentOrg = await autoSelectPromise;
+                clearTimeout(autoSelectTimer);
 
                 if (currentOrg) {
-                    this.logger.info(`[Auth] Auto-selected organization: ${currentOrg.name}`);
+                    this.logger.info(`[Auth] Auto-selected organization: ${currentOrg.name} (took ${Date.now() - autoSelectStart}ms)`);
                 } else {
-                    this.logger.info('[Auth] Auto-selection not possible - multiple organizations available or none accessible');
+                    this.logger.info(`[Auth] Auto-selection not possible - multiple organizations available or none accessible (took ${Date.now() - autoSelectStart}ms)`);
                 }
 
+                // Get current project (usually fast with SDK)
+                const projectCheckStart = Date.now();
                 const currentProject = await this.authManager.getCurrentProject();
+                if (currentProject) {
+                    this.logger.info(`[Auth] Current project: ${currentProject.name} (took ${Date.now() - projectCheckStart}ms)`);
+                } else {
+                    this.logger.debug(`[Auth] No current project (took ${Date.now() - projectCheckStart}ms)`);
+                }
 
                 // Handle the case where organization wasn't set during browser login (expected for forced login)
                 if (!currentOrg && force) {
