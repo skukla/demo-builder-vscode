@@ -1644,10 +1644,36 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 if (!hasMeshApi) {
                     this.logger.warn('[API Mesh] API Mesh API not found in workspace services');
                     this.debugLogger.debug('[API Mesh] Available services', { serviceNames: services.map((s: any) => s.name || s.code) });
+                    
+                    // Show VS Code notification with setup instructions
+                    const instructions = this.getSetupInstructions(selectedComponents);
+                    if (instructions && instructions.length > 0) {
+                        const instructionText = instructions
+                            .map((inst, idx) => `${idx + 1}. ${inst.step}: ${inst.details}`)
+                            .join('\n');
+                        
+                        vscode.window.showWarningMessage(
+                            `API Mesh API is not enabled. ${instructions.length} setup steps required.`,
+                            'View Instructions',
+                            'Open Console'
+                        ).then(action => {
+                            if (action === 'View Instructions') {
+                                // Show detailed instructions in a new information message
+                                vscode.window.showInformationMessage(
+                                    instructionText,
+                                    { modal: false }
+                                );
+                            } else if (action === 'Open Console') {
+                                // This would be handled by the webview button instead
+                                this.logger.info('[API Mesh] User requested to open console from notification');
+                            }
+                        });
+                    }
+                    
                     return {
                         apiEnabled: false,
                         meshExists: false,
-                        setupInstructions: this.getSetupInstructions(selectedComponents)
+                        setupInstructions: instructions
                     };
                 }
                 

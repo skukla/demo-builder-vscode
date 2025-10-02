@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Heading, Text, Flex, Button, ActionButton } from '@adobe/react-spectrum';
+import { Heading, Text, Flex, Button, ActionButton, DialogTrigger, Dialog, Content, Divider } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Info from '@spectrum-icons/workflow/Info';
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
-import ChevronUp from '@spectrum-icons/workflow/ChevronUp';
+import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import { vscode } from '../../app/vscodeApi';
 import { WizardState, WizardStep } from '../../types';
 import { ConfigurationSummary } from '../shared/ConfigurationSummary';
@@ -25,7 +24,6 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
     const [isChecking, setIsChecking] = useState<boolean>(false);
     const [error, setError] = useState<string | undefined>(undefined);
     const [meshData, setMeshData] = useState<any>(null);
-    const [instructionsExpanded, setInstructionsExpanded] = useState<boolean>(false);
 
     // Listen for progress updates during mesh creation
     useEffect(() => {
@@ -187,37 +185,44 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                                 <Text UNSAFE_className="text-sm text-gray-600">{error}</Text>
                             </Flex>
                             
-                            {/* Expandable Setup Instructions */}
+                            {/* Setup Instructions Modal */}
                             {state.apiMesh?.setupInstructions && state.apiMesh.setupInstructions.length > 0 && (
-                                <Flex direction="column" gap="size-100" marginTop="size-200" width="100%">
-                                    <ActionButton 
-                                        onPress={() => setInstructionsExpanded(!instructionsExpanded)}
-                                        isQuiet
-                                        alignSelf="flex-start"
-                                    >
-                                        {instructionsExpanded ? <ChevronUp /> : <ChevronDown />}
-                                        <Text>{instructionsExpanded ? 'Hide' : 'Show'} setup instructions</Text>
-                                    </ActionButton>
-                                    
-                                    {instructionsExpanded && (
-                                        <Flex direction="column" gap="size-150" marginTop="size-100" width="100%">
-                                            {state.apiMesh.setupInstructions.map((instruction, index) => (
-                                                <Flex key={index} direction="column" gap="size-50" UNSAFE_style={{ 
-                                                    padding: '12px',
-                                                    backgroundColor: instruction.important ? 'var(--spectrum-global-color-orange-100)' : 'var(--spectrum-global-color-gray-100)',
-                                                    borderRadius: '4px',
-                                                    borderLeft: instruction.important ? '3px solid var(--spectrum-global-color-orange-600)' : 'none'
-                                                }}>
-                                                    <Text UNSAFE_className={instruction.important ? "text-sm font-semibold" : "text-sm font-medium"}>
-                                                        {index + 1}. {instruction.step}
+                                <Flex direction="column" gap="size-100" marginTop="size-200" alignItems="center">
+                                    <Text UNSAFE_className="text-sm text-gray-600">
+                                        Follow the setup guide to enable API Mesh for this workspace.
+                                    </Text>
+                                    <DialogTrigger type="modal">
+                                        <ActionButton isQuiet>
+                                            <InfoOutline />
+                                            <Text>View Setup Instructions</Text>
+                                        </ActionButton>
+                                        <Dialog size="M">
+                                            <Heading>API Mesh Setup Guide</Heading>
+                                            <Divider />
+                                            <Content>
+                                                <Flex direction="column" gap="size-200">
+                                                    <Text>
+                                                        Complete these steps to enable API Mesh for your workspace:
                                                     </Text>
-                                                    <Text UNSAFE_className="text-sm text-gray-600">
-                                                        {instruction.details}
-                                                    </Text>
+                                                    {state.apiMesh.setupInstructions.map((instruction, index) => (
+                                                        <Flex key={index} direction="column" gap="size-75" UNSAFE_style={{ 
+                                                            padding: '12px',
+                                                            backgroundColor: instruction.important ? 'var(--spectrum-global-color-orange-100)' : 'var(--spectrum-global-color-gray-100)',
+                                                            borderRadius: '4px',
+                                                            borderLeft: instruction.important ? '3px solid var(--spectrum-global-color-orange-600)' : 'none'
+                                                        }}>
+                                                            <Text UNSAFE_className={instruction.important ? "font-semibold" : "font-medium"}>
+                                                                {index + 1}. {instruction.step}
+                                                            </Text>
+                                                            <Text UNSAFE_className="text-sm text-gray-600">
+                                                                {instruction.details}
+                                                            </Text>
+                                                        </Flex>
+                                                    ))}
                                                 </Flex>
-                                            ))}
-                                        </Flex>
-                                    )}
+                                            </Content>
+                                        </Dialog>
+                                    </DialogTrigger>
                                 </Flex>
                             )}
                             
