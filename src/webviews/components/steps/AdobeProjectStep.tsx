@@ -142,19 +142,21 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                             subMessage={state.adobeOrg?.name ? `Fetching from organization: ${state.adobeOrg.name}` : "Fetching projects..."}
                         />
                     </Flex>
-                ) : error ? (
-                    <Well marginTop="size-200">
-                        <Flex gap="size-200" alignItems="center">
-                            <AlertCircle UNSAFE_className="text-red-600" />
-                            <Flex direction="column" gap="size-50">
-                                <Text><strong>Error Loading Projects</strong></Text>
-                                <Text UNSAFE_className="text-sm">{error}</Text>
+                ) : error && !isLoadingProjects ? (
+                    <Flex justifyContent="center" alignItems="center" height="100%">
+                        <Well>
+                            <Flex gap="size-200" alignItems="center">
+                                <AlertCircle UNSAFE_className="text-red-600" />
+                                <Flex direction="column" gap="size-50">
+                                    <Text><strong>Error Loading Projects</strong></Text>
+                                    <Text UNSAFE_className="text-sm">{error}</Text>
+                                </Flex>
                             </Flex>
-                        </Flex>
-                        <Button variant="secondary" onPress={() => loadProjects()} marginTop="size-200">
-                            Retry
-                        </Button>
-                    </Well>
+                            <Button variant="secondary" onPress={() => loadProjects()} marginTop="size-200">
+                                Retry
+                            </Button>
+                        </Well>
+                    </Flex>
                 ) : projects.length === 0 ? (
                     <Well marginTop="size-200">
                         <Flex gap="size-200" alignItems="center">

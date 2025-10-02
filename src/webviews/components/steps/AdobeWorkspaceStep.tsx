@@ -133,19 +133,21 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                             subMessage={state.adobeProject ? `Fetching from project: ${state.adobeProject.title || state.adobeProject.name}` : undefined}
                         />
                     </Flex>
-                ) : error ? (
-                    <Well marginTop="size-200">
-                        <Flex gap="size-200" alignItems="center">
-                            <AlertCircle UNSAFE_className="text-red-600" />
-                            <Flex direction="column" gap="size-50">
-                                <Text><strong>Error Loading Workspaces</strong></Text>
-                                <Text UNSAFE_className="text-sm">{error}</Text>
+                ) : error && !isLoading ? (
+                    <Flex justifyContent="center" alignItems="center" height="100%">
+                        <Well>
+                            <Flex gap="size-200" alignItems="center">
+                                <AlertCircle UNSAFE_className="text-red-600" />
+                                <Flex direction="column" gap="size-50">
+                                    <Text><strong>Error Loading Workspaces</strong></Text>
+                                    <Text UNSAFE_className="text-sm">{error}</Text>
+                                </Flex>
                             </Flex>
-                        </Flex>
-                        <Button variant="secondary" onPress={loadWorkspaces} marginTop="size-200">
-                            Retry
-                        </Button>
-                    </Well>
+                            <Button variant="secondary" onPress={loadWorkspaces} marginTop="size-200">
+                                Retry
+                            </Button>
+                        </Well>
+                    </Flex>
                 ) : workspaces.length === 0 ? (
                     <Well marginTop="size-200">
                         <Flex gap="size-200" alignItems="center">
