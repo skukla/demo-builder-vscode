@@ -1330,19 +1330,26 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             this.logger.info(`[Auth] Starting Adobe authentication process${force ? ' (forced)' : ''} - opening browser...`);
             
-            // Send initial status that we're starting authentication with clearer message
-            await this.sendMessage('auth-status', {
-                isChecking: true,
-                message: 'Opening browser for authentication...',
-                subMessage: force ? 'Starting fresh login...' : 'If you\'re already logged in, the browser will complete automatically.',
-                isAuthenticated: false
-            });
-            
             // Start authentication - pass force flag to authManager
             this.logger.debug(`[Auth] Initiating browser-based login${force ? ' with force flag' : ''}`);
             
+            // Start login process
+            const loginPromise = this.authManager.login(force);
+            
+            // Only send "Opening browser" message if browser opening takes > 100ms
+            // (shorter debounce than usual because user needs to know to look for browser)
+            const browserOpenTimer = setTimeout(async () => {
+                await this.sendMessage('auth-status', {
+                    isChecking: true,
+                    message: 'Opening browser for authentication...',
+                    subMessage: force ? 'Starting fresh login...' : 'If you\'re already logged in, the browser will complete automatically.',
+                    isAuthenticated: false
+                });
+            }, 100);
+            
             // The login method already handles polling internally
-            const loginSuccess = await this.authManager.login(force);
+            const loginSuccess = await loginPromise;
+            clearTimeout(browserOpenTimer);
             
             const loginDuration = Date.now() - authStartTime;
             this.isAuthenticating = false;
