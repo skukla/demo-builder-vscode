@@ -48,7 +48,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         componentConfigs: {},
         adobeAuth: {
             isAuthenticated: undefined,  // Start as undefined to trigger auth check
-            isChecking: false  // Allow the check to proceed
+            isChecking: true  // Start as true to prevent flash of "not authenticated" state on mount
         },
         components: componentDefaults || undefined
     });
