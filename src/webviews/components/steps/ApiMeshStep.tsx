@@ -122,7 +122,8 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                         isChecking: false,
                         apiEnabled: false,
                         meshExists: false,
-                        error: err
+                        error: err,
+                        setupInstructions: result?.setupInstructions  // Include setup instructions
                     } 
                 });
                 setIsChecking(false);
