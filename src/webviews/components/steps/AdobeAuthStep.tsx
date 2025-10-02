@@ -38,6 +38,11 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
         // Don't re-check if already authenticated - prevents unnecessary flickering when navigating back
         if (!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated === undefined) {
             checkAuthentication();
+        } else if (state.adobeAuth.isAuthenticated && state.adobeOrg) {
+            // If already authenticated on mount, clear any stale messages
+            // This prevents "left over" feeling when navigating back to this step
+            setAuthStatus('');
+            setAuthSubMessage('');
         }
 
         // Listen for auth status updates
