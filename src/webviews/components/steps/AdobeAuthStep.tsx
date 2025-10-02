@@ -33,18 +33,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     // This prevents flash of loading messages for fast SDK-based auth checks
     const showChecking = useDebouncedLoading(state.adobeAuth.isChecking);
 
-    // Debug logging to track state changes
-    useEffect(() => {
-        console.log('[AdobeAuthStep] State changed:', {
-            isAuthenticated: state.adobeAuth.isAuthenticated,
-            isChecking: state.adobeAuth.isChecking,
-            showChecking: showChecking,
-            error: state.adobeAuth.error,
-            shouldShowKey: !showChecking && state.adobeAuth.isAuthenticated === false && !state.adobeAuth.error,
-            shouldShowChecking: showChecking || state.adobeAuth.isAuthenticated === undefined
-        });
-    }, [state.adobeAuth.isAuthenticated, state.adobeAuth.isChecking, showChecking, state.adobeAuth.error]);
-
     useEffect(() => {
         // Always check authentication when entering the step to ensure fresh data
         // This ensures we get updated messages including subMessage

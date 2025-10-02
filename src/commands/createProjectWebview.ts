@@ -6,7 +6,7 @@ import { BaseWebviewCommand } from './baseWebviewCommand';
 import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
 // Prerequisites checking is handled by PrerequisitesManager
 import { PrerequisitesManager, PrerequisiteDefinition, PrerequisiteStatus, PrerequisitePlugin, InstallStep } from '../utils/prerequisitesManager';
-import { AdobeAuthManager } from '../utils/adobeAuthManager';
+import { AdobeAuthManager, AdobeOrg, AdobeProject } from '../utils/adobeAuthManager';
 import { ComponentHandler } from './componentHandler';
 import { ErrorLogger } from '../utils/errorLogger';
 import { ComponentRegistryManager } from '../utils/componentRegistry';
@@ -1185,33 +1185,55 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.info(`[Auth] Authentication check completed in ${checkDuration}ms: ${isAuthenticated}`);
 
             // Get current organization if authenticated
-            let currentOrg = undefined;
-            let currentProject = undefined;
+            let currentOrg: AdobeOrg | undefined = undefined;
+            let currentProject: AdobeProject | undefined = undefined;
 
             if (isAuthenticated) {
                 // Step 2: If authenticated, check organization with progress
-                await this.sendMessage('auth-status', {
-                    isChecking: true,
-                    message: 'Authentication verified',
-                    subMessage: 'Loading your organization details...',
-                    isAuthenticated: true
-                });
-
-                currentOrg = await this.authManager.getCurrentOrganization();
-                if (currentOrg) {
-                    this.logger.info(`[Auth] Current organization: ${currentOrg.name}`);
-
-                    // Step 3: Check project if org exists
+                // Only send progress messages if operation is taking time (> 200ms)
+                const orgCheckStart = Date.now();
+                
+                // Start org check without message (will send if it takes time)
+                const orgCheckPromise = this.authManager.getCurrentOrganization();
+                
+                // Set a timer to send progress message only if org check takes > 200ms
+                const orgProgressTimer = setTimeout(async () => {
                     await this.sendMessage('auth-status', {
                         isChecking: true,
-                        message: 'Organization confirmed',
-                        subMessage: `Loading projects for ${currentOrg.name}...`,
+                        message: 'Authentication verified',
+                        subMessage: 'Loading your organization details...',
                         isAuthenticated: true
                     });
+                }, 200);
 
-                    currentProject = await this.authManager.getCurrentProject();
+                currentOrg = await orgCheckPromise;
+                clearTimeout(orgProgressTimer);
+                
+                if (currentOrg) {
+                    this.logger.info(`[Auth] Current organization: ${currentOrg.name} (took ${Date.now() - orgCheckStart}ms)`);
+
+                    // Step 3: Check project if org exists
+                    const projectCheckStart = Date.now();
+                    const projectCheckPromise = this.authManager.getCurrentProject();
+                    
+                    // Capture org name for closure
+                    const orgName = currentOrg.name;
+                    
+                    // Only send progress message if project check takes > 200ms
+                    const projectProgressTimer = setTimeout(async () => {
+                        await this.sendMessage('auth-status', {
+                            isChecking: true,
+                            message: 'Organization confirmed',
+                            subMessage: `Loading projects for ${orgName}...`,
+                            isAuthenticated: true
+                        });
+                    }, 200);
+
+                    currentProject = await projectCheckPromise;
+                    clearTimeout(projectProgressTimer);
+                    
                     if (currentProject) {
-                        this.logger.info(`[Auth] Current project: ${currentProject.name}`);
+                        this.logger.info(`[Auth] Current project: ${currentProject.name} (took ${Date.now() - projectCheckStart}ms)`);
                     }
                 } else {
                     // Authenticated but no org - likely interrupted switch or cleared due to mismatch
