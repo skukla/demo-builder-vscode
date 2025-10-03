@@ -1949,6 +1949,40 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		this.logger.info('[API Mesh] Mesh created successfully');
 		this.debugLogger.debug('[API Mesh] Create output', { stdout: createResult.stdout });
 		
+		// Check for error indicators in the output even with exit code 0
+		const combinedOutput = `${createResult.stdout}\n${createResult.stderr}`;
+		const hasErrors = /error|failed|unable to|invalid/i.test(combinedOutput);
+		
+		if (hasErrors) {
+			this.logger.warn('[API Mesh] Mesh created but output contains error indicators');
+			this.logger.warn('[API Mesh] Output:', combinedOutput.substring(0, 500));
+			
+			// Verify the mesh status to see if it's actually working
+			onProgress?.('Verifying mesh deployment...', 'Checking mesh status');
+			
+			try {
+				const verifyResult = await commandManager.execute(
+					'aio api-mesh get --active',
+					{
+						timeout: TIMEOUTS.API_CALL,
+						configureTelemetry: false,
+						useNodeVersion: null,
+						enhancePath: true
+					}
+				);
+				
+				if (verifyResult.code !== 0) {
+					// Mesh was created but is in error state
+					this.logger.error('[API Mesh] Mesh created but verification failed - mesh is in error state');
+					throw new Error('Mesh was created but is not functioning properly. Please check the Adobe Developer Console for details.');
+				}
+			} catch (verifyError) {
+				this.logger.error('[API Mesh] Mesh verification failed', verifyError as Error);
+				// Mesh exists but is broken - throw error so user knows
+				throw new Error('Mesh was created but may be in an error state. Please verify in the Adobe Developer Console.');
+			}
+		}
+		
 		// Try to extract mesh ID from output
 		const meshIdMatch = createResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
 		const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
