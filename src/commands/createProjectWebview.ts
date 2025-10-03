@@ -1836,10 +1836,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 			if (meshAlreadyExists || meshCreatedButFailed) {
 				if (meshCreatedButFailed) {
 					this.logger.info('[API Mesh] Mesh created but deployment failed, attempting update to redeploy');
-					onProgress?.('Redeploying API Mesh...', 'Mesh created, now deploying');
+					onProgress?.('Completing API Mesh Setup...', 'Detected partial creation, now deploying mesh');
 				} else {
 					this.logger.info('[API Mesh] Mesh already exists, updating with new configuration');
-					onProgress?.('Updating API Mesh...', 'Redeploying with current configuration');
+					onProgress?.('Updating Existing Mesh...', 'Found existing mesh, updating configuration');
 				}
 				
 				// Update the existing mesh to ensure proper deployment
@@ -1852,13 +1852,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 							onOutput: (data: string) => {
 								const output = data.toLowerCase();
 								if (output.includes('validating')) {
-									onProgress?.('Updating API Mesh...', 'Validating configuration');
+									onProgress?.('Deploying API Mesh...', 'Validating mesh configuration');
 								} else if (output.includes('updating')) {
-									onProgress?.('Updating API Mesh...', 'Updating mesh infrastructure');
+									onProgress?.('Deploying API Mesh...', 'Updating mesh infrastructure');
 								} else if (output.includes('deploying')) {
-									onProgress?.('Updating API Mesh...', 'Deploying mesh');
+									onProgress?.('Deploying API Mesh...', 'Deploying to Adobe infrastructure');
 								} else if (output.includes('success')) {
-									onProgress?.('Updating API Mesh...', 'Mesh updated successfully');
+									onProgress?.('API Mesh Ready', 'Mesh deployed successfully');
 								}
 							},
 							configureTelemetry: false,
@@ -1874,12 +1874,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 						const meshIdMatch = updateResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
 						const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
 						
-						onProgress?.('API Mesh Updated', meshId ? `Mesh ID: ${meshId}` : 'Mesh ready');
+						onProgress?.('✓ API Mesh Ready', 'Mesh successfully deployed and ready to use');
 						
 						return {
 							success: true,
 							meshId,
-							message: 'Mesh updated and deployed successfully'
+							message: 'API Mesh deployed successfully'
 						};
 					} else {
 						const updateError = updateResult.stderr || 'Failed to update mesh';
@@ -1897,20 +1897,20 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 			throw new Error(errorMsg);
 		}
 			
-			this.logger.info('[API Mesh] Mesh created successfully');
-			this.debugLogger.debug('[API Mesh] Create output', { stdout: createResult.stdout });
-			
-			// Try to extract mesh ID from output
-			const meshIdMatch = createResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
-			const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
-			
-			onProgress?.('API Mesh Created', meshId ? `Mesh ID: ${meshId}` : 'Mesh ready');
-			
-			return {
-				success: true,
-				meshId,
-				message: 'Mesh created successfully'
-			};
+		this.logger.info('[API Mesh] Mesh created successfully');
+		this.debugLogger.debug('[API Mesh] Create output', { stdout: createResult.stdout });
+		
+		// Try to extract mesh ID from output
+		const meshIdMatch = createResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
+		const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
+		
+		onProgress?.('✓ API Mesh Ready', 'Mesh successfully created and deployed');
+		
+		return {
+			success: true,
+			meshId,
+			message: 'API Mesh created and deployed successfully'
+		};
 			
 		} catch (error) {
 			this.logger.error('[API Mesh] Creation failed', error as Error);
