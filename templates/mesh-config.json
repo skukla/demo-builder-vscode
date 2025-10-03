@@ -2,16 +2,10 @@
   "meshConfig": {
     "sources": [
       {
-        "name": "Commerce",
+        "name": "PlaceholderAPI",
         "handler": {
           "graphql": {
-            "endpoint": "https://venia.magento.com/graphql",
-            "operationHeaders": {
-              "Store": "default"
-            },
-            "schemaHeaders": {
-              "Store": "default"
-            }
+            "endpoint": "https://countries.trevorblades.com/"
           }
         }
       }
