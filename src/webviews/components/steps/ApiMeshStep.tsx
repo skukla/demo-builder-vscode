@@ -31,10 +31,13 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             if (message.type === 'api-mesh-progress') {
+                console.log('[ApiMeshStep] Progress update received:', message);
                 if (message.message) {
+                    console.log('[ApiMeshStep] Setting message:', message.message);
                     setMessage(message.message);
                 }
                 if (message.subMessage) {
+                    console.log('[ApiMeshStep] Setting subMessage:', message.subMessage);
                     setSubMessage(message.subMessage);
                 }
             }
@@ -261,18 +264,17 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                             
                             {meshData.meshId && (
                                 <Flex direction="column" gap="size-100" marginTop="size-200" alignItems="center">
-                                    <Flex gap="size-100">
-                                        <Text UNSAFE_className="text-sm font-medium">Mesh ID:</Text>
-                                        <Text UNSAFE_className="text-sm text-gray-600">{meshData.meshId}</Text>
-                                    </Flex>
-                                    <Flex gap="size-100">
-                                        <Text UNSAFE_className="text-sm font-medium">Status:</Text>
-                                        <Text UNSAFE_className="text-sm" UNSAFE_style={{ 
+                                    <Text UNSAFE_className="text-sm">
+                                        <Text UNSAFE_className="font-medium" UNSAFE_style={{ display: 'inline' }}>Mesh ID:</Text>{' '}
+                                        <Text UNSAFE_className="text-gray-600" UNSAFE_style={{ display: 'inline' }}>{meshData.meshId}</Text>
+                                        <Text UNSAFE_className="text-gray-600" UNSAFE_style={{ display: 'inline', margin: '0 8px' }}>•</Text>
+                                        <Text UNSAFE_style={{ 
+                                            display: 'inline',
                                             color: meshData.status === 'error' ? 'var(--spectrum-global-color-orange-600)' : undefined 
                                         }}>
                                             {meshData.status === 'deployed' ? 'Deployed' : meshData.status === 'error' ? 'Error' : 'Not Deployed'}
                                         </Text>
-                                    </Flex>
+                                    </Text>
                                     {meshData.endpoint && (
                                         <Flex gap="size-100">
                                             <Text UNSAFE_className="text-sm font-medium">Endpoint:</Text>
