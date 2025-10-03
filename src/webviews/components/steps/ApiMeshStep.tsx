@@ -290,16 +290,29 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                     <Button 
                                         variant="accent" 
                                         onPress={async () => {
-                                            // Delete the broken mesh, then check again
+                                            // Delete the broken mesh
                                             setIsChecking(true);
                                             setMessage('Deleting broken mesh...');
                                             try {
                                                 await vscode.request('delete-api-mesh', {
                                                     workspaceId: state.adobeWorkspace?.id
                                                 });
-                                                // After deletion, run check again
-                                                setMessage('Checking API Mesh status...');
-                                                await runCheck();
+                                                
+                                                // After successful deletion, we know:
+                                                // 1. API is enabled (we already confirmed this)
+                                                // 2. Mesh no longer exists (we just deleted it)
+                                                // So update state directly without re-checking
+                                                setMeshData(null);
+                                                updateState({ 
+                                                    apiMesh: { 
+                                                        isChecking: false,
+                                                        apiEnabled: true,
+                                                        meshExists: false,
+                                                        meshStatus: 'pending'
+                                                    } 
+                                                });
+                                                setIsChecking(false);
+                                                setCanProceed(false);
                                             } catch (e) {
                                                 setError(e instanceof Error ? e.message : 'Failed to delete mesh');
                                                 setIsChecking(false);
