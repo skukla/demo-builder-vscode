@@ -385,6 +385,39 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
         });
 
+        // Delete API Mesh
+        comm.on('delete-api-mesh', async (data: any) => {
+            try {
+                this.logger.info('[API Mesh] Deleting mesh for workspace', { workspaceId: data.workspaceId });
+                
+                const commandManager = getExternalCommandManager();
+                const result = await commandManager.execute(
+                    'aio api-mesh delete --autoConfirmAction',
+                    {
+                        timeout: TIMEOUTS.API_CALL,
+                        configureTelemetry: false,
+                        useNodeVersion: null,
+                        enhancePath: true
+                    }
+                );
+                
+                if (result.code === 0) {
+                    this.logger.info('[API Mesh] Mesh deleted successfully');
+                    return { success: true };
+                } else {
+                    const errorMsg = result.stderr || 'Failed to delete mesh';
+                    this.logger.error('[API Mesh] Delete failed', new Error(errorMsg));
+                    throw new Error(errorMsg);
+                }
+            } catch (error) {
+                this.logger.error('[API Mesh Delete] Failed', error as Error);
+                return {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error)
+                };
+            }
+        });
+
         // Open Adobe Console in browser (with optional direct workspace link)
         comm.on('open-adobe-console', async (data: any) => {
             try {
@@ -1542,8 +1575,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         apiEnabled: boolean;
         meshExists: boolean;
         meshId?: string;
-        meshStatus?: 'deployed' | 'not-deployed';
+        meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error';
         endpoint?: string;
+        error?: string;
         setupInstructions?: Array<{ step: string; details: string; important?: boolean }>;
     }> {
         this.logger.info('[API Mesh] Checking API Mesh availability for workspace', { workspaceId });
@@ -1639,18 +1673,33 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         endpoint: undefined // Would need to parse from output
                     };
                     
-                } catch (meshError: any) {
-                    const combined = `${meshError?.message || ''}\n${meshError?.stderr || ''}\n${meshError?.stdout || ''}`;
-                    this.debugLogger.debug('[API Mesh] Mesh check error (non-fatal)', { combined });
-                    
-                    // API is already confirmed as enabled by Layer 1
-                    // Any error here just means no mesh exists yet
-                    this.logger.info('[API Mesh] API enabled, no mesh exists (mesh check failed)');
+            } catch (meshError: any) {
+                const combined = `${meshError?.message || ''}\n${meshError?.stderr || ''}\n${meshError?.stdout || ''}`;
+                this.debugLogger.debug('[API Mesh] Mesh check error', { combined });
+                
+                // Check if the error indicates "no mesh found" vs "mesh exists but is broken"
+                const noMeshFound = /no mesh found|unable to get mesh config/i.test(combined);
+                
+                if (noMeshFound) {
+                    // Truly no mesh exists
+                    this.logger.info('[API Mesh] API enabled, no mesh exists yet');
                     return {
-                        apiEnabled: true,  // Layer 1 confirmed this
+                        apiEnabled: true,
                         meshExists: false
                     };
+                } else {
+                    // Other error: mesh likely exists but is in error state
+                    this.logger.warn('[API Mesh] Mesh exists but appears to be in an error state');
+                    this.logger.warn('[API Mesh] Error details:', combined.substring(0, 200));
+                    
+                    return {
+                        apiEnabled: true,
+                        meshExists: true,
+                        meshStatus: 'error',
+                        error: 'Mesh exists but is in an error state. Try recreating it.'
+                    };
                 }
+            }
                 
             } catch (configError) {
                 this.debugLogger.debug('[API Mesh] Layer 1 failed, falling back to Layer 2', { error: String(configError) });

@@ -52,7 +52,7 @@ export interface WizardState {
         apiEnabled: boolean;
         meshExists: boolean;
         meshId?: string;
-        meshStatus?: 'deployed' | 'not-deployed' | 'pending';
+        meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error';
         endpoint?: string;
         error?: string;
         setupInstructions?: Array<{ step: string; details: string; important?: boolean }>;
