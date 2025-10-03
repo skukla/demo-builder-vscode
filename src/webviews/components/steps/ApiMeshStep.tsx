@@ -34,10 +34,11 @@ const renderInstructionText = (text: string) => {
                             style={{ 
                                 fontFamily: 'var(--spectrum-alias-body-text-font-family, monospace)',
                                 fontSize: '0.9em',
-                                backgroundColor: 'var(--spectrum-global-color-gray-200)',
-                                padding: '2px 6px',
-                                borderRadius: '3px',
-                                color: 'var(--spectrum-global-color-gray-900)'
+                                backgroundColor: 'rgba(20, 115, 230, 0.15)',
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                color: 'var(--spectrum-global-color-blue-400)',
+                                fontWeight: 600
                             }}
                         >
                             {part.slice(1, -1)}
