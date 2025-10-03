@@ -1782,7 +1782,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 			this.debugLogger.debug('[API Mesh] Mesh config content', minimalMeshConfig);
 			
 			// Create mesh with the configuration file
-			onProgress?.('Creating API Mesh...', 'Submitting configuration to Adobe');
+			try {
+				onProgress?.('Creating API Mesh...', 'Submitting configuration to Adobe');
+			} catch (progressError) {
+				this.logger.warn('[API Mesh] Progress callback failed (non-fatal)', progressError);
+			}
 			this.logger.info('[API Mesh] Executing mesh creation command');
 			
 			let lastOutput = '';

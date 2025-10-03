@@ -300,15 +300,22 @@ export class WebviewCommunicationManager {
                 if (message.id && message.expectsResponse) {
                     const requestTimeout = REQUEST_TIMEOUTS[message.type];
                     if (requestTimeout) {
-                        this.sendRawMessage({
-                            id: uuidv4(),
-                            type: '__timeout_hint__',
-                            payload: { 
-                                requestId: message.id,
-                                timeout: requestTimeout 
-                            },
-                            timestamp: Date.now()
-                        });
+                        try {
+                            await this.sendRawMessage({
+                                id: uuidv4(),
+                                type: '__timeout_hint__',
+                                payload: { 
+                                    requestId: message.id,
+                                    timeout: requestTimeout 
+                                },
+                                timestamp: Date.now()
+                            });
+                        } catch (hintError) {
+                            // Timeout hint is non-critical, log and continue
+                            if (this.config.enableLogging) {
+                                this.logger.warn(`[WebviewComm] Failed to send timeout hint (non-fatal): ${hintError}`);
+                            }
+                        }
                     }
                 }
 
