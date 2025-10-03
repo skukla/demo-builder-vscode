@@ -255,7 +255,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                     <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
                                     <Flex direction="column" gap="size-100" alignItems="center">
                                         <Text UNSAFE_className="text-xl font-medium">
-                                            API Mesh {meshData.status === 'deployed' ? 'Deployed' : 'Found'} ✓
+                                            API Mesh {meshData.status === 'deployed' ? 'Deployed' : 'Found'}
                                         </Text>
                                         <Text UNSAFE_className="text-sm text-gray-600">
                                             An existing mesh was detected. It will be updated during deployment.
