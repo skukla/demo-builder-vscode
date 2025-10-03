@@ -1826,44 +1826,59 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		if (createResult.code !== 0) {
 			const errorMsg = createResult.stderr || lastOutput || 'Failed to create mesh';
 			
-			// Special case: mesh already exists
+			// Special case: mesh already exists - update it instead
 			if (errorMsg.includes('already has a mesh') || lastOutput.includes('already has a mesh')) {
-				this.logger.info('[API Mesh] Mesh already exists, fetching details');
+				this.logger.info('[API Mesh] Mesh already exists, updating with new configuration');
+				onProgress?.('Updating API Mesh...', 'Redeploying with current configuration');
 				
-				// Fetch the existing mesh
+				// Update the existing mesh
 				try {
-					const getResult = await commandManager.execute(
-						`aio api-mesh get --active`,
+					const updateResult = await commandManager.execute(
+						`aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
 						{
-							timeout: TIMEOUTS.API_CALL,
+							streaming: true,
+							timeout: TIMEOUTS.API_MESH_UPDATE,
+							onOutput: (data: string) => {
+								const output = data.toLowerCase();
+								if (output.includes('validating')) {
+									onProgress?.('Updating API Mesh...', 'Validating configuration');
+								} else if (output.includes('updating')) {
+									onProgress?.('Updating API Mesh...', 'Updating mesh infrastructure');
+								} else if (output.includes('deploying')) {
+									onProgress?.('Updating API Mesh...', 'Deploying mesh');
+								} else if (output.includes('success')) {
+									onProgress?.('Updating API Mesh...', 'Mesh updated successfully');
+								}
+							},
 							configureTelemetry: false,
 							useNodeVersion: null,
 							enhancePath: true
 						}
 					);
 					
-					if (getResult.code === 0) {
+					if (updateResult.code === 0) {
+						this.logger.info('[API Mesh] Mesh updated successfully');
+						
 						// Extract mesh ID from output
-						const meshIdMatch = getResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
+						const meshIdMatch = updateResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
 						const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
 						
-						onProgress?.('API Mesh Ready', 'Using existing mesh');
+						onProgress?.('API Mesh Updated', meshId ? `Mesh ID: ${meshId}` : 'Mesh ready');
 						
 						return {
 							success: true,
 							meshId,
-							message: 'Mesh already exists and is ready to use'
+							message: 'Mesh updated and deployed successfully'
 						};
+					} else {
+						const updateError = updateResult.stderr || 'Failed to update mesh';
+						this.logger.error('[API Mesh] Update failed', new Error(updateError));
+						throw new Error(updateError);
 					}
-				} catch (getError) {
-					this.logger.warn('[API Mesh] Failed to fetch existing mesh details', getError as Error);
+				} catch (updateError) {
+					this.logger.error('[API Mesh] Failed to update existing mesh', updateError as Error);
+					throw updateError;
 				}
-				
-				// If we couldn't get details, still return success since mesh exists
-				return {
-					success: true,
-					message: 'Mesh already exists for this workspace'
-				};
 			}
 			
 			// Other errors: fail
