@@ -1687,18 +1687,33 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         apiEnabled: true,
                         meshExists: false
                     };
-                } else {
-                    // Other error: mesh likely exists but is in error state
-                    this.logger.warn('[API Mesh] Mesh exists but appears to be in an error state');
+                }
+                
+                // Check for specific error: No active deployment
+                const noActiveDeployment = /no active deployment found/i.test(combined);
+                
+                if (noActiveDeployment) {
+                    this.logger.warn('[API Mesh] Mesh exists but has no active deployment (deployment failed)');
                     this.logger.warn(`[API Mesh] Error details: ${combined.substring(0, 500)}`);
                     
                     return {
                         apiEnabled: true,
                         meshExists: true,
                         meshStatus: 'error',
-                        error: 'Mesh exists but is in an error state. Try recreating it.'
+                        error: 'Mesh exists but deployment failed. Click "Recreate Mesh" to delete and redeploy it.'
                     };
                 }
+                
+                // Other error: mesh likely exists but is in error state
+                this.logger.warn('[API Mesh] Mesh exists but appears to be in an error state');
+                this.logger.warn(`[API Mesh] Error details: ${combined.substring(0, 500)}`);
+                
+                return {
+                    apiEnabled: true,
+                    meshExists: true,
+                    meshStatus: 'error',
+                    error: 'Mesh exists but is in an error state. Try recreating it.'
+                };
             }
                 
             } catch (configError) {
