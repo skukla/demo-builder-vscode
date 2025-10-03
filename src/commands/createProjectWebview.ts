@@ -1967,48 +1967,105 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		this.logger.info('[API Mesh] Mesh created successfully');
 		this.debugLogger.debug('[API Mesh] Create output', { stdout: createResult.stdout });
 		
-		// ALWAYS verify the mesh after creation, even if output looks clean
-		// The mesh can be created with exit code 0 but still be in error state
-		this.logger.info('[API Mesh] Verifying mesh deployment status...');
-		onProgress?.('Verifying mesh deployment...', 'Checking mesh status');
+		// Mesh creation is asynchronous - poll until it's deployed
+		// Adobe CLI says "Wait a few minutes before checking the status"
+		this.logger.info('[API Mesh] Starting deployment verification polling...');
+		onProgress?.('Waiting for mesh deployment...', 'Mesh is being provisioned (this takes 2-3 minutes)');
 		
-		try {
-			const verifyResult = await commandManager.execute(
-				'aio api-mesh get --active',
-				{
-					timeout: TIMEOUTS.API_CALL,
-					configureTelemetry: false,
-					useNodeVersion: null,
-					enhancePath: true
-				}
-			);
+		const maxRetries = 12; // 12 * 15 seconds = 3 minutes
+		const pollInterval = 15000; // 15 seconds
+		let attempt = 0;
+		let meshDeployed = false;
+		
+		while (attempt < maxRetries && !meshDeployed) {
+			attempt++;
 			
-			if (verifyResult.code !== 0) {
-				// Mesh was created but is in error state
-				this.logger.error('[API Mesh] Mesh created but verification failed - mesh is in error state');
-				this.debugLogger.debug('[API Mesh] Verification error:', verifyResult.stderr || verifyResult.stdout);
-				
-				// Return structured response instead of throwing
-				// This will show "Mesh in Error State" UI with "Recreate Mesh" button
-				return {
-					success: false,
-					meshExists: true,
-					meshStatus: 'error',
-					error: 'Mesh was created but is not functioning properly. Click "Recreate Mesh" to delete and redeploy it.'
-				};
+			// Wait before checking (except first time, wait immediately)
+			if (attempt > 1) {
+				const remaining = Math.ceil((maxRetries - attempt) * pollInterval / 1000);
+				onProgress?.(
+					'Waiting for mesh deployment...', 
+					`Checking status (attempt ${attempt}/${maxRetries}, ~${remaining}s remaining)`
+				);
+				await new Promise(resolve => setTimeout(resolve, pollInterval));
+			} else {
+				// First attempt: wait a bit for mesh to start provisioning
+				onProgress?.('Waiting for mesh deployment...', 'Initial provisioning started, checking status...');
+				await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second initial wait
 			}
 			
-			this.logger.info('[API Mesh] Mesh verification successful - mesh is deployed and active');
-		} catch (verifyError: any) {
-			this.logger.error('[API Mesh] Mesh verification failed', verifyError as Error);
-			this.debugLogger.debug('[API Mesh] Verification error details:', verifyError);
+			this.logger.info(`[API Mesh] Verification attempt ${attempt}/${maxRetries}`);
 			
-			// Mesh exists but is broken - return structured response
+			try {
+				const verifyResult = await commandManager.execute(
+					'aio api-mesh get --active',
+					{
+						timeout: TIMEOUTS.API_CALL,
+						configureTelemetry: false,
+						useNodeVersion: null,
+						enhancePath: true
+					}
+				);
+				
+				if (verifyResult.code === 0) {
+					// Success! Mesh is deployed
+					this.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (${attempt * pollInterval / 1000}s)`);
+					meshDeployed = true;
+					break;
+				} else {
+					// Check if it's "no active deployment" (still provisioning) or a real error
+					const combined = `${verifyResult.stdout}\n${verifyResult.stderr}`;
+					const stillProvisioning = /no active deployment found/i.test(combined);
+					
+					if (stillProvisioning) {
+						this.logger.info(`[API Mesh] Mesh still provisioning (attempt ${attempt}/${maxRetries})`);
+						// Continue polling
+					} else {
+						// Real error - fail immediately
+						this.logger.error('[API Mesh] Mesh verification failed with unexpected error');
+						this.debugLogger.debug('[API Mesh] Verification error:', combined);
+						
+						return {
+							success: false,
+							meshExists: true,
+							meshStatus: 'error',
+							error: 'Mesh was created but encountered an error during deployment. Click "Recreate Mesh" to try again.'
+						};
+					}
+				}
+			} catch (verifyError: any) {
+				// Check if error is "no active deployment" (expected during provisioning)
+				const errorMsg = verifyError.message || verifyError.stderr || '';
+				const stillProvisioning = /no active deployment found/i.test(errorMsg);
+				
+				if (stillProvisioning) {
+					this.logger.info(`[API Mesh] Mesh still provisioning (attempt ${attempt}/${maxRetries})`);
+					// Continue polling
+				} else {
+					// Unexpected error
+					this.logger.error('[API Mesh] Unexpected verification error', verifyError as Error);
+					this.debugLogger.debug('[API Mesh] Verification error details:', verifyError);
+					
+					return {
+						success: false,
+						meshExists: true,
+						meshStatus: 'error',
+						error: 'Mesh was created but verification failed. Click "Recreate Mesh" to try again.'
+					};
+				}
+			}
+		}
+		
+		// Check if we succeeded or timed out
+		if (!meshDeployed) {
+			this.logger.warn(`[API Mesh] Mesh deployment verification timed out after ${maxRetries} attempts (${maxRetries * pollInterval / 1000}s)`);
+			onProgress?.('Mesh deployment timeout', 'Mesh is taking longer than expected to deploy');
+			
 			return {
 				success: false,
 				meshExists: true,
 				meshStatus: 'error',
-				error: 'Mesh was created but may be in an error state. Click "Recreate Mesh" to delete and redeploy it.'
+				error: 'Mesh deployment timed out after 3 minutes. It may still be provisioning. Click "Recreate Mesh" to try again or check Adobe Console.'
 			};
 		}
 		
