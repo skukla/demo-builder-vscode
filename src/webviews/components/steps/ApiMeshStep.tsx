@@ -301,7 +301,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                             apiEnabled: true,
                                                             meshExists: true,
                                                             meshId: result.meshId,
-                                                            meshStatus: 'deployed'
+                                                            meshStatus: 'deployed',
+                                                            endpoint: result.endpoint
                                                         } 
                                                     });
                                                     setMeshData(null); // Clear error state
@@ -394,6 +395,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                     meshExists: true,
                                                     meshId: result.meshId, // May be undefined if still provisioning
                                                     meshStatus: isDeployed ? 'deployed' : 'pending', // Deployed if we have ID, pending otherwise
+                                                    endpoint: result.endpoint, // Pass endpoint to next step
                                                     message: result.message // Show warning if timeout occurred
                                                 } 
                                             });

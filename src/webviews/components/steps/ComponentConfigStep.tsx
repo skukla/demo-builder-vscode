@@ -314,6 +314,38 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         setComponentConfigs(newConfigs);
     }, [selectedComponents]);
 
+    // Auto-fill MESH_ENDPOINT field when mesh endpoint is available
+    useEffect(() => {
+        const meshEndpoint = state.apiMesh?.endpoint;
+        if (meshEndpoint) {
+            // Find all components that need the MESH_ENDPOINT field
+            const meshEndpointField = serviceGroups
+                .flatMap(group => group.fields)
+                .find(field => field.key === 'MESH_ENDPOINT');
+            
+            if (meshEndpointField) {
+                setComponentConfigs(prev => {
+                    const newConfigs = { ...prev };
+                    let needsUpdate = false;
+                    
+                    // Set endpoint for all components that need it (if not already set)
+                    meshEndpointField.componentIds.forEach(componentId => {
+                        if (!newConfigs[componentId]) {
+                            newConfigs[componentId] = {};
+                        }
+                        // Only update if not already set or if value changed
+                        if (newConfigs[componentId]['MESH_ENDPOINT'] !== meshEndpoint) {
+                            newConfigs[componentId]['MESH_ENDPOINT'] = meshEndpoint;
+                            needsUpdate = true;
+                        }
+                    });
+                    
+                    return needsUpdate ? newConfigs : prev;
+                });
+            }
+        }
+    }, [state.apiMesh?.endpoint, serviceGroups]);
+
     // Update parent state and validation
     useEffect(() => {
         updateState({ componentConfigs });
@@ -398,7 +430,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         for (const componentId of field.componentIds) {
             const value = componentConfigs[componentId]?.[field.key];
             if (value !== undefined && value !== '') {
-                return value;
+                // Convert numbers to strings for consistency
+                return typeof value === 'number' ? String(value) : value;
             }
         }
         return '';
@@ -473,14 +506,19 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
 
         // Special-case: defer MESH_ENDPOINT input
         if (field.key === 'MESH_ENDPOINT') {
+            const hasValue = value && (value as string).length > 0;
+            const description = hasValue 
+                ? 'Auto-filled from API Mesh setup' 
+                : (field.description || 'This will be set automatically after Mesh deployment.');
+            
             return (
                 <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
                 <TextField
                         label={field.label}
                     value={value as string}
                         onChange={(val) => updateField(field, val)}
-                        placeholder={field.placeholder}
-                        description={field.description || 'This will be set automatically after Mesh deployment.'}
+                        placeholder={field.placeholder || 'Will be auto-filled from API Mesh'}
+                        description={description}
                         isReadOnly
                     width="100%"
                         marginBottom="size-200"
@@ -537,7 +575,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                     <Picker
                             label={field.label}
                         selectedKey={value as string}
-                            onSelectionChange={(key) => updateField(field, key)}
+                            onSelectionChange={(key) => updateField(field, String(key || ''))}
                         width="100%"
                             isRequired={field.required}
                             marginBottom="size-200"
