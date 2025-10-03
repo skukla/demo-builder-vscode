@@ -34,7 +34,8 @@ const renderInstructionText = (text: string) => {
                                 borderRadius: '4px',
                                 color: 'var(--spectrum-global-color-blue-500)',
                                 border: '1px solid rgba(255, 255, 255, 0.25)',
-                                fontWeight: 600
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap'
                             }}
                         >
                             {part.slice(1, -1)}
