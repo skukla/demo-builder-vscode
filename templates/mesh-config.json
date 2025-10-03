@@ -1,5 +1,4 @@
 {
-  "$schema": "./mesh-config.schema.json",
   "meshConfig": {
     "sources": [
       {
