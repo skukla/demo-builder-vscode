@@ -1826,12 +1826,23 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		if (createResult.code !== 0) {
 			const errorMsg = createResult.stderr || lastOutput || 'Failed to create mesh';
 			
-			// Special case: mesh already exists - update it instead
-			if (errorMsg.includes('already has a mesh') || lastOutput.includes('already has a mesh')) {
-				this.logger.info('[API Mesh] Mesh already exists, updating with new configuration');
-				onProgress?.('Updating API Mesh...', 'Redeploying with current configuration');
+			// Special case 1: mesh already exists - update it instead
+			// Special case 2: mesh was created but deployment failed - update to redeploy
+			const meshAlreadyExists = errorMsg.includes('already has a mesh') || lastOutput.includes('already has a mesh');
+			const meshCreatedButFailed = createResult.stdout.includes('Mesh created') || 
+			                             createResult.stdout.includes('mesh created') ||
+			                             lastOutput.includes('Mesh created');
+			
+			if (meshAlreadyExists || meshCreatedButFailed) {
+				if (meshCreatedButFailed) {
+					this.logger.info('[API Mesh] Mesh created but deployment failed, attempting update to redeploy');
+					onProgress?.('Redeploying API Mesh...', 'Mesh created, now deploying');
+				} else {
+					this.logger.info('[API Mesh] Mesh already exists, updating with new configuration');
+					onProgress?.('Updating API Mesh...', 'Redeploying with current configuration');
+				}
 				
-				// Update the existing mesh
+				// Update the existing mesh to ensure proper deployment
 				try {
 					const updateResult = await commandManager.execute(
 						`aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
