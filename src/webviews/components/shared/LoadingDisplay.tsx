@@ -34,8 +34,8 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     // Default centering based on size if not explicitly set
     const shouldCenter = centered !== undefined ? centered : size === 'L';
     
-    // Text size classes based on progress circle size
-    const mainTextClass = size === 'L' ? 'text-lg' : size === 'M' ? 'text-base' : '';
+    // Text size and color classes based on progress circle size
+    const mainTextClass = size === 'L' ? 'text-lg font-medium' : size === 'M' ? 'text-base font-medium' : 'font-medium';
     const subTextClass = 'text-sm text-gray-600';
     
     // Container props based on centering

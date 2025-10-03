@@ -31,7 +31,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             if (message.type === 'api-mesh-progress') {
-                setMessage(message.message);
+                console.log('[ApiMeshStep] Progress update received:', { message: message.message, subMessage: message.subMessage });
+                setMessage(message.message || 'Processing...');
                 if (message.subMessage) {
                     setSubMessage(message.subMessage);
                 }
@@ -172,9 +173,13 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
                         <LoadingDisplay 
                             size="L"
-                            message={message}
+                            message={message || 'Loading...'}
                             subMessage={subMessage}
                         />
+                        {/* Debug: Display state values */}
+                        <Text UNSAFE_style={{ fontSize: '10px', marginTop: '20px', color: '#666' }}>
+                            Debug: message="{message}" | subMessage="{subMessage}"
+                        </Text>
                     </Flex>
                 ) : error ? (
                     <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
