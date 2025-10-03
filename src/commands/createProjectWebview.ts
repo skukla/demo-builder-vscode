@@ -366,16 +366,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             try {
                 // Create progress callback to send updates to webview
                 const onProgress = (message: string, subMessage?: string) => {
-                    this.debugLogger.debug('[API Mesh] Sending progress update to frontend:', { message, subMessage });
                     // Fire-and-forget sendMessage, catch errors to prevent crashes
                     comm.sendMessage('api-mesh-progress', { message, subMessage }).catch(err => {
                         this.logger.warn('[API Mesh] Failed to send progress update', err);
                     });
                 };
                 
-                this.logger.debug('[API Mesh] Starting handleCreateApiMesh');
                 const result = await this.handleCreateApiMesh(data.workspaceId, onProgress);
-                this.logger.debug('[API Mesh] handleCreateApiMesh completed', result);
                 return result;
             } catch (error) {
                 this.logger.error('[API Mesh Create] Failed', error as Error);
@@ -1877,20 +1874,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 			this.debugLogger.debug('[API Mesh] Mesh config content', minimalMeshConfig);
 			
 		// Create mesh with the configuration file
-		this.logger.info('[API Mesh] About to call onProgress');
-		try {
-			onProgress?.('Creating API Mesh...', 'Submitting configuration to Adobe');
-			this.logger.info('[API Mesh] onProgress call completed');
-		} catch (progressError) {
-			this.logger.warn('[API Mesh] Progress callback failed (non-fatal)', progressError);
-		}
-		this.logger.info('[API Mesh] Executing mesh creation command');
-		this.logger.info('[API Mesh] Command path:', { meshConfigPath });
+		onProgress?.('Creating API Mesh...', 'Submitting configuration to Adobe');
 		
 		let lastOutput = '';
 		let meshEndpointFromCreate: string | undefined;
-		this.logger.info('[API Mesh] About to execute aio api-mesh create');
-			const createResult = await commandManager.execute(
+		const createResult = await commandManager.execute(
 				`aio api-mesh create "${meshConfigPath}" --autoConfirmAction`,
 				{
 					streaming: true,
@@ -2063,8 +2051,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 					const meshData = JSON.parse(jsonMatch[0]);
 					const meshStatus = meshData.meshStatus?.toLowerCase();
 					
-					// Log the FULL mesh data to understand the structure
-					this.debugLogger.debug('[API Mesh] Full mesh data from Adobe API:', JSON.stringify(meshData, null, 2));
 					this.debugLogger.debug('[API Mesh] Mesh status:', { meshStatus, meshId: meshData.meshId });
 						
 						if (meshStatus === 'deployed' || meshStatus === 'success') {
@@ -2130,22 +2116,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		// Use mesh data from successful polling result
 		onProgress?.('✓ API Mesh Ready', 'Mesh successfully created and deployed');
 		
-		const returnValue = {
+		return {
 			success: true,
 			meshId: deployedMeshId,
 			endpoint: deployedEndpoint,
 			message: 'API Mesh created and deployed successfully'
 		};
-		
-		this.logger.info('[API Mesh] Returning from handleCreateApiMesh:', {
-			success: returnValue.success,
-			hasMeshId: !!returnValue.meshId,
-			hasEndpoint: !!returnValue.endpoint,
-			meshId: returnValue.meshId,
-			endpoint: returnValue.endpoint
-		});
-		
-		return returnValue;
 			
 		} catch (error) {
 			this.logger.error('[API Mesh] Creation failed', error as Error);
