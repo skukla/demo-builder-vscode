@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Heading, Text, Flex, Button, ActionButton, DialogTrigger, Dialog, Content, Divider, ButtonGroup } from '@adobe/react-spectrum';
+import { Heading, Text, Flex, Button, ActionButton, DialogTrigger } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Info from '@spectrum-icons/workflow/Info';
@@ -8,6 +8,7 @@ import { vscode } from '../../app/vscodeApi';
 import { WizardState, WizardStep } from '../../types';
 import { ConfigurationSummary } from '../shared/ConfigurationSummary';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
+import { SetupInstructionsModal } from '../shared/SetupInstructionsModal';
 
 interface ApiMeshStepProps {
     state: WizardState;
@@ -16,41 +17,6 @@ interface ApiMeshStepProps {
     setCanProceed: (canProceed: boolean) => void;
     completedSteps?: WizardStep[];
 }
-
-// Helper function to render text with code highlighting for quoted content
-const renderInstructionText = (text: string) => {
-    // Split by single quotes to find code snippets
-    const parts = text.split(/('.*?')/g);
-    
-    return (
-        <>
-            {parts.map((part, i) => {
-                // If the part starts and ends with single quotes, it's code
-                if (part.startsWith("'") && part.endsWith("'")) {
-                    // Remove the quotes and wrap in styled code element
-                    return (
-                        <code 
-                            key={i} 
-                            style={{ 
-                                fontFamily: 'var(--spectrum-alias-body-text-font-family, monospace)',
-                                fontSize: '0.9em',
-                                backgroundColor: 'rgba(20, 115, 230, 0.15)',
-                                padding: '4px 10px',
-                                borderRadius: '4px',
-                                color: 'var(--spectrum-global-color-blue-500)',
-                                border: '1px solid rgba(20, 115, 230, 0.3)',
-                                fontWeight: 600
-                            }}
-                        >
-                            {part.slice(1, -1)}
-                        </code>
-                    );
-                }
-                return <span key={i}>{part}</span>;
-            })}
-        </>
-    );
-};
 
 export function ApiMeshStep({ state, updateState, onBack, setCanProceed, completedSteps = [] }: ApiMeshStepProps) {
     const [message, setMessage] = useState<string>('Checking API Mesh API...');
@@ -230,56 +196,25 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                             <Text>View Setup Instructions</Text>
                                         </ActionButton>
                                         {(close) => (
-                                            <Dialog size="M">
-                                                <Heading>API Mesh Setup Guide</Heading>
-                                                <Divider />
-                                                <Content>
-                                                    <Flex direction="column" gap="size-200">
-                                                        <Text>
-                                                            Complete these steps to enable API Mesh for your workspace:
-                                                        </Text>
-                                                        {state.apiMesh?.setupInstructions?.map((instruction, index) => (
-                                                            <Flex key={index} direction="row" gap="size-150" UNSAFE_style={{ 
-                                                                padding: '16px',
-                                                                backgroundColor: 'var(--spectrum-global-color-gray-100)',
-                                                                borderRadius: '6px'
-                                                            }}>
-                                                                {/* Circular number badge */}
-                                                                <div className="number-badge">
-                                                                    {index + 1}
-                                                                </div>
-                                                                
-                                                                {/* Content */}
-                                                                <Flex direction="column" gap="size-75" flex={1}>
-                                                                    <Text UNSAFE_className="font-semibold" UNSAFE_style={{ fontSize: '15px' }}>
-                                                                        {instruction.step}
-                                                                    </Text>
-                                                                    <Text UNSAFE_className="text-sm text-gray-600" UNSAFE_style={{ lineHeight: '1.6' }}>
-                                                                        {renderInstructionText(instruction.details)}
-                                                                    </Text>
-                                                                </Flex>
-                                                            </Flex>
-                                                        ))}
-                                                    </Flex>
-                                                </Content>
-                                                <ButtonGroup>
-                                                    <Button 
-                                                        variant="secondary" 
-                                                        onPress={() => {
+                                            <SetupInstructionsModal
+                                                title="API Mesh Setup Guide"
+                                                description="Complete these steps to enable API Mesh for your workspace:"
+                                                instructions={state.apiMesh?.setupInstructions || []}
+                                                actionButtons={[
+                                                    {
+                                                        label: 'Open Workspace in Console',
+                                                        variant: 'secondary',
+                                                        onPress: () => {
                                                             vscode.postMessage('open-adobe-console', {
                                                                 orgId: state.adobeProject?.org_id,
                                                                 projectId: state.adobeProject?.id,
                                                                 workspaceId: state.adobeWorkspace?.id
                                                             });
-                                                        }}
-                                                    >
-                                                        Open Workspace in Console
-                                                    </Button>
-                                                    <Button variant="secondary" onPress={close}>
-                                                        Close
-                                                    </Button>
-                                                </ButtonGroup>
-                                            </Dialog>
+                                                        }
+                                                    }
+                                                ]}
+                                                onClose={close}
+                                            />
                                         )}
                                     </DialogTrigger>
                                 </Flex>
