@@ -6,20 +6,17 @@ import {
     Picker,
     Item,
     Checkbox,
-    Divider,
-    Content
+    Divider
 } from '@adobe/react-spectrum';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
 import { vscode } from '../../app/vscodeApi';
 import { cn } from '../../utils/classNames';
 
 interface ComponentSelectionStepProps {
-    state: any;
-    updateState: (updates: any) => void;
-    onNext: () => void;
-    onBack: () => void;
+    state: Record<string, unknown>;
+    updateState: (updates: Record<string, unknown>) => void;
     setCanProceed: (canProceed: boolean) => void;
-    componentsData?: any;
+    componentsData?: Record<string, unknown>;
 }
 
 interface DependencyOption {
@@ -31,8 +28,6 @@ interface DependencyOption {
 export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({ 
     state,
     updateState,
-    onNext, 
-    onBack,
     setCanProceed,
     componentsData
 }) => {

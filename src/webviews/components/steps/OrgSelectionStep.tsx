@@ -7,7 +7,6 @@ import {
     ListView,
     Item,
     Well,
-    ProgressCircle,
     Flex,
     Button,
     Content,

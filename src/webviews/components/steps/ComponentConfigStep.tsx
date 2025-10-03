@@ -50,7 +50,7 @@ interface ServiceGroup {
     fields: UniqueField[];
 }
 
-export function ComponentConfigStep({ state, updateState, setCanProceed, completedSteps = [] }: ComponentConfigStepProps) {
+export function ComponentConfigStep({ state, updateState, setCanProceed }: ComponentConfigStepProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(state.componentConfigs || {});
     const [componentsData, setComponentsData] = useState<ComponentsData>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -140,7 +140,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
 
         fieldMap.forEach((field) => {
             // Use the 'group' metadata from JSON configuration
-            const metadata = field as any;
+            const metadata = field as UniqueField & { group?: string };
             const groupKey = metadata.group || 'other';
             
             if (!groups[groupKey]) {
@@ -377,7 +377,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
         setCanProceed(allValid);
     }, [componentConfigs, serviceGroups, updateState, setCanProceed]);
 
-    const updateField = (field: UniqueField, value: any) => {
+    const updateField = (field: UniqueField, value: string | boolean) => {
         // Update the field value for ALL components that need it
         setComponentConfigs(prev => {
             const newConfigs = { ...prev };
@@ -393,7 +393,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
         });
     };
 
-    const getFieldValue = (field: UniqueField): any => {
+    const getFieldValue = (field: UniqueField): string | boolean | undefined => {
         // Get value from first component that has it
         for (const componentId of field.componentIds) {
             const value = componentConfigs[componentId]?.[field.key];
@@ -598,8 +598,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed, complet
                 ) : (
                     <Form UNSAFE_style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
                         {serviceGroups.map((group, index) => {
-                            const completion = getSectionCompletion(group);
-                            
                             return (
                                 <React.Fragment key={group.id}>
                                     {index > 0 && (

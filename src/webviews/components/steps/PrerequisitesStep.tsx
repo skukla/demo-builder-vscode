@@ -21,7 +21,7 @@ interface PrerequisitesStepProps {
     onNext: () => void;
     onBack: () => void;
     setCanProceed: (canProceed: boolean) => void;
-    componentsData?: any;
+    componentsData?: Record<string, unknown>;
     currentStep?: string;
 }
 
@@ -52,7 +52,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
     useEffect(() => {
         // Listen for prerequisites loaded from backend
         const unsubscribeLoaded = vscode.onMessage('prerequisites-loaded', (data) => {
-            const prerequisites = data.prerequisites.map((p: any) => {
+            const prerequisites = data.prerequisites.map((p: Record<string, unknown>) => {
                 return {
                     id: p.id,
                     name: p.name,
@@ -155,7 +155,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 if (newChecks[index]) {
                     // For Node.js, the backend sends a detailed message with all the info we need
                     // Just use the message as-is from the backend
-                    let enhancedMessage = message;
+                    const enhancedMessage = message;
                     
                     newChecks[index] = {
                         ...newChecks[index],

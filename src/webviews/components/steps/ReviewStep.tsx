@@ -11,9 +11,7 @@ import {
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Globe from '@spectrum-icons/workflow/Globe';
 import User from '@spectrum-icons/workflow/User';
-import Folder from '@spectrum-icons/workflow/Folder';
 import Link from '@spectrum-icons/workflow/Link';
-import Settings from '@spectrum-icons/workflow/Settings';
 import { WizardState } from '../../types';
 
 interface ReviewStepProps {

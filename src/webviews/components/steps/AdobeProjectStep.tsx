@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-    View, 
     Heading, 
     ListView, 
     Item, 
@@ -14,7 +13,7 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import { vscode } from '../../app/vscodeApi';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
 import { ConfigurationSummary } from '../shared/ConfigurationSummary';
-import { WizardState, Project, AdobeOrg, WizardStep } from '../../types';
+import { WizardState, Project, WizardStep } from '../../types';
 import { useDebouncedLoading } from '../../utils/useDebouncedLoading';
 
 interface AdobeProjectStepProps {
