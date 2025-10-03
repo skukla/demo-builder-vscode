@@ -34,7 +34,7 @@ const renderInstructionText = (text: string) => {
                             style={{ 
                                 fontFamily: 'var(--spectrum-alias-body-text-font-family, monospace)',
                                 fontSize: '0.9em',
-                                backgroundColor: '#1a1a1a',
+                                backgroundColor: '#0a0a0a',
                                 padding: '3px 8px',
                                 borderRadius: '4px',
                                 color: '#e0e0e0',
