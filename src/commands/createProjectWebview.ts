@@ -1678,13 +1678,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     const meshData = JSON.parse(jsonMatch[0]);
                     const meshStatus = meshData.meshStatus?.toLowerCase();
                     const meshId = meshData.meshId;
-                    const endpoint = meshData.meshEndpoint;
+                    // Adobe's API doesn't return endpoint in JSON, construct it from meshId
+                    const endpoint = meshId ? `https://edge-sandbox-graph.adobe.io/api/${meshId}/graphql` : undefined;
                     
                     this.debugLogger.debug('[API Mesh] Parsed mesh data', { meshStatus, meshId, endpoint });
                     
                     // Mesh exists - check its status
                     if (meshStatus === 'deployed' || meshStatus === 'success') {
-                        this.logger.info('[API Mesh] Existing mesh found and deployed', { meshId });
+                        this.logger.info('[API Mesh] Existing mesh found and deployed', { meshId, endpoint });
                         return {
                             apiEnabled: true,
                             meshExists: true,
@@ -1702,6 +1703,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                             meshExists: true,
                             meshId,
                             meshStatus: 'error',
+                            endpoint, // Include endpoint even in error state for reference
                             error: 'Mesh exists but deployment failed. Click "Recreate Mesh" to delete and redeploy it.'
                         };
                     } else {
@@ -1712,6 +1714,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                             meshExists: true,
                             meshId,
                             meshStatus: 'pending',
+                            endpoint, // Include endpoint for consistency
                             error: 'Mesh is currently being provisioned. This may take a few minutes.'
                         };
                     }
@@ -1935,12 +1938,19 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 				
 				// Update the existing mesh to ensure proper deployment
 				try {
+					let updateEndpoint: string | undefined;
 					const updateResult = await commandManager.execute(
 						`aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
 						{
 							streaming: true,
 							timeout: TIMEOUTS.API_MESH_UPDATE,
 							onOutput: (data: string) => {
+								// Extract endpoint from update output
+								const endpointMatch = data.match(/Mesh Endpoint:\s*(https:\/\/[^\s]+)/i);
+								if (endpointMatch) {
+									updateEndpoint = endpointMatch[1];
+								}
+								
 								const output = data.toLowerCase();
 								if (output.includes('validating')) {
 									onProgress?.('Deploying API Mesh...', 'Validating mesh configuration');
@@ -1965,11 +1975,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 						const meshIdMatch = updateResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
 						const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
 						
+						// Construct endpoint from meshId if not captured from output
+						const endpoint = updateEndpoint || (meshId ? `https://edge-sandbox-graph.adobe.io/api/${meshId}/graphql` : undefined);
+						
 						onProgress?.('✓ API Mesh Ready', 'Mesh successfully deployed and ready to use');
 						
 						return {
 							success: true,
 							meshId,
+							endpoint,
 							message: 'API Mesh deployed successfully'
 						};
 					} else {
@@ -2053,15 +2067,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 					
 					this.debugLogger.debug('[API Mesh] Mesh status:', { meshStatus, meshId: meshData.meshId });
 						
-						if (meshStatus === 'deployed' || meshStatus === 'success') {
-							// Success! Mesh is fully deployed - store the mesh data
-							const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
-							this.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
-							deployedMeshId = meshData.meshId;
-							// Adobe's 'get' API doesn't return endpoint, use the one from create output
-							deployedEndpoint = meshEndpointFromCreate;
-							meshDeployed = true;
-							break;
+					if (meshStatus === 'deployed' || meshStatus === 'success') {
+						// Success! Mesh is fully deployed - store the mesh data
+						const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
+						this.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
+						deployedMeshId = meshData.meshId;
+						// Adobe's 'get' API doesn't return endpoint, use the one from create output
+						// If not captured, construct it from meshId
+						deployedEndpoint = meshEndpointFromCreate || (meshData.meshId ? `https://edge-sandbox-graph.adobe.io/api/${meshData.meshId}/graphql` : undefined);
+						meshDeployed = true;
+						break;
 						} else if (meshStatus === 'error' || meshStatus === 'failed') {
 							// Deployment failed - return error
 							const errorMsg = meshData.error || 'Mesh deployment failed';
