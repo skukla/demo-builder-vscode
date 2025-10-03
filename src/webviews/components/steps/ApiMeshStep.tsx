@@ -238,27 +238,14 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                                                         <Text>
                                                             Complete these steps to enable API Mesh for your workspace:
                                                         </Text>
-                                                        {state.apiMesh.setupInstructions.map((instruction, index) => (
+                                                        {state.apiMesh?.setupInstructions?.map((instruction, index) => (
                                                             <Flex key={index} direction="row" gap="size-150" UNSAFE_style={{ 
                                                                 padding: '16px',
                                                                 backgroundColor: 'var(--spectrum-global-color-gray-100)',
                                                                 borderRadius: '6px'
                                                             }}>
                                                                 {/* Circular number badge */}
-                                                                <div style={{
-                                                                    minWidth: '32px',
-                                                                    width: '32px',
-                                                                    height: '32px',
-                                                                    borderRadius: '50%',
-                                                                    backgroundColor: 'var(--spectrum-global-color-gray-900)',
-                                                                    color: 'white',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    fontWeight: 'bold',
-                                                                    fontSize: '16px',
-                                                                    flexShrink: 0
-                                                                }}>
+                                                                <div className="number-badge">
                                                                     {index + 1}
                                                                 </div>
                                                                 
