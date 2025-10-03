@@ -383,24 +383,50 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                         const result = await vscode.request('create-api-mesh', {
                                             workspaceId: state.adobeWorkspace?.id
                                         });
+                                        
+                                        console.log('[ApiMeshStep] Received create-api-mesh result:', result);
+                                        console.log('[ApiMeshStep] Result details:', {
+                                            success: result?.success,
+                                            hasMeshId: !!result?.meshId,
+                                            hasEndpoint: !!result?.endpoint,
+                                            hasMessage: !!result?.message,
+                                            meshId: result?.meshId,
+                                            endpoint: result?.endpoint,
+                                            message: result?.message
+                                        });
 
                                         if (result?.success) {
                                             // Success! Mesh was created (and possibly deployed)
+                                            const isDeployed = !!result.meshId;
+                                            
                                             updateState({ 
                                                 apiMesh: { 
                                                     isChecking: false,
                                                     apiEnabled: true,
                                                     meshExists: true,
                                                     meshId: result.meshId, // May be undefined if still provisioning
-                                                    meshStatus: result.meshId ? 'deployed' : 'pending', // Deployed if we have ID, pending otherwise
+                                                    meshStatus: isDeployed ? 'deployed' : 'pending', // Deployed if we have ID, pending otherwise
                                                     message: result.message // Show warning if timeout occurred
                                                 } 
                                             });
+                                            
+                                            // Update meshData to show the success state (deployed mesh with ID)
+                                            if (isDeployed) {
+                                                setMeshData({
+                                                    meshId: result.meshId,
+                                                    status: 'deployed',
+                                                    endpoint: result.endpoint
+                                                });
+                                            } else {
+                                                // Timeout case: mesh still provisioning
+                                                setMeshData(null);
+                                            }
+                                            
                                             // Allow Continue even if verification timed out - mesh was submitted successfully
                                             setCanProceed(true);
                                             
                                             // If there's a message (e.g. timeout warning), show it but don't block progress
-                                            if (result.message) {
+                                            if (result.message && !isDeployed) {
                                                 setMessage('✓ Mesh Submitted');
                                                 setSubMessage(result.message);
                                             }

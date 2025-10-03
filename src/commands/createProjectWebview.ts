@@ -2052,10 +2052,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 							continue; // Try next iteration
 						}
 						
-						const meshData = JSON.parse(jsonMatch[0]);
-						const meshStatus = meshData.meshStatus?.toLowerCase();
-						
-						this.debugLogger.debug('[API Mesh] Mesh status:', { meshStatus, meshId: meshData.meshId });
+					const meshData = JSON.parse(jsonMatch[0]);
+					const meshStatus = meshData.meshStatus?.toLowerCase();
+					
+					// Log the FULL mesh data to understand the structure
+					this.debugLogger.debug('[API Mesh] Full mesh data from Adobe API:', JSON.stringify(meshData, null, 2));
+					this.debugLogger.debug('[API Mesh] Mesh status:', { meshStatus, meshId: meshData.meshId });
 						
 						if (meshStatus === 'deployed' || meshStatus === 'success') {
 							// Success! Mesh is fully deployed - store the mesh data
@@ -2119,12 +2121,22 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		// Use mesh data from successful polling result
 		onProgress?.('✓ API Mesh Ready', 'Mesh successfully created and deployed');
 		
-		return {
+		const returnValue = {
 			success: true,
 			meshId: deployedMeshId,
 			endpoint: deployedEndpoint,
 			message: 'API Mesh created and deployed successfully'
 		};
+		
+		this.logger.info('[API Mesh] Returning from handleCreateApiMesh:', {
+			success: returnValue.success,
+			hasMeshId: !!returnValue.meshId,
+			hasEndpoint: !!returnValue.endpoint,
+			meshId: returnValue.meshId,
+			endpoint: returnValue.endpoint
+		});
+		
+		return returnValue;
 			
 		} catch (error) {
 			this.logger.error('[API Mesh] Creation failed', error as Error);
