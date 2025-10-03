@@ -366,10 +366,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             try {
                 // Create progress callback to send updates to webview
                 const onProgress = (message: string, subMessage?: string) => {
-                    comm.sendMessage('api-mesh-progress', { message, subMessage });
+                    // Fire-and-forget sendMessage, catch errors to prevent crashes
+                    comm.sendMessage('api-mesh-progress', { message, subMessage }).catch(err => {
+                        this.logger.warn('[API Mesh] Failed to send progress update', err);
+                    });
                 };
                 
+                this.logger.debug('[API Mesh] Starting handleCreateApiMesh');
                 const result = await this.handleCreateApiMesh(data.workspaceId, onProgress);
+                this.logger.debug('[API Mesh] handleCreateApiMesh completed', result);
                 return result;
             } catch (error) {
                 this.logger.error('[API Mesh Create] Failed', error as Error);
