@@ -264,26 +264,6 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                 </>
                             )}
                             
-                            {meshData.meshId && (
-                                <Flex direction="column" gap="size-100" marginTop="size-200" alignItems="center">
-                                    <Text UNSAFE_className="text-sm">
-                                        <Text UNSAFE_className="font-medium" UNSAFE_style={{ display: 'inline' }}>Mesh ID:</Text>{' '}
-                                        <Text UNSAFE_className="text-gray-600" UNSAFE_style={{ display: 'inline' }}>{meshData.meshId}</Text>
-                                    </Text>
-                                    {meshData.endpoint && (
-                                        <Flex gap="size-100">
-                                            <Text UNSAFE_className="text-sm font-medium">Endpoint:</Text>
-                                            <Text UNSAFE_className="text-sm text-gray-600" UNSAFE_style={{ 
-                                                wordBreak: 'break-all',
-                                                maxWidth: '400px'
-                                            }}>
-                                                {meshData.endpoint}
-                                            </Text>
-                                        </Flex>
-                                    )}
-                                </Flex>
-                            )}
-                            
                             {meshData.status === 'error' && (
                                 <Flex gap="size-150" marginTop="size-300">
                                     <Button 
