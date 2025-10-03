@@ -1644,45 +1644,90 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 this.logger.info('[API Mesh] Layer 2: Checking for existing mesh');
                 
                 try {
-                    const { stdout, stderr } = await commandManager.executeAdobeCLI('aio api-mesh get --active');
-                    const combined = `${stdout}\n${stderr}`;
+                    // Use 'get' without --active to get JSON response with meshStatus
+                    const { stdout, stderr, code } = await commandManager.executeAdobeCLI('aio api-mesh get');
                     
-                    this.debugLogger.debug('[API Mesh] get --active output', { stdout, stderr });
+                    if (code !== 0) {
+                        // Command failed - check if it's because no mesh exists
+                        const combined = `${stdout}\n${stderr}`;
+                        const noMeshFound = /no mesh found|unable to get mesh config/i.test(combined);
+                        
+                        if (noMeshFound) {
+                            this.logger.info('[API Mesh] API enabled, no mesh exists yet');
+                            return {
+                                apiEnabled: true,
+                                meshExists: false
+                            };
+                        }
+                        
+                        // Other error - treat as unknown state
+                        this.logger.warn('[API Mesh] Mesh check command failed with unexpected error');
+                        this.debugLogger.debug('[API Mesh] Error output:', combined);
+                        throw new Error(`Mesh check failed: ${stderr || stdout}`);
+                    }
                     
-                    // Check for "no mesh found" or "unable to get mesh config" (both mean no mesh exists yet)
-                    const noMesh = /no mesh found|unable to get mesh config/i.test(combined);
-                    if (noMesh) {
-                        this.logger.info('[API Mesh] API enabled, no mesh exists yet');
+                    // Parse JSON response
+                    const jsonMatch = stdout.match(/\{[\s\S]*\}/);
+                    if (!jsonMatch) {
+                        this.logger.warn('[API Mesh] Could not parse JSON from get response');
+                        this.debugLogger.debug('[API Mesh] Output:', stdout);
+                        // Assume no mesh if we can't parse
                         return {
-                            apiEnabled: true,  // Layer 1 confirmed this
+                            apiEnabled: true,
                             meshExists: false
                         };
                     }
                     
-                    // If we got here without error, mesh exists
-                    // Try to extract mesh ID from output (best effort)
-                    const meshIdMatch = combined.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
-                    const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
+                    const meshData = JSON.parse(jsonMatch[0]);
+                    const meshStatus = meshData.meshStatus?.toLowerCase();
+                    const meshId = meshData.meshId;
+                    const endpoint = meshData.meshEndpoint;
                     
-                    this.logger.info('[API Mesh] Existing mesh found', { meshId });
+                    this.debugLogger.debug('[API Mesh] Parsed mesh data', { meshStatus, meshId, endpoint });
                     
-                    return {
-                        apiEnabled: true,
-                        meshExists: true,
-                        meshId,
-                        meshStatus: 'deployed', // If we can get it, it's deployed
-                        endpoint: undefined // Would need to parse from output
-                    };
+                    // Mesh exists - check its status
+                    if (meshStatus === 'deployed' || meshStatus === 'success') {
+                        this.logger.info('[API Mesh] Existing mesh found and deployed', { meshId });
+                        return {
+                            apiEnabled: true,
+                            meshExists: true,
+                            meshId,
+                            meshStatus: 'deployed',
+                            endpoint
+                        };
+                    } else if (meshStatus === 'error' || meshStatus === 'failed') {
+                        this.logger.warn('[API Mesh] Mesh exists but is in error state');
+                        const errorMsg = meshData.error || 'Mesh deployment failed';
+                        this.debugLogger.debug('[API Mesh] Error details:', errorMsg.substring(0, 500));
+                        
+                        return {
+                            apiEnabled: true,
+                            meshExists: true,
+                            meshId,
+                            meshStatus: 'error',
+                            error: 'Mesh exists but deployment failed. Click "Recreate Mesh" to delete and redeploy it.'
+                        };
+                    } else {
+                        // Status is pending/provisioning/building
+                        this.logger.info('[API Mesh] Mesh exists but is still provisioning', { meshStatus });
+                        return {
+                            apiEnabled: true,
+                            meshExists: true,
+                            meshId,
+                            meshStatus: 'pending',
+                            error: 'Mesh is currently being provisioned. This may take a few minutes.'
+                        };
+                    }
                     
             } catch (meshError: any) {
                 const combined = `${meshError?.message || ''}\n${meshError?.stderr || ''}\n${meshError?.stdout || ''}`;
-                this.debugLogger.debug('[API Mesh] Mesh check error', { combined });
+                this.logger.warn('[API Mesh] Mesh check failed', meshError as Error);
+                this.debugLogger.debug('[API Mesh] Full error output:', combined);
                 
-                // Check if the error indicates "no mesh found" vs "mesh exists but is broken"
+                // Check if it's "no mesh found"
                 const noMeshFound = /no mesh found|unable to get mesh config/i.test(combined);
                 
                 if (noMeshFound) {
-                    // Truly no mesh exists
                     this.logger.info('[API Mesh] API enabled, no mesh exists yet');
                     return {
                         apiEnabled: true,
@@ -1690,30 +1735,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     };
                 }
                 
-                // Check for specific error: No active deployment
-                const noActiveDeployment = /no active deployment found/i.test(combined);
-                
-                if (noActiveDeployment) {
-                    this.logger.warn('[API Mesh] Mesh exists but has no active deployment (deployment failed)');
-                    this.debugLogger.debug('[API Mesh] Full error output:', combined);
-                    
-                    return {
-                        apiEnabled: true,
-                        meshExists: true,
-                        meshStatus: 'error',
-                        error: 'Mesh exists but deployment failed. Click "Recreate Mesh" to delete and redeploy it.'
-                    };
-                }
-                
-                // Other error: mesh likely exists but is in error state
-                this.logger.warn('[API Mesh] Mesh exists but appears to be in an error state');
-                this.debugLogger.debug('[API Mesh] Full error output:', combined);
-                
+                // Other error - treat as unknown/error state
                 return {
                     apiEnabled: true,
-                    meshExists: true,
-                    meshStatus: 'error',
-                    error: 'Mesh exists but is in an error state. Try recreating it.'
+                    meshExists: false,
+                    error: 'Unable to check mesh status. Try refreshing or check Adobe Console.'
                 };
             }
                 
@@ -2001,8 +2027,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 			this.logger.info(`[API Mesh] Verification attempt ${attempt}/${maxRetries}`);
 			
 			try {
+				// Use 'get' without --active flag to get JSON response with meshStatus
 				const verifyResult = await commandManager.execute(
-					'aio api-mesh get --active',
+					'aio api-mesh get',
 					{
 						timeout: TIMEOUTS.API_CALL,
 						configureTelemetry: false,
@@ -2012,52 +2039,59 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 				);
 				
 				if (verifyResult.code === 0) {
-					// Success! Mesh is deployed
-					const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
-					this.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
-					meshDeployed = true;
-					break;
-				} else {
-					// Check if it's "no active deployment" (still provisioning) or a real error
-					const combined = `${verifyResult.stdout}\n${verifyResult.stderr}`;
-					const stillProvisioning = /no active deployment found/i.test(combined);
-					
-					if (stillProvisioning) {
-						this.logger.info(`[API Mesh] Mesh still provisioning (attempt ${attempt}/${maxRetries})`);
-						// Continue polling
-					} else {
-						// Real error - fail immediately
-						this.logger.error('[API Mesh] Mesh verification failed with unexpected error');
-						this.debugLogger.debug('[API Mesh] Verification error:', combined);
+					// Parse JSON response to check meshStatus
+					try {
+						// Extract JSON from output (skip "Successfully retrieved mesh" line)
+						const jsonMatch = verifyResult.stdout.match(/\{[\s\S]*\}/);
+						if (!jsonMatch) {
+							this.logger.warn('[API Mesh] Could not parse JSON from get response');
+							this.debugLogger.debug('[API Mesh] Output:', verifyResult.stdout);
+							continue; // Try next iteration
+						}
 						
-						return {
-							success: false,
-							meshExists: true,
-							meshStatus: 'error',
-							error: 'Mesh was created but encountered an error during deployment. Click "Recreate Mesh" to try again.'
-						};
+						const meshData = JSON.parse(jsonMatch[0]);
+						const meshStatus = meshData.meshStatus?.toLowerCase();
+						
+						this.debugLogger.debug('[API Mesh] Mesh status:', { meshStatus, meshId: meshData.meshId });
+						
+						if (meshStatus === 'deployed' || meshStatus === 'success') {
+							// Success! Mesh is fully deployed
+							const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
+							this.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
+							meshDeployed = true;
+							break;
+						} else if (meshStatus === 'error' || meshStatus === 'failed') {
+							// Deployment failed - return error
+							const errorMsg = meshData.error || 'Mesh deployment failed';
+							this.logger.error('[API Mesh] Mesh deployment failed with error status');
+							this.debugLogger.debug('[API Mesh] Error details:', errorMsg.substring(0, 500));
+							
+							return {
+								success: false,
+								meshExists: true,
+								meshStatus: 'error',
+								error: 'Mesh deployment failed. Click "Recreate Mesh" to delete and try again.'
+							};
+						} else {
+							// Status is pending/provisioning/building - continue polling
+							this.logger.info(`[API Mesh] Mesh status: ${meshStatus || 'unknown'} (attempt ${attempt}/${maxRetries})`);
+						}
+					} catch (parseError) {
+						this.logger.warn('[API Mesh] Failed to parse mesh status JSON', parseError as Error);
+						this.debugLogger.debug('[API Mesh] Raw output:', verifyResult.stdout);
+						// Continue polling
 					}
+				} else {
+					// Non-zero exit code - likely mesh doesn't exist yet or other error
+					this.logger.warn(`[API Mesh] Get command returned exit code ${verifyResult.code}`);
+					this.debugLogger.debug('[API Mesh] stderr:', verifyResult.stderr);
+					// Continue polling - mesh might still be initializing
 				}
 			} catch (verifyError: any) {
-				// Check if error is "no active deployment" (expected during provisioning)
-				const errorMsg = verifyError.message || verifyError.stderr || '';
-				const stillProvisioning = /no active deployment found/i.test(errorMsg);
-				
-				if (stillProvisioning) {
-					this.logger.info(`[API Mesh] Mesh still provisioning (attempt ${attempt}/${maxRetries})`);
-					// Continue polling
-				} else {
-					// Unexpected error
-					this.logger.error('[API Mesh] Unexpected verification error', verifyError as Error);
-					this.debugLogger.debug('[API Mesh] Verification error details:', verifyError);
-					
-					return {
-						success: false,
-						meshExists: true,
-						meshStatus: 'error',
-						error: 'Mesh was created but verification failed. Click "Recreate Mesh" to try again.'
-					};
-				}
+				// Command execution failed - log and continue polling
+				this.logger.warn('[API Mesh] Verification command failed', verifyError as Error);
+				this.debugLogger.debug('[API Mesh] Error details:', verifyError);
+				// Continue polling - transient network issues shouldn't fail the entire process
 			}
 		}
 		
