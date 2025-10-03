@@ -1968,30 +1968,33 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		this.debugLogger.debug('[API Mesh] Create output', { stdout: createResult.stdout });
 		
 		// Mesh creation is asynchronous - poll until it's deployed
-		// Adobe CLI says "Wait a few minutes before checking the status"
+		// Typical deployment time: 60-90 seconds, with 2 minute buffer for safety
 		this.logger.info('[API Mesh] Starting deployment verification polling...');
-		onProgress?.('Waiting for mesh deployment...', 'Mesh is being provisioned (this takes 2-3 minutes)');
+		onProgress?.('Waiting for mesh deployment...', 'Mesh is being provisioned (typically takes 60-90 seconds)');
 		
-		const maxRetries = 12; // 12 * 15 seconds = 3 minutes
-		const pollInterval = 15000; // 15 seconds
+		const maxRetries = 10; // 10 attempts with strategic timing = ~2 minutes max
+		const pollInterval = 10000; // 10 seconds between checks
+		const initialWait = 20000; // 20 seconds before first check (avoid premature polling)
 		let attempt = 0;
 		let meshDeployed = false;
+		
+		// Initial wait: mesh won't be ready for at least 20 seconds
+		onProgress?.('Waiting for mesh deployment...', 'Provisioning infrastructure (~20 seconds)');
+		await new Promise(resolve => setTimeout(resolve, initialWait));
 		
 		while (attempt < maxRetries && !meshDeployed) {
 			attempt++;
 			
-			// Wait before checking (except first time, wait immediately)
+			const elapsed = initialWait + (attempt - 1) * pollInterval;
+			const elapsedSeconds = Math.floor(elapsed / 1000);
+			onProgress?.(
+				'Waiting for mesh deployment...', 
+				`Checking deployment status (~${elapsedSeconds}s elapsed, attempt ${attempt}/${maxRetries})`
+			);
+			
+			// Wait between attempts (but not before first check, we already waited)
 			if (attempt > 1) {
-				const remaining = Math.ceil((maxRetries - attempt) * pollInterval / 1000);
-				onProgress?.(
-					'Waiting for mesh deployment...', 
-					`Checking status (attempt ${attempt}/${maxRetries}, ~${remaining}s remaining)`
-				);
 				await new Promise(resolve => setTimeout(resolve, pollInterval));
-			} else {
-				// First attempt: wait a bit for mesh to start provisioning
-				onProgress?.('Waiting for mesh deployment...', 'Initial provisioning started, checking status...');
-				await new Promise(resolve => setTimeout(resolve, 5000)); // 5 second initial wait
 			}
 			
 			this.logger.info(`[API Mesh] Verification attempt ${attempt}/${maxRetries}`);
@@ -2009,7 +2012,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 				
 				if (verifyResult.code === 0) {
 					// Success! Mesh is deployed
-					this.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (${attempt * pollInterval / 1000}s)`);
+					const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
+					this.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
 					meshDeployed = true;
 					break;
 				} else {
@@ -2058,14 +2062,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		
 		// Check if we succeeded or timed out
 		if (!meshDeployed) {
-			this.logger.warn(`[API Mesh] Mesh deployment verification timed out after ${maxRetries} attempts (${maxRetries * pollInterval / 1000}s)`);
+			const totalWaitTime = Math.floor((initialWait + maxRetries * pollInterval) / 1000);
+			this.logger.warn(`[API Mesh] Mesh deployment verification timed out after ${maxRetries} attempts (~${totalWaitTime}s)`);
 			onProgress?.('Mesh deployment timeout', 'Mesh is taking longer than expected to deploy');
 			
 			return {
 				success: false,
 				meshExists: true,
 				meshStatus: 'error',
-				error: 'Mesh deployment timed out after 3 minutes. It may still be provisioning. Click "Recreate Mesh" to try again or check Adobe Console.'
+				error: `Mesh deployment timed out after ${totalWaitTime} seconds. It may still be provisioning. Click "Recreate Mesh" to try again or check Adobe Console.`
 			};
 		}
 		
