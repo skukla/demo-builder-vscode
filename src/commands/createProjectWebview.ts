@@ -1843,6 +1843,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		onProgress?: (message: string, subMessage?: string) => void
 	): Promise<{
 		meshId?: string;
+		endpoint?: string;
 		success: boolean;
 		message?: string;
 		meshExists?: boolean;
@@ -2004,6 +2005,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		const initialWait = 20000; // 20 seconds before first check (avoid premature polling)
 		let attempt = 0;
 		let meshDeployed = false;
+		let deployedMeshId: string | undefined;
+		let deployedEndpoint: string | undefined;
 		
 		// Initial wait: mesh won't be ready for at least 20 seconds
 		onProgress?.('Waiting for mesh deployment...', 'Provisioning infrastructure (~20 seconds)');
@@ -2055,9 +2058,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 						this.debugLogger.debug('[API Mesh] Mesh status:', { meshStatus, meshId: meshData.meshId });
 						
 						if (meshStatus === 'deployed' || meshStatus === 'success') {
-							// Success! Mesh is fully deployed
+							// Success! Mesh is fully deployed - store the mesh data
 							const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
 							this.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
+							deployedMeshId = meshData.meshId;
+							deployedEndpoint = meshData.meshEndpoint;
 							meshDeployed = true;
 							break;
 						} else if (meshStatus === 'error' || meshStatus === 'failed') {
@@ -2111,15 +2116,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 			};
 		}
 		
-		// Try to extract mesh ID from output
-		const meshIdMatch = createResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
-		const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
-		
+		// Use mesh data from successful polling result
 		onProgress?.('✓ API Mesh Ready', 'Mesh successfully created and deployed');
 		
 		return {
 			success: true,
-			meshId,
+			meshId: deployedMeshId,
+			endpoint: deployedEndpoint,
 			message: 'API Mesh created and deployed successfully'
 		};
 			
