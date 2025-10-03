@@ -166,7 +166,9 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                                 <Clock size="S" UNSAFE_className="text-blue-600" />
                             )}
                             <Text UNSAFE_className="text-sm">
-                                {state.apiMesh?.meshId || 'Mesh Found'}
+                                {state.apiMesh?.meshStatus === 'deployed' || state.apiMesh?.meshStatus === 'success' ? 'Mesh Deployed' :
+                                 state.apiMesh?.meshStatus === 'error' ? 'Mesh Error' :
+                                 'Mesh Pending'}
                             </Text>
                         </Flex>
                     ) : state.apiMesh?.apiEnabled && !state.apiMesh?.meshExists ? (

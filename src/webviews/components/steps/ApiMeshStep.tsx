@@ -261,6 +261,14 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                             An existing mesh was detected. It will be updated during deployment.
                                         </Text>
                                     </Flex>
+                                    {meshData.meshId && (
+                                        <Flex direction="column" gap="size-100" marginTop="size-200" alignItems="center">
+                                            <Text UNSAFE_className="text-sm">
+                                                <Text UNSAFE_className="font-medium" UNSAFE_style={{ display: 'inline' }}>Mesh ID:</Text>{' '}
+                                                <Text UNSAFE_className="text-gray-600" UNSAFE_style={{ display: 'inline' }}>{meshData.meshId}</Text>
+                                            </Text>
+                                        </Flex>
+                                    )}
                                 </>
                             )}
                             
