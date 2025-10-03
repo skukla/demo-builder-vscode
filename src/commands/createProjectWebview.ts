@@ -366,6 +366,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             try {
                 // Create progress callback to send updates to webview
                 const onProgress = (message: string, subMessage?: string) => {
+                    this.debugLogger.debug('[API Mesh] Sending progress update to frontend:', { message, subMessage });
                     // Fire-and-forget sendMessage, catch errors to prevent crashes
                     comm.sendMessage('api-mesh-progress', { message, subMessage }).catch(err => {
                         this.logger.warn('[API Mesh] Failed to send progress update', err);
@@ -2064,13 +2065,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		if (!meshDeployed) {
 			const totalWaitTime = Math.floor((initialWait + maxRetries * pollInterval) / 1000);
 			this.logger.warn(`[API Mesh] Mesh deployment verification timed out after ${maxRetries} attempts (~${totalWaitTime}s)`);
-			onProgress?.('Mesh deployment timeout', 'Mesh is taking longer than expected to deploy');
+			this.logger.info('[API Mesh] Mesh is still provisioning but taking longer than expected');
+			onProgress?.('Mesh still provisioning', 'Deployment is taking longer than usual');
 			
+			// TIMEOUT is not an ERROR - mesh is likely still being deployed
+			// Return success but note that verification is pending
 			return {
-				success: false,
-				meshExists: true,
-				meshStatus: 'error',
-				error: `Mesh deployment timed out after ${totalWaitTime} seconds. It may still be provisioning. Click "Recreate Mesh" to try again or check Adobe Console.`
+				success: true, // Don't block user - mesh was submitted successfully
+				meshId: undefined, // We don't have the ID yet
+				message: `Mesh is still provisioning after ${totalWaitTime} seconds. This is unusual but not necessarily an error. You can continue - the mesh will be available once deployment completes (check Adobe Console for status).`
 			};
 		}
 		

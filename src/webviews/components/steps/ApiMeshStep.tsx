@@ -31,8 +31,9 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
         const handleMessage = (event: MessageEvent) => {
             const message = event.data;
             if (message.type === 'api-mesh-progress') {
-                console.log('[ApiMeshStep] Progress update received:', { message: message.message, subMessage: message.subMessage });
-                setMessage(message.message || 'Processing...');
+                if (message.message) {
+                    setMessage(message.message);
+                }
                 if (message.subMessage) {
                     setSubMessage(message.subMessage);
                 }
@@ -173,13 +174,9 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
                         <LoadingDisplay 
                             size="L"
-                            message={message || 'Loading...'}
+                            message={message}
                             subMessage={subMessage}
                         />
-                        {/* Debug: Display state values */}
-                        <Text UNSAFE_style={{ fontSize: '10px', marginTop: '20px', color: '#666' }}>
-                            Debug: message="{message}" | subMessage="{subMessage}"
-                        </Text>
                     </Flex>
                 ) : error ? (
                     <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
@@ -403,17 +400,25 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                         });
 
                                         if (result?.success) {
-                                            // Success! Mesh was created and deployed (meshId is optional)
+                                            // Success! Mesh was created (and possibly deployed)
                                             updateState({ 
                                                 apiMesh: { 
                                                     isChecking: false,
                                                     apiEnabled: true,
                                                     meshExists: true,
-                                                    meshId: result.meshId, // May be undefined, that's OK
-                                                    meshStatus: 'deployed'
+                                                    meshId: result.meshId, // May be undefined if still provisioning
+                                                    meshStatus: result.meshId ? 'deployed' : 'pending', // Deployed if we have ID, pending otherwise
+                                                    message: result.message // Show warning if timeout occurred
                                                 } 
                                             });
+                                            // Allow Continue even if verification timed out - mesh was submitted successfully
                                             setCanProceed(true);
+                                            
+                                            // If there's a message (e.g. timeout warning), show it but don't block progress
+                                            if (result.message) {
+                                                setMessage('✓ Mesh Submitted');
+                                                setSubMessage(result.message);
+                                            }
                                         } else if (result?.meshExists && result?.meshStatus === 'error') {
                                             // Mesh was created but is in error state
                                             // Show "Mesh in Error State" UI with "Recreate Mesh" button
