@@ -8,7 +8,8 @@ import { vscode } from '../../app/vscodeApi';
 import { WizardState, WizardStep } from '../../types';
 import { ConfigurationSummary } from '../shared/ConfigurationSummary';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
-import { SetupInstructionsModal } from '../shared/SetupInstructionsModal';
+import { Modal } from '../shared/Modal';
+import { NumberedInstructions } from '../shared/NumberedInstructions';
 
 interface ApiMeshStepProps {
     state: WizardState;
@@ -196,10 +197,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                             <Text>View Setup Instructions</Text>
                                         </ActionButton>
                                         {(close) => (
-                                            <SetupInstructionsModal
+                                            <Modal
                                                 title="API Mesh Setup Guide"
-                                                description="Complete these steps to enable API Mesh for your workspace:"
-                                                instructions={state.apiMesh?.setupInstructions || []}
                                                 actionButtons={[
                                                     {
                                                         label: 'Open Workspace in Console',
@@ -214,7 +213,12 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                     }
                                                 ]}
                                                 onClose={close}
-                                            />
+                                            >
+                                                <NumberedInstructions
+                                                    description="Complete these steps to enable API Mesh for your workspace:"
+                                                    instructions={state.apiMesh?.setupInstructions || []}
+                                                />
+                                            </Modal>
                                         )}
                                     </DialogTrigger>
                                 </Flex>
