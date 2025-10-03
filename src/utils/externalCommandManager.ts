@@ -106,11 +106,16 @@ export class ExternalCommandManager {
      * Centralizes all command execution logic with configurable options
      */
     async execute(command: string, options: ExecuteOptions = {}): Promise<CommandResult> {
+        this.logger.info(`[CommandManager] execute() called with command: ${command.substring(0, 50)}...`);
+        this.logger.info(`[CommandManager] execute() options: streaming=${options.streaming}, timeout=${options.timeout}, exclusive=${options.exclusive}`);
+        
         // Handle exclusive execution if requested
         if (options.exclusive) {
+            this.logger.info(`[CommandManager] Using exclusive execution for: ${options.exclusive}`);
             return this.executeExclusive(options.exclusive, () => this.executeInternal(command, options));
         }
         
+        this.logger.info(`[CommandManager] Calling executeInternal()`);
         return this.executeInternal(command, options);
     }
 
@@ -118,6 +123,7 @@ export class ExternalCommandManager {
      * Internal execution logic
      */
     private async executeInternal(command: string, options: ExecuteOptions): Promise<CommandResult> {
+        this.logger.info(`[CommandManager] executeInternal() starting for: ${command.substring(0, 50)}...`);
         let finalCommand = command;
         let finalOptions: ExecOptions = { ...options };
         
@@ -175,12 +181,15 @@ export class ExternalCommandManager {
         
         // Step 4: Set default timeout
         finalOptions.timeout = options.timeout || TIMEOUTS.COMMAND_DEFAULT;
+        this.logger.info(`[CommandManager] Timeout set to: ${finalOptions.timeout}ms`);
         
         // Step 5: Handle streaming vs regular execution
         if (options.streaming && options.onOutput) {
+            this.logger.info(`[CommandManager] Using streaming execution`);
             return this.executeStreamingInternal(finalCommand, finalOptions, options.onOutput);
         }
         
+        this.logger.info(`[CommandManager] Using regular execution with retry`);
         // Step 6: Execute with retry logic
         const retryStrategy = options.retryStrategy || this.getDefaultStrategy();
         return this.executeWithRetry(finalCommand, finalOptions, retryStrategy);
@@ -271,16 +280,21 @@ export class ExternalCommandManager {
         options: ExecOptions,
         onOutput: (data: string) => void
     ): Promise<CommandResult> {
+        this.logger.info(`[CommandManager] executeStreamingInternal() starting`);
+        this.logger.info(`[CommandManager] About to spawn process with command: ${command.substring(0, 100)}...`);
         return new Promise((resolve, reject) => {
             const startTime = Date.now();
             let stdout = '';
             let stderr = '';
             
+            this.logger.info(`[CommandManager] Creating spawn with shell: ${options.shell || true}`);
             const child = spawn(command, [], {
                 shell: options.shell || true,
                 cwd: options.cwd,
                 env: options.env as NodeJS.ProcessEnv
             });
+            
+            this.logger.info(`[CommandManager] Spawn created, PID: ${child.pid}`);
             
             child.stdout?.on('data', (data) => {
                 const output = data.toString();

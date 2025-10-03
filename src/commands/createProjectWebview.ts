@@ -1781,19 +1781,19 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 			});
 			this.debugLogger.debug('[API Mesh] Mesh config content', minimalMeshConfig);
 			
-			// Create mesh with the configuration file
-			this.logger.info('[API Mesh] About to call onProgress');
-			try {
-				onProgress?.('Creating API Mesh...', 'Submitting configuration to Adobe');
-				this.logger.info('[API Mesh] onProgress call completed');
-			} catch (progressError) {
-				this.logger.warn('[API Mesh] Progress callback failed (non-fatal)', progressError);
-			}
-			this.logger.info('[API Mesh] Executing mesh creation command');
-			this.logger.info('[API Mesh] Command path:', { meshConfigPath });
-			
-			let lastOutput = '';
-			this.logger.info('[API Mesh] About to execute aio api-mesh create');
+		// Create mesh with the configuration file
+		this.logger.info('[API Mesh] About to call onProgress');
+		try {
+			onProgress?.('Creating API Mesh...', 'Submitting configuration to Adobe');
+			this.logger.info('[API Mesh] onProgress call completed');
+		} catch (progressError) {
+			this.logger.warn('[API Mesh] Progress callback failed (non-fatal)', progressError);
+		}
+		this.logger.info('[API Mesh] Executing mesh creation command');
+		this.logger.info('[API Mesh] Command path:', { meshConfigPath });
+		
+		let lastOutput = '';
+		this.logger.info('[API Mesh] About to execute aio api-mesh create');
 			const createResult = await commandManager.execute(
 				`aio api-mesh create "${meshConfigPath}"`,
 				{
