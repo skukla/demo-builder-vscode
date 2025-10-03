@@ -359,13 +359,14 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                             workspaceId: state.adobeWorkspace?.id
                                         });
 
-                                        if (result?.success && result.meshId) {
+                                        if (result?.success) {
+                                            // Success! Mesh was created (meshId is optional)
                                             updateState({ 
                                                 apiMesh: { 
                                                     isChecking: false,
                                                     apiEnabled: true,
                                                     meshExists: true,
-                                                    meshId: result.meshId,
+                                                    meshId: result.meshId, // May be undefined, that's OK
                                                     meshStatus: 'deployed'
                                                 } 
                                             });
