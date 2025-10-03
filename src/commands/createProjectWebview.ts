@@ -1967,52 +1967,49 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		this.logger.info('[API Mesh] Mesh created successfully');
 		this.debugLogger.debug('[API Mesh] Create output', { stdout: createResult.stdout });
 		
-		// Check for error indicators in the output even with exit code 0
-		const combinedOutput = `${createResult.stdout}\n${createResult.stderr}`;
-		const hasErrors = /error|failed|unable to|invalid/i.test(combinedOutput);
+		// ALWAYS verify the mesh after creation, even if output looks clean
+		// The mesh can be created with exit code 0 but still be in error state
+		this.logger.info('[API Mesh] Verifying mesh deployment status...');
+		onProgress?.('Verifying mesh deployment...', 'Checking mesh status');
 		
-		if (hasErrors) {
-			this.logger.warn('[API Mesh] Mesh created but output contains error indicators');
-			this.debugLogger.debug('[API Mesh] Full command output:', combinedOutput);
-			
-			// Verify the mesh status to see if it's actually working
-			onProgress?.('Verifying mesh deployment...', 'Checking mesh status');
-			
-			try {
-				const verifyResult = await commandManager.execute(
-					'aio api-mesh get --active',
-					{
-						timeout: TIMEOUTS.API_CALL,
-						configureTelemetry: false,
-						useNodeVersion: null,
-						enhancePath: true
-					}
-				);
-				
-				if (verifyResult.code !== 0) {
-					// Mesh was created but is in error state
-					this.logger.error('[API Mesh] Mesh created but verification failed - mesh is in error state');
-					
-					// Return structured response instead of throwing
-					// This will show "Mesh in Error State" UI with "Recreate Mesh" button
-					return {
-						success: false,
-						meshExists: true,
-						meshStatus: 'error',
-						error: 'Mesh was created but is not functioning properly. Click "Recreate Mesh" to delete and redeploy it.'
-					};
+		try {
+			const verifyResult = await commandManager.execute(
+				'aio api-mesh get --active',
+				{
+					timeout: TIMEOUTS.API_CALL,
+					configureTelemetry: false,
+					useNodeVersion: null,
+					enhancePath: true
 				}
-			} catch (verifyError) {
-				this.logger.error('[API Mesh] Mesh verification failed', verifyError as Error);
+			);
+			
+			if (verifyResult.code !== 0) {
+				// Mesh was created but is in error state
+				this.logger.error('[API Mesh] Mesh created but verification failed - mesh is in error state');
+				this.debugLogger.debug('[API Mesh] Verification error:', verifyResult.stderr || verifyResult.stdout);
 				
-				// Mesh exists but is broken - return structured response
+				// Return structured response instead of throwing
+				// This will show "Mesh in Error State" UI with "Recreate Mesh" button
 				return {
 					success: false,
 					meshExists: true,
 					meshStatus: 'error',
-					error: 'Mesh was created but may be in an error state. Click "Recreate Mesh" to delete and redeploy it.'
+					error: 'Mesh was created but is not functioning properly. Click "Recreate Mesh" to delete and redeploy it.'
 				};
 			}
+			
+			this.logger.info('[API Mesh] Mesh verification successful - mesh is deployed and active');
+		} catch (verifyError: any) {
+			this.logger.error('[API Mesh] Mesh verification failed', verifyError as Error);
+			this.debugLogger.debug('[API Mesh] Verification error details:', verifyError);
+			
+			// Mesh exists but is broken - return structured response
+			return {
+				success: false,
+				meshExists: true,
+				meshStatus: 'error',
+				error: 'Mesh was created but may be in an error state. Click "Recreate Mesh" to delete and redeploy it.'
+			};
 		}
 		
 		// Try to extract mesh ID from output
