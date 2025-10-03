@@ -32,6 +32,12 @@ export interface WizardState {
     commerceConfig?: CommerceConfig;  // Kept for compatibility
     creationProgress?: CreationProgress;
     projectSearchFilter?: string;  // Filter persistence for project selection
+    
+    // Persistent caches to prevent re-fetching on backward navigation
+    projectsCache?: Project[];
+    workspacesCache?: Workspace[];
+    organizationsCache?: Organization[];
+    
     apiVerification?: {
         isChecking: boolean;
         message?: string;

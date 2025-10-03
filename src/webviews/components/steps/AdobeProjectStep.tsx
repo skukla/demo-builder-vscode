@@ -25,8 +25,9 @@ interface AdobeProjectStepProps {
 }
 
 export function AdobeProjectStep({ state, updateState, setCanProceed, completedSteps = [] }: AdobeProjectStepProps) {
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [isLoadingProjects, setIsLoadingProjects] = useState(true); // Start as true to prevent flash on mount
+    // Use projects from wizard state cache (persistent across navigation)
+    const projects = state.projectsCache || [];
+    const [isLoadingProjects, setIsLoadingProjects] = useState(!state.projectsCache); // Only load if cache is empty
     const [error, setError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState(state.projectSearchFilter || '');
     
@@ -35,8 +36,10 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
     const showLoading = useDebouncedLoading(isLoadingProjects);
 
     useEffect(() => {
-        // Always load projects since organization is set during authentication
-        loadProjects();
+        // Only load projects if not already cached
+        if (!state.projectsCache) {
+            loadProjects();
+        }
     }, []);
 
     // Save search query to wizard state for persistence across navigation and reloads
@@ -53,7 +56,8 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
     useEffect(() => {
         const unsubscribeProjects = vscode.onMessage('projects', (data) => {
             if (Array.isArray(data)) {
-                setProjects(data);
+                // Store projects in wizard state cache for persistence
+                updateState({ projectsCache: data });
                 setIsLoadingProjects(false);
                 setError(null);
 
@@ -76,7 +80,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
             unsubscribeProjects();
             unsubscribeError();
         };
-    }, [state.adobeProject]);
+    }, [state.adobeProject, updateState]);
     
     const loadProjects = () => {
         setIsLoadingProjects(true);

@@ -24,8 +24,9 @@ interface AdobeWorkspaceStepProps {
 }
 
 export function AdobeWorkspaceStep({ state, updateState, setCanProceed, completedSteps = [] }: AdobeWorkspaceStepProps) {
-    const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    // Use workspaces from wizard state cache (persistent across navigation)
+    const workspaces = state.workspacesCache || [];
+    const [isLoading, setIsLoading] = useState(!state.workspacesCache);
     const [error, setError] = useState<string | null>(null);
     
     // Debounce loading state: only show loading UI if operation takes >300ms
@@ -33,11 +34,14 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
     const showLoading = useDebouncedLoading(isLoading);
     
     useEffect(() => {
-        if (state.adobeProject?.id) {
-            loadWorkspaces();
-        } else {
-            setError('No project selected. Please go back and select a project.');
-            setIsLoading(false);
+        // Only load workspaces if not already cached
+        if (!state.workspacesCache) {
+            if (state.adobeProject?.id) {
+                loadWorkspaces();
+            } else {
+                setError('No project selected. Please go back and select a project.');
+                setIsLoading(false);
+            }
         }
     }, []);
     
@@ -49,7 +53,8 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
     useEffect(() => {
         const unsubscribe = vscode.onMessage('workspaces', (data) => {
             if (Array.isArray(data)) {
-                setWorkspaces(data);
+                // Store workspaces in wizard state cache for persistence
+                updateState({ workspacesCache: data });
                 setIsLoading(false);
                 setError(null);
                 
@@ -85,7 +90,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
             unsubscribe();
             unsubscribeError();
         };
-    }, [state.adobeWorkspace]);
+    }, [state.adobeWorkspace, updateState]);
     
     const loadWorkspaces = () => {
         setIsLoading(true);
