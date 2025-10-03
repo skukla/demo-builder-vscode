@@ -1823,11 +1823,53 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 				}
 			);
 			
-			if (createResult.code !== 0) {
-				const errorMsg = createResult.stderr || lastOutput || 'Failed to create mesh';
-				this.logger.error('[API Mesh] Creation failed', new Error(errorMsg));
-				throw new Error(errorMsg);
+		if (createResult.code !== 0) {
+			const errorMsg = createResult.stderr || lastOutput || 'Failed to create mesh';
+			
+			// Special case: mesh already exists
+			if (errorMsg.includes('already has a mesh') || lastOutput.includes('already has a mesh')) {
+				this.logger.info('[API Mesh] Mesh already exists, fetching details');
+				
+				// Fetch the existing mesh
+				try {
+					const getResult = await commandManager.execute(
+						`aio api-mesh get --active`,
+						{
+							timeout: TIMEOUTS.API_CALL,
+							configureTelemetry: false,
+							useNodeVersion: null,
+							enhancePath: true
+						}
+					);
+					
+					if (getResult.code === 0) {
+						// Extract mesh ID from output
+						const meshIdMatch = getResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
+						const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
+						
+						onProgress?.('API Mesh Ready', 'Using existing mesh');
+						
+						return {
+							success: true,
+							meshId,
+							message: 'Mesh already exists and is ready to use'
+						};
+					}
+				} catch (getError) {
+					this.logger.warn('[API Mesh] Failed to fetch existing mesh details', getError as Error);
+				}
+				
+				// If we couldn't get details, still return success since mesh exists
+				return {
+					success: true,
+					message: 'Mesh already exists for this workspace'
+				};
 			}
+			
+			// Other errors: fail
+			this.logger.error('[API Mesh] Creation failed', new Error(errorMsg));
+			throw new Error(errorMsg);
+		}
 			
 			this.logger.info('[API Mesh] Mesh created successfully');
 			this.debugLogger.debug('[API Mesh] Create output', { stdout: createResult.stdout });
