@@ -1690,7 +1690,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 } else {
                     // Other error: mesh likely exists but is in error state
                     this.logger.warn('[API Mesh] Mesh exists but appears to be in an error state');
-                    this.logger.warn('[API Mesh] Error details:', combined.substring(0, 200));
+                    this.logger.warn(`[API Mesh] Error details: ${combined.substring(0, 500)}`);
                     
                     return {
                         apiEnabled: true,
@@ -1958,7 +1958,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		
 		if (hasErrors) {
 			this.logger.warn('[API Mesh] Mesh created but output contains error indicators');
-			this.logger.warn('[API Mesh] Output:', combinedOutput.substring(0, 500));
+			this.logger.warn(`[API Mesh] Output: ${combinedOutput.substring(0, 500)}`);
 			
 			// Verify the mesh status to see if it's actually working
 			onProgress?.('Verifying mesh deployment...', 'Checking mesh status');
