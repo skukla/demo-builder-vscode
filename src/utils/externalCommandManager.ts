@@ -297,22 +297,26 @@ export class ExternalCommandManager {
             this.logger.info(`[CommandManager] Spawn created, PID: ${child.pid}`);
             
             child.stdout?.on('data', (data) => {
+                this.logger.info(`[CommandManager] stdout data received: ${data.toString().substring(0, 100)}`);
                 const output = data.toString();
                 stdout += output;
                 onOutput(output);
             });
             
             child.stderr?.on('data', (data) => {
+                this.logger.info(`[CommandManager] stderr data received: ${data.toString().substring(0, 100)}`);
                 const output = data.toString();
                 stderr += output;
                 onOutput(output);
             });
             
             child.on('error', (error) => {
+                this.logger.info(`[CommandManager] error event fired: ${error.message}`);
                 reject(error);
             });
             
             child.on('close', (code) => {
+                this.logger.info(`[CommandManager] close event fired with code: ${code}`);
                 const duration = Date.now() - startTime;
                 resolve({
                     stdout,
@@ -321,6 +325,8 @@ export class ExternalCommandManager {
                     duration
                 });
             });
+            
+            this.logger.info(`[CommandManager] All event handlers registered, waiting for process output...`);
             
             // Handle timeout
             if (options.timeout) {
