@@ -102,7 +102,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     setIsChecking(false);
                     setCanProceed(true);
                 } else {
-                    // API enabled, no mesh yet
+                    // API enabled, no mesh yet - don't allow proceeding until mesh is created
                     updateState({ 
                         apiMesh: { 
                             isChecking: false,
@@ -113,7 +113,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     });
                     
                     setIsChecking(false);
-                    setCanProceed(true);
+                    setCanProceed(false); // Disable Continue until mesh is created
                 }
             } else {
                 // API not enabled
