@@ -32,7 +32,7 @@ const renderInstructionText = (text: string) => {
                                 backgroundColor: '#1a1a1a',
                                 padding: '4px 10px',
                                 borderRadius: '4px',
-                                color: 'var(--spectrum-global-color-blue-500)',
+                                color: 'var(--spectrum-global-color-blue-700)',
                                 border: '1px solid rgba(255, 255, 255, 0.25)',
                                 fontWeight: 600,
                                 whiteSpace: 'nowrap'
