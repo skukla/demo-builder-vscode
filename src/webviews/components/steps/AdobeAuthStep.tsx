@@ -15,7 +15,6 @@ import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import { WizardState } from '../../types';
 import { vscode } from '../../app/vscodeApi';
-import { LoadingDisplay } from '../shared/LoadingDisplay';
 import { useDebouncedLoading } from '../../utils/useDebouncedLoading';
 
 interface AdobeAuthStepProps {
@@ -196,7 +195,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                             variant="accent"
                             onPress={() => handleLogin(true)}
                             marginTop="size-300"
-                            size="L"
                         >
                             <Key size="S" marginEnd="size-100" />
                             Select Organization
@@ -222,7 +220,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                             variant="accent"
                             onPress={() => handleLogin(false)}
                             marginTop="size-300"
-                            size="L"
                         >
                             <Login size="S" marginEnd="size-100" />
                             Sign In with Adobe

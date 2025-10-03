@@ -7,7 +7,6 @@ import {
     ListView,
     Item,
     Well,
-    ProgressCircle,
     Flex,
     Button,
     Content,
@@ -245,7 +244,7 @@ export function ProjectSelectionStep({ state, updateState, setCanProceed }: Proj
 
                     {/* Selected Project Display */}
                     {state.adobeProject && (
-                        <Well backgroundColor="blue-100">
+                        <Well>
                             <Flex gap="size-200" alignItems="center">
                                 <Folder />
                                 <Content>
