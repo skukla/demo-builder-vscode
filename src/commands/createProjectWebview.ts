@@ -1888,6 +1888,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		this.logger.info('[API Mesh] Command path:', { meshConfigPath });
 		
 		let lastOutput = '';
+		let meshEndpointFromCreate: string | undefined;
 		this.logger.info('[API Mesh] About to execute aio api-mesh create');
 			const createResult = await commandManager.execute(
 				`aio api-mesh create "${meshConfigPath}" --autoConfirmAction`,
@@ -1896,6 +1897,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 					timeout: TIMEOUTS.API_MESH_CREATE,
 					onOutput: (data: string) => {
 						lastOutput += data;
+						
+						// Extract mesh endpoint from create output (not returned by 'get' command)
+						const endpointMatch = data.match(/Mesh Endpoint:\s*(https:\/\/[^\s]+)/i);
+						if (endpointMatch) {
+							meshEndpointFromCreate = endpointMatch[1];
+							this.logger.info('[API Mesh] Captured endpoint from create output:', meshEndpointFromCreate);
+						}
 						
 						// Parse output for progress indicators
 						const output = data.toLowerCase();
@@ -2064,7 +2072,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 							const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
 							this.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
 							deployedMeshId = meshData.meshId;
-							deployedEndpoint = meshData.meshEndpoint;
+							// Adobe's 'get' API doesn't return endpoint, use the one from create output
+							deployedEndpoint = meshEndpointFromCreate;
 							meshDeployed = true;
 							break;
 						} else if (meshStatus === 'error' || meshStatus === 'failed') {

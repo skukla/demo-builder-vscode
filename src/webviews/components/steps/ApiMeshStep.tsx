@@ -32,13 +32,15 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
             const message = event.data;
             if (message.type === 'api-mesh-progress') {
                 console.log('[ApiMeshStep] Progress update received:', message);
-                if (message.message) {
-                    console.log('[ApiMeshStep] Setting message:', message.message);
-                    setMessage(message.message);
+                // Progress data is nested under payload
+                const { message: progressMessage, subMessage: progressSubMessage } = message.payload || {};
+                if (progressMessage) {
+                    console.log('[ApiMeshStep] Setting message:', progressMessage);
+                    setMessage(progressMessage);
                 }
-                if (message.subMessage) {
-                    console.log('[ApiMeshStep] Setting subMessage:', message.subMessage);
-                    setSubMessage(message.subMessage);
+                if (progressSubMessage) {
+                    console.log('[ApiMeshStep] Setting subMessage:', progressSubMessage);
+                    setSubMessage(progressSubMessage);
                 }
             }
         };
