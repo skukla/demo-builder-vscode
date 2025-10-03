@@ -37,7 +37,7 @@
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    background-color: var(--spectrum-global-color-gray-900);
+    background-color: #2c2c2c;
     color: white;
     display: flex;
     align-items: center;
