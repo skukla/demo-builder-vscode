@@ -133,35 +133,34 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 });
             }
 
-            // For backward navigation, update currentStep immediately to avoid double transition
-            // Clear dependent state and update currentStep simultaneously
-            setState(prev => {
-                const newState = { ...prev, currentStep: step };
+            // For backward navigation, prepare state changes but don't switch step yet
+            // This prevents showing new content during fade-out animation
+            const workspaceIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-workspace');
+            const projectIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-project');
 
-                // Clear selections only when going BEFORE selection steps (not TO them)
-                const workspaceIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-workspace');
-                const projectIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-project');
-
-                // Clear workspace and its cache when going before workspace step
-                if (workspaceIndex !== -1 && targetIndex < workspaceIndex) {
-                    newState.adobeWorkspace = undefined;
-                    newState.workspacesCache = undefined;
-                }
-
-                // Clear project and its cache (plus dependent caches) when going before project step
-                if (projectIndex !== -1 && targetIndex < projectIndex) {
-                    newState.adobeProject = undefined;
-                    newState.projectsCache = undefined;
-                    // Also clear workspace cache since workspaces are project-specific
-                    newState.adobeWorkspace = undefined;
-                    newState.workspacesCache = undefined;
-                }
-
-                return newState;
-            });
-
-            // For backward navigation, only use setTimeout for transition animation end
+            // Wait for fade-out to complete, then update state and fade in
             setTimeout(() => {
+                setState(prev => {
+                    const newState = { ...prev, currentStep: step };
+
+                    // Clear selections only when going BEFORE selection steps (not TO them)
+                    // Clear workspace and its cache when going before workspace step
+                    if (workspaceIndex !== -1 && targetIndex < workspaceIndex) {
+                        newState.adobeWorkspace = undefined;
+                        newState.workspacesCache = undefined;
+                    }
+
+                    // Clear project and its cache (plus dependent caches) when going before project step
+                    if (projectIndex !== -1 && targetIndex < projectIndex) {
+                        newState.adobeProject = undefined;
+                        newState.projectsCache = undefined;
+                        // Also clear workspace cache since workspaces are project-specific
+                        newState.adobeWorkspace = undefined;
+                        newState.workspacesCache = undefined;
+                    }
+
+                    return newState;
+                });
                 setIsTransitioning(false);
             }, 300);
         } else {
