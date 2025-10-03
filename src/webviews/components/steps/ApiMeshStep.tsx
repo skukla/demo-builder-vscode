@@ -297,10 +297,10 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                     });
 
                                     try {
-                                        // Use 5-minute timeout for mesh creation (matches backend timeout)
+                                        // Backend automatically specifies required timeout via __timeout_hint__
                                         const result = await vscode.request('create-api-mesh', {
                                             workspaceId: state.adobeWorkspace?.id
-                                        }, 300000); // 5 minutes
+                                        });
 
                                         if (result?.success && result.meshId) {
                                             updateState({ 

@@ -85,6 +85,21 @@ class VSCodeAPIWrapper {
                 return;
             }
             
+            // Handle timeout hints from backend (backend specifies required timeout)
+            if (message.type === '__timeout_hint__' && message.payload) {
+                const { requestId, timeout: newTimeout } = message.payload;
+                const pending = this.pendingRequests.get(requestId);
+                if (pending) {
+                    // Clear old timeout and set new one with backend-specified duration
+                    clearTimeout(pending.timeout);
+                    pending.timeout = setTimeout(() => {
+                        this.pendingRequests.delete(requestId);
+                        pending.reject(new Error(`Request timeout (${newTimeout}ms)`));
+                    }, newTimeout);
+                }
+                return;
+            }
+            
             // Handle response messages
             if (message.isResponse && message.responseToId) {
                 const pending = this.pendingRequests.get(message.responseToId);
@@ -157,7 +172,17 @@ class VSCodeAPIWrapper {
         this.sendRawMessage(message);
     }
     
-    // Send request and wait for response
+    /**
+     * Send request and wait for response
+     * 
+     * Timeout is automatically extended if backend sends a __timeout_hint__ message.
+     * This allows backend operations to specify their own timeout requirements based on
+     * the operation being performed (e.g., mesh creation needs 5 minutes).
+     * 
+     * @param type - Request type
+     * @param payload - Request payload
+     * @param timeoutMs - Initial timeout (default 30s, may be extended by backend)
+     */
     public async request<T = any>(type: string, payload?: any, timeoutMs: number = 30000): Promise<T> {
         const message: Message = {
             id: this.generateMessageId(),
@@ -172,8 +197,8 @@ class VSCodeAPIWrapper {
         }
         
         return new Promise((resolve, reject) => {
-            // Set up timeout (configurable per request)
-            const timeout = setTimeout(() => {
+            // Set up initial timeout (may be extended by backend timeout hint)
+            let timeout = setTimeout(() => {
                 this.pendingRequests.delete(message.id);
                 reject(new Error(`Request timeout: ${type}`));
             }, timeoutMs);

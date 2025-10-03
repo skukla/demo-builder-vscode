@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { v4 as uuidv4 } from 'uuid';
 import { getLogger } from './debugLogger';
+import { TIMEOUTS } from './timeoutConfig';
 
 /**
  * Message structure for webview communication
@@ -38,6 +39,19 @@ interface CommunicationConfig {
 }
 
 /**
+ * Request timeout mappings from backend to frontend
+ * Maps request types to their required timeout durations
+ */
+const REQUEST_TIMEOUTS: Record<string, number> = {
+    'create-api-mesh': TIMEOUTS.API_MESH_CREATE,
+    'update-api-mesh': TIMEOUTS.API_MESH_UPDATE,
+    'check-api-mesh': TIMEOUTS.API_CALL,
+    'select-project': TIMEOUTS.CONFIG_WRITE,
+    'select-workspace': TIMEOUTS.CONFIG_WRITE,
+    // Add more as needed
+};
+
+/**
  * Manages robust bidirectional communication between extension and webview
  * 
  * Features:
@@ -47,6 +61,7 @@ interface CommunicationConfig {
  * - Automatic retry for failed messages
  * - State version tracking
  * - Comprehensive logging
+ * - Backend-specified timeouts (single source of truth)
  */
 export class WebviewCommunicationManager {
     private panel: vscode.WebviewPanel;
@@ -281,6 +296,22 @@ export class WebviewCommunicationManager {
         const handler = this.messageHandlers.get(message.type);
         if (handler) {
             try {
+                // Send timeout hint for requests that need extended timeouts
+                if (message.id && message.expectsResponse) {
+                    const requestTimeout = REQUEST_TIMEOUTS[message.type];
+                    if (requestTimeout) {
+                        this.sendRawMessage({
+                            id: uuidv4(),
+                            type: '__timeout_hint__',
+                            payload: { 
+                                requestId: message.id,
+                                timeout: requestTimeout 
+                            },
+                            timestamp: Date.now()
+                        });
+                    }
+                }
+
                 // CRITICAL FIX (v1.5.0): Properly await async handler results
                 // Previously, Promise objects were being sent to UI instead of resolved values
                 // This caused "Error Loading Projects" despite successful backend operations
