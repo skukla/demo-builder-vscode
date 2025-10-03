@@ -239,18 +239,38 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                                                             Complete these steps to enable API Mesh for your workspace:
                                                         </Text>
                                                         {state.apiMesh.setupInstructions.map((instruction, index) => (
-                                                            <Flex key={index} direction="column" gap="size-75" UNSAFE_style={{ 
-                                                                padding: '12px',
-                                                                backgroundColor: instruction.important ? 'var(--spectrum-global-color-orange-100)' : 'var(--spectrum-global-color-gray-100)',
-                                                                borderRadius: '4px',
-                                                                borderLeft: instruction.important ? '3px solid var(--spectrum-global-color-orange-600)' : 'none'
+                                                            <Flex key={index} direction="row" gap="size-150" UNSAFE_style={{ 
+                                                                padding: '16px',
+                                                                backgroundColor: 'var(--spectrum-global-color-gray-100)',
+                                                                borderRadius: '6px'
                                                             }}>
-                                                                <Text UNSAFE_className={instruction.important ? "font-semibold" : "font-medium"}>
-                                                                    {index + 1}. {instruction.step}
-                                                                </Text>
-                                                                <Text UNSAFE_className="text-sm text-gray-600">
-                                                                    {renderInstructionText(instruction.details)}
-                                                                </Text>
+                                                                {/* Circular number badge */}
+                                                                <div style={{
+                                                                    minWidth: '32px',
+                                                                    width: '32px',
+                                                                    height: '32px',
+                                                                    borderRadius: '50%',
+                                                                    backgroundColor: 'var(--spectrum-global-color-gray-800)',
+                                                                    color: 'white',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    fontWeight: 'bold',
+                                                                    fontSize: '16px',
+                                                                    flexShrink: 0
+                                                                }}>
+                                                                    {index + 1}
+                                                                </div>
+                                                                
+                                                                {/* Content */}
+                                                                <Flex direction="column" gap="size-75" flex={1}>
+                                                                    <Text UNSAFE_className="font-semibold" UNSAFE_style={{ fontSize: '15px' }}>
+                                                                        {instruction.step}
+                                                                    </Text>
+                                                                    <Text UNSAFE_className="text-sm text-gray-600">
+                                                                        {renderInstructionText(instruction.details)}
+                                                                    </Text>
+                                                                </Flex>
                                                             </Flex>
                                                         ))}
                                                     </Flex>
