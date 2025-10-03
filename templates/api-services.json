@@ -17,7 +17,6 @@
         {
           "step": "Configure Allowed Domains",
           "details": "In the API configuration, add '{{ALLOWED_DOMAINS}}' to the Allowed Domains list",
-          "important": true,
           "dynamicValues": {
             "ALLOWED_DOMAINS": {
               "source": "selectedComponents",
