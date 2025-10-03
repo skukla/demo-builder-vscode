@@ -34,12 +34,11 @@ const renderInstructionText = (text: string) => {
                             style={{ 
                                 fontFamily: 'var(--spectrum-alias-body-text-font-family, monospace)',
                                 fontSize: '0.9em',
-                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                padding: '4px 10px',
+                                backgroundColor: '#1a1a1a',
+                                padding: '3px 8px',
                                 borderRadius: '4px',
-                                color: '#e5e5e5',
-                                border: '1.5px solid rgba(255, 255, 255, 0.4)',
-                                fontWeight: 700
+                                color: '#e0e0e0',
+                                fontWeight: 600
                             }}
                         >
                             {part.slice(1, -1)}
@@ -254,7 +253,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                                     <Text UNSAFE_className="font-semibold" UNSAFE_style={{ fontSize: '15px' }}>
                                                                         {instruction.step}
                                                                     </Text>
-                                                                    <Text UNSAFE_className="text-sm text-gray-600">
+                                                                    <Text UNSAFE_className="text-sm text-gray-600" UNSAFE_style={{ lineHeight: '1.6' }}>
                                                                         {renderInstructionText(instruction.details)}
                                                                     </Text>
                                                                 </Flex>
