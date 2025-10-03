@@ -1803,6 +1803,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		meshId?: string;
 		success: boolean;
 		message?: string;
+		meshExists?: boolean;
+		meshStatus?: 'deployed' | 'error';
+		error?: string;
 	}> {
 		this.logger.info('[API Mesh] Creating new mesh for workspace', { workspaceId });
 		
@@ -1974,12 +1977,26 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 				if (verifyResult.code !== 0) {
 					// Mesh was created but is in error state
 					this.logger.error('[API Mesh] Mesh created but verification failed - mesh is in error state');
-					throw new Error('Mesh was created but is not functioning properly. Please check the Adobe Developer Console for details.');
+					
+					// Return structured response instead of throwing
+					// This will show "Mesh in Error State" UI with "Recreate Mesh" button
+					return {
+						success: false,
+						meshExists: true,
+						meshStatus: 'error',
+						error: 'Mesh was created but is not functioning properly. Click "Recreate Mesh" to delete and redeploy it.'
+					};
 				}
 			} catch (verifyError) {
 				this.logger.error('[API Mesh] Mesh verification failed', verifyError as Error);
-				// Mesh exists but is broken - throw error so user knows
-				throw new Error('Mesh was created but may be in an error state. Please verify in the Adobe Developer Console.');
+				
+				// Mesh exists but is broken - return structured response
+				return {
+					success: false,
+					meshExists: true,
+					meshStatus: 'error',
+					error: 'Mesh was created but may be in an error state. Click "Recreate Mesh" to delete and redeploy it.'
+				};
 			}
 		}
 		

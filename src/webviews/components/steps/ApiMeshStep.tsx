@@ -360,7 +360,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                         });
 
                                         if (result?.success) {
-                                            // Success! Mesh was created (meshId is optional)
+                                            // Success! Mesh was created and deployed (meshId is optional)
                                             updateState({ 
                                                 apiMesh: { 
                                                     isChecking: false,
@@ -371,6 +371,25 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                 } 
                                             });
                                             setCanProceed(true);
+                                        } else if (result?.meshExists && result?.meshStatus === 'error') {
+                                            // Mesh was created but is in error state
+                                            // Show "Mesh in Error State" UI with "Recreate Mesh" button
+                                            setMeshData({
+                                                meshId: result.meshId,
+                                                status: 'error',
+                                                endpoint: undefined
+                                            });
+                                            updateState({ 
+                                                apiMesh: { 
+                                                    isChecking: false,
+                                                    apiEnabled: true,
+                                                    meshExists: true,
+                                                    meshId: result.meshId,
+                                                    meshStatus: 'error',
+                                                    error: result.error
+                                                } 
+                                            });
+                                            setCanProceed(false);
                                         } else {
                                             throw new Error(result?.error || 'Failed to create mesh');
                                         }
