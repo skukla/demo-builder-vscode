@@ -12,7 +12,6 @@ import { LoadingDisplay } from '../shared/LoadingDisplay';
 interface ApiMeshStepProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
-    onNext: () => void;
     onBack: () => void;
     setCanProceed: (canProceed: boolean) => void;
     completedSteps?: WizardStep[];
@@ -51,12 +50,12 @@ const renderInstructionText = (text: string) => {
     );
 };
 
-export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed, completedSteps = [] }: ApiMeshStepProps) {
+export function ApiMeshStep({ state, updateState, onBack, setCanProceed, completedSteps = [] }: ApiMeshStepProps) {
     const [message, setMessage] = useState<string>('Checking API Mesh API...');
     const [subMessage, setSubMessage] = useState<string>('Downloading workspace configuration');
     const [isChecking, setIsChecking] = useState<boolean>(false);
     const [error, setError] = useState<string | undefined>(undefined);
-    const [meshData, setMeshData] = useState<any>(null);
+    const [meshData, setMeshData] = useState<{ meshId?: string; status?: string; endpoint?: string } | null>(null);
 
     // Listen for progress updates during mesh creation
     useEffect(() => {
@@ -107,7 +106,7 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
         try {
             const result = await vscode.request('check-api-mesh', { 
                 workspaceId: state.adobeWorkspace?.id,
-                selectedComponents: state.selectedComponents || []
+                selectedComponents: []
             });
 
             if (result?.success && result.apiEnabled) {
@@ -182,8 +181,7 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
     useEffect(() => {
         // Start checking when the step loads
         runCheck();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, []); // Only run on mount
 
     return (
         <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0' }}>
@@ -351,7 +349,9 @@ export function ApiMeshStep({ state, updateState, onNext, onBack, setCanProceed,
                                     updateState({ 
                                         apiMesh: { 
                                             ...state.apiMesh,
-                                            isChecking: true 
+                                            isChecking: true,
+                                            apiEnabled: state.apiMesh?.apiEnabled ?? false,
+                                            meshExists: state.apiMesh?.meshExists ?? false
                                         } 
                                     });
 
