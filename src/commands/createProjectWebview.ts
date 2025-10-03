@@ -1795,7 +1795,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 		let lastOutput = '';
 		this.logger.info('[API Mesh] About to execute aio api-mesh create');
 			const createResult = await commandManager.execute(
-				`aio api-mesh create "${meshConfigPath}"`,
+				`aio api-mesh create "${meshConfigPath}" --autoConfirmAction`,
 				{
 					streaming: true,
 					timeout: TIMEOUTS.API_MESH_CREATE,
