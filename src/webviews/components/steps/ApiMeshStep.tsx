@@ -290,31 +290,69 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                     <Button 
                                         variant="accent" 
                                         onPress={async () => {
-                                            // Delete the broken mesh
+                                            // Delete the broken mesh, then create a new one
                                             setIsChecking(true);
                                             setMessage('Deleting broken mesh...');
                                             try {
+                                                // Step 1: Delete the broken mesh
                                                 await vscode.request('delete-api-mesh', {
                                                     workspaceId: state.adobeWorkspace?.id
                                                 });
                                                 
-                                                // After successful deletion, we know:
-                                                // 1. API is enabled (we already confirmed this)
-                                                // 2. Mesh no longer exists (we just deleted it)
-                                                // So update state directly without re-checking
-                                                setMeshData(null);
+                                                // Step 2: Create a new mesh immediately
+                                                setMessage('Creating new mesh...');
+                                                setSubMessage('Submitting configuration to Adobe');
+                                                
+                                                const result = await vscode.request('create-api-mesh', {
+                                                    workspaceId: state.adobeWorkspace?.id
+                                                });
+
+                                                if (result?.success) {
+                                                    // Success! Mesh was created and deployed
+                                                    updateState({ 
+                                                        apiMesh: { 
+                                                            isChecking: false,
+                                                            apiEnabled: true,
+                                                            meshExists: true,
+                                                            meshId: result.meshId,
+                                                            meshStatus: 'deployed'
+                                                        } 
+                                                    });
+                                                    setMeshData(null); // Clear error state
+                                                    setCanProceed(true);
+                                                } else if (result?.meshExists && result?.meshStatus === 'error') {
+                                                    // Mesh was created but is in error state again
+                                                    setMeshData({
+                                                        meshId: result.meshId,
+                                                        status: 'error',
+                                                        endpoint: undefined
+                                                    });
+                                                    updateState({ 
+                                                        apiMesh: { 
+                                                            isChecking: false,
+                                                            apiEnabled: true,
+                                                            meshExists: true,
+                                                            meshId: result.meshId,
+                                                            meshStatus: 'error',
+                                                            error: result.error
+                                                        } 
+                                                    });
+                                                    setCanProceed(false);
+                                                } else {
+                                                    throw new Error(result?.error || 'Failed to create mesh');
+                                                }
+                                            } catch (e) {
+                                                const err = e instanceof Error ? e.message : 'Failed to recreate mesh';
+                                                setError(err);
                                                 updateState({ 
                                                     apiMesh: { 
                                                         isChecking: false,
                                                         apiEnabled: true,
                                                         meshExists: false,
-                                                        meshStatus: 'pending'
+                                                        error: err
                                                     } 
                                                 });
-                                                setIsChecking(false);
-                                                setCanProceed(false);
-                                            } catch (e) {
-                                                setError(e instanceof Error ? e.message : 'Failed to delete mesh');
+                                            } finally {
                                                 setIsChecking(false);
                                             }
                                         }}
