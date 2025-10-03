@@ -1569,6 +1569,70 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         });
     }
 
+    /**
+     * Get mesh endpoint using smart hybrid approach:
+     * 1. Use cached endpoint if available (instant)
+     * 2. Try aio api-mesh:describe command (official Adobe method)
+     * 3. Construct from meshId as fallback
+     */
+    private async getOrFetchEndpoint(
+        meshId: string,
+        cachedEndpoint?: string
+    ): Promise<string | undefined> {
+        // Priority 1: Use cached endpoint (instant)
+        if (cachedEndpoint) {
+            this.debugLogger.debug('[API Mesh] Using cached endpoint');
+            return cachedEndpoint;
+        }
+        
+        // Priority 2: Try describe command (official Adobe method)
+        try {
+            this.debugLogger.debug('[API Mesh] Fetching endpoint via describe command');
+            const commandManager = getExternalCommandManager();
+            const result = await commandManager.execute(
+                'aio api-mesh:describe --json',
+                {
+                    timeout: TIMEOUTS.API_CALL,
+                    configureTelemetry: false,
+                    useNodeVersion: null,
+                    enhancePath: true
+                }
+            );
+            
+            if (result.code === 0) {
+                // Try to parse endpoint from JSON response
+                try {
+                    const jsonMatch = result.stdout.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                        const meshData = JSON.parse(jsonMatch[0]);
+                        // Look for meshEndpoint or endpoint field
+                        const endpoint = meshData.meshEndpoint || meshData.endpoint;
+                        if (endpoint) {
+                            this.logger.info('[API Mesh] Retrieved endpoint from describe command:', endpoint);
+                            return endpoint;
+                        }
+                    }
+                } catch (parseError) {
+                    this.debugLogger.debug('[API Mesh] Failed to parse describe JSON:', parseError);
+                }
+                
+                // Try to extract from plain text output (fallback)
+                const endpointMatch = result.stdout.match(/(?:Mesh Endpoint|endpoint):\s*(https:\/\/[^\s]+)/i);
+                if (endpointMatch) {
+                    this.logger.info('[API Mesh] Extracted endpoint from describe output:', endpointMatch[1]);
+                    return endpointMatch[1];
+                }
+            }
+        } catch (error) {
+            this.debugLogger.debug('[API Mesh] Describe command failed, will use fallback:', error);
+        }
+        
+        // Priority 3: Construct from meshId (reliable fallback)
+        const constructedEndpoint = `https://edge-sandbox-graph.adobe.io/api/${meshId}/graphql`;
+        this.logger.info('[API Mesh] Using constructed endpoint (fallback)');
+        return constructedEndpoint;
+    }
+
     private async handleCheckApiMesh(workspaceId: string, selectedComponents: string[] = []): Promise<{
         apiEnabled: boolean;
         meshExists: boolean;
@@ -1678,8 +1742,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     const meshData = JSON.parse(jsonMatch[0]);
                     const meshStatus = meshData.meshStatus?.toLowerCase();
                     const meshId = meshData.meshId;
-                    // Adobe's API doesn't return endpoint in JSON, construct it from meshId
-                    const endpoint = meshId ? `https://edge-sandbox-graph.adobe.io/api/${meshId}/graphql` : undefined;
+                    
+                    // Get endpoint using smart hybrid approach (cached, describe, or construct)
+                    const endpoint = meshId ? await this.getOrFetchEndpoint(meshId) : undefined;
                     
                     this.debugLogger.debug('[API Mesh] Parsed mesh data', { meshStatus, meshId, endpoint });
                     
@@ -1975,8 +2040,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 						const meshIdMatch = updateResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
 						const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
 						
-						// Construct endpoint from meshId if not captured from output
-						const endpoint = updateEndpoint || (meshId ? `https://edge-sandbox-graph.adobe.io/api/${meshId}/graphql` : undefined);
+						// Priority 1: Use endpoint from update output (instant, zero cost)
+						// Priority 2: Fetch using describe or construct (only if not captured)
+						const endpoint = updateEndpoint || (meshId ? await this.getOrFetchEndpoint(meshId) : undefined);
 						
 						onProgress?.('✓ API Mesh Ready', 'Mesh successfully deployed and ready to use');
 						
@@ -2072,9 +2138,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 						const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
 						this.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
 						deployedMeshId = meshData.meshId;
-						// Adobe's 'get' API doesn't return endpoint, use the one from create output
-						// If not captured, construct it from meshId
-						deployedEndpoint = meshEndpointFromCreate || (meshData.meshId ? `https://edge-sandbox-graph.adobe.io/api/${meshData.meshId}/graphql` : undefined);
+						// Priority 1: Use endpoint from create output (instant, zero cost)
+						// Priority 2: Fetch using describe or construct (only if not captured)
+						deployedEndpoint = meshEndpointFromCreate || (meshData.meshId ? await this.getOrFetchEndpoint(meshData.meshId) : undefined);
 						meshDeployed = true;
 						break;
 						} else if (meshStatus === 'error' || meshStatus === 'failed') {
