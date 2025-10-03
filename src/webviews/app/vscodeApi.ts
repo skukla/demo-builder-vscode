@@ -158,7 +158,7 @@ class VSCodeAPIWrapper {
     }
     
     // Send request and wait for response
-    public async request<T = any>(type: string, payload?: any): Promise<T> {
+    public async request<T = any>(type: string, payload?: any, timeoutMs: number = 30000): Promise<T> {
         const message: Message = {
             id: this.generateMessageId(),
             type,
@@ -172,11 +172,11 @@ class VSCodeAPIWrapper {
         }
         
         return new Promise((resolve, reject) => {
-            // Set up timeout
+            // Set up timeout (configurable per request)
             const timeout = setTimeout(() => {
                 this.pendingRequests.delete(message.id);
                 reject(new Error(`Request timeout: ${type}`));
-            }, 30000);
+            }, timeoutMs);
             
             // Track pending request
             this.pendingRequests.set(message.id, {
