@@ -158,8 +158,10 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                         </Flex>
                     ) : state.apiMesh?.apiEnabled && state.apiMesh?.meshExists ? (
                         <Flex gap="size-100" alignItems="center">
-                            {isStepCompleted('api-mesh') ? (
+                            {state.apiMesh?.meshStatus === 'deployed' || state.apiMesh?.meshStatus === 'success' ? (
                                 <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
+                            ) : state.apiMesh?.meshStatus === 'error' ? (
+                                <AlertCircle size="S" UNSAFE_className="text-red-600" />
                             ) : (
                                 <Clock size="S" UNSAFE_className="text-blue-600" />
                             )}
