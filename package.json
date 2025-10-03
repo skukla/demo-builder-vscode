@@ -154,6 +154,8 @@
     "manage-keys": "node scripts/manage-keys.js",
     "setup": "npm install && npm run compile",
     "postinstall": "npm run compile",
+    "mesh:delete": "aio api-mesh delete --autoConfirmAction",
+    "mesh:status": "aio api-mesh get --active",
     "hooks": "node scripts/hooks.js",
     "docs:check": "node scripts/hooks.js coverage"
   },
