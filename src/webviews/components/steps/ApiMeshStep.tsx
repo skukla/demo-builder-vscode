@@ -254,7 +254,9 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                 <>
                                     <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
                                     <Flex direction="column" gap="size-100" alignItems="center">
-                                        <Text UNSAFE_className="text-xl font-medium">API Mesh Found</Text>
+                                        <Text UNSAFE_className="text-xl font-medium">
+                                            API Mesh {meshData.status === 'deployed' ? 'Deployed' : 'Found'} ✓
+                                        </Text>
                                         <Text UNSAFE_className="text-sm text-gray-600">
                                             An existing mesh was detected. It will be updated during deployment.
                                         </Text>
@@ -267,13 +269,6 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                     <Text UNSAFE_className="text-sm">
                                         <Text UNSAFE_className="font-medium" UNSAFE_style={{ display: 'inline' }}>Mesh ID:</Text>{' '}
                                         <Text UNSAFE_className="text-gray-600" UNSAFE_style={{ display: 'inline' }}>{meshData.meshId}</Text>
-                                        <Text UNSAFE_className="text-gray-600" UNSAFE_style={{ display: 'inline', margin: '0 8px' }}>•</Text>
-                                        <Text UNSAFE_style={{ 
-                                            display: 'inline',
-                                            color: meshData.status === 'error' ? 'var(--spectrum-global-color-orange-600)' : undefined 
-                                        }}>
-                                            {meshData.status === 'deployed' ? 'Deployed' : meshData.status === 'error' ? 'Error' : 'Not Deployed'}
-                                        </Text>
                                     </Text>
                                     {meshData.endpoint && (
                                         <Flex gap="size-100">
