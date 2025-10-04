@@ -261,7 +261,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 return newSet;
             });
             
-            // Scroll navigation panel to show section when entering new section
+            // Only scroll when entering a NEW section, not for every field
             if (isNewSection) {
                 const navSectionElement = document.getElementById(`nav-${section.id}`);
                 if (navSectionElement) {
@@ -274,17 +274,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                     sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
                 
-                // Also scroll the field node into view after section scroll
-                setTimeout(() => {
-                    const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
-                    if (navFieldElement) {
-                        navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                }, 150);
-            } else {
-                // Within same section, scroll the field itself with margin
-                fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                
                 // Scroll the navigation field node into view
                 setTimeout(() => {
                     const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
@@ -292,6 +281,13 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
                 }, 150);
+            } else {
+                // Within same section, only update navigation highlighting (no scroll)
+                // This keeps multiple fields visible as user tabs through them
+                const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
+                if (navFieldElement) {
+                    navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
             }
         };
 
