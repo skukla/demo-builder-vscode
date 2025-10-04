@@ -32,11 +32,20 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
         return undefined;
     };
 
-    // Set default project name on mount if empty
+    // Set default project name and manually focus + select on mount
     useEffect(() => {
         if (!state.projectName) {
             updateState({ projectName: defaultProjectName });
         }
+        
+        // Manually focus and select text (more reliable than autoFocus + onFocus)
+        setTimeout(() => {
+            const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+            if (input) {
+                input.focus();
+                input.select();
+            }
+        }, 100); // Small delay to ensure field is rendered with value
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount
 
@@ -95,7 +104,6 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                             }
                             isRequired
                             width="size-3600"
-                            autoFocus
                             {...selectableDefaultProps}
                         />
                     </Form>
