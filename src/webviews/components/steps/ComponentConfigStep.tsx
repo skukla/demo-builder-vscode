@@ -54,6 +54,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(state.componentConfigs || {});
     const [componentsData, setComponentsData] = useState<ComponentsData>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+    const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(true);
     const [expandedNavSections, setExpandedNavSections] = useState<Set<string>>(new Set());
     const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -410,6 +411,9 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     }, [componentConfigs, serviceGroups, updateState, setCanProceed]);
 
     const updateField = (field: UniqueField, value: string | boolean) => {
+        // Mark field as touched when user interacts with it
+        setTouchedFields(prev => new Set(prev).add(field.key));
+        
         // Update the field value for ALL components that need it
         setComponentConfigs(prev => {
             const newConfigs = { ...prev };
@@ -503,6 +507,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     const renderField = (field: UniqueField) => {
         const value = getFieldValue(field);
         const error = validationErrors[field.key];
+        const showError = error && touchedFields.has(field.key);
 
         // Special-case: defer MESH_ENDPOINT input
         if (field.key === 'MESH_ENDPOINT') {
@@ -542,8 +547,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                             placeholder={field.placeholder}
                             description={field.helpText || field.description}
                             isRequired={isFieldRequired}
-                        validationState={error ? 'invalid' : undefined}
-                        errorMessage={error}
+                        validationState={showError ? 'invalid' : undefined}
+                        errorMessage={showError ? error : undefined}
                         width="100%"
                             marginBottom="size-200"
                     />
@@ -561,8 +566,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                             placeholder={field.placeholder}
                             description={field.helpText || field.description}
                             isRequired={isFieldRequired}
-                        validationState={error ? 'invalid' : undefined}
-                        errorMessage={error}
+                        validationState={showError ? 'invalid' : undefined}
+                        errorMessage={showError ? error : undefined}
                         width="100%"
                             marginBottom="size-200"
                     />
