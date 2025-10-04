@@ -157,13 +157,26 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 id: 'adobe-commerce', 
                 label: 'Adobe Commerce', 
                 order: 1,
-                fieldOrder: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_WEBSITE_CODE', 'ADOBE_COMMERCE_STORE_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', 'ADOBE_COMMERCE_CUSTOMER_GROUP', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT']
+                // Required fields first, then optional fields
+                fieldOrder: [
+                    'ADOBE_COMMERCE_URL',
+                    'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
+                    'ADOBE_COMMERCE_WEBSITE_CODE',
+                    'ADOBE_COMMERCE_STORE_CODE',
+                    'ADOBE_COMMERCE_STORE_VIEW_CODE',
+                    'ADOBE_COMMERCE_CUSTOMER_GROUP' // Optional - at end
+                ]
             },
             { 
                 id: 'catalog-service', 
                 label: 'Catalog Service', 
                 order: 2,
-                fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_API_KEY']
+                // All required - order by logical flow
+                fieldOrder: [
+                    'ADOBE_CATALOG_SERVICE_ENDPOINT',
+                    'ADOBE_COMMERCE_ENVIRONMENT_ID',
+                    'ADOBE_CATALOG_API_KEY'
+                ]
             },
             { 
                 id: 'live-search', 
@@ -182,28 +195,16 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             .map(def => {
                 const fields = groups[def.id] || [];
                 
-                // Sort fields: required first, then optional
-                // Within each group, respect custom fieldOrder if specified
-                const sortedFields = fields.sort((a, b) => {
-                    // First, sort by required status (required fields come first)
-                    const aRequired = a.required ? 0 : 1;
-                    const bRequired = b.required ? 0 : 1;
-                    if (aRequired !== bRequired) {
-                        return aRequired - bRequired;
-                    }
-                    
-                    // Within same required/optional group, apply custom ordering if specified
-                    if (def.fieldOrder) {
-                        const aIndex = def.fieldOrder.indexOf(a.key);
-                        const bIndex = def.fieldOrder.indexOf(b.key);
+                // Apply field ordering based on configuration
+                const sortedFields = def.fieldOrder
+                    ? fields.sort((a, b) => {
+                        const aIndex = def.fieldOrder!.indexOf(a.key);
+                        const bIndex = def.fieldOrder!.indexOf(b.key);
                         const aPos = aIndex === -1 ? 999 : aIndex;
                         const bPos = bIndex === -1 ? 999 : bIndex;
                         return aPos - bPos;
-                    }
-                    
-                    // If no custom order, maintain current order
-                    return 0;
-                });
+                    })
+                    : fields; // No automatic sorting - respect natural order from JSON
                 
                 return {
                     id: def.id,
