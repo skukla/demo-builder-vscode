@@ -15,6 +15,7 @@ import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '../../types';
 import { vscode } from '../../app/vscodeApi';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
+import { useSelectableDefault } from '../../hooks/useSelectableDefault';
 
 interface ComponentConfigStepProps {
     state: WizardState;
@@ -61,6 +62,9 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     const [activeField, setActiveField] = useState<string | null>(null);
     const lastFocusedSectionRef = useRef<string | null>(null);
     const fieldCountInSectionRef = useRef<number>(0);
+    
+    // Hook for making default values easily replaceable (auto-select on focus)
+    const selectableDefaultProps = useSelectableDefault();
 
     // Load components data
     useEffect(() => {
@@ -591,6 +595,9 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         // Determine if field should be marked as required
         const isFieldRequired = field.required;
 
+        // Determine if field has a default value (not empty and equals the default from config)
+        const hasDefault = value && field.default && value === field.default;
+        
         switch (field.type) {
             case 'text':
             case 'url':
@@ -607,6 +614,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         errorMessage={showError ? error : undefined}
                         width="100%"
                             marginBottom="size-200"
+                            {...(hasDefault ? selectableDefaultProps : {})}
                     />
                     </div>
                 );
@@ -626,6 +634,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         errorMessage={showError ? error : undefined}
                         width="100%"
                             marginBottom="size-200"
+                            {...(hasDefault ? selectableDefaultProps : {})}
                     />
                     </div>
                 );
