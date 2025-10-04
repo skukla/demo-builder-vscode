@@ -8,6 +8,7 @@ import {
     Text
 } from '@adobe/react-spectrum';
 import { WizardState } from '../../types';
+import { useSelectableDefault } from '../../hooks/useSelectableDefault';
 
 interface WelcomeStepProps {
     state: WizardState;
@@ -18,6 +19,9 @@ interface WelcomeStepProps {
 }
 
 export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepProps) {
+    const defaultProjectName = 'my-commerce-demo';
+    const selectableDefaultProps = useSelectableDefault();
+    
     const validateProjectName = (value: string): string | undefined => {
         if (!value) return 'Project name is required';
         if (!/^[a-z0-9-]+$/.test(value)) {
@@ -27,6 +31,14 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
         if (value.length > 30) return 'Name must be less than 30 characters';
         return undefined;
     };
+
+    // Set default project name on mount if empty
+    useEffect(() => {
+        if (!state.projectName) {
+            updateState({ projectName: defaultProjectName });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Only run on mount
 
     useEffect(() => {
         const isValid = 
@@ -68,7 +80,6 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                             label="Name"
                             value={state.projectName}
                             onChange={(value) => updateState({ projectName: value })}
-                            placeholder="my-commerce-demo"
                             description="Lowercase letters, numbers, and hyphens only"
                             validationState={
                                 state.projectName && validateProjectName(state.projectName) 
@@ -85,6 +96,7 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                             isRequired
                             width="size-3600"
                             autoFocus
+                            {...selectableDefaultProps}
                         />
                     </Form>
                     
