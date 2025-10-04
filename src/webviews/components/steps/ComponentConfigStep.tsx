@@ -295,6 +295,26 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         };
     }, [isLoading, serviceGroups]);
 
+    // Auto-focus first editable field when component loads
+    useEffect(() => {
+        if (isLoading || serviceGroups.length === 0) return;
+
+        // Find the first editable field (skip read-only fields like MESH_ENDPOINT)
+        const firstEditableField = serviceGroups
+            .flatMap(group => group.fields)
+            .find(field => field.key !== 'MESH_ENDPOINT');
+
+        if (firstEditableField) {
+            // Wait for DOM to be ready, then focus the first field
+            setTimeout(() => {
+                const firstFieldElement = document.querySelector(`#field-${firstEditableField.key} input, #field-${firstEditableField.key} select`);
+                if (firstFieldElement instanceof HTMLElement) {
+                    firstFieldElement.focus();
+                }
+            }, 100);
+        }
+    }, [isLoading, serviceGroups]);
+
     // Initialize configs for selected components with intelligent pre-population
     useEffect(() => {
         const newConfigs = { ...componentConfigs };
