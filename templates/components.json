@@ -243,6 +243,7 @@
               "label": "Catalog Service Endpoint",
               "type": "url",
               "required": true,
+              "default": "https://catalog-service-sandbox.adobe.io/graphql",
               "placeholder": "https://catalog-service-sandbox.adobe.io/graphql",
               "description": "Adobe Catalog Service GraphQL endpoint (shared with Live Search)",
               "helpText": "The Catalog Service endpoint used by both Catalog Service and Live Search in API Mesh.",
