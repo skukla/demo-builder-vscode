@@ -57,7 +57,13 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                         Choose a unique name to identify your demo project.
                     </Text>
 
-                    <Form necessityIndicator="icon">
+                    <Form 
+                        necessityIndicator="icon"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            // Prevent form submission - navigation handled by Continue button
+                        }}
+                    >
                         <TextField
                             label="Name"
                             value={state.projectName}
