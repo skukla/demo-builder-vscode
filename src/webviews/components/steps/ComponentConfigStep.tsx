@@ -60,6 +60,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     const [activeSection, setActiveSection] = useState<string | null>(null);
     const [activeField, setActiveField] = useState<string | null>(null);
     const lastFocusedSectionRef = useRef<string | null>(null);
+    const fieldCountInSectionRef = useRef<number>(0);
 
     // Load components data
     useEffect(() => {
@@ -249,7 +250,14 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             
             // Check if we're entering a different section
             const isNewSection = lastFocusedSectionRef.current !== section.id;
-            lastFocusedSectionRef.current = section.id;
+            
+            // Reset field count when entering new section, increment when staying in same section
+            if (isNewSection) {
+                fieldCountInSectionRef.current = 1;
+                lastFocusedSectionRef.current = section.id;
+            } else {
+                fieldCountInSectionRef.current += 1;
+            }
             
             // Update active section (for highlighting)
             setActiveSection(section.id);
@@ -261,17 +269,24 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 return newSet;
             });
             
-            // Only scroll when entering a NEW section, not for every field
-            if (isNewSection) {
+            // Scroll on: 1) New section OR 2) Every 3 fields within section
+            const shouldScroll = isNewSection || (fieldCountInSectionRef.current % 3 === 0);
+            
+            if (shouldScroll) {
                 const navSectionElement = document.getElementById(`nav-${section.id}`);
                 if (navSectionElement) {
                     navSectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
                 
-                // Scroll to show the section header at the top in left column
-                const sectionElement = document.getElementById(`section-${section.id}`);
-                if (sectionElement) {
-                    sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // For new sections, scroll to section header; for field groups, scroll to current field
+                if (isNewSection) {
+                    const sectionElement = document.getElementById(`section-${section.id}`);
+                    if (sectionElement) {
+                        sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                } else {
+                    // Every 3 fields, scroll the current field into view
+                    fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
                 
                 // Scroll the navigation field node into view
@@ -283,7 +298,6 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 }, 150);
             } else {
                 // Within same section, only update navigation highlighting (no scroll)
-                // This keeps multiple fields visible as user tabs through them
                 const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
                 if (navFieldElement) {
                     navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
