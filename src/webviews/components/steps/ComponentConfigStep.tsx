@@ -251,9 +251,15 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             // Check if we're entering a different section
             const isNewSection = lastFocusedSectionRef.current !== section.id;
             
+            // Determine if this is the first field in the section (forward navigation)
+            // or a later field (backward navigation via Shift+Tab)
+            const fieldIndex = section.fields.findIndex(f => f.key === fieldId);
+            const isFirstFieldInSection = fieldIndex === 0;
+            const isBackwardNavigation = isNewSection && !isFirstFieldInSection;
+            
             // Reset field count when entering new section, increment when staying in same section
             if (isNewSection) {
-                fieldCountInSectionRef.current = 1;
+                fieldCountInSectionRef.current = isFirstFieldInSection ? 1 : fieldIndex + 1;
                 lastFocusedSectionRef.current = section.id;
             } else {
                 fieldCountInSectionRef.current += 1;
@@ -278,15 +284,22 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                     navSectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
                 
-                // For new sections, scroll to section header; for field groups, scroll to current field
+                // For new sections: scroll to section header (forward) or specific field (backward)
+                // For field groups: scroll to current field
                 if (isNewSection) {
-                    const sectionElement = document.getElementById(`section-${section.id}`);
-                    if (sectionElement) {
-                        sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (isBackwardNavigation) {
+                        // Backward navigation (Shift+Tab): scroll to the specific field
+                        fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        // Forward navigation: scroll to section header
+                        const sectionElement = document.getElementById(`section-${section.id}`);
+                        if (sectionElement) {
+                            sectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }
                     }
                 } else {
-                    // Every 3 fields, scroll the current field into view
-                    fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    // Every 3 fields, scroll the current field into view with center alignment for smoother transitions
+                    fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
                 
                 // Scroll the navigation field node into view
