@@ -182,16 +182,28 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             .map(def => {
                 const fields = groups[def.id] || [];
                 
-                // Apply custom field ordering if specified
-                const sortedFields = def.fieldOrder
-                    ? fields.sort((a, b) => {
-                        const aIndex = def.fieldOrder!.indexOf(a.key);
-                        const bIndex = def.fieldOrder!.indexOf(b.key);
+                // Sort fields: required first, then optional
+                // Within each group, respect custom fieldOrder if specified
+                const sortedFields = fields.sort((a, b) => {
+                    // First, sort by required status (required fields come first)
+                    const aRequired = a.required ? 0 : 1;
+                    const bRequired = b.required ? 0 : 1;
+                    if (aRequired !== bRequired) {
+                        return aRequired - bRequired;
+                    }
+                    
+                    // Within same required/optional group, apply custom ordering if specified
+                    if (def.fieldOrder) {
+                        const aIndex = def.fieldOrder.indexOf(a.key);
+                        const bIndex = def.fieldOrder.indexOf(b.key);
                         const aPos = aIndex === -1 ? 999 : aIndex;
                         const bPos = bIndex === -1 ? 999 : bIndex;
                         return aPos - bPos;
-                    })
-                    : fields;
+                    }
+                    
+                    // If no custom order, maintain current order
+                    return 0;
+                });
                 
                 return {
                     id: def.id,
