@@ -66,42 +66,86 @@ export function ReviewStep({ state, setCanProceed }: ReviewStepProps) {
 
                 {/* Frontend */}
                 {state.components?.frontend && (
-                    <View>
-                        <Flex gap="size-100" alignItems="center" marginBottom="size-100">
+                    <View 
+                        padding="size-200" 
+                        UNSAFE_style={{ 
+                            backgroundColor: 'rgba(75, 175, 79, 0.05)',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(75, 175, 79, 0.15)'
+                        }}
+                    >
+                        <Flex gap="size-100" alignItems="center" marginBottom="size-150">
                             <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
                             <Text UNSAFE_style={{ fontWeight: 600, fontSize: '15px' }}>Frontend</Text>
                         </Flex>
                         <View paddingStart="size-300">
-                            <Text UNSAFE_style={{ fontSize: '15px', marginBottom: '8px' }}>
+                            <Text UNSAFE_style={{ fontSize: '15px', marginBottom: '12px', color: 'var(--spectrum-global-color-gray-800)' }}>
                                 Headless CitiSignal
                             </Text>
                             {dependencies.length > 0 && (
-                                <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                                    Dependencies: {dependencies.join(' • ')}
-                                </Text>
+                                <View paddingStart="size-200">
+                                    <Flex direction="column" gap="size-75">
+                                        {dependencies.map(dep => (
+                                            <Flex key={dep} gap="size-100" alignItems="center">
+                                                <Text UNSAFE_style={{ 
+                                                    fontSize: '20px', 
+                                                    lineHeight: '1',
+                                                    color: 'var(--spectrum-global-color-gray-500)'
+                                                }}>
+                                                    •
+                                                </Text>
+                                                <Text UNSAFE_style={{ 
+                                                    fontSize: '14px', 
+                                                    color: 'var(--spectrum-global-color-gray-700)'
+                                                }}>
+                                                    {dep}
+                                                </Text>
+                                            </Flex>
+                                        ))}
+                                    </Flex>
+                                </View>
                             )}
                         </View>
                     </View>
                 )}
 
-                {state.components?.backend && state.components?.frontend && (
-                    <Divider size="S" />
-                )}
-
                 {/* Backend */}
                 {state.components?.backend && (
-                    <View>
-                        <Flex gap="size-100" alignItems="center" marginBottom="size-100">
+                    <View 
+                        padding="size-200" 
+                        UNSAFE_style={{ 
+                            backgroundColor: 'rgba(75, 175, 255, 0.05)',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(75, 175, 255, 0.15)'
+                        }}
+                    >
+                        <Flex gap="size-100" alignItems="center" marginBottom="size-150">
                             <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
                             <Text UNSAFE_style={{ fontWeight: 600, fontSize: '15px' }}>Backend</Text>
                         </Flex>
                         <View paddingStart="size-300">
-                            <Text UNSAFE_style={{ fontSize: '15px', marginBottom: '8px' }}>
+                            <Text UNSAFE_style={{ fontSize: '15px', marginBottom: '12px', color: 'var(--spectrum-global-color-gray-800)' }}>
                                 Adobe Commerce PaaS
                             </Text>
-                            <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-600)' }}>
-                                Includes: Catalog Service integration
-                            </Text>
+                            <View paddingStart="size-200">
+                                <Flex direction="column" gap="size-75">
+                                    <Flex gap="size-100" alignItems="center">
+                                        <Text UNSAFE_style={{ 
+                                            fontSize: '20px', 
+                                            lineHeight: '1',
+                                            color: 'var(--spectrum-global-color-gray-500)'
+                                        }}>
+                                            •
+                                        </Text>
+                                        <Text UNSAFE_style={{ 
+                                            fontSize: '14px', 
+                                            color: 'var(--spectrum-global-color-gray-700)'
+                                        }}>
+                                            Catalog Service integration
+                                        </Text>
+                                    </Flex>
+                                </Flex>
+                            </View>
                         </View>
                     </View>
                 )}
