@@ -159,10 +159,10 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                         
                         {/* Components List with Relationships */}
                         <View>
-                            <Text UNSAFE_style={{ fontSize: '15px', marginBottom: '8px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                            <Text UNSAFE_style={{ fontSize: '13px', marginBottom: '12px', color: 'var(--spectrum-global-color-gray-600)', fontWeight: 400 }}>
                                 Your demo project includes:
                             </Text>
-                            <Flex direction="column" gap="size-100" marginStart="size-200">
+                            <Flex direction="column" gap="size-100">
                                 {componentStructure.map((component, index) => (
                                     <View key={index}>
                                         {/* Parent Component */}
