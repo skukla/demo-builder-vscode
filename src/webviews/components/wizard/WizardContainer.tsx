@@ -311,7 +311,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             updateState,
             onNext: goNext,
             onBack: goBack,
-            setCanProceed
+            setCanProceed,
+            componentsData
         };
 
         // Calculate required Node versions based on selected components

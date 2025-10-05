@@ -8,13 +8,36 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import { WizardState } from '../../types';
 
+interface ComponentData {
+    id: string;
+    name: string;
+    description?: string;
+    configuration?: {
+        services?: Array<{
+            id: string;
+            name: string;
+            description: string;
+            required: boolean;
+        }>;
+    };
+}
+
+interface ComponentsData {
+    frontends?: ComponentData[];
+    backends?: ComponentData[];
+    dependencies?: ComponentData[];
+    externalSystems?: ComponentData[];
+    appBuilder?: ComponentData[];
+}
+
 interface ReviewStepProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
     setCanProceed: (canProceed: boolean) => void;
+    componentsData?: ComponentsData;
 }
 
-export function ReviewStep({ state, setCanProceed }: ReviewStepProps) {
+export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepProps) {
     useEffect(() => {
         // Can proceed if we have all required data
         const canProceed = !!(
@@ -26,51 +49,85 @@ export function ReviewStep({ state, setCanProceed }: ReviewStepProps) {
         setCanProceed(canProceed);
     }, [state, setCanProceed]);
 
-    // Build component structure with relationships
+    // Build component structure with relationships (fully configuration-driven)
     const getComponentStructure = () => {
         const structure: Array<{ name: string; children?: string[] }> = [];
         
         // Frontend + associated dependencies
-        if (state.components?.frontend) {
-            const frontendChildren: string[] = [];
-            
-            // Demo Inspector is associated with frontend
-            if (state.components?.dependencies?.includes('demo-inspector')) {
-                frontendChildren.push('Demo Inspector');
+        if (state.components?.frontend && componentsData?.frontends) {
+            const frontend = componentsData.frontends.find(f => f.id === state.components?.frontend);
+            if (frontend) {
+                const frontendChildren: string[] = [];
+                
+                // Find dependencies associated with frontend (like demo-inspector)
+                if (state.components?.dependencies && componentsData?.dependencies) {
+                    state.components.dependencies.forEach(depId => {
+                        const dep = componentsData.dependencies?.find(d => d.id === depId);
+                        // Check if this dependency is associated with the frontend
+                        // For now, demo-inspector is frontend-associated, others are standalone
+                        if (dep && depId === 'demo-inspector') {
+                            frontendChildren.push(dep.name);
+                        }
+                    });
+                }
+                
+                structure.push({
+                    name: frontend.name + ' (Frontend)',
+                    children: frontendChildren.length > 0 ? frontendChildren : undefined
+                });
             }
-            
-            structure.push({
-                name: 'Headless CitiSignal (Frontend)',
-                children: frontendChildren.length > 0 ? frontendChildren : undefined
-            });
         }
         
-        // Backend + associated services
-        if (state.components?.backend) {
-            structure.push({
-                name: 'Adobe Commerce PaaS (Backend)',
-                children: ['Catalog Service integration']
-            });
+        // Backend + associated services (dynamically from configuration)
+        if (state.components?.backend && componentsData?.backends) {
+            const backend = componentsData.backends.find(b => b.id === state.components?.backend);
+            if (backend) {
+                const backendChildren: string[] = [];
+                
+                // Extract services from backend configuration
+                if (backend.configuration?.services) {
+                    backend.configuration.services.forEach(service => {
+                        backendChildren.push(service.name);
+                    });
+                }
+                
+                structure.push({
+                    name: backend.name + ' (Backend)',
+                    children: backendChildren.length > 0 ? backendChildren : undefined
+                });
+            }
         }
         
-        // API Mesh - standalone component (not associated with frontend/backend)
-        if (state.components?.dependencies?.includes('commerce-mesh')) {
-            structure.push({
-                name: 'API Mesh (GraphQL Gateway)'
+        // Standalone dependencies (like API Mesh)
+        if (state.components?.dependencies && componentsData?.dependencies) {
+            state.components.dependencies.forEach(depId => {
+                const dep = componentsData.dependencies?.find(d => d.id === depId);
+                // Skip dependencies that are already shown under frontend/backend
+                if (dep && depId !== 'demo-inspector') {
+                    structure.push({
+                        name: dep.name
+                    });
+                }
             });
         }
         
         // External systems (standalone)
-        if (state.components?.externalSystems && state.components.externalSystems.length > 0) {
-            state.components.externalSystems.forEach(system => {
-                structure.push({ name: system });
+        if (state.components?.externalSystems && componentsData?.externalSystems) {
+            state.components.externalSystems.forEach(systemId => {
+                const system = componentsData.externalSystems?.find(s => s.id === systemId);
+                if (system) {
+                    structure.push({ name: system.name });
+                }
             });
         }
         
         // App Builder apps (standalone)
-        if (state.components?.appBuilderApps && state.components.appBuilderApps.length > 0) {
-            state.components.appBuilderApps.forEach(app => {
-                structure.push({ name: app });
+        if (state.components?.appBuilderApps && componentsData?.appBuilder) {
+            state.components.appBuilderApps.forEach(appId => {
+                const app = componentsData.appBuilder?.find(a => a.id === appId);
+                if (app) {
+                    structure.push({ name: app.name });
+                }
             });
         }
         
