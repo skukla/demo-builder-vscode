@@ -198,44 +198,35 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                         )}
                         
                         {/* Component Sections with Architectural Flow */}
-                        <Flex direction="column" gap="size-250">
+                        <Flex direction="column" gap="size-300">
                             {componentSections.map((section, index) => (
                                 <View key={index}>
-                                    {/* Section Header */}
+                                    {/* Component Name - Prominent */}
                                     <Text UNSAFE_style={{ 
-                                        fontSize: '14px', 
+                                        fontSize: '16px', 
                                         fontWeight: 600,
-                                        color: 'var(--spectrum-global-color-gray-700)',
-                                        marginBottom: '8px'
-                                    }}>
-                                        {section.label}:
-                                    </Text>
-                                    
-                                    {/* Component Name */}
-                                    <Text UNSAFE_style={{ 
-                                        fontSize: '15px', 
-                                        fontWeight: 500,
-                                        color: 'var(--spectrum-global-color-gray-800)',
-                                        marginLeft: '16px'
+                                        color: 'var(--spectrum-global-color-gray-900)',
+                                        lineHeight: '1.5'
                                     }}>
                                         {section.name}
                                     </Text>
                                     
                                     {/* Child Components (if any) */}
                                     {section.children && section.children.length > 0 && (
-                                        <Flex direction="column" gap="size-50" marginStart="size-400" marginTop="size-75">
+                                        <Flex direction="column" gap="size-75" marginStart="size-300" marginTop="size-100">
                                             {section.children.map((child, childIndex) => (
-                                                <Flex key={childIndex} gap="size-75" alignItems="center">
+                                                <Flex key={childIndex} gap="size-100" alignItems="center">
                                                     <Text UNSAFE_style={{ 
-                                                        fontSize: '14px', 
+                                                        fontSize: '15px', 
                                                         lineHeight: '1',
                                                         color: 'var(--spectrum-global-color-gray-500)'
                                                     }}>
                                                         ›
                                                     </Text>
                                                     <Text UNSAFE_style={{ 
-                                                        fontSize: '14px', 
-                                                        color: 'var(--spectrum-global-color-gray-700)'
+                                                        fontSize: '15px', 
+                                                        color: 'var(--spectrum-global-color-gray-700)',
+                                                        lineHeight: '1.5'
                                                     }}>
                                                         {child}
                                                     </Text>
