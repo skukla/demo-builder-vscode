@@ -49,11 +49,11 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
         setCanProceed(canProceed);
     }, [state, setCanProceed]);
 
-    // Build component structure with relationships (fully configuration-driven)
-    const getComponentStructure = () => {
-        const structure: Array<{ name: string; children?: string[] }> = [];
+    // Build component structure with architectural flow order (fully configuration-driven)
+    const getComponentSections = () => {
+        const sections: Array<{ type: string; label: string; name: string; children?: string[] }> = [];
         
-        // Frontend + associated dependencies
+        // 1. Frontend + associated dependencies
         if (state.components?.frontend && componentsData?.frontends) {
             const frontend = componentsData.frontends.find(f => f.id === state.components?.frontend);
             if (frontend) {
@@ -63,22 +63,38 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                 if (state.components?.dependencies && componentsData?.dependencies) {
                     state.components.dependencies.forEach(depId => {
                         const dep = componentsData.dependencies?.find(d => d.id === depId);
-                        // Check if this dependency is associated with the frontend
-                        // For now, demo-inspector is frontend-associated, others are standalone
+                        // demo-inspector is frontend-associated
                         if (dep && depId === 'demo-inspector') {
                             frontendChildren.push(dep.name);
                         }
                     });
                 }
                 
-                structure.push({
-                    name: frontend.name + ' (Frontend)',
+                sections.push({
+                    type: 'frontend',
+                    label: 'Frontend',
+                    name: frontend.name,
                     children: frontendChildren.length > 0 ? frontendChildren : undefined
                 });
             }
         }
         
-        // Backend + associated services (dynamically from configuration)
+        // 2. API Mesh (middleware/gateway layer)
+        if (state.components?.dependencies && componentsData?.dependencies) {
+            state.components.dependencies.forEach(depId => {
+                const dep = componentsData.dependencies?.find(d => d.id === depId);
+                // API Mesh sits between frontend and backend
+                if (dep && depId === 'commerce-mesh') {
+                    sections.push({
+                        type: 'middleware',
+                        label: 'API Mesh',
+                        name: dep.name
+                    });
+                }
+            });
+        }
+        
+        // 3. Backend + associated services
         if (state.components?.backend && componentsData?.backends) {
             const backend = componentsData.backends.find(b => b.id === state.components?.backend);
             if (backend) {
@@ -91,50 +107,62 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     });
                 }
                 
-                structure.push({
-                    name: backend.name + ' (Backend)',
+                sections.push({
+                    type: 'backend',
+                    label: 'Backend',
+                    name: backend.name,
                     children: backendChildren.length > 0 ? backendChildren : undefined
                 });
             }
         }
         
-        // Standalone dependencies (like API Mesh)
+        // 4. Other dependencies (not frontend-associated or API Mesh)
         if (state.components?.dependencies && componentsData?.dependencies) {
             state.components.dependencies.forEach(depId => {
                 const dep = componentsData.dependencies?.find(d => d.id === depId);
-                // Skip dependencies that are already shown under frontend/backend
-                if (dep && depId !== 'demo-inspector') {
-                    structure.push({
+                // Skip already-shown dependencies
+                if (dep && depId !== 'demo-inspector' && depId !== 'commerce-mesh') {
+                    sections.push({
+                        type: 'other',
+                        label: 'Additional',
                         name: dep.name
                     });
                 }
             });
         }
         
-        // External systems (standalone)
+        // 5. External systems
         if (state.components?.externalSystems && componentsData?.externalSystems) {
             state.components.externalSystems.forEach(systemId => {
                 const system = componentsData.externalSystems?.find(s => s.id === systemId);
                 if (system) {
-                    structure.push({ name: system.name });
+                    sections.push({
+                        type: 'external',
+                        label: 'External System',
+                        name: system.name
+                    });
                 }
             });
         }
         
-        // App Builder apps (standalone)
+        // 6. App Builder apps
         if (state.components?.appBuilderApps && componentsData?.appBuilder) {
             state.components.appBuilderApps.forEach(appId => {
                 const app = componentsData.appBuilder?.find(a => a.id === appId);
                 if (app) {
-                    structure.push({ name: app.name });
+                    sections.push({
+                        type: 'app-builder',
+                        label: 'App Builder',
+                        name: app.name
+                    });
                 }
             });
         }
         
-        return structure;
+        return sections;
     };
 
-    const componentStructure = getComponentStructure();
+    const componentSections = getComponentSections();
 
     return (
         <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
@@ -157,58 +185,67 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                             </Text>
                         </Flex>
                         
-                        {/* Components List with Relationships */}
-                        <View>
-                            <Text UNSAFE_style={{ fontSize: '14px', marginBottom: '24px', color: 'var(--spectrum-global-color-gray-600)', fontWeight: 400 }}>
-                                Your demo project includes:
-                            </Text>
-                            <Flex direction="column" gap="size-200">
-                                {componentStructure.map((component, index) => (
-                                    <View key={index}>
-                                        {/* Parent Component */}
-                                        <Flex gap="size-100" alignItems="center">
-                                            <Text UNSAFE_style={{ 
-                                                fontSize: '16px', 
-                                                lineHeight: '1',
-                                                color: 'var(--spectrum-global-color-gray-600)'
-                                            }}>
-                                                •
-                                            </Text>
-                                            <Text UNSAFE_style={{ 
-                                                fontSize: '15px', 
-                                                fontWeight: 500,
-                                                color: 'var(--spectrum-global-color-gray-800)'
-                                            }}>
-                                                {component.name}
-                                            </Text>
-                                        </Flex>
-                                        
-                                        {/* Child Components (if any) */}
-                                        {component.children && component.children.length > 0 && (
-                                            <Flex direction="column" gap="size-50" marginStart="size-300" marginTop="size-50">
-                                                {component.children.map((child, childIndex) => (
-                                                    <Flex key={childIndex} gap="size-75" alignItems="center">
-                                                        <Text UNSAFE_style={{ 
-                                                            fontSize: '14px', 
-                                                            lineHeight: '1',
-                                                            color: 'var(--spectrum-global-color-gray-500)'
-                                                        }}>
-                                                            ›
-                                                        </Text>
-                                                        <Text UNSAFE_style={{ 
-                                                            fontSize: '14px', 
-                                                            color: 'var(--spectrum-global-color-gray-700)'
-                                                        }}>
-                                                            {child}
-                                                        </Text>
-                                                    </Flex>
-                                                ))}
-                                            </Flex>
-                                        )}
-                                    </View>
-                                ))}
+                        {/* Project Name */}
+                        {state.projectName && (
+                            <Flex gap="size-100" alignItems="center" marginBottom="size-200">
+                                <Text UNSAFE_style={{ fontSize: '14px', fontWeight: 600, color: 'var(--spectrum-global-color-gray-700)' }}>
+                                    Project:
+                                </Text>
+                                <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-800)' }}>
+                                    {state.projectName}
+                                </Text>
                             </Flex>
-                        </View>
+                        )}
+                        
+                        {/* Component Sections with Architectural Flow */}
+                        <Flex direction="column" gap="size-250">
+                            {componentSections.map((section, index) => (
+                                <View key={index}>
+                                    {/* Section Header */}
+                                    <Text UNSAFE_style={{ 
+                                        fontSize: '14px', 
+                                        fontWeight: 600,
+                                        color: 'var(--spectrum-global-color-gray-700)',
+                                        marginBottom: '8px'
+                                    }}>
+                                        {section.label}:
+                                    </Text>
+                                    
+                                    {/* Component Name */}
+                                    <Text UNSAFE_style={{ 
+                                        fontSize: '15px', 
+                                        fontWeight: 500,
+                                        color: 'var(--spectrum-global-color-gray-800)',
+                                        marginLeft: '16px'
+                                    }}>
+                                        {section.name}
+                                    </Text>
+                                    
+                                    {/* Child Components (if any) */}
+                                    {section.children && section.children.length > 0 && (
+                                        <Flex direction="column" gap="size-50" marginStart="size-400" marginTop="size-75">
+                                            {section.children.map((child, childIndex) => (
+                                                <Flex key={childIndex} gap="size-75" alignItems="center">
+                                                    <Text UNSAFE_style={{ 
+                                                        fontSize: '14px', 
+                                                        lineHeight: '1',
+                                                        color: 'var(--spectrum-global-color-gray-500)'
+                                                    }}>
+                                                        ›
+                                                    </Text>
+                                                    <Text UNSAFE_style={{ 
+                                                        fontSize: '14px', 
+                                                        color: 'var(--spectrum-global-color-gray-700)'
+                                                    }}>
+                                                        {child}
+                                                    </Text>
+                                                </Flex>
+                                            ))}
+                                        </Flex>
+                                    )}
+                                </View>
+                            ))}
+                        </Flex>
                         
                         {/* Time Estimate */}
                         <Flex gap="size-100" alignItems="center" marginTop="size-100">
