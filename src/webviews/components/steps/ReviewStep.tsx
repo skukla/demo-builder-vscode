@@ -185,27 +185,29 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                             </Text>
                         </Flex>
                         
-                        {/* Project Name */}
+                        {/* Project Name - Hero Element */}
                         {state.projectName && (
-                            <Flex gap="size-100" alignItems="center" marginBottom="size-200">
-                                <Text UNSAFE_style={{ fontSize: '14px', fontWeight: 600, color: 'var(--spectrum-global-color-gray-700)' }}>
-                                    Project:
-                                </Text>
-                                <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-800)' }}>
+                            <View marginBottom="size-300">
+                                <Text UNSAFE_style={{ 
+                                    fontSize: '20px', 
+                                    fontWeight: 700,
+                                    color: 'var(--spectrum-global-color-gray-900)',
+                                    lineHeight: '1.3'
+                                }}>
                                     {state.projectName}
                                 </Text>
-                            </Flex>
+                            </View>
                         )}
                         
                         {/* Component Sections with Architectural Flow */}
-                        <Flex direction="column" gap="size-300">
+                        <Flex direction="column" gap="size-250">
                             {componentSections.map((section, index) => (
                                 <View key={index}>
-                                    {/* Component Name - Prominent */}
+                                    {/* Component Name */}
                                     <Text UNSAFE_style={{ 
-                                        fontSize: '16px', 
+                                        fontSize: '15px', 
                                         fontWeight: 600,
-                                        color: 'var(--spectrum-global-color-gray-900)',
+                                        color: 'var(--spectrum-global-color-gray-800)',
                                         lineHeight: '1.5'
                                     }}>
                                         {section.name}
@@ -217,14 +219,14 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                                             {section.children.map((child, childIndex) => (
                                                 <Flex key={childIndex} gap="size-100" alignItems="center">
                                                     <Text UNSAFE_style={{ 
-                                                        fontSize: '15px', 
+                                                        fontSize: '14px', 
                                                         lineHeight: '1',
                                                         color: 'var(--spectrum-global-color-gray-500)'
                                                     }}>
                                                         ›
                                                     </Text>
                                                     <Text UNSAFE_style={{ 
-                                                        fontSize: '15px', 
+                                                        fontSize: '14px', 
                                                         color: 'var(--spectrum-global-color-gray-700)',
                                                         lineHeight: '1.5'
                                                     }}>
