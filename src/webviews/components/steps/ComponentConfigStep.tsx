@@ -302,8 +302,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         }
                     }
                 } else {
-                    // Every 3 fields, scroll the current field into view with center alignment for smoother transitions
-                    fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Every 3 fields, scroll the current field to the top to show the next 3 fields below it
+                    fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
                 
                 // Scroll the navigation field node into view
