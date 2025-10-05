@@ -243,21 +243,13 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                             </Flex>
                         </Flex>
                         
-                        {/* Footer: Time Estimate & CTA */}
-                        <Flex direction="column" gap="size-100" marginTop="size-250">
-                            {/* Time Estimate */}
-                            <Flex gap="size-100" alignItems="center">
-                                <Clock size="S" UNSAFE_style={{ 
-                                    color: 'var(--spectrum-global-color-blue-600)' 
-                                }} />
-                                <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
-                                    <Text UNSAFE_style={{ fontWeight: 600, display: 'inline' }}>Estimated time:</Text> 5-8 minutes
-                                </Text>
-                            </Flex>
-                            
-                            {/* CTA */}
-                            <Text UNSAFE_style={{ fontSize: '15px', color: 'var(--spectrum-global-color-gray-700)' }}>
-                                Click "Create Project" to begin.
+                        {/* Footer: Time Estimate */}
+                        <Flex gap="size-100" alignItems="center" marginTop="size-250">
+                            <Clock size="S" UNSAFE_style={{ 
+                                color: 'var(--spectrum-global-color-blue-600)' 
+                            }} />
+                            <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                                <Text UNSAFE_style={{ fontWeight: 600, display: 'inline' }}>Estimated time:</Text> 5-8 minutes
                             </Text>
                         </Flex>
                     </Flex>
