@@ -126,51 +126,14 @@ export async function tryWithTimeout<T>(
  * 
  * @param ms Delay in milliseconds
  * @returns Promise that resolves after the delay
+ * 
+ * @internal Used internally by timeout utilities
  */
-export function delay(ms: number): Promise<void> {
+function delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-/**
- * Retries a promise-returning function with exponential backoff
- * 
- * @param fn Function that returns a promise
- * @param options Retry options
- * @returns The result of the function or throws after all retries exhausted
- */
-export async function retryWithBackoff<T>(
-    fn: () => Promise<T>,
-    options: {
-        maxAttempts?: number;
-        initialDelayMs?: number;
-        maxDelayMs?: number;
-        backoffMultiplier?: number;
-    } = {}
-): Promise<T> {
-    const {
-        maxAttempts = 3,
-        initialDelayMs = 1000,
-        maxDelayMs = 10000,
-        backoffMultiplier = 2
-    } = options;
-
-    let lastError: Error | undefined;
-    let delayMs = initialDelayMs;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        try {
-            return await fn();
-        } catch (error) {
-            lastError = error instanceof Error ? error : new Error(String(error));
-            
-            // Don't delay after the last attempt
-            if (attempt < maxAttempts) {
-                await delay(delayMs);
-                delayMs = Math.min(delayMs * backoffMultiplier, maxDelayMs);
-            }
-        }
-    }
-
-    throw lastError || new Error('All retry attempts failed');
-}
+// Note: For command-level retry logic with exponential backoff,
+// see ExternalCommandManager.executeWithRetry() which already
+// handles retries for git, npm, aio, and other CLI commands.
 
