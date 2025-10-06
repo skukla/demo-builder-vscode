@@ -16,6 +16,7 @@ import { getExternalCommandManager } from '../extension';
 import { ExternalCommandManager } from '../utils/externalCommandManager';
 import { getLogger } from '../utils/debugLogger';
 import { TIMEOUTS } from '../utils/timeoutConfig';
+import { withTimeout } from '../utils/promiseUtils';
 
 export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     // Prerequisites are handled by PrerequisitesManager
@@ -2411,30 +2412,18 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Send initial status
             await this.sendMessage('creationStarted', {});
             
-            // Create timeout promise
-            const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => {
-                    reject(new Error(
+            // Execute with timeout and cancellation support
+            await withTimeout(
+                this.executeProjectCreation(config),
+                {
+                    timeoutMs: OVERALL_TIMEOUT_MS,
+                    timeoutMessage: 
                         'Project creation timed out after 30 minutes. ' +
                         'This may indicate a network issue or very large components. ' +
-                        'Please check your connection and try again.'
-                    ));
-                }, OVERALL_TIMEOUT_MS);
-            });
-            
-            // Create cancellation promise
-            const cancellationPromise = new Promise<never>((_, reject) => {
-                this.projectCreationAbortController!.signal.addEventListener('abort', () => {
-                    reject(new Error('Project creation cancelled by user'));
-                });
-            });
-            
-            // Race between actual creation, timeout, and cancellation
-            await Promise.race([
-                this.executeProjectCreation(config),
-                timeoutPromise,
-                cancellationPromise
-            ]);
+                        'Please check your connection and try again.',
+                    signal: this.projectCreationAbortController!.signal
+                }
+            );
             
         } catch (error) {
             const elapsed = Date.now() - startTime;
