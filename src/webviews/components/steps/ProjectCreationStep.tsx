@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heading, Text, Flex, ActionButton } from '@adobe/react-spectrum';
+import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import { WizardState } from '../../types';
@@ -56,24 +56,25 @@ export function ProjectCreationStep({ state }: ProjectCreationStepProps) {
                             subMessage={progress.message}
                         />
                         
-                        {/* Additional info below spinner */}
+                        {/* Additional info below spinner - matches ApiMeshStep button pattern */}
                         <Flex direction="column" gap="size-200" alignItems="center" marginTop="size-400">
                             <Text UNSAFE_className="text-sm text-gray-600">
                                 💡 Your components will appear in the sidebar as they're installed
                             </Text>
                             
-                            <ActionButton
-                                onPress={handleCancel}
-                                isDisabled={isCancelling}
-                                isQuiet
-                                UNSAFE_className="text-red-600"
-                            >
-                                {isCancelling ? 'Cancelling...' : 'Cancel Project Creation'}
-                            </ActionButton>
-                            
                             <Text UNSAFE_className="text-sm text-gray-500">
                                 ⏱️ Maximum time: 30 minutes
                             </Text>
+                            
+                            <Flex gap="size-150" marginTop="size-300">
+                                <Button 
+                                    variant="secondary" 
+                                    onPress={handleCancel}
+                                    isDisabled={isCancelling}
+                                >
+                                    {isCancelling ? 'Cancelling...' : 'Cancel'}
+                                </Button>
+                            </Flex>
                         </Flex>
                     </Flex>
                 )}
