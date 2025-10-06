@@ -30,54 +30,45 @@ export function ProjectCreationStep({ state }: ProjectCreationStepProps) {
     const isActive = progress && !progress.error && !isCancelled && !isFailed && !isCompleted;
 
     return (
-        <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0' }}>
-            {/* Main content area (max 800px) - matches ApiMeshStep pattern */}
-            <div style={{
-                maxWidth: '800px',
-                width: '100%',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                minWidth: 0
-            }}>
-                <Heading level={2} marginBottom="size-300">
-                    Creating Your Demo Project
-                </Heading>
-                <Text marginBottom="size-400">
-                    Setting up your project with all selected components and configurations.
-                </Text>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+            {/* Main content area */}
+            <div style={{ flex: 1, display: 'flex', width: '100%' }}>
+                <div style={{
+                    maxWidth: '800px',
+                    width: '100%',
+                    padding: '24px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    minWidth: 0
+                }}>
+                    <Heading level={2} marginBottom="size-300">
+                        Creating Your Demo Project
+                    </Heading>
+                    <Text marginBottom="size-400">
+                        Setting up your project with all selected components and configurations.
+                    </Text>
 
-                {/* Active creation state - matches ApiMeshStep loading pattern */}
-                {isActive && (
-                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
-                        <LoadingDisplay 
-                            size="L"
-                            message={progress.currentOperation || 'Processing'}
-                            subMessage={progress.message}
-                        />
-                        
-                        {/* Additional info below spinner - matches ApiMeshStep button pattern */}
-                        <Flex direction="column" gap="size-200" alignItems="center" marginTop="size-400">
-                            <Text UNSAFE_className="text-sm text-gray-600">
-                                💡 Your components will appear in the sidebar as they're installed
-                            </Text>
+                    {/* Active creation state - matches ApiMeshStep loading pattern */}
+                    {isActive && (
+                        <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                            <LoadingDisplay 
+                                size="L"
+                                message={progress.currentOperation || 'Processing'}
+                                subMessage={progress.message}
+                            />
                             
-                            <Text UNSAFE_className="text-sm text-gray-500">
-                                ⏱️ Maximum time: 30 minutes
-                            </Text>
-                            
-                            <Flex gap="size-150" marginTop="size-300">
-                                <Button 
-                                    variant="secondary" 
-                                    onPress={handleCancel}
-                                    isDisabled={isCancelling}
-                                >
-                                    {isCancelling ? 'Cancelling...' : 'Cancel'}
-                                </Button>
+                            {/* Additional info below spinner */}
+                            <Flex direction="column" gap="size-200" alignItems="center" marginTop="size-400">
+                                <Text UNSAFE_className="text-sm text-gray-600">
+                                    💡 Your components will appear in the sidebar as they're installed
+                                </Text>
+                                
+                                <Text UNSAFE_className="text-sm text-gray-500">
+                                    ⏱️ Maximum time: 30 minutes
+                                </Text>
                             </Flex>
                         </Flex>
-                    </Flex>
-                )}
+                    )}
 
                 {/* Success state - matches ApiMeshStep success pattern */}
                 {isCompleted && !progress?.error && (
@@ -113,17 +104,39 @@ export function ProjectCreationStep({ state }: ProjectCreationStepProps) {
                     </Flex>
                 )}
 
-                {/* Initial loading state (before progress updates arrive) */}
-                {!progress && (
-                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
-                        <LoadingDisplay 
-                            size="L"
-                            message="Initializing"
-                            subMessage="Preparing to create your project..."
-                        />
-                    </Flex>
-                )}
+                    {/* Initial loading state (before progress updates arrive) */}
+                    {!progress && (
+                        <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                            <LoadingDisplay 
+                                size="L"
+                                message="Initializing"
+                                subMessage="Preparing to create your project..."
+                            />
+                        </Flex>
+                    )}
+                </div>
             </div>
+
+            {/* Footer - matches WizardContainer footer pattern (only show during active creation) */}
+            {isActive && (
+                <View
+                    padding="size-400"
+                    UNSAFE_className="border-t bg-gray-75"
+                >
+                    <div style={{ maxWidth: '800px', width: '100%' }}>
+                        <Flex justifyContent="flex-start" width="100%">
+                            <Button
+                                variant="secondary"
+                                onPress={handleCancel}
+                                isQuiet
+                                isDisabled={isCancelling}
+                            >
+                                {isCancelling ? 'Cancelling...' : 'Cancel'}
+                            </Button>
+                        </Flex>
+                    </div>
+                </View>
+            )}
         </div>
     );
 }
