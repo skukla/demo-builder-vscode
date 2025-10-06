@@ -2502,10 +2502,30 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             const path = await import('path');
             const os = await import('os');
             
+            // PRE-FLIGHT CHECK: Ensure clean slate
+            const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', config.projectName);
+            
+            if (await fs.access(projectPath).then(() => true).catch(() => false)) {
+                this.logger.warn(`[Project Creation] Directory already exists: ${projectPath}`);
+                
+                // Check if it has content
+                const existingFiles = await fs.readdir(projectPath);
+                if (existingFiles.length > 0) {
+                    this.logger.info(`[Project Creation] Found ${existingFiles.length} existing files/folders, cleaning up...`);
+                    progressTracker('Preparing Project', 5, 'Removing existing project data...');
+                    
+                    // Clean it up before proceeding
+                    await fs.rm(projectPath, { recursive: true, force: true });
+                    this.logger.info('[Project Creation] Existing directory cleaned');
+                } else {
+                    // Empty directory is fine, just remove it to be safe
+                    await fs.rmdir(projectPath);
+                }
+            }
+            
             // Step 1: Create project directory structure (10%)
             progressTracker('Setting Up Project', 10, 'Creating project directory structure...');
             
-            const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', config.projectName);
             const componentsDir = path.join(projectPath, 'components');
             
             await fs.mkdir(componentsDir, { recursive: true });
