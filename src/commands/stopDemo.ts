@@ -12,7 +12,13 @@ export class StopDemoCommand extends BaseCommand {
                 return;
             }
 
-            if (project.frontend?.status === 'stopped') {
+            // Check if frontend exists and is running
+            if (!project.frontend) {
+                this.logger.debug('[StopDemo] No frontend component, nothing to stop');
+                return;
+            }
+            
+            if (project.frontend.status === 'stopped') {
                 this.logger.debug('[StopDemo] Demo already stopped');
                 return;
             }
@@ -28,7 +34,9 @@ export class StopDemoCommand extends BaseCommand {
                 });
                 
                 // Update project status
-                project.frontend!.status = 'stopped';
+                if (project.frontend) {
+                    project.frontend.status = 'stopped';
+                }
                 project.status = 'ready';
                 await this.stateManager.saveProject(project);
                 
