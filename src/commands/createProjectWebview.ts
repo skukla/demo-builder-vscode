@@ -2525,10 +2525,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             });
         };
             
-            // Open Explorer at START so user can watch components appear in sidebar
-            // This makes the "Your components will appear in the sidebar" tip actually useful
-            await vscode.commands.executeCommand('workbench.view.explorer');
-            this.logger.debug('[Project Creation] Opened Explorer view for live updates');
+            // Open Demo Builder sidebar at START so user can watch components appear
+            // This makes the "Watch the Demo Builder sidebar" tip actually useful
+            await vscode.commands.executeCommand('demoBuilder.projectView.focus');
+            this.logger.debug('[Project Creation] Opened Demo Builder sidebar for live updates');
             
             // Import ComponentManager
             const { ComponentManager } = await import('../utils/componentManager');
@@ -2726,9 +2726,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Note: Tree view auto-refreshes via StateManager.onProjectChanged event
             // (triggered by saveProject() above)
             
-            // Reveal project folder in Explorer (Explorer was already opened at start)
+            // Now open Explorer to show the project files (user saw Demo Builder sidebar during install)
+            await vscode.commands.executeCommand('workbench.view.explorer');
             await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(projectPath));
-            this.logger.debug('[Project Creation] Revealed project in Explorer');
+            this.logger.debug('[Project Creation] Opened Explorer and revealed project files');
             
             // Send completion message
             await this.sendMessage('creationComplete', {
