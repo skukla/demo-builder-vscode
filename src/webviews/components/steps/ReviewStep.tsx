@@ -5,7 +5,6 @@ import {
     Flex
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import Clock from '@spectrum-icons/workflow/Clock';
 import { WizardState } from '../../types';
 
 interface ComponentData {
@@ -241,16 +240,6 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                                     </View>
                                 ))}
                             </Flex>
-                        </Flex>
-                        
-                        {/* Footer: Time Estimate */}
-                        <Flex gap="size-100" alignItems="center" marginTop="size-250">
-                            <Clock size="S" UNSAFE_style={{ 
-                                color: 'var(--spectrum-global-color-blue-600)' 
-                            }} />
-                            <Text UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
-                                <Text UNSAFE_style={{ fontWeight: 600, display: 'inline' }}>Estimated time:</Text> 5-8 minutes
-                            </Text>
                         </Flex>
                     </Flex>
                 </View>
