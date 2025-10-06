@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as os from 'os';
 import * as fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import { BaseWebviewCommand } from './baseWebviewCommand';
@@ -1602,7 +1603,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.debugLogger.debug('[API Mesh] Fetching endpoint via describe command');
             const commandManager = getExternalCommandManager();
             const result = await commandManager.execute(
-                'aio api-mesh:describe --json',
+                'aio api-mesh:describe',
                 {
                     timeout: TIMEOUTS.API_CALL,
                     configureTelemetry: false,
@@ -2401,6 +2402,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private async handleCreateProject(config: any): Promise<void> {
         const OVERALL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
         const startTime = Date.now();
+        const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', config.projectName);
         
         // Create abort controller for cancellation
         this.projectCreationAbortController = new AbortController();
@@ -2436,6 +2438,18 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             const elapsedSec = Math.floor((elapsed / 1000) % 60);
             
             this.logger.error(`[Project Creation] Failed after ${elapsedMin}m ${elapsedSec}s`, error as Error);
+            
+            // Cleanup partial project directory on failure
+            try {
+                if (fs.existsSync(projectPath)) {
+                    this.logger.info(`[Project Creation] Cleaning up partial project at ${projectPath}`);
+                    await fsPromises.rm(projectPath, { recursive: true, force: true });
+                    this.logger.info('[Project Creation] Cleanup complete');
+                }
+            } catch (cleanupError) {
+                this.logger.warn('[Project Creation] Failed to cleanup partial project', cleanupError as Error);
+                // Don't throw - we still want to report the original error
+            }
             
             // Determine error type
             const errorMessage = error instanceof Error ? error.message : String(error);
