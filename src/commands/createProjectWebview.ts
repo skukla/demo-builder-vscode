@@ -2525,6 +2525,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             });
         };
             
+            // Open Explorer at START so user can watch components appear in sidebar
+            // This makes the "Your components will appear in the sidebar" tip actually useful
+            await vscode.commands.executeCommand('workbench.view.explorer');
+            this.logger.debug('[Project Creation] Opened Explorer view for live updates');
+            
             // Import ComponentManager
             const { ComponentManager } = await import('../utils/componentManager');
             const { ComponentRegistryManager } = await import('../utils/componentRegistry');
@@ -2714,18 +2719,18 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
             
             // Step 10: Complete
-            progressTracker('Project Created', 100, 'Opening project in Explorer...');
+            progressTracker('Project Created', 100, 'Project creation complete');
             
             this.logger.info('[Project Creation] Completed successfully');
             
             // Note: Tree view auto-refreshes via StateManager.onProjectChanged event
             // (triggered by saveProject() above)
             
-            // FIRST: Open Explorer to show files (primary action)
-            await vscode.commands.executeCommand('workbench.view.explorer');
+            // Reveal project folder in Explorer (Explorer was already opened at start)
             await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(projectPath));
+            this.logger.debug('[Project Creation] Revealed project in Explorer');
             
-            // Send completion AFTER Explorer is open
+            // Send completion message
             await this.sendMessage('creationComplete', {
                 projectPath: projectPath,
                 success: true,
