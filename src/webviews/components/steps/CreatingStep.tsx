@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { View, Heading, Text, Well, Flex, ProgressCircle, Button, ActionButton } from '@adobe/react-spectrum';
+import { Heading, Text, Flex, ActionButton } from '@adobe/react-spectrum';
+import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import { WizardState } from '../../types';
+import { LoadingDisplay } from '../shared/LoadingDisplay';
 
 interface CreatingStepProps {
     state: WizardState;
@@ -26,63 +28,82 @@ export function CreatingStep({ state }: CreatingStepProps) {
     const isActive = progress && !progress.error && !isCancelled && !isFailed;
 
     return (
-        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
-            <Heading level={2} marginBottom="size-300">
-                Creating Your Demo Project
-            </Heading>
+        <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0' }}>
+            {/* Main content area (max 800px) - matches ApiMeshStep pattern */}
+            <div style={{
+                maxWidth: '800px',
+                width: '100%',
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                minWidth: 0
+            }}>
+                <Heading level={2} marginBottom="size-300">
+                    Creating Your Demo Project
+                </Heading>
+                <Text marginBottom="size-400">
+                    Setting up your project with all selected components and configurations.
+                </Text>
 
-            {progress ? (
-                <>
-                    <Well marginBottom="size-300">
-                        <Flex gap="size-200" alignItems="center">
-                            {isActive && <ProgressCircle size="S" isIndeterminate />}
-                            <View flex={1}>
-                                <Text><strong>{progress.currentOperation}</strong></Text>
-                                <Text UNSAFE_className="text-sm text-gray-700">
-                                    {progress.message}
-                                </Text>
-                            </View>
-                        </Flex>
-                    </Well>
-
-                    {isActive && (
-                        <>
-                            <Text UNSAFE_className="text-sm text-gray-600" marginBottom="size-200">
+                {/* Active creation state - matches ApiMeshStep loading pattern */}
+                {isActive && (
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                        <LoadingDisplay 
+                            size="L"
+                            message={progress.currentOperation || 'Processing'}
+                            subMessage={progress.message}
+                        />
+                        
+                        {/* Additional info below spinner */}
+                        <Flex direction="column" gap="size-200" alignItems="center" marginTop="size-400">
+                            <Text UNSAFE_className="text-sm text-gray-600">
                                 💡 Your components will appear in the sidebar as they're installed
                             </Text>
                             
-                            <Flex gap="size-200" marginTop="size-300">
-                                <ActionButton
-                                    onPress={handleCancel}
-                                    isDisabled={isCancelling}
-                                    UNSAFE_className="text-red-600"
-                                >
-                                    {isCancelling ? 'Cancelling...' : 'Cancel Project Creation'}
-                                </ActionButton>
-                            </Flex>
+                            <ActionButton
+                                onPress={handleCancel}
+                                isDisabled={isCancelling}
+                                isQuiet
+                                UNSAFE_className="text-red-600"
+                            >
+                                {isCancelling ? 'Cancelling...' : 'Cancel Project Creation'}
+                            </ActionButton>
                             
-                            <Text UNSAFE_className="text-sm text-gray-500" marginTop="size-200">
+                            <Text UNSAFE_className="text-sm text-gray-500">
                                 ⏱️ Maximum time: 30 minutes
                             </Text>
-                        </>
-                    )}
-
-                    {progress.error && (
-                        <Well marginTop="size-300" UNSAFE_className="bg-red-100">
-                            <Text UNSAFE_className="text-red-600">
-                                <strong>{isCancelled ? 'Cancelled' : 'Error'}:</strong> {progress.error}
-                            </Text>
-                        </Well>
-                    )}
-                </>
-            ) : (
-                <Well>
-                    <Flex gap="size-200" alignItems="center">
-                        <ProgressCircle size="S" isIndeterminate />
-                        <Text>Initializing project creation...</Text>
+                        </Flex>
                     </Flex>
-                </Well>
-            )}
+                )}
+
+                {/* Error state - matches ApiMeshStep error pattern */}
+                {(progress?.error || isCancelled || isFailed) && (
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                        <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+                            <AlertCircle size="L" UNSAFE_className="text-red-600" />
+                            <Flex direction="column" gap="size-100" alignItems="center">
+                                <Text UNSAFE_className="text-xl font-medium">
+                                    {isCancelled ? 'Project Creation Cancelled' : 'Project Creation Failed'}
+                                </Text>
+                                {progress?.error && (
+                                    <Text UNSAFE_className="text-sm text-gray-600">{progress.error}</Text>
+                                )}
+                            </Flex>
+                        </Flex>
+                    </Flex>
+                )}
+
+                {/* Initial loading state (before progress updates arrive) */}
+                {!progress && (
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                        <LoadingDisplay 
+                            size="L"
+                            message="Initializing"
+                            subMessage="Preparing to create your project..."
+                        />
+                    </Flex>
+                )}
+            </div>
         </div>
     );
 }
