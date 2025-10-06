@@ -2651,13 +2651,17 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     project.componentInstances![comp.id] = result.component;
                     this.logger.info(`[Project Creation] Successfully installed ${componentDef.name}`);
                     
-                    // Generate component-specific .env file
-                    await this.generateComponentEnvFile(
-                        result.component.path!,
-                        comp.id,
-                        componentDef,
-                        config
-                    );
+                    // Generate component-specific .env file (only for components with a path)
+                    if (result.component.path) {
+                        await this.generateComponentEnvFile(
+                            result.component.path,
+                            comp.id,
+                            componentDef,
+                            config
+                        );
+                    } else {
+                        this.logger.debug(`[Project Creation] Skipping .env generation for ${componentDef.name} (no path)`);
+                    }
                     
                     // Save project state to trigger sidebar refresh (show component in real-time)
                     await this.stateManager.saveProject(project);
