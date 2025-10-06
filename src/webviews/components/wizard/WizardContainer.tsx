@@ -17,7 +17,7 @@ import { AdobeWorkspaceStep } from '../steps/AdobeWorkspaceStep';
 import { ApiMeshStep } from '../steps/ApiMeshStep';
 import { ComponentConfigStep } from '../steps/ComponentConfigStep';
 import { ReviewStep } from '../steps/ReviewStep';
-import { CreatingStep } from '../steps/CreatingStep';
+import { ProjectCreationStep } from '../steps/ProjectCreationStep';
 import { vscode } from '../../app/vscodeApi';
 import { cn } from '../../utils/classNames';
 
@@ -406,7 +406,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             case 'review':
                 return <ReviewStep {...props} />;
             case 'creating':
-                return <CreatingStep state={state} />;
+                return <ProjectCreationStep state={state} />;
             default:
                 return null;
         }
