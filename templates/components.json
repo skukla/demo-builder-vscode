@@ -144,7 +144,7 @@
               "label": "Customer Group ID",
               "type": "text",
               "required": false,
-              "defaultValue": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
+              "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
               "description": "Customer group ID for pricing and catalog rules (default: \"Not Logged In\" group)",
               "helpText": "This defaults to the \"Not Logged In\" customer group. Change only if you need to impersonate a different customer segment.",
               "providedBy": "adobe-commerce-paas",
