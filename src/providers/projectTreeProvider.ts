@@ -308,17 +308,17 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
             'component-info'
         ));
         
-        // Path action (Open in Editor)
+        // Path action (Show Files)
         if (component.path) {
             items.push(new ProjectTreeItem(
-                'Open in Editor',
+                'Show Files',
                 '',
                 vscode.TreeItemCollapsibleState.None,
                 'component-action',
                 {
-                    command: 'vscode.openFolder',
-                    title: 'Open in Editor',
-                    arguments: [vscode.Uri.file(component.path), { forceNewWindow: true }]
+                    command: 'demoBuilder.openComponent',
+                    title: 'Show Files',
+                    arguments: [component.id, project]
                 }
             ));
             

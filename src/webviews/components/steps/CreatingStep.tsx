@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Heading, Text, ProgressBar, Well, Flex, ProgressCircle } from '@adobe/react-spectrum';
+import { View, Heading, Text, Well, Flex, ProgressCircle } from '@adobe/react-spectrum';
 import { WizardState } from '../../types';
-import { TerminalOutput } from '../feedback/TerminalOutput';
 
 interface CreatingStepProps {
     state: WizardState;
@@ -18,13 +17,6 @@ export function CreatingStep({ state }: CreatingStepProps) {
 
             {progress ? (
                 <>
-                    <ProgressBar 
-                        label="Overall Progress"
-                        value={progress.progress}
-                        showValueLabel
-                        marginBottom="size-300"
-                    />
-
                     <Well marginBottom="size-300">
                         <Flex gap="size-200" alignItems="center">
                             <ProgressCircle size="S" isIndeterminate />
@@ -37,12 +29,9 @@ export function CreatingStep({ state }: CreatingStepProps) {
                         </Flex>
                     </Well>
 
-                    {progress.logs.length > 0 && (
-                        <>
-                            <Text marginBottom="size-100"><strong>Terminal Output</strong></Text>
-                            <TerminalOutput logs={progress.logs} />
-                        </>
-                    )}
+                    <Text UNSAFE_className="text-sm text-gray-600" marginTop="size-200">
+                        💡 Your components will appear in the sidebar as they're installed
+                    </Text>
 
                     {progress.error && (
                         <Well marginTop="size-300" UNSAFE_className="bg-red-100">
@@ -53,7 +42,12 @@ export function CreatingStep({ state }: CreatingStepProps) {
                     )}
                 </>
             ) : (
-                <Text>Initializing project creation...</Text>
+                <Well>
+                    <Flex gap="size-200" alignItems="center">
+                        <ProgressCircle size="S" isIndeterminate />
+                        <Text>Initializing project creation...</Text>
+                    </Flex>
+                </Well>
             )}
         </div>
     );

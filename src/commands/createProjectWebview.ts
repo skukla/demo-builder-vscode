@@ -2548,19 +2548,50 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             this.logger.info('[Project Creation] Project state saved');
             
-            // Step 9: Complete (100%)
+            // Step 9: Add to workspace
+            progressTracker('complete', 100, 'Adding project to workspace...');
+            
+            // Add project folder to workspace (so Explorer shows files)
+            const workspaceFolder = {
+                uri: vscode.Uri.file(projectPath),
+                name: config.projectName
+            };
+            
+            const added = vscode.workspace.updateWorkspaceFolders(
+                0, // Insert at beginning
+                0, // Don't delete any
+                workspaceFolder
+            );
+            
+            if (added) {
+                this.logger.info('[Project Creation] Added to workspace');
+            } else {
+                this.logger.warn('[Project Creation] Failed to add to workspace');
+            }
+            
+            // Step 10: Complete
             progressTracker('complete', 100, 'Project created successfully!');
             
             // Send completion
             await this.sendMessage('creationComplete', {
                 projectPath: projectPath,
-                success: true
+                success: true,
+                message: 'Project files are now visible in Explorer'
             });
             
             this.logger.info('[Project Creation] Completed successfully');
             
-            // Refresh tree view
+            // Refresh tree view first (so Demo Builder shows the project)
             await vscode.commands.executeCommand('demoBuilder.refreshProjects');
+            
+            // Focus Demo Builder view briefly to show components
+            await vscode.commands.executeCommand('demoBuilder.projectView.focus');
+            
+            // Then switch to Explorer to show files (after a brief delay)
+            setTimeout(async () => {
+                await vscode.commands.executeCommand('workbench.view.explorer');
+                await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(projectPath));
+            }, 1000);
             
         } catch (error) {
             this.logger.error('[Project Creation] Failed:', error as Error);

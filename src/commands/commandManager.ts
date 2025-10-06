@@ -124,6 +124,61 @@ export class CommandManager {
         const diagnostics = new DiagnosticsCommand();
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
 
+        // Open Component (reveal in Explorer)
+        this.registerCommand('demoBuilder.openComponent', async (componentId: string, project?: any) => {
+            try {
+                // Get project if not provided
+                if (!project) {
+                    project = await this.stateManager.getCurrentProject();
+                }
+                
+                if (!project?.componentInstances?.[componentId]) {
+                    vscode.window.showErrorMessage(`Component ${componentId} not found`);
+                    return;
+                }
+                
+                const component = project.componentInstances[componentId];
+                
+                if (!component.path) {
+                    vscode.window.showErrorMessage(`Component ${component.name} has no local files`);
+                    return;
+                }
+                
+                const componentUri = vscode.Uri.file(component.path);
+                
+                // Switch to Explorer view
+                await vscode.commands.executeCommand('workbench.view.explorer');
+                
+                // Reveal in Explorer
+                await vscode.commands.executeCommand('revealInExplorer', componentUri);
+                
+                // Try to open README.md or package.json for quick reference
+                const fs = await import('fs/promises');
+                const path = await import('path');
+                
+                try {
+                    const readmePath = path.join(component.path, 'README.md');
+                    await fs.access(readmePath);
+                    await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(readmePath));
+                } catch {
+                    // No README, try package.json
+                    try {
+                        const packagePath = path.join(component.path, 'package.json');
+                        await fs.access(packagePath);
+                        await vscode.commands.executeCommand('vscode.open', vscode.Uri.file(packagePath));
+                    } catch {
+                        // No package.json either, just reveal the folder
+                        this.logger.debug(`[OpenComponent] No README or package.json found for ${componentId}`);
+                    }
+                }
+                
+                this.logger.info(`[OpenComponent] Opened ${component.name} in Explorer`);
+            } catch (error) {
+                this.logger.error('[OpenComponent] Failed to open component', error as Error);
+                vscode.window.showErrorMessage(`Failed to open component: ${error instanceof Error ? error.message : String(error)}`);
+            }
+        });
+
         this.logger.debug(`Registered ${this.commands.size} commands`);
         this.logger.debug('Commands registered:', Array.from(this.commands.keys()));
     }

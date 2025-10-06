@@ -123,12 +123,14 @@ export class ComponentManager {
         componentInstance.branch = options.branch || componentDef.source.branch || 'main';
         componentInstance.path = componentPath;
 
-        this.logger.info(`[ComponentManager] Cloning ${componentDef.source.url} to ${componentPath}`);
-
+        this.logger.info(`[ComponentManager] Cloning ${componentDef.name} from ${componentDef.source.url}`);
+        
         // Clone repository
         const commandManager = getExternalCommandManager();
         const branchFlag = componentInstance.branch ? `-b ${componentInstance.branch}` : '';
         const cloneCommand = `git clone ${branchFlag} "${componentDef.source.url}" "${componentPath}"`;
+        
+        this.logger.debug(`[ComponentManager] Executing: ${cloneCommand}`);
         
         const result = await commandManager.execute(cloneCommand, {
             timeout: 120000, // 2 minutes for large repos
@@ -136,8 +138,11 @@ export class ComponentManager {
         });
 
         if (result.code !== 0) {
+            this.logger.error(`[ComponentManager] Git clone failed for ${componentDef.name}`, new Error(result.stderr));
             throw new Error(`Git clone failed: ${result.stderr}`);
         }
+        
+        this.logger.debug(`[ComponentManager] Clone completed for ${componentDef.name}`);
 
         // Get current commit hash
         const commitResult = await commandManager.execute(
@@ -167,12 +172,20 @@ export class ComponentManager {
                     ? `fnm use ${nodeVersion} && npm install`
                     : 'npm install';
 
-                await commandManager.execute(installCommand, {
+                this.logger.debug(`[ComponentManager] Running: ${installCommand} in ${componentPath}`);
+
+                const installResult = await commandManager.execute(installCommand, {
                     cwd: componentPath,
                     timeout: 300000, // 5 minutes for npm install
                     enhancePath: true,
                     useNodeVersion: nodeVersion || null
                 });
+                
+                if (installResult.code !== 0) {
+                    this.logger.warn(`[ComponentManager] npm install had warnings/errors for ${componentDef.name}`);
+                } else {
+                    this.logger.debug(`[ComponentManager] Dependencies installed successfully for ${componentDef.name}`);
+                }
             }
         } catch {
             // No package.json, skip dependency installation
