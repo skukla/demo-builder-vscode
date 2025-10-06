@@ -171,7 +171,7 @@ export class ComponentManager {
                     cwd: componentPath,
                     timeout: 300000, // 5 minutes for npm install
                     enhancePath: true,
-                    useNodeVersion: nodeVersion ? parseInt(nodeVersion) : null
+                    useNodeVersion: nodeVersion || null
                 });
             }
         } catch {
