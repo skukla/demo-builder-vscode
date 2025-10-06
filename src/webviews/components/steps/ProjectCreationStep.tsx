@@ -49,16 +49,10 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                         subMessage={progress.message}
                     />
                     
-                    {/* Additional info below spinner */}
-                    <Flex direction="column" gap="size-200" alignItems="center" marginTop="size-400">
-                        <Text UNSAFE_className="text-sm text-gray-600">
-                            💡 Watch Explorer for live installation progress
-                        </Text>
-                        
-                        <Text UNSAFE_className="text-sm text-gray-500">
-                            ⏱️ Maximum time: 30 minutes
-                        </Text>
-                    </Flex>
+                    {/* Tip closer to the spinner */}
+                    <Text UNSAFE_className="text-sm text-gray-600" marginTop="size-300">
+                        💡 Watch Explorer for live installation progress
+                    </Text>
                 </Flex>
             )}
 
