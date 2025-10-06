@@ -88,6 +88,25 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         return unsubscribe;
     }, [state.currentStep, state.creationProgress]);
 
+    // Listen for creationProgress messages from extension
+    useEffect(() => {
+        const unsubscribe = vscode.onMessage('creationProgress', (progressData: any) => {
+            console.log('Received creationProgress:', progressData);
+            setState(prev => ({
+                ...prev,
+                creationProgress: {
+                    currentOperation: progressData.currentOperation || 'Processing',
+                    progress: progressData.progress || 0,
+                    message: progressData.message || '',
+                    logs: progressData.logs || [],
+                    error: progressData.error
+                }
+            }));
+        });
+
+        return unsubscribe;
+    }, []);
+
     // Listen for components data from extension
     useEffect(() => {
         const unsubscribe = vscode.onMessage('componentsLoaded', (data: any) => {
