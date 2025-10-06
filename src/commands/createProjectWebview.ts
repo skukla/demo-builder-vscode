@@ -2409,8 +2409,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.info('[Project Creation] Starting with config:', config);
             this.logger.info(`[Project Creation] Overall timeout: ${OVERALL_TIMEOUT_MS / 1000 / 60} minutes`);
             
-            // Send initial status
-            await this.sendMessage('creationStarted', {});
+            // Send initial status with progress
+            await this.sendMessage('creationProgress', {
+                currentOperation: 'Initializing',
+                progress: 0,
+                message: 'Preparing to create your project...',
+                logs: []
+            });
             
             // Execute with timeout and cancellation support
             await withTimeout(
