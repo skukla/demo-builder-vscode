@@ -11,7 +11,10 @@
         "source": {
           "type": "git",
           "url": "https://github.com/skukla/citisignal-nextjs",
-          "branch": "master"
+          "branch": "master",
+          "gitOptions": {
+            "shallow": true
+          }
         },
         "dependencies": {
           "required": ["commerce-mesh"],
@@ -223,7 +226,10 @@
         "source": {
           "type": "git",
           "url": "https://github.com/skukla/commerce-mesh",
-          "branch": "master"
+          "branch": "master",
+          "gitOptions": {
+            "shallow": true
+          }
         },
         "configuration": {
           "nodeVersion": "20",
@@ -385,7 +391,10 @@
         "description": "Custom integration service for Target Product Recommendations, AEM Assets, and more",
         "source": {
           "type": "git",
-          "url": "https://github.com/skukla/kukla-integration-service"
+          "url": "https://github.com/skukla/kukla-integration-service",
+          "gitOptions": {
+            "shallow": true
+          }
         },
         "requiresDeployment": true,
         "configuration": {

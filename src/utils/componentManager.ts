@@ -127,13 +127,37 @@ export class ComponentManager {
         
         // Clone repository
         const commandManager = getExternalCommandManager();
-        const branchFlag = componentInstance.branch ? `-b ${componentInstance.branch}` : '';
-        const cloneCommand = `git clone ${branchFlag} "${componentDef.source.url}" "${componentPath}"`;
+        
+        // Build git clone command with options
+        const cloneFlags: string[] = [];
+        
+        // Branch or tag
+        if (componentDef.source.gitOptions?.tag) {
+            cloneFlags.push(`--branch ${componentDef.source.gitOptions.tag}`);
+        } else if (componentInstance.branch) {
+            cloneFlags.push(`-b ${componentInstance.branch}`);
+        }
+        
+        // Shallow clone (faster, smaller)
+        if (componentDef.source.gitOptions?.shallow) {
+            cloneFlags.push('--depth=1');
+            this.logger.debug(`[ComponentManager] Using shallow clone for ${componentDef.name}`);
+        }
+        
+        // Recursive (submodules)
+        if (componentDef.source.gitOptions?.recursive) {
+            cloneFlags.push('--recursive');
+        }
+        
+        const cloneCommand = `git clone ${cloneFlags.join(' ')} "${componentDef.source.url}" "${componentPath}"`.trim();
         
         this.logger.debug(`[ComponentManager] Executing: ${cloneCommand}`);
         
+        // Use configurable timeout or default
+        const cloneTimeout = componentDef.source.timeouts?.clone || 120000; // Default 2 minutes
+        
         const result = await commandManager.execute(cloneCommand, {
-            timeout: 120000, // 2 minutes for large repos
+            timeout: cloneTimeout,
             enhancePath: true
         });
 
@@ -174,9 +198,12 @@ export class ComponentManager {
 
                 this.logger.debug(`[ComponentManager] Running: ${installCommand} in ${componentPath}`);
 
+                // Use configurable timeout or default
+                const installTimeout = componentDef.source.timeouts?.install || 300000; // Default 5 minutes
+
                 const installResult = await commandManager.execute(installCommand, {
                     cwd: componentPath,
-                    timeout: 300000, // 5 minutes for npm install
+                    timeout: installTimeout,
                     enhancePath: true,
                     useNodeVersion: nodeVersion || null
                 });

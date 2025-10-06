@@ -173,6 +173,20 @@ export interface ComponentSource {
     package?: string;
     version?: string;
     branch?: string;
+    
+    // Git-specific options
+    gitOptions?: {
+        shallow?: boolean;           // Use --depth=1 for faster clones
+        recursive?: boolean;          // Clone submodules (--recursive)
+        tag?: string;                 // Clone specific tag
+        commit?: string;              // Clone specific commit hash
+    };
+    
+    // Timeout configuration (milliseconds)
+    timeouts?: {
+        clone?: number;               // Override default clone timeout
+        install?: number;             // Override default install timeout
+    };
 }
 
 export interface ComponentDependencies {

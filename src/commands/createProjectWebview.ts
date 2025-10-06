@@ -32,6 +32,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private currentPrerequisiteStates?: Map<number, any>;  // Track state of each prerequisite
     private isAuthenticating = false;  // Prevent multiple simultaneous auth attempts
     private apiServicesConfig?: any;  // API services detection configuration
+    private projectCreationAbortController?: AbortController;  // For cancelling project creation
 
     constructor(
         context: vscode.ExtensionContext,
@@ -501,6 +502,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         comm.on('create-project', async (data: any) => {
             await this.handleCreateProject(data);
             return { success: true };
+        });
+
+        // Cancel project creation
+        comm.on('cancel-project-creation', async () => {
+            if (this.projectCreationAbortController) {
+                this.logger.info('[Project Creation] Cancellation requested by user');
+                this.projectCreationAbortController.abort();
+                return { success: true, message: 'Project creation cancelled' };
+            }
+            return { success: false, message: 'No active project creation to cancel' };
         });
 
         // Cancel
@@ -2385,23 +2396,96 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
-    // Project creation
+    // Project creation with timeout and cancellation support
     private async handleCreateProject(config: any): Promise<void> {
+        const OVERALL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+        const startTime = Date.now();
+        
+        // Create abort controller for cancellation
+        this.projectCreationAbortController = new AbortController();
+        
         try {
             this.logger.info('[Project Creation] Starting with config:', config);
+            this.logger.info(`[Project Creation] Overall timeout: ${OVERALL_TIMEOUT_MS / 1000 / 60} minutes`);
             
             // Send initial status
             await this.sendMessage('creationStarted', {});
             
-            // Create progress tracker
-            const progressTracker = (currentOperation: string, progress: number, message?: string) => {
-                this.sendMessage('creationProgress', {
-                    currentOperation,
-                    progress,
-                    message: message || '',
-                    logs: []
+            // Create timeout promise
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error(
+                        'Project creation timed out after 30 minutes. ' +
+                        'This may indicate a network issue or very large components. ' +
+                        'Please check your connection and try again.'
+                    ));
+                }, OVERALL_TIMEOUT_MS);
+            });
+            
+            // Create cancellation promise
+            const cancellationPromise = new Promise<never>((_, reject) => {
+                this.projectCreationAbortController!.signal.addEventListener('abort', () => {
+                    reject(new Error('Project creation cancelled by user'));
                 });
-            };
+            });
+            
+            // Race between actual creation, timeout, and cancellation
+            await Promise.race([
+                this.executeProjectCreation(config),
+                timeoutPromise,
+                cancellationPromise
+            ]);
+            
+        } catch (error) {
+            const elapsed = Date.now() - startTime;
+            const elapsedMin = Math.floor(elapsed / 1000 / 60);
+            const elapsedSec = Math.floor((elapsed / 1000) % 60);
+            
+            this.logger.error(`[Project Creation] Failed after ${elapsedMin}m ${elapsedSec}s`, error as Error);
+            
+            // Determine error type
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isCancelled = errorMessage.includes('cancelled by user');
+            const isTimeout = errorMessage.includes('timed out');
+            
+            await this.sendMessage('creationProgress', {
+                currentOperation: isCancelled ? 'Cancelled' : 'Failed',
+                progress: 0,
+                message: '',
+                logs: [],
+                error: errorMessage
+            });
+            
+            // Send specific completion message
+            if (isCancelled) {
+                await this.sendMessage('creationCancelled', {
+                    message: 'Project creation was cancelled',
+                    elapsed: `${elapsedMin}m ${elapsedSec}s`
+                });
+            } else {
+                await this.sendMessage('creationFailed', {
+                    error: errorMessage,
+                    isTimeout,
+                    elapsed: `${elapsedMin}m ${elapsedSec}s`
+                });
+            }
+        } finally {
+            // Cleanup
+            this.projectCreationAbortController = undefined;
+        }
+    }
+    
+    // Actual project creation logic (extracted for testability)
+    private async executeProjectCreation(config: any): Promise<void> {
+        // Create progress tracker
+        const progressTracker = (currentOperation: string, progress: number, message?: string) => {
+            this.sendMessage('creationProgress', {
+                currentOperation,
+                progress,
+                message: message || '',
+                logs: []
+            });
+        };
             
             // Import ComponentManager
             const { ComponentManager } = await import('../utils/componentManager');
@@ -2593,13 +2677,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 await vscode.commands.executeCommand('workbench.view.explorer');
                 await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(projectPath));
             }, 1000);
-            
-        } catch (error) {
-            this.logger.error('[Project Creation] Failed:', error as Error);
-            await this.sendMessage('creationError', {
-                error: error instanceof Error ? error.message : String(error)
-            });
-        }
     }
     
     /**
