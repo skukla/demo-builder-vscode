@@ -167,40 +167,13 @@ function registerFileWatchers(context: vscode.ExtensionContext) {
         false
     );
     
-    // Helper to filter out noisy directories from file watcher logs
-    const shouldLogFileOperation = (filePath: string): boolean => {
-        const noisyPatterns = [
-            'node_modules',
-            '.git',
-            'dist',
-            'build',
-            '.next',
-            'coverage',
-            '.vscode',
-            'logs'
-        ];
-        return !noisyPatterns.some(pattern => filePath.includes(`/${pattern}/`) || filePath.endsWith(`/${pattern}`));
-    };
-    
-    demoBuilderWatcher.onDidCreate(uri => {
-        if (shouldLogFileOperation(uri.fsPath)) {
-            logger.debug(`File created: ${uri.fsPath}`);
-        }
-    });
-    
+    // Watch for config changes to reload state
+    // Note: Individual file operations are not logged to keep logs clean and focused
     demoBuilderWatcher.onDidChange(uri => {
-        if (shouldLogFileOperation(uri.fsPath)) {
-            logger.debug(`File changed: ${uri.fsPath}`);
-        }
         // Reload state if config changed
         if (uri.fsPath.endsWith('config.yaml') || uri.fsPath.endsWith('state.json')) {
+            logger.debug('Project configuration changed, reloading state');
             stateManager.reload();
-        }
-    });
-    
-    demoBuilderWatcher.onDidDelete(uri => {
-        if (shouldLogFileOperation(uri.fsPath)) {
-            logger.debug(`File deleted: ${uri.fsPath}`);
         }
     });
     
