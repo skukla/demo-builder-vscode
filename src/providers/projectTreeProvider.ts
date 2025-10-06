@@ -62,7 +62,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         }
 
         if (element.contextValue === 'project') {
-            // Component-based hierarchy
+            // Flat control panel structure - list components directly with their actions
             const items: ProjectTreeItem[] = [];
             
             if (!project.componentInstances || Object.keys(project.componentInstances).length === 0) {
@@ -70,58 +70,30 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
                 return this.getLegacyProjectChildren(project);
             }
             
-            // Group components by type
+            // Get all components
             const frontendComponents = this.getComponentsByType(project, 'frontend');
             const meshComponents = this.getComponentsBySubType(project, 'mesh');
             const dependencyComponents = this.getComponentsByType(project, 'dependency').filter(c => c.subType !== 'mesh');
             const appBuilderComponents = this.getComponentsByType(project, 'app-builder');
             
-            // Frontend section
-            if (frontendComponents.length > 0) {
-                items.push(new ProjectTreeItem(
-                    '📱 Frontend',
-                    '',
-                    vscode.TreeItemCollapsibleState.Expanded,
-                    'section-frontend',
-                    undefined,
-                    project
-                ));
+            // Add frontend components directly (flat)
+            for (const component of frontendComponents) {
+                items.push(this.createComponentItem(component, project, '📱'));
             }
             
-            // API Mesh section
-            if (meshComponents.length > 0) {
-                items.push(new ProjectTreeItem(
-                    '🔀 API Mesh',
-                    '',
-                    vscode.TreeItemCollapsibleState.Expanded,
-                    'section-mesh',
-                    undefined,
-                    project
-                ));
+            // Add mesh components directly (flat)
+            for (const component of meshComponents) {
+                items.push(this.createComponentItem(component, project, '🔀'));
             }
             
-            // Dependencies section
-            if (dependencyComponents.length > 0) {
-                items.push(new ProjectTreeItem(
-                    '🔧 Dependencies',
-                    '',
-                    vscode.TreeItemCollapsibleState.Expanded,
-                    'section-dependencies',
-                    undefined,
-                    project
-                ));
+            // Add dependency components directly (flat)
+            for (const component of dependencyComponents) {
+                items.push(this.createComponentItem(component, project, '🔧'));
             }
             
-            // App Builder section
-            if (appBuilderComponents.length > 0) {
-                items.push(new ProjectTreeItem(
-                    '⚡ App Builder Apps',
-                    '',
-                    vscode.TreeItemCollapsibleState.Expanded,
-                    'section-app-builder',
-                    undefined,
-                    project
-                ));
+            // Add App Builder components directly (flat)
+            for (const component of appBuilderComponents) {
+                items.push(this.createComponentItem(component, project, '⚡'));
             }
 
             return items;
@@ -273,18 +245,16 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
     /**
      * Create a tree item for a component
      */
-    private createComponentItem(component: ComponentInstance, project: Project): ProjectTreeItem {
+    private createComponentItem(component: ComponentInstance, project: Project, emoji?: string): ProjectTreeItem {
         const statusEmoji = this.getStatusEmoji(component.status);
+        const label = emoji ? `${emoji} ${component.name}` : component.name;
         const description = `${statusEmoji} ${component.status}`;
         
-        // Determine if component should be expandable (has actions)
-        const hasActions = component.path || component.endpoint;
-        const collapsibleState = hasActions 
-            ? vscode.TreeItemCollapsibleState.Collapsed 
-            : vscode.TreeItemCollapsibleState.None;
+        // Always make expandable to show actions (Expanded by default for control panel UX)
+        const collapsibleState = vscode.TreeItemCollapsibleState.Expanded;
         
         return new ProjectTreeItem(
-            component.name,
+            label,
             description,
             collapsibleState,
             'component',
