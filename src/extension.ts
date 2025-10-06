@@ -189,9 +189,9 @@ function registerFileWatchers(context: vscode.ExtensionContext) {
     
     context.subscriptions.push(demoBuilderWatcher);
     
-    // Watch for .env file changes
+    // Watch for .env file changes (any component directory)
     const envWatcher = vscode.workspace.createFileSystemWatcher(
-        '**/.env',
+        '**/{.env,.env.local}',
         false,
         false,
         false

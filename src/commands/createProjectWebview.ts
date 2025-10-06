@@ -2674,15 +2674,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 this.logger.info('[Project Creation] API Mesh configured');
             }
             
-            // Step 6: Generate .env file (85%)
-            progressTracker('Finalizing Project', 85, 'Generating environment configuration...');
-            
-            const envContent = this.generateEnvFile(config);
-            await fs.writeFile(path.join(projectPath, '.env'), envContent);
-            
-            this.logger.info('[Project Creation] Environment file created');
-            
-            // Step 7: Create project manifest (90%)
+            // Step 6: Create project manifest (90%)
             progressTracker('Finalizing Project', 90, 'Creating project manifest...');
             
             const manifest = {
@@ -2751,48 +2743,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 success: true,
                 message: 'Your project files are ready in Explorer'
             });
-    }
-    
-    /**
-     * Generate .env file content from wizard configuration
-     */
-    private generateEnvFile(config: any): string {
-        const lines: string[] = [
-            '# Demo Builder Project Configuration',
-            '# Generated: ' + new Date().toISOString(),
-            '',
-            '# Adobe Configuration',
-            `ADOBE_ORG_ID=${config.adobe?.organization || ''}`,
-            `ADOBE_PROJECT_ID=${config.adobe?.projectId || ''}`,
-            `ADOBE_WORKSPACE_ID=${config.adobe?.workspace || ''}`,
-            ''
-        ];
-        
-        // Add API Mesh endpoint if configured
-        if (config.apiMesh?.endpoint) {
-            lines.push('# API Mesh');
-            lines.push(`MESH_ENDPOINT=${config.apiMesh.endpoint}`);
-            lines.push('');
-        }
-        
-        // Add component-specific configurations
-        if (config.componentConfigs) {
-            lines.push('# Component Configuration');
-            
-            for (const [componentId, componentConfig] of Object.entries(config.componentConfigs)) {
-                lines.push(`# ${componentId}`);
-                
-                for (const [key, value] of Object.entries(componentConfig as Record<string, any>)) {
-                    if (value !== undefined && value !== null && value !== '') {
-                        lines.push(`${key}=${value}`);
-                    }
-                }
-                
-                lines.push('');
-            }
-        }
-        
-        return lines.join('\n');
     }
     
     /**
