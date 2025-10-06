@@ -2678,6 +2678,28 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             if (added) {
                 this.logger.info('[Project Creation] Added to workspace');
+                
+                // Check if this is the first project and offer to trust parent directory
+                const hasShownTrustTip = this.context.globalState.get('demoBuilder.trustTipShown', false);
+                if (!hasShownTrustTip && !vscode.workspace.isTrusted) {
+                    this.logger.info('[Project Creation] Showing one-time trust tip');
+                    await this.context.globalState.update('demoBuilder.trustTipShown', true);
+                    
+                    const choice = await vscode.window.showInformationMessage(
+                        '💡 Tip: Trust all Demo Builder projects at once',
+                        'Learn How',
+                        'Dismiss'
+                    );
+                    
+                    if (choice === 'Learn How') {
+                        vscode.window.showInformationMessage(
+                            `Add "${path.join(os.homedir(), '.demo-builder')}" to your Trusted Folders ` +
+                            '(Cmd+Shift+P → "Workspaces: Manage Workspace Trust" → Add Folder). ' +
+                            'All future projects will be trusted automatically!',
+                            'Got it!'
+                        );
+                    }
+                }
             } else {
                 this.logger.warn('[Project Creation] Failed to add to workspace');
             }
