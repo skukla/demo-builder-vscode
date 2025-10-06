@@ -28,31 +28,51 @@ export class ResetAllCommand extends BaseCommand {
 
             this.logger.info('Resetting all Demo Builder state...');
 
-            // 1. Clear VSCode workspace state
+            // 1. Stop any running processes first
+            try {
+                await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                this.logger.info('Stopped any running demos');
+            } catch {
+                // Ignore errors if no demo is running
+            }
+
+            // 2. Remove all Demo Builder workspace folders from VSCode
+            const workspaceFolders = vscode.workspace.workspaceFolders || [];
+            const demoBuilderPath = path.join(os.homedir(), '.demo-builder');
+            const foldersToRemove: number[] = [];
+            
+            workspaceFolders.forEach((folder, index) => {
+                if (folder.uri.fsPath.startsWith(demoBuilderPath)) {
+                    foldersToRemove.push(index);
+                }
+            });
+            
+            if (foldersToRemove.length > 0) {
+                // Remove in reverse order to avoid index shifting
+                for (let i = foldersToRemove.length - 1; i >= 0; i--) {
+                    vscode.workspace.updateWorkspaceFolders(foldersToRemove[i], 1);
+                }
+                this.logger.info(`Removed ${foldersToRemove.length} workspace folder(s)`);
+            }
+
+            // 3. Clear VSCode workspace state
             await this.stateManager.clearAll();
             this.logger.info('Cleared workspace state');
 
-            // 2. Clear secrets (license key)
+            // 4. Clear secrets (license key)
             await this.context.secrets.delete('demoBuilder.licenseKey');
             this.logger.info('Cleared stored secrets');
 
-            // 3. Delete .demo-builder directory
-            const demoBuilderPath = path.join(os.homedir(), '.demo-builder');
-            try {
-                await fs.rm(demoBuilderPath, { recursive: true, force: true });
-                this.logger.info(`Deleted ${demoBuilderPath}`);
-            } catch (error) {
-                this.logger.warn(`Could not delete ${demoBuilderPath}: ${error}`);
-            }
-
-            // 4. Reset status bar
+            // 5. Reset status bar
             this.statusBar.reset();
 
-            // 5. Stop any running processes
+            // 6. Delete .demo-builder directory (after closing workspace folders)
             try {
-                await vscode.commands.executeCommand('demoBuilder.stopDemo');
-            } catch {
-                // Ignore errors if no demo is running
+                await fs.rm(demoBuilderPath, { recursive: true, force: true });
+                this.logger.info(`Deleted ${demoBuilderPath} and all projects`);
+            } catch (error) {
+                this.logger.warn(`Could not delete ${demoBuilderPath}: ${error}`);
+                this.logger.warn('You may need to manually delete this directory');
             }
 
             vscode.window.showInformationMessage('Demo Builder has been completely reset. Restart the extension to begin fresh.');
