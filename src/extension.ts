@@ -187,18 +187,26 @@ function registerFileWatchers(context: vscode.ExtensionContext) {
         false
     );
     
-    envWatcher.onDidChange(uri => {
-        logger.info('Environment file changed, consider restarting the demo');
-        vscode.window.showInformationMessage(
-            'Environment configuration changed. Restart the demo to apply changes.',
-            'Restart Demo'
-        ).then(selection => {
-            if (selection === 'Restart Demo') {
-                vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
-                    vscode.commands.executeCommand('demoBuilder.startDemo');
-                });
-            }
-        });
+    envWatcher.onDidChange(async uri => {
+        logger.info('Environment file changed');
+        
+        // Only show restart notification if a demo is currently running
+        const currentProject = await stateManager.getCurrentProject();
+        if (currentProject && currentProject.status === 'running') {
+            logger.info('Demo is running, suggesting restart');
+            vscode.window.showInformationMessage(
+                'Environment configuration changed. Restart the demo to apply changes.',
+                'Restart Demo'
+            ).then(selection => {
+                if (selection === 'Restart Demo') {
+                    vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
+                        vscode.commands.executeCommand('demoBuilder.startDemo');
+                    });
+                }
+            });
+        } else {
+            logger.debug('No running demo, skipping restart notification');
+        }
     });
     
     context.subscriptions.push(envWatcher);
