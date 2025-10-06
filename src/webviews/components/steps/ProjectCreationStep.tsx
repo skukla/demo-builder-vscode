@@ -72,7 +72,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                                 Project Created Successfully
                             </Text>
                             <Text UNSAFE_className="text-sm text-gray-600">
-                                {progress?.message || 'Opening project in Explorer...'}
+                                Your project files are now available in the Explorer
                             </Text>
                         </Flex>
                     </Flex>
