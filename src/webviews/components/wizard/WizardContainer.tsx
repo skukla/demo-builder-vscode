@@ -220,6 +220,36 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                     }
                 }
 
+                // Project creation: Trigger project creation when moving from review to creating step
+                if (state.currentStep === 'review' && nextStep.id === 'creating') {
+                    console.log('Triggering project creation with state:', state);
+                    
+                    // Build project configuration from wizard state
+                    const projectConfig = {
+                        projectName: state.projectName,
+                        projectTemplate: state.projectTemplate,
+                        adobe: {
+                            organization: state.adobeOrg?.id,
+                            projectId: state.adobeProject?.id,
+                            projectName: state.adobeProject?.name,
+                            workspace: state.adobeWorkspace?.id,
+                            workspaceName: state.adobeWorkspace?.name
+                        },
+                        components: {
+                            frontend: state.components?.frontend,
+                            backend: state.components?.backend,
+                            dependencies: state.components?.dependencies || [],
+                            externalSystems: state.components?.externalSystems || [],
+                            appBuilderApps: state.components?.appBuilderApps || []
+                        },
+                        apiMesh: state.apiMesh,
+                        componentConfigs: state.componentConfigs
+                    };
+                    
+                    // Send to backend - don't await, let it run asynchronously
+                    vscode.createProject(projectConfig);
+                }
+
                 // Mark current step as completed only after successful backend operation
                 if (!completedSteps.includes(state.currentStep)) {
                     setCompletedSteps(prev => [...prev, state.currentStep]);
