@@ -2571,7 +2571,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 created: new Date(),
                 lastModified: new Date(),
                 path: projectPath,
-                status: 'configuring',
+                status: 'created',
                 adobe: config.adobe,
                 componentInstances: {},
                 componentSelections: {

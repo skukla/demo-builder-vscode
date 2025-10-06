@@ -489,7 +489,7 @@ export class CreateProjectCommand extends BaseCommand {
                 created: new Date(),
                 lastModified: new Date(),
                 path: projectPath,
-                status: 'configuring',
+                status: 'created',
                 adobe: adobeConfig,
                 commerce: commerceConfig,
                 frontend: {
