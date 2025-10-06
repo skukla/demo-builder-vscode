@@ -2726,16 +2726,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Note: Tree view auto-refreshes via StateManager.onProjectChanged event
             // (triggered by saveProject() above)
             
-            // Now open Explorer to show the project files (user saw Demo Builder sidebar during install)
-            await vscode.commands.executeCommand('workbench.view.explorer');
-            await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(projectPath));
-            this.logger.debug('[Project Creation] Opened Explorer and revealed project files');
+            // Ensure Demo Builder sidebar is focused (shows controls ready to use)
+            await vscode.commands.executeCommand('demoBuilder.projectView.focus');
+            this.logger.debug('[Project Creation] Demo Builder sidebar focused, showing controls');
             
             // Send completion message
             await this.sendMessage('creationComplete', {
                 projectPath: projectPath,
                 success: true,
-                message: 'Project files are now visible in Explorer'
+                message: 'Your demo is ready to start'
             });
     }
     

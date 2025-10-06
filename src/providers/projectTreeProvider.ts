@@ -300,68 +300,104 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
     private getComponentChildren(component: ComponentInstance, project: Project): ProjectTreeItem[] {
         const items: ProjectTreeItem[] = [];
         
-        // Status info
-        items.push(new ProjectTreeItem(
-            'Status',
-            component.status,
-            vscode.TreeItemCollapsibleState.None,
-            'component-info'
-        ));
-        
-        // Path action (Show Files)
-        if (component.path) {
+        // Frontend-specific actions
+        if (component.type === 'frontend') {
+            const isRunning = component.status === 'running';
+            
+            if (isRunning) {
+                // Stop action
+                items.push(new ProjectTreeItem(
+                    '⏹️ Stop',
+                    '',
+                    vscode.TreeItemCollapsibleState.None,
+                    'component-action',
+                    {
+                        command: 'demoBuilder.stopDemo',
+                        title: 'Stop Demo',
+                        arguments: []
+                    }
+                ));
+                
+                // Open in Browser action
+                const port = (component as any).port || 3000;
+                items.push(new ProjectTreeItem(
+                    '🌐 Open in Browser',
+                    `http://localhost:${port}`,
+                    vscode.TreeItemCollapsibleState.None,
+                    'component-action',
+                    {
+                        command: 'vscode.open',
+                        title: 'Open Browser',
+                        arguments: [vscode.Uri.parse(`http://localhost:${port}`)]
+                    }
+                ));
+            } else {
+                // Start action
+                items.push(new ProjectTreeItem(
+                    '▶️ Start',
+                    '',
+                    vscode.TreeItemCollapsibleState.None,
+                    'component-action',
+                    {
+                        command: 'demoBuilder.startDemo',
+                        title: 'Start Demo',
+                        arguments: []
+                    }
+                ));
+            }
+            
+            // Port info
+            const port = (component as any).port || 3000;
             items.push(new ProjectTreeItem(
-                'Show Files',
+                'Port',
+                `${port}`,
+                vscode.TreeItemCollapsibleState.None,
+                'component-info'
+            ));
+        }
+        
+        // Mesh-specific actions
+        if (component.subType === 'mesh') {
+            // Redeploy action
+            items.push(new ProjectTreeItem(
+                '🔄 Redeploy Mesh',
                 '',
                 vscode.TreeItemCollapsibleState.None,
                 'component-action',
                 {
-                    command: 'demoBuilder.openComponent',
-                    title: 'Show Files',
+                    command: 'demoBuilder.redeployMesh',
+                    title: 'Redeploy Mesh',
                     arguments: [component.id, project]
                 }
             ));
             
-            // Git Pull action
-            items.push(new ProjectTreeItem(
-                'Git Pull',
-                '',
-                vscode.TreeItemCollapsibleState.None,
-                'component-action',
-                {
-                    command: 'demoBuilder.gitPullComponent',
-                    title: 'Git Pull',
-                    arguments: [component.id]
-                }
-            ));
-            
-            // Show in Finder/Explorer
-            items.push(new ProjectTreeItem(
-                'Show in Finder',
-                '',
-                vscode.TreeItemCollapsibleState.None,
-                'component-action',
-                {
-                    command: 'revealFileInOS',
-                    title: 'Show in Finder',
-                    arguments: [vscode.Uri.file(component.path)]
-                }
-            ));
-        }
-        
-        // Endpoint info (for deployed components)
-        if (component.endpoint) {
-            items.push(new ProjectTreeItem(
-                'Endpoint',
-                component.endpoint,
-                vscode.TreeItemCollapsibleState.None,
-                'component-info',
-                {
-                    command: 'vscode.open',
-                    title: 'Open Endpoint',
-                    arguments: [vscode.Uri.parse(component.endpoint)]
-                }
-            ));
+            // Copy Endpoint action (if endpoint exists)
+            if (component.endpoint) {
+                items.push(new ProjectTreeItem(
+                    '📋 Copy Endpoint',
+                    '',
+                    vscode.TreeItemCollapsibleState.None,
+                    'component-action',
+                    {
+                        command: 'demoBuilder.copyMeshEndpoint',
+                        title: 'Copy Endpoint',
+                        arguments: [component.endpoint]
+                    }
+                ));
+                
+                // Endpoint info (clickable)
+                items.push(new ProjectTreeItem(
+                    'Endpoint',
+                    component.endpoint,
+                    vscode.TreeItemCollapsibleState.None,
+                    'component-info',
+                    {
+                        command: 'vscode.open',
+                        title: 'Open Endpoint',
+                        arguments: [vscode.Uri.parse(component.endpoint)]
+                    }
+                ));
+            }
         }
         
         // Branch info

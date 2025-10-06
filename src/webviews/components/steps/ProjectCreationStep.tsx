@@ -72,7 +72,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                                 Project Created Successfully
                             </Text>
                             <Text UNSAFE_className="text-sm text-gray-600">
-                                Your project files are now available in the Explorer
+                                Your demo is ready to start in the Demo Builder sidebar
                             </Text>
                         </Flex>
                     </Flex>
