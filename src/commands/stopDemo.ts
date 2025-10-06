@@ -6,12 +6,14 @@ export class StopDemoCommand extends BaseCommand {
         try {
             const project = await this.stateManager.getCurrentProject();
             if (!project) {
-                await this.showWarning('No project found.');
+                // Silently return - no project means nothing to stop
+                // (often called programmatically during cleanup/reset)
+                this.logger.debug('[StopDemo] No project found, nothing to stop');
                 return;
             }
 
             if (project.frontend?.status === 'stopped') {
-                await this.showInfo('Demo is not running');
+                this.logger.debug('[StopDemo] Demo already stopped');
                 return;
             }
 
