@@ -523,6 +523,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             return { success: true };
         });
 
+        // Close panel (after project creation completes)
+        comm.on('closePanel', () => {
+            this.panel?.dispose();
+            this.logger.info('[Project Creation] Closing wizard after successful creation');
+            return { success: true };
+        });
+
         // Logging
         comm.on('log', (data: any) => {
             const { level, message } = data;

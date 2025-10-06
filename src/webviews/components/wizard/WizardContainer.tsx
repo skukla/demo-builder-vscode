@@ -107,6 +107,19 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         return unsubscribe;
     }, []);
 
+    // Listen for creationComplete message to close the wizard
+    useEffect(() => {
+        const unsubscribe = vscode.onMessage('creationComplete', (data: any) => {
+            console.log('Project creation complete, closing wizard:', data);
+            // Close the webview after a brief delay to show success state
+            setTimeout(() => {
+                vscode.postMessage({ type: 'closePanel' });
+            }, 1500);
+        });
+
+        return unsubscribe;
+    }, []);
+
     // Listen for components data from extension
     useEffect(() => {
         const unsubscribe = vscode.onMessage('componentsLoaded', (data: any) => {
