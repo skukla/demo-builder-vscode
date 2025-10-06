@@ -92,19 +92,6 @@ export async function activate(context: vscode.ExtensionContext) {
             if (project) {
                 statusBar.updateProject(project);
                 logger.info(`[Extension] Loaded existing project: ${project.name}`);
-                
-                // Show welcome back message
-                vscode.window.showInformationMessage(
-                    `Welcome back! Project "${project.name}" is ready.`,
-                    'Start Demo',
-                    'View Status'
-                ).then(selection => {
-                    if (selection === 'Start Demo') {
-                        vscode.commands.executeCommand('demoBuilder.startDemo');
-                    } else if (selection === 'View Status') {
-                        vscode.commands.executeCommand('demoBuilder.viewStatus');
-                    }
-                });
             }
         } else {
             // First time or no project - show welcome screen

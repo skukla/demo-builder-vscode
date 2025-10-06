@@ -2525,10 +2525,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             });
         };
             
-            // Open Explorer at START so user can watch component folders appear
-            await vscode.commands.executeCommand('workbench.view.explorer');
-            this.logger.debug('[Project Creation] Opened Explorer to show components being installed');
-            
             // Import ComponentManager
             const { ComponentManager } = await import('../utils/componentManager');
             const { ComponentRegistryManager } = await import('../utils/componentRegistry');
@@ -2590,6 +2586,26 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Save initial project state so sidebar shows project (not "No Project")
             await this.stateManager.saveProject(project);
             this.logger.info('[Project Creation] Initial project state saved');
+            
+            // Add project to workspace early so Explorer shows live progress
+            const workspaceFolder = {
+                uri: vscode.Uri.file(projectPath),
+                name: config.projectName
+            };
+            
+            const added = vscode.workspace.updateWorkspaceFolders(
+                0, // Insert at beginning
+                0, // Don't delete any
+                workspaceFolder
+            );
+            
+            if (added) {
+                this.logger.info('[Project Creation] Added to workspace (live view enabled)');
+                // Open Explorer to show live progress
+                await vscode.commands.executeCommand('workbench.view.explorer');
+            } else {
+                this.logger.warn('[Project Creation] Failed to add to workspace early');
+            }
             
             // Step 3: Load component definitions (20%)
             progressTracker('Loading Components', 20, 'Preparing component definitions...');
@@ -2702,29 +2718,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             this.logger.info('[Project Creation] Project state saved');
             
-            // Step 9: Add to workspace
-            progressTracker('Opening Project', 100, 'Adding project to workspace...');
-            
-            // Add project folder to workspace (so Explorer shows files)
-            const workspaceFolder = {
-                uri: vscode.Uri.file(projectPath),
-                name: config.projectName
-            };
-            
-            const added = vscode.workspace.updateWorkspaceFolders(
-                0, // Insert at beginning
-                0, // Don't delete any
-                workspaceFolder
-            );
-            
-            if (added) {
-                this.logger.info('[Project Creation] Added to workspace');
-                // Note: Trust tip was already shown at the beginning (if needed)
-            } else {
-                this.logger.warn('[Project Creation] Failed to add to workspace');
-            }
-            
-            // Step 10: Complete
+            // Step 9: Complete
             progressTracker('Project Created', 100, 'Project creation complete');
             
             this.logger.info('[Project Creation] Completed successfully');

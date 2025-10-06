@@ -52,7 +52,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                     {/* Additional info below spinner */}
                     <Flex direction="column" gap="size-200" alignItems="center" marginTop="size-400">
                         <Text UNSAFE_className="text-sm text-gray-600">
-                            💡 Watch the Demo Builder sidebar for live installation progress
+                            💡 Watch Explorer for live installation progress
                         </Text>
                         
                         <Text UNSAFE_className="text-sm text-gray-500">
@@ -72,7 +72,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                                 Project Created Successfully
                             </Text>
                             <Text UNSAFE_className="text-sm text-gray-600">
-                                Your demo is ready to start in the Demo Builder sidebar
+                                Your project is ready in Explorer
                             </Text>
                         </Flex>
                     </Flex>
