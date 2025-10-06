@@ -46,8 +46,8 @@
       "enabled": true
     },
     {
-      "id": "creating",
-      "name": "Demo Creation",
+      "id": "project-creation",
+      "name": "Project Creation",
       "enabled": true
     }
   ]

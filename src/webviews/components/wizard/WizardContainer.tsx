@@ -67,8 +67,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         const unsubscribe = vscode.onMessage('feedback', (message: FeedbackMessage) => {
             setFeedback(message);
             
-            // Update creation progress if in creating step
-            if (state.currentStep === 'creating' && state.creationProgress) {
+            // Update creation progress if in project-creation step
+            if (state.currentStep === 'project-creation' && state.creationProgress) {
                 setState(prev => ({
                     ...prev,
                     creationProgress: {
@@ -252,8 +252,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                     }
                 }
 
-                // Project creation: Trigger project creation when moving from review to creating step
-                if (state.currentStep === 'review' && nextStep.id === 'creating') {
+                // Project creation: Trigger project creation when moving from review to project-creation step
+                if (state.currentStep === 'review' && nextStep.id === 'project-creation') {
                     console.log('Triggering project creation with state:', state);
                     
                     // Build project configuration from wizard state
@@ -418,7 +418,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 return <ComponentConfigStep {...props} />;
             case 'review':
                 return <ReviewStep {...props} />;
-            case 'creating':
+            case 'project-creation':
                 return <ProjectCreationStep state={state} />;
             default:
                 return null;
@@ -427,7 +427,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
     const currentStepIndex = getCurrentStepIndex();
     const isFirstStep = currentStepIndex === 0;
-    const isLastStep = state.currentStep === 'creating';
+    const isLastStep = state.currentStep === 'project-creation';
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
 
     return (

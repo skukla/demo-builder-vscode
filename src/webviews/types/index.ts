@@ -17,7 +17,7 @@ export type WizardStep =
     | 'settings'  // Component-specific settings collection
     | 'commerce-config'  // Kept for compatibility
     | 'review'
-    | 'creating';
+    | 'project-creation';
 
 export interface WizardState {
     currentStep: WizardStep;

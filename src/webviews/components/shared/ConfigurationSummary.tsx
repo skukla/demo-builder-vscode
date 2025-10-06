@@ -24,7 +24,7 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
         'api-mesh',
         'settings',
         'review',
-        'creating'
+        'project-creation'
     ];
     
     const getCurrentStepIndex = () => {
