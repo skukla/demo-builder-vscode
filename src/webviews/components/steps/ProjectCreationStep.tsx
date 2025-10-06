@@ -52,7 +52,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                     {/* Additional info below spinner */}
                     <Flex direction="column" gap="size-200" alignItems="center" marginTop="size-400">
                         <Text UNSAFE_className="text-sm text-gray-600">
-                            💡 Your components will appear in the sidebar as they're installed
+                            💡 Watch the Demo Builder sidebar for live installation progress
                         </Text>
                         
                         <Text UNSAFE_className="text-sm text-gray-500">
