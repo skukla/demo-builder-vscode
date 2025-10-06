@@ -305,20 +305,54 @@ export class StateManager {
             // Check if path exists
             await fs.access(projectPath);
             
-            // Check for .demo-builder folder
-            const configPath = path.join(projectPath, '.demo-builder', 'config.yaml');
-            await fs.access(configPath);
+            // Check for .demo-builder.json manifest
+            const manifestPath = path.join(projectPath, '.demo-builder.json');
+            await fs.access(manifestPath);
             
-            // Load project configuration
-            const configData = await fs.readFile(configPath, 'utf-8');
-            // Parse YAML config here (simplified for now)
+            // Load project manifest
+            const manifestData = await fs.readFile(manifestPath, 'utf-8');
+            const manifest = JSON.parse(manifestData);
+            
+            // Reconstruct componentInstances from components/ directory
+            const componentInstances: { [key: string]: any } = {};
+            const componentsDir = path.join(projectPath, 'components');
+            
+            try {
+                const componentDirs = await fs.readdir(componentsDir);
+                
+                for (const componentId of componentDirs) {
+                    const componentPath = path.join(componentsDir, componentId);
+                    const stat = await fs.stat(componentPath);
+                    
+                    if (stat.isDirectory()) {
+                        // Try to determine component type from manifest
+                        const componentInfo = manifest.components?.find((c: any) => c === componentId);
+                        
+                        // Create a basic component instance
+                        componentInstances[componentId] = {
+                            id: componentId,
+                            name: componentId,
+                            type: 'dependency', // Default, should be refined
+                            status: 'ready',
+                            path: componentPath,
+                            lastUpdated: new Date()
+                        };
+                    }
+                }
+            } catch {
+                // No components directory or error reading it
+                console.log('No components directory found or error reading it');
+            }
             
             const project: Project = {
-                name: path.basename(projectPath),
+                name: manifest.name || path.basename(projectPath),
                 path: projectPath,
                 status: 'stopped',
-                created: new Date(),
-                lastModified: new Date()
+                created: manifest.created ? new Date(manifest.created) : new Date(),
+                lastModified: manifest.lastModified ? new Date(manifest.lastModified) : new Date(),
+                adobe: manifest.adobe,
+                componentInstances,
+                componentSelections: manifest.componentSelections
             };
             
             // Set as current project

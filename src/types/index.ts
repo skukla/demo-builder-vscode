@@ -8,19 +8,57 @@ export interface Project {
     organization?: string;
     adobe?: AdobeConfig;
     commerce?: CommerceConfig;
+    // Legacy configs (for backward compatibility)
     frontend?: FrontendConfig;
     mesh?: MeshConfig;
     inspector?: InspectorConfig;
-    // Component-based configuration
-    components?: {
+    // New component-based structure
+    componentInstances?: {
+        [componentId: string]: ComponentInstance;
+    };
+    // Component selections (which components were chosen)
+    componentSelections?: {
         frontend?: string;  // Component ID
         backend?: string;   // Component ID  
         dependencies?: string[]; // Component IDs
+        externalSystems?: string[]; // Component IDs
+        appBuilder?: string[]; // Component IDs
     };
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;
 }
+
+export interface ComponentInstance {
+    id: string;              // Component ID (e.g., "citisignal-nextjs")
+    name: string;            // Human-readable name
+    type: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder';
+    subType?: 'mesh' | 'inspector' | 'utility' | 'service';
+    path?: string;           // Full path to cloned repo (if applicable)
+    repoUrl?: string;        // Git repository URL
+    branch?: string;         // Current branch
+    version?: string;        // Version/commit hash
+    status: ComponentStatus;
+    port?: number;           // For components that run locally
+    pid?: number;            // Process ID if running
+    endpoint?: string;       // For deployed components (e.g., API Mesh endpoint)
+    lastUpdated?: Date;
+    metadata?: Record<string, any>; // Additional component-specific data
+}
+
+export type ComponentStatus = 
+    | 'not-installed'
+    | 'cloning'
+    | 'installing'
+    | 'ready'
+    | 'starting'
+    | 'running'
+    | 'stopping'
+    | 'stopped'
+    | 'deploying'
+    | 'deployed'
+    | 'updating'
+    | 'error';
 
 export type ProjectTemplate = 
     | 'commerce-paas'

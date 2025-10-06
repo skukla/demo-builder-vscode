@@ -2388,7 +2388,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     // Project creation
     private async handleCreateProject(config: any): Promise<void> {
         try {
-            this.logger.info('Starting project creation with config:', config);
+            this.logger.info('[Project Creation] Starting with config:', config);
             
             // Send initial status
             await this.sendMessage('creationStarted', {});
@@ -2402,45 +2402,213 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 });
             };
             
-            // TODO: Implement actual project creation logic
-            // This would involve:
-            // 1. Setting up project directory
-            // 2. Installing dependencies
-            // 3. Configuring Adobe services
-            // 4. Setting up components
-            // 5. Running initial build
+            // Import ComponentManager
+            const { ComponentManager } = await import('../utils/componentManager');
+            const { ComponentRegistryManager } = await import('../utils/componentRegistry');
+            const fs = await import('fs/promises');
+            const path = await import('path');
+            const os = await import('os');
             
-            // For now, simulate progress
-            await progressTracker('setup', 10, 'Creating project directory...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Step 1: Create project directory structure (10%)
+            progressTracker('setup', 10, 'Creating project directory...');
             
-            await progressTracker('dependencies', 30, 'Installing dependencies...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', config.projectName);
+            const componentsDir = path.join(projectPath, 'components');
             
-            await progressTracker('adobe', 50, 'Configuring Adobe services...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await fs.mkdir(componentsDir, { recursive: true });
+            await fs.mkdir(path.join(projectPath, 'logs'), { recursive: true });
             
-            await progressTracker('components', 70, 'Setting up components...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            this.logger.info(`[Project Creation] Created directory: ${projectPath}`);
             
-            await progressTracker('build', 90, 'Running initial build...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Step 2: Initialize project (15%)
+            progressTracker('setup', 15, 'Initializing project...');
             
-            await progressTracker('complete', 100, 'Project created successfully!');
+            const project: import('../types').Project = {
+                name: config.projectName,
+                created: new Date(),
+                lastModified: new Date(),
+                path: projectPath,
+                status: 'configuring',
+                adobe: config.adobe,
+                componentInstances: {},
+                componentSelections: {
+                    frontend: config.components?.frontend,
+                    backend: config.components?.backend,
+                    dependencies: config.components?.dependencies || [],
+                    externalSystems: config.components?.externalSystems || [],
+                    appBuilder: config.components?.appBuilderApps || []
+                }
+            };
+            
+            // Step 3: Load component definitions (20%)
+            progressTracker('components', 20, 'Loading component definitions...');
+            
+            const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+            const componentManager = new ComponentManager(this.logger);
+            
+            // Step 4: Install selected components (25-80%)
+            const allComponents = [
+                ...(config.components?.frontend ? [{ id: config.components.frontend, type: 'frontend' }] : []),
+                ...(config.components?.dependencies || []).map((id: string) => ({ id, type: 'dependency' })),
+                ...(config.components?.appBuilderApps || []).map((id: string) => ({ id, type: 'app-builder' }))
+            ];
+            
+            const progressPerComponent = 55 / Math.max(allComponents.length, 1);
+            let currentProgress = 25;
+            
+            for (const comp of allComponents) {
+                let componentDef;
+                
+                if (comp.type === 'frontend') {
+                    const frontends = await registryManager.getFrontends();
+                    componentDef = frontends.find(f => f.id === comp.id);
+                } else if (comp.type === 'dependency') {
+                    const dependencies = await registryManager.getDependencies();
+                    componentDef = dependencies.find(d => d.id === comp.id);
+                } else if (comp.type === 'app-builder') {
+                    const appBuilder = await registryManager.getAppBuilder();
+                    componentDef = appBuilder.find(a => a.id === comp.id);
+                }
+                
+                if (!componentDef) {
+                    this.logger.warn(`[Project Creation] Component ${comp.id} not found in registry`);
+                    continue;
+                }
+                
+                progressTracker('components', currentProgress, `Installing ${componentDef.name}...`);
+                this.logger.info(`[Project Creation] Installing component: ${componentDef.name}`);
+                
+                const result = await componentManager.installComponent(project, componentDef);
+                
+                if (result.success && result.component) {
+                    project.componentInstances![comp.id] = result.component;
+                    this.logger.info(`[Project Creation] Successfully installed ${componentDef.name}`);
+                } else {
+                    throw new Error(`Failed to install ${componentDef.name}: ${result.error}`);
+                }
+                
+                currentProgress += progressPerComponent;
+            }
+            
+            // Step 5: Deploy API Mesh if selected (80%)
+            if (config.apiMesh?.meshId && config.apiMesh?.endpoint) {
+                progressTracker('components', 80, 'Configuring API Mesh...');
+                
+                // Add mesh as a component instance (deployed, not cloned)
+                project.componentInstances!['commerce-mesh'] = {
+                    id: 'commerce-mesh',
+                    name: 'Commerce API Mesh',
+                    type: 'dependency',
+                    subType: 'mesh',
+                    status: 'deployed',
+                    endpoint: config.apiMesh.endpoint,
+                    lastUpdated: new Date(),
+                    metadata: {
+                        meshId: config.apiMesh.meshId,
+                        meshStatus: config.apiMesh.meshStatus
+                    }
+                };
+                
+                this.logger.info('[Project Creation] API Mesh configured');
+            }
+            
+            // Step 6: Generate .env file (85%)
+            progressTracker('setup', 85, 'Generating environment file...');
+            
+            const envContent = this.generateEnvFile(config);
+            await fs.writeFile(path.join(projectPath, '.env'), envContent);
+            
+            this.logger.info('[Project Creation] Environment file created');
+            
+            // Step 7: Create project manifest (90%)
+            progressTracker('setup', 90, 'Creating project manifest...');
+            
+            const manifest = {
+                name: project.name,
+                version: '1.0.0',
+                created: project.created.toISOString(),
+                lastModified: project.lastModified.toISOString(),
+                adobe: project.adobe,
+                componentSelections: project.componentSelections,
+                components: Object.keys(project.componentInstances || {})
+            };
+            
+            await fs.writeFile(
+                path.join(projectPath, '.demo-builder.json'),
+                JSON.stringify(manifest, null, 2)
+            );
+            
+            this.logger.info('[Project Creation] Project manifest created');
+            
+            // Step 8: Save project state (95%)
+            progressTracker('setup', 95, 'Saving project...');
+            
+            project.status = 'ready';
+            await this.stateManager.saveProject(project);
+            
+            this.logger.info('[Project Creation] Project state saved');
+            
+            // Step 9: Complete (100%)
+            progressTracker('complete', 100, 'Project created successfully!');
             
             // Send completion
             await this.sendMessage('creationComplete', {
-                projectPath: '/path/to/project',  // TODO: Get actual path
+                projectPath: projectPath,
                 success: true
             });
             
-            this.logger.info('Project creation completed successfully');
+            this.logger.info('[Project Creation] Completed successfully');
+            
+            // Refresh tree view
+            await vscode.commands.executeCommand('demoBuilder.refreshProjects');
             
         } catch (error) {
-            this.logger.error('Project creation failed:', error as Error);
+            this.logger.error('[Project Creation] Failed:', error as Error);
             await this.sendMessage('creationError', {
                 error: error instanceof Error ? error.message : String(error)
             });
         }
+    }
+    
+    /**
+     * Generate .env file content from wizard configuration
+     */
+    private generateEnvFile(config: any): string {
+        const lines: string[] = [
+            '# Demo Builder Project Configuration',
+            '# Generated: ' + new Date().toISOString(),
+            '',
+            '# Adobe Configuration',
+            `ADOBE_ORG_ID=${config.adobe?.organization || ''}`,
+            `ADOBE_PROJECT_ID=${config.adobe?.projectId || ''}`,
+            `ADOBE_WORKSPACE_ID=${config.adobe?.workspace || ''}`,
+            ''
+        ];
+        
+        // Add API Mesh endpoint if configured
+        if (config.apiMesh?.endpoint) {
+            lines.push('# API Mesh');
+            lines.push(`MESH_ENDPOINT=${config.apiMesh.endpoint}`);
+            lines.push('');
+        }
+        
+        // Add component-specific configurations
+        if (config.componentConfigs) {
+            lines.push('# Component Configuration');
+            
+            for (const [componentId, componentConfig] of Object.entries(config.componentConfigs)) {
+                lines.push(`# ${componentId}`);
+                
+                for (const [key, value] of Object.entries(componentConfig as Record<string, any>)) {
+                    if (value !== undefined && value !== null && value !== '') {
+                        lines.push(`${key}=${value}`);
+                    }
+                }
+                
+                lines.push('');
+            }
+        }
+        
+        return lines.join('\n');
     }
 }
