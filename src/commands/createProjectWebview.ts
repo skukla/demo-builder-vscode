@@ -2588,6 +2588,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 }
             };
             
+            // Save initial project state so sidebar shows project (not "No Project")
+            await this.stateManager.saveProject(project);
+            this.logger.info('[Project Creation] Initial project state saved');
+            
             // Step 3: Load component definitions (20%)
             progressTracker('Loading Components', 20, 'Preparing component definitions...');
             
@@ -2631,6 +2635,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 if (result.success && result.component) {
                     project.componentInstances![comp.id] = result.component;
                     this.logger.info(`[Project Creation] Successfully installed ${componentDef.name}`);
+                    
+                    // Save project state to trigger sidebar refresh (show component in real-time)
+                    await this.stateManager.saveProject(project);
                 } else {
                     throw new Error(`Failed to install ${componentDef.name}: ${result.error}`);
                 }
