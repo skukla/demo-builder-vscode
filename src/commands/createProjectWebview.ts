@@ -2711,8 +2711,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             this.logger.info('[Project Creation] Completed successfully');
             
-            // Refresh tree view (so Demo Builder shows the project when user looks)
-            await vscode.commands.executeCommand('demoBuilder.refreshProjects');
+            // Note: Tree view auto-refreshes via StateManager.onProjectChanged event
+            // (triggered by saveProject() above)
             
             // FIRST: Open Explorer to show files (primary action)
             await vscode.commands.executeCommand('workbench.view.explorer');
