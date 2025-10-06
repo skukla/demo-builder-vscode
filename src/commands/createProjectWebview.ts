@@ -2394,11 +2394,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             await this.sendMessage('creationStarted', {});
             
             // Create progress tracker
-            const progressTracker = (step: string, progress: number, message?: string) => {
+            const progressTracker = (currentOperation: string, progress: number, message?: string) => {
                 this.sendMessage('creationProgress', {
-                    step,
+                    currentOperation,
                     progress,
-                    message
+                    message: message || '',
+                    logs: []
                 });
             };
             
@@ -2410,7 +2411,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             const os = await import('os');
             
             // Step 1: Create project directory structure (10%)
-            progressTracker('setup', 10, 'Creating project directory...');
+            progressTracker('Setting Up Project', 10, 'Creating project directory structure...');
             
             const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', config.projectName);
             const componentsDir = path.join(projectPath, 'components');
@@ -2421,7 +2422,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.info(`[Project Creation] Created directory: ${projectPath}`);
             
             // Step 2: Initialize project (15%)
-            progressTracker('setup', 15, 'Initializing project...');
+            progressTracker('Setting Up Project', 15, 'Initializing project configuration...');
             
             const project: import('../types').Project = {
                 name: config.projectName,
@@ -2441,7 +2442,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             };
             
             // Step 3: Load component definitions (20%)
-            progressTracker('components', 20, 'Loading component definitions...');
+            progressTracker('Loading Components', 20, 'Preparing component definitions...');
             
             const registryManager = new ComponentRegistryManager(this.context.extensionPath);
             const componentManager = new ComponentManager(this.logger);
@@ -2475,7 +2476,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     continue;
                 }
                 
-                progressTracker('components', currentProgress, `Installing ${componentDef.name}...`);
+                progressTracker(`Installing ${componentDef.name}`, currentProgress, `Cloning repository and installing dependencies...`);
                 this.logger.info(`[Project Creation] Installing component: ${componentDef.name}`);
                 
                 const result = await componentManager.installComponent(project, componentDef);
@@ -2492,7 +2493,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             // Step 5: Deploy API Mesh if selected (80%)
             if (config.apiMesh?.meshId && config.apiMesh?.endpoint) {
-                progressTracker('components', 80, 'Configuring API Mesh...');
+                progressTracker('Configuring API Mesh', 80, 'Adding mesh configuration to project...');
                 
                 // Add mesh as a component instance (deployed, not cloned)
                 project.componentInstances!['commerce-mesh'] = {
@@ -2513,7 +2514,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
             
             // Step 6: Generate .env file (85%)
-            progressTracker('setup', 85, 'Generating environment file...');
+            progressTracker('Finalizing Project', 85, 'Generating environment configuration...');
             
             const envContent = this.generateEnvFile(config);
             await fs.writeFile(path.join(projectPath, '.env'), envContent);
@@ -2521,7 +2522,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.info('[Project Creation] Environment file created');
             
             // Step 7: Create project manifest (90%)
-            progressTracker('setup', 90, 'Creating project manifest...');
+            progressTracker('Finalizing Project', 90, 'Creating project manifest...');
             
             const manifest = {
                 name: project.name,
@@ -2541,7 +2542,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.info('[Project Creation] Project manifest created');
             
             // Step 8: Save project state (95%)
-            progressTracker('setup', 95, 'Saving project...');
+            progressTracker('Finalizing Project', 95, 'Saving project state...');
             
             project.status = 'ready';
             await this.stateManager.saveProject(project);
@@ -2549,7 +2550,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.info('[Project Creation] Project state saved');
             
             // Step 9: Add to workspace
-            progressTracker('complete', 100, 'Adding project to workspace...');
+            progressTracker('Opening Project', 100, 'Adding project to workspace...');
             
             // Add project folder to workspace (so Explorer shows files)
             const workspaceFolder = {
@@ -2570,7 +2571,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
             
             // Step 10: Complete
-            progressTracker('complete', 100, 'Project created successfully!');
+            progressTracker('Project Created', 100, 'Opening project in Explorer...');
             
             // Send completion
             await this.sendMessage('creationComplete', {

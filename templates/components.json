@@ -222,7 +222,8 @@
         "type": "mesh",
         "source": {
           "type": "git",
-          "url": "https://github.com/skukla/commerce-mesh"
+          "url": "https://github.com/skukla/commerce-mesh",
+          "branch": "master"
         },
         "configuration": {
           "nodeVersion": "20",
