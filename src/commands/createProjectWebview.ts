@@ -2404,6 +2404,29 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const startTime = Date.now();
         const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', config.projectName);
         
+        // FIRST: Check workspace trust and offer one-time tip
+        const hasShownTrustTip = this.context.globalState.get('demoBuilder.trustTipShown', false);
+        if (!hasShownTrustTip && !vscode.workspace.isTrusted) {
+            this.logger.info('[Project Creation] Showing one-time workspace trust tip');
+            await this.context.globalState.update('demoBuilder.trustTipShown', true);
+            
+            const choice = await vscode.window.showInformationMessage(
+                '💡 Tip: Trust all Demo Builder projects at once for the best experience',
+                'Learn How',
+                'Skip for Now'
+            );
+            
+            if (choice === 'Learn How') {
+                const demoBuilderPath = path.join(os.homedir(), '.demo-builder');
+                vscode.window.showInformationMessage(
+                    `Add "${demoBuilderPath}" to your Trusted Folders ` +
+                    '(Cmd+Shift+P → "Workspaces: Manage Workspace Trust" → Add Folder). ' +
+                    'All future projects will be trusted automatically, no more dialogs!',
+                    'Got it!'
+                );
+            }
+        }
+        
         // Create abort controller for cancellation
         this.projectCreationAbortController = new AbortController();
         
@@ -2678,28 +2701,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             if (added) {
                 this.logger.info('[Project Creation] Added to workspace');
-                
-                // Check if this is the first project and offer to trust parent directory
-                const hasShownTrustTip = this.context.globalState.get('demoBuilder.trustTipShown', false);
-                if (!hasShownTrustTip && !vscode.workspace.isTrusted) {
-                    this.logger.info('[Project Creation] Showing one-time trust tip');
-                    await this.context.globalState.update('demoBuilder.trustTipShown', true);
-                    
-                    const choice = await vscode.window.showInformationMessage(
-                        '💡 Tip: Trust all Demo Builder projects at once',
-                        'Learn How',
-                        'Dismiss'
-                    );
-                    
-                    if (choice === 'Learn How') {
-                        vscode.window.showInformationMessage(
-                            `Add "${path.join(os.homedir(), '.demo-builder')}" to your Trusted Folders ` +
-                            '(Cmd+Shift+P → "Workspaces: Manage Workspace Trust" → Add Folder). ' +
-                            'All future projects will be trusted automatically!',
-                            'Got it!'
-                        );
-                    }
-                }
+                // Note: Trust tip was already shown at the beginning (if needed)
             } else {
                 this.logger.warn('[Project Creation] Failed to add to workspace');
             }
