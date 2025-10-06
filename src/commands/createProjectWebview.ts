@@ -2685,26 +2685,21 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Step 10: Complete
             progressTracker('Project Created', 100, 'Opening project in Explorer...');
             
-            // Send completion
+            this.logger.info('[Project Creation] Completed successfully');
+            
+            // Refresh tree view (so Demo Builder shows the project when user looks)
+            await vscode.commands.executeCommand('demoBuilder.refreshProjects');
+            
+            // FIRST: Open Explorer to show files (primary action)
+            await vscode.commands.executeCommand('workbench.view.explorer');
+            await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(projectPath));
+            
+            // Send completion AFTER Explorer is open
             await this.sendMessage('creationComplete', {
                 projectPath: projectPath,
                 success: true,
                 message: 'Project files are now visible in Explorer'
             });
-            
-            this.logger.info('[Project Creation] Completed successfully');
-            
-            // Refresh tree view first (so Demo Builder shows the project)
-            await vscode.commands.executeCommand('demoBuilder.refreshProjects');
-            
-            // Focus Demo Builder view briefly to show components
-            await vscode.commands.executeCommand('demoBuilder.projectView.focus');
-            
-            // Then switch to Explorer to show files (after a brief delay)
-            setTimeout(async () => {
-                await vscode.commands.executeCommand('workbench.view.explorer');
-                await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(projectPath));
-            }, 1000);
     }
     
     /**

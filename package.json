@@ -30,6 +30,16 @@
     "workspaceContains:.demo-builder"
   ],
   "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Demo Builder requires workspace trust to execute external commands (git, npm, Adobe CLI). In untrusted workspaces, project creation and management features are disabled for security.",
+      "restrictedConfigurations": [
+        "demoBuilder.defaultPort",
+        "demoBuilder.autoUpdate"
+      ]
+    }
+  },
   "contributes": {
     "commands": [
       {
