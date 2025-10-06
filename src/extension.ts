@@ -52,13 +52,23 @@ export async function activate(context: vscode.ExtensionContext) {
         const commandManager = new CommandManager(context, stateManager, statusBar, logger);
         commandManager.registerCommands();
 
-        // Initialize project tree view
+        // Initialize control panel tree view (shows under Explorer)
         const projectTreeProvider = new ProjectTreeProvider(stateManager);
-        const treeView = vscode.window.createTreeView('demoBuilder.projectView', {
+        const treeView = vscode.window.createTreeView('demoBuilder.controls', {
             treeDataProvider: projectTreeProvider,
-            showCollapseAll: true
+            showCollapseAll: false // Simple flat list, no collapse needed
         });
         context.subscriptions.push(treeView);
+        
+        // Set context to show/hide the panel based on project existence
+        const updateTreeViewContext = async () => {
+            const hasProject = await stateManager.hasProject();
+            vscode.commands.executeCommand('setContext', 'demoBuilder.hasProject', hasProject);
+        };
+        
+        // Update immediately and on state changes
+        await updateTreeViewContext();
+        stateManager.onProjectChanged(updateTreeViewContext);
 
         // Initialize auto-updater if enabled
         const autoUpdateEnabled = vscode.workspace

@@ -128,22 +128,12 @@
         }
       }
     },
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "demoBuilder",
-          "title": "Demo Builder",
-          "icon": "media/sidebar-icon.svg"
-        }
-      ]
-    },
     "views": {
-      "demoBuilder": [
+      "explorer": [
         {
-          "id": "demoBuilder.projectView",
-          "name": "Current Project",
-          "icon": "$(project)",
-          "contextualTitle": "Demo Project"
+          "id": "demoBuilder.controls",
+          "name": "Demo Builder",
+          "when": "demoBuilder.hasProject"
         }
       ]
     }

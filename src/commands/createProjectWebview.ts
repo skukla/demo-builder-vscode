@@ -2525,10 +2525,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             });
         };
             
-            // Open Demo Builder sidebar at START so user can watch components appear
-            // This makes the "Watch the Demo Builder sidebar" tip actually useful
-            await vscode.commands.executeCommand('demoBuilder.projectView.focus');
-            this.logger.debug('[Project Creation] Opened Demo Builder sidebar for live updates');
+            // Open Explorer at START so user can watch component folders appear
+            await vscode.commands.executeCommand('workbench.view.explorer');
+            this.logger.debug('[Project Creation] Opened Explorer to show components being installed');
             
             // Import ComponentManager
             const { ComponentManager } = await import('../utils/componentManager');
@@ -2733,15 +2732,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Note: Tree view auto-refreshes via StateManager.onProjectChanged event
             // (triggered by saveProject() above)
             
-            // Ensure Demo Builder sidebar is focused (shows controls ready to use)
-            await vscode.commands.executeCommand('demoBuilder.projectView.focus');
-            this.logger.debug('[Project Creation] Demo Builder sidebar focused, showing controls');
+            // Open Explorer to show installed component files
+            await vscode.commands.executeCommand('workbench.view.explorer');
+            await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(projectPath));
+            this.logger.debug('[Project Creation] Opened Explorer to show installed components');
             
             // Send completion message
             await this.sendMessage('creationComplete', {
                 projectPath: projectPath,
                 success: true,
-                message: 'Your demo is ready to start'
+                message: 'Your project files are ready in Explorer'
             });
     }
     
