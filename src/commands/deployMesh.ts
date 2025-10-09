@@ -7,10 +7,7 @@ import { StatusBarManager } from '../providers/statusBar';
 import { Logger } from '../utils/logger';
 import { getExternalCommandManager } from '../extension';
 import { updateMeshState } from '../utils/stalenessDetector';
-
-const TIMEOUTS = {
-    API_MESH_UPDATE: 300000 // 5 minutes
-};
+import { TIMEOUTS } from '../utils/timeoutConfig';
 
 /**
  * Deploy (or redeploy) API Mesh using the mesh.json from the mesh component
@@ -72,11 +69,9 @@ export class DeployMeshCommand extends BaseCommand {
                 // Send initial "deploying" status to Project Dashboard
                 await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Starting deployment...');
             
-                // Update project state to deploying
-                if (project.mesh) {
-                    project.mesh.status = 'deploying';
-                    await this.stateManager.saveProject(project);
-                }
+                // Update component state to deploying
+                meshComponent.status = 'deploying';
+                await this.stateManager.saveProject(project);
 
                 // Show progress notification
                 await vscode.window.withProgress(
@@ -154,119 +149,48 @@ export class DeployMeshCommand extends BaseCommand {
                         outputChannel.appendLine('[3/3] Verifying deployment...');
                         outputChannel.appendLine('-'.repeat(60));
                         
-                        // Mesh update is asynchronous - poll until it's deployed
-                        // Use same timing as wizard: 20s initial wait, then 10s polls
+                        // Use shared verification utility
                         progress.report({ message: 'Waiting for mesh deployment...' });
                         await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Waiting for deployment to complete...');
                         
-                        const maxRetries = 12; // 12 attempts = ~2 minutes
-                        const pollInterval = 10000; // 10 seconds
-                        const initialWait = 20000; // 20 seconds
-                        let attempt = 0;
-                        let meshDeployed = false;
-                        let deployedMeshId: string | undefined;
-                        let deployedEndpoint: string | undefined;
-                        
-                        // Initial wait - mesh won't be ready immediately
                         outputChannel.appendLine('Waiting 20 seconds for mesh provisioning...');
-                        await new Promise(resolve => setTimeout(resolve, initialWait));
                         
-                        while (attempt < maxRetries && !meshDeployed) {
-                            attempt++;
-                            
-                            const elapsed = initialWait + (attempt - 1) * pollInterval;
-                            const elapsedSeconds = Math.floor(elapsed / 1000);
-                            progress.report({ 
-                                message: 'Verifying deployment...' 
-                            });
-                            await ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
-                                'deploying', 
-                                `Verifying deployment (attempt ${attempt}/${maxRetries})...`
-                            );
-                            
-                            // Wait between attempts
-                            if (attempt > 1) {
-                                await new Promise(resolve => setTimeout(resolve, pollInterval));
-                            }
-                            
-                            this.logger.info(`[Deploy Mesh] Verification attempt ${attempt}/${maxRetries}`);
-                            outputChannel.appendLine(`Attempt ${attempt}/${maxRetries} (${elapsedSeconds}s elapsed)...`);
-                            
-                            try {
-                                const verifyResult = await commandManager.execute(
-                                    'aio api-mesh get',
-                                    {
-                                        timeout: 30000,
-                                        configureTelemetry: false,
-                                        useNodeVersion: null,
-                                        enhancePath: true
-                                    }
+                        const { waitForMeshDeployment } = await import('../utils/meshDeploymentVerifier');
+                        
+                        const verificationResult = await waitForMeshDeployment({
+                            onProgress: (attempt, maxRetries, elapsedSeconds) => {
+                                progress.report({ message: 'Verifying deployment...' });
+                                ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
+                                    'deploying',
+                                    `Verifying deployment (attempt ${attempt}/${maxRetries})...`
                                 );
-                                
-                                if (verifyResult.code === 0) {
-                                    const jsonMatch = verifyResult.stdout.match(/\{[\s\S]*\}/);
-                                    if (jsonMatch) {
-                                        const meshData = JSON.parse(jsonMatch[0]);
-                                        const meshStatus = meshData.meshStatus?.toLowerCase();
-                                        
-                                        this.logger.info(`[Deploy Mesh] Status: ${meshStatus}`);
-                                        outputChannel.appendLine(`  Status: ${meshStatus || 'unknown'}`);
-                                        
-                                        if (meshStatus === 'deployed' || meshStatus === 'success') {
-                                            // Success! Mesh is fully deployed
-                                            const totalTime = Math.floor(elapsed / 1000);
-                                            this.logger.info(`[Deploy Mesh] Verified deployment after ${totalTime}s`);
-                                            
-                                            deployedMeshId = meshData.meshId;
-                                            if (deployedMeshId) {
-                                                deployedEndpoint = await this.getEndpoint(deployedMeshId);
-                                            }
-                                            meshDeployed = true;
-                                            
-                                            outputChannel.appendLine('');
-                                            outputChannel.appendLine('✓ Mesh successfully deployed!');
-                                            outputChannel.appendLine(`  Total time: ${totalTime}s`);
-                                            if (deployedMeshId) {
-                                                outputChannel.appendLine(`  Mesh ID: ${deployedMeshId}`);
-                                            }
-                                            if (deployedEndpoint) {
-                                                outputChannel.appendLine(`  Endpoint: ${deployedEndpoint}`);
-                                            }
-                                            break;
-                                        } else if (meshStatus === 'error' || meshStatus === 'failed') {
-                                            outputChannel.appendLine('✗ Mesh deployment failed with error status');
-                                            throw new Error('Mesh deployment failed with error status');
-                                        }
-                                        // Otherwise continue polling (status is pending/building/etc)
-                                    }
-                                }
-                            } catch (verifyError) {
-                                this.logger.warn('[Deploy Mesh] Verification attempt failed', verifyError as Error);
-                                outputChannel.appendLine(`  Warning: ${(verifyError as Error).message}`);
-                                // Continue polling
-                            }
-                        }
+                                outputChannel.appendLine(`Attempt ${attempt}/${maxRetries} (${elapsedSeconds}s elapsed)...`);
+                            },
+                            logger: this.logger
+                        });
                         
-                        if (!meshDeployed) {
+                        if (!verificationResult.deployed) {
                             outputChannel.appendLine('');
-                            outputChannel.appendLine('✗ Deployment verification timed out');
-                            outputChannel.appendLine('  The mesh may still be deploying - check the Developer Console.');
-                            throw new Error('Mesh deployment verification timed out. The mesh may still be deploying - check the Developer Console.');
+                            outputChannel.appendLine('✗ Deployment verification failed');
+                            outputChannel.appendLine(`  ${verificationResult.error || 'Unknown error'}`);
+                            throw new Error(verificationResult.error || 'Mesh deployment verification failed');
                         }
                         
-                        // Update project state
-                        if (project.mesh && deployedMeshId) {
-                            project.mesh.id = deployedMeshId;
-                            project.mesh.endpoint = deployedEndpoint;
-                            project.mesh.status = 'deployed';
-                            project.mesh.lastDeployed = new Date();
+                        const deployedMeshId = verificationResult.meshId;
+                        const deployedEndpoint = verificationResult.endpoint;
+                        
+                        outputChannel.appendLine('');
+                        outputChannel.appendLine('✓ Mesh successfully deployed!');
+                        if (deployedMeshId) {
+                            outputChannel.appendLine(`  Mesh ID: ${deployedMeshId}`);
+                        }
+                        if (deployedEndpoint) {
+                            outputChannel.appendLine(`  Endpoint: ${deployedEndpoint}`);
                         }
                         
                         // Update component instance
-                        if (project.componentInstances && meshComponent.id && project.componentInstances[meshComponent.id]) {
-                            project.componentInstances[meshComponent.id].endpoint = deployedEndpoint;
-                            project.componentInstances[meshComponent.id].status = 'deployed';
-                        }
+                        meshComponent.endpoint = deployedEndpoint;
+                        meshComponent.status = 'deployed';
                         
                         // Update mesh state (env vars + source hash) to match deployed configuration
                         // This ensures the dashboard knows the config is in sync
@@ -304,10 +228,11 @@ export class DeployMeshCommand extends BaseCommand {
                 // Send error status to Project Dashboard
                 await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('error', 'Deployment failed');
                 
-                // Update project state to error
+                // Update component state to error
                 const project = await this.stateManager.getCurrentProject();
-                if (project?.mesh) {
-                    project.mesh.status = 'error';
+                const meshComponent = project?.componentInstances?.['commerce-mesh'];
+                if (meshComponent) {
+                    meshComponent.status = 'error';
                     await this.stateManager.saveProject(project);
                 }
                 
@@ -354,50 +279,4 @@ export class DeployMeshCommand extends BaseCommand {
         return null;
     }
 
-    /**
-     * Get mesh endpoint using aio api-mesh:describe
-     * Reuses the logic from createProjectWebview
-     */
-    private async getEndpoint(meshId: string): Promise<string | undefined> {
-        try {
-            const commandManager = getExternalCommandManager();
-            const result = await commandManager.execute(
-                'aio api-mesh:describe',
-                {
-                    timeout: 30000,
-                    configureTelemetry: false,
-                    useNodeVersion: null,
-                    enhancePath: true
-                }
-            );
-
-            if (result.code === 0 && result.stdout) {
-                // Parse the output to extract endpoint
-                const endpointMatch = result.stdout.match(/endpoint[:\s]+([^\s\n]+)/i);
-                if (endpointMatch && endpointMatch[1]) {
-                    return endpointMatch[1].trim();
-                }
-
-                // Try JSON parsing
-                try {
-                    const meshData = JSON.parse(result.stdout);
-                    if (meshData.endpoint) {
-                        return meshData.endpoint;
-                    }
-                } catch {
-                    // Not JSON, continue
-                }
-            }
-
-            // Fallback: construct endpoint from mesh ID
-            if (meshId) {
-                return `https://graph.adobe.io/api/${meshId}/graphql`;
-            }
-
-        } catch (error) {
-            this.logger.warn('[Deploy Mesh] Could not retrieve endpoint', error as Error);
-        }
-
-        return undefined;
-    }
 }

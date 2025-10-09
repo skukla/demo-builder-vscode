@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { BaseCommand } from './baseCommand';
-import { StateManager } from '../utils/stateManager';
 import { setLoadingState } from '../utils/loadingHTML';
 import { detectMeshChanges, detectFrontendChanges } from '../utils/stalenessDetector';
+import { Project } from '../types';
 
 /**
  * Command to show the "Project Dashboard" after project creation
@@ -68,10 +68,28 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
 
             // Handle disposal
             this.panel.onDidDispose(
-                () => {
+                async () => {
                     ProjectDashboardWebviewCommand.activePanel = undefined;
                     ProjectDashboardWebviewCommand.activeInstance = undefined;
                     this.panel = undefined;
+                    
+                    // Auto-open Welcome screen when dashboard closes (for easy navigation)
+                    try {
+                        const hasProject = await this.stateManager.hasProject();
+                        if (hasProject) {
+                            this.logger.debug('[Project Dashboard] Dashboard closed, showing Welcome screen');
+                            // Small delay to ensure disposal is complete before opening new webview
+                            setTimeout(() => {
+                                vscode.commands.executeCommand('demoBuilder.showWelcome').then(
+                                    () => this.logger.debug('[Project Dashboard] Welcome screen opened successfully'),
+                                    (err) => this.logger.debug(`[Project Dashboard] Could not open Welcome screen: ${err?.message || err}`)
+                                );
+                            }, 100);
+                        }
+                    } catch (error) {
+                        // Silently ignore errors during disposal
+                        this.logger.debug(`[Project Dashboard] Error during disposal: ${error}`);
+                    }
                 },
                 undefined,
                 this.context.subscriptions
@@ -124,15 +142,17 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                             // Update status after stop
                             setTimeout(() => this.sendProjectStatus(), 1000);
                             break;
-                        case 'openBrowser':
+                        case 'openBrowser': {
                             // Open demo in browser
                             const currentProject = await this.stateManager.getCurrentProject();
-                            if (currentProject?.frontend?.port) {
-                                const url = `http://localhost:${currentProject.frontend.port}`;
+                            const frontendPort = currentProject?.componentInstances?.['citisignal-nextjs']?.port;
+                            if (frontendPort) {
+                                const url = `http://localhost:${frontendPort}`;
                                 await vscode.env.openExternal(vscode.Uri.parse(url));
                                 this.logger.info(`[Project Dashboard] Opening browser: ${url}`);
                             }
                             break;
+                        }
                         case 'viewLogs':
                             await vscode.commands.executeCommand('demoBuilder.showLogs');
                             break;
@@ -142,7 +162,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                         case 'deployMesh':
                             await vscode.commands.executeCommand('demoBuilder.deployMesh');
                             break;
-                        case 'openDevConsole':
+                        case 'openDevConsole': {
                             // Open Adobe Developer Console for this project/workspace
                             const project = await this.stateManager.getCurrentProject();
                             let consoleUrl = 'https://developer.adobe.com/console';
@@ -165,6 +185,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                                 
                             await vscode.env.openExternal(vscode.Uri.parse(consoleUrl));
                             break;
+                        }
                         case 'deleteProject':
                             await vscode.commands.executeCommand('demoBuilder.deleteProject');
                             // Close cockpit after delete
@@ -206,18 +227,55 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
         const project = await this.stateManager.getCurrentProject();
         if (!project) return;
 
+        // DEBUG: Log project structure
+        this.logger.debug('[Project Dashboard] Project data:', {
+            hasComponentInstances: !!project.componentInstances,
+            componentKeys: Object.keys(project.componentInstances || {}),
+            hasMeshState: !!project.meshState,
+            meshStateKeys: project.meshState ? Object.keys(project.meshState) : []
+        });
+
         // Get mesh component for status
         const meshComponent = project.componentInstances?.['commerce-mesh'];
-
-        // Detect if mesh configuration has changed
-        let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = 
-            (project.mesh?.status as any) || 'not-deployed';
         
-        if (meshComponent && project.componentConfigs) {
-            const meshChanges = await detectMeshChanges(project, project.componentConfigs);
-            if (meshChanges.hasChanges) {
-                meshStatus = 'config-changed';
+        this.logger.debug('[Project Dashboard] Mesh component data:', {
+            hasMeshComponent: !!meshComponent,
+            meshStatus: meshComponent?.status,
+            meshEndpoint: meshComponent?.endpoint,
+            meshPath: meshComponent?.path
+        });
+
+        // Determine mesh status
+        let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = 'not-deployed';
+        
+        if (meshComponent) {
+            // Check component status for transient states (deploying, error)
+            if (meshComponent.status === 'deploying') {
+                meshStatus = 'deploying';
             }
+            else if (meshComponent.status === 'error') {
+                meshStatus = 'error';
+            }
+            // meshState = source of truth for deployment
+            // meshState is ONLY set after successful deployment AND verification
+            else if (project.meshState) {
+                meshStatus = 'deployed';
+                
+                // Check if configuration has changed since deployment
+                if (project.componentConfigs) {
+                    const meshChanges = await detectMeshChanges(project, project.componentConfigs);
+                    if (meshChanges.hasChanges) {
+                        meshStatus = 'config-changed';
+                    }
+                }
+                
+                // Periodically verify mesh still exists in Adobe I/O (async, non-blocking)
+                // This catches cases where mesh was deleted externally
+                this.verifyMeshDeployment(project).catch(err => {
+                    this.logger.debug('[Project Dashboard] Background mesh verification failed', err);
+                });
+            }
+            // Otherwise, mesh is not deployed
         }
 
         // Detect if frontend configuration has changed since demo started
@@ -230,13 +288,14 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             name: project.name,
             path: project.path,
             status: project.status || 'ready',
-            port: project.frontend?.port,
+            port: project.componentInstances?.['citisignal-nextjs']?.port,
             adobeOrg: project.adobe?.organization,
             adobeProject: project.adobe?.projectName,
             frontendConfigChanged,
-            mesh: project.mesh ? {
+            // Show mesh status if mesh component exists
+            mesh: meshComponent ? {
                 status: meshStatus,
-                endpoint: meshComponent?.endpoint || project.mesh.endpoint,
+                endpoint: meshComponent.endpoint,
                 message: undefined
             } : undefined
         };
@@ -276,6 +335,51 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
         }
     }
 
+    /**
+     * Verify mesh deployment with Adobe I/O and update status if needed
+     * Runs in background to avoid blocking UI
+     */
+    private async verifyMeshDeployment(project: Project): Promise<void> {
+        const { verifyMeshDeployment, syncMeshStatus } = await import('../utils/meshVerifier');
+        
+        this.logger.debug('[Project Dashboard] Verifying mesh deployment with Adobe I/O...');
+        
+        const verificationResult = await verifyMeshDeployment(project);
+        
+        if (!verificationResult.exists) {
+            this.logger.warn('[Project Dashboard] Mesh verification failed - mesh may not exist in Adobe I/O', {
+                error: verificationResult.error
+            });
+            
+            // Sync project state with reality
+            await syncMeshStatus(project, verificationResult);
+            await this.stateManager.saveProject(project);
+            
+            // Update dashboard to show correct status
+            await this.sendProjectStatus();
+            
+            // Show warning to user
+            if (this.panel) {
+                await this.panel.webview.postMessage({
+                    type: 'meshStatusUpdate',
+                    payload: {
+                        status: 'not-deployed',
+                        message: 'Mesh not found in Adobe I/O - may have been deleted externally'
+                    }
+                });
+            }
+        } else {
+            this.logger.debug('[Project Dashboard] Mesh verified successfully', {
+                meshId: verificationResult.meshId,
+                endpoint: verificationResult.endpoint
+            });
+            
+            // Update endpoint if it changed
+            await syncMeshStatus(project, verificationResult);
+            await this.stateManager.saveProject(project);
+        }
+    }
+
     private getHtmlContent(webview: vscode.Webview): string {
         const nonce = this.getNonce();
         
@@ -312,4 +416,6 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
         return text;
     }
 }
+
+
 

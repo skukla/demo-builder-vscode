@@ -2998,14 +2998,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     };
                         project.componentInstances!['commerce-mesh'] = meshComponent;
                         
-                        // Also update project.mesh for backward compatibility
-                        project.mesh = {
-                            id: meshId || '',
-                            status: 'deployed',
-                            endpoint: endpoint,
-                            lastDeployed: new Date(),
-                            mode: 'deployed'
-                        };
+                        // Update meshState to track deployment (required for status detection)
+                        const { updateMeshState } = await import('../utils/stalenessDetector');
+                        await updateMeshState(project);
+                        this.logger.info('[Project Creation] Updated mesh state after successful deployment');
                         
                         this.logger.info(`[Project Creation] ✅ Mesh configuration updated successfully${endpoint ? ': ' + endpoint : ''}`);
                 } else {
@@ -3039,6 +3035,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     }
                 };
                 
+                // Update meshState to track deployment (required for status detection)
+                const { updateMeshState } = await import('../utils/stalenessDetector');
+                await updateMeshState(project);
+                this.logger.info('[Project Creation] Updated mesh state for existing mesh');
+                
                 this.logger.info('[Project Creation] API Mesh configured');
         }
             
@@ -3052,7 +3053,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             lastModified: project.lastModified.toISOString(),
             adobe: project.adobe,
             componentSelections: project.componentSelections,
-            components: Object.keys(project.componentInstances || {})
+            componentInstances: project.componentInstances,
+            componentConfigs: project.componentConfigs,
+            meshState: project.meshState,
+            commerce: project.commerce,
+            components: Object.keys(project.componentInstances || {}) // Keep for backward compatibility
         };
             
         await fs.writeFile(
@@ -3307,24 +3312,34 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 throw new Error(formatAdobeCliError(errorMsg));
             }
             
-            this.logger.info('[Deploy Mesh] Mesh deployed successfully');
+            this.logger.info('[Deploy Mesh] Update command completed, verifying deployment...');
             
-            // Extract mesh ID from output
-            const meshIdMatch = deployResult.stdout.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
-            const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
+            // Use shared verification utility (same as manual deploy command)
+            const { waitForMeshDeployment } = await import('../utils/meshDeploymentVerifier');
             
-            // Get endpoint
-            let endpoint: string | undefined;
-            if (meshId) {
-                endpoint = await this.getEndpoint(meshId);
+            const verificationResult = await waitForMeshDeployment({
+                onProgress: (_attempt, _maxRetries, _elapsedSeconds) => {
+                    // Don't show individual mesh timing during project creation
+                    // The overall "This could take up to 3 minutes" is already shown
+                    onProgress?.(
+                        'Verifying deployment...',
+                        'Checking deployment status...'
+                    );
+                },
+                logger: this.logger
+            });
+            
+            if (!verificationResult.deployed) {
+                throw new Error(verificationResult.error || 'Mesh deployment verification failed');
             }
             
-            onProgress?.('✓ Deployment Complete', endpoint || 'Mesh deployed successfully');
+            this.logger.info('[Deploy Mesh] ✅ Mesh verified and deployed successfully');
+            onProgress?.('✓ Deployment Complete', verificationResult.endpoint || 'Mesh deployed successfully');
             
             return {
                 success: true,
-                meshId,
-                endpoint
+                meshId: verificationResult.meshId,
+                endpoint: verificationResult.endpoint
             };
             
         } catch (error) {
