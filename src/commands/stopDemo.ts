@@ -1,7 +1,45 @@
 import * as vscode from 'vscode';
+import * as net from 'net';
 import { BaseCommand } from './baseCommand';
 
 export class StopDemoCommand extends BaseCommand {
+    /**
+     * Check if a port is available (not in use)
+     */
+    private async isPortAvailable(port: number): Promise<boolean> {
+        return new Promise((resolve) => {
+            const server = net.createServer();
+            
+            server.once('error', () => {
+                resolve(false); // Port is in use
+            });
+            
+            server.once('listening', () => {
+                server.close();
+                resolve(true); // Port is available
+            });
+            
+            server.listen(port);
+        });
+    }
+    
+    /**
+     * Wait for a port to become available (with timeout)
+     */
+    private async waitForPortToFree(port: number, timeoutMs: number = 10000): Promise<boolean> {
+        const startTime = Date.now();
+        const checkInterval = 500; // Check every 500ms
+        
+        while (Date.now() - startTime < timeoutMs) {
+            if (await this.isPortAvailable(port)) {
+                return true;
+            }
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+        }
+        
+        return false; // Timeout reached
+    }
+    
     public async execute(): Promise<void> {
         try {
             const project = await this.stateManager.getCurrentProject();
@@ -42,8 +80,16 @@ export class StopDemoCommand extends BaseCommand {
                 });
                 
                 // Wait for port to be freed (Node process shutdown takes time)
-                progress.report({ message: 'Waiting for port to be released...' });
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                const port = project.frontend?.port || 3000;
+                progress.report({ message: `Waiting for port ${port} to be released...` });
+                
+                const portFreed = await this.waitForPortToFree(port, 10000);
+                if (!portFreed) {
+                    this.logger.warn(`Port ${port} still in use after 10 seconds, but marking as stopped`);
+                    vscode.window.showWarningMessage(
+                        `Port ${port} may still be in use. Wait a moment before restarting.`
+                    );
+                }
                 
                 // Update project status to 'stopped'
                 if (project.frontend) {
