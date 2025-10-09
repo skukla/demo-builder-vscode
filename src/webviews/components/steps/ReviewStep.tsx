@@ -3,7 +3,8 @@ import {
     View, 
     Text, 
     Flex,
-    Divider
+    Divider,
+    Well
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import { WizardState } from '../../types';
@@ -173,15 +174,12 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     Ready to create
                 </Text>
             </Flex>
-
-            {/* Visual Separator */}
-            <Divider size="S" marginBottom="size-300" />
             
-            {/* Project Details Block */}
-            <Flex direction="column" gap="size-100">
+            {/* Card Container with Background */}
+            <Well>
                 {/* Project Name - Hero Element */}
                 {state.projectName && (
-                    <View marginBottom="size-200">
+                    <View marginBottom="size-400">
                         <Text UNSAFE_style={{ 
                             fontSize: '26px', 
                             fontWeight: 700,
@@ -193,8 +191,8 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     </View>
                 )}
                 
-                {/* Component Sections with Architectural Flow */}
-                <Flex direction="column" gap="size-250">
+                {/* Component Sections */}
+                <Flex direction="column" gap="size-300">
                     {componentSections.map((section, index) => (
                         <View key={index}>
                             {/* Component Name */}
@@ -233,7 +231,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                         </View>
                     ))}
                 </Flex>
-            </Flex>
+            </Well>
         </div>
     );
 }
