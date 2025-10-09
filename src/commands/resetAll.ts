@@ -36,7 +36,22 @@ export class ResetAllCommand extends BaseCommand {
                 // Ignore errors if no demo is running
             }
 
-            // 2. Remove all Demo Builder workspace folders from VSCode
+            // 2. Close all open webview panels (Welcome, Project Dashboard, Create Project wizard)
+            try {
+                const { WelcomeWebviewCommand } = await import('./welcomeWebview');
+                const { ProjectDashboardWebviewCommand } = await import('./projectDashboardWebview');
+                const { BaseWebviewCommand } = await import('./baseWebviewCommand');
+                
+                WelcomeWebviewCommand.disposeActivePanel();
+                ProjectDashboardWebviewCommand.disposeActivePanel();
+                BaseWebviewCommand.disposeAllActivePanels();
+                
+                this.logger.info('Closed all webview panels');
+            } catch (err) {
+                this.logger.warn('Error closing webview panels:', err as Error);
+            }
+
+            // 3. Remove all Demo Builder workspace folders from VSCode
             const workspaceFolders = vscode.workspace.workspaceFolders || [];
             const demoBuilderPath = path.join(os.homedir(), '.demo-builder');
             const foldersToRemove: number[] = [];
@@ -55,18 +70,18 @@ export class ResetAllCommand extends BaseCommand {
                 this.logger.info(`Removed ${foldersToRemove.length} workspace folder(s)`);
             }
 
-            // 3. Clear VSCode workspace state
+            // 4. Clear VSCode workspace state
             await this.stateManager.clearAll();
             this.logger.info('Cleared workspace state');
 
-            // 4. Clear secrets (license key)
+            // 5. Clear secrets (license key)
             await this.context.secrets.delete('demoBuilder.licenseKey');
             this.logger.info('Cleared stored secrets');
 
-            // 5. Reset status bar
+            // 6. Reset status bar
             this.statusBar.reset();
 
-            // 6. Delete .demo-builder directory (after closing workspace folders)
+            // 7. Delete .demo-builder directory (after closing workspace folders)
             try {
                 await fs.rm(demoBuilderPath, { recursive: true, force: true });
                 this.logger.info(`Deleted ${demoBuilderPath} and all projects`);
@@ -75,18 +90,15 @@ export class ResetAllCommand extends BaseCommand {
                 this.logger.warn('You may need to manually delete this directory');
             }
 
-            vscode.window.showInformationMessage('Demo Builder has been completely reset. Restart the extension to begin fresh.');
+            // Reload window automatically to ensure clean state
+            // This prevents workspace folder references from lingering
+            this.logger.info('Reloading window to complete reset...');
+            vscode.window.showInformationMessage('Demo Builder reset complete. Reloading window...');
             
-            // Suggest restart
-            const restart = await vscode.window.showInformationMessage(
-                'Would you like to reload the window to complete the reset?',
-                'Reload Window',
-                'Later'
-            );
-
-            if (restart === 'Reload Window') {
-                vscode.commands.executeCommand('workbench.action.reloadWindow');
-            }
+            // Small delay to let message show
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await vscode.commands.executeCommand('workbench.action.reloadWindow');
 
         } catch (error) {
             await this.showError('Failed to reset Demo Builder', error as Error);
