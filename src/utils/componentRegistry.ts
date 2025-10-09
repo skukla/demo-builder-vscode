@@ -3,7 +3,6 @@ import * as path from 'path';
 import { 
     ComponentDefinition, 
     ComponentRegistry, 
-    ComponentDependencies,
     PresetDefinition 
 } from '../types';
 
@@ -73,18 +72,14 @@ export class ComponentRegistryManager {
             if (enhanced) components.dependencies.push(enhanced);
         });
 
+        (groups.appBuilderApps || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.appBuilder.push(enhanced);
+        });
+
         (groups.integrations || []).forEach((id: string) => {
             const enhanced = enhanceComponent(id);
-            // Map integrations to appropriate buckets based on component characteristics
-            if (enhanced) {
-                // For now, map to externalSystems and appBuilder based on component ID
-                // This maintains compatibility with existing code
-                if (id === 'experience-platform') {
-                    components.externalSystems.push(enhanced);
-                } else if (id === 'integration-service') {
-                    components.appBuilder.push(enhanced);
-                }
-            }
+            if (enhanced) components.externalSystems.push(enhanced);
         });
 
         return {

@@ -5,7 +5,8 @@
     "frontends": ["citisignal-nextjs"],
     "backends": ["adobe-commerce-paas"],
     "optionalAddOns": ["demo-inspector"],
-    "integrations": ["integration-service", "experience-platform"]
+    "appBuilderApps": ["integration-service"],
+    "integrations": ["experience-platform"]
   },
   "components": {
     "citisignal-nextjs": {
