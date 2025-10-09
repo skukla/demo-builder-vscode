@@ -25,6 +25,7 @@ interface ProjectStatus {
     port?: number;
     adobeOrg?: string;
     adobeProject?: string;
+    frontendConfigChanged?: boolean; // True if frontend .env changed since demo started
     mesh?: {
         status: 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'error';
         endpoint?: string;
@@ -154,6 +155,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
     const displayName = projectStatus?.name || project?.name || 'Demo Project';
     const status = projectStatus?.status || 'ready';
     const port = projectStatus?.port || 3000;
+    const frontendConfigChanged = projectStatus?.frontendConfigChanged || false;
     const meshStatus = projectStatus?.mesh?.status;
     const meshEndpoint = projectStatus?.mesh?.endpoint;
     const meshMessage = projectStatus?.mesh?.message;
@@ -167,6 +169,13 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                     text: 'Starting...'
                 };
             case 'running':
+                // Amber indicator if config changed while running
+                if (frontendConfigChanged) {
+                    return {
+                        color: 'var(--spectrum-global-color-orange-600)',
+                        text: 'Config Changed'
+                    };
+                }
                 return {
                     color: 'var(--spectrum-global-color-green-600)',
                     text: `Running on port ${port}`
@@ -219,7 +228,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
             case 'config-changed':
                 return {
                     color: 'var(--spectrum-global-color-orange-600)',
-                    text: 'Config Changed ⚠️'
+                    text: 'Config Changed'
                 };
             case 'not-deployed':
                 return {

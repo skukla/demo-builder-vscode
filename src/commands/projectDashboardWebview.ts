@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as fs from 'fs/promises';
+import * as crypto from 'crypto';
 import { BaseCommand } from './baseCommand';
 import { StateManager } from '../utils/stateManager';
 import { setLoadingState } from '../utils/loadingHTML';
@@ -214,6 +216,16 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             }
         }
 
+        // Detect if frontend configuration has changed since demo started
+        let frontendConfigChanged = false;
+        if (project.status === 'running' && project.frontendEnvHash) {
+            const currentHash = await this.getCurrentFrontendEnvHash(project);
+            if (currentHash && currentHash !== project.frontendEnvHash) {
+                frontendConfigChanged = true;
+                this.logger.debug(`[Dashboard] Frontend config changed: ${project.frontendEnvHash.substring(0, 8)}... -> ${currentHash.substring(0, 8)}...`);
+            }
+        }
+
         const statusData = {
             name: project.name,
             path: project.path,
@@ -221,6 +233,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             port: project.frontend?.port,
             adobeOrg: project.adobe?.organization,
             adobeProject: project.adobe?.projectName,
+            frontendConfigChanged,
             mesh: project.mesh ? {
                 status: meshStatus,
                 endpoint: meshComponent?.endpoint || project.mesh.endpoint,
@@ -288,6 +301,25 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             text += possible.charAt(Math.floor(Math.random() * possible.length));
         }
         return text;
+    }
+
+    /**
+     * Get current hash of frontend .env.local file
+     */
+    private async getCurrentFrontendEnvHash(project: any): Promise<string | null> {
+        try {
+            const frontendInstance = project.componentInstances?.['citisignal-nextjs'];
+            if (!frontendInstance?.path) {
+                return null;
+            }
+
+            const envPath = path.join(frontendInstance.path, '.env.local');
+            const envContent = await fs.readFile(envPath, 'utf-8');
+            return crypto.createHash('md5').update(envContent).digest('hex');
+        } catch (error) {
+            // .env.local might not exist
+            return null;
+        }
     }
 }
 

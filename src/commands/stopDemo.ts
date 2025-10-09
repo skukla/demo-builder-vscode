@@ -96,6 +96,10 @@ export class StopDemoCommand extends BaseCommand {
                     project.frontend.status = 'stopped';
                 }
                 project.status = 'ready';
+                
+                // Clear frontend env hash (config changes don't matter when stopped)
+                project.frontendEnvHash = undefined;
+                
                 await this.stateManager.saveProject(project);
                 
                 // Notify extension to reset env change grace period

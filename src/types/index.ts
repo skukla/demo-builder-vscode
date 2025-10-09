@@ -36,6 +36,8 @@ export interface Project {
         sourceHash: string | null;
         lastDeployed: string; // ISO date string
     };
+    // Frontend config state (tracks changes since demo started)
+    frontendEnvHash?: string; // Hash of .env.local when demo started
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;
