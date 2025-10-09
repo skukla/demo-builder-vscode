@@ -191,10 +191,13 @@ export function ConfigureScreen({ project, componentsData }: ConfigureScreenProp
                 fieldOrder: [
                     'ADOBE_COMMERCE_URL',
                     'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
+                    'ADOBE_COMMERCE_ENVIRONMENT_ID',
                     'ADOBE_COMMERCE_WEBSITE_CODE',
                     'ADOBE_COMMERCE_STORE_CODE',
                     'ADOBE_COMMERCE_STORE_VIEW_CODE',
-                    'ADOBE_COMMERCE_CUSTOMER_GROUP'
+                    'ADOBE_COMMERCE_CUSTOMER_GROUP',
+                    'ADOBE_COMMERCE_ADMIN_USERNAME',
+                    'ADOBE_COMMERCE_ADMIN_PASSWORD'
                 ]
             },
             { 
@@ -203,19 +206,13 @@ export function ConfigureScreen({ project, componentsData }: ConfigureScreenProp
                 order: 2,
                 fieldOrder: [
                     'ADOBE_CATALOG_SERVICE_ENDPOINT',
-                    'ADOBE_COMMERCE_ENVIRONMENT_ID',
                     'ADOBE_CATALOG_API_KEY'
                 ]
             },
-            { 
-                id: 'live-search', 
-                label: 'Live Search Service', 
-                order: 3,
-                fieldOrder: ['ADOBE_LIVE_SEARCH_ENDPOINT']
-            },
-            { id: 'mesh', label: 'API Mesh', order: 4 },
+            { id: 'mesh', label: 'API Mesh', order: 3 },
+            { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
             { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
-            { id: 'headless-citisignal', label: 'Headless CitiSignal', order: 6 },
+            { id: 'experience-platform', label: 'Experience Platform', order: 6 },
             { id: 'other', label: 'Additional Settings', order: 99 }
         ];
 

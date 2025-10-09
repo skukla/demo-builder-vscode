@@ -142,10 +142,9 @@
           "delete-file"
         ],
         "requiredEnvVars": [
-          "COMMERCE_BASE_URL",
-          "COMMERCE_ADMIN_USERNAME",
-          "COMMERCE_ADMIN_PASSWORD",
           "ADOBE_COMMERCE_URL",
+          "ADOBE_COMMERCE_ADMIN_USERNAME",
+          "ADOBE_COMMERCE_ADMIN_PASSWORD",
           "ADOBE_COMMERCE_ENVIRONMENT_ID",
           "ADOBE_COMMERCE_STORE_VIEW_CODE",
           "ADOBE_COMMERCE_WEBSITE_CODE",
@@ -153,171 +152,6 @@
         ],
         "optionalEnvVars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
       }
-    }
-  },
-  "envVars": {
-    "MESH_ENDPOINT": {
-      "label": "Mesh Query URL",
-      "type": "url",
-      "required": true,
-      "placeholder": "https://edge-sandbox-graph.adobe.io/api/your-mesh-id/graphql",
-      "description": "The GraphQL endpoint for your Adobe Commerce API Mesh",
-      "helpText": "Automatically supplied after API Mesh deployment",
-      "group": "mesh"
-    },
-    "ADOBE_COMMERCE_URL": {
-      "label": "Adobe Commerce URL",
-      "type": "url",
-      "required": true,
-      "placeholder": "https://your-instance.adobedemo.com",
-      "description": "The base URL of your Adobe Commerce instance",
-      "helpText": "Shared across mesh, storefront, and integration services",
-      "group": "adobe-commerce"
-    },
-    "ADOBE_ASSETS_URL": {
-      "label": "Adobe Assets URL",
-      "type": "url",
-      "required": false,
-      "placeholder": "https://delivery-p57319-e1619941.adobeaemcloud.com",
-      "description": "Optional URL for Adobe Experience Manager assets delivery",
-      "helpText": "Supply if the storefront should load assets from AEM.",
-      "group": "headless-citisignal"
-    },
-    "ADOBE_COMMERCE_ENVIRONMENT_ID": {
-      "label": "Environment ID",
-      "type": "text",
-      "required": true,
-      "placeholder": "your-environment-id",
-      "description": "Adobe Commerce Catalog Service dataspace identifier",
-      "helpText": "Found in your Commerce Cloud project settings under Catalog Service configuration",
-      "group": "catalog-service"
-    },
-    "ADOBE_COMMERCE_STORE_VIEW_CODE": {
-      "label": "Store View Code",
-      "type": "text",
-      "required": true,
-      "placeholder": "default",
-      "description": "Store view code",
-      "helpText": "Typically 'default' unless you have a custom store view setup",
-      "group": "adobe-commerce"
-    },
-    "ADOBE_COMMERCE_WEBSITE_CODE": {
-      "label": "Website Code",
-      "type": "text",
-      "required": true,
-      "placeholder": "base",
-      "description": "Website code",
-      "helpText": "Typically 'base' for single-website installations",
-      "group": "adobe-commerce"
-    },
-    "ADOBE_COMMERCE_STORE_CODE": {
-      "label": "Store Code",
-      "type": "text",
-      "required": true,
-      "placeholder": "main_website_store",
-      "description": "Store code",
-      "helpText": "Usually 'main_website_store' for default Commerce installations",
-      "group": "adobe-commerce"
-    },
-    "ADOBE_CATALOG_API_KEY": {
-      "label": "Sandbox Catalog API Key",
-      "type": "text",
-      "required": true,
-      "placeholder": "your-sandbox-catalog-api-key",
-      "description": "Your sandbox API key for Adobe Catalog Service",
-      "helpText": "Key used by Catalog Service and Live Search sources in API Mesh.",
-      "group": "catalog-service"
-    },
-    "ADOBE_COMMERCE_CUSTOMER_GROUP": {
-      "label": "Customer Group ID",
-      "type": "text",
-      "required": false,
-      "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
-      "description": "Customer group ID for pricing and catalog rules",
-      "helpText": "Leave as default for the \"Not Logged In\" customer group, or customize for specific pricing rules",
-      "group": "adobe-commerce"
-    },
-    "ADOBE_COMMERCE_GRAPHQL_ENDPOINT": {
-      "label": "Commerce GraphQL Endpoint",
-      "type": "url",
-      "required": true,
-      "placeholder": "https://your-instance.adobedemo.com/graphql",
-      "description": "GraphQL endpoint of your Adobe Commerce instance",
-      "helpText": "This is the /graphql endpoint of your Commerce instance.",
-      "group": "adobe-commerce"
-    },
-    "ADOBE_CATALOG_SERVICE_ENDPOINT": {
-      "label": "Catalog Service Endpoint",
-      "type": "url",
-      "required": true,
-      "default": "https://catalog-service-sandbox.adobe.io/graphql",
-      "placeholder": "https://catalog-service-sandbox.adobe.io/graphql",
-      "description": "Adobe Catalog Service GraphQL endpoint (shared with Live Search)",
-      "helpText": "Public Adobe service endpoint for Catalog Service and Live Search",
-      "group": "catalog-service"
-    },
-    "EXPERIENCE_PLATFORM_DATASTREAM_ID": {
-      "label": "Datastream ID",
-      "type": "text",
-      "required": true,
-      "placeholder": "your-datastream-id",
-      "description": "Adobe Experience Platform datastream identifier",
-      "helpText": "Create a datastream in the Adobe Experience Platform Data Collection UI.",
-      "group": "experience-platform"
-    },
-    "EXPERIENCE_PLATFORM_API_KEY": {
-      "label": "Platform API Key",
-      "type": "text",
-      "required": true,
-      "placeholder": "your-platform-api-key",
-      "description": "API key for Adobe Experience Platform access",
-      "helpText": "Generate this in Adobe Developer Console for your Experience Platform project.",
-      "group": "experience-platform"
-    },
-    "COMMERCE_BASE_URL": {
-      "label": "Commerce Base URL",
-      "type": "url",
-      "required": true,
-      "placeholder": "https://your-commerce-instance.adobedemo.com",
-      "description": "Base URL of your Adobe Commerce instance",
-      "helpText": "Same as ADOBE_COMMERCE_URL used elsewhere.",
-      "group": "adobe-commerce"
-    },
-    "COMMERCE_ADMIN_USERNAME": {
-      "label": "Admin Username",
-      "type": "text",
-      "required": true,
-      "placeholder": "admin",
-      "description": "Username for Commerce admin panel access",
-      "helpText": "Admin user must have API access permissions.",
-      "group": "adobe-commerce"
-    },
-    "COMMERCE_ADMIN_PASSWORD": {
-      "label": "Admin Password",
-      "type": "password",
-      "required": true,
-      "placeholder": "your_admin_password",
-      "description": "Password for Commerce admin panel access",
-      "helpText": "Ensure this password is secure and stored safely.",
-      "group": "adobe-commerce"
-    },
-    "AWS_ACCESS_KEY_ID": {
-      "label": "AWS Access Key ID",
-      "type": "text",
-      "required": false,
-      "placeholder": "your_aws_access_key_id",
-      "description": "AWS access key for S3 integration (optional)",
-      "helpText": "Only needed if your integration uses AWS S3 for asset storage.",
-      "group": "integration-service"
-    },
-    "AWS_SECRET_ACCESS_KEY": {
-      "label": "AWS Secret Access Key",
-      "type": "password",
-      "required": false,
-      "placeholder": "your_aws_secret_access_key",
-      "description": "AWS secret key for S3 integration (optional)",
-      "helpText": "Pair this with your AWS Access Key ID for S3 access.",
-      "group": "integration-service"
     }
   },
   "services": {
@@ -338,6 +172,162 @@
         "ADOBE_COMMERCE_ENVIRONMENT_ID",
         "ADOBE_CATALOG_API_KEY"
       ]
+    }
+  },
+  "envVars": {
+    "MESH_ENDPOINT": {
+      "label": "Mesh Query URL",
+      "type": "url",
+      "required": true,
+      "placeholder": "https://edge-sandbox-graph.adobe.io/api/your-mesh-id/graphql",
+      "description": "The GraphQL endpoint for your Adobe Commerce API Mesh",
+      "helpText": "Automatically supplied after API Mesh deployment",
+      "group": "mesh"
+    },
+    "ADOBE_ASSETS_URL": {
+      "label": "Adobe Assets URL",
+      "type": "url",
+      "required": false,
+      "placeholder": "https://delivery-p57319-e1619941.adobeaemcloud.com",
+      "description": "Optional URL for Adobe Experience Manager assets delivery",
+      "helpText": "Supply if the storefront should load assets from AEM.",
+      "group": "adobe-assets"
+    },
+    "ADOBE_CATALOG_API_KEY": {
+      "label": "Sandbox Catalog API Key",
+      "type": "text",
+      "required": true,
+      "placeholder": "your-sandbox-catalog-api-key",
+      "description": "Your sandbox API key for Adobe Catalog Service",
+      "helpText": "Key used by Catalog Service and Live Search sources in API Mesh.",
+      "group": "catalog-service"
+    },
+    "ADOBE_CATALOG_SERVICE_ENDPOINT": {
+      "label": "Catalog Service Endpoint",
+      "type": "url",
+      "required": true,
+      "default": "https://catalog-service-sandbox.adobe.io/graphql",
+      "placeholder": "https://catalog-service-sandbox.adobe.io/graphql",
+      "description": "Adobe Catalog Service GraphQL endpoint (shared with Live Search)",
+      "helpText": "Public Adobe service endpoint for Catalog Service and Live Search",
+      "group": "catalog-service"
+    },
+    "ADOBE_COMMERCE_ADMIN_PASSWORD": {
+      "label": "Admin Password",
+      "type": "password",
+      "required": true,
+      "placeholder": "your_admin_password",
+      "description": "Password for Commerce admin panel access",
+      "helpText": "Admin user must have API access permissions.",
+      "group": "adobe-commerce"
+    },
+    "ADOBE_COMMERCE_ADMIN_USERNAME": {
+      "label": "Admin Username",
+      "type": "text",
+      "required": true,
+      "placeholder": "admin",
+      "description": "Username for Commerce admin panel access",
+      "helpText": "Admin user must have API access permissions.",
+      "group": "adobe-commerce"
+    },
+    "ADOBE_COMMERCE_CUSTOMER_GROUP": {
+      "label": "Customer Group ID",
+      "type": "text",
+      "required": false,
+      "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
+      "description": "Customer group ID for pricing and catalog rules",
+      "helpText": "Leave as default for the \"Not Logged In\" customer group, or customize for specific pricing rules",
+      "group": "adobe-commerce"
+    },
+    "ADOBE_COMMERCE_ENVIRONMENT_ID": {
+      "label": "Environment ID",
+      "type": "text",
+      "required": true,
+      "placeholder": "your-environment-id",
+      "description": "Adobe Commerce Catalog Service dataspace identifier",
+      "helpText": "Found in your Commerce Cloud project settings under Catalog Service configuration",
+      "group": "adobe-commerce"
+    },
+    "ADOBE_COMMERCE_GRAPHQL_ENDPOINT": {
+      "label": "Commerce GraphQL Endpoint",
+      "type": "url",
+      "required": true,
+      "placeholder": "https://your-instance.adobedemo.com/graphql",
+      "description": "GraphQL endpoint of your Adobe Commerce instance",
+      "helpText": "This is the /graphql endpoint of your Commerce instance.",
+      "group": "adobe-commerce"
+    },
+    "ADOBE_COMMERCE_STORE_CODE": {
+      "label": "Store Code",
+      "type": "text",
+      "required": true,
+      "placeholder": "main_website_store",
+      "description": "Store code",
+      "helpText": "Usually 'main_website_store' for default Commerce installations",
+      "group": "adobe-commerce"
+    },
+    "ADOBE_COMMERCE_STORE_VIEW_CODE": {
+      "label": "Store View Code",
+      "type": "text",
+      "required": true,
+      "placeholder": "default",
+      "description": "Store view code",
+      "helpText": "Typically 'default' unless you have a custom store view setup",
+      "group": "adobe-commerce"
+    },
+    "ADOBE_COMMERCE_URL": {
+      "label": "Adobe Commerce URL",
+      "type": "url",
+      "required": true,
+      "placeholder": "https://your-instance.adobedemo.com",
+      "description": "The base URL of your Adobe Commerce instance",
+      "helpText": "Shared across mesh, storefront, and integration services",
+      "group": "adobe-commerce"
+    },
+    "ADOBE_COMMERCE_WEBSITE_CODE": {
+      "label": "Website Code",
+      "type": "text",
+      "required": true,
+      "placeholder": "base",
+      "description": "Website code",
+      "helpText": "Typically 'base' for single-website installations",
+      "group": "adobe-commerce"
+    },
+    "AWS_ACCESS_KEY_ID": {
+      "label": "AWS Access Key ID",
+      "type": "text",
+      "required": false,
+      "placeholder": "your_aws_access_key_id",
+      "description": "AWS access key for S3 integration (optional)",
+      "helpText": "Only needed if your integration uses AWS S3 for asset storage.",
+      "group": "integration-service"
+    },
+    "AWS_SECRET_ACCESS_KEY": {
+      "label": "AWS Secret Access Key",
+      "type": "password",
+      "required": false,
+      "placeholder": "your_aws_secret_access_key",
+      "description": "AWS secret key for S3 integration (optional)",
+      "helpText": "Pair this with your AWS Access Key ID for S3 access.",
+      "group": "integration-service"
+    },
+    "EXPERIENCE_PLATFORM_API_KEY": {
+      "label": "Platform API Key",
+      "type": "text",
+      "required": true,
+      "placeholder": "your-platform-api-key",
+      "description": "API key for Adobe Experience Platform access",
+      "helpText": "Generate this in Adobe Developer Console for your Experience Platform project.",
+      "group": "experience-platform"
+    },
+    "EXPERIENCE_PLATFORM_DATASTREAM_ID": {
+      "label": "Datastream ID",
+      "type": "text",
+      "required": true,
+      "placeholder": "your-datastream-id",
+      "description": "Adobe Experience Platform datastream identifier",
+      "helpText": "Create a datastream in the Adobe Experience Platform Data Collection UI.",
+      "group": "experience-platform"
     }
   }
 }
