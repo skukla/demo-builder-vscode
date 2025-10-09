@@ -741,7 +741,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 </Text>
 
                 {isLoading ? (
-                    <Flex justifyContent="center" alignItems="center" height="100%">
+                    <Flex justifyContent="center" alignItems="center" height="400px">
                         <LoadingDisplay 
                             size="L"
                             message="Loading component configurations..."
