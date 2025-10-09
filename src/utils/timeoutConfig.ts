@@ -9,18 +9,29 @@
  */
 
 export const TIMEOUTS = {
-    // Quick operations
-    TELEMETRY_CHECK: 500,           // Fire-and-forget telemetry check
-
     // Adobe CLI operations
     CONFIG_READ: 5000,              // Reading config values (expiry, other config)
     TOKEN_READ: 10000,              // Reading JWT tokens (longer due to size)
     CONFIG_WRITE: 10000,            // Writing config values (CRITICAL FIX: increased from 5000ms)
-                                    // Adobe CLI project/workspace selection often takes 8-10 seconds
+    // Adobe CLI project/workspace selection often takes 8-10 seconds
     API_CALL: 10000,                // API-based commands (console where, org list)
-    BROWSER_AUTH: 120000,           // Browser-based authentication flow (2 minutes)
-    API_MESH_CREATE: 300000,        // API Mesh creation (5 minutes - increased for slow operations)
-    API_MESH_UPDATE: 300000,        // API Mesh update/deployment (5 minutes - increased for slow operations)
+    BROWSER_AUTH: 60000,            // Browser-based authentication flow (1 minute)
+    API_MESH_CREATE: 120000,        // API Mesh creation (2 minutes)
+    API_MESH_UPDATE: 120000,        // API Mesh update/deployment (2 minutes)
+    
+    // Adobe SDK operations
+    SDK_INIT: 5000,                 // Adobe SDK initialization (fail fast, non-critical background operation)
+
+    // Data loading timeouts (wizard UI)
+    ORG_LIST: 30000,                // 30 seconds - organization list
+    PROJECT_LIST: 30000,            // 30 seconds - project list  
+    WORKSPACE_LIST: 30000,          // 30 seconds - workspace list
+    PROJECT_DETAILS: 30000,         // 30 seconds - project details
+    WORKSPACE_DETAILS: 30000,       // 30 seconds - workspace details
+
+    // Prerequisites timeouts
+    PREREQUISITE_CHECK: 60000,      // 1 minute - checking if prerequisite exists (fast)
+    PREREQUISITE_INSTALL: 180000,   // 3 minutes - installing prerequisites (downloads, npm installs)
 
     // Default fallbacks
     COMMAND_DEFAULT: 30000,         // Default command timeout
