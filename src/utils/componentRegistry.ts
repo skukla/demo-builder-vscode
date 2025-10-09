@@ -26,7 +26,7 @@ export class ComponentRegistryManager {
 
     /**
      * Transform v2.0 flat structure to grouped structure for internal use
-     * Groups components by type and builds envVars arrays from shared registry
+     * Uses selectionGroups to organize components, builds envVars arrays from shared registry
      */
     private transformToGroupedStructure(raw: any): ComponentRegistry {
         const components: any = {
@@ -37,52 +37,52 @@ export class ComponentRegistryManager {
             appBuilder: []
         };
 
-        // Group components by type and build their envVars and services
-        for (const [id, component] of Object.entries(raw.components || {})) {
-            const comp = component as any;
-            const enhanced = { 
-                ...comp, 
+        const groups = raw.selectionGroups || {};
+        
+        // Helper to enhance a component with envVars and services
+        const enhanceComponent = (id: string) => {
+            const comp = raw.components[id];
+            if (!comp) return null;
+            
+            return {
+                ...comp,
                 id,
                 configuration: comp.configuration ? {
                     ...comp.configuration,
                     envVars: this.buildEnvVarsForComponent(id, comp, raw.envVars || {}),
-                    // Expand service references to full service definitions
                     services: comp.configuration.requiredServices 
                         ? this.buildServicesForComponent(comp.configuration.requiredServices, raw.services || {}, raw.envVars || {})
                         : undefined
                 } : undefined
             };
+        };
 
-            switch (comp.type) {
-                case 'frontend':
-                    components.frontends.push(enhanced);
-                    break;
-                case 'backend':
-                    components.backends.push(enhanced);
-                    break;
-                // New types - first-class components
-                case 'mesh':
-                case 'inspector':
-                    components.dependencies.push(enhanced);
-                    break;
-                case 'platform':
-                    components.externalSystems.push(enhanced);
-                    break;
-                case 'integration':
-                    components.appBuilder.push(enhanced);
-                    break;
-                // Legacy types for backward compatibility
-                case 'dependency':
-                    components.dependencies.push(enhanced);
-                    break;
-                case 'external-system':
-                    components.externalSystems.push(enhanced);
-                    break;
-                case 'app-builder':
-                    components.appBuilder.push(enhanced);
-                    break;
-            }
-        }
+        // Map selectionGroups to internal buckets
+        (groups.frontends || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.frontends.push(enhanced);
+        });
+
+        (groups.backends || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.backends.push(enhanced);
+        });
+
+        (groups.optionalAddOns || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.dependencies.push(enhanced);
+        });
+
+        (groups.externalSystems || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.externalSystems.push(enhanced);
+        });
+
+        // appBuilder bucket is currently not used in selectionGroups but keep for future use
+        (groups.appBuilder || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.appBuilder.push(enhanced);
+        });
 
         return {
             version: raw.version,

@@ -43,7 +43,7 @@ export interface CustomIconPaths {
 export interface ComponentInstance {
     id: string;              // Component ID (e.g., "citisignal-nextjs")
     name: string;            // Human-readable name
-    type: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder';
+    type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder'; // Legacy field, not used with selectionGroups
     subType?: 'mesh' | 'inspector' | 'utility' | 'service';
     icon?: string | CustomIconPaths;  // VSCode ThemeIcon name OR custom icon paths
     path?: string;           // Full path to cloned repo (if applicable)
@@ -159,7 +159,7 @@ export interface ValidationResult {
 export interface ComponentDefinition {
     id: string;
     name: string;
-    type: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder';
+    type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder'; // Legacy field, not used with selectionGroups
     subType?: 'mesh' | 'inspector' | 'utility' | 'service';
     icon?: string | CustomIconPaths;  // VSCode ThemeIcon name OR custom icon paths
     description?: string;

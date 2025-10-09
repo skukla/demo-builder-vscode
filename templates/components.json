@@ -1,9 +1,17 @@
 {
   "$schema": "./components.schema.json",
   "version": "2.0.0",
+  "selectionGroups": {
+    "frontends": ["citisignal-nextjs"],
+    "backends": ["adobe-commerce-paas"],
+    "optionalAddOns": [
+      "demo-inspector",
+      "integration-service"
+    ],
+    "externalSystems": ["experience-platform"]
+  },
   "components": {
     "citisignal-nextjs": {
-      "type": "frontend",
       "name": "Headless CitiSignal",
       "description": "NextJS-based storefront with Adobe mesh integration",
       "icon": {
@@ -40,7 +48,6 @@
       }
     },
     "adobe-commerce-paas": {
-      "type": "backend",
       "name": "Adobe Commerce PaaS",
       "description": "Adobe Commerce DSN instance",
       "configuration": {
@@ -49,7 +56,6 @@
       }
     },
     "commerce-mesh": {
-      "type": "mesh",
       "name": "Adobe Commerce API Mesh",
       "description": "GraphQL gateway for unifying commerce data sources",
       "icon": {
@@ -83,7 +89,6 @@
       }
     },
     "demo-inspector": {
-      "type": "inspector",
       "name": "Demo Inspector",
       "description": "Visual debugging overlay showing data sources and API calls",
       "icon": {
@@ -104,7 +109,6 @@
       "removable": true
     },
     "experience-platform": {
-      "type": "platform",
       "name": "Experience Platform",
       "description": "Adobe Experience Platform integration via Commerce Data Sharing",
       "requiresApiKey": true,
@@ -117,7 +121,6 @@
       }
     },
     "integration-service": {
-      "type": "integration",
       "name": "Kukla Integration Service",
       "description": "Custom integration service for Target Product Recommendations, AEM Assets, and more",
       "icon": {
