@@ -25,6 +25,22 @@ const MESH_ENV_VARS = [
     'ADOBE_COMMERCE_STORE_CODE'
 ];
 
+/**
+ * Environment variables that affect frontend runtime
+ * These are read by the Next.js frontend at runtime
+ */
+const FRONTEND_ENV_VARS = [
+    'MESH_ENDPOINT',
+    'ADOBE_COMMERCE_URL',
+    'ADOBE_COMMERCE_ENVIRONMENT_ID',
+    'ADOBE_COMMERCE_STORE_VIEW_CODE',
+    'ADOBE_COMMERCE_WEBSITE_CODE',
+    'ADOBE_COMMERCE_STORE_CODE',
+    'ADOBE_CATALOG_API_KEY',
+    'ADOBE_ASSETS_URL',
+    'ADOBE_COMMERCE_CUSTOMER_GROUP'
+];
+
 export interface MeshState {
     envVars: Record<string, string>;
     sourceHash: string | null;
@@ -45,6 +61,21 @@ export function getMeshEnvVars(componentConfig: Record<string, any>): Record<str
     const envVars: Record<string, string> = {};
     
     MESH_ENV_VARS.forEach(key => {
+        if (componentConfig[key]) {
+            envVars[key] = componentConfig[key];
+        }
+    });
+    
+    return envVars;
+}
+
+/**
+ * Get current frontend-related environment variables from component config
+ */
+export function getFrontendEnvVars(componentConfig: Record<string, any>): Record<string, string> {
+    const envVars: Record<string, string> = {};
+    
+    FRONTEND_ENV_VARS.forEach(key => {
         if (componentConfig[key]) {
             envVars[key] = componentConfig[key];
         }
@@ -223,6 +254,52 @@ export async function updateMeshState(project: Project): Promise<void> {
         envVars,
         sourceHash,
         lastDeployed: new Date().toISOString()
+    };
+}
+
+/**
+ * Detect if frontend env vars have changed since demo started
+ * Returns true if any frontend-relevant env var changed
+ */
+export function detectFrontendChanges(project: Project): boolean {
+    const frontendInstance = project.componentInstances?.['citisignal-nextjs'];
+    if (!frontendInstance || !project.frontendEnvState) {
+        return false;
+    }
+    
+    const currentConfig = project.componentConfigs?.['citisignal-nextjs'] || {};
+    const currentEnvVars = getFrontendEnvVars(currentConfig);
+    const deployedEnvVars = project.frontendEnvState.envVars;
+    
+    // Check if any frontend-relevant var changed
+    for (const key of FRONTEND_ENV_VARS) {
+        const oldValue = deployedEnvVars[key];
+        const newValue = currentEnvVars[key];
+        
+        if (oldValue !== newValue) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+/**
+ * Update frontend state after demo starts
+ * Captures the env vars that were active when demo started
+ */
+export function updateFrontendState(project: Project): void {
+    const frontendInstance = project.componentInstances?.['citisignal-nextjs'];
+    if (!frontendInstance || !project.componentConfigs) {
+        return;
+    }
+    
+    const frontendConfig = project.componentConfigs['citisignal-nextjs'] || {};
+    const envVars = getFrontendEnvVars(frontendConfig);
+    
+    project.frontendEnvState = {
+        envVars,
+        capturedAt: new Date().toISOString()
     };
 }
 

@@ -97,8 +97,8 @@ export class StopDemoCommand extends BaseCommand {
                 }
                 project.status = 'ready';
                 
-                // Clear frontend env hash (config changes don't matter when stopped)
-                project.frontendEnvHash = undefined;
+                // Clear frontend env state (config changes don't matter when stopped)
+                project.frontendEnvState = undefined;
                 
                 await this.stateManager.saveProject(project);
                 

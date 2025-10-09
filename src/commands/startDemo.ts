@@ -1,9 +1,7 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as crypto from 'crypto';
 import { BaseCommand } from './baseCommand';
 import { getExternalCommandManager } from '../extension';
+import { updateFrontendState } from '../utils/meshChangeDetector';
 
 export class StartDemoCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -89,8 +87,8 @@ export class StartDemoCommand extends BaseCommand {
                 }
                 project.status = 'running';
                 
-                // Store hash of frontend .env for change detection
-                await this.captureFrontendEnvHash(project);
+                // Capture frontend env vars for change detection
+                updateFrontendState(project);
                 
                 await this.stateManager.saveProject(project);
                 
@@ -112,30 +110,6 @@ export class StartDemoCommand extends BaseCommand {
             
         } catch (error) {
             await this.showError('Failed to start demo', error as Error);
-        }
-    }
-
-    /**
-     * Capture hash of frontend .env file when demo starts
-     * This allows us to detect if config changed while demo is running
-     */
-    private async captureFrontendEnvHash(project: any): Promise<void> {
-        try {
-            const frontendInstance = project.componentInstances?.['citisignal-nextjs'];
-            if (!frontendInstance?.path) {
-                return;
-            }
-
-            const envPath = path.join(frontendInstance.path, '.env.local');
-            const envContent = await fs.readFile(envPath, 'utf-8');
-            const hash = crypto.createHash('md5').update(envContent).digest('hex');
-            
-            project.frontendEnvHash = hash;
-            this.logger.debug(`[Start Demo] Captured frontend .env hash: ${hash.substring(0, 8)}...`);
-        } catch (error) {
-            // .env.local might not exist yet, that's okay
-            this.logger.debug('[Start Demo] No frontend .env.local file found');
-            project.frontendEnvHash = undefined;
         }
     }
 }
