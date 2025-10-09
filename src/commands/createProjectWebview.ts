@@ -2323,7 +2323,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             let deployedEndpoint: string | undefined;
 		
             // Initial wait: mesh won't be ready for at least 20 seconds
-            onProgress?.('Waiting for mesh deployment...', 'Provisioning infrastructure (~20 seconds)');
+            onProgress?.('Waiting for mesh deployment...', 'Provisioning mesh (~20 seconds)');
             await new Promise(resolve => setTimeout(resolve, initialWait));
 		
             while (attempt < maxRetries && !meshDeployed) {
