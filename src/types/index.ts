@@ -156,15 +156,6 @@ export interface ValidationResult {
     warnings: string[];
 }
 
-export interface LicenseKey {
-    key: string;
-    email?: string;
-    issued: string;
-    expires?: string;
-    revoked: boolean;
-    notes?: string;
-}
-
 export interface ComponentDefinition {
     id: string;
     name: string;

@@ -1,5 +1,4 @@
 import * as vscode from 'vscode';
-import { LicenseValidator } from './license/validator';
 import { CommandManager } from './commands/commandManager';
 import { StatusBarManager } from './providers/statusBar';
 import { AutoUpdater } from './utils/autoUpdater';
@@ -63,10 +62,6 @@ export async function activate(context: vscode.ExtensionContext) {
             );
             return;
         }
-
-        // Initialize license validator
-        const licenseValidator = new LicenseValidator(context);
-        const isLicensed = await licenseValidator.checkLicense();
 
         // Initialize status bar
         statusBar = new StatusBarManager(context, stateManager);
@@ -267,26 +262,6 @@ export function getExternalCommandManager(): ExternalCommandManager {
     return externalCommandManager;
 }
 
-
-async function promptForLicense(): Promise<string | undefined> {
-    const key = await vscode.window.showInputBox({
-        prompt: 'Enter your Demo Builder license key',
-        placeHolder: 'DEMO-2024-XXXXXX',
-        password: true,
-        ignoreFocusOut: true,
-        validateInput: (value) => {
-            if (!value) {
-                return 'License key is required';
-            }
-            if (!value.match(/^DEMO-\d{4}-[A-Z0-9]{6}$/)) {
-                return 'Invalid license key format';
-            }
-            return undefined;
-        }
-    });
-    
-    return key;
-}
 
 function registerFileWatchers(context: vscode.ExtensionContext) {
     // Watch for .demo-builder directory

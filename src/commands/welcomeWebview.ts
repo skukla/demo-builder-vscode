@@ -258,22 +258,10 @@ export class WelcomeWebviewCommand extends BaseCommand {
 
 
     private async sendInitialData(): Promise<void> {
-        // Check license status
-        // For testing, temporarily bypass license check
-        const isLicensed = true; // TODO: Re-enable license check
-        /*
-        const { LicenseValidator } = await import('../license/validator');
-        const licenseValidator = new LicenseValidator(this.context);
-        const isLicensed = await licenseValidator.checkLicense();
-        */
-        
-        this.logger.info(`[License] Check result: ${isLicensed} (bypassed for testing)`);
-
         // Send initialization data
         await this.sendMessage('init', {
             theme: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
-            workspacePath: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
-            isLicensed
+            workspacePath: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
         });
         
         this.logger.debug('Initial data sent to webview');
@@ -311,29 +299,9 @@ export class WelcomeWebviewCommand extends BaseCommand {
             vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder');
             break;
 
-        case 'validate-license':
-            await this.validateLicense(payload.licenseKey);
-            break;
-
         case 'log':
             this.logger.info(`[Welcome] ${payload.message}`);
             break;
-        }
-    }
-
-    private async validateLicense(licenseKey: string): Promise<void> {
-        const { LicenseValidator } = await import('../license/validator');
-        const licenseValidator = new LicenseValidator(this.context);
-        
-        const isValid = await licenseValidator.validateLicense(licenseKey);
-        
-        if (isValid) {
-            await this.context.secrets.store('demoBuilder.licenseKey', licenseKey);
-            await this.sendMessage('license-validated', { valid: true });
-            vscode.window.showInformationMessage('License validated successfully!');
-        } else {
-            await this.sendMessage('license-validated', { valid: false });
-            vscode.window.showErrorMessage('Invalid license key provided.');
         }
     }
 

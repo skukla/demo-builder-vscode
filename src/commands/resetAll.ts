@@ -74,11 +74,7 @@ export class ResetAllCommand extends BaseCommand {
             await this.stateManager.clearAll();
             this.logger.info('Cleared workspace state');
 
-            // 5. Clear secrets (license key)
-            await this.context.secrets.delete('demoBuilder.licenseKey');
-            this.logger.info('Cleared stored secrets');
-
-            // 6. Reset status bar
+            // 5. Reset status bar
             this.statusBar.reset();
 
             // 7. Delete .demo-builder directory (after closing workspace folders)
