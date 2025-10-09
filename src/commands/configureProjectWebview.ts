@@ -129,24 +129,30 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 // Regenerate .env files
                 await this.regenerateEnvFiles(project, data.componentConfigs);
 
-                // Show success message
-                await vscode.window.showInformationMessage('Configuration saved successfully');
-
-                // Check if demo is running and prompt to restart
-                if (project.frontend?.status === 'running') {
-                    const restart = await vscode.window.showInformationMessage(
-                        'Demo is currently running. Restart to apply changes?',
-                        'Restart Now',
-                        'Later'
-                    );
-
-                    if (restart === 'Restart Now') {
-                        await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                        await vscode.commands.executeCommand('demoBuilder.startDemo');
+                // Return success immediately so UI can reset (don't block on notifications)
+                const result = { success: true };
+                
+                // Show notifications after returning (non-blocking)
+                setImmediate(() => {
+                    vscode.window.showInformationMessage('Configuration saved successfully');
+                    
+                    // Check if demo is running and prompt to restart
+                    if (project.frontend?.status === 'running') {
+                        vscode.window.showInformationMessage(
+                            'Demo is currently running. Restart to apply changes?',
+                            'Restart Now',
+                            'Later'
+                        ).then(restart => {
+                            if (restart === 'Restart Now') {
+                                vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
+                                    vscode.commands.executeCommand('demoBuilder.startDemo');
+                                });
+                            }
+                        });
                     }
-                }
+                });
 
-                return { success: true };
+                return result;
             } catch (error) {
                 this.logger.error('[Configure] Failed to save configuration:', error as Error);
                 await vscode.window.showErrorMessage(`Failed to save configuration: ${(error as Error).message}`);
