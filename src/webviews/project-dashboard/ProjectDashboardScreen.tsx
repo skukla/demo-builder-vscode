@@ -85,6 +85,63 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
         }
     }, [projectStatus, isRunning]);
 
+    // Focus trap for Tab navigation - keeps focus within the webview
+    useEffect(() => {
+        const selector = 'button:not([disabled]):not([tabindex="-1"]), ' +
+            'input:not([disabled]):not([tabindex="-1"]), ' +
+            'select:not([disabled]):not([tabindex="-1"]), ' +
+            'textarea:not([disabled]):not([tabindex="-1"]), ' +
+            '[tabindex]:not([tabindex="-1"]):not([tabindex="0"])';
+
+        const focusDefaultElement = () => {
+            // Focus first focusable element if no element is focused
+            const focusableElements = document.querySelectorAll(selector);
+            if (focusableElements.length > 0) {
+                const first = focusableElements[0] as HTMLElement;
+                if (document.activeElement === document.body || !document.activeElement) {
+                    first.focus();
+                }
+            }
+        };
+
+        // Ensure focus starts inside the webview
+        const focusTimeout = window.setTimeout(focusDefaultElement, 0);
+        window.addEventListener('focus', focusDefaultElement);
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Tab') {
+                const focusableElements = document.querySelectorAll(selector);
+                const focusableArray = Array.from(focusableElements) as HTMLElement[];
+                
+                if (focusableArray.length === 0) {
+                    return;
+                }
+
+                const currentIndex = focusableArray.indexOf(document.activeElement as HTMLElement);
+
+                e.preventDefault();
+
+                if (e.shiftKey) {
+                    // Shift+Tab: move to previous element (or wrap to last)
+                    const nextIndex = currentIndex <= 0 ? focusableArray.length - 1 : currentIndex - 1;
+                    focusableArray[nextIndex].focus();
+                } else {
+                    // Tab: move to next element (or wrap to first)
+                    const nextIndex = currentIndex >= focusableArray.length - 1 ? 0 : currentIndex + 1;
+                    focusableArray[nextIndex].focus();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        
+        return () => {
+            window.clearTimeout(focusTimeout);
+            window.removeEventListener('focus', focusDefaultElement);
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [projectStatus, isRunning]); // Re-run when button layout changes
+
     const handleStartDemo = () => vscode.postMessage('startDemo');
     const handleStopDemo = () => vscode.postMessage('stopDemo');
     const handleOpenBrowser = () => vscode.postMessage('openBrowser');
