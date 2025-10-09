@@ -133,23 +133,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 const result = { success: true };
                 
                 // Show success notification after returning (non-blocking)
+                // Note: File watcher will automatically detect the .env changes and show
+                // restart notification if the demo is running - no need to duplicate here
                 setImmediate(() => {
                     vscode.window.showInformationMessage('Configuration saved successfully');
-                    
-                    // Explicitly check if restart is needed (don't rely solely on file watcher)
-                    // File watcher might miss the change if it's initializing hashes
-                    if (project.status === 'running') {
-                        vscode.window.showInformationMessage(
-                            'Environment configuration changed. Restart the demo to apply changes.',
-                            'Restart Demo'
-                        ).then(selection => {
-                            if (selection === 'Restart Demo') {
-                                vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
-                                    vscode.commands.executeCommand('demoBuilder.startDemo');
-                                });
-                            }
-                        });
-                    }
                 });
 
                 return result;

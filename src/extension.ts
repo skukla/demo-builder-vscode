@@ -345,6 +345,7 @@ function registerFileWatchers(context: vscode.ExtensionContext) {
             return;
         }
         
+        
         // Check if this is the first time we're seeing this file
         const previousHash = fileContentHashes.get(filePath);
         if (previousHash === undefined) {
