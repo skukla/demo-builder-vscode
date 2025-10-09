@@ -1,5 +1,4 @@
 import { ExecOptions, spawn } from 'child_process';
-import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -215,14 +214,14 @@ export class ExternalCommandManager {
                 // Don't retry on timeout errors - they already took the full timeout duration
                 const isTimeout = error.message?.toLowerCase().includes('timed out');
                 if (isTimeout) {
-                    this.logger.warn(`[CommandManager] Command timed out - not retrying`);
+                    this.logger.warn('[CommandManager] Command timed out - not retrying');
                     throw error;
                 }
                 
                 // Check if we should retry
                 if (attempt < retryStrategy.maxAttempts) {
                     if (retryStrategy.shouldRetry && !retryStrategy.shouldRetry(error, attempt)) {
-                        this.logger.debug(`[CommandManager] shouldRetry returned false - not retrying`);
+                        this.logger.debug('[CommandManager] shouldRetry returned false - not retrying');
                         throw error;
                     }
                     
@@ -721,7 +720,7 @@ export class ExternalCommandManager {
                         paths.push(libBinPath);
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Ignore errors reading directory
             }
         }
@@ -737,7 +736,7 @@ export class ExternalCommandManager {
                         paths.push(binPath);
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Ignore errors reading directory
             }
         }
@@ -831,7 +830,7 @@ export class ExternalCommandManager {
                         return version; // Fallback to full version if pattern doesn't match
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Ignore errors
             }
         }
@@ -855,7 +854,7 @@ export class ExternalCommandManager {
                         return version;
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Ignore errors
             }
         }
@@ -960,7 +959,7 @@ export class ExternalCommandManager {
             ExternalCommandManager.telemetryConfigured = true;
             this.logger.info('[Telemetry] ✓ Configured aio-cli to opt out of telemetry');
             
-        } catch (error) {
+        } catch {
             // Still mark as configured to avoid repeated attempts
             ExternalCommandManager.telemetryConfigured = true;
         } finally {

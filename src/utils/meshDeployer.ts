@@ -3,7 +3,6 @@ import * as path from 'path';
 import { Project } from '../types';
 import { Logger } from './logger';
 import { getExternalCommandManager } from '../extension';
-import { ExternalCommandManager } from './externalCommandManager';
 
 export class MeshDeployer {
     private logger: Logger;

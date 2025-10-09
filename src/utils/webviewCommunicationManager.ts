@@ -105,7 +105,7 @@ export class WebviewCommunicationManager {
         }
 
         // Set up message listener
-        const messageListener = this.panel.webview.onDidReceiveMessage(
+        this.panel.webview.onDidReceiveMessage(
             message => this.handleWebviewMessage(message),
             undefined,
             this.disposables

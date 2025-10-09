@@ -39,10 +39,10 @@ export abstract class BaseWebviewCommand extends BaseCommand {
      * Useful for cleanup during extension reset
      */
     public static disposeAllActivePanels(): void {
-        BaseWebviewCommand.activePanels.forEach((panel, id) => {
+        BaseWebviewCommand.activePanels.forEach((panel, _id) => {
             try {
                 panel.dispose();
-            } catch (err) {
+            } catch {
                 // Ignore errors during disposal
             }
         });

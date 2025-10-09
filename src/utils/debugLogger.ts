@@ -1,4 +1,6 @@
 import * as vscode from 'vscode';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 
 export interface CommandResult {
     stdout: string;
@@ -183,7 +185,6 @@ export class DebugLogger {
 
         if (uri) {
             const content = (this.debugChannel as any)._content || 'No debug content available';
-            const fs = require('fs').promises;
             await fs.writeFile(uri.fsPath, content);
             this.info(`Debug log exported to: ${uri.fsPath}`);
             return uri.fsPath;
@@ -196,8 +197,6 @@ export class DebugLogger {
      * Save current logs to a file for persistence across Extension Host restarts
      */
     public async saveLogsToFile(filePath: string): Promise<void> {
-        const fs = require('fs').promises;
-        const path = require('path');
         
         // Ensure directory exists
         const dir = path.dirname(filePath);
@@ -219,8 +218,6 @@ export class DebugLogger {
      * Replay logs from a file into the current log buffer and output channel
      */
     public async replayLogsFromFile(filePath: string): Promise<void> {
-        const fs = require('fs').promises;
-        const path = require('path');
         
         try {
             // Replay main logs
@@ -262,7 +259,7 @@ export class DebugLogger {
                 // Note: Don't log to debug channel here since we're still replaying
                 // Clean up debug log file
                 await fs.unlink(debugFilePath);
-            } catch (debugError) {
+            } catch {
                 // Debug log file might not exist, that's okay
             }
             

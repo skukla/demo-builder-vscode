@@ -121,18 +121,6 @@ export async function tryWithTimeout<T>(
     }
 }
 
-/**
- * Creates a promise that resolves after a specified delay
- * 
- * @param ms Delay in milliseconds
- * @returns Promise that resolves after the delay
- * 
- * @internal Used internally by timeout utilities
- */
-function delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 // Note: For command-level retry logic with exponential backoff,
 // see ExternalCommandManager.executeWithRetry() which already
 // handles retries for git, npm, aio, and other CLI commands.

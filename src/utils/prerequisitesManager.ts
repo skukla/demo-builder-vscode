@@ -1,8 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import { Logger } from './logger';
-import { ExternalCommandManager } from './externalCommandManager';
 import { getExternalCommandManager } from '../extension';
 import { TIMEOUTS } from './timeoutConfig';
 
@@ -399,7 +397,7 @@ export class PrerequisitesManager {
     }
 
     async getRequiredNodeVersions(
-        selectedComponents?: {
+        _selectedComponents?: {
             frontend?: string;
             backend?: string;
             dependencies?: string[];

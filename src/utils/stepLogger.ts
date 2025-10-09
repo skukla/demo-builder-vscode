@@ -1,6 +1,5 @@
 import { Logger } from './logger';
 import * as fs from 'fs';
-import * as path from 'path';
 
 /**
  * StepLogger provides consistent, configuration-driven logging for wizard steps.
@@ -88,7 +87,7 @@ export class StepLogger {
             try {
                 const content = fs.readFileSync(templatesPath, 'utf8');
                 return JSON.parse(content);
-            } catch (error) {
+            } catch {
                 // Fall back to defaults on error
                 this.logger.debug('Failed to load logging templates, using defaults');
             }

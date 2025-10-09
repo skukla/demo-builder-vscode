@@ -39,7 +39,7 @@ export class TerminalManager {
             if (newTerminal) {
                 this.terminal = newTerminal;
             }
-        } catch (error) {
+        } catch {
             // Fallback to regular terminal panel
             const terminal = this.getOrCreateTerminal();
             terminal.show(false); // false = don't steal focus from webview
