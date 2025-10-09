@@ -183,13 +183,26 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 continue;
             }
 
-            const envPath = path.join(instance.path, '.env');
-            try {
-                const envContent = await fs.readFile(envPath, 'utf-8');
-                envValues[componentId] = this.parseEnvFile(envContent);
-                this.logger.info(`  - Loaded ${Object.keys(envValues[componentId]).length} env vars from ${componentId}`);
-            } catch (error) {
-                // .env file doesn't exist yet - that's okay, just log
+            // Next.js uses .env.local, others use .env
+            const possibleEnvFiles = [
+                path.join(instance.path, '.env.local'),
+                path.join(instance.path, '.env')
+            ];
+
+            let loaded = false;
+            for (const envPath of possibleEnvFiles) {
+                try {
+                    const envContent = await fs.readFile(envPath, 'utf-8');
+                    envValues[componentId] = this.parseEnvFile(envContent);
+                    this.logger.info(`  - Loaded ${Object.keys(envValues[componentId]).length} env vars from ${componentId} (${path.basename(envPath)})`);
+                    loaded = true;
+                    break;  // Found it, stop looking
+                } catch {
+                    // File doesn't exist, try next one
+                }
+            }
+
+            if (!loaded) {
                 this.logger.info(`  - No .env file found for ${componentId} (will be created on save)`);
                 envValues[componentId] = {};
             }
@@ -303,7 +316,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         componentId: string,
         config: Record<string, any>
     ): Promise<void> {
-        const envPath = path.join(componentPath, '.env');
+        // Next.js uses .env.local, others use .env
+        const envFileName = componentId.includes('nextjs') ? '.env.local' : '.env';
+        const envPath = path.join(componentPath, envFileName);
         
         const lines: string[] = [
             `# ${componentId} - Environment Configuration`,
@@ -318,7 +333,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         });
 
         await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
-        this.logger.debug(`[Configure] Generated component .env at ${envPath}`);
+        this.logger.debug(`[Configure] Generated component ${envFileName} at ${envPath}`);
     }
 }
 
