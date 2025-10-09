@@ -175,7 +175,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                 </Text>
 
                 {isChecking ? (
-                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                         <LoadingDisplay 
                             size="L"
                             message={message}
@@ -185,7 +185,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     </Flex>
                 ) : error ? (
                     <FadeTransition show={true}>
-                        <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                        <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                             <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
                                 <AlertCircle size="L" UNSAFE_className="text-red-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
@@ -242,7 +242,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                 ) : meshData ? (
                     // Mesh exists
                     <FadeTransition show={true}>
-                        <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                        <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                             <Flex direction="column" gap="size-200" alignItems="center">
                                 {meshData.status === 'error' ? (
                                     <>
@@ -355,7 +355,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     </FadeTransition>
                 ) : (
                     // API enabled, no mesh
-                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                         <Flex direction="column" gap="size-200" alignItems="center">
                             <Info size="L" UNSAFE_className="text-blue-600" />
                             <Flex direction="column" gap="size-100" alignItems="center">

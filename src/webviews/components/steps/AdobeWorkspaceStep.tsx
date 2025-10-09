@@ -152,7 +152,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                 </Heading>
 
                 {showLoading || (isLoading && !hasLoadedOnce) ? (
-                    <Flex justifyContent="center" alignItems="center" height="400px">
+                    <Flex justifyContent="center" alignItems="center" height="350px">
                         <LoadingDisplay 
                             size="L"
                             message="Loading workspaces..."
@@ -162,7 +162,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                     </Flex>
                 ) : error && !isLoading ? (
                     <FadeTransition show={true}>
-                        <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                        <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                             <Flex direction="column" gap="size-200" alignItems="center">
                                 <AlertCircle UNSAFE_className="text-red-600" size="L" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
@@ -181,7 +181,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                         </Flex>
                     </FadeTransition>
                 ) : workspaces.length === 0 && !isLoading ? (
-                    <Flex justifyContent="center" alignItems="center" height="400px">
+                    <Flex justifyContent="center" alignItems="center" height="350px">
                         <Well>
                             <Flex gap="size-200" alignItems="center">
                                 <AlertCircle UNSAFE_className="text-yellow-600" />

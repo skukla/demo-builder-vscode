@@ -152,7 +152,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                 </Heading>
 
                 {showLoading || (isLoadingProjects && !hasLoadedOnce) ? (
-                    <Flex justifyContent="center" alignItems="center" height="400px">
+                    <Flex justifyContent="center" alignItems="center" height="350px">
                         <LoadingDisplay
                             size="L"
                             message="Loading your Adobe projects..."
@@ -162,7 +162,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                     </Flex>
                 ) : error && !isLoadingProjects ? (
                     <FadeTransition show={true}>
-                        <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                        <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                             <Flex direction="column" gap="size-200" alignItems="center">
                                 <AlertCircle UNSAFE_className="text-red-600" size="L" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
@@ -181,7 +181,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                         </Flex>
                     </FadeTransition>
                 ) : projects.length === 0 && !isLoadingProjects ? (
-                    <Flex justifyContent="center" alignItems="center" height="400px">
+                    <Flex justifyContent="center" alignItems="center" height="350px">
                         <Well>
                             <Flex gap="size-200" alignItems="center">
                                 <AlertCircle UNSAFE_className="text-yellow-600" />

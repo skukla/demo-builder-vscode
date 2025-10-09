@@ -177,7 +177,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
 
             {/* Authentication Status - Checking (or not yet checked) */}
             {(showChecking || state.adobeAuth.isAuthenticated === undefined) && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <LoadingDisplay 
                         size="L"
                         helperText="This could take up to 1 minute"
@@ -189,10 +189,10 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
 
             {/* Authenticated with valid organization */}
             {!showChecking && state.adobeAuth.isAuthenticated && state.adobeOrg && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <CheckmarkCircle UNSAFE_className="text-green-600" size="L" />
-                        <Flex direction="column" gap="size-50" alignItems="center">
+                        <Flex direction="column" gap="size-100" alignItems="center">
                             <Text UNSAFE_className="text-lg font-medium">
                                 Connected
                             </Text>
@@ -213,7 +213,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
 
             {/* Authenticated but organization selection required */}
             {!showChecking && state.adobeAuth.isAuthenticated && !state.adobeOrg && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <AlertCircle UNSAFE_className="text-orange-500" size="L" />
                         <Flex direction="column" gap="size-100" alignItems="center">
@@ -240,7 +240,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
 
             {/* Not authenticated - normal state */}
             {!showChecking && state.adobeAuth.isAuthenticated === false && !state.adobeAuth.error && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Key UNSAFE_className="text-gray-500" size="L" />
                         <Flex direction="column" gap="size-100" alignItems="center">
@@ -265,7 +265,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
 
             {/* Error state with helpful guidance */}
             {!showChecking && state.adobeAuth.error && !authTimeout && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Alert UNSAFE_className="text-red-500" size="L" />
                         <Flex direction="column" gap="size-100" alignItems="center">
@@ -292,7 +292,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
 
             {/* Timeout state - similar to error but with specific messaging */}
             {authTimeout && !state.adobeAuth.isAuthenticated && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Pending UNSAFE_className="text-orange-500" size="L" />
                         <Flex direction="column" gap="size-100" alignItems="center">

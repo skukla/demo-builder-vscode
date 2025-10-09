@@ -62,7 +62,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
 
             {/* Active creation state - matches ApiMeshStep loading pattern (no buttons) */}
             {isActive && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <LoadingDisplay 
                         size="L"
                         message={progress.currentOperation || 'Processing'}
@@ -74,7 +74,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
 
             {/* Success state - matches ApiMeshStep success pattern */}
             {isCompleted && !progress?.error && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
                         <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
                         <Flex direction="column" gap="size-100" alignItems="center">
@@ -91,7 +91,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
 
             {/* Error state - matches ApiMeshStep error pattern (buttons centered with content) */}
             {(progress?.error || isCancelled || isFailed) && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
                         <AlertCircle size="L" UNSAFE_className="text-red-600" />
                         <Flex direction="column" gap="size-100" alignItems="center">
@@ -113,7 +113,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
 
                 {/* Initial loading state (before progress updates arrive) */}
                 {!progress && (
-                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                         <LoadingDisplay 
                             size="L"
                             message="Initializing"
