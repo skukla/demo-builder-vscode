@@ -26,13 +26,21 @@ export class DeleteProjectCommand extends BaseCommand {
                     await vscode.commands.executeCommand('demoBuilder.stopDemo');
                 }
 
+                // Save project path before clearing state
+                const projectPath = project.path;
+
                 // Delete project files
-                if (project.path) {
+                if (projectPath) {
                     try {
-                        await fs.rm(project.path, { recursive: true, force: true });
+                        await fs.rm(projectPath, { recursive: true, force: true });
                     } catch (error) {
                         this.logger.warn(`Failed to delete project files: ${error}`);
                     }
+                }
+
+                // Remove from recent projects list
+                if (projectPath) {
+                    await this.stateManager.removeFromRecentProjects(projectPath);
                 }
 
                 // Clear state
