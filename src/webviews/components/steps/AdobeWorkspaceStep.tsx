@@ -151,7 +151,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                     Select Workspace
                 </Heading>
 
-                {showLoading ? (
+                {showLoading || (isLoading && !hasLoadedOnce) ? (
                     <Flex justifyContent="center" alignItems="center" height="100%">
                         <LoadingDisplay 
                             size="L"

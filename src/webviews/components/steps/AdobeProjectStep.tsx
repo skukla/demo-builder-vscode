@@ -151,7 +151,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                     {state.adobeOrg?.name ? `Projects in ${state.adobeOrg.name}` : 'Select Adobe Project'}
                 </Heading>
 
-                {showLoading ? (
+                {showLoading || (isLoadingProjects && !hasLoadedOnce) ? (
                     <Flex justifyContent="center" alignItems="center" height="100%">
                         <LoadingDisplay
                             size="L"
