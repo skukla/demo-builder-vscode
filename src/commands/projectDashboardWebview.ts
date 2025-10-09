@@ -213,17 +213,10 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
         let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = 
             (project.mesh?.status as any) || 'not-deployed';
         
-        this.logger.debug('[Dashboard] Checking mesh status...');
-        this.logger.debug(`  - Base mesh status: ${meshStatus}`);
-        this.logger.debug(`  - Has mesh component: ${!!meshComponent}`);
-        this.logger.debug(`  - Has componentConfigs: ${!!project.componentConfigs}`);
-        
         if (meshComponent && project.componentConfigs) {
             const meshChanges = await detectMeshChanges(project, project.componentConfigs);
-            this.logger.debug(`  - Mesh changes: ${JSON.stringify(meshChanges)}`);
             if (meshChanges.hasChanges) {
                 meshStatus = 'config-changed';
-                this.logger.debug(`  - Setting mesh status to config-changed`);
             }
         }
 
