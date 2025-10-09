@@ -31,6 +31,7 @@ interface ComponentsData {
 interface ConfigureScreenProps {
     project: DemoProject;
     componentsData: ComponentsData;
+    existingEnvValues?: Record<string, Record<string, string>>;
 }
 
 interface ComponentData {
@@ -57,30 +58,17 @@ interface ServiceGroup {
     fields: UniqueField[];
 }
 
-export function ConfigureScreen({ project, componentsData }: ConfigureScreenProps) {
-    // Initialize componentConfigs with existing configs and populate MESH_ENDPOINT from project
+export function ConfigureScreen({ project, componentsData, existingEnvValues }: ConfigureScreenProps) {
+    // Initialize componentConfigs with existing values from .env files
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(() => {
-        const initialConfigs = project.componentConfigs || {};
-        
-        // Pre-populate MESH_ENDPOINT from project.apiMesh.endpoint
-        const projectData = project as unknown as Record<string, unknown>;
-        const apiMeshData = projectData.apiMesh as Record<string, unknown> | undefined;
-        const meshEndpointStr = apiMeshData?.endpoint as string | undefined;
-        
-        // If we have a mesh endpoint and component configs, pre-populate it
-        if (meshEndpointStr) {
-            // If initialConfigs is empty, we'll handle this in getFieldValue()
-            // If initialConfigs has data, pre-populate MESH_ENDPOINT for components that need it
-            if (Object.keys(initialConfigs).length > 0) {
-                Object.keys(initialConfigs).forEach(componentId => {
-                    if (initialConfigs[componentId] && !initialConfigs[componentId]['MESH_ENDPOINT']) {
-                        initialConfigs[componentId]['MESH_ENDPOINT'] = meshEndpointStr;
-                    }
-                });
-            }
+        // Use existingEnvValues if available, otherwise fall back to project.componentConfigs
+        if (existingEnvValues && Object.keys(existingEnvValues).length > 0) {
+            console.log('[ConfigureScreen] Initializing with existingEnvValues:', existingEnvValues);
+            return existingEnvValues;
         }
         
-        return initialConfigs;
+        console.log('[ConfigureScreen] No existingEnvValues, using project.componentConfigs');
+        return project.componentConfigs || {};
     });
     
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -549,12 +537,24 @@ export function ConfigureScreen({ project, componentsData }: ConfigureScreenProp
         const requiredFields = group.fields.filter(f => f.required);
         
         const completedFields = requiredFields.filter(f => {
+            // Special case: MESH_ENDPOINT is read-only and always complete if present
             if (f.key === 'MESH_ENDPOINT') {
-                return true;
+                const projectData = project as unknown as Record<string, unknown>;
+                const apiMeshData = projectData.apiMesh as Record<string, unknown> | undefined;
+                const meshEndpoint = apiMeshData?.endpoint as string | undefined;
+                return !!meshEndpoint;
             }
             
-            const value = getFieldValue(f);
-            return value !== undefined && value !== '';
+            // Check if user has entered a value for any component that uses this field
+            // Don't count default values as "complete" - only actual user input
+            for (const componentId of f.componentIds) {
+                const value = componentConfigs[componentId]?.[f.key];
+                if (value !== undefined && value !== '' && value !== f.default) {
+                    return true;
+                }
+            }
+            
+            return false;
         });
         
         return {

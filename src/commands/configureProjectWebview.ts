@@ -86,6 +86,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             envVars: registry.envVars || {}
         };
 
+        // Load existing env values from component .env files
+        const existingEnvValues = await this.loadExistingEnvValues(project);
+
         // Debug: Log what we're sending
         this.logger.info('[ConfigureProjectWebview] Sending data to webview:');
         this.logger.info(`  - Frontends: ${componentsData.frontends?.length || 0}`);
@@ -93,6 +96,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         this.logger.info(`  - Dependencies: ${componentsData.dependencies?.length || 0}`);
         this.logger.info(`  - App Builder: ${componentsData.appBuilder?.length || 0}`);
         this.logger.info(`  - EnvVars keys: ${Object.keys(componentsData.envVars || {}).length}`);
+        this.logger.info(`  - Existing env values: ${Object.keys(existingEnvValues).length} components`);
         this.logger.info(`  - Project componentSelections: ${JSON.stringify(project.componentSelections || 'none')}`);
         this.logger.info(`  - Project componentInstances: ${project.componentInstances ? Object.keys(project.componentInstances).join(', ') : 'none'}`);
 
@@ -102,7 +106,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         return {
             theme,
             project,
-            componentsData
+            componentsData,
+            existingEnvValues
         };
     }
 
@@ -160,6 +165,70 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             const componentsContent = await fs.readFile(componentsPath, 'utf-8');
             return JSON.parse(componentsContent);
         });
+    }
+
+    /**
+     * Load existing environment variable values from component .env files
+     */
+    private async loadExistingEnvValues(project: Project): Promise<Record<string, Record<string, string>>> {
+        const envValues: Record<string, Record<string, string>> = {};
+        
+        if (!project.componentInstances) {
+            return envValues;
+        }
+
+        // Read each component's .env file
+        for (const [componentId, instance] of Object.entries(project.componentInstances)) {
+            if (!instance.path) {
+                continue;
+            }
+
+            const envPath = path.join(instance.path, '.env');
+            try {
+                const envContent = await fs.readFile(envPath, 'utf-8');
+                envValues[componentId] = this.parseEnvFile(envContent);
+                this.logger.info(`  - Loaded ${Object.keys(envValues[componentId]).length} env vars from ${componentId}`);
+            } catch (error) {
+                // .env file doesn't exist yet - that's okay, just log
+                this.logger.info(`  - No .env file found for ${componentId} (will be created on save)`);
+                envValues[componentId] = {};
+            }
+        }
+
+        return envValues;
+    }
+
+    /**
+     * Parse .env file content into key-value pairs
+     */
+    private parseEnvFile(content: string): Record<string, string> {
+        const values: Record<string, string> = {};
+        const lines = content.split('\n');
+
+        for (const line of lines) {
+            // Skip comments and empty lines
+            const trimmed = line.trim();
+            if (!trimmed || trimmed.startsWith('#')) {
+                continue;
+            }
+
+            // Parse KEY=VALUE
+            const match = trimmed.match(/^([^=]+)=(.*)$/);
+            if (match) {
+                const key = match[1].trim();
+                let value = match[2].trim();
+                
+                // Remove quotes if present
+                if ((value.startsWith('"') && value.endsWith('"')) || 
+                    (value.startsWith("'") && value.endsWith("'"))) {
+                    value = value.slice(1, -1);
+                }
+                
+                values[key] = value;
+            }
+        }
+
+        return values;
     }
 
     /**

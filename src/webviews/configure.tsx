@@ -14,6 +14,7 @@ function ConfigureApp() {
     const [isReady, setIsReady] = useState(false);
     const [projectData, setProjectData] = useState<any>(null);
     const [componentsData, setComponentsData] = useState<any>(null);
+    const [existingEnvValues, setExistingEnvValues] = useState<any>(null);
 
     useEffect(() => {
         // Apply VSCode theme class to body
@@ -31,6 +32,9 @@ function ConfigureApp() {
             }
             if (data.componentsData) {
                 setComponentsData(data.componentsData);
+            }
+            if (data.existingEnvValues) {
+                setExistingEnvValues(data.existingEnvValues);
             }
             setIsReady(true);
         });
@@ -65,6 +69,7 @@ function ConfigureApp() {
             <ConfigureScreen 
                 project={projectData} 
                 componentsData={componentsData}
+                existingEnvValues={existingEnvValues}
             />
         </Provider>
     );
