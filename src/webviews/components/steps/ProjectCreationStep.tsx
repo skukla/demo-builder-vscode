@@ -14,20 +14,7 @@ interface ProjectCreationStepProps {
 export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps) {
     const progress = state.creationProgress;
     const [isCancelling, setIsCancelling] = useState(false);
-    const [projectPath, setProjectPath] = useState<string>('');
     const [isOpeningProject, setIsOpeningProject] = useState(false);
-
-    // Listen for creationComplete to get project path
-    React.useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            const message = event.data;
-            if (message.type === 'creationComplete' && message.projectPath) {
-                setProjectPath(message.projectPath);
-            }
-        };
-        window.addEventListener('message', handleMessage);
-        return () => window.removeEventListener('message', handleMessage);
-    }, []);
 
     const handleCancel = () => {
         setIsCancelling(true);
@@ -72,21 +59,32 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                 </Flex>
             )}
 
-            {/* Success state - matches ApiMeshStep success pattern */}
+            {/* Success state or opening transition */}
             {isCompleted && !progress?.error && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                    <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                        <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
-                        <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-xl font-medium">
-                                Project Created Successfully
-                            </Text>
-                            <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                                Click below to open your demo project files in VSCode
-                            </Text>
+                <>
+                    {isOpeningProject ? (
+                        <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+                            <LoadingDisplay 
+                                size="L"
+                                message="Opening your project..."
+                            />
                         </Flex>
-                    </Flex>
-                </Flex>
+                    ) : (
+                        <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+                                <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                                <Flex direction="column" gap="size-100" alignItems="center">
+                                    <Text UNSAFE_className="text-xl font-medium">
+                                        Project Created Successfully
+                                    </Text>
+                                    <Text UNSAFE_className="text-sm text-gray-600 text-center">
+                                        Click below to open your demo project
+                                    </Text>
+                                </Flex>
+                            </Flex>
+                        </Flex>
+                    )}
+                </>
             )}
 
             {/* Error state - matches ApiMeshStep error pattern (buttons centered with content) */}
@@ -135,7 +133,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                     }}
                 >
                     <div style={{ maxWidth: '800px', width: '100%' }}>
-                        <Flex justifyContent="flex-start" width="100%">
+                        <Flex justifyContent="start" width="100%">
                             <Button
                                 variant="secondary"
                                 onPress={handleCancel}
@@ -149,8 +147,8 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                 </div>
             )}
             
-            {/* Show Open Project button or transition on success */}
-            {isCompleted && !progress?.error && (
+            {/* Show Open Project button on success */}
+            {isCompleted && !progress?.error && !isOpeningProject && (
                 <div
                     style={{
                         padding: '16px',
@@ -159,23 +157,14 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                     }}
                 >
                     <div style={{ maxWidth: '800px', width: '100%' }}>
-                        {isOpeningProject ? (
-                            <Flex justifyContent="center" alignItems="center" marginTop="size-200">
-                                <LoadingDisplay 
-                                    size="M"
-                                    message="Opening your project..."
-                                />
-                            </Flex>
-                        ) : (
-                            <Flex justifyContent="flex-end" width="100%">
-                                <Button
-                                    variant="cta"
-                                    onPress={handleOpenProject}
-                                >
-                                    Open Project
-                                </Button>
-                            </Flex>
-                        )}
+                        <Flex justifyContent="end" width="100%">
+                            <Button
+                                variant="cta"
+                                onPress={handleOpenProject}
+                            >
+                                Open Project
+                            </Button>
+                        </Flex>
                     </div>
                 </div>
             )}
