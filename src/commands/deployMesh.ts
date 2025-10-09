@@ -176,7 +176,7 @@ export class DeployMeshCommand extends BaseCommand {
                             const elapsed = initialWait + (attempt - 1) * pollInterval;
                             const elapsedSeconds = Math.floor(elapsed / 1000);
                             progress.report({ 
-                                message: `Verifying deployment (${elapsedSeconds}s elapsed, attempt ${attempt}/${maxRetries})...` 
+                                message: 'Verifying deployment...' 
                             });
                             await ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
                                 'deploying', 
