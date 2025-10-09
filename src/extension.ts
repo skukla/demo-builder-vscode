@@ -141,87 +141,35 @@ export async function activate(context: vscode.ExtensionContext) {
             });
         }
 
-        // Check for "Project Dashboard" flag (after workspace addition restart)
-        let showingGettingStarted = false;
-        try {
-            const os = require('os');
-            const path = require('path');
-            const fs = require('fs').promises;
-            
-            const flagFile = path.join(os.homedir(), '.demo-builder', '.wizard-reopen-on-success');
-            const flagExists = await fs.access(flagFile).then(() => true).catch(() => false);
-            
-            if (flagExists) {
-                showingGettingStarted = true;
-                
-                // Read flag data
-                const flagData = await fs.readFile(flagFile, 'utf8');
-                const { projectName } = JSON.parse(flagData);
-                
-                // Remove flag immediately
-                await fs.unlink(flagFile).catch(() => {});
-                
-                // Close any existing Welcome webview (may persist across Extension Host restart due to retainContextWhenHidden)
-                const { WelcomeWebviewCommand } = require('./commands/welcomeWebview');
-                WelcomeWebviewCommand.disposeActivePanel();
-                logger.debug('[Extension] Closed any stale Welcome webview from before restart');
-                
-                // Show Getting Started guide + auto-open Demo Builder sidebar
-                logger.info(`[Extension] Showing Getting Started guide for project: ${projectName}`);
-                
-                // Small delay to ensure extension is fully initialized
-                setTimeout(() => {
-                    logger.debug('[Extension] Executing showProjectDashboard command...');
-                    vscode.commands.executeCommand('demoBuilder.showProjectDashboard').then(
-                        () => {
-                            logger.debug('[Extension] Project Dashboard command executed successfully');
-                            // Focus stays on webview (don't focus sidebar)
-                        },
-                        (err) => logger.error('[Extension] Getting Started command failed:', err)
-                    );
-                }, 500);
-            }
-        } catch (error) {
-            // Silently ignore errors
-            logger.debug('[Extension] No getting started flag found or error reading it');
-        }
+        // Project Dashboard is now opened directly after creation
+        // (No flag checking needed)
 
-        // Handle startup UI based on current state
-        if (showingGettingStarted) {
-            // We're showing Project Dashboard after restart (post-creation) - just update status bar
+        // Normal startup - ALWAYS show Welcome screen first (MVP requirement)
+        // User must explicitly choose to open a project or create a new one
+        
+        // Load existing project if available (for status bar), but don't auto-open dashboard
+        const hasExistingProject = await stateManager.hasProject();
+        if (hasExistingProject) {
             const project = await stateManager.getCurrentProject();
             if (project) {
                 statusBar.updateProject(project);
-                logger.info(`[Extension] Loaded existing project (Project Dashboard mode): ${project.name}`);
+                logger.info(`[Extension] Loaded existing project: ${project.name}`);
             }
-        } else {
-            // Normal startup - ALWAYS show Welcome screen first (MVP requirement)
-            // User must explicitly choose to open a project or create a new one
-            
-            // Load existing project if available (for status bar), but don't auto-open dashboard
-            const hasExistingProject = await stateManager.hasProject();
-            if (hasExistingProject) {
-                const project = await stateManager.getCurrentProject();
-                if (project) {
-                    statusBar.updateProject(project);
-                    logger.info(`[Extension] Loaded existing project: ${project.name}`);
+        }
+        
+        // Always show Welcome screen on startup
+        const isWelcomeVisible = commandManager.welcomeScreen?.isVisible() || false;
+        
+        if (!isWelcomeVisible) {
+            vscode.commands.executeCommand('demoBuilder.showWelcome').then(
+                () => logger.info('[Extension] Welcome screen shown successfully'),
+                (err) => {
+                    logger.error('[Extension] Failed to show welcome screen:', err);
+                    vscode.window.showErrorMessage(`Failed to show welcome screen: ${err?.message || err}`);
                 }
-            }
-            
-            // Always show Welcome screen on startup
-            const isWelcomeVisible = commandManager.welcomeScreen?.isVisible() || false;
-            
-            if (!isWelcomeVisible) {
-                vscode.commands.executeCommand('demoBuilder.showWelcome').then(
-                    () => logger.info('[Extension] Welcome screen shown successfully'),
-                    (err) => {
-                        logger.error('[Extension] Failed to show welcome screen:', err);
-                        vscode.window.showErrorMessage(`Failed to show welcome screen: ${err?.message || err}`);
-                    }
-                );
-            } else {
-                logger.debug('[Extension] Welcome screen already visible, not showing duplicate');
-            }
+            );
+        } else {
+            logger.debug('[Extension] Welcome screen already visible, not showing duplicate');
         }
 
         // Register file watchers

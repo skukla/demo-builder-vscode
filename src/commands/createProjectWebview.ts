@@ -554,37 +554,22 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 WelcomeWebviewCommand.disposeActivePanel();
                 this.logger.debug('[Project Creation] Closed Welcome webview if it was open');
                 
-                // Get current project to access path
-                const project = await this.stateManager.getCurrentProject();
+                // Dispose this panel first
+                this.panel?.dispose();
+                this.logger.info('[Project Creation] Wizard closed');
                 
-                if (project && project.path) {
-                    this.logger.info('[Project Creation] Adding project to workspace...');
-                    
-                    // Add workspace folder (triggers Extension Host restart)
-                    const workspaceFolder = {
-                        uri: vscode.Uri.file(project.path),
-                        name: project.name
-                    };
-                    
-                    const added = vscode.workspace.updateWorkspaceFolders(
-                        0, // Insert at beginning
-                        0, // Don't delete any
-                        workspaceFolder
-                    );
-                    
-                    if (added) {
-                        this.logger.info('[Project Creation] ✅ Workspace folder added (reload will occur)');
-                    } else {
-                        this.logger.warn('[Project Creation] Workspace folder may already exist');
-                    }
-                }
+                // Small delay to ensure panel is fully disposed
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // Open Project Dashboard directly
+                this.logger.info('[Project Creation] Opening Project Dashboard...');
+                await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+                this.logger.info('[Project Creation] ✅ Project Dashboard opened');
+                
             } catch (error) {
-                this.logger.error('[Project Creation] Error adding to workspace', error as Error);
+                this.logger.error('[Project Creation] Error opening Project Dashboard', error as Error);
+                vscode.window.showErrorMessage('Failed to open Project Dashboard. Please use the tree view or status bar to access your project.');
             }
-            
-            // Dispose panel (happens synchronously before Extension Host restart)
-            this.panel?.dispose();
-            this.logger.info('[Project Creation] Wizard closed - workspace reload pending');
             
             return { success: true };
         });
@@ -3094,25 +3079,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         // Note: Tree view auto-refreshes via StateManager.onProjectChanged event
         // (triggered by saveProject() above)
             
-        // Set flag to reopen wizard to success step after workspace restart
-        try {
-            const os = await import('os');
-            const path = await import('path');
-            const fs = await import('fs/promises');
-                
-            const demoBuilderDir = path.join(os.homedir(), '.demo-builder');
-            await fs.mkdir(demoBuilderDir, { recursive: true });
-                
-            const flagFile = path.join(demoBuilderDir, '.wizard-reopen-on-success');
-            await fs.writeFile(flagFile, JSON.stringify({
-                projectName: config.projectName,
-                timestamp: Date.now()
-            }), 'utf8');
-                
-            this.logger.debug('[Project Creation] Set wizard reopen flag');
-        } catch (flagError) {
-            this.logger.warn('[Project Creation] Could not set reopen flag', flagError instanceof Error ? flagError.message : String(flagError));
-        }
+        // Project Dashboard is now opened directly via "Open Project" button
+        // (No need for restart flag)
             
         // Send completion message (with project path for Browse Files button)
         this.logger.debug('[Project Creation] Sending completion message to webview...');
