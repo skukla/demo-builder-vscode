@@ -76,12 +76,22 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     
     // Update componentConfigs when existingEnvValues becomes available
     useEffect(() => {
+        console.log('[ConfigureScreen useEffect] Triggered with:', {
+            hasExistingEnvValues: !!existingEnvValues,
+            existingEnvValuesKeys: existingEnvValues ? Object.keys(existingEnvValues) : [],
+            existingEnvValues: existingEnvValues,
+            hasProjectComponentConfigs: !!project.componentConfigs,
+            projectComponentConfigs: project.componentConfigs
+        });
+        
         if (existingEnvValues && Object.keys(existingEnvValues).length > 0) {
-            console.log('[ConfigureScreen] Updating componentConfigs with existingEnvValues:', existingEnvValues);
+            console.log('[ConfigureScreen] ✅ Updating componentConfigs with existingEnvValues');
             setComponentConfigs(existingEnvValues);
         } else if (project.componentConfigs) {
-            console.log('[ConfigureScreen] Using project.componentConfigs as fallback');
+            console.log('[ConfigureScreen] ⚠️ Using project.componentConfigs as fallback');
             setComponentConfigs(project.componentConfigs);
+        } else {
+            console.log('[ConfigureScreen] ❌ No env values available at all!');
         }
     }, [existingEnvValues, project.componentConfigs]);
 
@@ -527,7 +537,17 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     };
 
     const getFieldValue = (field: UniqueField): string | boolean | undefined => {
-        // Check if user has entered a value for any component that uses this field
+        // Special handling for MESH_ENDPOINT - check project data first
+        if (field.key === 'MESH_ENDPOINT') {
+            const projectData = project as unknown as Record<string, unknown>;
+            const apiMeshData = projectData.apiMesh as Record<string, unknown> | undefined;
+            const meshEndpoint = apiMeshData?.endpoint as string | undefined;
+            if (meshEndpoint) {
+                return meshEndpoint;
+            }
+        }
+        
+        // Check declared components first (from field.componentIds)
         for (const componentId of field.componentIds) {
             const value = componentConfigs[componentId]?.[field.key];
             if (value !== undefined && value !== '') {
@@ -535,29 +555,17 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             }
         }
         
-        // Special handling for MESH_ENDPOINT - check project data
-        if (field.key === 'MESH_ENDPOINT') {
-            const projectData = project as unknown as Record<string, unknown>;
-            const apiMeshData = projectData.apiMesh as Record<string, unknown> | undefined;
-            const meshEndpoint = apiMeshData?.endpoint as string | undefined;
-            console.log(`[getFieldValue] MESH_ENDPOINT from project.apiMesh:`, meshEndpoint);
-            if (meshEndpoint) {
-                return meshEndpoint;
+        // Fallback: Check ALL other components in componentConfigs
+        // This handles cases where a value exists in a different component
+        // (e.g., values in commerce-mesh that citisignal-nextjs also needs)
+        for (const [componentId, config] of Object.entries(componentConfigs)) {
+            if (!field.componentIds.includes(componentId)) {
+                const value = config[field.key];
+                if (value !== undefined && value !== '') {
+                    console.log(`[getFieldValue] Found ${field.key} in ${componentId} (not in declared componentIds)`);
+                    return typeof value === 'number' ? String(value) : value;
+                }
             }
-        }
-        
-        // Debug logging for specific fields
-        if (field.key === 'MESH_ENDPOINT' || field.key === 'ADOBE_ASSETS_URL') {
-            console.log(`[getFieldValue] ${field.key}:`, {
-                componentIds: field.componentIds,
-                lookupResults: field.componentIds.map(id => ({ 
-                    componentId: id, 
-                    hasComponent: !!componentConfigs[id],
-                    actualValue: JSON.stringify(componentConfigs[id]?.[field.key]),
-                    allKeysInComponent: componentConfigs[id] ? Object.keys(componentConfigs[id]) : []
-                })),
-                finalReturnValue: 'see below'
-            });
         }
         
         // Fall back to default from field definition
