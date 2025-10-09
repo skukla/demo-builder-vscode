@@ -132,24 +132,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 // Return success immediately so UI can reset (don't block on notifications)
                 const result = { success: true };
                 
-                // Show notifications after returning (non-blocking)
+                // Show success notification after returning (non-blocking)
+                // Note: No need to show restart prompt here - the .env file watcher
+                // (registerFileWatchers in extension.ts) automatically detects changes
+                // and shows a restart notification if the demo is running
                 setImmediate(() => {
                     vscode.window.showInformationMessage('Configuration saved successfully');
-                    
-                    // Check if demo is running and prompt to restart
-                    if (project.frontend?.status === 'running') {
-                        vscode.window.showInformationMessage(
-                            'Demo is currently running. Restart to apply changes?',
-                            'Restart Now',
-                            'Later'
-                        ).then(restart => {
-                            if (restart === 'Restart Now') {
-                                vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
-                                    vscode.commands.executeCommand('demoBuilder.startDemo');
-                                });
-                            }
-                        });
-                    }
                 });
 
                 return result;
