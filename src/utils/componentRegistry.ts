@@ -73,15 +73,18 @@ export class ComponentRegistryManager {
             if (enhanced) components.dependencies.push(enhanced);
         });
 
-        (groups.externalSystems || []).forEach((id: string) => {
+        (groups.integrations || []).forEach((id: string) => {
             const enhanced = enhanceComponent(id);
-            if (enhanced) components.externalSystems.push(enhanced);
-        });
-
-        // appBuilder bucket is currently not used in selectionGroups but keep for future use
-        (groups.appBuilder || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.appBuilder.push(enhanced);
+            // Map integrations to appropriate buckets based on component characteristics
+            if (enhanced) {
+                // For now, map to externalSystems and appBuilder based on component ID
+                // This maintains compatibility with existing code
+                if (id === 'experience-platform') {
+                    components.externalSystems.push(enhanced);
+                } else if (id === 'integration-service') {
+                    components.appBuilder.push(enhanced);
+                }
+            }
         });
 
         return {

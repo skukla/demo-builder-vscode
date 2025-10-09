@@ -4,11 +4,8 @@
   "selectionGroups": {
     "frontends": ["citisignal-nextjs"],
     "backends": ["adobe-commerce-paas"],
-    "optionalAddOns": [
-      "demo-inspector",
-      "integration-service"
-    ],
-    "externalSystems": ["experience-platform"]
+    "optionalAddOns": ["demo-inspector"],
+    "integrations": ["integration-service", "experience-platform"]
   },
   "components": {
     "citisignal-nextjs": {
