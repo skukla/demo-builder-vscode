@@ -330,11 +330,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         });
 
         // Write each unique key (using first component's value)
+        // Skip empty, null, or undefined values
         allKeys.forEach(key => {
-            // Find first component that has this key
+            // Find first component that has this key with a non-empty value
             for (const config of Object.values(componentConfigs) as any[]) {
-                if (config[key] !== undefined) {
-                    lines.push(`${key}=${config[key]}`);
+                const value = config[key];
+                if (value !== undefined && value !== null && value !== '') {
+                    lines.push(`${key}=${value}`);
                     break;
                 }
             }
@@ -364,8 +366,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         ];
 
         // Add all configuration values for this component
+        // Skip empty, null, or undefined values (don't write them to file)
         Object.entries(config).forEach(([key, value]) => {
-            lines.push(`${key}=${value}`);
+            if (value !== undefined && value !== null && value !== '') {
+                lines.push(`${key}=${value}`);
+            }
         });
 
         await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
