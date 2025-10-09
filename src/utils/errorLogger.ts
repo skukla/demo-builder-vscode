@@ -29,11 +29,7 @@ export class ErrorLogger {
         this.diagnostics = vscode.languages.createDiagnosticCollection('demo-builder');
         context.subscriptions.push(this.diagnostics);
         
-        // Register command to show logs
-        const showLogsCommand = vscode.commands.registerCommand('demoBuilder.showLogs', () => {
-            this.show();
-        });
-        context.subscriptions.push(showLogsCommand);
+        // Note: demoBuilder.showLogs command is registered in extension.ts
     }
     
     /**

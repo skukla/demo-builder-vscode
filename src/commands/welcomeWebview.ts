@@ -5,22 +5,52 @@ import { Project } from '../types';
 import { setLoadingState } from '../utils/loadingHTML';
 
 export class WelcomeWebviewCommand extends BaseCommand {
+    // Singleton: Track the active Welcome panel to prevent duplicates
+    private static activePanel: vscode.WebviewPanel | undefined;
+    
     private panel: vscode.WebviewPanel | undefined;
     private messageIdCounter = 0;
     private handshakeComplete = false;
+
+    /**
+     * Check if Welcome webview is currently visible
+     */
+    public isVisible(): boolean {
+        return (WelcomeWebviewCommand.activePanel !== undefined && WelcomeWebviewCommand.activePanel.visible) ||
+               (this.panel !== undefined && this.panel.visible);
+    }
+
+    /**
+     * Static method to dispose any active Welcome panel
+     * Useful for cleanup when transitioning to other views (e.g., after project creation)
+     */
+    public static disposeActivePanel(): void {
+        if (WelcomeWebviewCommand.activePanel) {
+            WelcomeWebviewCommand.activePanel.dispose();
+            WelcomeWebviewCommand.activePanel = undefined;
+        }
+    }
 
     public async execute(): Promise<void> {
         try {
             this.logger.info('[UI] Showing Demo Builder Welcome screen...');
 
-            // Check if panel already exists
+            // Check if Welcome panel already exists globally (singleton)
+            if (WelcomeWebviewCommand.activePanel) {
+                this.logger.debug('[UI] Global Welcome panel already exists, revealing it');
+                WelcomeWebviewCommand.activePanel.reveal();
+                this.panel = WelcomeWebviewCommand.activePanel;
+                return;
+            }
+
+            // Check if panel already exists in this instance (legacy support)
             if (this.panel) {
                 this.logger.debug('[UI] Panel already exists, revealing it');
                 this.panel.reveal();
                 return;
             }
 
-            this.logger.debug('[UI] Creating new webview panel');
+            this.logger.debug('[UI] Creating new Welcome webview panel');
             // Create webview panel
             this.panel = vscode.window.createWebviewPanel(
                 'demoBuilderWelcome',
@@ -34,7 +64,11 @@ export class WelcomeWebviewCommand extends BaseCommand {
                     ]
                 }
             );
-            this.logger.debug('[UI] Panel created successfully');
+            
+            // Register in singleton
+            WelcomeWebviewCommand.activePanel = this.panel;
+            
+            this.logger.debug('[UI] Welcome panel created successfully');
 
             // Use the loading utility to manage the loading state and content transition
             // Call it IMMEDIATELY after panel creation
@@ -50,8 +84,6 @@ export class WelcomeWebviewCommand extends BaseCommand {
             // Handle messages from webview
             this.panel.webview.onDidReceiveMessage(
                 async message => {
-                    this.logger.debug(`Welcome screen message:`, message);
-                    
                     // Handle handshake protocol
                     if (message.type === '__webview_ready__') {
                         this.logger.debug('[UI] Received webview ready signal');
@@ -83,7 +115,10 @@ export class WelcomeWebviewCommand extends BaseCommand {
             // Clean up on dispose
             this.panel.onDidDispose(
                 () => {
+                    // Clear both instance and static references
+                    WelcomeWebviewCommand.activePanel = undefined;
                     this.panel = undefined;
+                    this.logger.debug('[UI] Welcome panel disposed');
                 },
                 undefined,
                 this.context.subscriptions
@@ -100,7 +135,6 @@ export class WelcomeWebviewCommand extends BaseCommand {
         
         // Get URI for bundle
         const bundlePath = path.join(webviewPath, 'welcome-bundle.js');
-        this.logger.debug(`[UI] Bundle path: ${bundlePath}`);
         
         if (!this.panel) {
             this.logger.error('[UI] Panel is undefined in getWebviewContent!');
@@ -110,7 +144,6 @@ export class WelcomeWebviewCommand extends BaseCommand {
         const bundleUri = this.panel.webview.asWebviewUri(
             vscode.Uri.file(bundlePath)
         );
-        this.logger.debug(`[UI] Bundle URI: ${bundleUri}`);
         
         const nonce = this.getNonce();
         const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
@@ -251,40 +284,40 @@ export class WelcomeWebviewCommand extends BaseCommand {
         this.logger.debug(`Welcome screen action: ${type}`);
 
         switch (type) {
-            case 'ready':
-                await this.sendInitialData();
-                break;
+        case 'ready':
+            await this.sendInitialData();
+            break;
 
-            case 'create-new':
-                // Open wizard (welcome panel stays in background)
-                this.logger.info('[Project Creation] Starting wizard from welcome screen');
-                await vscode.commands.executeCommand('demoBuilder.createProject');
-                // Don't dispose the welcome panel - keep it available for navigation back
-                break;
+        case 'create-new':
+            // Open wizard (welcome panel stays in background)
+            this.logger.info('[Project Creation] Starting wizard from welcome screen');
+            await vscode.commands.executeCommand('demoBuilder.createProject');
+            // Don't dispose the welcome panel - keep it available for navigation back
+            break;
 
-            case 'open-project':
-                await this.browseForProject();
-                break;
+        case 'open-project':
+            await this.browseForProject();
+            break;
 
-            case 'import-project':
-                await this.importProject();
-                break;
+        case 'import-project':
+            await this.importProject();
+            break;
 
-            case 'open-docs':
-                vscode.env.openExternal(vscode.Uri.parse('https://docs.adobe.com/demo-builder'));
-                break;
+        case 'open-docs':
+            vscode.env.openExternal(vscode.Uri.parse('https://docs.adobe.com/demo-builder'));
+            break;
 
-            case 'open-settings':
-                vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder');
-                break;
+        case 'open-settings':
+            vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder');
+            break;
 
-            case 'validate-license':
-                await this.validateLicense(payload.licenseKey);
-                break;
+        case 'validate-license':
+            await this.validateLicense(payload.licenseKey);
+            break;
 
-            case 'log':
-                this.logger.info(`[Welcome] ${payload.message}`);
-                break;
+        case 'log':
+            this.logger.info(`[Welcome] ${payload.message}`);
+            break;
         }
     }
 

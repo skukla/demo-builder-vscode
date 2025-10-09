@@ -4,6 +4,7 @@ import * as os from 'os';
 import { Logger } from './logger';
 import { ExternalCommandManager } from './externalCommandManager';
 import { getExternalCommandManager } from '../extension';
+import { TIMEOUTS } from './timeoutConfig';
 
 export interface PrerequisiteCheck {
     command: string;
@@ -168,6 +169,9 @@ export class PrerequisitesManager {
     }
 
     async checkPrerequisite(prereq: PrerequisiteDefinition): Promise<PrerequisiteStatus> {
+        const startTime = Date.now();
+        this.logger.debug(`[Prereq Check] Starting check for ${prereq.id}`);
+        
         const status: PrerequisiteStatus = {
             id: prereq.id,
             name: prereq.name,
@@ -181,45 +185,99 @@ export class PrerequisitesManager {
             const commandManager = getExternalCommandManager();
             // Use fnm wrapper for Node.js checks, enhanced path for others
             let checkResult;
-            if (prereq.id === 'node' || prereq.id === 'npm' || prereq.perNodeVersion) {
-                checkResult = await commandManager.execute(prereq.check.command, {
-                    useNodeVersion: 'current'
-                });
-            } else if (prereq.id === 'aio-cli') {
+            
+            const cmdStartTime = Date.now();
+            if (prereq.id === 'aio-cli') {
                 // Use executeAdobeCLI for proper Node version management and caching
+                // For prerequisite checks, disable retries to fail fast on timeout
+                // IMPORTANT: Check for aio-cli BEFORE perNodeVersion since aio-cli has perNodeVersion=true
+                this.logger.debug(`[Prereq Check] aio-cli: Executing via executeAdobeCLI with timeout=${TIMEOUTS.PREREQUISITE_CHECK}ms`);
                 checkResult = await commandManager.executeAdobeCLI(prereq.check.command, {
-                    timeout: 5000  // 5 second timeout for version check
+                    timeout: TIMEOUTS.PREREQUISITE_CHECK,
+                    retryStrategy: { 
+                        maxAttempts: 1,
+                        initialDelay: 0,
+                        maxDelay: 0,
+                        backoffFactor: 1
+                    }
                 });
-                // Log raw output for debugging version detection
-                this.logger.debug(`Adobe CLI version check output: ${checkResult.stdout}`);
+                const cmdDuration = Date.now() - cmdStartTime;
+                this.logger.debug(`[Prereq Check] aio-cli: Command completed in ${cmdDuration}ms`);
+                this.logger.debug(`[Prereq Check] aio-cli: stdout length=${checkResult.stdout?.length || 0}, stderr length=${checkResult.stderr?.length || 0}`);
+                this.logger.debug(`[Prereq Check] aio-cli: stdout preview: ${checkResult.stdout?.substring(0, 200)}`);
+            } else if (prereq.id === 'node' || prereq.id === 'npm' || prereq.perNodeVersion) {
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Executing command with useNodeVersion=current`);
+                checkResult = await commandManager.execute(prereq.check.command, {
+                    useNodeVersion: 'current',
+                    timeout: TIMEOUTS.PREREQUISITE_CHECK
+                });
             } else {
-                checkResult = await commandManager.execute(prereq.check.command);
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Executing command normally`);
+                checkResult = await commandManager.execute(prereq.check.command, {
+                    timeout: TIMEOUTS.PREREQUISITE_CHECK
+                });
             }
+            
+            const cmdDuration = Date.now() - cmdStartTime;
+            this.logger.debug(`[Prereq Check] ${prereq.id}: Command execution took ${cmdDuration}ms`);
+            
             const { stdout } = checkResult;
             
             // Check if installed
             if (prereq.check.parseVersion) {
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Parsing version with regex: ${prereq.check.parseVersion}`);
                 const versionRegex = new RegExp(prereq.check.parseVersion);
                 const match = stdout.match(versionRegex);
                 if (match) {
                     status.installed = true;
                     status.version = match[1];
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Version found: ${match[1]}`);
+                } else {
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: ✗ Version regex did not match`);
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: stdout to match against: ${stdout.substring(0, 300)}`);
                 }
             } else if (prereq.check.contains) {
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Checking if stdout contains: ${prereq.check.contains}`);
                 status.installed = stdout.includes(prereq.check.contains);
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Contains check result: ${status.installed}`);
             } else {
                 status.installed = true; // Command succeeded
+                this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Command succeeded (no version check required)`);
             }
             
             // Check plugins if any
             if (prereq.plugins && status.installed) {
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Checking ${prereq.plugins.length} plugins`);
                 status.plugins = [];
                 for (const plugin of prereq.plugins) {
+                    const pluginStartTime = Date.now();
                     const pluginStatus = await this.checkPlugin(plugin);
+                    const pluginDuration = Date.now() - pluginStartTime;
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: Plugin ${plugin.id} check took ${pluginDuration}ms, installed=${pluginStatus.installed}`);
                     status.plugins.push(pluginStatus);
                 }
             }
+            
+            const totalDuration = Date.now() - startTime;
+            this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Complete in ${totalDuration}ms, installed=${status.installed}`);
+            
         } catch (error) {
+            const totalDuration = Date.now() - startTime;
+            this.logger.debug(`[Prereq Check] ${prereq.id}: ✗ Failed after ${totalDuration}ms`);
+            
+            // Check if this is a timeout error
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const isTimeout = errorMessage.toLowerCase().includes('timed out') || 
+                            errorMessage.toLowerCase().includes('timeout') ||
+                            (error as any).killed && (error as any).signal === 'SIGTERM';
+            
+            if (isTimeout) {
+                // Re-throw timeout errors so they can be handled at the command level
+                this.logger.warn(`${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK}ms`);
+                throw new Error(`${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds`);
+            }
+            
+            // For other errors (command not found, etc), treat as not installed
             status.installed = false;
             this.logger.info(`${prereq.name} not found: ${error}`);
         }
@@ -231,7 +289,16 @@ export class PrerequisitesManager {
         try {
             const commandManager = getExternalCommandManager();
             // Use executeAdobeCLI for proper Node version management and caching
-            const { stdout } = await commandManager.executeAdobeCLI(plugin.check.command);
+            // For prerequisite checks, disable retries to fail fast on timeout
+            const { stdout } = await commandManager.executeAdobeCLI(plugin.check.command, {
+                timeout: TIMEOUTS.PREREQUISITE_CHECK,
+                retryStrategy: { 
+                    maxAttempts: 1,
+                    initialDelay: 0,
+                    maxDelay: 0,
+                    backoffFactor: 1
+                }
+            });
             const installed = plugin.check.contains ? 
                 stdout.includes(plugin.check.contains) : true;
             
