@@ -98,13 +98,7 @@ export class StartDemoCommand extends BaseCommand {
                 // Update status bar
                 this.statusBar.updateProject(project);
                 
-                // Wait a moment then open browser
-                setTimeout(() => {
-                    const url = `http://localhost:${port}`;
-                    vscode.env.openExternal(vscode.Uri.parse(url));
-                    this.logger.info(`Demo started at ${url}`);
-                }, 3000);
-                
+                this.logger.info(`Demo started at http://localhost:${port}`);
                 progress.report({ message: 'Demo started successfully!' });
             });
             

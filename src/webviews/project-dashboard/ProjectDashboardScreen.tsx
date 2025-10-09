@@ -336,17 +336,16 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                         </ActionButton>
                     )}
 
-                    {/* Open Browser (only when running) */}
-                    {isRunning && (
-                        <ActionButton 
-                            onPress={handleOpenBrowser}
-                            isQuiet
-                            UNSAFE_className="dashboard-action-button dashboard-action-button-enter"
-                        >
-                            <Globe size="L" />
-                            <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Open</Text>
-                        </ActionButton>
-                    )}
+                    {/* Open Browser */}
+                    <ActionButton 
+                        onPress={handleOpenBrowser}
+                        isQuiet
+                        isDisabled={!isRunning}
+                        UNSAFE_className="dashboard-action-button"
+                    >
+                        <Globe size="L" />
+                        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Open</Text>
+                    </ActionButton>
 
                     {/* Logs */}
                     <ActionButton 
