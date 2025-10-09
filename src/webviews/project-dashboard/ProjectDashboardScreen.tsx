@@ -26,7 +26,7 @@ interface ProjectStatus {
     adobeOrg?: string;
     adobeProject?: string;
     mesh?: {
-        status: 'not-deployed' | 'deploying' | 'deployed' | 'error';
+        status: 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'error';
         endpoint?: string;
         message?: string;
     };
@@ -215,6 +215,11 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                 return {
                     color: 'var(--spectrum-global-color-green-600)',
                     text: meshEndpoint ? 'Deployed' : 'Deployed'
+                };
+            case 'config-changed':
+                return {
+                    color: 'var(--spectrum-global-color-orange-600)',
+                    text: 'Config Changed ⚠️'
                 };
             case 'not-deployed':
                 return {

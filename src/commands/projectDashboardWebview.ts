@@ -3,6 +3,7 @@ import * as path from 'path';
 import { BaseCommand } from './baseCommand';
 import { StateManager } from '../utils/stateManager';
 import { setLoadingState } from '../utils/loadingHTML';
+import { detectMeshChanges } from '../utils/meshChangeDetector';
 
 /**
  * Command to show the "Project Dashboard" after project creation
@@ -204,6 +205,15 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
         // Get mesh component for status
         const meshComponent = project.componentInstances?.['commerce-mesh'];
 
+        // Detect if mesh configuration has changed
+        let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = project.mesh?.status || 'not-deployed';
+        if (meshComponent && project.componentConfigs) {
+            const meshChanges = await detectMeshChanges(project, project.componentConfigs);
+            if (meshChanges.hasChanges) {
+                meshStatus = 'config-changed';
+            }
+        }
+
         const statusData = {
             name: project.name,
             path: project.path,
@@ -212,7 +222,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             adobeOrg: project.adobe?.organization,
             adobeProject: project.adobe?.projectName,
             mesh: project.mesh ? {
-                status: project.mesh.status || 'not-deployed',
+                status: meshStatus,
                 endpoint: meshComponent?.endpoint || project.mesh.endpoint,
                 message: undefined
             } : undefined
@@ -228,7 +238,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
      * Public method to send mesh status updates (called by deployMesh command)
      */
     public static async sendMeshStatusUpdate(
-        status: 'deploying' | 'deployed' | 'error' | 'not-deployed',
+        status: 'deploying' | 'deployed' | 'config-changed' | 'error' | 'not-deployed',
         message?: string,
         endpoint?: string
     ): Promise<void> {
