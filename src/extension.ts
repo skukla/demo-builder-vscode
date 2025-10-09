@@ -141,35 +141,77 @@ export async function activate(context: vscode.ExtensionContext) {
             });
         }
 
-        // Project Dashboard is now opened directly after creation
-        // (No flag checking needed)
-
-        // Normal startup - ALWAYS show Welcome screen first (MVP requirement)
-        // User must explicitly choose to open a project or create a new one
-        
-        // Load existing project if available (for status bar), but don't auto-open dashboard
-        const hasExistingProject = await stateManager.hasProject();
-        if (hasExistingProject) {
-            const project = await stateManager.getCurrentProject();
-            if (project) {
-                statusBar.updateProject(project);
-                logger.info(`[Extension] Loaded existing project: ${project.name}`);
-            }
-        }
-        
-        // Always show Welcome screen on startup
-        const isWelcomeVisible = commandManager.welcomeScreen?.isVisible() || false;
-        
-        if (!isWelcomeVisible) {
-            vscode.commands.executeCommand('demoBuilder.showWelcome').then(
-                () => logger.info('[Extension] Welcome screen shown successfully'),
-                (err) => {
-                    logger.error('[Extension] Failed to show welcome screen:', err);
-                    vscode.window.showErrorMessage(`Failed to show welcome screen: ${err?.message || err}`);
+        // Check for dashboard reopen flag (after workspace folder addition restart)
+        let openingDashboardAfterRestart = false;
+        try {
+            const os = require('os');
+            const path = require('path');
+            const fs = require('fs').promises;
+            
+            const flagFile = path.join(os.homedir(), '.demo-builder', '.open-dashboard-after-restart');
+            const flagExists = await fs.access(flagFile).then(() => true).catch(() => false);
+            
+            if (flagExists) {
+                openingDashboardAfterRestart = true;
+                
+                // Read flag data
+                const flagData = await fs.readFile(flagFile, 'utf8');
+                const { projectName, projectPath } = JSON.parse(flagData);
+                
+                // Remove flag immediately
+                await fs.unlink(flagFile).catch(() => {});
+                
+                logger.info(`[Extension] Opening Project Dashboard after restart for: ${projectName}`);
+                
+                // Ensure project is loaded
+                const project = await stateManager.getCurrentProject();
+                if (project) {
+                    statusBar.updateProject(project);
+                    
+                    // Small delay to ensure extension is fully initialized
+                    setTimeout(() => {
+                        logger.debug('[Extension] Executing showProjectDashboard command...');
+                        vscode.commands.executeCommand('demoBuilder.showProjectDashboard').then(
+                            () => logger.debug('[Extension] Project Dashboard opened successfully'),
+                            (err) => logger.error('[Extension] Failed to open Project Dashboard:', err)
+                        );
+                    }, 500);
+                } else {
+                    logger.warn(`[Extension] Could not load project from ${projectPath}, showing Welcome instead`);
+                    openingDashboardAfterRestart = false;
                 }
-            );
-        } else {
-            logger.debug('[Extension] Welcome screen already visible, not showing duplicate');
+            }
+        } catch (error) {
+            // Silently ignore errors
+            logger.debug('[Extension] No dashboard reopen flag found or error reading it');
+        }
+
+        // Normal startup - show Welcome screen if not opening dashboard
+        if (!openingDashboardAfterRestart) {
+            // Load existing project if available (for status bar), but don't auto-open dashboard
+            const hasExistingProject = await stateManager.hasProject();
+            if (hasExistingProject) {
+                const project = await stateManager.getCurrentProject();
+                if (project) {
+                    statusBar.updateProject(project);
+                    logger.info(`[Extension] Loaded existing project: ${project.name}`);
+                }
+            }
+            
+            // Show Welcome screen on startup
+            const isWelcomeVisible = commandManager.welcomeScreen?.isVisible() || false;
+            
+            if (!isWelcomeVisible) {
+                vscode.commands.executeCommand('demoBuilder.showWelcome').then(
+                    () => logger.info('[Extension] Welcome screen shown successfully'),
+                    (err) => {
+                        logger.error('[Extension] Failed to show welcome screen:', err);
+                        vscode.window.showErrorMessage(`Failed to show welcome screen: ${err?.message || err}`);
+                    }
+                );
+            } else {
+                logger.debug('[Extension] Welcome screen already visible, not showing duplicate');
+            }
         }
 
         // Register file watchers
@@ -204,32 +246,12 @@ export function getExternalCommandManager(): ExternalCommandManager {
 
 
 function registerFileWatchers(context: vscode.ExtensionContext) {
-    // Watch for .demo-builder directory
-    const demoBuilderWatcher = vscode.workspace.createFileSystemWatcher(
-        '**/.demo-builder/**',
-        false,
-        false,
-        false
-    );
-    
-    // Watch for config changes to reload state
-    // Note: Individual file operations are not logged to keep logs clean and focused
-    demoBuilderWatcher.onDidChange(uri => {
-        // Reload state if config changed
-        if (uri.fsPath.endsWith('config.yaml') || uri.fsPath.endsWith('state.json')) {
-            logger.debug('Project configuration changed, reloading state');
-            stateManager.reload();
-        }
-    });
-    
-    context.subscriptions.push(demoBuilderWatcher);
-    
-    // Watch for .env file changes (any component directory)
+    // Watch for .env file changes in workspace (component directories)
     const envWatcher = vscode.workspace.createFileSystemWatcher(
         '**/{.env,.env.local}',
-        false,
-        false,
-        false
+        false, // create
+        false, // change
+        false  // delete
     );
     
     // Track when demo starts to suppress notifications during startup

@@ -549,26 +549,69 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.debug(`[Project Creation] Current panel: ${this.panel ? 'exists' : 'undefined'}`);
             
             try {
+                // Get current project to access path
+                const project = await this.stateManager.getCurrentProject();
+                
+                if (!project || !project.path) {
+                    this.logger.error('[Project Creation] No project found or path missing');
+                    throw new Error('Project not found');
+                }
+                
+                // Set flag to reopen dashboard after Extension Host restart
+                try {
+                    const os = await import('os');
+                    const path = await import('path');
+                    const fs = await import('fs/promises');
+                    
+                    const demoBuilderDir = path.join(os.homedir(), '.demo-builder');
+                    await fs.mkdir(demoBuilderDir, { recursive: true });
+                    
+                    const flagFile = path.join(demoBuilderDir, '.open-dashboard-after-restart');
+                    await fs.writeFile(flagFile, JSON.stringify({
+                        projectName: project.name,
+                        projectPath: project.path,
+                        timestamp: Date.now()
+                    }), 'utf8');
+                    
+                    this.logger.debug('[Project Creation] Set dashboard reopen flag');
+                } catch (flagError) {
+                    this.logger.warn('[Project Creation] Could not set reopen flag', flagError instanceof Error ? flagError.message : String(flagError));
+                }
+                
                 // Close any existing Welcome webview before opening project
                 const { WelcomeWebviewCommand } = await import('./welcomeWebview');
                 WelcomeWebviewCommand.disposeActivePanel();
                 this.logger.debug('[Project Creation] Closed Welcome webview if it was open');
                 
-                // Dispose this panel first
+                // Dispose this panel
                 this.panel?.dispose();
                 this.logger.info('[Project Creation] Wizard closed');
                 
-                // Small delay to ensure panel is fully disposed
-                await new Promise(resolve => setTimeout(resolve, 100));
+                // Add workspace folder (triggers Extension Host restart)
+                this.logger.info('[Project Creation] Adding project to workspace...');
+                const workspaceFolder = {
+                    uri: vscode.Uri.file(project.path),
+                    name: project.name
+                };
                 
-                // Open Project Dashboard directly
-                this.logger.info('[Project Creation] Opening Project Dashboard...');
-                await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
-                this.logger.info('[Project Creation] ✅ Project Dashboard opened');
+                const added = vscode.workspace.updateWorkspaceFolders(
+                    0, // Insert at beginning
+                    0, // Don't delete any
+                    workspaceFolder
+                );
+                
+                if (added) {
+                    this.logger.info('[Project Creation] ✅ Workspace folder added (Extension Host will restart)');
+                } else {
+                    this.logger.warn('[Project Creation] Workspace folder may already exist, opening dashboard directly');
+                    // If folder already exists, open dashboard directly (no restart will occur)
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+                }
                 
             } catch (error) {
-                this.logger.error('[Project Creation] Error opening Project Dashboard', error as Error);
-                vscode.window.showErrorMessage('Failed to open Project Dashboard. Please use the tree view or status bar to access your project.');
+                this.logger.error('[Project Creation] Error opening project', error as Error);
+                vscode.window.showErrorMessage('Failed to open project. Please use the tree view or status bar to access your project.');
             }
             
             return { success: true };
