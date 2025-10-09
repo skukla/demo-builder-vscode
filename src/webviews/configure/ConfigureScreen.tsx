@@ -25,6 +25,7 @@ interface ComponentsData {
     dependencies?: ComponentData[];
     externalSystems?: ComponentData[];
     appBuilder?: ComponentData[];
+    envVars?: Record<string, ComponentEnvVar>; // Top-level envVars object
 }
 
 interface ConfigureScreenProps {
@@ -37,7 +38,8 @@ interface ComponentData {
     name: string;
     description?: string;
     configuration?: {
-        envVars?: ComponentEnvVar[];
+        requiredEnvVars?: string[];
+        optionalEnvVars?: string[];
     };
 }
 
@@ -106,8 +108,12 @@ export function ConfigureScreen({ project, componentsData }: ConfigureScreenProp
         
         project.componentSelections?.dependencies?.forEach(depId => {
             const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId);
-            if (dep?.configuration?.envVars?.length) {
-                components.push({ id: dep.id, data: dep, type: 'Dependency' });
+            if (dep) {
+                const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                                   (dep.configuration?.optionalEnvVars?.length || 0) > 0;
+                if (hasEnvVars) {
+                    components.push({ id: dep.id, data: dep, type: 'Dependency' });
+                }
             }
         });
         
@@ -134,12 +140,16 @@ export function ConfigureScreen({ project, componentsData }: ConfigureScreenProp
                 ];
                 
                 const componentDef = allComponentDefs.find((c: ComponentData) => c.id === id);
-                if (componentDef && componentDef.configuration?.envVars?.length) {
-                    components.push({ 
-                        id: componentDef.id, 
-                        data: componentDef, 
-                        type: instance.type.charAt(0).toUpperCase() + instance.type.slice(1)
-                    });
+                if (componentDef) {
+                    const hasEnvVars = (componentDef.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                                       (componentDef.configuration?.optionalEnvVars?.length || 0) > 0;
+                    if (hasEnvVars) {
+                        components.push({ 
+                            id: componentDef.id, 
+                            data: componentDef, 
+                            type: instance.type.charAt(0).toUpperCase() + instance.type.slice(1)
+                        });
+                    }
                 }
             });
         }
@@ -151,18 +161,45 @@ export function ConfigureScreen({ project, componentsData }: ConfigureScreenProp
     const serviceGroups = useMemo(() => {
         const fieldMap = new Map<string, UniqueField>();
         
+        // Get the top-level envVars definitions
+        const envVarDefs = componentsData.envVars || {};
+        
         // Collect all unique fields by key
         selectedComponents.forEach(({ id, data }) => {
-            data.configuration?.envVars?.forEach(envVar => {
-                if (!fieldMap.has(envVar.key)) {
-                    fieldMap.set(envVar.key, {
-                        ...envVar,
-                        componentIds: [id]
-                    });
-                } else {
-                    const existing = fieldMap.get(envVar.key)!;
-                    if (!existing.componentIds.includes(id)) {
-                        existing.componentIds.push(id);
+            // Collect required env vars
+            data.configuration?.requiredEnvVars?.forEach(envVarKey => {
+                const envVarDef = envVarDefs[envVarKey];
+                if (envVarDef) {
+                    if (!fieldMap.has(envVarKey)) {
+                        fieldMap.set(envVarKey, {
+                            ...envVarDef,
+                            key: envVarKey,
+                            componentIds: [id]
+                        });
+                    } else {
+                        const existing = fieldMap.get(envVarKey)!;
+                        if (!existing.componentIds.includes(id)) {
+                            existing.componentIds.push(id);
+                        }
+                    }
+                }
+            });
+            
+            // Collect optional env vars
+            data.configuration?.optionalEnvVars?.forEach(envVarKey => {
+                const envVarDef = envVarDefs[envVarKey];
+                if (envVarDef) {
+                    if (!fieldMap.has(envVarKey)) {
+                        fieldMap.set(envVarKey, {
+                            ...envVarDef,
+                            key: envVarKey,
+                            componentIds: [id]
+                        });
+                    } else {
+                        const existing = fieldMap.get(envVarKey)!;
+                        if (!existing.componentIds.includes(id)) {
+                            existing.componentIds.push(id);
+                        }
                     }
                 }
             });

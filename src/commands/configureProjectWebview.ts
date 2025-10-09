@@ -76,8 +76,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         const componentsContent = await fs.readFile(componentsPath, 'utf-8');
         const componentsJson = JSON.parse(componentsContent);
         
-        // Extract the components structure (frontends, backends, dependencies, etc.)
-        const componentsData = componentsJson.components || {};
+        // Extract the components structure and envVars definitions
+        const componentsData = {
+            ...(componentsJson.components || {}),
+            envVars: componentsJson.envVars || {}
+        };
 
         // Get current theme
         const theme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
