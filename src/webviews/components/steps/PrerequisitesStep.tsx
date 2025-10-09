@@ -299,7 +299,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         setChecks(prev => {
             const newChecks = [...prev];
             newChecks[index].status = 'checking';
-            newChecks[index].message = 'Installing... (this may take a few minutes)';
+            newChecks[index].message = 'Installing... (this could take up to 3 minutes)';
             return newChecks;
         });
     };

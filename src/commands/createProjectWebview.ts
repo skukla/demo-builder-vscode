@@ -2034,7 +2034,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                             meshId,
                             meshStatus: 'pending',
                             endpoint, // Include endpoint for consistency
-                            error: 'Mesh is currently being provisioned. This may take a few minutes.'
+                            error: 'Mesh is currently being provisioned. This could take up to 2 minutes.'
                         };
                     }
                     
@@ -3271,7 +3271,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // This ensures relative paths in mesh.json (like build/resolvers/*.js) resolve correctly
             this.logger.debug(`[Deploy Mesh] Using config from: ${meshConfigPath}`);
             
-            onProgress?.('Deploying to Adobe I/O...', 'This may take a few minutes');
+            onProgress?.('Deploying API Mesh...', 'Updating mesh configuration');
             
             const commandManager = getExternalCommandManager();
             
