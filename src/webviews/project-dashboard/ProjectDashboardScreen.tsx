@@ -173,7 +173,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                 if (frontendConfigChanged) {
                     return {
                         color: 'var(--spectrum-global-color-orange-600)',
-                        text: 'Config Changed'
+                        text: 'Configuration Changed'
                     };
                 }
                 return {
@@ -228,7 +228,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
             case 'config-changed':
                 return {
                     color: 'var(--spectrum-global-color-orange-600)',
-                    text: 'Config Changed'
+                    text: 'Configuration Changed'
                 };
             case 'not-deployed':
                 return {

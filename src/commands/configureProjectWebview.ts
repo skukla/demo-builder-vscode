@@ -5,6 +5,7 @@ import { BaseWebviewCommand } from './baseWebviewCommand';
 import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
 import { ComponentRegistryManager } from '../utils/componentRegistry';
 import { detectMeshChanges } from '../utils/meshChangeDetector';
+import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
 import { Project } from '../types';
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
@@ -141,8 +142,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 const result = { success: true };
                 
                 // Show success notification after returning (non-blocking)
-                setImmediate(() => {
+                setImmediate(async () => {
                     vscode.window.showInformationMessage('Configuration saved successfully');
+                    
+                    // Refresh Dashboard status (if open) to show amber indicators
+                    await ProjectDashboardWebviewCommand.refreshStatus();
                     
                     // Smart notification based on what changed
                     if (meshChanges.hasChanges && project.status === 'running') {

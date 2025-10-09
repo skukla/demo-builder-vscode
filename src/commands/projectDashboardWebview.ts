@@ -12,8 +12,9 @@ import { detectMeshChanges } from '../utils/meshChangeDetector';
  * This provides a control panel for demo management and quick actions
  */
 export class ProjectDashboardWebviewCommand extends BaseCommand {
-    // Singleton: Track the active Project Dashboard panel
+    // Singleton: Track the active Project Dashboard panel and instance
     private static activePanel: vscode.WebviewPanel | undefined;
+    private static activeInstance: ProjectDashboardWebviewCommand | undefined;
     
     private panel: vscode.WebviewPanel | undefined;
     private currentProject: any = null; // Store project for message handler access
@@ -26,6 +27,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
         if (ProjectDashboardWebviewCommand.activePanel) {
             ProjectDashboardWebviewCommand.activePanel.dispose();
             ProjectDashboardWebviewCommand.activePanel = undefined;
+            ProjectDashboardWebviewCommand.activeInstance = undefined;
         }
     }
 
@@ -64,11 +66,13 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
 
             // Register in singleton
             ProjectDashboardWebviewCommand.activePanel = this.panel;
+            ProjectDashboardWebviewCommand.activeInstance = this;
 
             // Handle disposal
             this.panel.onDidDispose(
                 () => {
                     ProjectDashboardWebviewCommand.activePanel = undefined;
+                    ProjectDashboardWebviewCommand.activeInstance = undefined;
                     this.panel = undefined;
                 },
                 undefined,
@@ -208,7 +212,9 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
         const meshComponent = project.componentInstances?.['commerce-mesh'];
 
         // Detect if mesh configuration has changed
-        let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = project.mesh?.status || 'not-deployed';
+        let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = 
+            (project.mesh?.status as any) || 'not-deployed';
+        
         if (meshComponent && project.componentConfigs) {
             const meshChanges = await detectMeshChanges(project, project.componentConfigs);
             if (meshChanges.hasChanges) {
@@ -222,7 +228,6 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             const currentHash = await this.getCurrentFrontendEnvHash(project);
             if (currentHash && currentHash !== project.frontendEnvHash) {
                 frontendConfigChanged = true;
-                this.logger.debug(`[Dashboard] Frontend config changed: ${project.frontendEnvHash.substring(0, 8)}... -> ${currentHash.substring(0, 8)}...`);
             }
         }
 
@@ -264,6 +269,15 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                     endpoint
                 }
             });
+        }
+    }
+
+    /**
+     * Public method to trigger a full status refresh (called after config changes)
+     */
+    public static async refreshStatus(): Promise<void> {
+        if (ProjectDashboardWebviewCommand.activeInstance) {
+            await ProjectDashboardWebviewCommand.activeInstance.sendProjectStatus();
         }
     }
 

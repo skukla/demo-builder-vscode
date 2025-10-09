@@ -180,7 +180,15 @@ export async function detectMeshChanges(
     
     // Check source files changes
     const newSourceHash = await calculateMeshSourceHash(meshInstance.path);
-    const sourceFilesChanged = newSourceHash !== null && newSourceHash !== currentState.sourceHash;
+    
+    // If old hash is null, it means meshState was never captured after deployment
+    // In this case, DON'T flag as changed (assume deployed = current state)
+    let sourceFilesChanged = false;
+    if (currentState.sourceHash === null) {
+        sourceFilesChanged = false;
+    } else {
+        sourceFilesChanged = newSourceHash !== null && newSourceHash !== currentState.sourceHash;
+    }
     
     return {
         hasChanges: envVarsChanged || sourceFilesChanged,
@@ -200,10 +208,11 @@ export async function updateMeshState(project: Project): Promise<void> {
     }
     
     const meshConfig = project.componentConfigs?.['commerce-mesh'] || {};
+    const envVars = getMeshEnvVars(meshConfig);
     const sourceHash = await calculateMeshSourceHash(meshInstance.path);
     
     project.meshState = {
-        envVars: getMeshEnvVars(meshConfig),
+        envVars,
         sourceHash,
         lastDeployed: new Date().toISOString()
     };
