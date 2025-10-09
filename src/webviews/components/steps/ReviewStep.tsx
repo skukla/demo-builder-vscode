@@ -165,84 +165,70 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
 
     return (
         <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
-            <Flex direction="column" gap="size-300">
-                {/* Single Summary Card */}
-                <View 
-                    padding="size-300" 
-                    UNSAFE_style={{ 
-                        backgroundColor: 'rgba(75, 175, 79, 0.08)',
-                        borderRadius: '8px',
-                        border: '2px solid rgba(75, 175, 79, 0.25)'
-                    }}
-                >
-                    <Flex direction="column" gap="size-100">
-                        {/* Header */}
-                        <Flex gap="size-150" alignItems="center" marginBottom="size-300">
-                            <CheckmarkCircle size="M" UNSAFE_className="text-green-600" />
-                            <Text UNSAFE_style={{ fontWeight: 600, fontSize: '18px' }}>
-                                Ready to Create
+            {/* Header */}
+            <Flex gap="size-150" alignItems="center" marginBottom="size-300">
+                <CheckmarkCircle size="M" UNSAFE_className="text-green-600" />
+                <Text UNSAFE_style={{ fontWeight: 600, fontSize: '18px' }}>
+                    Ready to Create
+                </Text>
+            </Flex>
+            
+            {/* Project Details Block */}
+            <Flex direction="column" gap="size-100">
+                {/* Project Name - Hero Element */}
+                {state.projectName && (
+                    <View marginBottom="size-150">
+                        <Text UNSAFE_style={{ 
+                            fontSize: '20px', 
+                            fontWeight: 700,
+                            color: 'var(--spectrum-global-color-gray-900)',
+                            lineHeight: '1.3'
+                        }}>
+                            {state.projectName}
+                        </Text>
+                    </View>
+                )}
+                
+                {/* Component Sections with Architectural Flow */}
+                <Flex direction="column" gap="size-250">
+                    {componentSections.map((section, index) => (
+                        <View key={index}>
+                            {/* Component Name */}
+                            <Text UNSAFE_style={{ 
+                                fontSize: '15px', 
+                                fontWeight: 600,
+                                color: 'var(--spectrum-global-color-gray-800)',
+                                lineHeight: '1.5'
+                            }}>
+                                {section.name}
                             </Text>
-                        </Flex>
-                        
-                        {/* Project Details Block */}
-                        <Flex direction="column" gap="size-100">
-                            {/* Project Name - Hero Element */}
-                            {state.projectName && (
-                                <View marginBottom="size-150">
-                                    <Text UNSAFE_style={{ 
-                                        fontSize: '20px', 
-                                        fontWeight: 700,
-                                        color: 'var(--spectrum-global-color-gray-900)',
-                                        lineHeight: '1.3'
-                                    }}>
-                                        {state.projectName}
-                                    </Text>
-                                </View>
-                            )}
                             
-                            {/* Component Sections with Architectural Flow */}
-                            <Flex direction="column" gap="size-250">
-                                {componentSections.map((section, index) => (
-                                    <View key={index}>
-                                        {/* Component Name */}
-                                        <Text UNSAFE_style={{ 
-                                            fontSize: '15px', 
-                                            fontWeight: 600,
-                                            color: 'var(--spectrum-global-color-gray-800)',
-                                            lineHeight: '1.5'
-                                        }}>
-                                            {section.name}
-                                        </Text>
-                                        
-                                        {/* Child Components (if any) */}
-                                        {section.children && section.children.length > 0 && (
-                                            <Flex direction="column" gap="size-75" marginStart="size-300" marginTop="size-100">
-                                                {section.children.map((child, childIndex) => (
-                                                    <Flex key={childIndex} gap="size-100" alignItems="center">
-                                                        <Text UNSAFE_style={{ 
-                                                            fontSize: '14px', 
-                                                            lineHeight: '1',
-                                                            color: 'var(--spectrum-global-color-gray-500)'
-                                                        }}>
-                                                            ›
-                                                        </Text>
-                                                        <Text UNSAFE_style={{ 
-                                                            fontSize: '14px', 
-                                                            color: 'var(--spectrum-global-color-gray-700)',
-                                                            lineHeight: '1.5'
-                                                        }}>
-                                                            {child}
-                                                        </Text>
-                                                    </Flex>
-                                                ))}
-                                            </Flex>
-                                        )}
-                                    </View>
-                                ))}
-                            </Flex>
-                        </Flex>
-                    </Flex>
-                </View>
+                            {/* Child Components (if any) */}
+                            {section.children && section.children.length > 0 && (
+                                <Flex direction="column" gap="size-75" marginStart="size-300" marginTop="size-100">
+                                    {section.children.map((child, childIndex) => (
+                                        <Flex key={childIndex} gap="size-100" alignItems="center">
+                                            <Text UNSAFE_style={{ 
+                                                fontSize: '14px', 
+                                                lineHeight: '1',
+                                                color: 'var(--spectrum-global-color-gray-500)'
+                                            }}>
+                                                ›
+                                            </Text>
+                                            <Text UNSAFE_style={{ 
+                                                fontSize: '14px', 
+                                                color: 'var(--spectrum-global-color-gray-700)',
+                                                lineHeight: '1.5'
+                                            }}>
+                                                {child}
+                                            </Text>
+                                        </Flex>
+                                    ))}
+                                </Flex>
+                            )}
+                        </View>
+                    ))}
+                </Flex>
             </Flex>
         </div>
     );
