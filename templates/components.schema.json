@@ -82,6 +82,29 @@
         "description": {
           "type": "string"
         },
+        "icon": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "VSCode ThemeIcon name or codicon identifier (e.g., 'rocket', 'server-process')"
+            },
+            {
+              "type": "object",
+              "description": "Custom icon paths for light and dark themes",
+              "required": ["light", "dark"],
+              "properties": {
+                "light": {
+                  "type": "string",
+                  "description": "Path to icon for light theme (relative to media folder or absolute)"
+                },
+                "dark": {
+                  "type": "string",
+                  "description": "Path to icon for dark theme (relative to media folder or absolute)"
+                }
+              }
+            }
+          ]
+        },
         "version": {
           "type": "string"
         },
@@ -150,6 +173,29 @@
         "description": {
           "type": "string"
         },
+        "icon": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "VSCode ThemeIcon name or codicon identifier (e.g., 'rocket', 'server-process')"
+            },
+            {
+              "type": "object",
+              "description": "Custom icon paths for light and dark themes",
+              "required": ["light", "dark"],
+              "properties": {
+                "light": {
+                  "type": "string",
+                  "description": "Path to icon for light theme (relative to media folder or absolute)"
+                },
+                "dark": {
+                  "type": "string",
+                  "description": "Path to icon for dark theme (relative to media folder or absolute)"
+                }
+              }
+            }
+          ]
+        },
         "configuration": {
           "type": "object",
           "properties": {
@@ -182,6 +228,29 @@
         },
         "description": {
           "type": "string"
+        },
+        "icon": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "VSCode ThemeIcon name or codicon identifier (e.g., 'rocket', 'server-process')"
+            },
+            {
+              "type": "object",
+              "description": "Custom icon paths for light and dark themes",
+              "required": ["light", "dark"],
+              "properties": {
+                "light": {
+                  "type": "string",
+                  "description": "Path to icon for light theme (relative to media folder or absolute)"
+                },
+                "dark": {
+                  "type": "string",
+                  "description": "Path to icon for dark theme (relative to media folder or absolute)"
+                }
+              }
+            }
+          ]
         },
         "type": {
           "enum": ["mesh", "inspector", "utility", "service"]
@@ -383,6 +452,29 @@
         },
         "description": {
           "type": "string"
+        },
+        "icon": {
+          "oneOf": [
+            {
+              "type": "string",
+              "description": "VSCode ThemeIcon name or codicon identifier (e.g., 'rocket', 'server-process')"
+            },
+            {
+              "type": "object",
+              "description": "Custom icon paths for light and dark themes",
+              "required": ["light", "dark"],
+              "properties": {
+                "light": {
+                  "type": "string",
+                  "description": "Path to icon for light theme (relative to media folder or absolute)"
+                },
+                "dark": {
+                  "type": "string",
+                  "description": "Path to icon for dark theme (relative to media folder or absolute)"
+                }
+              }
+            }
+          ]
         },
         "source": {
           "$ref": "#/definitions/source"

@@ -42,7 +42,7 @@ export class ComponentManager {
         options: ComponentInstallOptions = {}
     ): Promise<ComponentInstallResult> {
         try {
-            this.logger.info(`[ComponentManager] Installing component: ${componentDef.name}`);
+            this.logger.debug(`[ComponentManager] Installing component: ${componentDef.name}`);
 
             // Initialize component instance
             const componentInstance: ComponentInstance = {
@@ -50,6 +50,7 @@ export class ComponentManager {
                 name: componentDef.name,
                 type: componentDef.type,
                 subType: componentDef.subType,
+                icon: componentDef.icon,  // Preserve icon from component definition
                 status: 'not-installed',
                 lastUpdated: new Date()
             };
@@ -62,31 +63,31 @@ export class ComponentManager {
             }
 
             switch (componentDef.source.type) {
-                case 'git':
-                    return await this.installGitComponent(
-                        project,
-                        componentDef,
-                        componentInstance,
-                        options
-                    );
+            case 'git':
+                return await this.installGitComponent(
+                    project,
+                    componentDef,
+                    componentInstance,
+                    options
+                );
                 
-                case 'npm':
-                    return await this.installNpmComponent(
-                        project,
-                        componentDef,
-                        componentInstance,
-                        options
-                    );
+            case 'npm':
+                return await this.installNpmComponent(
+                    project,
+                    componentDef,
+                    componentInstance,
+                    options
+                );
                 
-                case 'local':
-                    return await this.linkLocalComponent(
-                        project,
-                        componentDef,
-                        componentInstance
-                    );
+            case 'local':
+                return await this.linkLocalComponent(
+                    project,
+                    componentDef,
+                    componentInstance
+                );
                 
-                default:
-                    throw new Error(`Unsupported source type: ${componentDef.source.type}`);
+            default:
+                throw new Error(`Unsupported source type: ${componentDef.source.type}`);
             }
 
         } catch (error) {
@@ -117,13 +118,22 @@ export class ComponentManager {
         // Create components directory if it doesn't exist
         await fs.mkdir(componentsDir, { recursive: true });
 
+        // Clean up any existing component directory (from previous failed attempts)
+        try {
+            await fs.access(componentPath);
+            this.logger.debug(`[ComponentManager] Removing existing component directory: ${componentPath}`);
+            await fs.rm(componentPath, { recursive: true, force: true });
+        } catch {
+            // Directory doesn't exist, no cleanup needed
+        }
+
         // Update status
         componentInstance.status = 'cloning';
         componentInstance.repoUrl = componentDef.source.url;
         componentInstance.branch = options.branch || componentDef.source.branch || 'main';
         componentInstance.path = componentPath;
 
-        this.logger.info(`[ComponentManager] Cloning ${componentDef.name} from ${componentDef.source.url}`);
+        this.logger.debug(`[ComponentManager] Cloning ${componentDef.name} from ${componentDef.source.url}`);
         
         // Clone repository
         const commandManager = getExternalCommandManager();
@@ -181,37 +191,87 @@ export class ComponentManager {
             componentInstance.version = commitResult.stdout.trim().substring(0, 8); // Short hash
         }
 
+        // Store Node version in metadata for runtime use
+        if (componentDef.configuration?.nodeVersion) {
+            componentInstance.metadata = {
+                ...componentInstance.metadata,
+                nodeVersion: componentDef.configuration.nodeVersion
+            };
+        }
+
+        // Create .node-version file if configured (enables fnm auto-switching)
+        const configuredNodeVersion = componentDef.configuration?.nodeVersion;
+        if (configuredNodeVersion) {
+            const nodeVersionFile = path.join(componentPath, '.node-version');
+            try {
+                // Check if file already exists
+                await fs.access(nodeVersionFile);
+                this.logger.debug(`[ComponentManager] .node-version file already exists for ${componentDef.name}`);
+            } catch {
+                // File doesn't exist, create it
+                await fs.writeFile(nodeVersionFile, `${configuredNodeVersion}\n`, 'utf-8');
+                this.logger.debug(`[ComponentManager] Created .node-version file with Node ${configuredNodeVersion} for ${componentDef.name}`);
+            }
+        }
+
         // Install dependencies if package.json exists
         const packageJsonPath = path.join(componentPath, 'package.json');
         try {
             await fs.access(packageJsonPath);
             
             if (!options.skipDependencies) {
-                this.logger.info(`[ComponentManager] Installing dependencies for ${componentDef.name}`);
+                this.logger.debug(`[ComponentManager] Installing dependencies for ${componentDef.name}`);
                 componentInstance.status = 'installing';
 
-                // Use the component's configured Node version if specified
+                // Use the configured Node version
                 const nodeVersion = componentDef.configuration?.nodeVersion;
-                const installCommand = nodeVersion 
-                    ? `fnm use ${nodeVersion} && npm install`
-                    : 'npm install';
+                
+                // Don't include fnm use in command - CommandManager handles it via useNodeVersion option
+                const installCommand = 'npm install';
 
-                this.logger.debug(`[ComponentManager] Running: ${installCommand} in ${componentPath}`);
+                this.logger.debug(`[ComponentManager] Running: ${installCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
 
                 // Use configurable timeout or default
                 const installTimeout = componentDef.source.timeouts?.install || 300000; // Default 5 minutes
 
                 const installResult = await commandManager.execute(installCommand, {
-                    cwd: componentPath,
+                    cwd: componentPath,  // Run from component directory
                     timeout: installTimeout,
                     enhancePath: true,
-                    useNodeVersion: nodeVersion || null
+                    useNodeVersion: nodeVersion || null  // CommandManager handles fnm use
                 });
                 
                 if (installResult.code !== 0) {
                     this.logger.warn(`[ComponentManager] npm install had warnings/errors for ${componentDef.name}`);
                 } else {
                     this.logger.debug(`[ComponentManager] Dependencies installed successfully for ${componentDef.name}`);
+                }
+                
+                // Run build script if configured
+                const buildScript = componentDef.configuration?.buildScript;
+                if (buildScript && !options.skipDependencies) {
+                    this.logger.debug(`[ComponentManager] Running build script for ${componentDef.name}`);
+                    
+                    // Don't include fnm use in command - CommandManager handles it via useNodeVersion option
+                    const buildCommand = `npm run ${buildScript}`;
+                    
+                    this.logger.debug(`[ComponentManager] Running: ${buildCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
+                    
+                    const buildTimeout = 180000; // 3 minutes for build
+                    
+                    const buildResult = await commandManager.execute(buildCommand, {
+                        cwd: componentPath,  // Run from component directory
+                        timeout: buildTimeout,
+                        enhancePath: true,
+                        useNodeVersion: nodeVersion || null  // CommandManager handles fnm use
+                    });
+                    
+                    if (buildResult.code !== 0) {
+                        this.logger.warn(`[ComponentManager] Build script failed for ${componentDef.name}`);
+                        this.logger.debug(`[ComponentManager] Build stderr: ${buildResult.stderr?.substring(0, 500)}`);
+                    } else {
+                        this.logger.debug(`[ComponentManager] Build completed successfully for ${componentDef.name}`);
+                    }
                 }
             }
         } catch {
@@ -223,7 +283,7 @@ export class ComponentManager {
         componentInstance.status = 'ready';
         componentInstance.lastUpdated = new Date();
 
-        this.logger.info(`[ComponentManager] Successfully installed ${componentDef.name}`);
+        this.logger.debug(`[ComponentManager] Successfully installed ${componentDef.name}`);
 
         return {
             success: true,
@@ -244,7 +304,7 @@ export class ComponentManager {
             throw new Error('NPM package name not provided');
         }
 
-        this.logger.info(`[ComponentManager] Installing npm package: ${componentDef.source.package}`);
+        this.logger.debug(`[ComponentManager] Installing npm package: ${componentDef.source.package}`);
 
         componentInstance.status = 'installing';
         componentInstance.version = options.version || componentDef.source.version || 'latest';
@@ -278,7 +338,7 @@ export class ComponentManager {
             throw new Error('Local path not provided');
         }
 
-        this.logger.info(`[ComponentManager] Linking local component: ${componentDef.source.url}`);
+        this.logger.debug(`[ComponentManager] Linking local component: ${componentDef.source.url}`);
 
         // Verify path exists
         try {
@@ -367,15 +427,15 @@ export class ComponentManager {
             throw new Error(`Component ${componentId} not found`);
         }
 
-        this.logger.info(`[ComponentManager] Removing component: ${component.name}`);
+        this.logger.debug(`[ComponentManager] Removing component: ${component.name}`);
 
         // Delete files if requested and path exists
         if (deleteFiles && component.path) {
             try {
                 await fs.rm(component.path, { recursive: true, force: true });
-                this.logger.info(`[ComponentManager] Deleted component files: ${component.path}`);
+                this.logger.debug(`[ComponentManager] Deleted component files: ${component.path}`);
             } catch (error) {
-                this.logger.error(`[ComponentManager] Failed to delete component files`, error as Error);
+                this.logger.error('[ComponentManager] Failed to delete component files', error as Error);
             }
         }
 
@@ -384,7 +444,7 @@ export class ComponentManager {
             delete project.componentInstances[componentId];
         }
 
-        this.logger.info(`[ComponentManager] Successfully removed ${component.name}`);
+        this.logger.debug(`[ComponentManager] Successfully removed ${component.name}`);
     }
 
     /**
@@ -400,5 +460,6 @@ export class ComponentManager {
     public static getComponentPath(project: Project, componentId: string): string {
         return path.join(ComponentManager.getComponentsDirectory(project), componentId);
     }
+
 }
 

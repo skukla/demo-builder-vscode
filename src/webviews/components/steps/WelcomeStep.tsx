@@ -107,12 +107,6 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                             {...selectableDefaultProps}
                         />
                     </Form>
-                    
-                    <View marginTop="size-200">
-                        <Text UNSAFE_className="info-tip-text" UNSAFE_style={{ fontSize: '14px', color: 'var(--spectrum-global-color-gray-700)' }}>
-                            💡 <strong>Next:</strong> Select components and configure your Adobe workspace.
-                        </Text>
-                    </View>
                 </View>
             </Flex>
         </div>

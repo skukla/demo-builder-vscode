@@ -39,31 +39,66 @@ export class StartDemoCommand extends BaseCommand {
 
                 progress.report({ message: 'Starting frontend application...' });
                 
-                // Create terminal for frontend
+                // Find frontend component
+                const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+                if (!frontendComponent || !frontendComponent.path) {
+                    const debugInfo = JSON.stringify({
+                        hasComponentInstances: !!project.componentInstances,
+                        componentKeys: project.componentInstances ? Object.keys(project.componentInstances) : [],
+                        frontendComponent: frontendComponent
+                    });
+                    this.logger.error(`[Start Demo] Frontend component not found: ${debugInfo}`);
+                    await this.showError('Frontend component not found or path not set');
+                    return;
+                }
+                
+                const frontendPath = frontendComponent.path;
+                const nodeVersion = frontendComponent.metadata?.nodeVersion || '20';
+                
+                this.logger.info(`[Start Demo] Starting demo in: ${frontendPath}`);
+                this.logger.info(`[Start Demo] Using Node ${nodeVersion}`);
+                
+                // Set status to 'starting' immediately
+                project.status = 'starting';
+                if (!project.frontend) {
+                    project.frontend = {
+                        path: frontendPath,
+                        version: frontendComponent.version || 'latest',
+                        port: port,
+                        status: 'starting'
+                    };
+                } else {
+                    project.frontend.status = 'starting';
+                }
+                await this.stateManager.saveProject(project);
+                this.statusBar.updateProject(project);
+                
+                // Create terminal for frontend (don't auto-show)
                 const terminal = this.createTerminal('Demo Frontend');
-                terminal.show();
                 
                 // Navigate to frontend directory and start
-                const frontendPath = project.frontend?.path;
-                if (frontendPath) {
-                    terminal.sendText(`cd "${frontendPath}"`);
-                    terminal.sendText('npm run dev');
-                    
-                    // Update project status
-                    project.frontend!.status = 'running';
-                    project.status = 'running';
-                    await this.stateManager.saveProject(project);
-                    
-                    // Update status bar
-                    this.statusBar.updateProject(project);
-                    
-                    // Wait a moment then open browser
-                    setTimeout(() => {
-                        const url = `http://localhost:${port}`;
-                        vscode.env.openExternal(vscode.Uri.parse(url));
-                        this.logger.info(`Demo started at ${url}`);
-                    }, 3000);
+                terminal.sendText(`cd "${frontendPath}"`);
+                terminal.sendText(`fnm use ${nodeVersion} && npm run dev`);
+                
+                // Update project status to 'running' after starting
+                if (project.frontend) {
+                    project.frontend.status = 'running';
                 }
+                project.status = 'running';
+                await this.stateManager.saveProject(project);
+                
+                // Notify extension to suppress env change notifications during startup
+                await vscode.commands.executeCommand('demoBuilder._internal.demoStarted');
+                
+                // Update status bar
+                this.statusBar.updateProject(project);
+                
+                // Wait a moment then open browser
+                setTimeout(() => {
+                    const url = `http://localhost:${port}`;
+                    vscode.env.openExternal(vscode.Uri.parse(url));
+                    this.logger.info(`Demo started at ${url}`);
+                }, 3000);
                 
                 progress.report({ message: 'Demo started successfully!' });
             });

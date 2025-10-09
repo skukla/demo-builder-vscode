@@ -227,6 +227,42 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         return orderedGroups;
     }, [selectedComponents]);
 
+    // Initialize componentConfigs with default values from components.json
+    useEffect(() => {
+        if (serviceGroups.length === 0) return;
+        
+        setComponentConfigs(prevConfigs => {
+            const newConfigs = { ...prevConfigs };
+            let hasChanges = false;
+            
+            // For each field in each service group
+            serviceGroups.forEach(group => {
+                group.fields.forEach(field => {
+                    // Use default value if available
+                    const defaultValue = field.default;
+                    
+                    if (defaultValue !== undefined && defaultValue !== '') {
+                        // Set this value for all components that use this field
+                        // BUT only if they don't already have a value
+                        field.componentIds.forEach(componentId => {
+                            if (!newConfigs[componentId]) {
+                                newConfigs[componentId] = {};
+                            }
+                            
+                            // Only set if not already set (preserve user values)
+                            if (!newConfigs[componentId][field.key]) {
+                                newConfigs[componentId][field.key] = defaultValue;
+                                hasChanges = true;
+                            }
+                        });
+                    }
+                });
+            });
+            
+            return hasChanges ? newConfigs : prevConfigs;
+        });
+    }, [serviceGroups]);
+
     // Note: activeSection is controlled ONLY by field focus for predictable tab navigation
 
     // Handle field focus to scroll section header into view when entering new section
@@ -490,7 +526,12 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     };
 
     const getFieldValue = (field: UniqueField): string | boolean | undefined => {
-        // Get value from first component that has it
+        // Priority order:
+        // 1. User-entered value (from componentConfigs)
+        // 2. Default value (from components.json)
+        // 3. Empty string
+        
+        // Check if user has entered a value for any component that uses this field
         for (const componentId of field.componentIds) {
             const value = componentConfigs[componentId]?.[field.key];
             if (value !== undefined && value !== '') {
@@ -498,6 +539,12 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 return typeof value === 'number' ? String(value) : value;
             }
         }
+        
+        // Fall back to default from field definition
+        if (field.default !== undefined && field.default !== '') {
+            return field.default;
+        }
+        
         return '';
     };
 
@@ -663,6 +710,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                     <Checkbox
                         isSelected={value as boolean}
                             onChange={(val) => updateField(field, val)}
+                            aria-label={field.label}
                             marginBottom="size-200"
                     >
                             {field.label}

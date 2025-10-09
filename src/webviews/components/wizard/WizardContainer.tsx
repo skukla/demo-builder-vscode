@@ -41,6 +41,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     const WIZARD_STEPS = wizardSteps
         .filter(step => step.enabled)
         .map(step => ({ id: step.id as WizardStep, name: step.name }));
+    
     const [state, setState] = useState<WizardState>({
         currentStep: 'welcome',
         projectName: '',
@@ -107,18 +108,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         return unsubscribe;
     }, []);
 
-    // Listen for creationComplete message to close the wizard
-    useEffect(() => {
-        const unsubscribe = vscode.onMessage('creationComplete', (data: any) => {
-            console.log('Project creation complete, closing wizard:', data);
-            // Close the webview after a brief delay to show success state
-            setTimeout(() => {
-                vscode.postMessage({ type: 'closePanel' });
-            }, 1500);
-        });
-
-        return unsubscribe;
-    }, []);
+    // Note: We no longer auto-close the wizard on success
+    // The ProjectCreationStep has Browse Files and Close buttons instead
 
     // Listen for components data from extension
     useEffect(() => {

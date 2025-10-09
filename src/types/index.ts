@@ -24,9 +24,20 @@ export interface Project {
         externalSystems?: string[]; // Component IDs
         appBuilder?: string[]; // Component IDs
     };
+    // Component configurations (environment variables and settings)
+    componentConfigs?: {
+        [componentId: string]: {
+            [key: string]: string | boolean | number | undefined;
+        };
+    };
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;
+}
+
+export interface CustomIconPaths {
+    light: string;           // Path to icon for light theme
+    dark: string;            // Path to icon for dark theme
 }
 
 export interface ComponentInstance {
@@ -34,6 +45,7 @@ export interface ComponentInstance {
     name: string;            // Human-readable name
     type: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder';
     subType?: 'mesh' | 'inspector' | 'utility' | 'service';
+    icon?: string | CustomIconPaths;  // VSCode ThemeIcon name OR custom icon paths
     path?: string;           // Full path to cloned repo (if applicable)
     repoUrl?: string;        // Git repository URL
     branch?: string;         // Current branch
@@ -70,7 +82,9 @@ export type ProjectStatus =
     | 'created'
     | 'configuring'
     | 'ready'
+    | 'starting'      // Transitional: demo is starting up
     | 'running'
+    | 'stopping'      // Transitional: demo is shutting down
     | 'stopped'
     | 'error';
 
@@ -109,7 +123,7 @@ export interface FrontendConfig {
     path: string;
     version: string;
     port: number;
-    status: 'stopped' | 'starting' | 'running' | 'error';
+    status: 'stopped' | 'starting' | 'running' | 'stopping' | 'error';
     pid?: number;
     url?: string;
 }
@@ -156,6 +170,7 @@ export interface ComponentDefinition {
     name: string;
     type: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder';
     subType?: 'mesh' | 'inspector' | 'utility' | 'service';
+    icon?: string | CustomIconPaths;  // VSCode ThemeIcon name OR custom icon paths
     description?: string;
     source?: ComponentSource;
     dependencies?: ComponentDependencies;
@@ -198,6 +213,7 @@ export interface ComponentConfiguration {
     envVars?: string[];
     port?: number;
     nodeVersion?: string;
+    buildScript?: string;  // npm script to run after install (e.g., "build")
     required?: Record<string, ConfigField>;
     services?: ServiceDefinition[];
     meshIntegration?: any;

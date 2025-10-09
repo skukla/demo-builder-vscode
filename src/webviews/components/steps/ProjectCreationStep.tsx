@@ -4,23 +4,54 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import { WizardState } from '../../types';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
+import { vscode } from '../../app/vscodeApi';
 
 interface ProjectCreationStepProps {
     state: WizardState;
     onBack: () => void;
 }
 
-declare const vscode: {
-    postMessage: (message: any) => void;
-};
-
 export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps) {
     const progress = state.creationProgress;
     const [isCancelling, setIsCancelling] = useState(false);
+    const [projectPath, setProjectPath] = useState<string>('');
+
+    // Listen for creationComplete to get project path
+    React.useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.type === 'creationComplete' && message.projectPath) {
+                setProjectPath(message.projectPath);
+            }
+        };
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, []);
 
     const handleCancel = () => {
+        console.log('[ProjectCreationStep] Cancel button clicked');
+        console.log('[ProjectCreationStep] vscode API:', vscode);
         setIsCancelling(true);
-        vscode.postMessage({ type: 'cancel-project-creation' });
+        try {
+            vscode.postMessage('cancel-project-creation');
+            console.log('[ProjectCreationStep] Cancel message sent');
+        } catch (error) {
+            console.error('[ProjectCreationStep] Error sending cancel message:', error);
+        }
+    };
+
+    const handleOpenProject = () => {
+        console.log('[ProjectCreationStep] ===== OPEN PROJECT BUTTON CLICKED =====');
+        console.log('[ProjectCreationStep] Current time:', new Date().toISOString());
+        console.log('[ProjectCreationStep] vscode API exists:', !!vscode);
+        console.log('[ProjectCreationStep] vscode.postMessage type:', typeof vscode?.postMessage);
+        
+        try {
+            vscode.postMessage('openProject');
+            console.log('[ProjectCreationStep] ✅ openProject message sent successfully');
+        } catch (error) {
+            console.error('[ProjectCreationStep] ❌ Error sending openProject message:', error);
+        }
     };
 
     const isCancelled = progress?.currentOperation === 'Cancelled';
@@ -47,12 +78,8 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                         size="L"
                         message={progress.currentOperation || 'Processing'}
                         subMessage={progress.message}
+                        helperText="This could take up to 3 minutes"
                     />
-                    
-                    {/* Tip closer to the spinner */}
-                    <Text UNSAFE_className="text-sm text-gray-600" marginTop="size-300">
-                        💡 Watch Explorer for live installation progress
-                    </Text>
                 </Flex>
             )}
 
@@ -65,8 +92,8 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                             <Text UNSAFE_className="text-xl font-medium">
                                 Project Created Successfully
                             </Text>
-                            <Text UNSAFE_className="text-sm text-gray-600">
-                                Your project is ready in Explorer
+                            <Text UNSAFE_className="text-sm text-gray-600 text-center">
+                                Click below to open your demo project files in VSCode
                             </Text>
                         </Flex>
                     </Flex>
@@ -108,7 +135,8 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                 </div>
             </div>
 
-            {/* Footer - matches WizardContainer footer pattern (only show during active creation) */}
+            {/* Footer - matches WizardContainer footer pattern */}
+            {/* Show Cancel during active creation */}
             {isActive && (
                 <div
                     style={{
@@ -126,6 +154,28 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                                 isDisabled={isCancelling}
                             >
                                 {isCancelling ? 'Cancelling...' : 'Cancel'}
+                            </Button>
+                        </Flex>
+                    </div>
+                </div>
+            )}
+            
+            {/* Show Open Project button on success */}
+            {isCompleted && !progress?.error && (
+                <div
+                    style={{
+                        padding: '16px',
+                        borderTop: '1px solid var(--vscode-panel-border)',
+                        backgroundColor: 'var(--spectrum-global-color-gray-75)'
+                    }}
+                >
+                    <div style={{ maxWidth: '800px', width: '100%' }}>
+                        <Flex justifyContent="flex-end" width="100%">
+                            <Button
+                                variant="cta"
+                                onPress={handleOpenProject}
+                            >
+                                Open Project
                             </Button>
                         </Flex>
                     </div>

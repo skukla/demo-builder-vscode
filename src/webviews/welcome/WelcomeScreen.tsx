@@ -97,7 +97,8 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
             'textarea:not([disabled]):not([tabindex="-1"]), ' +
             '[tabindex]:not([tabindex="-1"]):not([tabindex="0"])';
 
-        const focusFirstElement = () => {
+        const focusDefaultElement = () => {
+            // Focus first element (autoFocus on Create button handles initial focus)
             const focusableElements = document.querySelectorAll(selector);
             if (focusableElements.length > 0) {
                 const first = focusableElements[0] as HTMLElement;
@@ -108,8 +109,8 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
         };
 
         // Ensure focus starts inside the webview
-        const focusTimeout = window.setTimeout(focusFirstElement, 0);
-        window.addEventListener('focus', focusFirstElement);
+        const focusTimeout = window.setTimeout(focusDefaultElement, 0);
+        window.addEventListener('focus', focusDefaultElement);
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Tab') {
@@ -137,7 +138,7 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
         document.addEventListener('keydown', handleKeyDown);
         return () => {
             window.clearTimeout(focusTimeout);
-            window.removeEventListener('focus', focusFirstElement);
+            window.removeEventListener('focus', focusDefaultElement);
             document.removeEventListener('keydown', handleKeyDown);
         };
     }, [isLicensed]);
@@ -256,6 +257,7 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
                             onPress={handleCreateNew}
                             isQuiet
                             UNSAFE_className="welcome-action-card"
+                            autoFocus
                         >
                             <View UNSAFE_className={cn('mb-5', 'scale-180')}>
                                 <Add size="L" UNSAFE_className="text-blue-600" />

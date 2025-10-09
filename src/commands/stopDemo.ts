@@ -26,6 +26,14 @@ export class StopDemoCommand extends BaseCommand {
             await this.withProgress('Stopping demo...', async (progress) => {
                 progress.report({ message: 'Stopping frontend application...' });
                 
+                // Set status to 'stopping' immediately
+                project.status = 'stopping';
+                if (project.frontend) {
+                    project.frontend.status = 'stopping';
+                }
+                await this.stateManager.saveProject(project);
+                this.statusBar.updateProject(project);
+                
                 // Find and close the terminal
                 vscode.window.terminals.forEach(terminal => {
                     if (terminal.name === 'Demo Frontend') {
@@ -33,12 +41,15 @@ export class StopDemoCommand extends BaseCommand {
                     }
                 });
                 
-                // Update project status
+                // Update project status to 'stopped'
                 if (project.frontend) {
                     project.frontend.status = 'stopped';
                 }
                 project.status = 'ready';
                 await this.stateManager.saveProject(project);
+                
+                // Notify extension to reset env change grace period
+                await vscode.commands.executeCommand('demoBuilder._internal.demoStopped');
                 
                 // Update status bar
                 this.statusBar.updateProject(project);

@@ -291,14 +291,14 @@ export class DiagnosticsCommand {
         let command: string;
         
         switch (platform) {
-            case 'darwin':
-                command = 'open --help';
-                break;
-            case 'win32':
-                command = 'start /?';
-                break;
-            default:
-                command = 'xdg-open --help';
+        case 'darwin':
+            command = 'open --help';
+            break;
+        case 'win32':
+            command = 'start /?';
+            break;
+        default:
+            command = 'xdg-open --help';
         }
         
         const result = await this.checkCommand(command);

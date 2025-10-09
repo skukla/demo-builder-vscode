@@ -12,24 +12,24 @@ export class ComponentHandler {
 
     async handleMessage(message: any, panel: vscode.WebviewPanel) {
         switch (message.type) {
-            case 'loadComponents':
-                await this.loadComponents(panel);
-                break;
-            case 'get-components-data':
-                await this.getComponentsData(panel);
-                break;
-            case 'checkCompatibility':
-                await this.checkCompatibility(message.payload, panel);
-                break;
-            case 'loadDependencies':
-                await this.loadDependencies(message.payload, panel);
-                break;
-            case 'loadPreset':
-                await this.loadPreset(message.payload, panel);
-                break;
-            case 'validateSelection':
-                await this.validateSelection(message.payload, panel);
-                break;
+        case 'loadComponents':
+            await this.loadComponents(panel);
+            break;
+        case 'get-components-data':
+            await this.getComponentsData(panel);
+            break;
+        case 'checkCompatibility':
+            await this.checkCompatibility(message.payload, panel);
+            break;
+        case 'loadDependencies':
+            await this.loadDependencies(message.payload, panel);
+            break;
+        case 'loadPreset':
+            await this.loadPreset(message.payload, panel);
+            break;
+        case 'validateSelection':
+            await this.validateSelection(message.payload, panel);
+            break;
         }
     }
 

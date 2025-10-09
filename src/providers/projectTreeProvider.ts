@@ -3,8 +3,7 @@ import { Project } from '../types';
 import { StateManager } from '../utils/stateManager';
 
 /**
- * Simple control panel provider for Demo Builder
- * Shows as a collapsible panel under the Explorer file tree
+ * Tree provider for demo controls panel
  */
 export class ProjectTreeProvider implements vscode.TreeDataProvider<ControlAction> {
     private _onDidChangeTreeData = new vscode.EventEmitter<ControlAction | undefined | null | void>();
@@ -33,136 +32,109 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ControlActio
         const project = await this.stateManager.getCurrentProject();
         
         if (!project) {
-            // No project - shouldn't happen due to "when" clause, but provide fallback
-            return [
-                new ControlAction(
-                    'No Project',
-                    'Click to create',
-                    'add',
-                    'demoBuilder.createProject'
-                )
-            ];
+            // No project - return empty (Components view handles welcome message)
+            return [];
         }
 
         return this.getControlActions(project);
     }
     
     /**
-     * Get flat list of control actions based on project state
+     * Get list of management actions
      */
     private getControlActions(project: Project): ControlAction[] {
-        const actions: ControlAction[] = [];
-        const isRunning = project.frontend?.status === 'running' || project.status === 'running';
-        const port = project.frontend?.port || 3000;
-        
-        // Primary control: Start or Stop
-        if (isRunning) {
+        try {
+            const actions: ControlAction[] = [];
+            
+            // Deploy Mesh (if mesh exists)
+            try {
+                if (project.mesh || this.hasMeshComponent(project)) {
+                    actions.push(
+                        new ControlAction(
+                            'Deploy Mesh',
+                            'Deploy API Mesh to Adobe I/O',
+                            'cloud-upload',
+                            'demoBuilder.deployMesh'
+                        )
+                    );
+                }
+            } catch (meshError) {
+                console.error('[TreeView] Error checking mesh component:', meshError);
+            }
+            
+            // Configuration
             actions.push(
                 new ControlAction(
-                    'Stop Demo',
-                    'Stop the running demo',
-                    'debug-stop',
-                    'demoBuilder.stopDemo'
+                    'Configure',
+                    'Edit environment variables',
+                    'settings-gear',
+                    'demoBuilder.configure'
                 )
             );
             
+            // Delete project
             actions.push(
                 new ControlAction(
-                    'Open in Browser',
-                    `http://localhost:${port}`,
-                    'globe',
-                    'vscode.open',
-                    [vscode.Uri.parse(`http://localhost:${port}`)]
+                    'Delete Project',
+                    'Delete this project',
+                    'trash',
+                    'demoBuilder.deleteProject'
                 )
             );
-        } else {
-            actions.push(
+            
+            return actions;
+        } catch (error) {
+            console.error('[TreeView] Error building control actions:', error);
+            return [
                 new ControlAction(
-                    'Start Demo',
-                    'Start the demo frontend',
-                    'debug-start',
-                    'demoBuilder.startDemo'
+                    'Error',
+                    'Try reloading VSCode',
+                    'error',
+                    undefined
                 )
-            );
+            ];
         }
-        
-        // API Mesh info (if exists)
-        if (project.mesh || this.hasMeshComponent(project)) {
-            const meshComponent = this.getMeshComponent(project);
-            if (meshComponent?.endpoint) {
-                actions.push(
-                    new ControlAction(
-                        'API Mesh Endpoint',
-                        meshComponent.endpoint,
-                        'cloud',
-                        'vscode.open',
-                        [vscode.Uri.parse(meshComponent.endpoint)]
-                    )
-                );
-            }
-        }
-        
-        // Separator
-        actions.push(
-            new ControlAction(
-                '───────────',
-                '',
-                undefined,
-                undefined
-            )
-        );
-        
-        // Configuration actions
-        actions.push(
-            new ControlAction(
-                'Configure',
-                'Edit project configuration',
-                'settings-gear',
-                'demoBuilder.configure'
-            )
-        );
-        
-        actions.push(
-            new ControlAction(
-                'View Status',
-                'View detailed project status',
-                'info',
-                'demoBuilder.viewStatus'
-            )
-        );
-        
-        actions.push(
-            new ControlAction(
-                'Delete Project',
-                'Delete this project',
-                'trash',
-                'demoBuilder.deleteProject'
-            )
-        );
-        
-        return actions;
     }
     
     /**
      * Check if project has a mesh component
      */
     private hasMeshComponent(project: Project): boolean {
-        if (!project.componentInstances) {
+        try {
+            if (!project || !project.componentInstances) {
+                return false;
+            }
+            
+            return Object.values(project.componentInstances).some(c => c && c.subType === 'mesh');
+        } catch (error) {
+            console.error('[TreeView] Error checking mesh component:', error);
             return false;
         }
-        
-        return Object.values(project.componentInstances).some(c => c.subType === 'mesh');
     }
     
     /**
      * Get mesh component from project
      */
     private getMeshComponent(project: Project) {
-        if (!project.componentInstances) {
+        try {
+            if (!project || !project.componentInstances) {
+                return null;
+            }
+            
+            // Find the mesh component by ID (commerce-mesh)
+            const meshComponent = project.componentInstances['commerce-mesh'];
+            if (meshComponent) {
+                return meshComponent;
+            }
+            
+            // Fallback: search by subType or any component with 'mesh' in the ID
+            return Object.entries(project.componentInstances).find(([id, c]) => 
+                c && (c.subType === 'mesh' || id.includes('mesh'))
+            )?.[1] || null;
+        } catch (error) {
+            console.error('[TreeView] Error getting mesh component:', error);
             return null;
         }
-        
-        return Object.values(project.componentInstances).find(c => c.subType === 'mesh');
     }
 }
 
@@ -193,11 +165,6 @@ class ControlAction extends vscode.TreeItem {
             };
         }
         
-        // Disable command for separator
-        if (label.startsWith('───')) {
-            this.command = undefined;
-            this.iconPath = undefined;
-            this.contextValue = 'separator';
-        }
+        this.contextValue = 'action';
     }
 }

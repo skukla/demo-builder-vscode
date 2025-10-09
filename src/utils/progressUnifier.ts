@@ -66,17 +66,17 @@ export class ProgressUnifier {
             
             // Execute based on strategy
             switch (step.progressStrategy) {
-                case 'exact':
-                    await this.executeWithExactProgress(command, step, stepIndex, totalSteps, onProgress, options);
-                    break;
-                case 'milestones':
-                    await this.executeWithMilestones(command, step, stepIndex, totalSteps, onProgress, options);
-                    break;
-                case 'immediate':
-                    await this.executeImmediate(command, step, stepIndex, totalSteps, onProgress, options);
-                    break;
-                default:
-                    await this.executeWithSyntheticProgress(command, step, stepIndex, totalSteps, onProgress, options);
+            case 'exact':
+                await this.executeWithExactProgress(command, step, stepIndex, totalSteps, onProgress, options);
+                break;
+            case 'milestones':
+                await this.executeWithMilestones(command, step, stepIndex, totalSteps, onProgress, options);
+                break;
+            case 'immediate':
+                await this.executeImmediate(command, step, stepIndex, totalSteps, onProgress, options);
+                break;
+            default:
+                await this.executeWithSyntheticProgress(command, step, stepIndex, totalSteps, onProgress, options);
             }
         }
         

@@ -48,21 +48,21 @@ export class ConfigureCommand extends BaseCommand {
             }
 
             switch (selection.value) {
-                case 'env':
-                    await this.editEnvironmentFile(project);
-                    break;
-                case 'inspector':
-                    await this.toggleInspector(project);
-                    break;
-                case 'mesh':
-                    await this.updateMesh(project);
-                    break;
-                case 'port':
-                    await this.changePort(project);
-                    break;
-                case 'advanced':
-                    await this.openAdvancedConfig(project);
-                    break;
+            case 'env':
+                await this.editEnvironmentFile(project);
+                break;
+            case 'inspector':
+                await this.toggleInspector(project);
+                break;
+            case 'mesh':
+                await this.updateMesh(project);
+                break;
+            case 'port':
+                await this.changePort(project);
+                break;
+            case 'advanced':
+                await this.openAdvancedConfig(project);
+                break;
             }
             
         } catch (error) {

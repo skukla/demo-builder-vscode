@@ -13,11 +13,42 @@ import { setLoadingState } from '../utils/loadingHTML';
  * - Loading state management
  * - Error recovery
  * - Consistent logging
+ * - Singleton pattern per webview type (prevents duplicate panels)
  */
 export abstract class BaseWebviewCommand extends BaseCommand {
+    // Singleton: Track active webview panels and their communication managers by ID to prevent duplicates
+    private static activePanels: Map<string, vscode.WebviewPanel> = new Map();
+    private static activeCommunicationManagers: Map<string, WebviewCommunicationManager> = new Map();
+    
     protected panel: vscode.WebviewPanel | undefined;
     protected communicationManager: WebviewCommunicationManager | undefined;
     protected disposables: vscode.Disposable[] = [];
+
+    /**
+     * Check if this webview is currently visible
+     */
+    public isVisible(): boolean {
+        const webviewId = this.getWebviewId();
+        const activePanel = BaseWebviewCommand.activePanels.get(webviewId);
+        return (activePanel !== undefined && activePanel.visible) ||
+               (this.panel !== undefined && this.panel.visible);
+    }
+
+    /**
+     * Static method to dispose all active webview panels
+     * Useful for cleanup during extension reset
+     */
+    public static disposeAllActivePanels(): void {
+        BaseWebviewCommand.activePanels.forEach((panel, id) => {
+            try {
+                panel.dispose();
+            } catch (err) {
+                // Ignore errors during disposal
+            }
+        });
+        BaseWebviewCommand.activePanels.clear();
+        BaseWebviewCommand.activeCommunicationManagers.clear();
+    }
 
     /**
      * Get the webview identifier (used for panel type)
@@ -50,17 +81,38 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     protected abstract getLoadingMessage(): string;
 
     /**
-     * Create or reveal the webview panel
+     * Create or reveal the webview panel (singleton per webview type)
      */
     protected async createOrRevealPanel(): Promise<vscode.WebviewPanel> {
+        const webviewId = this.getWebviewId();
+        
+        this.logger.debug(`[Webview] createOrRevealPanel() for ${webviewId}. Active panels count: ${BaseWebviewCommand.activePanels.size}`);
+        
+        // Check if this webview type already has an active panel
+        const existingPanel = BaseWebviewCommand.activePanels.get(webviewId);
+        const existingCommManager = BaseWebviewCommand.activeCommunicationManagers.get(webviewId);
+        
+        this.logger.debug(`[Webview] Singleton check for ${webviewId}: panel=${existingPanel ? 'exists' : 'none'}, comm=${existingCommManager ? 'exists' : 'none'}`);
+        
+        if (existingPanel && existingCommManager) {
+            this.logger.debug(`[Webview] Revealing existing ${webviewId} panel`);
+            existingPanel.reveal();
+            this.panel = existingPanel;
+            this.communicationManager = existingCommManager;
+            return existingPanel;
+        }
+
+        // Check instance panel (legacy support)
         if (this.panel) {
+            this.logger.debug(`[Webview] Revealing instance panel for ${webviewId}`);
             this.panel.reveal();
             return this.panel;
         }
 
         // Create new panel
+        this.logger.debug(`[Webview] Creating new ${webviewId} panel`);
         this.panel = vscode.window.createWebviewPanel(
-            this.getWebviewId(),
+            webviewId,
             this.getWebviewTitle(),
             vscode.ViewColumn.One,
             {
@@ -72,6 +124,10 @@ export abstract class BaseWebviewCommand extends BaseCommand {
                 ]
             }
         );
+
+        // Register in singleton map
+        BaseWebviewCommand.activePanels.set(webviewId, this.panel);
+        this.logger.debug(`[Webview] Registered ${webviewId} in singleton map. Active panels: ${BaseWebviewCommand.activePanels.size}`);
 
         // Set up disposal handling
         this.panel.onDidDispose(
@@ -107,6 +163,10 @@ export abstract class BaseWebviewCommand extends BaseCommand {
             maxRetries: 3
         });
 
+        // Register in singleton map
+        const webviewId = this.getWebviewId();
+        BaseWebviewCommand.activeCommunicationManagers.set(webviewId, this.communicationManager);
+
         // Set up message handlers
         this.initializeMessageHandlers(this.communicationManager);
 
@@ -132,17 +192,17 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         this.communicationManager.on('log', (data: { level: string; message: string }) => {
             const prefix = `[${this.getWebviewTitle()}:UI]`;
             switch (data.level) {
-                case 'error':
-                    this.logger.error(`${prefix} ${data.message}`);
-                    break;
-                case 'warn':
-                    this.logger.warn(`${prefix} ${data.message}`);
-                    break;
-                case 'debug':
-                    this.logger.debug(`${prefix} ${data.message}`);
-                    break;
-                default:
-                    this.logger.info(`${prefix} ${data.message}`);
+            case 'error':
+                this.logger.error(`${prefix} ${data.message}`);
+                break;
+            case 'warn':
+                this.logger.warn(`${prefix} ${data.message}`);
+                break;
+            case 'debug':
+                this.logger.debug(`${prefix} ${data.message}`);
+                break;
+            default:
+                this.logger.info(`${prefix} ${data.message}`);
             }
         });
 
@@ -206,6 +266,8 @@ export abstract class BaseWebviewCommand extends BaseCommand {
      * Handle panel disposal
      */
     private handlePanelDisposal(): void {
+        const webviewId = this.getWebviewId();
+        
         // Clean up communication manager
         if (this.communicationManager) {
             this.communicationManager.dispose();
@@ -216,10 +278,14 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         this.disposables.forEach(d => d.dispose());
         this.disposables = [];
 
+        // Remove from singleton maps
+        BaseWebviewCommand.activePanels.delete(webviewId);
+        BaseWebviewCommand.activeCommunicationManagers.delete(webviewId);
+
         // Clear panel reference
         this.panel = undefined;
 
-        this.logger.debug(`[${this.getWebviewTitle()}] Panel disposed`);
+        this.logger.debug(`[${this.getWebviewTitle()}] Panel disposed (webviewId: ${webviewId})`);
     }
 
     /**

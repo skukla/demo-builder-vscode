@@ -20,15 +20,13 @@ export class DeleteProjectCommand extends BaseCommand {
                 return;
             }
 
-            await this.withProgress('Deleting project...', async (progress) => {
+            await this.withProgress('Deleting project', async (progress) => {
                 // Stop demo if running
                 if (project.frontend?.status === 'running') {
-                    progress.report({ message: 'Stopping demo...' });
                     await vscode.commands.executeCommand('demoBuilder.stopDemo');
                 }
 
                 // Delete project files
-                progress.report({ message: 'Removing project files...' });
                 if (project.path) {
                     try {
                         await fs.rm(project.path, { recursive: true, force: true });
@@ -38,24 +36,19 @@ export class DeleteProjectCommand extends BaseCommand {
                 }
 
                 // Clear state
-                progress.report({ message: 'Clearing configuration...' });
                 await this.stateManager.clearProject();
                 
                 // Update status bar
                 this.statusBar.clear();
                 
-                progress.report({ message: 'Project deleted successfully!' });
                 this.logger.info(`Project "${project.name}" deleted`);
             });
 
-            await vscode.window.showInformationMessage(
-                'Project deleted successfully',
-                'Create New Project'
-            ).then(selection => {
-                if (selection === 'Create New Project') {
-                    vscode.commands.executeCommand('demoBuilder.createProject');
-                }
-            });
+            // Show simple confirmation
+            vscode.window.showInformationMessage('Project deleted successfully');
+            
+            // Open Welcome screen to guide user to create a new project
+            await vscode.commands.executeCommand('demoBuilder.showWelcome');
             
         } catch (error) {
             await this.showError('Failed to delete project', error as Error);
