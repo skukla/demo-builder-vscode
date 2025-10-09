@@ -19,24 +19,16 @@ export class ComponentRegistryManager {
         if (!this.registry) {
             const content = await fs.promises.readFile(this.registryPath, 'utf8');
             const rawRegistry = JSON.parse(content);
-            
-            // Adapter: Transform new flat structure to old grouped structure for backward compatibility
-            this.registry = this.adaptNewStructure(rawRegistry);
+            this.registry = this.transformToGroupedStructure(rawRegistry);
         }
         return this.registry!;
     }
 
     /**
-     * Adapter method to transform new v2.0 structure to old structure
-     * This maintains backward compatibility while using the new normalized format
+     * Transform v2.0 flat structure to grouped structure for internal use
+     * Groups components by type and builds envVars arrays from shared registry
      */
-    private adaptNewStructure(raw: any): ComponentRegistry {
-        // If already in old format (has frontends/backends as arrays), return as-is
-        if (Array.isArray(raw.components?.frontends)) {
-            return raw as ComponentRegistry;
-        }
-
-        // Transform flat components map to grouped structure
+    private transformToGroupedStructure(raw: any): ComponentRegistry {
         const components: any = {
             frontends: [],
             backends: [],
@@ -45,13 +37,12 @@ export class ComponentRegistryManager {
             appBuilder: []
         };
 
-        // Group components by type
+        // Group components by type and build their envVars
         for (const [id, component] of Object.entries(raw.components || {})) {
             const comp = component as any;
             const enhanced = { 
                 ...comp, 
                 id,
-                // Convert requiredEnvVars/optionalEnvVars to envVars array with full definitions
                 configuration: comp.configuration ? {
                     ...comp.configuration,
                     envVars: this.buildEnvVarsForComponent(id, comp, raw.envVars || {})
@@ -99,7 +90,6 @@ export class ComponentRegistryManager {
                 envVars.push({
                     key,
                     ...envVar,
-                    // Maintain the usedBy pattern for filtering (though we could remove this later)
                     usedBy: [componentId]
                 });
             }
