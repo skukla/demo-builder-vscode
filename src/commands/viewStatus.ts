@@ -18,6 +18,11 @@ export class ViewStatusCommand extends BaseCommand {
                 return;
             }
 
+            // Get component instances
+            const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+            const meshComponent = project.componentInstances?.['commerce-mesh'];
+            const inspectorComponent = project.componentInstances?.['demo-inspector'];
+            
             // Create status report
             const status = [
                 `**Project:** ${project.name}`,
@@ -25,21 +30,21 @@ export class ViewStatusCommand extends BaseCommand {
                 `**Status:** ${project.status}`,
                 '',
                 '### Frontend',
-                `- **Status:** ${project.frontend?.status || 'Not configured'}`,
-                `- **Port:** ${project.frontend?.port || 'N/A'}`,
-                `- **Version:** ${project.frontend?.version || 'N/A'}`,
+                `- **Status:** ${frontendComponent?.status || 'Not configured'}`,
+                `- **Port:** ${frontendComponent?.port || 'N/A'}`,
+                `- **Version:** ${frontendComponent?.version || 'N/A'}`,
                 '',
                 '### API Mesh',
-                `- **Status:** ${project.mesh?.status || 'Not deployed'}`,
-                `- **Endpoint:** ${project.mesh?.endpoint || 'N/A'}`,
+                `- **Status:** ${meshComponent?.status || 'Not deployed'}`,
+                `- **Endpoint:** ${meshComponent?.endpoint || 'N/A'}`,
                 '',
                 '### Commerce',
                 `- **Type:** ${project.commerce?.type || 'Not configured'}`,
                 `- **URL:** ${project.commerce?.instance.url || 'N/A'}`,
                 '',
                 '### Demo Inspector',
-                `- **Enabled:** ${project.inspector?.enabled ? 'Yes' : 'No'}`,
-                `- **Installed:** ${project.inspector?.installed ? 'Yes' : 'No'}`,
+                `- **Enabled:** ${inspectorComponent ? 'Yes' : 'No'}`,
+                `- **Status:** ${inspectorComponent?.status || 'Not installed'}`,
             ].join('\n');
 
             // Show in output channel using the main logger
@@ -53,9 +58,9 @@ export class ViewStatusCommand extends BaseCommand {
 
             // Show quick actions
             const actions = [];
-            if (project.frontend?.status === 'stopped') {
+            if (project.status === 'ready' || project.status === 'stopped') {
                 actions.push('Start Demo');
-            } else if (project.frontend?.status === 'running') {
+            } else if (project.status === 'running') {
                 actions.push('Stop Demo');
                 actions.push('Open Browser');
             }
@@ -71,7 +76,7 @@ export class ViewStatusCommand extends BaseCommand {
             } else if (action === 'Stop Demo') {
                 await vscode.commands.executeCommand('demoBuilder.stopDemo');
             } else if (action === 'Open Browser') {
-                const url = `http://localhost:${project.frontend?.port || 3000}`;
+                const url = `http://localhost:${frontendComponent?.port || 3000}`;
                 await vscode.env.openExternal(vscode.Uri.parse(url));
             } else if (action === 'Configure') {
                 await vscode.commands.executeCommand('demoBuilder.configure');

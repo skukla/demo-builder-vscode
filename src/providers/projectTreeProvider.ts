@@ -46,9 +46,9 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ControlActio
         try {
             const actions: ControlAction[] = [];
             
-            // Deploy Mesh (if mesh exists)
+            // Deploy Mesh (if mesh component exists)
             try {
-                if (project.mesh || this.hasMeshComponent(project)) {
+                if (this.hasMeshComponent(project)) {
                     actions.push(
                         new ControlAction(
                             'Deploy Mesh',

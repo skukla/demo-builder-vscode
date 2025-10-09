@@ -69,7 +69,7 @@ export class StatusBarManager {
 
     private updateStatusForProject(project: Project): void {
         const status = project.status;
-        const port = project.frontend?.port;
+        const port = project.componentInstances?.['citisignal-nextjs']?.port;
         
         // Status indicator and colors based on state
         let statusDot = '○';
@@ -126,8 +126,9 @@ export class StatusBarManager {
             tooltipLines.push(`Port: ${port}`);
         }
 
-        if (project.mesh?.endpoint) {
-            tooltipLines.push(`Mesh: ${project.mesh.status}`);
+        const meshComponent = project.componentInstances?.['commerce-mesh'];
+        if (meshComponent?.endpoint) {
+            tooltipLines.push(`Mesh: ${meshComponent.status || 'deployed'}`);
         }
 
         tooltipLines.push('', 'Click to open Project Dashboard');

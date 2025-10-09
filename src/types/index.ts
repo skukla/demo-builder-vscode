@@ -8,11 +8,7 @@ export interface Project {
     organization?: string;
     adobe?: AdobeConfig;
     commerce?: CommerceConfig;
-    // Legacy configs (for backward compatibility)
-    frontend?: FrontendConfig;
-    mesh?: MeshConfig;
-    inspector?: InspectorConfig;
-    // New component-based structure
+    // Component-based structure
     componentInstances?: {
         [componentId: string]: ComponentInstance;
     };
@@ -128,29 +124,6 @@ export interface CommerceConfig {
             apiKey?: string;
         };
     };
-}
-
-export interface FrontendConfig {
-    path: string;
-    version: string;
-    port: number;
-    status: 'stopped' | 'starting' | 'running' | 'stopping' | 'error';
-    pid?: number;
-    url?: string;
-}
-
-export interface MeshConfig {
-    id: string;
-    status: 'not-deployed' | 'deploying' | 'deployed' | 'error';
-    endpoint?: string;
-    lastDeployed?: Date;
-    mode: 'deployed' | 'local-proxy';
-}
-
-export interface InspectorConfig {
-    enabled: boolean;
-    version: string;
-    installed: boolean;
 }
 
 export interface ProcessInfo {
