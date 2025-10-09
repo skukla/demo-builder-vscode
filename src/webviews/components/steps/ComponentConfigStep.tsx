@@ -655,7 +655,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         value={value as string}
                             onChange={(val) => updateField(field, val)}
                             placeholder={field.placeholder}
-                            description={field.helpText || field.description}
+                            description={field.description}
                             isRequired={isFieldRequired}
                         validationState={showError ? 'invalid' : undefined}
                         errorMessage={showError ? error : undefined}
@@ -675,7 +675,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         value={value as string}
                             onChange={(val) => updateField(field, val)}
                             placeholder={field.placeholder}
-                            description={field.helpText || field.description}
+                            description={field.description}
                             isRequired={isFieldRequired}
                         validationState={showError ? 'invalid' : undefined}
                         errorMessage={showError ? error : undefined}
