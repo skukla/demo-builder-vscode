@@ -67,11 +67,6 @@ export class ComponentRegistryManager {
             if (enhanced) components.backends.push(enhanced);
         });
 
-        (groups.optionalAddOns || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.dependencies.push(enhanced);
-        });
-
         (groups.appBuilderApps || []).forEach((id: string) => {
             const enhanced = enhanceComponent(id);
             if (enhanced) components.appBuilder.push(enhanced);
