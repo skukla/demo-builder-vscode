@@ -34,6 +34,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private apiServicesConfig?: any;  // API services detection configuration
     private projectCreationAbortController?: AbortController;  // For cancelling project creation
     private meshCreatedForWorkspace?: string;  // Track workspace ID if mesh was created (for cleanup on failure/cancellation)
+    private meshExistedBeforeSession?: string;  // Track workspace ID if mesh pre-existed (prevent deletion on cancel)
 
     constructor(
         context: vscode.ExtensionContext,
@@ -403,6 +404,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 
                 if (result.code === 0) {
                     this.logger.info('[API Mesh] Mesh deleted successfully');
+                    // Clear the pre-existing mesh flag since user explicitly deleted it
+                    // Any new mesh created after this is NOT pre-existing
+                    this.meshExistedBeforeSession = undefined;
+                    this.logger.debug('[API Mesh] Cleared pre-existing mesh flag after explicit deletion');
                     return { success: true };
                 } else {
                     const errorMsg = result.stderr || 'Failed to delete mesh';
@@ -1993,6 +1998,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     // Mesh exists - check its status
                     if (meshStatus === 'deployed' || meshStatus === 'success') {
                         this.logger.info('[API Mesh] Existing mesh found and deployed', { meshId, endpoint });
+                        // Track that mesh existed before this session (prevent deletion on cancel)
+                        this.meshExistedBeforeSession = workspaceId;
                         return {
                             apiEnabled: true,
                             meshExists: true,
@@ -2005,6 +2012,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         const errorMsg = meshData.error || 'Mesh deployment failed';
                         this.debugLogger.debug('[API Mesh] Error details:', errorMsg.substring(0, 500));
                         
+                        // Track that mesh existed (even in error state) to prevent deletion on cancel
+                        this.meshExistedBeforeSession = workspaceId;
+                        
                         return {
                             apiEnabled: true,
                             meshExists: true,
@@ -2016,6 +2026,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     } else {
                         // Status is pending/provisioning/building
                         this.logger.info('[API Mesh] Mesh exists but is still provisioning', { meshStatus });
+                        // Track that mesh existed to prevent deletion on cancel
+                        this.meshExistedBeforeSession = workspaceId;
                         return {
                             apiEnabled: true,
                             meshExists: true,
@@ -2721,8 +2733,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 }
                 
                 // Cleanup API Mesh if it was created during this session
-                if (this.meshCreatedForWorkspace) {
+                // IMPORTANT: Only delete if we created it AND it didn't exist before
+                // This prevents deleting pre-existing production meshes on cancel/failure
+                if (this.meshCreatedForWorkspace && !this.meshExistedBeforeSession) {
                     this.logger.info(`[Project Creation] Cleaning up orphaned API Mesh for workspace ${this.meshCreatedForWorkspace}`);
+                    this.logger.debug('[Project Creation] Mesh was created in this session and did not exist before - safe to delete');
                     try {
                         const commandManager = getExternalCommandManager();
                         const deleteResult = await commandManager.execute('aio api-mesh:delete --autoConfirmAction', {
@@ -2739,6 +2754,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     } catch (meshCleanupError) {
                         this.logger.warn('[Project Creation] Error during mesh cleanup', meshCleanupError as Error);
                     }
+                } else if (this.meshCreatedForWorkspace && this.meshExistedBeforeSession) {
+                    this.logger.info('[Project Creation] Mesh existed before session - preserving it (not deleting on cancel/failure)');
+                    this.logger.debug(`[Project Creation] Pre-existing mesh preserved for workspace ${this.meshExistedBeforeSession}`);
                 }
             } catch (cleanupError) {
                 this.logger.warn('[Project Creation] Failed to cleanup partial project', cleanupError as Error);
@@ -2775,6 +2793,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Cleanup
             this.projectCreationAbortController = undefined;
             this.meshCreatedForWorkspace = undefined;
+            this.meshExistedBeforeSession = undefined;
         }
     }
     
