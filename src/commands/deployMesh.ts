@@ -6,6 +6,7 @@ import { StateManager } from '../utils/stateManager';
 import { StatusBarManager } from '../providers/statusBar';
 import { Logger } from '../utils/logger';
 import { getExternalCommandManager } from '../extension';
+import { updateMeshState } from '../utils/meshChangeDetector';
 
 const TIMEOUTS = {
     API_MESH_UPDATE: 300000 // 5 minutes
@@ -266,6 +267,11 @@ export class DeployMeshCommand extends BaseCommand {
                             project.componentInstances[meshComponent.id].endpoint = deployedEndpoint;
                             project.componentInstances[meshComponent.id].status = 'deployed';
                         }
+                        
+                        // Update mesh state (env vars + source hash) to match deployed configuration
+                        // This ensures the dashboard knows the config is in sync
+                        await updateMeshState(project);
+                        this.logger.info('[Deploy Mesh] Updated mesh state after successful deployment');
                         
                         await this.stateManager.saveProject(project);
                         
