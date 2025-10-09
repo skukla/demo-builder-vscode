@@ -44,47 +44,17 @@
     "commands": [
       {
         "command": "demoBuilder.createProject",
-        "title": "Demo Builder: Create Project",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.startDemo",
-        "title": "Demo Builder: Start",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.stopDemo",
-        "title": "Demo Builder: Stop",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.deleteProject",
-        "title": "Demo Builder: Delete Project",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.viewStatus",
-        "title": "Demo Builder: View Status",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.configure",
-        "title": "Demo Builder: Configure",
+        "title": "Create Project",
         "category": "Demo Builder"
       },
       {
         "command": "demoBuilder.checkUpdates",
-        "title": "Demo Builder: Check for Updates",
+        "title": "Check for Updates",
         "category": "Demo Builder"
       },
       {
         "command": "demoBuilder.resetAll",
-        "title": "Demo Builder: Reset All (Dev Only)",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.diagnostics",
-        "title": "Demo Builder: Diagnostics",
+        "title": "Reset All (Dev Only)",
         "category": "Demo Builder"
       }
     ],
@@ -128,20 +98,29 @@
         }
       }
     },
-    "views": {
-      "explorer": [
+    "viewsContainers": {
+      "activitybar": [
         {
-          "id": "demoBuilder.controls",
-          "name": "Demo Builder",
-          "when": "demoBuilder.hasProject"
+          "id": "demoBuilder",
+          "title": "Demo Builder",
+          "icon": "media/adobe-icon-dark.svg"
+        }
+      ]
+    },
+    "views": {
+      "demoBuilder": [
+        {
+          "id": "demoBuilder.components",
+          "name": "Components"
         }
       ]
     }
   },
   "scripts": {
-    "compile": "npm run compile:typescript && npm run compile:webview",
+    "compile": "npm run compile:typescript && npm run compile:webview && npm run copy:media",
     "compile:typescript": "tsc -p ./",
     "compile:webview": "webpack --mode production",
+    "copy:media": "mkdir -p dist/media && cp -r media/* dist/media/",
     "watch": "tsc -watch -p ./",
     "watch:webview": "webpack --mode development --watch",
     "watch:all": "npm run watch & npm run watch:webview",

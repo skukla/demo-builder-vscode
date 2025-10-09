@@ -1,14 +1,17 @@
 import * as vscode from 'vscode';
 import { CreateProjectWebviewCommand } from './createProjectWebview';
 import { WelcomeWebviewCommand } from './welcomeWebview';
+import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
 import { StartDemoCommand } from './startDemo';
 import { StopDemoCommand } from './stopDemo';
 import { DeleteProjectCommand } from './deleteProject';
 import { ViewStatusCommand } from './viewStatus';
 import { ConfigureCommand } from './configure';
+import { ConfigureProjectWebviewCommand } from './configureProjectWebview';
 import { CheckUpdatesCommand } from './checkUpdates';
 import { ResetAllCommand } from './resetAll';
 import { DiagnosticsCommand } from './diagnostics';
+import { DeployMeshCommand } from './deployMesh';
 import { StateManager } from '../utils/stateManager';
 import { StatusBarManager } from '../providers/statusBar';
 import { Logger } from '../utils/logger';
@@ -19,6 +22,8 @@ export class CommandManager {
     private statusBar: StatusBarManager;
     private logger: Logger;
     private commands: Map<string, vscode.Disposable>;
+    public welcomeScreen!: WelcomeWebviewCommand;
+    public createProjectWebview!: CreateProjectWebviewCommand;
 
     constructor(
         context: vscode.ExtensionContext,
@@ -38,22 +43,31 @@ export class CommandManager {
         this.logger.debug('Registering Demo Builder commands...');
 
         // Welcome Screen
-        const welcomeScreen = new WelcomeWebviewCommand(
+        this.welcomeScreen = new WelcomeWebviewCommand(
             this.context,
             this.stateManager,
             this.statusBar,
             this.logger
         );
-        this.registerCommand('demoBuilder.showWelcome', () => welcomeScreen.execute());
+        this.registerCommand('demoBuilder.showWelcome', () => this.welcomeScreen.execute());
 
         // Create Project (Webview version)
-        const createProject = new CreateProjectWebviewCommand(
+        this.createProjectWebview = new CreateProjectWebviewCommand(
             this.context,
             this.stateManager,
             this.statusBar,
             this.logger
         );
-        this.registerCommand('demoBuilder.createProject', () => createProject.execute());
+        this.registerCommand('demoBuilder.createProject', () => this.createProjectWebview.execute());
+
+        // Project Dashboard (Post-creation guide)
+        const projectDashboard = new ProjectDashboardWebviewCommand(
+            this.context,
+            this.stateManager,
+            this.statusBar,
+            this.logger
+        );
+        this.registerCommand('demoBuilder.showProjectDashboard', () => projectDashboard.execute());
 
         // Start Demo
         const startDemo = new StartDemoCommand(
@@ -91,7 +105,7 @@ export class CommandManager {
         );
         this.registerCommand('demoBuilder.viewStatus', () => viewStatus.execute());
 
-        // Configure
+        // Configure (Legacy - command palette)
         const configure = new ConfigureCommand(
             this.context,
             this.stateManager,
@@ -99,6 +113,24 @@ export class CommandManager {
             this.logger
         );
         this.registerCommand('demoBuilder.configure', () => configure.execute());
+
+        // Configure Project (Webview)
+        const configureProject = new ConfigureProjectWebviewCommand(
+            this.context,
+            this.stateManager,
+            this.statusBar,
+            this.logger
+        );
+        this.registerCommand('demoBuilder.configureProject', () => configureProject.execute());
+
+        // Deploy Mesh
+        const deployMesh = new DeployMeshCommand(
+            this.context,
+            this.stateManager,
+            this.statusBar,
+            this.logger
+        );
+        this.registerCommand('demoBuilder.deployMesh', () => deployMesh.execute());
 
         // Check Updates
         const checkUpdates = new CheckUpdatesCommand(
@@ -179,8 +211,8 @@ export class CommandManager {
             }
         });
 
-        this.logger.debug(`Registered ${this.commands.size} commands`);
-        this.logger.debug('Commands registered:', Array.from(this.commands.keys()));
+        const commandList = Array.from(this.commands.keys());
+        this.logger.debug(`Registered ${this.commands.size} commands: ${commandList.slice(0, 3).join(', ')}${commandList.length > 3 ? ` ... (and ${commandList.length - 3} more)` : ''}`);
     }
 
     private registerCommand(command: string, callback: (...args: any[]) => any): void {
