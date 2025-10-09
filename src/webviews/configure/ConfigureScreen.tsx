@@ -60,16 +60,7 @@ interface ServiceGroup {
 
 export function ConfigureScreen({ project, componentsData, existingEnvValues }: ConfigureScreenProps) {
     // Initialize componentConfigs with existing values from .env files
-    const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(() => {
-        // Use existingEnvValues if available, otherwise fall back to project.componentConfigs
-        if (existingEnvValues && Object.keys(existingEnvValues).length > 0) {
-            console.log('[ConfigureScreen] Initializing with existingEnvValues:', existingEnvValues);
-            return existingEnvValues;
-        }
-        
-        console.log('[ConfigureScreen] No existingEnvValues, using project.componentConfigs');
-        return project.componentConfigs || {};
-    });
+    const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
@@ -82,6 +73,17 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     
     // Hook for making default values easily replaceable (auto-select on focus)
     const selectableDefaultProps = useSelectableDefault();
+    
+    // Update componentConfigs when existingEnvValues becomes available
+    useEffect(() => {
+        if (existingEnvValues && Object.keys(existingEnvValues).length > 0) {
+            console.log('[ConfigureScreen] Updating componentConfigs with existingEnvValues:', existingEnvValues);
+            setComponentConfigs(existingEnvValues);
+        } else if (project.componentConfigs) {
+            console.log('[ConfigureScreen] Using project.componentConfigs as fallback');
+            setComponentConfigs(project.componentConfigs);
+        }
+    }, [existingEnvValues, project.componentConfigs]);
 
     // Get all selected components with their data
     const selectedComponents = useMemo(() => {
@@ -208,10 +210,19 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
     // Deduplicate fields and organize by service
     const serviceGroups = useMemo(() => {
+        console.log('[ConfigureScreen] Building serviceGroups from selectedComponents:', 
+            selectedComponents.map(c => ({ 
+                id: c.id, 
+                requiredEnvVars: c.data.configuration?.requiredEnvVars,
+                optionalEnvVars: c.data.configuration?.optionalEnvVars
+            }))
+        );
+        
         const fieldMap = new Map<string, UniqueField>();
         
         // Get the top-level envVars definitions
         const envVarDefs = componentsData.envVars || {};
+        console.log('[ConfigureScreen] envVarDefs keys:', Object.keys(envVarDefs));
         
         // Collect all unique fields by key
         selectedComponents.forEach(({ id, data }) => {
@@ -253,6 +264,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 }
             });
         });
+
+        console.log('[ConfigureScreen] fieldMap after collection:', Array.from(fieldMap.keys()));
 
         // Group fields by service using the 'group' metadata from configuration
         const groups: Record<string, UniqueField[]> = {};
@@ -330,6 +343,13 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 const bOrder = serviceGroupDefs.find(d => d.id === b.id)?.order || 99;
                 return aOrder - bOrder;
             });
+
+        console.log('[ConfigureScreen] Final service groups:', orderedGroups.map(g => ({ 
+            id: g.id, 
+            label: g.label, 
+            fieldCount: g.fields.length,
+            fields: g.fields.map(f => f.key)
+        })));
 
         return orderedGroups;
     }, [selectedComponents]);
@@ -520,9 +540,24 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             const projectData = project as unknown as Record<string, unknown>;
             const apiMeshData = projectData.apiMesh as Record<string, unknown> | undefined;
             const meshEndpoint = apiMeshData?.endpoint as string | undefined;
+            console.log(`[getFieldValue] MESH_ENDPOINT from project.apiMesh:`, meshEndpoint);
             if (meshEndpoint) {
                 return meshEndpoint;
             }
+        }
+        
+        // Debug logging for specific fields
+        if (field.key === 'MESH_ENDPOINT' || field.key === 'ADOBE_ASSETS_URL') {
+            console.log(`[getFieldValue] ${field.key}:`, {
+                componentIds: field.componentIds,
+                lookupResults: field.componentIds.map(id => ({ 
+                    componentId: id, 
+                    hasComponent: !!componentConfigs[id],
+                    actualValue: JSON.stringify(componentConfigs[id]?.[field.key]),
+                    allKeysInComponent: componentConfigs[id] ? Object.keys(componentConfigs[id]) : []
+                })),
+                finalReturnValue: 'see below'
+            });
         }
         
         // Fall back to default from field definition
