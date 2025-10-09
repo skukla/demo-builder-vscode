@@ -107,38 +107,45 @@ export class ComponentHandler {
             const externalSystems = await this.registryManager.getExternalSystems();
             const appBuilder = await this.registryManager.getAppBuilder();
             const dependencies = await this.registryManager.getDependencies();
+            const registry = await this.registryManager.loadRegistry();
 
             const componentsData = {
                 frontends: frontends.map(f => ({
                     id: f.id,
                     name: f.name,
                     description: f.description,
+                    dependencies: f.dependencies, // Include dependency relationships
                     configuration: f.configuration
                 })),
                 backends: backends.map(b => ({
                     id: b.id,
                     name: b.name,
                     description: b.description,
+                    dependencies: b.dependencies, // Include dependency relationships
                     configuration: b.configuration
                 })),
                 externalSystems: externalSystems.map(e => ({
                     id: e.id,
                     name: e.name,
                     description: e.description,
+                    dependencies: e.dependencies, // Include dependency relationships
                     configuration: e.configuration
                 })),
                 appBuilder: appBuilder.map(a => ({
                     id: a.id,
                     name: a.name,
                     description: a.description,
+                    dependencies: a.dependencies, // Include dependency relationships
                     configuration: a.configuration
                 })),
                 dependencies: dependencies.map(d => ({
                     id: d.id,
                     name: d.name,
                     description: d.description,
+                    dependencies: d.dependencies, // Include dependency relationships
                     configuration: d.configuration
-                }))
+                })),
+                envVars: registry.envVars || {} // Include top-level envVars definitions
             };
 
             // Send components data to webview
