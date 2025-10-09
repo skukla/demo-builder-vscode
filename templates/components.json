@@ -7,6 +7,10 @@
         "id": "citisignal-nextjs",
         "name": "Headless CitiSignal",
         "description": "NextJS-based storefront with Adobe mesh integration",
+        "icon": {
+          "light": "nextjs-file-icon-light.svg",
+          "dark": "nextjs-file-icon-dark.svg"
+        },
         "version": "latest",
         "source": {
           "type": "git",
@@ -25,7 +29,7 @@
           "envVars": [
             {
               "key": "MESH_ENDPOINT",
-              "label": "API Mesh Endpoint",
+              "label": "Mesh Query URL",
               "type": "url",
               "required": true,
               "placeholder": "https://edge-sandbox-graph.adobe.io/api/your-mesh-id/graphql",
@@ -40,6 +44,7 @@
               "label": "Adobe Commerce URL",
               "type": "url",
               "required": true,
+              "default": "https://citisignal-com774.adobedemo.com",
               "placeholder": "https://your-instance.adobedemo.com",
               "description": "Base URL of your Adobe Commerce instance",
               "helpText": "Same URL is reused by API Mesh, Headless CitiSignal, and integration services.",
@@ -56,6 +61,7 @@
               "label": "Adobe Assets URL",
               "type": "url",
               "required": false,
+              "default": "https://delivery-p57319-e1619941.adobeaemcloud.com",
               "placeholder": "https://delivery-p57319-e1619941.adobeaemcloud.com",
               "description": "URL for Adobe Experience Manager assets delivery",
               "helpText": "Optional: supply if the storefront should load assets from AEM.",
@@ -68,9 +74,10 @@
               "label": "Environment ID",
               "type": "text",
               "required": true,
+              "default": "22d69fd7-d43a-43a1-b660-7feeede16247",
               "placeholder": "your-environment-id",
               "description": "Adobe Commerce environment identifier",
-              "helpText": "Matches the Commerce environment you selected during setup.",
+              "helpText": "Your Catalog Service dataspace identifier",
               "providedBy": "adobe-commerce-paas",
               "usedBy": [
                 "citisignal-nextjs",
@@ -84,7 +91,7 @@
               "label": "Store View Code",
               "type": "text",
               "required": true,
-              "default": "default",
+              "default": "citisignal_us",
               "placeholder": "default",
               "description": "Store view code for multi-store setup",
               "helpText": "Commerce store view code shared across storefront and services.",
@@ -101,7 +108,7 @@
               "label": "Website Code",
               "type": "text",
               "required": true,
-              "default": "base",
+              "default": "citisignal",
               "placeholder": "base",
               "description": "Website code for multi-website setup",
               "helpText": "Commerce website code reused by API Mesh and integration service.",
@@ -118,7 +125,7 @@
               "label": "Store Code",
               "type": "text",
               "required": true,
-              "default": "main_website_store",
+              "default": "citisignal_store",
               "placeholder": "main_website_store",
               "description": "Store code identifier",
               "helpText": "Commerce store code used for mesh configuration and integration service.",
@@ -135,6 +142,7 @@
               "label": "Sandbox Catalog API Key",
               "type": "text",
               "required": true,
+              "default": "6534c8452daa49ec93bf1595e2082245",
               "placeholder": "your-sandbox-catalog-api-key",
               "description": "Sandbox API key for Adobe Catalog Service",
               "helpText": "Same key used by Catalog Service and Live Search sources in API Mesh.",
@@ -222,6 +230,10 @@
         "id": "commerce-mesh",
         "name": "Adobe Commerce API Mesh",
         "description": "GraphQL gateway for unifying commerce data sources",
+        "icon": {
+          "light": "adobe-file-icon-light.svg",
+          "dark": "adobe-file-icon-dark.svg"
+        },
         "type": "mesh",
         "source": {
           "type": "git",
@@ -233,6 +245,7 @@
         },
         "configuration": {
           "nodeVersion": "20",
+          "buildScript": "build",
           "requiresDeployment": true,
           "deploymentTarget": "adobe-io",
           "envVars": [
@@ -241,6 +254,7 @@
               "label": "Commerce GraphQL Endpoint",
               "type": "url",
               "required": true,
+              "default": "https://citisignal-com774.adobedemo.com/graphql",
               "placeholder": "https://your-instance.adobedemo.com/graphql",
               "description": "GraphQL endpoint of your Adobe Commerce instance",
               "helpText": "This is the /graphql endpoint of your Commerce instance.",
@@ -332,6 +346,10 @@
         "id": "demo-inspector",
         "name": "Demo Inspector",
         "description": "Visual debugging overlay showing data sources and API calls",
+        "icon": {
+          "light": "adobe-file-icon-light.svg",
+          "dark": "adobe-file-icon-dark.svg"
+        },
         "type": "inspector",
         "source": {
           "type": "npm",
@@ -389,6 +407,10 @@
         "id": "integration-service",
         "name": "Kukla Integration Service",
         "description": "Custom integration service for Target Product Recommendations, AEM Assets, and more",
+        "icon": {
+          "light": "adobe-file-icon-light.svg",
+          "dark": "adobe-file-icon-dark.svg"
+        },
         "source": {
           "type": "git",
           "url": "https://github.com/skukla/kukla-integration-service",
