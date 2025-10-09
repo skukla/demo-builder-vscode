@@ -80,7 +80,8 @@ export class ComponentRegistryManager {
         return {
             version: raw.version,
             components,
-            services: raw.services || {}
+            services: raw.services || {},
+            envVars: raw.envVars || {}
         };
     }
 

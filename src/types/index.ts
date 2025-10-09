@@ -240,6 +240,7 @@ export interface ComponentRegistry {
         appBuilder?: ComponentDefinition[];
     };
     services?: Record<string, any>;
+    envVars?: Record<string, any>;
 }
 
 export interface CompatibilityInfo {

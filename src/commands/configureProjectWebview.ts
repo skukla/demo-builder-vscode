@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import { BaseWebviewCommand } from './baseWebviewCommand';
 import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
+import { ComponentRegistryManager } from '../utils/componentRegistry';
 import { Project } from '../types';
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
@@ -71,15 +72,18 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             throw new Error('No project found');
         }
 
-        // Load components data
-        const componentsPath = path.join(this.context.extensionPath, 'templates', 'components.json');
-        const componentsContent = await fs.readFile(componentsPath, 'utf-8');
-        const componentsJson = JSON.parse(componentsContent);
+        // Load and transform components data using ComponentRegistryManager
+        const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+        const registry = await registryManager.loadRegistry();
         
-        // Extract the components structure and envVars definitions
+        // Send both the categorized components structure AND the top-level envVars
         const componentsData = {
-            ...(componentsJson.components || {}),
-            envVars: componentsJson.envVars || {}
+            frontends: registry.components.frontends,
+            backends: registry.components.backends,
+            dependencies: registry.components.dependencies,
+            externalSystems: registry.components.externalSystems,
+            appBuilder: registry.components.appBuilder,
+            envVars: registry.envVars || {}
         };
 
         // Get current theme
