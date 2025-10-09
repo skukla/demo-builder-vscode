@@ -580,24 +580,11 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         const requiredFields = group.fields.filter(f => f.required);
         
         const completedFields = requiredFields.filter(f => {
-            // Special case: MESH_ENDPOINT is read-only and always complete if present
-            if (f.key === 'MESH_ENDPOINT') {
-                const projectData = project as unknown as Record<string, unknown>;
-                const apiMeshData = projectData.apiMesh as Record<string, unknown> | undefined;
-                const meshEndpoint = apiMeshData?.endpoint as string | undefined;
-                return !!meshEndpoint;
-            }
+            // Use getFieldValue to check for value (includes fallback logic)
+            const value = getFieldValue(f);
             
-            // Check if user has entered a value for any component that uses this field
-            // Don't count default values as "complete" - only actual user input
-            for (const componentId of f.componentIds) {
-                const value = componentConfigs[componentId]?.[f.key];
-                if (value !== undefined && value !== '' && value !== f.default) {
-                    return true;
-                }
-            }
-            
-            return false;
+            // Field is complete if it has ANY non-empty value (including defaults)
+            return value !== undefined && value !== '';
         });
         
         return {
@@ -643,8 +630,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     };
 
     const isFieldComplete = (field: UniqueField): boolean => {
-        if (field.key === 'MESH_ENDPOINT') return true;
         const value = getFieldValue(field);
+        // Complete if has ANY non-empty value (including defaults)
         return value !== undefined && value !== '';
     };
 
