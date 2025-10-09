@@ -262,7 +262,7 @@
       "type": "text",
       "required": true,
       "placeholder": "main_website_store",
-      "description": "Store code",
+      "description": "",
       "helpText": "Usually 'main_website_store' for default Commerce installations",
       "group": "adobe-commerce"
     },
@@ -271,7 +271,7 @@
       "type": "text",
       "required": true,
       "placeholder": "default",
-      "description": "Store view code",
+      "description": "",
       "helpText": "Typically 'default' unless you have a custom store view setup",
       "group": "adobe-commerce"
     },
@@ -289,7 +289,7 @@
       "type": "text",
       "required": true,
       "placeholder": "base",
-      "description": "Website code",
+      "description": "",
       "helpText": "Typically 'base' for single-website installations",
       "group": "adobe-commerce"
     },
