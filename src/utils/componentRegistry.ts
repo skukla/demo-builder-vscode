@@ -18,9 +18,94 @@ export class ComponentRegistryManager {
     async loadRegistry(): Promise<ComponentRegistry> {
         if (!this.registry) {
             const content = await fs.promises.readFile(this.registryPath, 'utf8');
-            this.registry = JSON.parse(content);
+            const rawRegistry = JSON.parse(content);
+            
+            // Adapter: Transform new flat structure to old grouped structure for backward compatibility
+            this.registry = this.adaptNewStructure(rawRegistry);
         }
         return this.registry!;
+    }
+
+    /**
+     * Adapter method to transform new v2.0 structure to old structure
+     * This maintains backward compatibility while using the new normalized format
+     */
+    private adaptNewStructure(raw: any): ComponentRegistry {
+        // If already in old format (has frontends/backends as arrays), return as-is
+        if (Array.isArray(raw.components?.frontends)) {
+            return raw as ComponentRegistry;
+        }
+
+        // Transform flat components map to grouped structure
+        const components: any = {
+            frontends: [],
+            backends: [],
+            dependencies: [],
+            externalSystems: [],
+            appBuilder: []
+        };
+
+        // Group components by type
+        for (const [id, component] of Object.entries(raw.components || {})) {
+            const comp = component as any;
+            const enhanced = { 
+                ...comp, 
+                id,
+                // Convert requiredEnvVars/optionalEnvVars to envVars array with full definitions
+                configuration: comp.configuration ? {
+                    ...comp.configuration,
+                    envVars: this.buildEnvVarsForComponent(id, comp, raw.envVars || {})
+                } : undefined
+            };
+
+            switch (comp.type) {
+                case 'frontend':
+                    components.frontends.push(enhanced);
+                    break;
+                case 'backend':
+                    components.backends.push(enhanced);
+                    break;
+                case 'dependency':
+                    components.dependencies.push(enhanced);
+                    break;
+                case 'external-system':
+                    components.externalSystems.push(enhanced);
+                    break;
+                case 'app-builder':
+                    components.appBuilder.push(enhanced);
+                    break;
+            }
+        }
+
+        return {
+            version: raw.version,
+            components,
+            compatibilityMatrix: raw.compatibility || raw.compatibilityMatrix || {}
+        };
+    }
+
+    /**
+     * Build envVars array for a component from the shared envVars registry
+     */
+    private buildEnvVarsForComponent(componentId: string, component: any, sharedEnvVars: any): any[] {
+        const envVars: any[] = [];
+        const requiredKeys = component.configuration?.requiredEnvVars || [];
+        const optionalKeys = component.configuration?.optionalEnvVars || [];
+        const allKeys = [...requiredKeys, ...optionalKeys];
+
+        for (const key of allKeys) {
+            const envVar = sharedEnvVars[key];
+            if (envVar) {
+                envVars.push({
+                    key,
+                    ...envVar,
+                    // Maintain the usedBy pattern for filtering (though we could remove this later)
+                    usedBy: [componentId]
+                });
+            }
+        }
+
+        return envVars;
     }
 
     async getFrontends(): Promise<ComponentDefinition[]> {
