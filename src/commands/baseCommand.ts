@@ -60,10 +60,10 @@ export abstract class BaseCommand {
         return vscode.window.showInputBox(options);
     }
 
-    protected createTerminal(name: string): vscode.Terminal {
+    protected createTerminal(name: string, cwd?: string): vscode.Terminal {
         const terminal = vscode.window.createTerminal({
             name,
-            cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+            cwd: cwd || undefined // Only set cwd if explicitly provided
         });
         this.context.subscriptions.push(terminal);
         return terminal;
