@@ -4,7 +4,7 @@ import * as fs from 'fs/promises';
 import { BaseWebviewCommand } from './baseWebviewCommand';
 import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
 import { ComponentRegistryManager } from '../utils/componentRegistry';
-import { detectMeshChanges } from '../utils/meshChangeDetector';
+import { detectMeshChanges } from '../utils/stalenessDetector';
 import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
 import { Project } from '../types';
 

@@ -6,7 +6,7 @@ import { StateManager } from '../utils/stateManager';
 import { StatusBarManager } from '../providers/statusBar';
 import { Logger } from '../utils/logger';
 import { getExternalCommandManager } from '../extension';
-import { updateMeshState } from '../utils/meshChangeDetector';
+import { updateMeshState } from '../utils/stalenessDetector';
 
 const TIMEOUTS = {
     API_MESH_UPDATE: 300000 // 5 minutes

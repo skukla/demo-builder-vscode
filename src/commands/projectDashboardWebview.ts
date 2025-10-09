@@ -3,7 +3,7 @@ import * as path from 'path';
 import { BaseCommand } from './baseCommand';
 import { StateManager } from '../utils/stateManager';
 import { setLoadingState } from '../utils/loadingHTML';
-import { detectMeshChanges, detectFrontendChanges } from '../utils/meshChangeDetector';
+import { detectMeshChanges, detectFrontendChanges } from '../utils/stalenessDetector';
 
 /**
  * Command to show the "Project Dashboard" after project creation

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
 import { getExternalCommandManager } from '../extension';
-import { updateFrontendState } from '../utils/meshChangeDetector';
+import { updateFrontendState } from '../utils/stalenessDetector';
 
 export class StartDemoCommand extends BaseCommand {
     public async execute(): Promise<void> {
