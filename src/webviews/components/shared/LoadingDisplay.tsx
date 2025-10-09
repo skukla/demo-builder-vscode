@@ -1,13 +1,16 @@
 import React from 'react';
 import { Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
+import { FadeTransition } from './FadeTransition';
 
 export interface LoadingDisplayProps {
     /** Size of the progress circle */
     size?: 'S' | 'M' | 'L';
     /** Main loading message */
     message: string;
-    /** Optional sub-message for additional context */
+    /** Optional sub-message for additional context (dynamic, can change during operation) */
     subMessage?: string;
+    /** Optional static helper text (e.g., time expectations) - stays visible */
+    helperText?: string;
     /** Whether the progress is indeterminate (default: true) */
     isIndeterminate?: boolean;
     /** Progress value for determinate progress (0-100) */
@@ -26,6 +29,7 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     size = 'L',
     message,
     subMessage,
+    helperText,
     isIndeterminate = true,
     progress,
     centered,
@@ -37,6 +41,7 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     // Text size and color classes based on progress circle size
     const mainTextClass = size === 'L' ? 'text-lg font-medium' : size === 'M' ? 'text-base font-medium' : 'font-medium';
     const subTextClass = 'text-sm text-gray-600';
+    const helperTextClass = 'text-xs text-gray-500 italic';
     
     // Container props based on centering
     const containerProps = shouldCenter ? {
@@ -75,12 +80,21 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
                 value={!isIndeterminate ? progress : undefined}
             />
             <Flex direction="column" gap="size-50" alignItems={shouldCenter ? 'center' : 'flex-start'}>
-                <Text UNSAFE_className={mainTextClass}>
-                    {message}
-                </Text>
+                <FadeTransition show={true} duration={150} key={message}>
+                    <Text UNSAFE_className={mainTextClass}>
+                        {message}
+                    </Text>
+                </FadeTransition>
                 {subMessage && (
-                    <Text UNSAFE_className={subTextClass}>
-                        {subMessage}
+                    <FadeTransition show={true} duration={150} key={subMessage}>
+                        <Text UNSAFE_className={subTextClass}>
+                            {subMessage}
+                        </Text>
+                    </FadeTransition>
+                )}
+                {helperText && (
+                    <Text UNSAFE_className={helperTextClass} marginTop="size-100">
+                        {helperText}
                     </Text>
                 )}
             </Flex>
