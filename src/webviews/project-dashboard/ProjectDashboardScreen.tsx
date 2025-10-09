@@ -16,6 +16,8 @@ import Refresh from '@spectrum-icons/workflow/Refresh';
 import Globe from '@spectrum-icons/workflow/Globe';
 import Delete from '@spectrum-icons/workflow/Delete';
 import ViewList from '@spectrum-icons/workflow/ViewList';
+import DataMapping from '@spectrum-icons/workflow/DataMapping';
+import Data from '@spectrum-icons/workflow/Data';
 import { vscode } from '../app/vscodeApi';
 
 interface ProjectStatus {
@@ -385,6 +387,26 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                     >
                         <Globe size="L" />
                         <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Dev Console</Text>
+                    </ActionButton>
+
+                    {/* Mesh Designer (Coming Soon) */}
+                    <ActionButton 
+                        isQuiet
+                        isDisabled
+                        UNSAFE_className="dashboard-action-button"
+                    >
+                        <DataMapping size="L" />
+                        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Mesh Designer</Text>
+                    </ActionButton>
+
+                    {/* Data Manager (Coming Soon) */}
+                    <ActionButton 
+                        isQuiet
+                        isDisabled
+                        UNSAFE_className="dashboard-action-button"
+                    >
+                        <Data size="L" />
+                        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Data Manager</Text>
                     </ActionButton>
 
                     {/* Delete Project */}
