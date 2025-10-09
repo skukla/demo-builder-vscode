@@ -117,19 +117,16 @@ export async function calculateMeshSourceHash(meshComponentPath: string): Promis
  * Get current mesh state from project
  */
 export function getCurrentMeshState(project: Project): MeshState | null {
-    // Check if commerce-mesh component exists
-    const meshInstance = project.componentInstances?.['commerce-mesh'];
-    if (!meshInstance) {
+    // Return the stored mesh state (from last deployment)
+    // This represents the DEPLOYED configuration, not the current config
+    if (!project.meshState) {
         return null;
     }
     
-    // Get mesh config from componentConfigs
-    const meshConfig = project.componentConfigs?.['commerce-mesh'] || {};
-    
     return {
-        envVars: getMeshEnvVars(meshConfig),
-        sourceHash: project.meshState?.sourceHash || null,
-        lastDeployed: project.meshState?.lastDeployed ? new Date(project.meshState.lastDeployed) : null
+        envVars: project.meshState.envVars || {},
+        sourceHash: project.meshState.sourceHash || null,
+        lastDeployed: project.meshState.lastDeployed ? new Date(project.meshState.lastDeployed) : null
     };
 }
 
@@ -142,6 +139,7 @@ export async function detectMeshChanges(
 ): Promise<MeshChanges> {
     const meshInstance = project.componentInstances?.['commerce-mesh'];
     if (!meshInstance || !meshInstance.path) {
+        console.log('[MeshChangeDetector] No mesh instance found');
         return {
             hasChanges: false,
             envVarsChanged: false,
@@ -152,8 +150,15 @@ export async function detectMeshChanges(
     
     // Get current deployed state
     const currentState = getCurrentMeshState(project);
+    console.log('[MeshChangeDetector] Current mesh state:', currentState ? 'exists' : 'null');
+    if (currentState) {
+        console.log('  Deployed env vars:', JSON.stringify(currentState.envVars, null, 2));
+        console.log('  Deployed source hash:', currentState.sourceHash);
+    }
+    
     if (!currentState) {
         // No previous state, assume fresh deployment needed
+        console.log('[MeshChangeDetector] No previous state, flagging as changed');
         return {
             hasChanges: true,
             envVarsChanged: true,
@@ -165,6 +170,7 @@ export async function detectMeshChanges(
     // Check env vars changes
     const newMeshConfig = newComponentConfigs['commerce-mesh'] || {};
     const newEnvVars = getMeshEnvVars(newMeshConfig);
+    console.log('  Current env vars:', JSON.stringify(newEnvVars, null, 2));
     
     const changedEnvVars: string[] = [];
     MESH_ENV_VARS.forEach(key => {
@@ -172,11 +178,13 @@ export async function detectMeshChanges(
         const newValue = newEnvVars[key];
         
         if (oldValue !== newValue) {
+            console.log(`  [CHANGED] ${key}: "${oldValue}" → "${newValue}"`);
             changedEnvVars.push(key);
         }
     });
     
     const envVarsChanged = changedEnvVars.length > 0;
+    console.log(`  Env vars changed: ${envVarsChanged}, changed keys: ${changedEnvVars.join(', ')}`);
     
     // Check source files changes
     const newSourceHash = await calculateMeshSourceHash(meshInstance.path);
