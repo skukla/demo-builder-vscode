@@ -86,6 +86,16 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             envVars: registry.envVars || {}
         };
 
+        // Debug: Log what we're sending
+        this.logger.info('[ConfigureProjectWebview] Sending data to webview:');
+        this.logger.info(`  - Frontends: ${componentsData.frontends?.length || 0}`);
+        this.logger.info(`  - Backends: ${componentsData.backends?.length || 0}`);
+        this.logger.info(`  - Dependencies: ${componentsData.dependencies?.length || 0}`);
+        this.logger.info(`  - App Builder: ${componentsData.appBuilder?.length || 0}`);
+        this.logger.info(`  - EnvVars keys: ${Object.keys(componentsData.envVars || {}).length}`);
+        this.logger.info(`  - Project componentSelections: ${JSON.stringify(project.componentSelections || 'none')}`);
+        this.logger.info(`  - Project componentInstances: ${project.componentInstances ? Object.keys(project.componentInstances).join(', ') : 'none'}`);
+
         // Get current theme
         const theme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
 
