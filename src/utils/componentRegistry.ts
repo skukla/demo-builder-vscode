@@ -468,9 +468,14 @@ export class DependencyResolver {
         }
 
         config.envVars = envVars;
+        
+        // Get default port from extension settings
+        const vscode = await import('vscode');
+        const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
+        
         config.frontend = {
             id: frontend.id,
-            port: frontend.configuration?.port || 3000,
+            port: frontend.configuration?.port || defaultPort,
             nodeVersion: frontend.configuration?.nodeVersion || '20'
         };
         config.backend = {

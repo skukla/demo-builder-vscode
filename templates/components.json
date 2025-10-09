@@ -31,7 +31,6 @@
       },
       "compatibleBackends": ["adobe-commerce-paas"],
       "configuration": {
-        "port": 3000,
         "nodeVersion": "24",
         "requiredEnvVars": [
           "MESH_ENDPOINT",
