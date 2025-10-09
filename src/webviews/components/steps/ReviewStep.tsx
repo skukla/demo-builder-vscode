@@ -2,9 +2,10 @@ import React, { useEffect } from 'react';
 import { 
     View, 
     Text, 
-    Flex
+    Flex,
+    Heading,
+    Divider
 } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import { WizardState } from '../../types';
 
 interface ComponentData {
@@ -165,21 +166,24 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
 
     return (
         <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
-            {/* Header */}
-            <Flex gap="size-150" alignItems="center" marginBottom="size-300">
-                <CheckmarkCircle size="M" UNSAFE_className="text-green-600" />
-                <Text UNSAFE_style={{ fontWeight: 600, fontSize: '18px' }}>
-                    Ready to Create
-                </Text>
-            </Flex>
+            {/* Standard Heading (consistent with other steps) */}
+            <Heading level={2} marginBottom="size-300">
+                Final Review
+            </Heading>
+            <Text marginBottom="size-400" UNSAFE_className="text-gray-700">
+                Review your project configuration before creation.
+            </Text>
+
+            {/* Visual Separator */}
+            <Divider size="S" marginBottom="size-300" />
             
             {/* Project Details Block */}
             <Flex direction="column" gap="size-100">
                 {/* Project Name - Hero Element */}
                 {state.projectName && (
-                    <View marginBottom="size-150">
+                    <View marginBottom="size-200">
                         <Text UNSAFE_style={{ 
-                            fontSize: '20px', 
+                            fontSize: '24px', 
                             fontWeight: 700,
                             color: 'var(--spectrum-global-color-gray-900)',
                             lineHeight: '1.3'

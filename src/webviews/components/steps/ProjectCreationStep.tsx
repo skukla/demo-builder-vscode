@@ -15,6 +15,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
     const progress = state.creationProgress;
     const [isCancelling, setIsCancelling] = useState(false);
     const [projectPath, setProjectPath] = useState<string>('');
+    const [isOpeningProject, setIsOpeningProject] = useState(false);
 
     // Listen for creationComplete to get project path
     React.useEffect(() => {
@@ -29,29 +30,17 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
     }, []);
 
     const handleCancel = () => {
-        console.log('[ProjectCreationStep] Cancel button clicked');
-        console.log('[ProjectCreationStep] vscode API:', vscode);
         setIsCancelling(true);
-        try {
-            vscode.postMessage('cancel-project-creation');
-            console.log('[ProjectCreationStep] Cancel message sent');
-        } catch (error) {
-            console.error('[ProjectCreationStep] Error sending cancel message:', error);
-        }
+        vscode.postMessage('cancel-project-creation');
     };
 
     const handleOpenProject = () => {
-        console.log('[ProjectCreationStep] ===== OPEN PROJECT BUTTON CLICKED =====');
-        console.log('[ProjectCreationStep] Current time:', new Date().toISOString());
-        console.log('[ProjectCreationStep] vscode API exists:', !!vscode);
-        console.log('[ProjectCreationStep] vscode.postMessage type:', typeof vscode?.postMessage);
+        setIsOpeningProject(true);
         
-        try {
+        // Wait 1.5 seconds to show transition message, then trigger reload
+        setTimeout(() => {
             vscode.postMessage('openProject');
-            console.log('[ProjectCreationStep] ✅ openProject message sent successfully');
-        } catch (error) {
-            console.error('[ProjectCreationStep] ❌ Error sending openProject message:', error);
-        }
+        }, 1500);
     };
 
     const isCancelled = progress?.currentOperation === 'Cancelled';
@@ -160,7 +149,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                 </div>
             )}
             
-            {/* Show Open Project button on success */}
+            {/* Show Open Project button or transition on success */}
             {isCompleted && !progress?.error && (
                 <div
                     style={{
@@ -170,14 +159,23 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                     }}
                 >
                     <div style={{ maxWidth: '800px', width: '100%' }}>
-                        <Flex justifyContent="flex-end" width="100%">
-                            <Button
-                                variant="cta"
-                                onPress={handleOpenProject}
-                            >
-                                Open Project
-                            </Button>
-                        </Flex>
+                        {isOpeningProject ? (
+                            <Flex justifyContent="center" alignItems="center" marginTop="size-200">
+                                <LoadingDisplay 
+                                    size="M"
+                                    message="Opening your project..."
+                                />
+                            </Flex>
+                        ) : (
+                            <Flex justifyContent="flex-end" width="100%">
+                                <Button
+                                    variant="cta"
+                                    onPress={handleOpenProject}
+                                >
+                                    Open Project
+                                </Button>
+                            </Flex>
+                        )}
                     </div>
                 </div>
             )}
