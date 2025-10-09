@@ -240,8 +240,6 @@ export interface ComponentRegistry {
         appBuilder?: ComponentDefinition[];
     };
     services?: Record<string, any>;
-    compatibilityMatrix?: Record<string, Record<string, CompatibilityInfo>>;
-    presets?: PresetDefinition[];
 }
 
 export interface CompatibilityInfo {

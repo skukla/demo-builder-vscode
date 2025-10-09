@@ -339,14 +339,5 @@
         "ADOBE_CATALOG_API_KEY"
       ]
     }
-  },
-  "compatibility": {
-    "citisignal-nextjs": {
-      "adobe-commerce-paas": {
-        "compatible": true,
-        "recommended": true,
-        "notes": "Full feature support with all commerce capabilities"
-      }
-    }
   }
 }

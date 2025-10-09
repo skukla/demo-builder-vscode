@@ -166,16 +166,11 @@ export class ComponentHandler {
                 payload.frontend,
                 payload.backend
             );
-            const compatibilityInfo = await this.registryManager.getCompatibilityInfo(
-                payload.frontend,
-                payload.backend
-            );
 
             panel.webview.postMessage({
                 type: 'compatibilityResult',
                 payload: {
-                    compatible,
-                    ...compatibilityInfo
+                    compatible
                 }
             });
         } catch (error) {

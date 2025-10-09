@@ -80,8 +80,7 @@ export class ComponentRegistryManager {
         return {
             version: raw.version,
             components,
-            services: raw.services || {},
-            compatibilityMatrix: raw.compatibility || raw.compatibilityMatrix || {}
+            services: raw.services || {}
         };
     }
 
@@ -191,8 +190,8 @@ export class ComponentRegistryManager {
     }
 
     async getPresets(): Promise<PresetDefinition[]> {
-        const registry = await this.loadRegistry();
-        return registry.presets || [];
+        // Presets are not currently defined in components.json v2.0
+        return [];
     }
 
     async checkCompatibility(frontendId: string, backendId: string): Promise<boolean> {
@@ -200,11 +199,6 @@ export class ComponentRegistryManager {
         if (!frontend) return false;
         
         return frontend.compatibleBackends?.includes(backendId) || false;
-    }
-
-    async getCompatibilityInfo(frontendId: string, backendId: string) {
-        const registry = await this.loadRegistry();
-        return registry.compatibilityMatrix?.[frontendId]?.[backendId];
     }
 
     async getRequiredNodeVersions(
