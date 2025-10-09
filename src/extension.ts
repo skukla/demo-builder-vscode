@@ -370,17 +370,25 @@ function registerFileWatchers(context: vscode.ExtensionContext) {
             return;
         }
         
-        // Check if content actually changed
+        // Check if this is the first time we're seeing this file
         const previousHash = fileContentHashes.get(filePath);
+        if (previousHash === undefined) {
+            // First time seeing this file - initialize hash without notification
+            fileContentHashes.set(filePath, currentHash);
+            logger.debug(`[Env Watcher] First time tracking file, initialized hash: ${currentHash.substring(0, 8)}...`);
+            return;
+        }
+        
+        // Check if content actually changed
         if (previousHash === currentHash) {
             logger.debug('[Env Watcher] ✓ File event but content unchanged (hash match), ignoring');
             return;
         }
         
-        // Content changed - update hash and proceed
+        // Content actually changed - update hash and proceed
         fileContentHashes.set(filePath, currentHash);
         logger.info(`[Env Watcher] ✓ Content actually changed: ${filePath}`);
-        logger.debug(`[Env Watcher] Hash changed from ${previousHash?.substring(0, 8)}... to ${currentHash.substring(0, 8)}...`);
+        logger.debug(`[Env Watcher] Hash changed from ${previousHash.substring(0, 8)}... to ${currentHash.substring(0, 8)}...`);
         
         // Only show restart notification if a demo is currently running
         const currentProject = await stateManager.getCurrentProject();
