@@ -41,6 +41,10 @@ export class StopDemoCommand extends BaseCommand {
                     }
                 });
                 
+                // Wait for port to be freed (Node process shutdown takes time)
+                progress.report({ message: 'Waiting for port to be released...' });
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
                 // Update project status to 'stopped'
                 if (project.frontend) {
                     project.frontend.status = 'stopped';
