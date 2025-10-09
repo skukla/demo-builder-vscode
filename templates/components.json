@@ -4,6 +4,7 @@
   "selectionGroups": {
     "frontends": ["citisignal-nextjs"],
     "backends": ["adobe-commerce-paas"],
+    "dependencies": ["commerce-mesh", "demo-inspector"],
     "appBuilderApps": ["integration-service"],
     "integrations": ["experience-platform"]
   },
@@ -235,7 +236,7 @@
       "type": "text",
       "required": false,
       "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
-      "description": "Customer group ID for pricing and catalog rules",
+      "description": "Defaults to the \"Not Logged In\" customer group",
       "helpText": "Leave as default for the \"Not Logged In\" customer group, or customize for specific pricing rules",
       "group": "adobe-commerce"
     },

@@ -77,6 +77,12 @@ export class ComponentRegistryManager {
             if (enhanced) components.externalSystems.push(enhanced);
         });
 
+        // Map dependencies from selectionGroups (explicit list)
+        (groups.dependencies || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.dependencies.push(enhanced);
+        });
+
         return {
             version: raw.version,
             components,

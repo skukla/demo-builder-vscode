@@ -78,7 +78,12 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         
         const unsubscribeData = vscode.onMessage('components-data', (data) => {
             console.log('[ComponentConfigStep] Received components-data:', {
-                frontends: data.frontends?.map((f: any) => ({ id: f.id, hasDeps: !!f.dependencies })),
+                frontends: data.frontends?.map((f: any) => ({ 
+                    id: f.id, 
+                    hasDeps: !!f.dependencies,
+                    depsDetail: f.dependencies 
+                })),
+                dependencies: data.dependencies?.map((d: any) => d.id),
                 hasEnvVars: !!data.envVars,
                 envVarsCount: Object.keys(data.envVars || {}).length
             });

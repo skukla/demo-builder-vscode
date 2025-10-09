@@ -24,6 +24,11 @@
           "items": { "type": "string" },
           "description": "Component IDs for backend dropdown"
         },
+        "dependencies": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Component IDs for dependencies (components pulled in via relationships, not directly selected)"
+        },
         "appBuilderApps": {
           "type": "array",
           "items": { "type": "string" },
