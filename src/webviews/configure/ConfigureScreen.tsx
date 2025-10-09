@@ -228,7 +228,6 @@ export function ConfigureScreen({ project, componentsData }: ConfigureScreenProp
                 fieldOrder: [
                     'ADOBE_COMMERCE_URL',
                     'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
-                    'ADOBE_COMMERCE_ENVIRONMENT_ID',
                     'ADOBE_COMMERCE_WEBSITE_CODE',
                     'ADOBE_COMMERCE_STORE_CODE',
                     'ADOBE_COMMERCE_STORE_VIEW_CODE',
@@ -243,6 +242,7 @@ export function ConfigureScreen({ project, componentsData }: ConfigureScreenProp
                 order: 2,
                 fieldOrder: [
                     'ADOBE_CATALOG_SERVICE_ENDPOINT',
+                    'ADOBE_COMMERCE_ENVIRONMENT_ID',
                     'ADOBE_CATALOG_API_KEY'
                 ]
             },

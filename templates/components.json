@@ -246,7 +246,7 @@
       "placeholder": "your-environment-id",
       "description": "Adobe Commerce Catalog Service dataspace identifier",
       "helpText": "Found in your Commerce Cloud project settings under Catalog Service configuration",
-      "group": "adobe-commerce"
+      "group": "catalog-service"
     },
     "ADOBE_COMMERCE_GRAPHQL_ENDPOINT": {
       "label": "Commerce GraphQL Endpoint",
