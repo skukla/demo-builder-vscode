@@ -50,13 +50,14 @@ export class StopDemoCommand extends BaseCommand {
                 return;
             }
 
-            // Check if frontend exists and is running
-            if (!project.frontend) {
+            // Check if demo is running
+            const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+            if (!frontendComponent) {
                 this.logger.debug('[StopDemo] No frontend component, nothing to stop');
                 return;
             }
             
-            if (project.frontend.status === 'stopped') {
+            if (project.status !== 'running' && project.status !== 'starting') {
                 this.logger.debug('[StopDemo] Demo already stopped');
                 return;
             }
@@ -66,21 +67,21 @@ export class StopDemoCommand extends BaseCommand {
                 
                 // Set status to 'stopping' immediately
                 project.status = 'stopping';
-                if (project.frontend) {
-                    project.frontend.status = 'stopping';
-                }
+                frontendComponent.status = 'stopping';
                 await this.stateManager.saveProject(project);
                 this.statusBar.updateProject(project);
                 
-                // Find and close the terminal
+                // Find and close the project-specific terminal
+                const terminalName = `${project.name} - Frontend`;
                 vscode.window.terminals.forEach(terminal => {
-                    if (terminal.name === 'Demo Frontend') {
+                    if (terminal.name === terminalName) {
                         terminal.dispose();
                     }
                 });
                 
                 // Wait for port to be freed (Node process shutdown takes time)
-                const port = project.frontend?.port || 3000;
+                const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
+                const port = frontendComponent.port || defaultPort;
                 progress.report({ message: `Waiting for port ${port} to be released...` });
                 
                 const portFreed = await this.waitForPortToFree(port, 10000);
@@ -92,9 +93,7 @@ export class StopDemoCommand extends BaseCommand {
                 }
                 
                 // Update project status to 'stopped'
-                if (project.frontend) {
-                    project.frontend.status = 'stopped';
-                }
+                frontendComponent.status = 'stopped';
                 project.status = 'ready';
                 
                 // Clear frontend env state (config changes don't matter when stopped)

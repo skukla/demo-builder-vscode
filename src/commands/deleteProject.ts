@@ -20,9 +20,9 @@ export class DeleteProjectCommand extends BaseCommand {
                 return;
             }
 
-            await this.withProgress('Deleting project', async (progress) => {
+            await this.withProgress('Deleting project', async (_progress) => {
                 // Stop demo if running
-                if (project.frontend?.status === 'running') {
+                if (project.status === 'running') {
                     await vscode.commands.executeCommand('demoBuilder.stopDemo');
                 }
 

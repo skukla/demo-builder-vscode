@@ -20,28 +20,86 @@ export class StartDemoCommand extends BaseCommand {
                 return;
             }
 
-            if (project.frontend?.status === 'running') {
+            // Check if demo is already running
+            if (project.status === 'running') {
                 await this.showInfo('Demo is already running');
                 return;
             }
 
-            await this.withProgress('Starting demo...', async (progress) => {
-                progress.report({ message: 'Checking port availability...' });
+            // Pre-flight check: port availability (outside progress to allow user interaction)
+            const commandManager = getExternalCommandManager();
+            const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+            
+            // Get port: use component's configured port, fallback to extension setting, then 3000
+            const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
+            const port = frontendComponent?.port || defaultPort;
+            
+            const portAvailable = await commandManager.isPortAvailable(port);
+            if (!portAvailable) {
+                // Find out what's running on the port
+                let processInfo = 'Unknown process';
+                try {
+                    const result = await commandManager.execute(`lsof -i:${port}`, {
+                        timeout: 5000,
+                        configureTelemetry: false,
+                        useNodeVersion: null,
+                        enhancePath: false
+                    });
+                    
+                    if (result.code === 0 && result.stdout) {
+                        // Parse lsof output (skip header line, take first process line)
+                        const lines = result.stdout.trim().split('\n');
+                        if (lines.length > 1) {
+                            const processLine = lines[1].trim();
+                            const parts = processLine.split(/\s+/);
+                            const processName = parts[0] || 'Unknown';
+                            const pid = parts[1] || 'Unknown';
+                            processInfo = `${processName} (PID: ${pid})`;
+                        }
+                    }
+                } catch (error) {
+                    this.logger.warn(`[Start Demo] Could not identify process on port ${port}:`, error as Error);
+                }
                 
-                const commandManager = getExternalCommandManager();
-                const port = project.frontend?.port || 3000;
+                this.logger.warn(`[Start Demo] Port ${port} is in use by: ${processInfo}`);
                 
-                // Check port availability
-                const portAvailable = await commandManager.isPortAvailable(port);
-                if (!portAvailable) {
-                    await this.showError(`Port ${port} is already in use`);
+                // Ask user if they want to stop the process
+                const action = await vscode.window.showWarningMessage(
+                    `Port ${port} in use by ${processInfo}. Stop it and start demo?`,
+                    'Stop & Start',
+                    'Cancel'
+                );
+                
+                if (action !== 'Stop & Start') {
+                    this.logger.info('[Start Demo] User cancelled demo start due to port conflict');
                     return;
                 }
-
-                progress.report({ message: 'Starting frontend application...' });
                 
-                // Find frontend component
-                const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+                // Kill the process
+                this.logger.info(`[Start Demo] Stopping process on port ${port}...`);
+                try {
+                    await commandManager.execute(`lsof -ti:${port} | xargs kill`, {
+                        timeout: 5000,
+                        configureTelemetry: false,
+                        useNodeVersion: null,
+                        enhancePath: false
+                    });
+                    
+                    // Wait a moment for port to be freed
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    this.logger.info('[Start Demo] Process stopped successfully');
+                } catch (error) {
+                    this.logger.error('[Start Demo] Failed to stop process:', error as Error);
+                    await this.showError(`Failed to stop process on port ${port}. Try stopping it manually.`);
+                    return;
+                }
+            }
+
+            await this.withProgress('Starting demo...', async (progress) => {
+                progress.report({ message: 'Starting frontend application' });
+                
+                // Validate frontend component
                 if (!frontendComponent || !frontendComponent.path) {
                     const debugInfo = JSON.stringify({
                         hasComponentInstances: !!project.componentInstances,
@@ -61,30 +119,21 @@ export class StartDemoCommand extends BaseCommand {
                 
                 // Set status to 'starting' immediately
                 project.status = 'starting';
-                if (!project.frontend) {
-                    project.frontend = {
-                        path: frontendPath,
-                        version: frontendComponent.version || 'latest',
-                        port: port,
-                        status: 'starting'
-                    };
-                } else {
-                    project.frontend.status = 'starting';
-                }
+                frontendComponent.status = 'starting';
+                frontendComponent.port = port;
                 await this.stateManager.saveProject(project);
                 this.statusBar.updateProject(project);
                 
-                // Create terminal for frontend (don't auto-show)
-                const terminal = this.createTerminal('Demo Frontend');
+                // Create project-specific terminal name (allows us to identify which project is running)
+                const terminalName = `${project.name} - Frontend`;
+                const terminal = this.createTerminal(terminalName);
                 
                 // Navigate to frontend directory and start
                 terminal.sendText(`cd "${frontendPath}"`);
                 terminal.sendText(`fnm use ${nodeVersion} && npm run dev`);
                 
                 // Update project status to 'running' after starting
-                if (project.frontend) {
-                    project.frontend.status = 'running';
-                }
+                frontendComponent.status = 'running';
                 project.status = 'running';
                 
                 // Capture frontend env vars for change detection
