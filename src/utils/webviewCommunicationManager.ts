@@ -43,12 +43,21 @@ interface CommunicationConfig {
  * Maps request types to their required timeout durations
  */
 const REQUEST_TIMEOUTS: Record<string, number> = {
-    'create-api-mesh': TIMEOUTS.API_MESH_CREATE,
-    'update-api-mesh': TIMEOUTS.API_MESH_UPDATE,
-    'check-api-mesh': TIMEOUTS.API_CALL,
-    'select-project': TIMEOUTS.CONFIG_WRITE,
-    'select-workspace': TIMEOUTS.CONFIG_WRITE,
-    // Add more as needed
+    // Authentication
+    'authenticate': TIMEOUTS.BROWSER_AUTH,           // 60s - browser-based auth flow
+    
+    // Data loading (wizard UI)
+    'get-projects': TIMEOUTS.PROJECT_LIST,           // 30s - fetch project list from Adobe
+    'get-workspaces': TIMEOUTS.WORKSPACE_LIST,       // 30s - fetch workspace list from Adobe
+    
+    // Project/workspace selection (write operations)
+    'select-project': TIMEOUTS.CONFIG_WRITE,         // 10s - write selected project to config
+    'select-workspace': TIMEOUTS.CONFIG_WRITE,       // 10s - write selected workspace to config
+    
+    // API Mesh operations
+    'check-api-mesh': 60000,                         // 60s - workspace download + mesh describe
+    'create-api-mesh': TIMEOUTS.API_MESH_CREATE,     // 120s - create and deploy mesh
+    'update-api-mesh': TIMEOUTS.API_MESH_UPDATE      // 120s - update and deploy mesh
 };
 
 /**

@@ -8,6 +8,7 @@ import { vscode } from '../../app/vscodeApi';
 import { WizardState, WizardStep } from '../../types';
 import { ConfigurationSummary } from '../shared/ConfigurationSummary';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
+import { FadeTransition } from '../shared/FadeTransition';
 import { Modal } from '../shared/Modal';
 import { NumberedInstructions } from '../shared/NumberedInstructions';
 
@@ -22,6 +23,7 @@ interface ApiMeshStepProps {
 export function ApiMeshStep({ state, updateState, onBack, setCanProceed, completedSteps = [] }: ApiMeshStepProps) {
     const [message, setMessage] = useState<string>('Checking API Mesh API...');
     const [subMessage, setSubMessage] = useState<string>('Downloading workspace configuration');
+    const [helperText, setHelperText] = useState<string | undefined>(undefined);
     const [isChecking, setIsChecking] = useState<boolean>(false);
     const [error, setError] = useState<string | undefined>(undefined);
     const [meshData, setMeshData] = useState<{ meshId?: string; status?: string; endpoint?: string } | null>(null);
@@ -178,16 +180,18 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                             size="L"
                             message={message}
                             subMessage={subMessage}
+                            helperText={helperText}
                         />
                     </Flex>
                 ) : error ? (
-                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
-                        <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
-                            <AlertCircle size="L" UNSAFE_className="text-red-600" />
-                            <Flex direction="column" gap="size-100" alignItems="center">
-                                <Text UNSAFE_className="text-xl font-medium">API Mesh API Not Enabled</Text>
-                                <Text UNSAFE_className="text-sm text-gray-600">{error}</Text>
-                            </Flex>
+                    <FadeTransition show={true}>
+                        <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                            <Flex direction="column" gap="size-200" alignItems="center" maxWidth="600px">
+                                <AlertCircle size="L" UNSAFE_className="text-red-600" />
+                                <Flex direction="column" gap="size-100" alignItems="center">
+                                    <Text UNSAFE_className="text-xl font-medium">API Mesh API Not Enabled</Text>
+                                    <Text UNSAFE_className="text-sm text-gray-600">{error}</Text>
+                                </Flex>
                             
                             {/* Setup Instructions Modal */}
                             {state.apiMesh?.setupInstructions && state.apiMesh.setupInstructions.length > 0 && (
@@ -234,34 +238,36 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                             </Flex>
                         </Flex>
                     </Flex>
+                    </FadeTransition>
                 ) : meshData ? (
                     // Mesh exists
-                    <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
-                        <Flex direction="column" gap="size-200" alignItems="center">
-                            {meshData.status === 'error' ? (
-                                <>
-                                    <AlertCircle size="L" UNSAFE_className="text-orange-600" />
-                                    <Flex direction="column" gap="size-100" alignItems="center">
-                                        <Text UNSAFE_className="text-xl font-medium">Mesh in Error State</Text>
-                                        <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '500px' }}>
-                                            An API Mesh exists but is not functioning properly. 
-                                            Click "Recreate Mesh" below to delete and redeploy it.
-                                        </Text>
-                                    </Flex>
-                                </>
-                            ) : (
-                                <>
-                                    <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
-                                    <Flex direction="column" gap="size-100" alignItems="center">
-                                        <Text UNSAFE_className="text-xl font-medium">
-                                            API Mesh {meshData.status === 'deployed' ? 'Deployed' : 'Found'}
-                                        </Text>
-                                        <Text UNSAFE_className="text-sm text-gray-600">
-                                            An existing mesh was detected. It will be updated during deployment.
-                                        </Text>
-                                    </Flex>
-                                </>
-                            )}
+                    <FadeTransition show={true}>
+                        <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                            <Flex direction="column" gap="size-200" alignItems="center">
+                                {meshData.status === 'error' ? (
+                                    <>
+                                        <AlertCircle size="L" UNSAFE_className="text-orange-600" />
+                                        <Flex direction="column" gap="size-100" alignItems="center">
+                                            <Text UNSAFE_className="text-xl font-medium">Mesh in Error State</Text>
+                                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '500px' }}>
+                                                An API Mesh exists but is not functioning properly. 
+                                                Click "Recreate Mesh" below to delete and redeploy it.
+                                            </Text>
+                                        </Flex>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckmarkCircle size="L" UNSAFE_className="text-green-600" />
+                                        <Flex direction="column" gap="size-100" alignItems="center">
+                                            <Text UNSAFE_className="text-xl font-medium">
+                                                API Mesh {meshData.status === 'deployed' ? 'Deployed' : 'Found'}
+                                            </Text>
+                                            <Text UNSAFE_className="text-sm text-gray-600">
+                                                An existing mesh was detected. It will be updated during deployment.
+                                            </Text>
+                                        </Flex>
+                                    </>
+                                )}
                             
                             {meshData.status === 'error' && (
                                 <Flex gap="size-150" marginTop="size-300">
@@ -271,6 +277,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                             // Delete the broken mesh, then create a new one
                                             setIsChecking(true);
                                             setMessage('Deleting broken mesh...');
+                                            setSubMessage('Removing existing mesh');
+                                            setHelperText('This could take up to 2 minutes');
                                             try {
                                                 // Step 1: Delete the broken mesh
                                                 await vscode.request('delete-api-mesh', {
@@ -280,6 +288,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                 // Step 2: Create a new mesh immediately
                                                 setMessage('Creating new mesh...');
                                                 setSubMessage('Submitting configuration to Adobe');
+                                                setHelperText('This could take up to 2 minutes');
                                                 
                                                 const result = await vscode.request('create-api-mesh', {
                                                     workspaceId: state.adobeWorkspace?.id
@@ -343,6 +352,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                             )}
                         </Flex>
                     </Flex>
+                    </FadeTransition>
                 ) : (
                     // API enabled, no mesh
                     <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
@@ -361,6 +371,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                     setIsChecking(true);
                                     setMessage('Creating API Mesh...');
                                     setSubMessage('Setting up mesh infrastructure');
+                                    setHelperText('This could take up to 2 minutes');
                                     updateState({ 
                                         apiMesh: { 
                                             ...state.apiMesh,

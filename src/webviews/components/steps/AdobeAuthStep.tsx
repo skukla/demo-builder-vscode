@@ -3,19 +3,19 @@ import {
     Flex,
     Heading,
     Text,
-    Button,
-    ProgressCircle,
-    View
+    Button
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Alert from '@spectrum-icons/workflow/Alert';
+import Pending from '@spectrum-icons/workflow/Pending';
 import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import { WizardState } from '../../types';
 import { vscode } from '../../app/vscodeApi';
 import { useDebouncedLoading } from '../../utils/useDebouncedLoading';
+import { LoadingDisplay } from '../shared/LoadingDisplay';
 
 interface AdobeAuthStepProps {
     state: WizardState;
@@ -26,7 +26,9 @@ interface AdobeAuthStepProps {
 export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthStepProps) {
     const [authStatus, setAuthStatus] = useState<string>('');
     const [authSubMessage, setAuthSubMessage] = useState<string>('');
+    const [authTimeout, setAuthTimeout] = useState(false);
     const isSwitchingRef = useRef(false);
+    const authTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     
     // Debounce loading state: only show checking UI if operation takes >300ms
     // This prevents flash of loading messages for fast SDK-based auth checks
@@ -51,9 +53,35 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             console.log('Message:', data.message);
             console.log('SubMessage:', data.subMessage);
 
+            // Clear timeout on any auth status update
+            if (authTimeoutRef.current) {
+                clearTimeout(authTimeoutRef.current);
+                authTimeoutRef.current = null;
+            }
+
+            // Check if this is a timeout error
+            if (data.error === 'timeout') {
+                setAuthTimeout(true);
+                updateState({
+                    adobeAuth: {
+                        ...state.adobeAuth,
+                        isChecking: false,
+                        error: 'timeout'
+                    }
+                });
+                setAuthStatus(data.message || '');
+                setAuthSubMessage(data.subMessage || '');
+                return;
+            }
+
             // Reset the switching flag when authentication completes
             if (data.isAuthenticated && isSwitchingRef.current) {
                 isSwitchingRef.current = false;
+            }
+
+            // Clear timeout state on successful auth
+            if (data.isAuthenticated) {
+                setAuthTimeout(false);
             }
 
             updateState({
@@ -98,6 +126,15 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     };
 
     const handleLogin = (force: boolean = false) => {
+        // Clear any existing timeout
+        if (authTimeoutRef.current) {
+            clearTimeout(authTimeoutRef.current);
+            authTimeoutRef.current = null;
+        }
+        
+        // Reset timeout state
+        setAuthTimeout(false);
+        
         // Immediately set the ref when switching orgs to prevent race conditions
         if (force) {
             isSwitchingRef.current = true;
@@ -108,6 +145,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             adobeAuth: { 
                 ...state.adobeAuth, 
                 isChecking: true,
+                error: undefined,
                 // Keep isAuthenticated as-is - we're switching orgs, not logging out
                 // The checking state will show appropriate loading UI
             },
@@ -119,6 +157,10 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             })
         });
         setAuthStatus(force ? 'Starting fresh login...' : 'Opening browser for login...');
+        
+        // NOTE: No frontend timeout - backend handles timeout detection
+        // Backend will send auth-status with error='timeout' if authentication times out
+        // This prevents race conditions where frontend timeout fires before backend completes post-login work
         
         vscode.requestAuth(force);
     };
@@ -136,19 +178,12 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             {/* Authentication Status - Checking (or not yet checked) */}
             {(showChecking || state.adobeAuth.isAuthenticated === undefined) && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
-                    <View marginBottom="size-200">
-                        <ProgressCircle size="L" isIndeterminate />
-                    </View>
-                    <Flex direction="column" gap="size-50" alignItems="center">
-                        <Text UNSAFE_className="text-lg font-medium">
-                            {authStatus || 'Connecting to Adobe services...'}
-                        </Text>
-                        {authSubMessage && (
-                            <Text UNSAFE_className="text-sm text-gray-500 text-center" UNSAFE_style={{maxWidth: '400px'}}>
-                                {authSubMessage}
-                            </Text>
-                        )}
-                    </Flex>
+                    <LoadingDisplay 
+                        size="L"
+                        helperText="This could take up to 1 minute"
+                        message={authStatus || 'Connecting to Adobe services...'}
+                        subMessage={authSubMessage}
+                    />
                 </Flex>
             )}
 
@@ -229,7 +264,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Error state with helpful guidance */}
-            {!showChecking && state.adobeAuth.error && (
+            {!showChecking && state.adobeAuth.error && !authTimeout && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Alert UNSAFE_className="text-red-500" size="L" />
@@ -249,6 +284,39 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                             <Button variant="accent" onPress={() => handleLogin(false)}>
                                 <Login size="S" marginEnd="size-100" />
                                 Sign In Again
+                            </Button>
+                        </Flex>
+                    </Flex>
+                </Flex>
+            )}
+
+            {/* Timeout state - similar to error but with specific messaging */}
+            {authTimeout && !state.adobeAuth.isAuthenticated && (
+                <Flex direction="column" justifyContent="center" alignItems="center" height="400px">
+                    <Flex direction="column" gap="size-200" alignItems="center">
+                        <Pending UNSAFE_className="text-orange-500" size="L" />
+                        <Flex direction="column" gap="size-100" alignItems="center">
+                            <Text UNSAFE_className="text-xl font-medium">
+                                Authentication Timed Out
+                            </Text>
+                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
+                                The browser authentication window may have been closed or the session expired. You can try again.
+                            </Text>
+                        </Flex>
+                        <Flex direction="row" gap="size-200" marginTop="size-300">
+                            <Button variant="secondary" onPress={() => {
+                                setAuthTimeout(false);
+                                checkAuthentication();
+                            }}>
+                                <Refresh size="S" marginEnd="size-100" />
+                                Check Again
+                            </Button>
+                            <Button variant="accent" onPress={() => {
+                                setAuthTimeout(false);
+                                handleLogin(false);
+                            }}>
+                                <Login size="S" marginEnd="size-100" />
+                                Retry Login
                             </Button>
                         </Flex>
                     </Flex>
