@@ -60,6 +60,18 @@ export class ComponentRegistryManager {
                 case 'backend':
                     components.backends.push(enhanced);
                     break;
+                // New types - first-class components
+                case 'mesh':
+                case 'inspector':
+                    components.dependencies.push(enhanced);
+                    break;
+                case 'platform':
+                    components.externalSystems.push(enhanced);
+                    break;
+                case 'integration':
+                    components.appBuilder.push(enhanced);
+                    break;
+                // Legacy types for backward compatibility
                 case 'dependency':
                     components.dependencies.push(enhanced);
                     break;

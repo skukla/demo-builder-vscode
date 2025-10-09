@@ -49,8 +49,7 @@
       }
     },
     "commerce-mesh": {
-      "type": "dependency",
-      "subType": "mesh",
+      "type": "mesh",
       "name": "Adobe Commerce API Mesh",
       "description": "GraphQL gateway for unifying commerce data sources",
       "icon": {
@@ -84,8 +83,7 @@
       }
     },
     "demo-inspector": {
-      "type": "dependency",
-      "subType": "inspector",
+      "type": "inspector",
       "name": "Demo Inspector",
       "description": "Visual debugging overlay showing data sources and API calls",
       "icon": {
@@ -106,7 +104,7 @@
       "removable": true
     },
     "experience-platform": {
-      "type": "external-system",
+      "type": "platform",
       "name": "Experience Platform",
       "description": "Adobe Experience Platform integration via Commerce Data Sharing",
       "requiresApiKey": true,
@@ -119,7 +117,7 @@
       }
     },
     "integration-service": {
-      "type": "app-builder",
+      "type": "integration",
       "name": "Kukla Integration Service",
       "description": "Custom integration service for Target Product Recommendations, AEM Assets, and more",
       "icon": {
@@ -326,7 +324,6 @@
     "catalog-service": {
       "name": "Catalog Service",
       "description": "Enhanced product information management",
-      "required": true,
       "requiredEnvVars": [
         "ADOBE_CATALOG_SERVICE_ENDPOINT",
         "ADOBE_COMMERCE_ENVIRONMENT_ID",
@@ -336,7 +333,6 @@
     "live-search": {
       "name": "Live Search",
       "description": "AI-powered search with personalization",
-      "required": true,
       "requiredEnvVars": [
         "ADOBE_CATALOG_SERVICE_ENDPOINT",
         "ADOBE_COMMERCE_ENVIRONMENT_ID",
