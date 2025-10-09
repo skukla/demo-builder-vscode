@@ -12,6 +12,17 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     // Singleton: Track the active Configure panel
     private static activePanel: vscode.WebviewPanel | undefined;
 
+    /**
+     * Static method to dispose any active Configure panel
+     * Useful for cleanup during navigation
+     */
+    public static disposeActivePanel(): void {
+        if (ConfigureProjectWebviewCommand.activePanel) {
+            ConfigureProjectWebviewCommand.activePanel.dispose();
+            ConfigureProjectWebviewCommand.activePanel = undefined;
+        }
+    }
+
     protected getWebviewId(): string {
         return 'demoBuilder.configureProject';
     }
@@ -273,7 +284,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 
                 // Remove quotes if present
                 if ((value.startsWith('"') && value.endsWith('"')) || 
-                    (value.startsWith("'") && value.endsWith("'"))) {
+                    (value.startsWith('\'') && value.endsWith('\''))) {
                     value = value.slice(1, -1);
                 }
                 
