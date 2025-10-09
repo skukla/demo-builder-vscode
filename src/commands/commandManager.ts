@@ -2,12 +2,12 @@ import * as vscode from 'vscode';
 import { CreateProjectWebviewCommand } from './createProjectWebview';
 import { WelcomeWebviewCommand } from './welcomeWebview';
 import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
+import { ConfigureProjectWebviewCommand } from './configureProjectWebview';
 import { StartDemoCommand } from './startDemo';
 import { StopDemoCommand } from './stopDemo';
 import { DeleteProjectCommand } from './deleteProject';
 import { ViewStatusCommand } from './viewStatus';
 import { ConfigureCommand } from './configure';
-import { ConfigureProjectWebviewCommand } from './configureProjectWebview';
 import { CheckUpdatesCommand } from './checkUpdates';
 import { ResetAllCommand } from './resetAll';
 import { DiagnosticsCommand } from './diagnostics';
@@ -49,7 +49,12 @@ export class CommandManager {
             this.statusBar,
             this.logger
         );
-        this.registerCommand('demoBuilder.showWelcome', () => this.welcomeScreen.execute());
+        this.registerCommand('demoBuilder.showWelcome', async () => {
+            // Close other webviews when going "home" to Welcome
+            ProjectDashboardWebviewCommand.disposeActivePanel();
+            ConfigureProjectWebviewCommand.disposeActivePanel();
+            await this.welcomeScreen.execute();
+        });
 
         // Create Project (Webview version)
         this.createProjectWebview = new CreateProjectWebviewCommand(
@@ -58,7 +63,27 @@ export class CommandManager {
             this.statusBar,
             this.logger
         );
-        this.registerCommand('demoBuilder.createProject', () => this.createProjectWebview.execute());
+        this.registerCommand('demoBuilder.createProject', async () => {
+            // Check if current project has a running demo
+            const currentProject = await this.stateManager.getCurrentProject();
+            if (currentProject && currentProject.status === 'running') {
+                const action = await vscode.window.showWarningMessage(
+                    `Demo is currently running for "${currentProject.name}". Stop it before creating a new project?`,
+                    'Stop & Continue',
+                    'Cancel'
+                );
+                
+                if (action !== 'Stop & Continue') {
+                    return;
+                }
+                
+                // Stop the current demo
+                this.logger.info('[CreateProject] Stopping current demo before creating new project...');
+                await vscode.commands.executeCommand('demoBuilder.stopDemo');
+            }
+            
+            await this.createProjectWebview.execute();
+        });
 
         // Project Dashboard (Post-creation guide)
         const projectDashboard = new ProjectDashboardWebviewCommand(
@@ -67,7 +92,92 @@ export class CommandManager {
             this.statusBar,
             this.logger
         );
-        this.registerCommand('demoBuilder.showProjectDashboard', () => projectDashboard.execute());
+        this.registerCommand('demoBuilder.showProjectDashboard', async () => {
+            // Close Welcome when opening Dashboard (prevent confusion)
+            WelcomeWebviewCommand.disposeActivePanel();
+            await projectDashboard.execute();
+        });
+
+        // Switch Project (Quick picker for existing projects)
+        this.registerCommand('demoBuilder.switchProject', async () => {
+            // Check if current project has a running demo
+            const currentProject = await this.stateManager.getCurrentProject();
+            if (currentProject && currentProject.status === 'running') {
+                const action = await vscode.window.showWarningMessage(
+                    `Demo is currently running for "${currentProject.name}". Stop it before switching projects?`,
+                    'Stop & Switch',
+                    'Cancel'
+                );
+                
+                if (action !== 'Stop & Switch') {
+                    return;
+                }
+                
+                // Stop the current demo
+                this.logger.info('[SwitchProject] Stopping current demo before switching...');
+                await vscode.commands.executeCommand('demoBuilder.stopDemo');
+            }
+            
+            const projects = await this.stateManager.getAllProjects();
+            
+            if (projects.length === 0) {
+                vscode.window.showInformationMessage('No existing projects found. Create a new project to get started!');
+                return;
+            }
+            
+            const items = projects.map((project: { name: string; path: string; lastModified: Date }) => ({
+                label: project.name,
+                description: project.path,
+                detail: `Last modified: ${project.lastModified.toLocaleDateString()}`,
+                projectPath: project.path
+            }));
+            
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: 'Select a project to open',
+                title: 'Switch Project'
+            });
+            
+            if (selected) {
+                const project = await this.stateManager.loadProjectFromPath(selected.projectPath);
+                if (project) {
+                    this.logger.info(`[SwitchProject] Switched to project: ${project.name}`);
+                    this.statusBar.updateProject(project);
+                    vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+                } else {
+                    vscode.window.showErrorMessage(`Failed to load project from ${selected.projectPath}`);
+                }
+            }
+        });
+
+        // Load Project (from tree view click)
+        this.registerCommand('demoBuilder.loadProject', async (projectPath: string) => {
+            // Check if current project has a running demo
+            const currentProject = await this.stateManager.getCurrentProject();
+            if (currentProject && currentProject.status === 'running') {
+                const action = await vscode.window.showWarningMessage(
+                    `Demo is currently running for "${currentProject.name}". Stop it before switching projects?`,
+                    'Stop & Switch',
+                    'Cancel'
+                );
+                
+                if (action !== 'Stop & Switch') {
+                    return;
+                }
+                
+                // Stop the current demo
+                this.logger.info('[LoadProject] Stopping current demo before switching...');
+                await vscode.commands.executeCommand('demoBuilder.stopDemo');
+            }
+            
+            const project = await this.stateManager.loadProjectFromPath(projectPath);
+            if (project) {
+                this.logger.info(`[LoadProject] Loaded project: ${project.name}`);
+                this.statusBar.updateProject(project);
+                vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+            } else {
+                vscode.window.showErrorMessage(`Failed to load project from ${projectPath}`);
+            }
+        });
 
         // Start Demo
         const startDemo = new StartDemoCommand(
@@ -121,7 +231,11 @@ export class CommandManager {
             this.statusBar,
             this.logger
         );
-        this.registerCommand('demoBuilder.configureProject', () => configureProject.execute());
+        this.registerCommand('demoBuilder.configureProject', async () => {
+            // Close Welcome when opening Configure (prevent confusion)
+            WelcomeWebviewCommand.disposeActivePanel();
+            await configureProject.execute();
+        });
 
         // Deploy Mesh
         const deployMesh = new DeployMeshCommand(

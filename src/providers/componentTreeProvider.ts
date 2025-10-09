@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Project, CustomIconPaths } from '../types';
+import { CustomIconPaths } from '../types';
 import { StateManager } from '../utils/stateManager';
 
-type FileSystemItem = ComponentFolder | FileItem;
+type FileSystemItem = ComponentFolder | FileItem | ProjectItem;
 
 /**
  * Tree provider for displaying project components as a file browser
@@ -38,14 +38,24 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
         const project = await this.stateManager.getCurrentProject();
         
         if (!project) {
-            // No project - show welcome message
-            return [
-                new FileItem(
-                    'Get Started',
-                    'Click here or use the Activity Bar icon to create your first demo project',
-                    true
-                )
-            ];
+            // No current project - check if any projects exist
+            const allProjects = await this.stateManager.getAllProjects();
+            
+            if (allProjects.length === 0) {
+                // No projects at all - show welcome message
+                return [
+                    new FileItem(
+                        'Get Started',
+                        'Click here or use the Activity Bar icon to create your first demo project',
+                        true
+                    )
+                ];
+            }
+            
+            // Show list of available projects
+            return allProjects.map((proj: { name: string; path: string; lastModified: Date }) => 
+                new ProjectItem(proj.name, proj.path, proj.lastModified)
+            );
         }
 
         // Root level: show component folders
@@ -53,7 +63,7 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
             const items: FileSystemItem[] = [];
             
             if (project.componentInstances) {
-                for (const [key, component] of Object.entries(project.componentInstances)) {
+                for (const [, component] of Object.entries(project.componentInstances)) {
                     if (component && component.path) {
                         // Pass component icon and subType for custom icons
                         const icon = component.icon || null;
@@ -112,7 +122,7 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
                 }
                 return a.label.localeCompare(b.label);
             });
-        } catch (error) {
+        } catch {
             return [];
         }
     }
@@ -216,6 +226,31 @@ class FileItem extends vscode.TreeItem {
                 title: 'Show Welcome'
             };
         }
+    }
+}
+
+/**
+ * Tree item representing a project (shown when no current project is selected)
+ */
+class ProjectItem extends vscode.TreeItem {
+    constructor(
+        public readonly label: string,
+        public readonly projectPath: string,
+        public readonly lastModified: Date
+    ) {
+        super(label, vscode.TreeItemCollapsibleState.None);
+        
+        this.iconPath = new vscode.ThemeIcon('folder-active');
+        this.description = lastModified.toLocaleDateString();
+        this.tooltip = `${label}\n${projectPath}\nLast modified: ${lastModified.toLocaleString()}`;
+        this.contextValue = 'project';
+        
+        // Make project clickable to load
+        this.command = {
+            command: 'demoBuilder.loadProject',
+            title: 'Load Project',
+            arguments: [projectPath]
+        };
     }
 }
 

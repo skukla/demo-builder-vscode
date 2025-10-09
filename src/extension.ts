@@ -118,8 +118,9 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(
             vscode.commands.registerCommand('demoBuilder.openBrowser', async () => {
                 const project = await stateManager.getCurrentProject();
-                if (project?.frontend?.port) {
-                    const url = `http://localhost:${project.frontend.port}`;
+                const port = project?.componentInstances?.['citisignal-nextjs']?.port;
+                if (port) {
+                    const url = `http://localhost:${port}`;
                     await vscode.env.openExternal(vscode.Uri.parse(url));
                 }
             })
@@ -187,48 +188,39 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Handle startup UI based on current state
         if (showingGettingStarted) {
-            // We're showing Project Dashboard after restart - just update status bar
+            // We're showing Project Dashboard after restart (post-creation) - just update status bar
             const project = await stateManager.getCurrentProject();
             if (project) {
                 statusBar.updateProject(project);
                 logger.info(`[Extension] Loaded existing project (Project Dashboard mode): ${project.name}`);
             }
         } else {
-            // Normal startup - check for existing project
+            // Normal startup - ALWAYS show Welcome screen first (MVP requirement)
+            // User must explicitly choose to open a project or create a new one
+            
+            // Load existing project if available (for status bar), but don't auto-open dashboard
             const hasExistingProject = await stateManager.hasProject();
             if (hasExistingProject) {
-                // Existing project found - show Project Dashboard
                 const project = await stateManager.getCurrentProject();
                 if (project) {
                     statusBar.updateProject(project);
                     logger.info(`[Extension] Loaded existing project: ${project.name}`);
-                    
-                    // Auto-open Project Dashboard for existing projects
-                    vscode.commands.executeCommand('demoBuilder.showProjectDashboard').then(
-                        () => {
-                            logger.info('[Extension] Project Dashboard opened for existing project');
-                            // Focus stays on webview (don't focus sidebar)
-                        },
-                        (err) => {
-                            logger.error('[Extension] Failed to show Project Dashboard:', err);
-                        }
-                    );
                 }
+            }
+            
+            // Always show Welcome screen on startup
+            const isWelcomeVisible = commandManager.welcomeScreen?.isVisible() || false;
+            
+            if (!isWelcomeVisible) {
+                vscode.commands.executeCommand('demoBuilder.showWelcome').then(
+                    () => logger.info('[Extension] Welcome screen shown successfully'),
+                    (err) => {
+                        logger.error('[Extension] Failed to show welcome screen:', err);
+                        vscode.window.showErrorMessage(`Failed to show welcome screen: ${err?.message || err}`);
+                    }
+                );
             } else {
-                // First time or no project - show welcome screen (only if not already visible)
-                const isWelcomeVisible = commandManager.welcomeScreen?.isVisible() || false;
-                
-                if (!isWelcomeVisible) {
-                    vscode.commands.executeCommand('demoBuilder.showWelcome').then(
-                        () => logger.info('[Extension] Welcome screen shown successfully'),
-                        (err) => {
-                            logger.error('[Extension] Failed to show welcome screen:', err);
-                            vscode.window.showErrorMessage(`Failed to show welcome screen: ${err?.message || err}`);
-                        }
-                    );
-                } else {
-                    logger.debug('[Extension] Welcome screen already visible, not showing duplicate');
-                }
+                logger.debug('[Extension] Welcome screen already visible, not showing duplicate');
             }
         }
 

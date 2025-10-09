@@ -114,7 +114,27 @@
           "name": "Components"
         }
       ]
-    }
+    },
+    "commands": [
+      {
+        "command": "demoBuilder.showWelcome",
+        "title": "Show Welcome Screen",
+        "category": "Demo Builder",
+        "icon": "$(home)"
+      },
+      {
+        "command": "demoBuilder.showProjectDashboard",
+        "title": "Open Project Dashboard",
+        "category": "Demo Builder",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "demoBuilder.switchProject",
+        "title": "Switch Project",
+        "category": "Demo Builder",
+        "icon": "$(folder-opened)"
+      }
+    ]
   },
   "scripts": {
     "compile": "npm run compile:typescript && npm run compile:webview && npm run copy:media",

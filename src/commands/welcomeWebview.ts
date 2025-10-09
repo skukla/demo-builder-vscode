@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { BaseCommand } from './baseCommand';
-import { Project } from '../types';
 import { setLoadingState } from '../utils/loadingHTML';
 
 export class WelcomeWebviewCommand extends BaseCommand {
@@ -339,18 +338,10 @@ export class WelcomeWebviewCommand extends BaseCommand {
                 // Close welcome screen
                 this.panel?.dispose();
                 
-                // Show success message
-                vscode.window.showInformationMessage(
-                    `Project "${project.name}" loaded successfully!`,
-                    'Start Demo',
-                    'View Status'
-                ).then(selection => {
-                    if (selection === 'Start Demo') {
-                        vscode.commands.executeCommand('demoBuilder.startDemo');
-                    } else if (selection === 'View Status') {
-                        vscode.commands.executeCommand('demoBuilder.viewStatus');
-                    }
-                });
+                // Open project dashboard
+                await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+                
+                this.logger.info(`[Welcome] Opened project dashboard for: ${project.name}`);
             }
         } catch (error) {
             await this.showError('Failed to open project', error as Error);
@@ -358,17 +349,29 @@ export class WelcomeWebviewCommand extends BaseCommand {
     }
 
     private async browseForProject(): Promise<void> {
-        const result = await vscode.window.showOpenDialog({
-            canSelectFiles: false,
-            canSelectFolders: true,
-            canSelectMany: false,
-            openLabel: 'Select Demo Project',
-            title: 'Select Demo Builder Project Directory'
+        // Get all projects from ~/.demo-builder/projects/
+        const projects = await this.stateManager.getAllProjects();
+        
+        if (projects.length === 0) {
+            vscode.window.showInformationMessage('No existing projects found. Create a new project to get started!');
+            return;
+        }
+        
+        // Show QuickPick with project list
+        const items = projects.map((project: { name: string; path: string; lastModified: Date }) => ({
+            label: project.name,
+            description: project.path,
+            detail: `Last modified: ${project.lastModified.toLocaleDateString()}`,
+            projectPath: project.path
+        }));
+        
+        const selected = await vscode.window.showQuickPick(items, {
+            placeHolder: 'Select a project to open',
+            title: 'Open Existing Project'
         });
-
-        if (result && result.length > 0) {
-            const projectPath = result[0].fsPath;
-            await this.openProject(projectPath);
+        
+        if (selected) {
+            await this.openProject(selected.projectPath);
         }
     }
 
