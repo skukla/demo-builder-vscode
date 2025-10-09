@@ -36,10 +36,7 @@
           "ADOBE_COMMERCE_STORE_CODE",
           "ADOBE_CATALOG_API_KEY"
         ],
-        "optionalEnvVars": [
-          "ADOBE_ASSETS_URL",
-          "ADOBE_COMMERCE_CUSTOMER_GROUP"
-        ]
+        "optionalEnvVars": ["ADOBE_ASSETS_URL", "ADOBE_COMMERCE_CUSTOMER_GROUP"]
       }
     },
     "adobe-commerce-paas": {
@@ -48,20 +45,7 @@
       "description": "Adobe Commerce DSN instance",
       "configuration": {
         "nodeVersion": "20",
-        "services": [
-          {
-            "id": "catalog-service",
-            "name": "Catalog Service",
-            "description": "Enhanced product information management",
-            "required": true
-          },
-          {
-            "id": "live-search",
-            "name": "Live Search",
-            "description": "AI-powered search with personalization",
-            "required": true
-          }
-        ]
+        "requiredServices": ["catalog-service", "live-search"]
       }
     },
     "commerce-mesh": {
@@ -169,10 +153,7 @@
           "ADOBE_COMMERCE_WEBSITE_CODE",
           "ADOBE_COMMERCE_STORE_CODE"
         ],
-        "optionalEnvVars": [
-          "AWS_ACCESS_KEY_ID",
-          "AWS_SECRET_ACCESS_KEY"
-        ]
+        "optionalEnvVars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
       }
     }
   },
@@ -341,6 +322,28 @@
       "group": "integration-service"
     }
   },
+  "services": {
+    "catalog-service": {
+      "name": "Catalog Service",
+      "description": "Enhanced product information management",
+      "required": true,
+      "requiredEnvVars": [
+        "ADOBE_CATALOG_SERVICE_ENDPOINT",
+        "ADOBE_COMMERCE_ENVIRONMENT_ID",
+        "ADOBE_CATALOG_API_KEY"
+      ]
+    },
+    "live-search": {
+      "name": "Live Search",
+      "description": "AI-powered search with personalization",
+      "required": true,
+      "requiredEnvVars": [
+        "ADOBE_CATALOG_SERVICE_ENDPOINT",
+        "ADOBE_COMMERCE_ENVIRONMENT_ID",
+        "ADOBE_CATALOG_API_KEY"
+      ]
+    }
+  },
   "compatibility": {
     "citisignal-nextjs": {
       "adobe-commerce-paas": {
@@ -351,4 +354,3 @@
     }
   }
 }
-

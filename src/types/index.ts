@@ -239,6 +239,7 @@ export interface ComponentRegistry {
         externalSystems?: ComponentDefinition[];
         appBuilder?: ComponentDefinition[];
     };
+    services?: Record<string, any>;
     compatibilityMatrix?: Record<string, Record<string, CompatibilityInfo>>;
     presets?: PresetDefinition[];
 }

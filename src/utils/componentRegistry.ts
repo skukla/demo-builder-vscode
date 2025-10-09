@@ -37,7 +37,7 @@ export class ComponentRegistryManager {
             appBuilder: []
         };
 
-        // Group components by type and build their envVars
+        // Group components by type and build their envVars and services
         for (const [id, component] of Object.entries(raw.components || {})) {
             const comp = component as any;
             const enhanced = { 
@@ -45,7 +45,11 @@ export class ComponentRegistryManager {
                 id,
                 configuration: comp.configuration ? {
                     ...comp.configuration,
-                    envVars: this.buildEnvVarsForComponent(id, comp, raw.envVars || {})
+                    envVars: this.buildEnvVarsForComponent(id, comp, raw.envVars || {}),
+                    // Expand service references to full service definitions
+                    services: comp.configuration.requiredServices 
+                        ? this.buildServicesForComponent(comp.configuration.requiredServices, raw.services || {}, raw.envVars || {})
+                        : undefined
                 } : undefined
             };
 
@@ -71,6 +75,7 @@ export class ComponentRegistryManager {
         return {
             version: raw.version,
             components,
+            services: raw.services || {},
             compatibilityMatrix: raw.compatibility || raw.compatibilityMatrix || {}
         };
     }
@@ -98,6 +103,41 @@ export class ComponentRegistryManager {
         return envVars;
     }
 
+    /**
+     * Build services array for a component from service IDs
+     * Expands service references to full definitions with envVars
+     */
+    private buildServicesForComponent(serviceIds: string[], services: any, sharedEnvVars: any): any[] {
+        const expandedServices: any[] = [];
+
+        for (const serviceId of serviceIds) {
+            const service = services[serviceId];
+            if (service) {
+                // Build envVars for this service
+                const serviceEnvVars: any[] = [];
+                const requiredKeys = service.requiredEnvVars || [];
+                
+                for (const key of requiredKeys) {
+                    const envVar = sharedEnvVars[key];
+                    if (envVar) {
+                        serviceEnvVars.push({
+                            key,
+                            ...envVar
+                        });
+                    }
+                }
+
+                expandedServices.push({
+                    id: serviceId,
+                    ...service,
+                    envVars: serviceEnvVars
+                });
+            }
+        }
+
+        return expandedServices;
+    }
+
     async getFrontends(): Promise<ComponentDefinition[]> {
         const registry = await this.loadRegistry();
         return registry.components.frontends;
@@ -121,6 +161,16 @@ export class ComponentRegistryManager {
     async getAppBuilder(): Promise<ComponentDefinition[]> {
         const registry = await this.loadRegistry();
         return registry.components.appBuilder || [];
+    }
+
+    async getServices(): Promise<Record<string, any>> {
+        const registry = await this.loadRegistry();
+        return registry.services || {};
+    }
+
+    async getServiceById(id: string): Promise<any | undefined> {
+        const registry = await this.loadRegistry();
+        return registry.services?.[id];
     }
 
     async getComponentById(id: string): Promise<ComponentDefinition | undefined> {
