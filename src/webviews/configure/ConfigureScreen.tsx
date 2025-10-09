@@ -37,6 +37,10 @@ interface ComponentData {
     id: string;
     name: string;
     description?: string;
+    dependencies?: {
+        required?: string[];
+        optional?: string[];
+    };
     configuration?: {
         requiredEnvVars?: string[];
         optionalEnvVars?: string[];
@@ -95,24 +99,79 @@ export function ConfigureScreen({ project, componentsData }: ConfigureScreenProp
     const selectedComponents = useMemo(() => {
         const components: Array<{ id: string; data: ComponentData; type: string }> = [];
         
+        // Debug: Log what we're working with
+        console.log('[ConfigureScreen] Project componentSelections:', project.componentSelections);
+        console.log('[ConfigureScreen] Project componentInstances:', project.componentInstances ? Object.keys(project.componentInstances) : 'none');
+        console.log('[ConfigureScreen] Available componentsData:', {
+            frontends: componentsData.frontends?.map(f => f.id),
+            backends: componentsData.backends?.map(b => b.id),
+            dependencies: componentsData.dependencies?.map(d => d.id),
+            hasEnvVars: !!componentsData.envVars
+        });
+        
+        // Helper to find component by ID across all categories
+        const findComponent = (componentId: string): ComponentData | undefined => {
+            return componentsData.frontends?.find(c => c.id === componentId) ||
+                   componentsData.backends?.find(c => c.id === componentId) ||
+                   componentsData.dependencies?.find(c => c.id === componentId) ||
+                   componentsData.externalSystems?.find(c => c.id === componentId) ||
+                   componentsData.appBuilder?.find(c => c.id === componentId);
+        };
+        
+        // Helper to add component and its dependencies
+        const addComponentWithDeps = (comp: ComponentData, type: string) => {
+            components.push({ id: comp.id, data: comp, type });
+            
+            // Also add required dependencies
+            comp.dependencies?.required?.forEach(depId => {
+                const dep = findComponent(depId);
+                if (dep && !components.some(c => c.id === depId)) {
+                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
+                    if (hasEnvVars) {
+                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
+                    }
+                }
+            });
+            
+            // Also add optional dependencies (if selected)
+            comp.dependencies?.optional?.forEach(depId => {
+                const dep = findComponent(depId);
+                if (dep && !components.some(c => c.id === depId)) {
+                    // Check if this optional dependency was actually selected
+                    const isSelected = project.componentSelections?.dependencies?.includes(depId);
+                    if (isSelected) {
+                        const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                                           (dep.configuration?.optionalEnvVars?.length || 0) > 0;
+                        if (hasEnvVars) {
+                            components.push({ id: dep.id, data: dep, type: 'Dependency' });
+                        }
+                    }
+                }
+            });
+        };
+        
         // Try using componentSelections first
         if (project.componentSelections?.frontend) {
             const frontend = componentsData.frontends?.find((f: ComponentData) => f.id === project.componentSelections?.frontend);
-            if (frontend) components.push({ id: frontend.id, data: frontend, type: 'Frontend' });
+            if (frontend) addComponentWithDeps(frontend, 'Frontend');
         }
         
         if (project.componentSelections?.backend) {
             const backend = componentsData.backends?.find((b: ComponentData) => b.id === project.componentSelections?.backend);
-            if (backend) components.push({ id: backend.id, data: backend, type: 'Backend' });
+            if (backend) addComponentWithDeps(backend, 'Backend');
         }
         
+        // Add explicitly selected dependencies (that weren't already added via relationships)
         project.componentSelections?.dependencies?.forEach(depId => {
-            const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId);
-            if (dep) {
-                const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 || 
-                                   (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                if (hasEnvVars) {
-                    components.push({ id: dep.id, data: dep, type: 'Dependency' });
+            if (!components.some(c => c.id === depId)) {
+                const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId);
+                if (dep) {
+                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
+                    if (hasEnvVars) {
+                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
+                    }
                 }
             }
         });
@@ -124,8 +183,10 @@ export function ConfigureScreen({ project, componentsData }: ConfigureScreenProp
         
         project.componentSelections?.appBuilder?.forEach(appId => {
             const app = componentsData.appBuilder?.find((a: ComponentData) => a.id === appId);
-            if (app) components.push({ id: app.id, data: app, type: 'App Builder' });
+            if (app) addComponentWithDeps(app, 'App Builder');
         });
+        
+        console.log('[ConfigureScreen] Selected components after relationships:', components.map(c => ({ id: c.id, type: c.type })));
         
         // Fallback: If no components found via componentSelections, try componentInstances
         if (components.length === 0 && project.componentInstances) {
