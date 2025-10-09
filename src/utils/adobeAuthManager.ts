@@ -297,8 +297,13 @@ export class AdobeAuthManager {
 
             this.debugLogger.debug('[Auth SDK] Initializing Adobe Console SDK...');
             
-            // Get CLI access token
-            const accessToken = await getToken('cli');
+            // Get CLI access token with timeout protection
+            const accessToken = await Promise.race([
+                getToken('cli'),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('SDK token fetch timed out')), TIMEOUTS.SDK_INIT)
+                )
+            ]) as string;
             
             if (!accessToken) {
                 this.debugLogger.debug('[Auth SDK] No access token available, skipping SDK initialization');
@@ -429,8 +434,11 @@ export class AdobeAuthManager {
                         // Check if we have an org context and validate it's accessible
                         await this.validateAndClearInvalidOrgContext();
 
-                        // Initialize SDK for high-performance operations
-                        await this.initializeSDK();
+                        // Initialize SDK in background (non-blocking) for future high-performance operations
+                        this.initializeSDK().catch(error => {
+                            // SDK initialization failure is not critical - operations will fall back to CLI
+                            this.debugLogger.debug('[Auth SDK] Background SDK init failed, using CLI fallback:', error);
+                        });
 
                         this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
 
@@ -460,8 +468,11 @@ export class AdobeAuthManager {
                     // Check if we have an org context and validate it's accessible
                     await this.validateAndClearInvalidOrgContext();
 
-                    // Initialize SDK for high-performance operations
-                    await this.initializeSDK();
+                    // Initialize SDK in background (non-blocking) for future high-performance operations
+                    this.initializeSDK().catch(error => {
+                        // SDK initialization failure is not critical - operations will fall back to CLI
+                        this.debugLogger.debug('[Auth SDK] Background SDK init failed, using CLI fallback:', error);
+                    });
 
                     this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
 
