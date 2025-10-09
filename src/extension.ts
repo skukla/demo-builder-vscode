@@ -296,6 +296,10 @@ function registerFileWatchers(context: vscode.ExtensionContext) {
     let demoStartTime: number | null = null;
     const STARTUP_GRACE_PERIOD = 10000; // 10 seconds grace period after demo starts
     
+    // Track programmatic writes (from Configure screen) to suppress file watcher
+    // Configure screen handles its own restart notifications
+    const programmaticWrites = new Set<string>();
+    
     // Listen for demo start events to set grace period
     context.subscriptions.push(
         vscode.commands.registerCommand('demoBuilder._internal.demoStarted', () => {
@@ -310,6 +314,22 @@ function registerFileWatchers(context: vscode.ExtensionContext) {
             demoStartTime = null;
             logger.debug('[Env Watcher] Demo stopped, grace period reset');
         })
+    );
+    
+    // Listen for Configure screen to register programmatic writes
+    // This allows us to ignore Configure screen's own writes (it shows its own notification)
+    context.subscriptions.push(
+        vscode.commands.registerCommand('demoBuilder._internal.registerProgrammaticWrites', 
+            (filePaths: string[]) => {
+                filePaths.forEach(fp => programmaticWrites.add(fp));
+                logger.debug(`[Env Watcher] Registered ${filePaths.length} programmatic writes to ignore`);
+                
+                // Auto-cleanup after 5 seconds in case watcher events are delayed
+                setTimeout(() => {
+                    filePaths.forEach(fp => programmaticWrites.delete(fp));
+                }, 5000);
+            }
+        )
     );
     
     // Track file content hashes to detect actual changes (not just file events)
@@ -338,13 +358,19 @@ function registerFileWatchers(context: vscode.ExtensionContext) {
             return;
         }
         
+        // Check if this is a programmatic write (Configure screen handles its own notifications)
+        if (programmaticWrites.has(filePath)) {
+            logger.debug('[Env Watcher] Ignoring programmatic write (Configure screen handles notification)');
+            programmaticWrites.delete(filePath); // Clean up immediately
+            return;
+        }
+        
         // Calculate current file hash
         const currentHash = await getFileHash(filePath);
         if (!currentHash) {
             logger.debug('[Env Watcher] File no longer readable, skipping');
             return;
         }
-        
         
         // Check if this is the first time we're seeing this file
         const previousHash = fileContentHashes.get(filePath);

@@ -126,6 +126,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 project.componentConfigs = data.componentConfigs;
                 await this.stateManager.saveProject(project);
 
+                // Register programmatic writes BEFORE writing files
+                // This prevents file watcher from showing duplicate notifications
+                await this.registerProgrammaticWrites(project, data.componentConfigs);
+
                 // Regenerate .env files
                 await this.regenerateEnvFiles(project, data.componentConfigs);
 
@@ -133,10 +137,25 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 const result = { success: true };
                 
                 // Show success notification after returning (non-blocking)
-                // Note: File watcher will automatically detect the .env changes and show
-                // restart notification if the demo is running - no need to duplicate here
                 setImmediate(() => {
                     vscode.window.showInformationMessage('Configuration saved successfully');
+                    
+                    // Always show restart notification if demo is running
+                    // Don't rely on file watcher - it only catches .env file changes
+                    // This ensures we catch ALL config changes, including future ones
+                    // that might not write to files
+                    if (project.status === 'running') {
+                        vscode.window.showInformationMessage(
+                            'Restart the demo to apply configuration changes.',
+                            'Restart Demo'
+                        ).then(selection => {
+                            if (selection === 'Restart Demo') {
+                                vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
+                                    vscode.commands.executeCommand('demoBuilder.startDemo');
+                                });
+                            }
+                        });
+                    }
                 });
 
                 return result;
@@ -235,6 +254,30 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         }
 
         return values;
+    }
+
+    /**
+     * Register programmatic writes to suppress file watcher notifications
+     */
+    private async registerProgrammaticWrites(project: Project, componentConfigs: any): Promise<void> {
+        const filePaths: string[] = [];
+        
+        // Project root .env
+        filePaths.push(path.join(project.path, '.env'));
+        
+        // Component .env files
+        if (project.componentInstances) {
+            for (const [componentId, instance] of Object.entries(project.componentInstances)) {
+                if (instance.path && componentConfigs[componentId]) {
+                    const envFileName = componentId.includes('nextjs') ? '.env.local' : '.env';
+                    filePaths.push(path.join(instance.path, envFileName));
+                }
+            }
+        }
+        
+        // Register all paths with file watcher
+        await vscode.commands.executeCommand('demoBuilder._internal.registerProgrammaticWrites', filePaths);
+        this.logger.debug(`[Configure] Registered ${filePaths.length} programmatic writes`);
     }
 
     /**
