@@ -4,6 +4,7 @@ import * as fs from 'fs/promises';
 import { BaseWebviewCommand } from './baseWebviewCommand';
 import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
 import { ComponentRegistryManager } from '../utils/componentRegistry';
+import { detectMeshChanges } from '../utils/meshChangeDetector';
 import { Project } from '../types';
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
@@ -122,6 +123,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
                 this.logger.info('[Configure] Saving configuration...');
 
+                // Detect if mesh configuration changed BEFORE saving
+                const meshChanges = await detectMeshChanges(project, data.componentConfigs);
+
                 // Update project state
                 project.componentConfigs = data.componentConfigs;
                 await this.stateManager.saveProject(project);
@@ -140,11 +144,31 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 setImmediate(() => {
                     vscode.window.showInformationMessage('Configuration saved successfully');
                     
-                    // Always show restart notification if demo is running
-                    // Don't rely on file watcher - it only catches .env file changes
-                    // This ensures we catch ALL config changes, including future ones
-                    // that might not write to files
-                    if (project.status === 'running') {
+                    // Smart notification based on what changed
+                    if (meshChanges.hasChanges && project.status === 'running') {
+                        // Mesh config changed AND demo is running
+                        vscode.window.showWarningMessage(
+                            'API Mesh configuration changed. Redeploy mesh and restart demo to apply changes.',
+                            'Redeploy Mesh',
+                            'Later'
+                        ).then(selection => {
+                            if (selection === 'Redeploy Mesh') {
+                                vscode.commands.executeCommand('demoBuilder.deployMesh');
+                            }
+                        });
+                    } else if (meshChanges.hasChanges) {
+                        // Mesh config changed but demo is NOT running
+                        vscode.window.showInformationMessage(
+                            'API Mesh configuration changed. Redeploy mesh to apply changes.',
+                            'Redeploy Mesh',
+                            'Later'
+                        ).then(selection => {
+                            if (selection === 'Redeploy Mesh') {
+                                vscode.commands.executeCommand('demoBuilder.deployMesh');
+                            }
+                        });
+                    } else if (project.status === 'running') {
+                        // Only non-mesh configs changed, demo is running
                         vscode.window.showInformationMessage(
                             'Restart the demo to apply configuration changes.',
                             'Restart Demo'

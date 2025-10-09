@@ -30,6 +30,12 @@ export interface Project {
             [key: string]: string | boolean | number | undefined;
         };
     };
+    // API Mesh deployment state (tracks changes that require redeployment)
+    meshState?: {
+        envVars: Record<string, string>;
+        sourceHash: string | null;
+        lastDeployed: string; // ISO date string
+    };
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;
