@@ -13,6 +13,7 @@ import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import { WizardState } from '../../types';
 import { vscode } from '../../app/vscodeApi';
+import { useMinimumLoadingTime } from '../../utils/useMinimumLoadingTime';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
 
 interface AdobeAuthStepProps {
@@ -27,6 +28,9 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     const [authTimeout, setAuthTimeout] = useState(false);
     const isSwitchingRef = useRef(false);
     const authTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    
+    // Ensure loading spinner shows for minimum 500ms to avoid looking like a bug
+    const showLoadingSpinner = useMinimumLoadingTime(state.adobeAuth.isChecking, 500);
 
     useEffect(() => {
         // Only check authentication if status is unknown (undefined) or explicitly failed
@@ -84,7 +88,8 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                     isChecking: data.isChecking !== undefined ? data.isChecking : false,
                     email: data.email,
                     error: data.error,
-                    requiresOrgSelection: data.requiresOrgSelection
+                    requiresOrgSelection: data.requiresOrgSelection,
+                    orgLacksAccess: data.orgLacksAccess
                 },
                 // Always update org - set to undefined when null/undefined
                 adobeOrg: data.organization ? {
@@ -170,7 +175,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             </Text>
 
             {/* Authentication Status - Checking (or not yet checked) */}
-            {(state.adobeAuth.isChecking || state.adobeAuth.isAuthenticated === undefined) && !authTimeout && (
+            {(showLoadingSpinner || state.adobeAuth.isAuthenticated === undefined) && !authTimeout && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <LoadingDisplay 
                         size="L"
@@ -215,9 +220,21 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                                 Select Your Organization
                             </Text>
                             <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
-                                {state.adobeAuth.requiresOrgSelection
-                                    ? "Your previous organization is no longer accessible. Please select a new organization to continue with your project."
-                                    : "You're signed in to Adobe, but haven't selected an organization yet. Choose your organization to access App Builder projects."}
+                                {state.adobeAuth.orgLacksAccess ? (
+                                    <>
+                                        No organizations are currently accessible. If you just selected an organization, it may lack App Builder access, or there may be a temporary authentication issue.
+                                        <br />
+                                        Please choose an organization with App Builder enabled.
+                                    </>
+                                ) : state.adobeAuth.requiresOrgSelection ? (
+                                    "Your previous organization is no longer accessible. Please select a new organization to continue with your project."
+                                ) : (
+                                    <>
+                                        You're signed in to Adobe, but haven't selected an organization yet.
+                                        <br />
+                                        Choose your organization to access App Builder projects.
+                                    </>
+                                )}
                             </Text>
                         </Flex>
                         <Button
@@ -298,7 +315,8 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                             </Text>
                         </Flex>
                         <Button variant="accent" onPress={() => {
-                            // Don't clear timeout manually - let backend clear it when checking starts
+                            // Clear timeout immediately to prevent flash during state transition
+                            setAuthTimeout(false);
                             handleLogin(false);
                         }} marginTop="size-300">
                             <Login size="S" marginEnd="size-100" />
