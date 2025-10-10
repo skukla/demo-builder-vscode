@@ -13,7 +13,6 @@ import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import { WizardState } from '../../types';
 import { vscode } from '../../app/vscodeApi';
-import { useDebouncedLoading } from '../../utils/useDebouncedLoading';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
 
 interface AdobeAuthStepProps {
@@ -28,10 +27,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     const [authTimeout, setAuthTimeout] = useState(false);
     const isSwitchingRef = useRef(false);
     const authTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    
-    // Debounce loading state: only show checking UI if operation takes >300ms
-    // This prevents flash of loading messages for fast SDK-based auth checks
-    const showChecking = useDebouncedLoading(state.adobeAuth.isChecking);
 
     useEffect(() => {
         // Only check authentication if status is unknown (undefined) or explicitly failed
@@ -175,7 +170,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             </Text>
 
             {/* Authentication Status - Checking (or not yet checked) */}
-            {(showChecking || state.adobeAuth.isAuthenticated === undefined) && !authTimeout && (
+            {(state.adobeAuth.isChecking || state.adobeAuth.isAuthenticated === undefined) && !authTimeout && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <LoadingDisplay 
                         size="L"
@@ -187,7 +182,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Authenticated with valid organization */}
-            {!showChecking && !state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && state.adobeOrg && (
+            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && state.adobeOrg && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <CheckmarkCircle UNSAFE_className="text-green-600" size="L" />
@@ -211,7 +206,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Authenticated but organization selection required */}
-            {!showChecking && !state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && !state.adobeOrg && (
+            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && !state.adobeOrg && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <AlertCircle UNSAFE_className="text-orange-500" size="L" />
@@ -238,7 +233,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Not authenticated - normal state */}
-            {!showChecking && !state.adobeAuth.isChecking && !authTimeout && state.adobeAuth.isAuthenticated === false && !state.adobeAuth.error && (
+            {!state.adobeAuth.isChecking && !authTimeout && state.adobeAuth.isAuthenticated === false && !state.adobeAuth.error && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Key UNSAFE_className="text-gray-500" size="L" />
@@ -263,7 +258,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Error state with helpful guidance */}
-            {!showChecking && !state.adobeAuth.isChecking && state.adobeAuth.error && !authTimeout && (
+            {!state.adobeAuth.isChecking && state.adobeAuth.error && !authTimeout && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Alert UNSAFE_className="text-red-500" size="L" />
