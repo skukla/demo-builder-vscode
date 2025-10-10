@@ -8,7 +8,6 @@ import {
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Alert from '@spectrum-icons/workflow/Alert';
-import Pending from '@spectrum-icons/workflow/Pending';
 import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
@@ -156,7 +155,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 adobeWorkspace: undefined
             })
         });
-        setAuthStatus(force ? 'Starting fresh login...' : 'Opening browser for login...');
+        // Backend sends auth-status message immediately - no need to set here
         
         // NOTE: No frontend timeout - backend handles timeout detection
         // Backend will send auth-status with error='timeout' if authentication times out
@@ -303,22 +302,13 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                                 The browser authentication window may have been closed or the session expired. You can try again.
                             </Text>
                         </Flex>
-                        <Flex direction="row" gap="size-200" marginTop="size-300">
-                            <Button variant="secondary" onPress={() => {
-                                setAuthTimeout(false);
-                                checkAuthentication();
-                            }}>
-                                <Refresh size="S" marginEnd="size-100" />
-                                Check Again
-                            </Button>
-                            <Button variant="accent" onPress={() => {
-                                setAuthTimeout(false);
-                                handleLogin(false);
-                            }}>
-                                <Login size="S" marginEnd="size-100" />
-                                Retry Login
-                            </Button>
-                        </Flex>
+                        <Button variant="accent" onPress={() => {
+                            setAuthTimeout(false);
+                            handleLogin(false);
+                        }} marginTop="size-300">
+                            <Login size="S" marginEnd="size-100" />
+                            Retry Login
+                        </Button>
                     </Flex>
                 </Flex>
             )}
