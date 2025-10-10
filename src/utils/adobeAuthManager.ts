@@ -111,10 +111,10 @@ export class AdobeAuthManager {
     private async validateOrganizationAccess(): Promise<boolean> {
         try {
             // Try to list projects - this will fail with 403 if org is invalid
-            // Use standard API timeout instead of aggressive 5-second timeout
+            // Use PROJECT_LIST timeout (30s) - validation needs time for slow networks
             const result = await this.commandManager.executeAdobeCLI(
                 'aio console project list --json',
-                { encoding: 'utf8', timeout: TIMEOUTS.API_CALL }
+                { encoding: 'utf8', timeout: TIMEOUTS.PROJECT_LIST }
             );
 
             // If we get here without error, check the result
@@ -132,13 +132,21 @@ export class AdobeAuthManager {
             this.debugLogger.debug('[Auth] Organization access validation failed:', result.stderr);
             return false;
         } catch (error) {
-            // Check if this is a timeout vs other errors
+            // Better timeout detection - check multiple indicators
             const errorString = error instanceof Error ? error.message : String(error);
-            if (errorString.includes('timeout') || errorString.includes('ETIMEDOUT')) {
-                this.debugLogger.warn('[Auth] Organization validation timed out - assuming valid (slow network)');
-                // On timeout, assume valid to avoid false negatives
-                return true;
+            const errorObj = error as any;
+            
+            const isTimeout = 
+                errorString.toLowerCase().includes('timeout') ||
+                errorString.toLowerCase().includes('timed out') ||
+                errorString.includes('ETIMEDOUT') ||
+                errorObj?.code === 'ETIMEDOUT';
+            
+            if (isTimeout) {
+                this.debugLogger.warn('[Auth] Organization validation timed out - assuming valid (network delay)');
+                return true; // Fail-open: assume org is valid on timeout
             }
+            
             this.debugLogger.debug('[Auth] Organization access validation error:', error);
             return false;
         }
@@ -188,9 +196,16 @@ export class AdobeAuthManager {
                     this.debugLogger.debug(`[Auth] Found organization context: ${context.org}, validating access...`);
 
                     // We have an org context, validate it's accessible
-                    const isValid = await this.validateOrganizationAccess();
+                    let isValid = await this.validateOrganizationAccess();
 
-                    // Cache the validation result
+                    // If validation failed, retry once (network might be slow)
+                    if (!isValid) {
+                        this.logger.info('Retrying organization access validation...');
+                        this.debugLogger.debug('[Auth] First validation failed, retrying once...');
+                        isValid = await this.validateOrganizationAccess();
+                    }
+
+                    // Cache the validation result (after retry if needed)
                     this.validationCache = {
                         org: context.org,
                         isValid,
@@ -198,6 +213,7 @@ export class AdobeAuthManager {
                     };
 
                     if (!isValid) {
+                        // Failed twice - now we clear
                         this.logger.info('Previous organization no longer accessible. Clearing selection...');
                         this.debugLogger.warn('[Auth] Organization context is invalid for current user - clearing');
 
