@@ -276,10 +276,13 @@ export class WelcomeWebviewCommand extends BaseCommand {
             break;
 
         case 'create-new':
-            // Open wizard (welcome panel stays in background)
+            // Open wizard and close welcome panel
             this.logger.info('[Project Creation] Starting wizard from welcome screen');
             await vscode.commands.executeCommand('demoBuilder.createProject');
-            // Don't dispose the welcome panel - keep it available for navigation back
+            
+            // Close welcome panel to provide focused wizard experience
+            // Welcome will auto-reopen via extension.ts logic if wizard closes without completion
+            WelcomeWebviewCommand.disposeActivePanel();
             break;
 
         case 'open-project':
