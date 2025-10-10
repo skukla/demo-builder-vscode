@@ -67,6 +67,7 @@ export interface AdobeAuthState {
     email?: string;
     error?: string;
     requiresOrgSelection?: boolean;
+    orgLacksAccess?: boolean;  // Selected organization doesn't have App Builder access
 }
 
 export interface Organization {

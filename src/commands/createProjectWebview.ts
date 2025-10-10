@@ -1529,11 +1529,19 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             let message: string;
             let subMessage: string | undefined;
             let requiresOrgSelection = false;
+            let orgLacksAccess = false;
 
             if (isAuthenticated) {
                 if (!currentOrg) {
+                    // Check if org was just cleared due to validation failure
+                    orgLacksAccess = this.authManager.wasOrgClearedDueToValidation();
+                    
                     message = 'Action required';
-                    subMessage = 'Your previous organization is no longer accessible';
+                    if (orgLacksAccess) {
+                        subMessage = 'Organization no longer accessible or lacks App Builder access';
+                    } else {
+                        subMessage = 'Your previous organization is no longer accessible';
+                    }
                     requiresOrgSelection = true;
                 } else if (!currentProject) {
                     message = 'Ready to continue';
@@ -1558,7 +1566,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 project: currentProject,
                 message,
                 subMessage,
-                requiresOrgSelection
+                requiresOrgSelection,
+                orgLacksAccess
             });
         } catch (error) {
             const checkDuration = Date.now() - checkStartTime;
@@ -1599,14 +1608,21 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     const currentOrg = await this.authManager.getCurrentOrganization();
                     const currentProject = await this.authManager.getCurrentProject();
                     
+                    // Check if org was cleared due to validation failure
+                    const orgLacksAccess = !currentOrg ? this.authManager.wasOrgClearedDueToValidation() : false;
+                    
                     await this.sendMessage('auth-status', {
                         authenticated: true,
                         isAuthenticated: true,
                         isChecking: false,
                         organization: currentOrg,
                         project: currentProject,
-                        message: 'Already authenticated',
-                        subMessage: currentOrg ? `Connected to ${currentOrg?.name || 'your organization'}` : 'Please complete authentication to continue'
+                        message: orgLacksAccess ? 'Organization selection required' : 'Already authenticated',
+                        subMessage: orgLacksAccess 
+                            ? 'Organization no longer accessible or lacks App Builder access'
+                            : currentOrg ? `Connected to ${currentOrg?.name || 'your organization'}` : 'Please complete authentication to continue',
+                        requiresOrgSelection: !currentOrg,
+                        orgLacksAccess
                     });
                     return;
                 }
@@ -1641,21 +1657,73 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     this.logger.info('[Auth] Cleared caches after forced login - checking for organization selection');
                 }
 
-                // After fresh authentication, we know org is empty (console context was cleared)
-                // Skip the redundant getCurrentOrganization() call and go directly to auto-selection
-                this.logger.info('[Auth] Organization empty after fresh login - attempting auto-selection');
+                // After fresh authentication, check what org was selected (if any)
+                // For forced login, user may have selected org in browser
+                this.logger.info('[Auth] Checking for organization selection after login');
 
                 // Start the overall post-login setup (no intermediate messages)
                 const setupStart = Date.now();
                 
-                // Start org auto-selection
-                const autoSelectStart = Date.now();
-                const currentOrg = await this.authManager.autoSelectOrganizationIfNeeded(true);
-
+                // First, check if user selected an org in the browser
+                const orgCheckStart = Date.now();
+                let currentOrg = await this.authManager.getCurrentOrganization();
+                let availableOrgs: any[] = [];
+                
                 if (currentOrg) {
-                    this.logger.info(`[Auth] Auto-selected organization: ${currentOrg.name} (took ${Date.now() - autoSelectStart}ms)`);
+                    this.logger.info(`[Auth] Organization found after browser login: ${currentOrg.name} (took ${Date.now() - orgCheckStart}ms)`);
                 } else {
-                    this.logger.info(`[Auth] Auto-selection not possible - multiple organizations available or none accessible (took ${Date.now() - autoSelectStart}ms)`);
+                    // No org selected in browser
+                    // Check if user has orgs available (to distinguish "no access" from "rejected org")
+                    this.logger.debug('[Auth] No org in context, checking available organizations...');
+                    
+                    try {
+                        availableOrgs = await this.authManager.getOrganizations();
+                        this.logger.debug(`[Auth] User has access to ${availableOrgs.length} organization(s)`);
+                    } catch (error) {
+                        this.logger.debug('[Auth] Failed to get organizations:', error as Error);
+                    }
+                    
+                    if (availableOrgs.length === 1) {
+                        // Only one org available, auto-select it
+                        this.logger.info('[Auth] Auto-selecting single available organization');
+                        const autoSelectStart = Date.now();
+                        currentOrg = await this.authManager.autoSelectOrganizationIfNeeded(true);
+                        
+                        if (currentOrg) {
+                            this.logger.info(`[Auth] Auto-selected organization: ${currentOrg.name} (took ${Date.now() - autoSelectStart}ms)`);
+                        } else {
+                            this.logger.warn(`[Auth] Failed to auto-select single org (took ${Date.now() - autoSelectStart}ms)`);
+                        }
+                    } else if (availableOrgs.length > 1 && force) {
+                        // Multiple orgs + forced login + no org set = user likely selected invalid org
+                        this.logger.info('[Auth] Multiple orgs available but none selected after forced login - likely selected org without App Builder access');
+                        this.authManager.setOrgRejectedFlag();
+                    } else if (availableOrgs.length === 0 && force) {
+                        // Forced login + 0 orgs = could be token issue, no orgs, or rejected org
+                        // Set flag to show honest message about the ambiguous situation
+                        this.logger.warn('[Auth] No organizations returned after forced login - could be auth issue, no org access, or selected org lacks App Builder');
+                        this.authManager.setOrgRejectedFlag();
+                    } else if (availableOrgs.length === 0) {
+                        this.logger.warn('[Auth] No organizations accessible to this user');
+                    } else {
+                        this.logger.info('[Auth] Multiple organizations available, manual selection required');
+                    }
+                }
+
+                // Validate the organization has App Builder access (critical for browser-selected orgs)
+                if (currentOrg) {
+                    const validationStart = Date.now();
+                    this.logger.debug(`[Auth] Validating "${currentOrg.name}" has App Builder access...`);
+                    await this.authManager.validateAndClearInvalidOrgContext(true);
+                    
+                    // Re-check if org is still set after validation (it may have been cleared)
+                    const orgAfterValidation = await this.authManager.getCurrentOrganization();
+                    if (!orgAfterValidation) {
+                        this.logger.info(`[Auth] Organization "${currentOrg.name}" was cleared - lacks App Builder access (took ${Date.now() - validationStart}ms)`);
+                        currentOrg = undefined; // Update our local variable
+                    } else {
+                        this.logger.debug(`[Auth] Organization "${currentOrg.name}" validation passed (took ${Date.now() - validationStart}ms)`);
+                    }
                 }
 
                 // Get current project (usually fast with SDK)
@@ -1673,7 +1741,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
                 // Handle the case where organization wasn't set during browser login (expected for forced login)
                 if (!currentOrg && force) {
-                    this.logger.info('[Auth] No organization set after forced login - this is expected, user needs to select organization');
+                    // Check if org was cleared due to lack of App Builder access
+                    const orgLacksAccess = this.authManager.wasOrgClearedDueToValidation();
+                    
+                    this.logger.debug(`[Auth] orgLacksAccess flag value: ${orgLacksAccess}`);
+                    
+                    if (orgLacksAccess) {
+                        this.logger.info('[Auth] No orgs accessible - could be rejected org or auth issue');
+                    } else {
+                        this.logger.info('[Auth] No organization set after forced login - this is expected, user needs to select organization');
+                    }
 
                     await this.sendMessage('auth-status', {
                         authenticated: true,
@@ -1681,9 +1758,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         isChecking: false,
                         organization: undefined,
                         project: undefined,
-                        message: 'Authentication successful',
-                        subMessage: 'Please select your organization to continue',
-                        requiresOrgSelection: true
+                        message: orgLacksAccess ? 'Organization selection required' : 'Authentication successful',
+                        subMessage: orgLacksAccess ? 'No organizations currently accessible' : 'Please select your organization to continue',
+                        requiresOrgSelection: true,
+                        orgLacksAccess
                     });
                 } else {
                     // Normal case - organization is available

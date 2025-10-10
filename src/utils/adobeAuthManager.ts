@@ -73,6 +73,10 @@ export class AdobeAuthManager {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private consoleWhereCache: { data: any, expiry: number } | undefined;
 
+    // Track when organization was just cleared due to validation failure
+    // Used to show appropriate message: "Selected org lacks App Builder access"
+    private orgClearedDueToValidation: boolean = false;
+
     /**
      * Cache Management Strategy:
      *
@@ -155,7 +159,7 @@ export class AdobeAuthManager {
     /**
      * Check if we have an org context and validate it's accessible, clearing if invalid
      */
-    private async validateAndClearInvalidOrgContext(forceValidation: boolean = false): Promise<void> {
+    public async validateAndClearInvalidOrgContext(forceValidation: boolean = false): Promise<void> {
         try {
             // Check if we have an organization context
             const result = await this.commandManager.executeAdobeCLI(
@@ -197,12 +201,14 @@ export class AdobeAuthManager {
 
                     // We have an org context, validate it's accessible
                     let isValid = await this.validateOrganizationAccess();
+                    this.debugLogger.debug(`[Auth] First validation result for ${context.org}: ${isValid}`);
 
                     // If validation failed, retry once (network might be slow)
                     if (!isValid) {
                         this.logger.info('Retrying organization access validation...');
                         this.debugLogger.debug('[Auth] First validation failed, retrying once...');
                         isValid = await this.validateOrganizationAccess();
+                        this.debugLogger.debug(`[Auth] Second validation result for ${context.org}: ${isValid}`);
                     }
 
                     // Cache the validation result (after retry if needed)
@@ -221,6 +227,11 @@ export class AdobeAuthManager {
                         // Also clear our cache since the context changed
                         this.clearCache();
 
+                        // Set flag to indicate org was cleared due to validation failure
+                        // This helps distinguish "org lacks App Builder" from "no org selected yet"
+                        this.orgClearedDueToValidation = true;
+                        this.debugLogger.debug(`[Auth] Set orgClearedDueToValidation flag to true for ${context.org}`);
+
                         this.logger.info('Organization cleared. You will need to select a new organization.');
                     } else {
                         this.logger.info(`Successfully verified access to ${context.org}`);
@@ -233,6 +244,28 @@ export class AdobeAuthManager {
         } catch (error) {
             this.debugLogger.debug('[Auth] Failed to validate organization context:', error);
         }
+    }
+
+    /**
+     * Check if organization was recently cleared due to validation failure
+     * This flag is used to show appropriate message when org lacks App Builder access
+     * @returns true if org was just cleared due to validation failure
+     */
+    public wasOrgClearedDueToValidation(): boolean {
+        const result = this.orgClearedDueToValidation;
+        this.debugLogger.debug(`[Auth] wasOrgClearedDueToValidation() called, returning: ${result}`);
+        // Clear the flag after reading (one-time check)
+        this.orgClearedDueToValidation = false;
+        return result;
+    }
+
+    /**
+     * Manually set the org rejected flag
+     * Used when we detect a user selected an org that was rejected (e.g., no App Builder access)
+     */
+    public setOrgRejectedFlag(): void {
+        this.orgClearedDueToValidation = true;
+        this.debugLogger.debug('[Auth] Manually set orgClearedDueToValidation flag (org rejected during browser selection)');
     }
 
     /**
@@ -1172,6 +1205,9 @@ export class AdobeAuthManager {
 
             if (result.code === 0) {
                 this.stepLogger.logTemplate('adobe-setup', 'statuses.organization-selected', { name: orgId });
+
+                // Clear validation failure flag since new org was successfully selected
+                this.orgClearedDueToValidation = false;
 
                 // Smart caching: populate org cache directly instead of clearing
                 // This prevents the next getCurrentOrganization() from querying CLI
