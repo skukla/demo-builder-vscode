@@ -207,8 +207,8 @@ export class DeployMeshCommand extends BaseCommand {
                         outputChannel.appendLine('Deployment Completed Successfully');
                         outputChannel.appendLine('='.repeat(60));
                         
-                        // Show simple success message (no logs button - only show logs on error)
-                        vscode.window.showInformationMessage('API Mesh deployed successfully!');
+                        // Show auto-dismissing success message (no logs button - only show logs on error)
+                        this.showSuccessMessage('API Mesh deployed successfully');
                     }
                 );
             

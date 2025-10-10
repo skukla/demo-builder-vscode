@@ -88,8 +88,8 @@ export class ResetAllCommand extends BaseCommand {
 
             // Reload window automatically to ensure clean state
             // This prevents workspace folder references from lingering
-            this.logger.info('Reloading window to complete reset...');
-            vscode.window.showInformationMessage('Demo Builder reset complete. Reloading window...');
+            this.logger.info('Reloading window to complete reset');
+            vscode.window.setStatusBarMessage('✅ Demo Builder reset complete', 3000);
             
             // Small delay to let message show
             await new Promise(resolve => setTimeout(resolve, 500));

@@ -70,8 +70,8 @@ export class DeleteProjectCommand extends BaseCommand {
                 this.logger.info(`Project "${project.name}" deleted`);
             });
 
-            // Show simple confirmation
-            vscode.window.showInformationMessage('Project deleted successfully');
+            // Show auto-dismissing success message
+            this.showSuccessMessage('Project deleted successfully');
             
             // Open Welcome screen to guide user to create a new project
             await vscode.commands.executeCommand('demoBuilder.showWelcome');
