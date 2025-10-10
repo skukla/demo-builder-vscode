@@ -187,7 +187,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Authenticated with valid organization */}
-            {!showChecking && state.adobeAuth.isAuthenticated && state.adobeOrg && (
+            {!showChecking && !state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && state.adobeOrg && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <CheckmarkCircle UNSAFE_className="text-green-600" size="L" />
@@ -211,7 +211,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Authenticated but organization selection required */}
-            {!showChecking && state.adobeAuth.isAuthenticated && !state.adobeOrg && (
+            {!showChecking && !state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && !state.adobeOrg && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <AlertCircle UNSAFE_className="text-orange-500" size="L" />
@@ -238,7 +238,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Not authenticated - normal state */}
-            {!showChecking && state.adobeAuth.isAuthenticated === false && !state.adobeAuth.error && (
+            {!showChecking && !state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated === false && !state.adobeAuth.error && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Key UNSAFE_className="text-gray-500" size="L" />
@@ -263,7 +263,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Error state with helpful guidance */}
-            {!showChecking && state.adobeAuth.error && !authTimeout && (
+            {!showChecking && !state.adobeAuth.isChecking && state.adobeAuth.error && !authTimeout && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Alert UNSAFE_className="text-red-500" size="L" />
@@ -290,7 +290,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Timeout state - similar to error but with specific messaging */}
-            {authTimeout && !state.adobeAuth.isAuthenticated && (
+            {authTimeout && !state.adobeAuth.isChecking && !state.adobeAuth.isAuthenticated && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Alert UNSAFE_className="text-red-500" size="L" />
