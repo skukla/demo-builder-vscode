@@ -294,7 +294,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             {authTimeout && !state.adobeAuth.isAuthenticated && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
-                        <Pending UNSAFE_className="text-orange-500" size="L" />
+                        <Alert UNSAFE_className="text-red-500" size="L" />
                         <Flex direction="column" gap="size-100" alignItems="center">
                             <Text UNSAFE_className="text-xl font-medium">
                                 Authentication Timed Out
