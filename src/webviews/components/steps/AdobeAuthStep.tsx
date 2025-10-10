@@ -78,8 +78,8 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 isSwitchingRef.current = false;
             }
 
-            // Clear timeout state on successful auth
-            if (data.isAuthenticated) {
+            // Clear timeout state on successful auth OR when starting a new check
+            if (data.isAuthenticated || data.isChecking) {
                 setAuthTimeout(false);
             }
 
@@ -238,7 +238,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Not authenticated - normal state */}
-            {!showChecking && !state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated === false && !state.adobeAuth.error && (
+            {!showChecking && !state.adobeAuth.isChecking && !authTimeout && state.adobeAuth.isAuthenticated === false && !state.adobeAuth.error && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Key UNSAFE_className="text-gray-500" size="L" />
@@ -303,7 +303,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                             </Text>
                         </Flex>
                         <Button variant="accent" onPress={() => {
-                            setAuthTimeout(false);
+                            // Don't clear timeout manually - let backend clear it when checking starts
                             handleLogin(false);
                         }} marginTop="size-300">
                             <Login size="S" marginEnd="size-100" />
