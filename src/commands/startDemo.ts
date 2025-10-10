@@ -96,7 +96,7 @@ export class StartDemoCommand extends BaseCommand {
                 }
             }
 
-            await this.withProgress('Starting demo...', async (progress) => {
+            await this.withProgress('Starting demo', async (progress) => {
                 progress.report({ message: 'Starting frontend application' });
                 
                 // Validate frontend component
@@ -150,6 +150,9 @@ export class StartDemoCommand extends BaseCommand {
                 this.logger.info(`Demo started at http://localhost:${port}`);
                 progress.report({ message: 'Demo started successfully!' });
             });
+            
+            // Show auto-dismissing success notification
+            this.showSuccessMessage(`Demo started at http://localhost:${port}`);
             
         } catch (error) {
             await this.showError('Failed to start demo', error as Error);
