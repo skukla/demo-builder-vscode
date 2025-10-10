@@ -20,9 +20,28 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     private static activePanels: Map<string, vscode.WebviewPanel> = new Map();
     private static activeCommunicationManagers: Map<string, WebviewCommunicationManager> = new Map();
     
+    // Static callback for disposal notifications
+    private static disposalCallback?: (webviewId: string) => Promise<void>;
+    
     protected panel: vscode.WebviewPanel | undefined;
     protected communicationManager: WebviewCommunicationManager | undefined;
     protected disposables: vscode.Disposable[] = [];
+
+    /**
+     * Set callback to be invoked when any webview disposes
+     * Used by extension.ts to handle auto-reopen logic centrally
+     */
+    public static setDisposalCallback(callback: (webviewId: string) => Promise<void>): void {
+        BaseWebviewCommand.disposalCallback = callback;
+    }
+    
+    /**
+     * Override in subclasses to indicate if Welcome should reopen on disposal
+     * @returns true if this webview should trigger Welcome reopen when closed
+     */
+    protected shouldReopenWelcomeOnDispose(): boolean {
+        return false; // Default: don't reopen
+    }
 
     /**
      * Check if this webview is currently visible
@@ -284,6 +303,14 @@ export abstract class BaseWebviewCommand extends BaseCommand {
 
         // Clear panel reference
         this.panel = undefined;
+        
+        // Notify about disposal if webview requested Welcome reopen
+        if (this.shouldReopenWelcomeOnDispose() && BaseWebviewCommand.disposalCallback) {
+            // Use setTimeout to ensure disposal is fully complete before callback
+            setTimeout(() => {
+                BaseWebviewCommand.disposalCallback?.(webviewId);
+            }, 100);
+        }
 
         this.logger.debug(`[${this.getWebviewTitle()}] Panel disposed (webviewId: ${webviewId})`);
     }

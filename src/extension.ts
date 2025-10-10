@@ -7,6 +7,7 @@ import { initializeLogger } from './utils/debugLogger';
 import { StateManager } from './utils/stateManager';
 import { ComponentTreeProvider } from './providers/componentTreeProvider';
 import { ExternalCommandManager } from './utils/externalCommandManager';
+import { BaseWebviewCommand } from './commands/baseWebviewCommand';
 
 let logger: Logger;
 let statusBar: StatusBarManager;
@@ -79,7 +80,8 @@ export async function activate(context: vscode.ExtensionContext) {
         });
         context.subscriptions.push(componentsView);
         
-        // Auto-show Welcome when Components view becomes visible (if no project and Welcome not already visible)
+        // Auto-show Welcome when appropriate
+        // 1. When Components view becomes visible (sidebar opened)
         componentsView.onDidChangeVisibility(async (e) => {
             if (e.visible) {
                 const hasProject = await stateManager.hasProject();
@@ -93,6 +95,20 @@ export async function activate(context: vscode.ExtensionContext) {
                 if (!hasProject && !isWelcomeOpen && !isWizardOpen) {
                     vscode.commands.executeCommand('demoBuilder.showWelcome');
                 }
+            }
+        });
+        
+        // 2. When a webview that requested it closes (Cancel, Back, X button)
+        BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
+            const hasProject = await stateManager.hasProject();
+            const isWelcomeOpen = commandManager.welcomeScreen?.isVisible() || false;
+            
+            // Only show Welcome if:
+            // - No project exists (webview didn't complete successfully)
+            // - Welcome isn't already open
+            if (!hasProject && !isWelcomeOpen) {
+                logger.debug(`[Extension] Webview ${webviewId} closed without completion - reopening Welcome`);
+                vscode.commands.executeCommand('demoBuilder.showWelcome');
             }
         });
         

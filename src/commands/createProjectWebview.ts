@@ -36,6 +36,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private meshCreatedForWorkspace?: string;  // Track workspace ID if mesh was created (for cleanup on failure/cancellation)
     private meshExistedBeforeSession?: string;  // Track workspace ID if mesh pre-existed (prevent deletion on cancel)
 
+    /**
+     * Request Welcome reopen when wizard closes without completing
+     * This ensures users aren't left with just the Components panel
+     */
+    protected shouldReopenWelcomeOnDispose(): boolean {
+        return true;
+    }
+
     constructor(
         context: vscode.ExtensionContext,
         stateManager: any,
