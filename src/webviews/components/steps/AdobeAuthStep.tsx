@@ -176,7 +176,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             </Text>
 
             {/* Authentication Status - Checking (or not yet checked) */}
-            {(showChecking || state.adobeAuth.isAuthenticated === undefined) && (
+            {(showChecking || state.adobeAuth.isAuthenticated === undefined) && !authTimeout && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <LoadingDisplay 
                         size="L"
