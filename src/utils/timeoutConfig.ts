@@ -33,6 +33,11 @@ export const TIMEOUTS = {
     PREREQUISITE_CHECK: 60000,      // 1 minute - checking if prerequisite exists (fast)
     PREREQUISITE_INSTALL: 180000,   // 3 minutes - installing prerequisites (downloads, npm installs)
 
+    // Update system timeouts
+    UPDATE_CHECK: 10000,            // GitHub API calls to check releases
+    UPDATE_DOWNLOAD: 60000,         // Downloading VSIX or component archives (1 minute)
+    UPDATE_EXTRACT: 30000,          // Extracting downloaded archives
+
     // Default fallbacks
     COMMAND_DEFAULT: 30000,         // Default command timeout
 } as const;

@@ -9,6 +9,7 @@ npm run setup
 ```
 
 This single command will:
+
 1. Install all dependencies
 2. Compile TypeScript
 3. Build webview bundles
@@ -50,12 +51,14 @@ npm run setup                  # Installs and builds everything
 If you encounter build errors:
 
 1. Clean install dependencies:
+
    ```bash
    rm -rf node_modules package-lock.json
    npm install
    ```
 
 2. Clean build:
+
    ```bash
    rm -rf dist
    npm run compile
@@ -64,6 +67,7 @@ If you encounter build errors:
 ### Missing Types
 
 If TypeScript complains about missing types:
+
 ```bash
 npm install
 ```
@@ -71,6 +75,7 @@ npm install
 ## Build Output
 
 After successful build, you should have:
+
 - `dist/extension.js` - Main extension file
 - `dist/webview/` - Webview bundles
 - `dist/commands/` - Command implementations

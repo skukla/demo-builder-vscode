@@ -48,7 +48,7 @@
         "category": "Demo Builder"
       },
       {
-        "command": "demoBuilder.checkUpdates",
+        "command": "demoBuilder.checkForUpdates",
         "title": "Check for Updates",
         "category": "Demo Builder"
       },
@@ -69,7 +69,7 @@
         "demoBuilder.autoUpdate": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically check for extension updates"
+          "description": "Automatically check for updates on startup"
         },
         "demoBuilder.updateChannel": {
           "type": "string",
@@ -78,7 +78,7 @@
             "beta"
           ],
           "default": "stable",
-          "description": "Update channel for extension updates"
+          "description": "Update channel: stable (production releases) or beta (testing)"
         },
         "demoBuilder.showStatusBar": {
           "type": "boolean",
