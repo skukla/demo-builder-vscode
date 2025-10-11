@@ -17,6 +17,8 @@ export class DebugLogger {
     private debugEnabled: boolean = true; // Can be controlled by settings later
     private logBuffer: string[] = []; // Track all main channel logs for persistence
     private debugBuffer: string[] = []; // Track all debug channel logs for persistence
+    private isLogsVisible: boolean = false; // Track visibility for toggle functionality
+    private isDebugVisible: boolean = false; // Track debug channel visibility
 
     constructor(context: vscode.ExtensionContext) {
         // Main channel for user-facing messages
@@ -158,11 +160,45 @@ export class DebugLogger {
     // Show the output channel
     public show(preserveFocus: boolean = true): void {
         this.outputChannel.show(preserveFocus);
+        this.isLogsVisible = true;
+        this.isDebugVisible = false; // Logs is now active, not Debug
+    }
+
+    // Hide the output channel
+    public hide(): void {
+        this.outputChannel.hide();
+        this.isLogsVisible = false;
+    }
+
+    // Toggle the output channel visibility
+    // Smart behavior:
+    // - If Logs channel is visible → toggle it off (close)
+    // - If Debug channel is visible → leave it (don't switch)
+    // - If neither visible → show Logs
+    public toggle(): void {
+        if (this.isLogsVisible) {
+            // Logs is currently showing, toggle it off
+            this.hide();
+        } else if (this.isDebugVisible) {
+            // Debug is showing, leave it alone (don't interrupt)
+            return;
+        } else {
+            // No Demo Builder channels visible, show Logs
+            this.show(true);
+        }
     }
 
     // Show the debug channel
     public showDebug(preserveFocus: boolean = true): void {
         this.debugChannel.show(preserveFocus);
+        this.isDebugVisible = true;
+        this.isLogsVisible = false; // Debug is now active, not Logs
+    }
+    
+    // Hide the debug channel
+    public hideDebug(): void {
+        this.debugChannel.hide();
+        this.isDebugVisible = false;
     }
 
     // Clear channels

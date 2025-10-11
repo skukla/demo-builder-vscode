@@ -144,6 +144,39 @@ export class StartDemoCommand extends BaseCommand {
                 // Notify extension to suppress env change notifications during startup
                 await vscode.commands.executeCommand('demoBuilder._internal.demoStarted');
                 
+                // Initialize file hashes for change detection (capture baseline state)
+                // Find all .env files in component directories
+                const path = require('path');
+                const envFiles: string[] = [];
+                
+                // Collect .env files from all component instances
+                if (project.componentInstances) {
+                    for (const [componentKey, componentInstance] of Object.entries(project.componentInstances)) {
+                        if (componentInstance.path) {
+                            const componentPath = componentInstance.path;
+                            const envPath = path.join(componentPath, '.env');
+                            const envLocalPath = path.join(componentPath, '.env.local');
+                            
+                            // Check if files exist
+                            const fs = require('fs').promises;
+                            try {
+                                await fs.access(envPath);
+                                envFiles.push(envPath);
+                            } catch {}
+                            
+                            try {
+                                await fs.access(envLocalPath);
+                                envFiles.push(envLocalPath);
+                            } catch {}
+                        }
+                    }
+                }
+                
+                if (envFiles.length > 0) {
+                    this.logger.debug(`[Start Demo] Initializing file hashes for ${envFiles.length} .env files`);
+                    await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', envFiles);
+                }
+                
                 // Update status bar
                 this.statusBar.updateProject(project);
                 
@@ -153,6 +186,9 @@ export class StartDemoCommand extends BaseCommand {
             
             // Show auto-dismissing success notification
             this.showSuccessMessage(`Demo started at http://localhost:${port}`);
+            
+            // Reset restart notification flag (user has restarted)
+            await vscode.commands.executeCommand('demoBuilder._internal.restartActionTaken');
             
         } catch (error) {
             await this.showError('Failed to start demo', error as Error);

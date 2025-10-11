@@ -36,6 +36,14 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     }
     
     /**
+     * Get count of active webview panels
+     * Used to check if any webviews are still open
+     */
+    public static getActivePanelCount(): number {
+        return BaseWebviewCommand.activePanels.size;
+    }
+    
+    /**
      * Override in subclasses to indicate if Welcome should reopen on disposal
      * @returns true if this webview should trigger Welcome reopen when closed
      */

@@ -64,24 +64,8 @@ export class CommandManager {
             this.logger
         );
         this.registerCommand('demoBuilder.createProject', async () => {
-            // Check if current project has a running demo
-            const currentProject = await this.stateManager.getCurrentProject();
-            if (currentProject && currentProject.status === 'running') {
-                const action = await vscode.window.showWarningMessage(
-                    `Demo is currently running for "${currentProject.name}". Stop it before creating a new project?`,
-                    'Stop & Continue',
-                    'Cancel'
-                );
-                
-                if (action !== 'Stop & Continue') {
-                    return;
-                }
-                
-                // Stop the current demo
-                this.logger.info('[CreateProject] Stopping current demo before creating new project...');
-                await vscode.commands.executeCommand('demoBuilder.stopDemo');
-            }
-            
+            // Port conflicts are automatically handled during project creation
+            // (see executeProjectCreation in createProjectWebview.ts)
             await this.createProjectWebview.execute();
         });
 
@@ -110,6 +94,12 @@ export class CommandManager {
                 );
                 
                 if (action !== 'Stop & Switch') {
+                    // User cancelled - reopen Welcome screen if no project exists
+                    const hasProject = await this.stateManager.hasProject();
+                    if (!hasProject) {
+                        this.logger.debug('[SwitchProject] User cancelled, reopening Welcome screen');
+                        await vscode.commands.executeCommand('demoBuilder.showWelcome');
+                    }
                     return;
                 }
                 
@@ -161,6 +151,12 @@ export class CommandManager {
                 );
                 
                 if (action !== 'Stop & Switch') {
+                    // User cancelled - reopen Welcome screen if no project exists
+                    const hasProject = await this.stateManager.hasProject();
+                    if (!hasProject) {
+                        this.logger.debug('[LoadProject] User cancelled, reopening Welcome screen');
+                        await vscode.commands.executeCommand('demoBuilder.showWelcome');
+                    }
                     return;
                 }
                 

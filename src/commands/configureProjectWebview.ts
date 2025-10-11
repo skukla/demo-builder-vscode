@@ -161,39 +161,57 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                     
                     // Smart notification based on what changed
                     if (meshChanges.hasChanges && project.status === 'running') {
-                        // Mesh config changed AND demo is running
-                        vscode.window.showWarningMessage(
-                            'API Mesh configuration changed. Redeploy mesh and restart demo to apply changes.',
-                            'Redeploy Mesh',
-                            'Later'
-                        ).then(selection => {
-                            if (selection === 'Redeploy Mesh') {
-                                vscode.commands.executeCommand('demoBuilder.deployMesh');
-                            }
-                        });
+                        // Check if mesh notification already shown this session
+                        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
+                        if (shouldShow) {
+                            await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
+                            vscode.window.showWarningMessage(
+                                'API Mesh configuration changed. Redeploy mesh and restart demo to apply changes.',
+                                'Redeploy Mesh',
+                                'Later'
+                            ).then(selection => {
+                                if (selection === 'Redeploy Mesh') {
+                                    vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                }
+                            });
+                        } else {
+                            this.logger.debug('[Configure] Mesh notification already shown this session, suppressing');
+                        }
                     } else if (meshChanges.hasChanges) {
-                        // Mesh config changed but demo is NOT running
-                        vscode.window.showInformationMessage(
-                            'API Mesh configuration changed. Redeploy mesh to apply changes.',
-                            'Redeploy Mesh',
-                            'Later'
-                        ).then(selection => {
-                            if (selection === 'Redeploy Mesh') {
-                                vscode.commands.executeCommand('demoBuilder.deployMesh');
-                            }
-                        });
+                        // Mesh changed, demo not running
+                        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
+                        if (shouldShow) {
+                            await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
+                            vscode.window.showInformationMessage(
+                                'API Mesh configuration changed. Redeploy mesh to apply changes.',
+                                'Redeploy Mesh',
+                                'Later'
+                            ).then(selection => {
+                                if (selection === 'Redeploy Mesh') {
+                                    vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                }
+                            });
+                        } else {
+                            this.logger.debug('[Configure] Mesh notification already shown this session, suppressing');
+                        }
                     } else if (project.status === 'running') {
                         // Only non-mesh configs changed, demo is running
-                        vscode.window.showInformationMessage(
-                            'Restart the demo to apply configuration changes.',
-                            'Restart Demo'
-                        ).then(selection => {
-                            if (selection === 'Restart Demo') {
-                                vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
-                                    vscode.commands.executeCommand('demoBuilder.startDemo');
-                                });
-                            }
-                        });
+                        const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowRestartNotification');
+                        if (shouldShow) {
+                            await vscode.commands.executeCommand('demoBuilder._internal.markRestartNotificationShown');
+                            vscode.window.showInformationMessage(
+                                'Restart the demo to apply configuration changes.',
+                                'Restart Demo'
+                            ).then(selection => {
+                                if (selection === 'Restart Demo') {
+                                    vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
+                                        vscode.commands.executeCommand('demoBuilder.startDemo');
+                                    });
+                                }
+                            });
+                        } else {
+                            this.logger.debug('[Configure] Restart notification already shown this session, suppressing');
+                        }
                     }
                 });
 

@@ -674,38 +674,6 @@ button[class*="spectrum-Button"][disabled],
     outline: none !important;
 }
 
-/* Smooth fade-in animation for appearing buttons */
-@keyframes dashboard-button-fade-in {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-/* Smooth fade-out animation for disappearing buttons */
-@keyframes dashboard-button-fade-out {
-    from {
-        opacity: 1;
-        transform: scale(1);
-    }
-    to {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-}
-
-.dashboard-action-button-enter {
-    animation: dashboard-button-fade-in 0.2s ease-out forwards !important;
-}
-
-.dashboard-action-button-exit {
-    animation: dashboard-button-fade-out 0.2s ease-out forwards !important;
-}
-
 /* ===========================================
    Component Card Styles
    =========================================== */

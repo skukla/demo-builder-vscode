@@ -345,7 +345,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
                 // Close welcome screen
                 this.panel?.dispose();
                 
-                // Open project dashboard
+                // Open project dashboard (dashboard will initialize file hashes if demo is running)
                 await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
                 
                 this.logger.info(`[Welcome] Opened project dashboard for: ${project.name}`);
