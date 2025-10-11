@@ -94,9 +94,8 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
 
             for (const entry of entries) {
                 // Skip hidden files and common ignore patterns
-                // Exception: Allow .env* files (important configuration)
-                const isEnvFile = entry.name.startsWith('.env');
-                if ((entry.name.startsWith('.') && !isEnvFile) || 
+                // Note: .env files are hidden (configuration is managed via Configure UI)
+                if (entry.name.startsWith('.') || 
                     entry.name === 'node_modules' || 
                     entry.name === 'dist' ||
                     entry.name === '.next') {
