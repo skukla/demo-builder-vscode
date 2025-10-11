@@ -1,6 +1,5 @@
 import { Logger } from './logger';
 import * as fs from 'fs';
-import * as path from 'path';
 
 /**
  * StepLogger provides consistent, configuration-driven logging for wizard steps.
@@ -60,26 +59,26 @@ export class StepLogger {
         // Default templates
         const defaults = {
             operations: {
-                checking: "Checking {item}...",
-                fetching: "Fetching {item}...",
-                installing: "Installing {item}...",
-                creating: "Creating {item}...",
-                loading: "Loading {item}...",
-                validating: "Validating {item}...",
-                configuring: "Configuring {item}...",
-                starting: "Starting {item}...",
-                completed: "{item} completed successfully",
-                failed: "{item} failed"
+                checking: 'Checking {item}...',
+                fetching: 'Fetching {item}...',
+                installing: 'Installing {item}...',
+                creating: 'Creating {item}...',
+                loading: 'Loading {item}...',
+                validating: 'Validating {item}...',
+                configuring: 'Configuring {item}...',
+                starting: 'Starting {item}...',
+                completed: '{item} completed successfully',
+                failed: '{item} failed'
             },
             statuses: {
-                found: "Found {count} {item}",
-                "found-single": "Found: {item}",
-                installed: "{item} installed: {version}",
-                missing: "{item} not found",
-                ready: "{item} ready",
-                success: "✓ {item}",
-                error: "✗ {item}: {error}",
-                warning: "⚠ {item}"
+                found: 'Found {count} {item}',
+                'found-single': 'Found: {item}',
+                installed: '{item} installed: {version}',
+                missing: '{item} not found',
+                ready: '{item} ready',
+                success: '✓ {item}',
+                error: '✗ {item}: {error}',
+                warning: '⚠ {item}'
             }
         };
         
@@ -88,7 +87,7 @@ export class StepLogger {
             try {
                 const content = fs.readFileSync(templatesPath, 'utf8');
                 return JSON.parse(content);
-            } catch (error) {
+            } catch {
                 // Fall back to defaults on error
                 this.logger.debug('Failed to load logging templates, using defaults');
             }
@@ -128,17 +127,17 @@ export class StepLogger {
         const formattedMessage = `[${stepName}] ${message}`;
         
         switch(level) {
-            case 'debug':
-                this.logger.debug(formattedMessage);
-                break;
-            case 'error':
-                this.logger.error(formattedMessage);
-                break;
-            case 'warn':
-                this.logger.warn(formattedMessage);
-                break;
-            default:
-                this.logger.info(formattedMessage);
+        case 'debug':
+            this.logger.debug(formattedMessage);
+            break;
+        case 'error':
+            this.logger.error(formattedMessage);
+            break;
+        case 'warn':
+            this.logger.warn(formattedMessage);
+            break;
+        default:
+            this.logger.info(formattedMessage);
         }
     }
     

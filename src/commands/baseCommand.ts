@@ -49,6 +49,28 @@ export abstract class BaseCommand {
         await vscode.window.showInformationMessage(message, 'OK');
     }
 
+    /**
+     * Show a temporary success message in status bar (auto-dismissing)
+     * Use for simple confirmations that don't require user interaction
+     * @param message Success message to display
+     * @param timeout Milliseconds to show (default 5000)
+     */
+    protected showSuccessMessage(message: string, timeout: number = 5000): void {
+        this.logger.info(message);
+        vscode.window.setStatusBarMessage(`✅ ${message}`, timeout);
+    }
+
+    /**
+     * Show a temporary info message in status bar (auto-dismissing)
+     * Use for non-critical informational messages
+     * @param message Info message to display  
+     * @param timeout Milliseconds to show (default 3000)
+     */
+    protected showStatusMessage(message: string, timeout: number = 3000): void {
+        this.logger.info(message);
+        vscode.window.setStatusBarMessage(`ℹ️  ${message}`, timeout);
+    }
+
     protected async showQuickPick<T extends vscode.QuickPickItem>(
         items: T[],
         options?: vscode.QuickPickOptions
@@ -60,10 +82,10 @@ export abstract class BaseCommand {
         return vscode.window.showInputBox(options);
     }
 
-    protected createTerminal(name: string): vscode.Terminal {
+    protected createTerminal(name: string, cwd?: string): vscode.Terminal {
         const terminal = vscode.window.createTerminal({
             name,
-            cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+            cwd: cwd || undefined // Only set cwd if explicitly provided
         });
         this.context.subscriptions.push(terminal);
         return terminal;

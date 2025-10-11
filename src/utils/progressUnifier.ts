@@ -1,5 +1,5 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
-import { InstallStep, ProgressMilestone } from './prerequisitesManager';
+import { InstallStep } from './prerequisitesManager';
 import { Logger } from './logger';
 
 export interface UnifiedProgress {
@@ -66,17 +66,17 @@ export class ProgressUnifier {
             
             // Execute based on strategy
             switch (step.progressStrategy) {
-                case 'exact':
-                    await this.executeWithExactProgress(command, step, stepIndex, totalSteps, onProgress, options);
-                    break;
-                case 'milestones':
-                    await this.executeWithMilestones(command, step, stepIndex, totalSteps, onProgress, options);
-                    break;
-                case 'immediate':
-                    await this.executeImmediate(command, step, stepIndex, totalSteps, onProgress, options);
-                    break;
-                default:
-                    await this.executeWithSyntheticProgress(command, step, stepIndex, totalSteps, onProgress, options);
+            case 'exact':
+                await this.executeWithExactProgress(command, step, stepIndex, totalSteps, onProgress, options);
+                break;
+            case 'milestones':
+                await this.executeWithMilestones(command, step, stepIndex, totalSteps, onProgress, options);
+                break;
+            case 'immediate':
+                await this.executeImmediate(command, step, stepIndex, totalSteps, onProgress, options);
+                break;
+            default:
+                await this.executeWithSyntheticProgress(command, step, stepIndex, totalSteps, onProgress, options);
             }
         }
         
@@ -193,7 +193,6 @@ export class ProgressUnifier {
             const milestones = step.milestones || [];
             let currentProgress = 0;
             let currentMilestoneIndex = 0;
-            let outputBuffer = '';
             
             const checkMilestones = async (text: string) => {
                 for (let i = 0; i < milestones.length; i++) {
@@ -225,14 +224,12 @@ export class ProgressUnifier {
             
             child.stdout.on('data', async (data) => {
                 const output = data.toString();
-                outputBuffer += output;
                 await checkMilestones(output);
                 this.logger.info(`[${step.name}] ${output.trim()}`);
             });
             
             child.stderr.on('data', async (data) => {
                 const output = data.toString();
-                outputBuffer += output;
                 await checkMilestones(output);
                 this.logger.warn(`[${step.name}] ${output.trim()}`);
             });
@@ -256,7 +253,7 @@ export class ProgressUnifier {
         stepIndex: number,
         totalSteps: number,
         onProgress: ProgressHandler,
-        options?: { nodeVersion?: string }
+        _options?: { nodeVersion?: string }
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);

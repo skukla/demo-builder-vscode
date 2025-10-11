@@ -20,42 +20,61 @@ export class DeleteProjectCommand extends BaseCommand {
                 return;
             }
 
-            await this.withProgress('Deleting project...', async (progress) => {
+            await this.withProgress('Deleting project', async (_progress) => {
                 // Stop demo if running
-                if (project.frontend?.status === 'running') {
-                    progress.report({ message: 'Stopping demo...' });
+                if (project.status === 'running') {
                     await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                    // Wait a moment for demo to fully stop
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
 
+                // Save project path before clearing state
+                const projectPath = project.path;
+
                 // Delete project files
-                progress.report({ message: 'Removing project files...' });
-                if (project.path) {
+                if (projectPath) {
+                    this.logger.info(`[Delete Project] Deleting project directory: ${projectPath}`);
                     try {
-                        await fs.rm(project.path, { recursive: true, force: true });
+                        await fs.rm(projectPath, { recursive: true, force: true });
+                        this.logger.info('[Delete Project] ✅ Project directory deleted successfully');
+                        
+                        // Verify deletion
+                        try {
+                            await fs.access(projectPath);
+                            // If we get here, the directory still exists
+                            throw new Error('Project directory still exists after deletion attempt');
+                        } catch (accessError: any) {
+                            if (accessError.code !== 'ENOENT') {
+                                // Some other error besides "file not found" - deletion may have failed
+                                throw accessError;
+                            }
+                            // ENOENT is good - it means the directory is gone
+                        }
                     } catch (error) {
-                        this.logger.warn(`Failed to delete project files: ${error}`);
+                        this.logger.error('[Delete Project] ❌ Failed to delete project files', error as Error);
+                        throw new Error(`Failed to delete project directory: ${error instanceof Error ? error.message : String(error)}`);
                     }
                 }
 
+                // Remove from recent projects list
+                if (projectPath) {
+                    await this.stateManager.removeFromRecentProjects(projectPath);
+                }
+
                 // Clear state
-                progress.report({ message: 'Clearing configuration...' });
                 await this.stateManager.clearProject();
                 
                 // Update status bar
                 this.statusBar.clear();
                 
-                progress.report({ message: 'Project deleted successfully!' });
                 this.logger.info(`Project "${project.name}" deleted`);
             });
 
-            await vscode.window.showInformationMessage(
-                'Project deleted successfully',
-                'Create New Project'
-            ).then(selection => {
-                if (selection === 'Create New Project') {
-                    vscode.commands.executeCommand('demoBuilder.createProject');
-                }
-            });
+            // Show auto-dismissing success message
+            this.showSuccessMessage('Project deleted successfully');
+            
+            // Open Welcome screen to guide user to create a new project
+            await vscode.commands.executeCommand('demoBuilder.showWelcome');
             
         } catch (error) {
             await this.showError('Failed to delete project', error as Error);

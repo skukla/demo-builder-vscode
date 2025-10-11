@@ -24,7 +24,7 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
         'api-mesh',
         'settings',
         'review',
-        'creating'
+        'project-creation'
     ];
     
     const getCurrentStepIndex = () => {
@@ -63,6 +63,11 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                                 <Text UNSAFE_className="text-sm">
                                     {state.adobeOrg.name}
                                 </Text>
+                            </Flex>
+                        ) : state.adobeAuth.isChecking ? (
+                            <Flex gap="size-100" alignItems="center">
+                                <Clock size="S" UNSAFE_className="text-blue-600" />
+                                <Text UNSAFE_className="text-sm text-gray-600">Switching...</Text>
                             </Flex>
                         ) : (
                             <Text UNSAFE_className="text-sm text-gray-600">No organization selected</Text>

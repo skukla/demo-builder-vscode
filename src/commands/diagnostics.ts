@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import * as os from 'os';
 import * as path from 'path';
+import { promises as fs } from 'fs';
 import { getLogger, CommandResult } from '../utils/debugLogger';
-import { ExternalCommandManager } from '../utils/externalCommandManager';
 import { getExternalCommandManager } from '../extension';
 
 export class DiagnosticsCommand {
@@ -170,7 +170,7 @@ export class DiagnosticsCommand {
                         project: context.project?.name || 'Not selected',
                         workspace: context.workspace?.name || 'Not selected'
                     };
-                } catch (e) {
+                } catch {
                     adobe.currentContext = whereCheck.output;
                 }
             }
@@ -182,7 +182,7 @@ export class DiagnosticsCommand {
                 try {
                     const orgs = JSON.parse(orgCheck.output);
                     adobe.organizationCount = Array.isArray(orgs) ? orgs.length : 0;
-                } catch (e) {
+                } catch {
                     // Fallback to raw output
                 }
             }
@@ -291,14 +291,14 @@ export class DiagnosticsCommand {
         let command: string;
         
         switch (platform) {
-            case 'darwin':
-                command = 'open --help';
-                break;
-            case 'win32':
-                command = 'start /?';
-                break;
-            default:
-                command = 'xdg-open --help';
+        case 'darwin':
+            command = 'open --help';
+            break;
+        case 'win32':
+            command = 'start /?';
+            break;
+        default:
+            command = 'xdg-open --help';
         }
         
         const result = await this.checkCommand(command);
@@ -323,7 +323,6 @@ export class DiagnosticsCommand {
         const testFile = path.join(tempDir, 'demo-builder-test.txt');
         
         try {
-            const fs = require('fs').promises;
             
             // Test write
             await fs.writeFile(testFile, 'test');

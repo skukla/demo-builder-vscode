@@ -56,7 +56,7 @@ webviews/
 5. **AdobeProjectStep**: Select Adobe project within authenticated organization
 6. **CommerceConfigStep**: Commerce-specific settings
 7. **ReviewStep**: Review selections
-8. **CreatingStep**: Project creation progress
+8. **ProjectCreationStep**: Project creation progress
 
 ### PrerequisitesStep Implementation
 

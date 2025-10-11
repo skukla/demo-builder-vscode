@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import {
     View,
     Flex,
@@ -8,8 +8,6 @@ import {
     Divider,
     ActionButton,
     Button,
-    TextField,
-    Form,
     DialogTrigger,
     Dialog,
     Content,
@@ -19,7 +17,6 @@ import {
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
-import Key from '@spectrum-icons/workflow/Key';
 import Book from '@spectrum-icons/workflow/Book';
 import Settings from '@spectrum-icons/workflow/Settings';
 import Star from '@spectrum-icons/workflow/Star';
@@ -31,54 +28,19 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
-    const [isLicensed, setIsLicensed] = useState<boolean | null>(null);
-    const [licenseKey, setLicenseKey] = useState('');
-    const [isValidating, setIsValidating] = useState(false);
-
     useEffect(() => {
-        // Listen for initialization data
-        const unsubscribe = vscode.onMessage('init', (data) => {
-            if (data.isLicensed !== undefined) {
-                setIsLicensed(data.isLicensed);
-            }
-        });
-
         // Request initialization
         vscode.postMessage('ready');
-
-        return unsubscribe;
     }, []);
 
     const handleCreateNew = () => {
-        console.log('handleCreateNew called, isLicensed:', isLicensed);
-        if (isLicensed) {
-            console.log('Sending create-new message');
-            vscode.postMessage('create-new');
-        }
+        console.log('handleCreateNew called');
+        console.log('Sending create-new message');
+        vscode.postMessage('create-new');
     };
 
     const handleOpenExisting = () => {
-        if (isLicensed) {
-            vscode.postMessage('open-project');
-        }
-    };
-
-
-    const handleValidateLicense = async () => {
-        if (!licenseKey) return;
-        
-        setIsValidating(true);
-        vscode.postMessage('validate-license', { licenseKey });
-        
-        // Listen for response
-        const unsubscribe = vscode.onMessage('license-validated', (data) => {
-            setIsValidating(false);
-            if (data.valid) {
-                setIsLicensed(true);
-                setLicenseKey('');
-            }
-            unsubscribe();
-        });
+        vscode.postMessage('open-project');
     };
 
     const handleOpenDocs = () => {
@@ -97,7 +59,8 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
             'textarea:not([disabled]):not([tabindex="-1"]), ' +
             '[tabindex]:not([tabindex="-1"]):not([tabindex="0"])';
 
-        const focusFirstElement = () => {
+        const focusDefaultElement = () => {
+            // Focus first element (autoFocus on Create button handles initial focus)
             const focusableElements = document.querySelectorAll(selector);
             if (focusableElements.length > 0) {
                 const first = focusableElements[0] as HTMLElement;
@@ -108,8 +71,8 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
         };
 
         // Ensure focus starts inside the webview
-        const focusTimeout = window.setTimeout(focusFirstElement, 0);
-        window.addEventListener('focus', focusFirstElement);
+        const focusTimeout = window.setTimeout(focusDefaultElement, 0);
+        window.addEventListener('focus', focusDefaultElement);
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Tab') {
@@ -137,85 +100,12 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
         document.addEventListener('keydown', handleKeyDown);
         return () => {
             window.clearTimeout(focusTimeout);
-            window.removeEventListener('focus', focusFirstElement);
+            window.removeEventListener('focus', focusDefaultElement);
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isLicensed]);
+    }, []);
 
-    // Show license prompt if not licensed
-    if (isLicensed === false) {
-        return (
-            <View padding="size-400" height="100vh" backgroundColor="gray-50">
-                <Flex direction="column" gap="size-400" alignItems="center" justifyContent="center" height="100%">
-                    <View maxWidth="600px" width="100%">
-                        <Flex direction="column" gap="size-300" alignItems="center">
-                            <Key size="XXL" UNSAFE_className="text-gray-600" />
-                            
-                            <Heading level={1} UNSAFE_className={cn('text-3xl', 'text-center')}>
-                                License Required
-                            </Heading>
-                            
-                            <Text UNSAFE_className={cn('text-md', 'text-gray-700', 'text-center', 'mb-5')}>
-                                Adobe Demo Builder requires a valid license key to activate.
-                                Please enter your license key below to continue.
-                            </Text>
-
-                            <Form width="100%">
-                                <TextField
-                                    label="License Key"
-                                    placeholder="DEMO-2024-XXXXXX"
-                                    value={licenseKey}
-                                    onChange={setLicenseKey}
-                                    width="100%"
-                                    description="Enter the license key provided by Adobe"
-                                    validationState={
-                                        licenseKey && !licenseKey.match(/^DEMO-\d{4}-[A-Z0-9]{6}$/)
-                                            ? 'invalid'
-                                            : undefined
-                                    }
-                                    errorMessage={
-                                        licenseKey && !licenseKey.match(/^DEMO-\d{4}-[A-Z0-9]{6}$/)
-                                            ? 'Invalid license key format'
-                                            : undefined
-                                    }
-                                />
-                            </Form>
-
-                            <ButtonGroup>
-                                <Button 
-                                    variant="accent"
-                                    onPress={handleValidateLicense}
-                                    isDisabled={!licenseKey || !licenseKey.match(/^DEMO-\d{4}-[A-Z0-9]{6}$/) || isValidating}
-                                >
-                                    {isValidating ? 'Validating...' : 'Activate License'}
-                                </Button>
-                                <Button variant="secondary" onPress={handleOpenDocs}>
-                                    Get License
-                                </Button>
-                            </ButtonGroup>
-
-                            <Text UNSAFE_className={cn('text-sm', 'text-gray-600', 'text-center', 'mt-5')}>
-                                Don't have a license? Visit the Adobe Demo Builder portal to request one.
-                            </Text>
-                        </Flex>
-                    </View>
-                </Flex>
-            </View>
-        );
-    }
-
-    // Show loading if license status unknown
-    if (isLicensed === null) {
-        return (
-            <View padding="size-400" height="100vh" backgroundColor="gray-50">
-                <Flex direction="column" gap="size-400" alignItems="center" justifyContent="center" height="100%">
-                    <Text>Loading...</Text>
-                </Flex>
-            </View>
-        );
-    }
-
-    // Main welcome screen (licensed)
+    // Main welcome screen
     return (
         <View height="100vh" backgroundColor="gray-50">
             <Flex direction="column" alignItems="center" justifyContent="center" height="100%">
@@ -256,6 +146,7 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
                             onPress={handleCreateNew}
                             isQuiet
                             UNSAFE_className="welcome-action-card"
+                            autoFocus
                         >
                             <View UNSAFE_className={cn('mb-5', 'scale-180')}>
                                 <Add size="L" UNSAFE_className="text-blue-600" />

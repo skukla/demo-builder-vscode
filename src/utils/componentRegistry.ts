@@ -3,7 +3,6 @@ import * as path from 'path';
 import { 
     ComponentDefinition, 
     ComponentRegistry, 
-    ComponentDependencies,
     PresetDefinition 
 } from '../types';
 
@@ -18,9 +17,136 @@ export class ComponentRegistryManager {
     async loadRegistry(): Promise<ComponentRegistry> {
         if (!this.registry) {
             const content = await fs.promises.readFile(this.registryPath, 'utf8');
-            this.registry = JSON.parse(content);
+            const rawRegistry = JSON.parse(content);
+            this.registry = this.transformToGroupedStructure(rawRegistry);
         }
         return this.registry!;
+    }
+
+    /**
+     * Transform v2.0 flat structure to grouped structure for internal use
+     * Uses selectionGroups to organize components, builds envVars arrays from shared registry
+     */
+    private transformToGroupedStructure(raw: any): ComponentRegistry {
+        const components: any = {
+            frontends: [],
+            backends: [],
+            dependencies: [],
+            externalSystems: [],
+            appBuilder: []
+        };
+
+        const groups = raw.selectionGroups || {};
+        
+        // Helper to enhance a component with envVars and services
+        const enhanceComponent = (id: string) => {
+            const comp = raw.components[id];
+            if (!comp) return null;
+            
+            return {
+                ...comp,
+                id,
+                configuration: comp.configuration ? {
+                    ...comp.configuration,
+                    envVars: this.buildEnvVarsForComponent(id, comp, raw.envVars || {}),
+                    services: comp.configuration.requiredServices 
+                        ? this.buildServicesForComponent(comp.configuration.requiredServices, raw.services || {}, raw.envVars || {})
+                        : undefined
+                } : undefined
+            };
+        };
+
+        // Map selectionGroups to internal buckets
+        (groups.frontends || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.frontends.push(enhanced);
+        });
+
+        (groups.backends || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.backends.push(enhanced);
+        });
+
+        (groups.appBuilderApps || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.appBuilder.push(enhanced);
+        });
+
+        (groups.integrations || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.externalSystems.push(enhanced);
+        });
+
+        // Map dependencies from selectionGroups (explicit list)
+        (groups.dependencies || []).forEach((id: string) => {
+            const enhanced = enhanceComponent(id);
+            if (enhanced) components.dependencies.push(enhanced);
+        });
+
+        return {
+            version: raw.version,
+            components,
+            services: raw.services || {},
+            envVars: raw.envVars || {}
+        };
+    }
+
+    /**
+     * Build envVars array for a component from the shared envVars registry
+     */
+    private buildEnvVarsForComponent(componentId: string, component: any, sharedEnvVars: any): any[] {
+        const envVars: any[] = [];
+        const requiredKeys = component.configuration?.requiredEnvVars || [];
+        const optionalKeys = component.configuration?.optionalEnvVars || [];
+        const allKeys = [...requiredKeys, ...optionalKeys];
+
+        for (const key of allKeys) {
+            const envVar = sharedEnvVars[key];
+            if (envVar) {
+                envVars.push({
+                    key,
+                    ...envVar,
+                    usedBy: [componentId]
+                });
+            }
+        }
+
+        return envVars;
+    }
+
+    /**
+     * Build services array for a component from service IDs
+     * Expands service references to full definitions with envVars
+     */
+    private buildServicesForComponent(serviceIds: string[], services: any, sharedEnvVars: any): any[] {
+        const expandedServices: any[] = [];
+
+        for (const serviceId of serviceIds) {
+            const service = services[serviceId];
+            if (service) {
+                // Build envVars for this service
+                const serviceEnvVars: any[] = [];
+                const requiredKeys = service.requiredEnvVars || [];
+                
+                for (const key of requiredKeys) {
+                    const envVar = sharedEnvVars[key];
+                    if (envVar) {
+                        serviceEnvVars.push({
+                            key,
+                            ...envVar
+                        });
+                    }
+                }
+
+                expandedServices.push({
+                    id: serviceId,
+                    ...service,
+                    envVars: serviceEnvVars
+                });
+            }
+        }
+
+        return expandedServices;
     }
 
     async getFrontends(): Promise<ComponentDefinition[]> {
@@ -48,6 +174,16 @@ export class ComponentRegistryManager {
         return registry.components.appBuilder || [];
     }
 
+    async getServices(): Promise<Record<string, any>> {
+        const registry = await this.loadRegistry();
+        return registry.services || {};
+    }
+
+    async getServiceById(id: string): Promise<any | undefined> {
+        const registry = await this.loadRegistry();
+        return registry.services?.[id];
+    }
+
     async getComponentById(id: string): Promise<ComponentDefinition | undefined> {
         const registry = await this.loadRegistry();
         const allComponents = [
@@ -61,8 +197,8 @@ export class ComponentRegistryManager {
     }
 
     async getPresets(): Promise<PresetDefinition[]> {
-        const registry = await this.loadRegistry();
-        return registry.presets || [];
+        // Presets are not currently defined in components.json v2.0
+        return [];
     }
 
     async checkCompatibility(frontendId: string, backendId: string): Promise<boolean> {
@@ -70,11 +206,6 @@ export class ComponentRegistryManager {
         if (!frontend) return false;
         
         return frontend.compatibleBackends?.includes(backendId) || false;
-    }
-
-    async getCompatibilityInfo(frontendId: string, backendId: string) {
-        const registry = await this.loadRegistry();
-        return registry.compatibilityMatrix?.[frontendId]?.[backendId];
     }
 
     async getRequiredNodeVersions(
@@ -337,9 +468,14 @@ export class DependencyResolver {
         }
 
         config.envVars = envVars;
+        
+        // Get default port from extension settings
+        const vscode = await import('vscode');
+        const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
+        
         config.frontend = {
             id: frontend.id,
-            port: frontend.configuration?.port || 3000,
+            port: frontend.configuration?.port || defaultPort,
             nodeVersion: frontend.configuration?.nodeVersion || '20'
         };
         config.backend = {

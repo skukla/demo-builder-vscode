@@ -1,14 +1,10 @@
-import { exec, ExecOptions, spawn } from 'child_process';
-import { promisify } from 'util';
-import * as fs from 'fs/promises';
+import { ExecOptions, spawn } from 'child_process';
 import * as fsSync from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as vscode from 'vscode';
 import { getLogger } from './debugLogger';
 import { TIMEOUTS } from './timeoutConfig';
-
-const execAsync = promisify(exec);
 
 /**
  * Command execution request
@@ -106,16 +102,11 @@ export class ExternalCommandManager {
      * Centralizes all command execution logic with configurable options
      */
     async execute(command: string, options: ExecuteOptions = {}): Promise<CommandResult> {
-        this.logger.debug(`[CommandManager] execute() called with command: ${command.substring(0, 50)}...`);
-        this.logger.debug(`[CommandManager] execute() options: streaming=${options.streaming}, timeout=${options.timeout}, exclusive=${options.exclusive}`);
-        
         // Handle exclusive execution if requested
         if (options.exclusive) {
-            this.logger.debug(`[CommandManager] Using exclusive execution for: ${options.exclusive}`);
             return this.executeExclusive(options.exclusive, () => this.executeInternal(command, options));
         }
         
-        this.logger.debug(`[CommandManager] Calling executeInternal()`);
         return this.executeInternal(command, options);
     }
 
@@ -123,9 +114,8 @@ export class ExternalCommandManager {
      * Internal execution logic
      */
     private async executeInternal(command: string, options: ExecuteOptions): Promise<CommandResult> {
-        this.logger.debug(`[CommandManager] executeInternal() starting for: ${command.substring(0, 50)}...`);
         let finalCommand = command;
-        let finalOptions: ExecOptions = { ...options };
+        const finalOptions: ExecOptions = { ...options };
         
         // Step 1: Handle telemetry configuration for Adobe CLI
         // Only check if explicitly requested or if it's an aio command (unless explicitly disabled)
@@ -140,30 +130,22 @@ export class ExternalCommandManager {
                 : options.useNodeVersion;
                 
             if (await this.isFnmAvailable()) {
-                this.logger.debug(`[CommandManager] Setting up fnm for Node v${nodeVersion}`);
-                
                 // Special handling for 'current' - use fnm env instead of fnm use
                 if (options.useNodeVersion === 'current' || nodeVersion === 'current') {
                     // Use fnm env to set up the environment with the current active version
-                    this.logger.debug(`[CommandManager] Using current Node version with fnm env`);
                     finalCommand = `eval "$(fnm env)" && ${finalCommand}`;
                 } else if (nodeVersion) {
                     // Check if we're already on the target version to avoid unnecessary switching
                     const currentVersion = await this.getCurrentFnmVersion();
                     if (currentVersion && currentVersion.includes(nodeVersion)) {
-                        this.logger.debug(`[CommandManager] Already on Node v${nodeVersion}, skipping fnm entirely`);
                         // No fnm needed - run command directly with current Node version
                         // finalCommand remains unchanged (no fnm prefix)
                     } else {
                         // Use specific version with silent flag to prevent output mixing
-                        this.logger.debug(`[CommandManager] Switching from v${currentVersion || 'unknown'} to Node v${nodeVersion} with fnm`);
                         finalCommand = `fnm use ${nodeVersion} --silent-if-unchanged && ${finalCommand}`;
                     }
                 }
                 finalOptions.shell = finalOptions.shell || '/bin/zsh';
-                this.logger.debug(`[CommandManager] Final command: ${finalCommand}`);
-            } else {
-                this.logger.debug(`[CommandManager] fnm not available, using system Node`);
             }
         }
         
@@ -181,15 +163,12 @@ export class ExternalCommandManager {
         
         // Step 4: Set default timeout
         finalOptions.timeout = options.timeout || TIMEOUTS.COMMAND_DEFAULT;
-        this.logger.debug(`[CommandManager] Timeout set to: ${finalOptions.timeout}ms`);
         
         // Step 5: Handle streaming vs regular execution
         if (options.streaming && options.onOutput) {
-            this.logger.debug(`[CommandManager] Using streaming execution`);
             return this.executeStreamingInternal(finalCommand, finalOptions, options.onOutput);
         }
         
-        this.logger.debug(`[CommandManager] Using regular execution with retry`);
         // Step 6: Execute with retry logic
         const retryStrategy = options.retryStrategy || this.getDefaultStrategy();
         return this.executeWithRetry(finalCommand, finalOptions, retryStrategy);
@@ -208,50 +187,41 @@ export class ExternalCommandManager {
         for (let attempt = 1; attempt <= retryStrategy.maxAttempts; attempt++) {
             const startTime = Date.now();
             try {
-                this.logger.debug(`[CommandManager] Executing command (attempt ${attempt}): ${command}`);
+                // Only log retry attempts (not first attempt)
+                if (attempt > 1) {
+                    this.logger.debug(`[CommandManager] Retry attempt ${attempt}/${retryStrategy.maxAttempts}: ${command.substring(0, 50)}...`);
+                }
                 
-                const { stdout, stderr } = await execAsync(command, {
-                    ...options,
-                    encoding: 'utf8'
-                });
+                // Use executeStreamingInternal for full debugging visibility
+                const result = await this.executeStreamingInternal(command, options, () => {});
                 
                 const duration = Date.now() - startTime;
-                this.logger.debug(`[CommandManager] Command succeeded in ${duration}ms`);
+                // Only log if retried or took > 5 seconds
+                if (attempt > 1 || duration > 5000) {
+                    this.logger.debug(`[CommandManager] Command succeeded after ${duration}ms (attempt ${attempt}/${retryStrategy.maxAttempts})`);
+                }
                 
-                return {
-                    stdout,
-                    stderr,
-                    code: 0,
-                    duration
-                };
+                return result;
             } catch (error: any) {
                 lastError = error;
                 const duration = Date.now() - startTime;
                 
-                // Enhanced error logging with all available details
-                this.logger.debug(`[CommandManager] Command failed (attempt ${attempt}) after ${duration}ms:`);
+                // Enhanced error logging
+                this.logger.debug(`[CommandManager] Command failed (attempt ${attempt}/${retryStrategy.maxAttempts}) after ${duration}ms:`);
                 this.logger.debug(`  Command: ${command}`);
                 this.logger.debug(`  Error: ${error.message}`);
-                this.logger.debug(`  Exit code: ${error.code || 'none'}`);
-                this.logger.debug(`  Signal: ${error.signal || 'none'}`);
                 
-                if (error.stdout) {
-                    this.logger.debug(`  Stdout: ${error.stdout.substring(0, 500)}`);
-                }
-                if (error.stderr) {
-                    this.logger.debug(`  Stderr: ${error.stderr.substring(0, 500)}`);
-                }
-                
-                // Identify timeout vs other failures
-                if (error.killed && error.signal === 'SIGTERM') {
-                    this.logger.debug(`  → Command timed out after ${options.timeout || TIMEOUTS.COMMAND_DEFAULT}ms`);
-                } else if (error.code && error.code !== 0) {
-                    this.logger.debug(`  → Command exited with non-zero code`);
+                // Don't retry on timeout errors - they already took the full timeout duration
+                const isTimeout = error.message?.toLowerCase().includes('timed out');
+                if (isTimeout) {
+                    this.logger.warn('[CommandManager] Command timed out - not retrying');
+                    throw error;
                 }
                 
                 // Check if we should retry
                 if (attempt < retryStrategy.maxAttempts) {
                     if (retryStrategy.shouldRetry && !retryStrategy.shouldRetry(error, attempt)) {
+                        this.logger.debug('[CommandManager] shouldRetry returned false - not retrying');
                         throw error;
                     }
                     
@@ -264,6 +234,7 @@ export class ExternalCommandManager {
                     this.logger.debug(`[CommandManager] Retrying in ${delay}ms...`);
                     await this.delay(delay);
                 } else {
+                    this.logger.warn(`[CommandManager] All ${retryStrategy.maxAttempts} attempts exhausted`);
                     throw error;
                 }
             }
@@ -280,43 +251,47 @@ export class ExternalCommandManager {
         options: ExecOptions,
         onOutput: (data: string) => void
     ): Promise<CommandResult> {
-        this.logger.debug(`[CommandManager] executeStreamingInternal() starting`);
-        this.logger.debug(`[CommandManager] About to spawn process with command: ${command.substring(0, 100)}...`);
         return new Promise((resolve, reject) => {
             const startTime = Date.now();
             let stdout = '';
             let stderr = '';
             
-            this.logger.debug(`[CommandManager] Creating spawn with shell: ${options.shell || true}`);
             const child = spawn(command, [], {
                 shell: options.shell || true,
                 cwd: options.cwd,
                 env: options.env as NodeJS.ProcessEnv
             });
             
-            this.logger.debug(`[CommandManager] Spawn created, PID: ${child.pid}`);
-            
             child.stdout?.on('data', (data) => {
-                this.logger.debug(`[CommandManager] stdout data received: ${data.toString().substring(0, 100)}`);
                 const output = data.toString();
                 stdout += output;
+                
+                // Auto-handle Adobe CLI telemetry prompt
+                if (output.includes('Would you like to allow @adobe/aio-cli to collect anonymous usage data?')) {
+                    this.logger.info('[CommandManager] 🔧 Auto-answered aio-cli telemetry prompt');
+                    child.stdin?.write('n\n');
+                    child.stdin?.end();
+                }
+                
                 onOutput(output);
             });
             
             child.stderr?.on('data', (data) => {
-                this.logger.debug(`[CommandManager] stderr data received: ${data.toString().substring(0, 100)}`);
                 const output = data.toString();
                 stderr += output;
                 onOutput(output);
             });
             
             child.on('error', (error) => {
-                this.logger.debug(`[CommandManager] error event fired: ${error.message}`);
+                this.logger.error(`[CommandManager] Process error: ${error.message}`);
                 reject(error);
             });
             
             child.on('close', (code) => {
-                this.logger.debug(`[CommandManager] close event fired with code: ${code}`);
+                // Only log non-zero exit codes
+                if (code && code !== 0) {
+                    this.logger.warn(`[CommandManager] Process exited with code ${code} after ${Date.now() - startTime}ms`);
+                }
                 const duration = Date.now() - startTime;
                 resolve({
                     stdout,
@@ -326,14 +301,28 @@ export class ExternalCommandManager {
                 });
             });
             
-            this.logger.debug(`[CommandManager] All event handlers registered, waiting for process output...`);
-            
             // Handle timeout
             if (options.timeout) {
-                setTimeout(() => {
-                    child.kill();
+                const timeoutId = setTimeout(() => {
+                    this.logger.warn(`[CommandManager] ⏱️ Command timed out after ${options.timeout}ms (PID: ${child.pid})`);
+                    
+                    if (!child.killed) {
+                        child.kill('SIGTERM');
+                        
+                        // Force kill after 2 seconds if still alive
+                        setTimeout(() => {
+                            if (!child.killed && child.exitCode === null) {
+                                this.logger.warn(`[CommandManager] Force killing process ${child.pid} (SIGKILL)`);
+                                child.kill('SIGKILL');
+                            }
+                        }, 2000);
+                    }
+                    
                     reject(new Error(`Command timed out after ${options.timeout}ms`));
                 }, options.timeout);
+                
+                // Clear timeout when process completes
+                child.on('close', () => clearTimeout(timeoutId));
             }
         });
     }
@@ -731,7 +720,7 @@ export class ExternalCommandManager {
                         paths.push(libBinPath);
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Ignore errors reading directory
             }
         }
@@ -747,7 +736,7 @@ export class ExternalCommandManager {
                         paths.push(binPath);
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Ignore errors reading directory
             }
         }
@@ -775,9 +764,8 @@ export class ExternalCommandManager {
      */
     async isFnmAvailable(): Promise<boolean> {
         try {
-            await execAsync('fnm --version', { 
-                shell: '/bin/zsh',
-                encoding: 'utf8'
+            await this.execute('fnm --version', { 
+                timeout: 2000 // Quick check
             });
             return true;
         } catch {
@@ -790,9 +778,7 @@ export class ExternalCommandManager {
      */
     async getCurrentFnmVersion(): Promise<string | null> {
         try {
-            const result = await execAsync('fnm current', { 
-                shell: '/bin/zsh',
-                encoding: 'utf8',
+            const result = await this.execute('fnm current', { 
                 timeout: 2000 // Quick check
             });
             return result.stdout?.trim() || null;
@@ -844,7 +830,7 @@ export class ExternalCommandManager {
                         return version; // Fallback to full version if pattern doesn't match
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Ignore errors
             }
         }
@@ -868,7 +854,7 @@ export class ExternalCommandManager {
                         return version;
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Ignore errors
             }
         }
@@ -905,13 +891,10 @@ export class ExternalCommandManager {
     }
 
     private async doNodeVersionSetup(): Promise<void> {
-        this.logger.debug(`[CommandManager] Setting up Adobe CLI Node version for session`);
-        
         try {
             // Find the required Node version for Adobe CLI
             const requiredVersion = await this.findAdobeCLINodeVersion();
             if (!requiredVersion) {
-                this.logger.debug(`[CommandManager] No Adobe CLI Node version required`);
                 this.isAdobeCLINodeVersionSet = true;
                 return;
             }
@@ -920,25 +903,20 @@ export class ExternalCommandManager {
             if (await this.isFnmAvailable()) {
                 const currentVersion = await this.getCurrentFnmVersion();
                 if (!currentVersion || !currentVersion.includes(requiredVersion)) {
-                    // Switch to the required version
-                    this.logger.debug(`[CommandManager] Switching from v${currentVersion || 'unknown'} to Node v${requiredVersion} for Adobe CLI`);
-                    await execAsync(`fnm use ${requiredVersion} --silent-if-unchanged`, { 
-                        shell: '/bin/zsh',
-                        encoding: 'utf8'
+                    // Switch to the required version (only log if actually switching)
+                    this.logger.info(`[Adobe CLI] Switching to Node v${requiredVersion}`);
+                    await this.execute(`fnm use ${requiredVersion} --silent-if-unchanged`, { 
+                        timeout: TIMEOUTS.COMMAND_DEFAULT // 30 second timeout for Node version switching
                     });
-                    this.logger.debug(`[CommandManager] Successfully switched to Node v${requiredVersion}`);
-                } else {
-                    this.logger.debug(`[CommandManager] Already on correct Node v${requiredVersion} for Adobe CLI`);
                 }
             }
 
             // Mark as set for the session
             this.sessionNodeVersion = requiredVersion;
             this.isAdobeCLINodeVersionSet = true;
-            this.logger.debug(`[CommandManager] Node v${requiredVersion} confirmed for Adobe CLI session`);
 
         } catch (error) {
-            this.logger.debug(`[CommandManager] Failed to set Adobe CLI Node version:`, error);
+            this.logger.warn(`[Adobe CLI] Failed to set Node version: ${error instanceof Error ? error.message : String(error)}`);
             // Continue anyway - Adobe CLI might work with current version
             this.isAdobeCLINodeVersionSet = true;
         }
@@ -951,13 +929,11 @@ export class ExternalCommandManager {
 
     /**
      * Ensure Adobe CLI telemetry is configured to prevent interactive prompts
-     * Uses fire-and-forget approach: quick check + background configuration
-     * This minimizes user delays while still configuring telemetry eventually
+     * Directly sets the config without checking first (checking can trigger the prompt!)
      */
     async ensureAdobeCLIConfigured(): Promise<void> {
         // Skip if already handled this session (prevent repeated attempts)
         if (ExternalCommandManager.telemetryConfigured || ExternalCommandManager.checkingTelemetry) {
-            this.logger.debug('[Telemetry] Already handled this session - skipping (0ms)');
             return;
         }
         
@@ -965,61 +941,26 @@ export class ExternalCommandManager {
         ExternalCommandManager.checkingTelemetry = true;
         
         try {
-            // Quick check with very short timeout (Adobe CLI is slow)
-            // IMPORTANT: Set configureTelemetry: false to prevent infinite recursion
-            const checkResult = await this.execute(
-                'aio config get aio-cli-telemetry.optOut',
+            // IMPORTANT: Just SET the config directly without checking first
+            // Checking with "aio config get" can trigger the interactive prompt on first run!
+            await this.execute(
+                'aio config set aio-cli-telemetry.optOut true',
                 { 
                     configureTelemetry: false,  // CRITICAL: Don't check telemetry for telemetry commands
                     encoding: 'utf8',
-                    timeout: TIMEOUTS.TELEMETRY_CHECK // Very quick timeout - fail fast if Adobe CLI is slow
+                    timeout: 5000 // 5 second timeout - should be quick
                 }
             ).catch(error => {
-                // If it times out, return a "not configured" result
-                if (error.killed || error.signal === 'SIGTERM') {
-                    this.logger.debug('[Telemetry] Check timed out as expected (500ms) - not blocking operations');
-                    this.logger.debug('[Telemetry] Will configure in background to prevent future prompts');
-                    return { code: 1, stdout: '', stderr: '', duration: 500 };
-                }
-                throw error;
+                // Log but don't fail - telemetry config is not critical
+                this.logger.debug('[Telemetry] Failed to configure (non-critical):', error.message);
             });
             
-            // Check if telemetry is already configured
-            if (checkResult.code === 0 && checkResult.stdout?.trim() === 'true') {
-                this.logger.debug('[Telemetry] Already configured - no action needed (checked in 500ms)');
-            } else {
-                // Telemetry not configured - set it in background (fire-and-forget)
-                this.logger.debug('[Telemetry] Starting background configuration (non-blocking)');
-                this.logger.debug('[Telemetry] User operations continue immediately');
-                
-                // Use Node.js exec to start command without waiting
-                const { exec } = require('child_process');
-                const process = exec('aio config set aio-cli-telemetry.optOut true');
-                const backgroundStart = Date.now();
-                
-                // Optional: Log completion for debugging (non-blocking)
-                process.on('exit', (code: number | null) => {
-                    const elapsed = ((Date.now() - backgroundStart) / 1000).toFixed(1);
-                    if (code === 0) {
-                        this.logger.debug(`[Telemetry] Background: Configuration completed successfully (${elapsed}s elapsed)`);
-                        this.logger.debug('[Telemetry] Adobe CLI telemetry opt-out is now configured');
-                    } else {
-                        this.logger.debug(`[Telemetry] Background: Configuration failed after ${elapsed}s (non-critical)`);
-                    }
-                });
-                
-                process.on('error', (err: Error) => {
-                    this.logger.debug('[Telemetry] Background: Configuration error (non-critical):', err);
-                });
-            }
-            
-            // Mark as configured immediately (don't wait for background completion)
+            // Mark as configured
             ExternalCommandManager.telemetryConfigured = true;
-            this.logger.debug('[Telemetry] Performance: Handled in 500ms (non-blocking approach)');
+            this.logger.info('[Telemetry] ✓ Configured aio-cli to opt out of telemetry');
             
-        } catch (error) {
-            this.logger.debug('[Telemetry] Check failed (non-critical):', error);
-            // Still mark as checked to avoid repeated attempts
+        } catch {
+            // Still mark as configured to avoid repeated attempts
             ExternalCommandManager.telemetryConfigured = true;
         } finally {
             // Always clear the recursion guard
@@ -1031,7 +972,7 @@ export class ExternalCommandManager {
      * Execute Adobe CLI command with the correct Node version
      * This ensures Adobe CLI runs with a compatible Node version
      */
-    async executeAdobeCLI(command: string, options?: ExecOptions): Promise<CommandResult> {
+    async executeAdobeCLI(command: string, options?: ExecuteOptions): Promise<CommandResult> {
         // Check cache for specific commands that don't change during session
         if (command === 'aio --version' && this.adobeVersionCache) {
             this.logger.debug('[CommandManager] Using cached aio --version result');

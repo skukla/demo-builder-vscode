@@ -641,9 +641,37 @@ button[class*="spectrum-Button"][disabled],
     cursor: pointer !important;
 }
 
-.welcome-action-card:hover {
+.welcome-action-card:hover,
+.welcome-action-card:focus {
     background: var(--spectrum-global-color-gray-200) !important;
-    border-color: var(--spectrum-global-color-blue-400) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    outline: none !important;
+}
+
+/* Dashboard action buttons - match welcome card style */
+.dashboard-action-button {
+    background: var(--spectrum-global-color-gray-100) !important;
+    border-radius: 6px !important;
+    padding: 16px !important;
+    transition: all 0.15s ease !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    text-align: center !important;
+    height: 80px !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    cursor: pointer !important;
+}
+
+.dashboard-action-button:hover,
+.dashboard-action-button:focus {
+    background: var(--spectrum-global-color-gray-200) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    outline: none !important;
 }
 
 /* ===========================================

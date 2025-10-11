@@ -6,7 +6,9 @@ module.exports = {
   mode: process.env.NODE_ENV || 'development',
   entry: {
     main: './src/webviews/index.tsx',
-    welcome: './src/webviews/welcome.tsx'
+    welcome: './src/webviews/welcome.tsx',
+    projectDashboard: './src/webviews/project-dashboard.tsx',
+    configure: './src/webviews/configure.tsx'
   },
   output: {
     path: path.resolve(__dirname, 'dist', 'webview'),

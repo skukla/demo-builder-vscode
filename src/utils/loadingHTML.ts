@@ -117,14 +117,7 @@ export async function setLoadingState(
     // Ensure spinner is visible for minimum time (prevents jarring instant transitions)
     if (elapsed < MIN_DISPLAY_TIME) {
         const remainingTime = MIN_DISPLAY_TIME - elapsed;
-        if (logger && logger.debug) {
-            logger.debug(`Content loaded in ${elapsed}ms, waiting ${remainingTime}ms more for better UX`);
-        }
         await new Promise(resolve => setTimeout(resolve, remainingTime));
-    } else {
-        if (logger && logger.debug) {
-            logger.debug(`Content loaded in ${elapsed}ms (no additional delay needed)`);
-        }
     }
     
     // Set actual HTML content

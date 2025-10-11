@@ -2,11 +2,10 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as os from 'os';
 import { BaseCommand } from './baseCommand';
-import { Project, ProjectTemplate, CommerceConfig, ValidationResult } from '../types';
+import { Project, ProjectTemplate, CommerceConfig } from '../types';
 import { PrerequisitesManager } from '../utils/prerequisitesManager';
-import { AdobeAuthManager, AdobeOrg, AdobeProject } from '../utils/adobeAuthManager';
+import { AdobeAuthManager } from '../utils/adobeAuthManager';
 import { getExternalCommandManager } from '../extension';
-import { CommerceValidator } from '../utils/commerceValidator';
 import { MeshDeployer } from '../utils/meshDeployer';
 import { FrontendInstaller } from '../utils/frontendInstaller';
 
@@ -384,7 +383,7 @@ export class CreateProjectCommand extends BaseCommand {
         });
     }
 
-    private async configureCommerce(template: ProjectTemplate): Promise<CommerceConfig | undefined> {
+    private async configureCommerce(_template: ProjectTemplate): Promise<CommerceConfig | undefined> {
         const commerceUrl = await this.showInputBox({
             prompt: 'Commerce Instance URL',
             placeHolder: 'https://my-store.adobe.com',
@@ -489,25 +488,9 @@ export class CreateProjectCommand extends BaseCommand {
                 created: new Date(),
                 lastModified: new Date(),
                 path: projectPath,
-                status: 'configuring',
+                status: 'created',
                 adobe: adobeConfig,
-                commerce: commerceConfig,
-                frontend: {
-                    path: path.join(projectPath, 'frontend'),
-                    version: 'latest',
-                    port: 3000,
-                    status: 'stopped'
-                },
-                mesh: {
-                    id: '',
-                    status: 'not-deployed',
-                    mode: 'deployed'
-                },
-                inspector: {
-                    enabled: true,
-                    version: '1.0.0',
-                    installed: false
-                }
+                commerce: commerceConfig
             };
 
             // Save project
@@ -519,10 +502,14 @@ export class CreateProjectCommand extends BaseCommand {
             const meshResult = await meshDeployer.deploy(project);
             
             if (meshResult.success && meshResult.endpoint) {
-                project.mesh!.endpoint = meshResult.endpoint;
-                project.mesh!.status = 'deployed';
-                project.mesh!.lastDeployed = new Date();
-                await this.stateManager.saveProject(project);
+                // Update mesh component instance with endpoint
+                const meshComponent = project.componentInstances?.['commerce-mesh'];
+                if (meshComponent) {
+                    meshComponent.endpoint = meshResult.endpoint;
+                    meshComponent.status = 'deployed';
+                    meshComponent.lastUpdated = new Date();
+                    await this.stateManager.saveProject(project);
+                }
             }
 
             // Install frontend

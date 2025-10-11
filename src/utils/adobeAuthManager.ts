@@ -73,6 +73,10 @@ export class AdobeAuthManager {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private consoleWhereCache: { data: any, expiry: number } | undefined;
 
+    // Track when organization was just cleared due to validation failure
+    // Used to show appropriate message: "Selected org lacks App Builder access"
+    private orgClearedDueToValidation: boolean = false;
+
     /**
      * Cache Management Strategy:
      *
@@ -111,10 +115,10 @@ export class AdobeAuthManager {
     private async validateOrganizationAccess(): Promise<boolean> {
         try {
             // Try to list projects - this will fail with 403 if org is invalid
-            // Use standard API timeout instead of aggressive 5-second timeout
+            // Use PROJECT_LIST timeout (30s) - validation needs time for slow networks
             const result = await this.commandManager.executeAdobeCLI(
                 'aio console project list --json',
-                { encoding: 'utf8', timeout: TIMEOUTS.API_CALL }
+                { encoding: 'utf8', timeout: TIMEOUTS.PROJECT_LIST }
             );
 
             // If we get here without error, check the result
@@ -132,13 +136,21 @@ export class AdobeAuthManager {
             this.debugLogger.debug('[Auth] Organization access validation failed:', result.stderr);
             return false;
         } catch (error) {
-            // Check if this is a timeout vs other errors
+            // Better timeout detection - check multiple indicators
             const errorString = error instanceof Error ? error.message : String(error);
-            if (errorString.includes('timeout') || errorString.includes('ETIMEDOUT')) {
-                this.debugLogger.warn('[Auth] Organization validation timed out - assuming valid (slow network)');
-                // On timeout, assume valid to avoid false negatives
-                return true;
+            const errorObj = error as any;
+            
+            const isTimeout = 
+                errorString.toLowerCase().includes('timeout') ||
+                errorString.toLowerCase().includes('timed out') ||
+                errorString.includes('ETIMEDOUT') ||
+                errorObj?.code === 'ETIMEDOUT';
+            
+            if (isTimeout) {
+                this.debugLogger.warn('[Auth] Organization validation timed out - assuming valid (network delay)');
+                return true; // Fail-open: assume org is valid on timeout
             }
+            
             this.debugLogger.debug('[Auth] Organization access validation error:', error);
             return false;
         }
@@ -147,7 +159,7 @@ export class AdobeAuthManager {
     /**
      * Check if we have an org context and validate it's accessible, clearing if invalid
      */
-    private async validateAndClearInvalidOrgContext(forceValidation: boolean = false): Promise<void> {
+    public async validateAndClearInvalidOrgContext(forceValidation: boolean = false): Promise<void> {
         try {
             // Check if we have an organization context
             const result = await this.commandManager.executeAdobeCLI(
@@ -188,9 +200,18 @@ export class AdobeAuthManager {
                     this.debugLogger.debug(`[Auth] Found organization context: ${context.org}, validating access...`);
 
                     // We have an org context, validate it's accessible
-                    const isValid = await this.validateOrganizationAccess();
+                    let isValid = await this.validateOrganizationAccess();
+                    this.debugLogger.debug(`[Auth] First validation result for ${context.org}: ${isValid}`);
 
-                    // Cache the validation result
+                    // If validation failed, retry once (network might be slow)
+                    if (!isValid) {
+                        this.logger.info('Retrying organization access validation...');
+                        this.debugLogger.debug('[Auth] First validation failed, retrying once...');
+                        isValid = await this.validateOrganizationAccess();
+                        this.debugLogger.debug(`[Auth] Second validation result for ${context.org}: ${isValid}`);
+                    }
+
+                    // Cache the validation result (after retry if needed)
                     this.validationCache = {
                         org: context.org,
                         isValid,
@@ -198,12 +219,18 @@ export class AdobeAuthManager {
                     };
 
                     if (!isValid) {
+                        // Failed twice - now we clear
                         this.logger.info('Previous organization no longer accessible. Clearing selection...');
                         this.debugLogger.warn('[Auth] Organization context is invalid for current user - clearing');
 
                         await this.clearConsoleContext();
                         // Also clear our cache since the context changed
                         this.clearCache();
+
+                        // Set flag to indicate org was cleared due to validation failure
+                        // This helps distinguish "org lacks App Builder" from "no org selected yet"
+                        this.orgClearedDueToValidation = true;
+                        this.debugLogger.debug(`[Auth] Set orgClearedDueToValidation flag to true for ${context.org}`);
 
                         this.logger.info('Organization cleared. You will need to select a new organization.');
                     } else {
@@ -217,6 +244,28 @@ export class AdobeAuthManager {
         } catch (error) {
             this.debugLogger.debug('[Auth] Failed to validate organization context:', error);
         }
+    }
+
+    /**
+     * Check if organization was recently cleared due to validation failure
+     * This flag is used to show appropriate message when org lacks App Builder access
+     * @returns true if org was just cleared due to validation failure
+     */
+    public wasOrgClearedDueToValidation(): boolean {
+        const result = this.orgClearedDueToValidation;
+        this.debugLogger.debug(`[Auth] wasOrgClearedDueToValidation() called, returning: ${result}`);
+        // Clear the flag after reading (one-time check)
+        this.orgClearedDueToValidation = false;
+        return result;
+    }
+
+    /**
+     * Manually set the org rejected flag
+     * Used when we detect a user selected an org that was rejected (e.g., no App Builder access)
+     */
+    public setOrgRejectedFlag(): void {
+        this.orgClearedDueToValidation = true;
+        this.debugLogger.debug('[Auth] Manually set orgClearedDueToValidation flag (org rejected during browser selection)');
     }
 
     /**
@@ -284,6 +333,25 @@ export class AdobeAuthManager {
     }
 
     /**
+     * Ensure SDK is initialized and ready for use
+     * Waits for SDK initialization if in progress
+     * Returns true if SDK is available, false if fallback to CLI needed
+     */
+    public async ensureSDKInitialized(): Promise<boolean> {
+        // Already initialized
+        if (this.sdkClient) {
+            this.debugLogger.debug('[Auth SDK] SDK already initialized');
+            return true;
+        }
+        
+        // Not initialized, do it now (blocking)
+        this.debugLogger.debug('[Auth SDK] Ensuring SDK is initialized...');
+        await this.initializeSDK();
+        
+        return this.sdkClient !== undefined;
+    }
+
+    /**
      * Initialize Adobe Console SDK client for high-performance operations
      * Called after successful authentication to enable SDK-based operations
      * Falls back to CLI if SDK initialization fails
@@ -297,8 +365,13 @@ export class AdobeAuthManager {
 
             this.debugLogger.debug('[Auth SDK] Initializing Adobe Console SDK...');
             
-            // Get CLI access token
-            const accessToken = await getToken('cli');
+            // Get CLI access token with timeout protection
+            const accessToken = await Promise.race([
+                getToken('cli'),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('SDK token fetch timed out')), TIMEOUTS.SDK_INIT)
+                )
+            ]) as string;
             
             if (!accessToken) {
                 this.debugLogger.debug('[Auth SDK] No access token available, skipping SDK initialization');
@@ -370,7 +443,118 @@ export class AdobeAuthManager {
     }
 
     /**
+     * Quick authentication check - only verifies token existence and expiry
+     * Does NOT validate org access or initialize SDK
+     * Use this for dashboard loads and other performance-critical paths
+     * 
+     * Performance: < 1 second (vs 9+ seconds for full isAuthenticated)
+     */
+    public async isAuthenticatedQuick(): Promise<boolean> {
+        this.startTiming('isAuthenticatedQuick');
+        
+        // Check cache first
+        const now = Date.now();
+        if (this.cachedAuthStatus !== undefined && now < this.authCacheExpiry) {
+            this.debugLogger.debug(`[Auth] Using cached authentication status: ${this.cachedAuthStatus}`);
+            this.endTiming('isAuthenticatedQuick');
+            return this.cachedAuthStatus;
+        }
+        
+        try {
+            this.debugLogger.debug('[Auth] Quick authentication check (token only, no org validation)');
+            
+            // Check for access token and expiry in parallel
+            const [result, expiryResult] = await Promise.all([
+                this.commandManager.executeAdobeCLI(
+                    'aio config get ims.contexts.cli.access_token.token',
+                    { encoding: 'utf8', timeout: TIMEOUTS.TOKEN_READ }
+                ),
+                this.commandManager.executeAdobeCLI(
+                    'aio config get ims.contexts.cli.access_token.expiry',
+                    { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ }
+                )
+            ]);
+            
+            // Clean the token output
+            const stdout = result.stdout?.trim() || '';
+            const cleanOutput = stdout.split('\n').filter(line => 
+                !line.startsWith('Using Node') && 
+                !line.includes('fnm') &&
+                line.trim().length > 0
+            ).join('\n').trim();
+            
+            // Adobe access tokens are long JWT strings (>100 chars)
+            const hasToken = result.code === 0 && cleanOutput.length > 100 && cleanOutput.includes('eyJ');
+            
+            if (hasToken) {
+                if (expiryResult.code === 0 && expiryResult.stdout) {
+                    // Clean expiry output
+                    const expiryOutput = expiryResult.stdout.trim().split('\n')
+                        .filter(line => !line.startsWith('Using Node') && !line.includes('fnm'))
+                        .join('\n').trim();
+                    const expiry = parseInt(expiryOutput);
+                    const currentTime = Date.now();
+                    
+                    if (!isNaN(expiry) && expiry > currentTime) {
+                        this.debugLogger.debug(`[Auth] Quick check: authenticated (expires in ${Math.floor((expiry - currentTime) / 1000 / 60)} minutes)`);
+                        
+                        // Cache the successful result
+                        this.cachedAuthStatus = true;
+                        this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
+                        
+                        this.endTiming('isAuthenticatedQuick');
+                        return true;
+                    } else {
+                        const expiredMinutesAgo = Math.floor((currentTime - expiry) / 1000 / 60);
+                        this.debugLogger.debug(`[Auth] Quick check: token expired ${expiredMinutesAgo} minutes ago`);
+                        
+                        // Cache the failed result
+                        this.cachedAuthStatus = false;
+                        this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
+                        
+                        this.endTiming('isAuthenticatedQuick');
+                        return false;
+                    }
+                } else {
+                    // No expiry info, but we have a token, assume valid
+                    this.debugLogger.debug('[Auth] Quick check: authenticated (no expiry info)');
+                    
+                    // Cache the successful result
+                    this.cachedAuthStatus = true;
+                    this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
+                    
+                    this.endTiming('isAuthenticatedQuick');
+                    return true;
+                }
+            } else {
+                this.debugLogger.debug('[Auth] Quick check: not authenticated');
+                
+                // Cache the failed result
+                this.cachedAuthStatus = false;
+                this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
+                
+                this.endTiming('isAuthenticatedQuick');
+                return false;
+            }
+        } catch (error) {
+            this.debugLogger.error('[Auth] Quick authentication check failed', error as Error);
+            
+            // Cache the failed result (short TTL for errors)
+            this.cachedAuthStatus = false;
+            this.authCacheExpiry = Date.now() + (CACHE_TTL.AUTH_STATUS / 5);
+            
+            this.endTiming('isAuthenticatedQuick');
+            return false;
+        }
+    }
+
+    /**
      * Check if authenticated - check for access token
+     * ALSO validates org access and initializes SDK
+     * Use this when you need full authentication context
+     * 
+     * Performance: 3-10 seconds (includes org validation)
+     * For faster checks, use isAuthenticatedQuick()
      */
     public async isAuthenticated(): Promise<boolean> {
         this.startTiming('isAuthenticated');
@@ -429,8 +613,11 @@ export class AdobeAuthManager {
                         // Check if we have an org context and validate it's accessible
                         await this.validateAndClearInvalidOrgContext();
 
-                        // Initialize SDK for high-performance operations
-                        await this.initializeSDK();
+                        // Initialize SDK in background (non-blocking) for future high-performance operations
+                        this.initializeSDK().catch(error => {
+                            // SDK initialization failure is not critical - operations will fall back to CLI
+                            this.debugLogger.debug('[Auth SDK] Background SDK init failed, using CLI fallback:', error);
+                        });
 
                         this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
 
@@ -460,8 +647,11 @@ export class AdobeAuthManager {
                     // Check if we have an org context and validate it's accessible
                     await this.validateAndClearInvalidOrgContext();
 
-                    // Initialize SDK for high-performance operations
-                    await this.initializeSDK();
+                    // Initialize SDK in background (non-blocking) for future high-performance operations
+                    this.initializeSDK().catch(error => {
+                        // SDK initialization failure is not critical - operations will fall back to CLI
+                        this.debugLogger.debug('[Auth SDK] Background SDK init failed, using CLI fallback:', error);
+                    });
 
                     this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
 
@@ -573,7 +763,10 @@ export class AdobeAuthManager {
                             this.debugLogger.debug(`[Auth] Current organization name: ${context.org}, fetching numeric ID...`);
                             
                             try {
-                                // Use cached org list if available, otherwise fetch
+                                // Ensure SDK is initialized for 30x faster org lookup
+                                await this.ensureSDKInitialized();
+                                
+                                // Use cached org list if available, otherwise fetch (SDK will be used if available)
                                 const orgs = await this.getOrganizations();
                                 const matchedOrg = orgs.find(o => o.name === context.org || o.code === context.org);
                                 
@@ -1145,6 +1338,9 @@ export class AdobeAuthManager {
 
             if (result.code === 0) {
                 this.stepLogger.logTemplate('adobe-setup', 'statuses.organization-selected', { name: orgId });
+
+                // Clear validation failure flag since new org was successfully selected
+                this.orgClearedDueToValidation = false;
 
                 // Smart caching: populate org cache directly instead of clearing
                 // This prevents the next getCurrentOrganization() from querying CLI

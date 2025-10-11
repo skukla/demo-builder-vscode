@@ -48,6 +48,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const hasAutoScrolled = useRef<boolean>(false);
+    const checkInProgressRef = useRef<boolean>(false);
 
     useEffect(() => {
         // Listen for prerequisites loaded from backend
@@ -235,7 +236,11 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
     // Trigger prerequisites check when navigating back to this step
     useEffect(() => {
         // When navigating back to prerequisites, restart the check
-        if (currentStep === 'prerequisites' && !isChecking) {
+        // Guard against duplicate checks using ref (prevents React Strict Mode double-render)
+        if (currentStep === 'prerequisites' && !isChecking && !checkInProgressRef.current) {
+            // Mark check as in progress
+            checkInProgressRef.current = true;
+            
             // Reset auto-scroll flag so it can work again on fresh check
             hasAutoScrolled.current = false;
             
@@ -244,11 +249,31 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 checkPrerequisites();
             }, 100);
 
-            return () => clearTimeout(timer);
+            return () => {
+                clearTimeout(timer);
+                // Don't reset flag here - let the backend response reset it when all checks complete
+            };
         }
     }, [currentStep]);  // Re-run when currentStep changes
 
+    // Reset the check-in-progress flag when all checks are complete
+    useEffect(() => {
+        const allDone = checks.every(check => 
+            check.status !== 'checking' && check.status !== 'pending'
+        );
+        
+        if (allDone && checkInProgressRef.current) {
+            checkInProgressRef.current = false;
+        }
+    }, [checks]);
+
     const checkPrerequisites = () => {
+        // Guard: prevent duplicate checks if already in progress
+        if (checkInProgressRef.current) {
+            return;
+        }
+        
+        checkInProgressRef.current = true;
         setIsChecking(true);
         vscode.postMessage('check-prerequisites');
         
@@ -274,7 +299,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         setChecks(prev => {
             const newChecks = [...prev];
             newChecks[index].status = 'checking';
-            newChecks[index].message = 'Installing...';
+            newChecks[index].message = 'Installing... (this could take up to 3 minutes)';
             return newChecks;
         });
     };

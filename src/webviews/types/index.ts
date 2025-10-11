@@ -17,7 +17,7 @@ export type WizardStep =
     | 'settings'  // Component-specific settings collection
     | 'commerce-config'  // Kept for compatibility
     | 'review'
-    | 'creating';
+    | 'project-creation';
 
 export interface WizardState {
     currentStep: WizardStep;
@@ -67,6 +67,7 @@ export interface AdobeAuthState {
     email?: string;
     error?: string;
     requiresOrgSelection?: boolean;
+    orgLacksAccess?: boolean;  // Selected organization doesn't have App Builder access
 }
 
 export interface Organization {
@@ -81,6 +82,39 @@ export interface Project {
     title?: string;
     description?: string;
     org_id?: number;  // Numeric organization ID from Adobe Console
+}
+
+// Full Demo Builder project (different from Adobe Project above)
+export interface DemoProject {
+    name: string;
+    template?: ProjectTemplate;
+    created: Date;
+    lastModified: Date;
+    path: string;
+    status: string;
+    organization?: string;
+    adobe?: any;
+    commerce?: any;
+    // Legacy configs
+    frontend?: any;
+    mesh?: any;
+    inspector?: any;
+    // Component-based structure
+    componentInstances?: {
+        [componentId: string]: any;
+    };
+    componentSelections?: {
+        frontend?: string;
+        backend?: string;
+        dependencies?: string[];
+        externalSystems?: string[];
+        appBuilder?: string[];
+    };
+    componentConfigs?: {
+        [componentId: string]: {
+            [key: string]: string | boolean | number | undefined;
+        };
+    };
 }
 
 export interface Workspace {

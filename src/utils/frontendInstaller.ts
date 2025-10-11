@@ -3,7 +3,6 @@ import * as path from 'path';
 import { Project } from '../types';
 import { Logger } from './logger';
 import { getExternalCommandManager } from '../extension';
-import { ExternalCommandManager } from './externalCommandManager';
 
 export class FrontendInstaller {
     private logger: Logger;
@@ -15,9 +14,9 @@ export class FrontendInstaller {
 
     public async install(project: Project): Promise<void> {
         try {
-            const frontendPath = project.frontend?.path;
+            const frontendPath = project.componentInstances?.['citisignal-nextjs']?.path;
             if (!frontendPath) {
-                throw new Error('Frontend path not defined');
+                throw new Error('Frontend component not found or path not defined');
             }
 
             // Clone repository
@@ -42,9 +41,9 @@ export class FrontendInstaller {
 
     public async update(project: Project, version?: string): Promise<void> {
         try {
-            const frontendPath = project.frontend?.path;
+            const frontendPath = project.componentInstances?.['citisignal-nextjs']?.path;
             if (!frontendPath) {
-                throw new Error('Frontend path not defined');
+                throw new Error('Frontend component not found or path not defined');
             }
 
             // Pull latest changes
@@ -65,9 +64,9 @@ export class FrontendInstaller {
 
     public async installDependencies(project: Project): Promise<void> {
         try {
-            const frontendPath = project.frontend?.path;
+            const frontendPath = project.componentInstances?.['citisignal-nextjs']?.path;
             if (!frontendPath) {
-                throw new Error('Frontend path not defined');
+                throw new Error('Frontend component not found or path not defined');
             }
 
             this.logger.info('Installing frontend dependencies...');
@@ -86,9 +85,9 @@ export class FrontendInstaller {
 
     public async enableInspector(project: Project): Promise<void> {
         try {
-            const frontendPath = project.frontend?.path;
+            const frontendPath = project.componentInstances?.['citisignal-nextjs']?.path;
             if (!frontendPath) {
-                throw new Error('Frontend path not defined');
+                throw new Error('Frontend component not found or path not defined');
             }
 
             // Install demo inspector package

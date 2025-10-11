@@ -21,7 +21,7 @@ export class Logger {
         }
     }
 
-    public setOutputChannel(channel: any): void {
+    public setOutputChannel(_channel: any): void {
         // No-op for backward compatibility
         // DebugLogger manages its own channels
     }

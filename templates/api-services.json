@@ -11,8 +11,12 @@
       "description": "API Mesh enables GraphQL federation and API aggregation",
       "setupInstructions": [
         {
-          "step": "Add the API Mesh API to your workspace",
-          "details": "Click 'Add API' and select 'API Mesh for Adobe Developer App Builder'"
+          "step": "Add an API Service and Authentication",
+          "details": "In the workspace dropdown, select 'Add service', then choose 'API'.  Click the 'Adobe Experience Platform' filter to show the API Mesh API.  Click 'Next' to set up API authentication."
+        },
+        {
+          "step": "Select the API",
+          "details": "Click on 'API Mesh for Adobe Developer App Builder' to add it to your workspace"
         },
         {
           "step": "Configure Allowed Domains",
@@ -29,4 +33,3 @@
     }
   }
 }
-

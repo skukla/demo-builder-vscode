@@ -28,8 +28,13 @@ interface ComponentData {
     id: string;
     name: string;
     description?: string;
+    dependencies?: {
+        required?: string[];
+        optional?: string[];
+    };
     configuration?: {
-        envVars?: ComponentEnvVar[];
+        requiredEnvVars?: string[];
+        optionalEnvVars?: string[];
     };
 }
 
@@ -39,6 +44,7 @@ interface ComponentsData {
     dependencies?: ComponentData[];
     externalSystems?: ComponentData[];
     appBuilder?: ComponentData[];
+    envVars?: Record<string, ComponentEnvVar>;
 }
 
 interface UniqueField extends ComponentEnvVar {
@@ -71,6 +77,16 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         vscode.postMessage('get-components-data');
         
         const unsubscribeData = vscode.onMessage('components-data', (data) => {
+            console.log('[ComponentConfigStep] Received components-data:', {
+                frontends: data.frontends?.map((f: any) => ({ 
+                    id: f.id, 
+                    hasDeps: !!f.dependencies,
+                    depsDetail: f.dependencies 
+                })),
+                dependencies: data.dependencies?.map((d: any) => d.id),
+                hasEnvVars: !!data.envVars,
+                envVarsCount: Object.keys(data.envVars || {}).length
+            });
             setComponentsData(data);
             setIsLoading(false);
         });
@@ -90,20 +106,68 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     const selectedComponents = useMemo(() => {
         const components: Array<{ id: string; data: ComponentData; type: string }> = [];
         
+        // Helper to find component by ID across all categories
+        const findComponent = (componentId: string): ComponentData | undefined => {
+            return componentsData.frontends?.find(c => c.id === componentId) ||
+                   componentsData.backends?.find(c => c.id === componentId) ||
+                   componentsData.dependencies?.find(c => c.id === componentId) ||
+                   componentsData.externalSystems?.find(c => c.id === componentId) ||
+                   componentsData.appBuilder?.find(c => c.id === componentId);
+        };
+        
+        // Helper to add component and its dependencies
+        const addComponentWithDeps = (comp: ComponentData, type: string) => {
+            components.push({ id: comp.id, data: comp, type });
+            
+            // Also add required dependencies
+            comp.dependencies?.required?.forEach(depId => {
+                const dep = findComponent(depId);
+                if (dep && !components.some(c => c.id === depId)) {
+                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
+                    if (hasEnvVars) {
+                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
+                    }
+                }
+            });
+            
+            // Also add optional dependencies (if selected)
+            comp.dependencies?.optional?.forEach(depId => {
+                const dep = findComponent(depId);
+                if (dep && !components.some(c => c.id === depId)) {
+                    const isSelected = state.components?.dependencies?.includes(depId);
+                    if (isSelected) {
+                        const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                                           (dep.configuration?.optionalEnvVars?.length || 0) > 0;
+                        if (hasEnvVars) {
+                            components.push({ id: dep.id, data: dep, type: 'Dependency' });
+                        }
+                    }
+                }
+            });
+        };
+        
         if (state.components?.frontend) {
             const frontend = componentsData.frontends?.find(f => f.id === state.components?.frontend);
-            if (frontend) components.push({ id: frontend.id, data: frontend, type: 'Frontend' });
+            if (frontend) addComponentWithDeps(frontend, 'Frontend');
         }
         
         if (state.components?.backend) {
             const backend = componentsData.backends?.find(b => b.id === state.components?.backend);
-            if (backend) components.push({ id: backend.id, data: backend, type: 'Backend' });
+            if (backend) addComponentWithDeps(backend, 'Backend');
         }
         
+        // Add explicitly selected dependencies (that weren't already added via relationships)
         state.components?.dependencies?.forEach(depId => {
-            const dep = componentsData.dependencies?.find(d => d.id === depId);
-            if (dep?.configuration?.envVars?.length) {
-                components.push({ id: dep.id, data: dep, type: 'Dependency' });
+            if (!components.some(c => c.id === depId)) {
+                const dep = componentsData.dependencies?.find(d => d.id === depId);
+                if (dep) {
+                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
+                    if (hasEnvVars) {
+                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
+                    }
+                }
             }
         });
         
@@ -114,8 +178,10 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         
         state.components?.appBuilderApps?.forEach(appId => {
             const app = componentsData.appBuilder?.find(a => a.id === appId);
-            if (app) components.push({ id: app.id, data: app, type: 'App Builder' });
+            if (app) addComponentWithDeps(app, 'App Builder');
         });
+        
+        console.log('[ComponentConfigStep] Selected components with dependencies:', components.map(c => ({ id: c.id, type: c.type })));
         
         return components;
     }, [state.components, componentsData]);
@@ -124,18 +190,45 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     const serviceGroups = useMemo(() => {
         const fieldMap = new Map<string, UniqueField>();
         
+        // Get the top-level envVars definitions
+        const envVarDefs = componentsData.envVars || {};
+        
         // Collect all unique fields by key
         selectedComponents.forEach(({ id, data }) => {
-            data.configuration?.envVars?.forEach(envVar => {
-                if (!fieldMap.has(envVar.key)) {
-                    fieldMap.set(envVar.key, {
-                        ...envVar,
-                        componentIds: [id]
-                    });
-                } else {
-                    const existing = fieldMap.get(envVar.key)!;
-                    if (!existing.componentIds.includes(id)) {
-                        existing.componentIds.push(id);
+            // Collect required env vars
+            data.configuration?.requiredEnvVars?.forEach(envVarKey => {
+                const envVarDef = envVarDefs[envVarKey];
+                if (envVarDef) {
+                    if (!fieldMap.has(envVarKey)) {
+                        fieldMap.set(envVarKey, {
+                            ...envVarDef,
+                            key: envVarKey,
+                            componentIds: [id]
+                        });
+                    } else {
+                        const existing = fieldMap.get(envVarKey)!;
+                        if (!existing.componentIds.includes(id)) {
+                            existing.componentIds.push(id);
+                        }
+                    }
+                }
+            });
+            
+            // Collect optional env vars
+            data.configuration?.optionalEnvVars?.forEach(envVarKey => {
+                const envVarDef = envVarDefs[envVarKey];
+                if (envVarDef) {
+                    if (!fieldMap.has(envVarKey)) {
+                        fieldMap.set(envVarKey, {
+                            ...envVarDef,
+                            key: envVarKey,
+                            componentIds: [id]
+                        });
+                    } else {
+                        const existing = fieldMap.get(envVarKey)!;
+                        if (!existing.componentIds.includes(id)) {
+                            existing.componentIds.push(id);
+                        }
                     }
                 }
             });
@@ -162,36 +255,31 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 id: 'adobe-commerce', 
                 label: 'Adobe Commerce', 
                 order: 1,
-                // Required fields first, then optional fields
                 fieldOrder: [
                     'ADOBE_COMMERCE_URL',
                     'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
                     'ADOBE_COMMERCE_WEBSITE_CODE',
                     'ADOBE_COMMERCE_STORE_CODE',
                     'ADOBE_COMMERCE_STORE_VIEW_CODE',
-                    'ADOBE_COMMERCE_CUSTOMER_GROUP' // Optional - at end
+                    'ADOBE_COMMERCE_CUSTOMER_GROUP',
+                    'ADOBE_COMMERCE_ADMIN_USERNAME',
+                    'ADOBE_COMMERCE_ADMIN_PASSWORD'
                 ]
             },
             { 
                 id: 'catalog-service', 
                 label: 'Catalog Service', 
                 order: 2,
-                // All required - order by logical flow
                 fieldOrder: [
                     'ADOBE_CATALOG_SERVICE_ENDPOINT',
                     'ADOBE_COMMERCE_ENVIRONMENT_ID',
                     'ADOBE_CATALOG_API_KEY'
                 ]
             },
-            { 
-                id: 'live-search', 
-                label: 'Live Search Service', 
-                order: 3,
-                fieldOrder: ['ADOBE_LIVE_SEARCH_ENDPOINT']
-            },
-            { id: 'mesh', label: 'API Mesh', order: 4 },
+            { id: 'mesh', label: 'API Mesh', order: 3 },
+            { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
             { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
-            { id: 'headless-citisignal', label: 'Headless CitiSignal', order: 6 },
+            { id: 'experience-platform', label: 'Experience Platform', order: 6 },
             { id: 'other', label: 'Additional Settings', order: 99 }
         ];
 
@@ -226,6 +314,42 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
 
         return orderedGroups;
     }, [selectedComponents]);
+
+    // Initialize componentConfigs with default values from components.json
+    useEffect(() => {
+        if (serviceGroups.length === 0) return;
+        
+        setComponentConfigs(prevConfigs => {
+            const newConfigs = { ...prevConfigs };
+            let hasChanges = false;
+            
+            // For each field in each service group
+            serviceGroups.forEach(group => {
+                group.fields.forEach(field => {
+                    // Use default value if available
+                    const defaultValue = field.default;
+                    
+                    if (defaultValue !== undefined && defaultValue !== '') {
+                        // Set this value for all components that use this field
+                        // BUT only if they don't already have a value
+                        field.componentIds.forEach(componentId => {
+                            if (!newConfigs[componentId]) {
+                                newConfigs[componentId] = {};
+                            }
+                            
+                            // Only set if not already set (preserve user values)
+                            if (!newConfigs[componentId][field.key]) {
+                                newConfigs[componentId][field.key] = defaultValue;
+                                hasChanges = true;
+                            }
+                        });
+                    }
+                });
+            });
+            
+            return hasChanges ? newConfigs : prevConfigs;
+        });
+    }, [serviceGroups]);
 
     // Note: activeSection is controlled ONLY by field focus for predictable tab navigation
 
@@ -490,7 +614,12 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     };
 
     const getFieldValue = (field: UniqueField): string | boolean | undefined => {
-        // Get value from first component that has it
+        // Priority order:
+        // 1. User-entered value (from componentConfigs)
+        // 2. Default value (from components.json)
+        // 3. Empty string
+        
+        // Check if user has entered a value for any component that uses this field
         for (const componentId of field.componentIds) {
             const value = componentConfigs[componentId]?.[field.key];
             if (value !== undefined && value !== '') {
@@ -498,6 +627,12 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 return typeof value === 'number' ? String(value) : value;
             }
         }
+        
+        // Fall back to default from field definition
+        if (field.default !== undefined && field.default !== '') {
+            return field.default;
+        }
+        
         return '';
     };
 
@@ -608,7 +743,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         value={value as string}
                             onChange={(val) => updateField(field, val)}
                             placeholder={field.placeholder}
-                            description={field.helpText || field.description}
+                            description={field.description}
                             isRequired={isFieldRequired}
                         validationState={showError ? 'invalid' : undefined}
                         errorMessage={showError ? error : undefined}
@@ -628,7 +763,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         value={value as string}
                             onChange={(val) => updateField(field, val)}
                             placeholder={field.placeholder}
-                            description={field.helpText || field.description}
+                            description={field.description}
                             isRequired={isFieldRequired}
                         validationState={showError ? 'invalid' : undefined}
                         errorMessage={showError ? error : undefined}
@@ -663,6 +798,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                     <Checkbox
                         isSelected={value as boolean}
                             onChange={(val) => updateField(field, val)}
+                            aria-label={field.label}
                             marginBottom="size-200"
                     >
                             {field.label}
@@ -693,7 +829,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 </Text>
 
                 {isLoading ? (
-                    <Flex justifyContent="center" alignItems="center" height="100%">
+                    <Flex justifyContent="center" alignItems="center" height="350px">
                         <LoadingDisplay 
                             size="L"
                             message="Loading component configurations..."

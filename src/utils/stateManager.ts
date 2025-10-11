@@ -68,7 +68,7 @@ export class StateManager {
                 processes: new Map(Object.entries(parsed.processes || {})),
                 lastUpdated: new Date(parsed.lastUpdated || Date.now())
             };
-        } catch (error) {
+        } catch {
             // State file doesn't exist or is invalid, use defaults
             console.log('No existing state found, using defaults');
         }
@@ -111,8 +111,6 @@ export class StateManager {
     }
 
     private async saveProjectConfig(project: Project): Promise<void> {
-        const configFile = path.join(project.path, 'config.yaml');
-        
         // Ensure directory exists
         try {
             await fs.mkdir(project.path, { recursive: true });
@@ -120,28 +118,26 @@ export class StateManager {
             console.error('Failed to create project directory:', error);
         }
 
-        // For now, we'll save as JSON (can convert to YAML later)
-        const configData = {
-            project: {
-                name: project.name,
-                template: project.template,
-                created: project.created,
-                lastModified: new Date()
-            },
-            adobe: project.adobe,
-            commerce: project.commerce,
-            frontend: project.frontend,
-            mesh: project.mesh,
-            inspector: project.inspector
-        };
-
+        // Update .demo-builder.json manifest with latest state
         try {
-            await fs.writeFile(
-                path.join(project.path, 'config.json'),
-                JSON.stringify(configData, null, 2)
-            );
+            const manifestPath = path.join(project.path, '.demo-builder.json');
+            const manifest = {
+                name: project.name,
+                version: '1.0.0',
+                created: project.created.toISOString(),
+                lastModified: new Date().toISOString(),
+                adobe: project.adobe,
+                commerce: project.commerce,
+                componentSelections: project.componentSelections,
+                componentInstances: project.componentInstances,
+                componentConfigs: project.componentConfigs,
+                meshState: project.meshState,
+                components: Object.keys(project.componentInstances || {})
+            };
+            
+            await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
         } catch (error) {
-            console.error('Failed to save project config:', error);
+            console.error('Failed to update project manifest:', error);
         }
 
         // Create .env file
@@ -165,14 +161,7 @@ export class StateManager {
             `CATALOG_API_KEY=${project.commerce?.services.catalog?.apiKey || ''}`,
             `SEARCH_API_KEY=${project.commerce?.services.liveSearch?.apiKey || ''}`,
             '',
-            '# Mesh Configuration',
-            `MESH_ENDPOINT=${project.mesh?.endpoint || ''}`,
-            '',
-            '# Demo Inspector',
-            `DEMO_INSPECTOR_ENABLED=${project.inspector?.enabled || false}`,
-            '',
-            '# Frontend',
-            `FRONTEND_PORT=${project.frontend?.port || 3000}`
+            '# Note: Component-specific environment variables are now stored in each component\'s .env file'
         ].join('\n');
 
         try {
@@ -305,21 +294,81 @@ export class StateManager {
             // Check if path exists
             await fs.access(projectPath);
             
-            // Check for .demo-builder folder
-            const configPath = path.join(projectPath, '.demo-builder', 'config.yaml');
-            await fs.access(configPath);
+            // Check for .demo-builder.json manifest
+            const manifestPath = path.join(projectPath, '.demo-builder.json');
+            await fs.access(manifestPath);
             
-            // Load project configuration
-            const configData = await fs.readFile(configPath, 'utf-8');
-            // Parse YAML config here (simplified for now)
+            // Load project manifest
+            const manifestData = await fs.readFile(manifestPath, 'utf-8');
+            const manifest = JSON.parse(manifestData);
+            
+            // Reconstruct componentInstances from components/ directory
+            const componentInstances: { [key: string]: any } = {};
+            const componentsDir = path.join(projectPath, 'components');
+            
+            try {
+                const componentDirs = await fs.readdir(componentsDir);
+                
+                for (const componentId of componentDirs) {
+                    const componentPath = path.join(componentsDir, componentId);
+                    const stat = await fs.stat(componentPath);
+                    
+                    if (stat.isDirectory()) {
+                        // Try to determine component type from manifest
+                        
+                        // Create a basic component instance
+                        componentInstances[componentId] = {
+                            id: componentId,
+                            name: componentId,
+                            type: 'dependency', // Default, should be refined
+                            status: 'ready',
+                            path: componentPath,
+                            lastUpdated: new Date()
+                        };
+                    }
+                }
+            } catch {
+                // No components directory or error reading it
+                console.log('No components directory found or error reading it');
+            }
             
             const project: Project = {
-                name: path.basename(projectPath),
+                name: manifest.name || path.basename(projectPath),
                 path: projectPath,
-                status: 'stopped',
-                created: new Date(),
-                lastModified: new Date()
+                status: 'stopped', // Will be updated below if demo is actually running
+                created: manifest.created ? new Date(manifest.created) : new Date(),
+                lastModified: manifest.lastModified ? new Date(manifest.lastModified) : new Date(),
+                adobe: manifest.adobe,
+                commerce: manifest.commerce,
+                componentInstances: manifest.componentInstances || componentInstances,
+                componentSelections: manifest.componentSelections,
+                componentConfigs: manifest.componentConfigs,
+                meshState: manifest.meshState
             };
+            
+            // Detect if demo is actually running by checking for project-specific terminal
+            // This handles cases where extension state was lost but terminal is still alive
+            const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+            if (frontendComponent) {
+                try {
+                    const vscode = await import('vscode');
+                    const projectTerminalName = `${project.name} - Frontend`;
+                    const hasProjectTerminal = vscode.window.terminals.some(t => t.name === projectTerminalName);
+                    
+                    if (hasProjectTerminal) {
+                        // This project's demo is running, update status
+                        project.status = 'running';
+                        frontendComponent.status = 'running';
+                        console.log(`[StateManager] Detected running demo for ${project.name} (terminal: ${projectTerminalName})`);
+                    } else {
+                        // No terminal for this project, ensure status is stopped
+                        project.status = 'stopped';
+                        frontendComponent.status = 'ready';
+                    }
+                } catch (error) {
+                    console.error('[StateManager] Error detecting demo status:', error);
+                }
+            }
             
             // Set as current project
             await this.saveProject(project);
@@ -332,6 +381,47 @@ export class StateManager {
             console.error(`Failed to load project from ${projectPath}:`, error);
             return null;
         }
+    }
+
+    /**
+     * Get all projects from the projects directory
+     */
+    public async getAllProjects(): Promise<Array<{ name: string; path: string; lastModified: Date }>> {
+        const projectsDir = path.join(os.homedir(), '.demo-builder', 'projects');
+        const projects: Array<{ name: string; path: string; lastModified: Date }> = [];
+        
+        try {
+            const entries = await fs.readdir(projectsDir, { withFileTypes: true });
+            
+            for (const entry of entries) {
+                if (entry.isDirectory()) {
+                    const projectPath = path.join(projectsDir, entry.name);
+                    const manifestPath = path.join(projectPath, '.demo-builder.json');
+                    
+                    // Check if it's a valid project (has manifest)
+                    try {
+                        await fs.access(manifestPath);
+                        const stats = await fs.stat(manifestPath);
+                        
+                        projects.push({
+                            name: entry.name,
+                            path: projectPath,
+                            lastModified: stats.mtime
+                        });
+                    } catch {
+                        // Not a valid project, skip
+                    }
+                }
+            }
+            
+            // Sort by last modified (newest first)
+            projects.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
+        } catch {
+            // Projects directory might not exist yet
+            console.log('No projects directory found or error reading it');
+        }
+        
+        return projects;
     }
 
     public dispose(): void {

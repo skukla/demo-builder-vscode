@@ -68,49 +68,76 @@ export class StatusBarManager {
     }
 
     private updateStatusForProject(project: Project): void {
-        const statusIcons: Record<string, string> = {
-            'created': '$(circle-outline)',
-            'configuring': '$(sync~spin)',
-            'ready': '$(check)',
-            'running': '$(play)',
-            'stopped': '$(stop)',
-            'error': '$(error)'
-        };
-
-        const statusColors: Record<string, vscode.ThemeColor | undefined> = {
-            'running': new vscode.ThemeColor('statusBarItem.prominentBackground'),
-            'error': new vscode.ThemeColor('statusBarItem.errorBackground'),
-            'configuring': new vscode.ThemeColor('statusBarItem.warningBackground')
-        };
-
-        const icon = statusIcons[project.status] || '$(question)';
-        const frontendStatus = project.frontend?.status || 'unknown';
+        const status = project.status;
+        const port = project.componentInstances?.['citisignal-nextjs']?.port;
         
-        // Build status text
-        let statusText = `${icon} Demo: ${project.name}`;
+        // Status indicator and colors based on state
+        let statusDot = '○';
+        let backgroundColor: vscode.ThemeColor | undefined = undefined;
+        let statusLabel = '';
         
-        if (frontendStatus === 'running' && project.frontend?.port) {
-            statusText += ` $(server) :${project.frontend.port}`;
+        switch (status) {
+        case 'starting':
+            statusDot = '$(sync~spin)';
+            statusLabel = 'Starting';
+            break;
+        case 'running':
+            statusDot = '●';
+            backgroundColor = new vscode.ThemeColor('statusBarItem.prominentBackground');
+            statusLabel = 'Running';
+            break;
+        case 'stopping':
+            statusDot = '$(sync~spin)';
+            statusLabel = 'Stopping';
+            break;
+        case 'stopped':
+        case 'ready':
+            statusDot = '○';
+            statusLabel = 'Stopped';
+            break;
+        case 'configuring':
+            statusDot = '$(sync~spin)';
+            statusLabel = 'Configuring';
+            break;
+        case 'error':
+            statusDot = '$(error)';
+            backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+            statusLabel = 'Error';
+            break;
+        default:
+            statusDot = '○';
+            statusLabel = 'Ready';
+        }
+        
+        // Build status text - minimal and clean
+        let statusText = `${statusDot} Demo: ${project.name}`;
+        
+        if (status === 'running' && port) {
+            statusText += ` :${port}`;
         }
 
         // Build tooltip
         const tooltipLines = [
             `Project: ${project.name}`,
-            `Status: ${project.status}`,
-            `Frontend: ${frontendStatus}`
+            `Status: ${statusLabel}`
         ];
 
-        if (project.mesh?.endpoint) {
-            tooltipLines.push(`Mesh: ${project.mesh.status}`);
+        if (status === 'running' && port) {
+            tooltipLines.push(`Port: ${port}`);
         }
 
-        tooltipLines.push('', 'Click to view status');
+        const meshComponent = project.componentInstances?.['commerce-mesh'];
+        if (meshComponent?.endpoint) {
+            tooltipLines.push(`Mesh: ${meshComponent.status || 'deployed'}`);
+        }
+
+        tooltipLines.push('', 'Click to open Project Dashboard');
 
         // Update status bar
         this.statusBarItem.text = statusText;
         this.statusBarItem.tooltip = tooltipLines.join('\n');
-        this.statusBarItem.command = 'demoBuilder.viewStatus';
-        this.statusBarItem.backgroundColor = statusColors[project.status];
+        this.statusBarItem.command = 'demoBuilder.showProjectDashboard'; // Open Project Dashboard
+        this.statusBarItem.backgroundColor = backgroundColor;
 
         // Show/hide based on settings
         const showStatusBar = vscode.workspace

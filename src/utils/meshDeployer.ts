@@ -3,7 +3,6 @@ import * as path from 'path';
 import { Project } from '../types';
 import { Logger } from './logger';
 import { getExternalCommandManager } from '../extension';
-import { ExternalCommandManager } from './externalCommandManager';
 
 export class MeshDeployer {
     private logger: Logger;
@@ -25,7 +24,7 @@ export class MeshDeployer {
             // Deploy mesh
             this.logger.info('Deploying API Mesh...');
             const commandManager = getExternalCommandManager();
-            const { stdout } = await commandManager.executeAdobeCLI(`aio api-mesh:create mesh.json`, {
+            const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:create mesh.json', {
                 cwd: project.path
             });
 
@@ -68,7 +67,7 @@ export class MeshDeployer {
                     graphql: {
                         endpoint: project.commerce.services.catalog.endpoint,
                         operationHeaders: {
-                            'x-api-key': `{context.headers['x-api-key']}`
+                            'x-api-key': '{context.headers[\'x-api-key\']}'
                         }
                     }
                 }
@@ -83,7 +82,7 @@ export class MeshDeployer {
                     graphql: {
                         endpoint: project.commerce.services.liveSearch.endpoint,
                         operationHeaders: {
-                            'x-api-key': `{context.headers['x-api-key']}`
+                            'x-api-key': '{context.headers[\'x-api-key\']}'
                         }
                     }
                 }
@@ -105,7 +104,7 @@ export class MeshDeployer {
             await fs.writeFile(meshPath, JSON.stringify(meshConfig, null, 2));
             
             const commandManager = getExternalCommandManager();
-            const { stdout } = await commandManager.executeAdobeCLI(`aio api-mesh:update mesh.json`, {
+            const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:update mesh.json', {
                 cwd: project.path
             });
 

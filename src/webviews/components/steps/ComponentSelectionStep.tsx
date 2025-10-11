@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Flex,
@@ -46,6 +46,9 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     const [selectedAppBuilder, setSelectedAppBuilder] = useState<Set<string>>(
         new Set(state.components?.appBuilderApps || [])
     );
+    
+    // Track last sent selection to prevent duplicate messages
+    const lastSentSelectionRef = useRef<string>('');
     
     // Use componentsData if available, otherwise fall back to hardcoded
     const frontendOptions = componentsData?.frontends || [
@@ -160,7 +163,12 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         updateState({ components });
         
         // Send component selection to backend for prerequisite determination
-        vscode.postMessage('update-component-selection', components);
+        // Guard: only send if selection actually changed to prevent duplicates
+        const selectionKey = JSON.stringify(components);
+        if (selectionKey !== lastSentSelectionRef.current) {
+            lastSentSelectionRef.current = selectionKey;
+            vscode.postMessage('update-component-selection', components);
+        }
     }, [selectedFrontend, selectedBackend, selectedDependencies, selectedServices, selectedExternalSystems, selectedAppBuilder, setCanProceed, updateState]);
 
     const handleDependencyToggle = (id: string, selected: boolean) => {
@@ -202,6 +210,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         selectedKey={selectedFrontend}
                         onSelectionChange={(key) => setSelectedFrontend(key as string)}
                         placeholder="Select frontend system"
+                        aria-label="Select frontend system"
                         isQuiet={false}
                         align="start"
                         direction="bottom"
@@ -226,6 +235,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                     isSelected={selectedDependencies.has(dep.id)}
                                     isDisabled={dep.required}
                                     onChange={(isSelected) => handleDependencyToggle(dep.id, isSelected)}
+                                    aria-label={dep.name}
                                     UNSAFE_className="mb-1"
                                 >
                                     <Flex alignItems="center" gap="size-50">
@@ -253,6 +263,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         selectedKey={selectedBackend}
                         onSelectionChange={(key) => setSelectedBackend(key as string)}
                         placeholder="Select backend system"
+                        aria-label="Select backend system"
                         isQuiet={false}
                         align="start"
                         direction="bottom"
@@ -277,6 +288,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                     isSelected={selectedServices.has(service.id)}
                                     isDisabled={service.required}
                                     onChange={(isSelected) => handleServiceToggle(service.id, isSelected)}
+                                    aria-label={service.name}
                                     UNSAFE_className="mb-1"
                                 >
                                     <Flex alignItems="center" gap="size-50">
@@ -320,6 +332,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                         return newSet;
                                     });
                                 }}
+                                aria-label={system.name}
                                 UNSAFE_className="mb-2"
                             >
                                 <Flex direction="column" gap="size-50">
@@ -357,6 +370,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                         return newSet;
                                     });
                                 }}
+                                aria-label={app.name}
                                 UNSAFE_className="mb-2"
                             >
                                 <Flex direction="column" gap="size-50">

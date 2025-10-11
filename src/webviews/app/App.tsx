@@ -70,7 +70,10 @@ export function App() {
             isQuiet // Enable quiet mode globally for minimal appearance
             UNSAFE_className="app-container"
         >
-            <WizardContainer componentDefaults={componentDefaults} wizardSteps={wizardSteps} />
+            <WizardContainer 
+                componentDefaults={componentDefaults} 
+                wizardSteps={wizardSteps}
+            />
         </Provider>
     );
 }
