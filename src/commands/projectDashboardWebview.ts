@@ -48,6 +48,11 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             // Store project for message handler
             this.currentProject = project;
 
+            // If demo is already running, initialize file hashes for change detection
+            if (project.status === 'running') {
+                await this.initializeFileHashesForRunningDemo(project);
+            }
+
             // Create webview panel
             this.panel = vscode.window.createWebviewPanel(
                 'demoBuilder.projectDashboard',
@@ -132,15 +137,19 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                             // Send current project status
                             await this.sendProjectStatus();
                             break;
+                        case 're-authenticate':
+                            // Trigger browser authentication flow
+                            await this.handleReAuthentication();
+                            break;
                         case 'startDemo':
                             await vscode.commands.executeCommand('demoBuilder.startDemo');
-                            // Update status after start
-                            setTimeout(() => this.sendProjectStatus(), 1000);
+                            // Update demo status only (don't re-check mesh)
+                            setTimeout(() => this.sendDemoStatusUpdate(), 1000);
                             break;
                         case 'stopDemo':
                             await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                            // Update status after stop
-                            setTimeout(() => this.sendProjectStatus(), 1000);
+                            // Update demo status only (don't re-check mesh)
+                            setTimeout(() => this.sendDemoStatusUpdate(), 1000);
                             break;
                         case 'openBrowser': {
                             // Open demo in browser
@@ -219,6 +228,232 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
     }
 
     /**
+     * Check mesh status asynchronously and update UI when complete
+     * This prevents blocking the initial UI render on slow auth checks
+     */
+    private async checkMeshStatusAsync(project: Project, meshComponent: any, frontendConfigChanged: boolean): Promise<void> {
+        try {
+            let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = 'not-deployed';
+            let meshEndpoint: string | undefined;
+            let meshMessage: string | undefined;
+            
+            if (project.componentConfigs) {
+                this.logger.debug('[Dashboard] Checking mesh deployment status...');
+                
+                // Pre-check: Quick auth verification (< 1 second vs 9+ seconds for full check)
+                const { AdobeAuthManager } = await import('../utils/adobeAuthManager');
+                const { getExternalCommandManager } = await import('../extension');
+                const authManager = new AdobeAuthManager(
+                    this.context.extensionPath,
+                    this.logger,
+                    getExternalCommandManager()
+                );
+                
+                // Use quick check - doesn't validate org access or init SDK (much faster)
+                const isAuthenticated = await authManager.isAuthenticatedQuick();
+                
+                if (!isAuthenticated) {
+                    this.logger.debug('[Dashboard] Not authenticated, showing auth prompt');
+                    // Send 'needs-auth' status to show inline authentication prompt
+                    if (this.panel) {
+                        this.panel.webview.postMessage({
+                            type: 'statusUpdate',
+                            payload: {
+                                name: project.name,
+                                path: project.path,
+                                status: project.status || 'ready',
+                                port: project.componentInstances?.['citisignal-nextjs']?.port,
+                                adobeOrg: project.adobe?.organization,
+                                adobeProject: project.adobe?.projectName,
+                                frontendConfigChanged,
+                                mesh: {
+                                    status: 'needs-auth',
+                                    message: 'Sign in to verify mesh status'
+                                }
+                            }
+                        });
+                    }
+                    return;
+                }
+                
+                // Check org access (degraded mode detection)
+                // Ensure SDK is initialized for faster org operations
+                await authManager.ensureSDKInitialized();
+                
+                if (project.adobe?.organization) {
+                    const currentOrg = await authManager.getCurrentOrganization();
+                    if (!currentOrg || currentOrg.id !== project.adobe.organization) {
+                        this.logger.warn('[Dashboard] User lost access to project organization');
+                        // Send degraded mode status
+                        if (this.panel) {
+                            this.panel.webview.postMessage({
+                                type: 'statusUpdate',
+                                payload: {
+                                    name: project.name,
+                                    path: project.path,
+                                    status: project.status || 'ready',
+                                    port: project.componentInstances?.['citisignal-nextjs']?.port,
+                                    adobeOrg: project.adobe?.organization,
+                                    adobeProject: project.adobe?.projectName,
+                                    frontendConfigChanged,
+                                    mesh: {
+                                        status: 'error',
+                                        message: 'Organization access lost'
+                                    }
+                                }
+                            });
+                        }
+                        return;
+                    }
+                }
+                
+                // Initialize meshState if it doesn't exist
+                if (!project.meshState) {
+                    this.logger.debug('[Dashboard] No meshState found, initializing empty state');
+                    project.meshState = {
+                        envVars: {},
+                        sourceHash: null,
+                        lastDeployed: ''
+                    };
+                }
+                
+                const meshChanges = await detectMeshChanges(project, project.componentConfigs);
+                
+                // If we fetched and populated deployed config, save the project
+                if (meshChanges.shouldSaveProject) {
+                    this.logger.debug('[Dashboard] Populated meshState.envVars from deployed config, saving project');
+                    await this.stateManager.saveProject(project);
+                    meshStatus = 'deployed';
+                }
+                
+                // Check if we have a valid meshState now
+                if (project.meshState && Object.keys(project.meshState.envVars || {}).length > 0) {
+                    meshStatus = 'deployed';
+                    
+                    if (meshChanges.hasChanges) {
+                        meshStatus = 'config-changed';
+                        
+                        if (meshChanges.unknownDeployedState) {
+                            this.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');
+                        }
+                    }
+                    
+                    meshEndpoint = meshComponent.endpoint;
+                    
+                    // Verify mesh still exists in Adobe I/O (async, non-blocking)
+                    this.verifyMeshDeployment(project).catch(err => {
+                        this.logger.debug('[Project Dashboard] Background mesh verification failed', err);
+                    });
+                } else if (meshChanges.unknownDeployedState) {
+                    meshStatus = 'not-deployed';
+                    this.logger.debug('[Dashboard] Could not verify mesh deployment status');
+                }
+            } else {
+                this.logger.debug('[Dashboard] No component configs available for mesh status check');
+            }
+            
+            // Send updated status to UI
+            if (this.panel) {
+                this.panel.webview.postMessage({
+                    type: 'statusUpdate',
+                    payload: {
+                        name: project.name,
+                        path: project.path,
+                        status: project.status || 'ready',
+                        port: project.componentInstances?.['citisignal-nextjs']?.port,
+                        adobeOrg: project.adobe?.organization,
+                        adobeProject: project.adobe?.projectName,
+                        frontendConfigChanged,
+                        mesh: {
+                            status: meshStatus,
+                            endpoint: meshEndpoint,
+                            message: meshMessage
+                        }
+                    }
+                });
+            }
+        } catch (error) {
+            this.logger.error('[Dashboard] Error in async mesh status check', error as Error);
+            
+            // Send error status to UI
+            if (this.panel) {
+                this.panel.webview.postMessage({
+                    type: 'statusUpdate',
+                    payload: {
+                        name: project.name,
+                        path: project.path,
+                        status: project.status || 'ready',
+                        port: project.componentInstances?.['citisignal-nextjs']?.port,
+                        adobeOrg: project.adobe?.organization,
+                        adobeProject: project.adobe?.projectName,
+                        frontendConfigChanged,
+                        mesh: {
+                            status: 'error',
+                            message: 'Failed to check deployment status'
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    /**
+     * Send quick demo status update without re-checking mesh
+     * Used after start/stop demo to avoid unnecessary "checking" state
+     */
+    private async sendDemoStatusUpdate(): Promise<void> {
+        if (!this.panel) return;
+
+        const project = await this.stateManager.getCurrentProject();
+        if (!project) return;
+
+        // Quick check of frontend config changes (no async operations)
+        const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
+        
+        // Get mesh component and derive status from current state (no re-check)
+        const meshComponent = project.componentInstances?.['commerce-mesh'];
+        let meshStatus: any = undefined;
+        
+        if (meshComponent) {
+            // Use component status for transient states
+            if (meshComponent.status === 'deploying') {
+                meshStatus = { status: 'deploying', message: 'Deploying...' };
+            } else if (meshComponent.status === 'error') {
+                meshStatus = { status: 'error', message: 'Deployment error' };
+            } else if (project.meshState && Object.keys(project.meshState.envVars || {}).length > 0) {
+                // Has mesh state - determine if config changed
+                if (project.componentConfigs) {
+                    const meshChanges = await detectMeshChanges(project, project.componentConfigs);
+                    meshStatus = {
+                        status: meshChanges.hasChanges ? 'config-changed' : 'deployed',
+                        endpoint: meshComponent.endpoint
+                    };
+                } else {
+                    meshStatus = { status: 'deployed', endpoint: meshComponent.endpoint };
+                }
+            } else {
+                // No mesh state - not deployed
+                meshStatus = { status: 'not-deployed' };
+            }
+        }
+        
+        // Send lightweight status update
+        this.panel.webview.postMessage({
+            type: 'statusUpdate',
+            payload: {
+                name: project.name,
+                path: project.path,
+                status: project.status || 'ready',
+                port: project.componentInstances?.['citisignal-nextjs']?.port,
+                adobeOrg: project.adobe?.organization,
+                adobeProject: project.adobe?.projectName,
+                frontendConfigChanged,
+                mesh: meshStatus
+            }
+        });
+    }
+
+    /**
      * Send current project status to the webview
      */
     private async sendProjectStatus(): Promise<void> {
@@ -245,6 +480,36 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             meshPath: meshComponent?.path
         });
 
+        // Send initial status immediately with mesh as 'checking' if mesh component exists
+        const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
+        
+        if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.status !== 'error') {
+            // Send initial status with 'checking' for mesh
+            this.panel.webview.postMessage({
+                type: 'statusUpdate',
+                payload: {
+                    name: project.name,
+                    path: project.path,
+                    status: project.status || 'ready',
+                    port: project.componentInstances?.['citisignal-nextjs']?.port,
+                    adobeOrg: project.adobe?.organization,
+                    adobeProject: project.adobe?.projectName,
+                    frontendConfigChanged,
+                    mesh: {
+                        status: 'checking',
+                        message: 'Verifying deployment status...'
+                    }
+                }
+            });
+            
+            // Check mesh status asynchronously and update when complete
+            this.checkMeshStatusAsync(project, meshComponent, frontendConfigChanged).catch(err => {
+                this.logger.error('[Dashboard] Failed to check mesh status', err as Error);
+            });
+            return;
+        }
+
+        // For other cases (deploying, error, no mesh), continue with synchronous check
         // Determine mesh status
         let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = 'not-deployed';
         
@@ -256,34 +521,78 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             else if (meshComponent.status === 'error') {
                 meshStatus = 'error';
             }
-            // meshState = source of truth for deployment
-            // meshState is ONLY set after successful deployment AND verification
-            else if (project.meshState) {
-                meshStatus = 'deployed';
-                
-                // Check if configuration has changed since deployment
+            else {
+                // Check mesh deployment status via detectMeshChanges
+                // This will fetch deployed config from Adobe I/O if meshState is missing
                 if (project.componentConfigs) {
-                    const meshChanges = await detectMeshChanges(project, project.componentConfigs);
-                    if (meshChanges.hasChanges) {
-                        meshStatus = 'config-changed';
+                    this.logger.debug('[Dashboard] Checking mesh deployment status...');
+                    
+                    // Pre-check: Verify auth before fetching (prevents browser popup)
+                    const { AdobeAuthManager } = await import('../utils/adobeAuthManager');
+                    const { getExternalCommandManager } = await import('../extension');
+                    const authManager = new AdobeAuthManager(
+                        this.context.extensionPath,
+                        this.logger,
+                        getExternalCommandManager()
+                    );
+                    
+                    const isAuthenticated = await authManager.isAuthenticated();
+                    
+                    if (!isAuthenticated) {
+                        this.logger.debug('[Dashboard] Not authenticated, skipping mesh status fetch');
+                        meshStatus = 'not-deployed';
+                        // Don't set meshEndpoint - leave undefined
+                    } else {
+                        // Initialize meshState if it doesn't exist
+                        if (!project.meshState) {
+                            this.logger.debug('[Dashboard] No meshState found, initializing empty state');
+                            project.meshState = {
+                                envVars: {},
+                                sourceHash: null,
+                                lastDeployed: '' // Empty string, not null (Project type expects string)
+                            };
+                        }
+                        
+                        const meshChanges = await detectMeshChanges(project, project.componentConfigs);
+                        
+                        // If we fetched and populated deployed config, save the project
+                        if (meshChanges.shouldSaveProject) {
+                            this.logger.debug('[Dashboard] Populated meshState.envVars from deployed config, saving project');
+                            await this.stateManager.saveProject(project);
+                            meshStatus = 'deployed';
+                        }
+                        
+                        // Check if we have a valid meshState now
+                        if (project.meshState && Object.keys(project.meshState.envVars || {}).length > 0) {
+                            meshStatus = 'deployed';
+                            
+                            if (meshChanges.hasChanges) {
+                                meshStatus = 'config-changed';
+                                
+                                // Log if this is due to unknown deployed state
+                                if (meshChanges.unknownDeployedState) {
+                                    this.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state (could not fetch from Adobe I/O)');
+                                }
+                            }
+                            
+                            // Periodically verify mesh still exists in Adobe I/O (async, non-blocking)
+                            // This catches cases where mesh was deleted externally
+                            this.verifyMeshDeployment(project).catch(err => {
+                                this.logger.debug('[Project Dashboard] Background mesh verification failed', err);
+                            });
+                        } else if (meshChanges.unknownDeployedState) {
+                            // Could not fetch deployed config - show as not deployed
+                            meshStatus = 'not-deployed';
+                            this.logger.debug('[Dashboard] Could not verify mesh deployment status');
+                        }
                     }
+                } else {
+                    this.logger.debug('[Dashboard] No component configs available for mesh status check');
                 }
-                
-                // Periodically verify mesh still exists in Adobe I/O (async, non-blocking)
-                // This catches cases where mesh was deleted externally
-                this.verifyMeshDeployment(project).catch(err => {
-                    this.logger.debug('[Project Dashboard] Background mesh verification failed', err);
-                });
             }
-            // Otherwise, mesh is not deployed
         }
 
-        // Detect if frontend configuration has changed since demo started
-        let frontendConfigChanged = false;
-        if (project.status === 'running') {
-            frontendConfigChanged = detectFrontendChanges(project);
-        }
-
+        // Build status data for synchronous path (deploying, error, no mesh)
         const statusData = {
             name: project.name,
             path: project.path,
@@ -291,7 +600,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             port: project.componentInstances?.['citisignal-nextjs']?.port,
             adobeOrg: project.adobe?.organization,
             adobeProject: project.adobe?.projectName,
-            frontendConfigChanged,
+            frontendConfigChanged, // Already calculated above for both async and sync paths
             // Show mesh status if mesh component exists
             mesh: meshComponent ? {
                 status: meshStatus,
@@ -414,6 +723,111 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             text += possible.charAt(Math.floor(Math.random() * possible.length));
         }
         return text;
+    }
+
+    /**
+     * Handle re-authentication request from dashboard
+     * Triggers browser authentication flow and auto-selects project's organization
+     */
+    private async handleReAuthentication(): Promise<void> {
+        try {
+            const project = await this.stateManager.getCurrentProject();
+            if (!project) {
+                this.logger.error('[Dashboard] No current project for re-authentication');
+                return;
+            }
+            
+            // Update UI to 'authenticating' state
+            this.panel?.webview.postMessage({
+                type: 'meshStatusUpdate',
+                payload: { 
+                    status: 'authenticating', 
+                    message: 'Opening browser for authentication...' 
+                }
+            });
+            
+            this.logger.info('[Dashboard] Starting re-authentication flow');
+            
+            const { AdobeAuthManager } = await import('../utils/adobeAuthManager');
+            const { getExternalCommandManager } = await import('../extension');
+            const authManager = new AdobeAuthManager(
+                this.context.extensionPath,
+                this.logger,
+                getExternalCommandManager()
+            );
+            
+            // Trigger browser auth (reuses wizard pattern)
+            await authManager.login();
+            
+            this.logger.info('[Dashboard] Browser authentication completed');
+            
+            // Auto-select project's organization if available
+            if (project.adobe?.organization) {
+                this.logger.info(`[Dashboard] Auto-selecting project org: ${project.adobe.organization}`);
+                
+                try {
+                    await authManager.selectOrganization(project.adobe.organization);
+                    this.logger.info('[Dashboard] Organization selected successfully');
+                } catch (orgError) {
+                    this.logger.warn('[Dashboard] Could not select project organization', orgError as Error);
+                    // Continue - user might have lost access, but auth succeeded
+                }
+            }
+            
+            // Re-check mesh status with fresh authentication
+            this.logger.info('[Dashboard] Re-checking mesh status after authentication');
+            await this.sendProjectStatus();
+            
+        } catch (error) {
+            this.logger.error('[Dashboard] Re-authentication failed', error as Error);
+            
+            // Send error status to UI
+            this.panel?.webview.postMessage({
+                type: 'meshStatusUpdate',
+                payload: { 
+                    status: 'error', 
+                    message: 'Authentication failed. Please try again.' 
+                }
+            });
+        }
+    }
+
+    /**
+     * Initialize file hashes for a running demo
+     * Collects all .env files from component instances and initializes their hashes for change detection
+     */
+    private async initializeFileHashesForRunningDemo(project: Project): Promise<void> {
+        const envFiles: string[] = [];
+        
+        this.logger.debug('[Project Dashboard] Initializing file hashes for running demo');
+        
+        // Collect .env files from all component instances
+        if (project.componentInstances) {
+            for (const [componentKey, componentInstance] of Object.entries(project.componentInstances)) {
+                if (componentInstance.path) {
+                    const componentPath = componentInstance.path;
+                    const envPath = path.join(componentPath, '.env');
+                    const envLocalPath = path.join(componentPath, '.env.local');
+                    
+                    // Check if files exist
+                    const fs = require('fs').promises;
+                    try {
+                        await fs.access(envPath);
+                        envFiles.push(envPath);
+                    } catch {}
+                    
+                    try {
+                        await fs.access(envLocalPath);
+                        envFiles.push(envLocalPath);
+                    } catch {}
+                }
+            }
+        }
+        
+        if (envFiles.length > 0) {
+            this.logger.debug(`[Project Dashboard] Initializing file hashes for ${envFiles.length} .env files`);
+            await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', envFiles);
+        }
     }
 }
 

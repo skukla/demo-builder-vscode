@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Flex,
@@ -7,7 +7,8 @@ import {
     ActionButton,
     Divider,
     ActionGroup,
-    Item
+    Item,
+    ProgressCircle
 } from '@adobe/react-spectrum';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
@@ -18,6 +19,7 @@ import Delete from '@spectrum-icons/workflow/Delete';
 import ViewList from '@spectrum-icons/workflow/ViewList';
 import DataMapping from '@spectrum-icons/workflow/DataMapping';
 import Data from '@spectrum-icons/workflow/Data';
+import Login from '@spectrum-icons/workflow/Login';
 import { vscode } from '../app/vscodeApi';
 
 interface ProjectStatus {
@@ -29,7 +31,7 @@ interface ProjectStatus {
     adobeProject?: string;
     frontendConfigChanged?: boolean; // True if frontend .env changed since demo started
     mesh?: {
-        status: 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'error';
+        status: 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'error';
         endpoint?: string;
         message?: string;
     };
@@ -74,82 +76,85 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
         };
     }, []);
 
-    // Auto-focus the Start button when dashboard opens (if not running)
+    // Initial focus: Start/Stop button (or Open if Start/Stop not present)
     useEffect(() => {
-        if (projectStatus && !isRunning) {
-            // Small delay to ensure DOM is ready
+        if (projectStatus) {
             const timer = setTimeout(() => {
-                const startButton = document.querySelector('.dashboard-action-button') as HTMLElement;
-                if (startButton) {
-                    startButton.focus();
+                // Focus first action button (Start/Stop or Open)
+                const firstButton = document.querySelector('.dashboard-action-button') as HTMLElement;
+                if (firstButton) {
+                    firstButton.focus();
                 }
-            }, 200);
+            }, 100);
             return () => clearTimeout(timer);
         }
-    }, [projectStatus, isRunning]);
+    }, []); // Only on mount
 
-    // Focus trap for Tab navigation - keeps focus within the webview
+    // Focus trap: Keep keyboard navigation within the dashboard
     useEffect(() => {
-        const selector = 'button:not([disabled]):not([tabindex="-1"]), ' +
-            'input:not([disabled]):not([tabindex="-1"]), ' +
-            'select:not([disabled]):not([tabindex="-1"]), ' +
-            'textarea:not([disabled]):not([tabindex="-1"]), ' +
-            '[tabindex]:not([tabindex="-1"]):not([tabindex="0"])';
-
-        const focusDefaultElement = () => {
-            // Focus first focusable element if no element is focused
-            const focusableElements = document.querySelectorAll(selector);
-            if (focusableElements.length > 0) {
-                const first = focusableElements[0] as HTMLElement;
-                if (document.activeElement === document.body || !document.activeElement) {
-                    first.focus();
-                }
-            }
-        };
-
-        // Ensure focus starts inside the webview
-        const focusTimeout = window.setTimeout(focusDefaultElement, 0);
-        window.addEventListener('focus', focusDefaultElement);
-
         const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Tab') {
-                const focusableElements = document.querySelectorAll(selector);
-                const focusableArray = Array.from(focusableElements) as HTMLElement[];
-                
-                if (focusableArray.length === 0) {
-                    return;
-                }
+            if (e.key !== 'Tab') return;
 
-                const currentIndex = focusableArray.indexOf(document.activeElement as HTMLElement);
+            // Get all focusable elements in the dashboard
+            const focusableElements = document.querySelectorAll<HTMLElement>(
+                '.dashboard-action-button, button[aria-label], button:not([disabled])'
+            );
+            
+            if (focusableElements.length === 0) return;
 
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements[focusableElements.length - 1];
+            const activeElement = document.activeElement as HTMLElement;
+
+            // Tab forward from last element -> wrap to first
+            if (!e.shiftKey && activeElement === lastElement) {
                 e.preventDefault();
-
-                if (e.shiftKey) {
-                    // Shift+Tab: move to previous element (or wrap to last)
-                    const nextIndex = currentIndex <= 0 ? focusableArray.length - 1 : currentIndex - 1;
-                    focusableArray[nextIndex].focus();
-                } else {
-                    // Tab: move to next element (or wrap to first)
-                    const nextIndex = currentIndex >= focusableArray.length - 1 ? 0 : currentIndex + 1;
-                    focusableArray[nextIndex].focus();
-                }
+                firstElement.focus();
+            }
+            
+            // Tab backward from first element -> wrap to last
+            if (e.shiftKey && activeElement === firstElement) {
+                e.preventDefault();
+                lastElement.focus();
             }
         };
 
         document.addEventListener('keydown', handleKeyDown);
-        
-        return () => {
-            window.clearTimeout(focusTimeout);
-            window.removeEventListener('focus', focusDefaultElement);
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [projectStatus, isRunning]); // Re-run when button layout changes
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
+    // Action handlers
     const handleStartDemo = () => vscode.postMessage('startDemo');
     const handleStopDemo = () => vscode.postMessage('stopDemo');
+    
+    // Re-authenticate: Trigger browser authentication flow
+    const handleReAuthenticate = () => vscode.postMessage('re-authenticate');
+    
+    // Logs toggle: Retain focus
+    const handleViewLogs = () => {
+        vscode.postMessage('viewLogs');
+        // Retain focus on Logs button after toggle
+        setTimeout(() => {
+            const logsButton = document.querySelector('[data-action="logs"]') as HTMLElement;
+            if (logsButton) {
+                logsButton.focus();
+            }
+        }, 50);
+    };
+    
+    // Deploy Mesh: Retain focus
+    const handleDeployMesh = () => {
+        vscode.postMessage('deployMesh');
+        // Retain focus on Deploy Mesh button
+        setTimeout(() => {
+            const deployButton = document.querySelector('[data-action="deploy-mesh"]') as HTMLElement;
+            if (deployButton) {
+                deployButton.focus();
+            }
+        }, 50);
+    };
+    
     const handleOpenBrowser = () => vscode.postMessage('openBrowser');
-    const handleViewLogs = () => vscode.postMessage('viewLogs');
-    const handleDeployMesh = () => vscode.postMessage('deployMesh');
     const handleConfigure = () => vscode.postMessage('configure');
     const handleOpenDevConsole = () => vscode.postMessage('openDevConsole');
     const handleDeleteProject = () => vscode.postMessage('deleteProject');
@@ -175,7 +180,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                 if (frontendConfigChanged) {
                     return {
                         color: 'var(--spectrum-global-color-orange-600)',
-                        text: 'Configuration Changed'
+                        text: 'Restart Needed'
                     };
                 }
                 return {
@@ -217,6 +222,21 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
         }
         
         switch (meshStatus) {
+            case 'checking':
+                return {
+                    color: 'var(--spectrum-global-color-blue-600)',
+                    text: 'Checking...'
+                };
+            case 'needs-auth':
+                return {
+                    color: 'var(--spectrum-global-color-orange-600)',
+                    text: 'Session expired'
+                };
+            case 'authenticating':
+                return {
+                    color: 'var(--spectrum-global-color-blue-600)',
+                    text: 'Authenticating...'
+                };
             case 'deploying':
                 return {
                     color: 'var(--spectrum-global-color-blue-600)',
@@ -230,7 +250,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
             case 'config-changed':
                 return {
                     color: 'var(--spectrum-global-color-orange-600)',
-                    text: 'Configuration Changed'
+                    text: 'Redeploy Needed'
                 };
             case 'not-deployed':
                 return {
@@ -296,9 +316,34 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                                 backgroundColor: meshStatusDisplay.color,
                                 flexShrink: 0
                             }} />
-                            <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
-                                API Mesh: {meshStatusDisplay.text}
-                            </Text>
+                            
+                            {/* Special UI for authentication states */}
+                            {meshStatus === 'needs-auth' ? (
+                                <Flex direction="row" alignItems="center" gap="size-100">
+                                    <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                                        API Mesh: {meshStatusDisplay.text}
+                                    </Text>
+                                    <ActionButton 
+                                        isQuiet 
+                                        onPress={handleReAuthenticate}
+                                        UNSAFE_style={{ marginLeft: '4px' }}
+                                    >
+                                        <Login size="XS" />
+                                        <Text>Sign in</Text>
+                                    </ActionButton>
+                                </Flex>
+                            ) : meshStatus === 'authenticating' ? (
+                                <Flex direction="row" alignItems="center" gap="size-100">
+                                    <ProgressCircle size="S" isIndeterminate UNSAFE_style={{ width: '16px', height: '16px' }} />
+                                    <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                                        API Mesh: {meshStatusDisplay.text}
+                                    </Text>
+                                </Flex>
+                            ) : (
+                                <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                                    API Mesh: {meshStatusDisplay.text}
+                                </Text>
+                            )}
                         </Flex>
                     )}
                 </View>
@@ -321,7 +366,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                         <ActionButton 
                             onPress={handleStartDemo}
                             isQuiet
-                            UNSAFE_className="dashboard-action-button dashboard-action-button-enter"
+                            UNSAFE_className="dashboard-action-button"
                         >
                             <PlayCircle size="L" />
                             <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Start</Text>
@@ -331,7 +376,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                         <ActionButton 
                             onPress={handleStopDemo}
                             isQuiet
-                            UNSAFE_className="dashboard-action-button dashboard-action-button-enter"
+                            UNSAFE_className="dashboard-action-button"
                         >
                             <StopCircle size="L" />
                             <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Stop</Text>
@@ -354,6 +399,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                         onPress={handleViewLogs}
                         isQuiet
                         UNSAFE_className="dashboard-action-button"
+                        data-action="logs"
                     >
                         <ViewList size="L" />
                         <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Logs</Text>
@@ -364,6 +410,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                         onPress={handleDeployMesh}
                         isQuiet
                         UNSAFE_className="dashboard-action-button"
+                        data-action="deploy-mesh"
                     >
                         <Refresh size="L" />
                         <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Deploy Mesh</Text>
