@@ -3228,6 +3228,19 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
         try {
             project.status = 'ready';
+            
+            // Initialize component versions (for future update tracking)
+            if (!project.componentVersions) {
+                project.componentVersions = {};
+            }
+            
+            for (const componentId of Object.keys(project.componentInstances || {})) {
+                project.componentVersions[componentId] = {
+                    version: 'unknown', // Will be set on first update
+                    lastUpdated: new Date().toISOString()
+                };
+            }
+            
             await this.stateManager.saveProject(project);
             this.logger.info('[Project Creation] ✅ Project state saved successfully');
         } catch (saveError) {

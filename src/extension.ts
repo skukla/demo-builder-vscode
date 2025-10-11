@@ -237,6 +237,24 @@ export async function activate(context: vscode.ExtensionContext) {
             }
         }
 
+        // Auto-check for updates on startup (if enabled)
+        const autoCheck = vscode.workspace.getConfiguration('demoBuilder')
+            .get<boolean>('autoUpdate', true);
+
+        if (autoCheck) {
+            // Check in background, don't block activation
+            setTimeout(() => {
+                vscode.commands.executeCommand('demoBuilder.checkForUpdates').then(
+                    () => {
+                        // Success - no action needed
+                    },
+                    (err: Error) => {
+                        logger.debug('[Updates] Background check failed:', err);
+                    }
+                );
+            }, 10000); // 10 second delay
+        }
+
         logger.info('[Extension] Ready');
 
     } catch (error) {

@@ -249,7 +249,7 @@ export class CommandManager {
             this.statusBar,
             this.logger
         );
-        this.registerCommand('demoBuilder.checkUpdates', () => checkUpdates.execute());
+        this.registerCommand('demoBuilder.checkForUpdates', () => checkUpdates.execute());
 
         // Reset All (Development only)
         if (this.context.extensionMode === vscode.ExtensionMode.Development) {

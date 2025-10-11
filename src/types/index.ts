@@ -37,6 +37,13 @@ export interface Project {
         envVars: Record<string, string>;
         capturedAt: string; // ISO date string
     };
+    // Component version tracking (for updates)
+    componentVersions?: {
+        [componentId: string]: {
+            version: string;
+            lastUpdated: string; // ISO date string
+        };
+    };
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;
