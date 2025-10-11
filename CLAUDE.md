@@ -1,0 +1,279 @@
+# Adobe Demo Builder VS Code Extension
+
+## Project Overview
+
+The Adobe Demo Builder is a VS Code extension that streamlines the creation of Adobe Commerce demo projects. It provides a wizard-based interface for setting up complex e-commerce demonstrations with various Adobe technologies integrated.
+
+## High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                   VS Code Extension Host                  │
+├─────────────────────────────────────────────────────────┤
+│  Extension Activation (extension.ts)                     │
+│  ├── Command Registration                                │
+│  ├── State Management                                    │
+│  └── Provider Registration                               │
+├─────────────────────────────────────────────────────────┤
+│              Core Systems                                │
+│  ├── Prerequisites System (JSON-driven)                  │
+│  ├── Component Registry (templates/)                     │
+│  ├── Progress Tracking (ProgressUnifier)                 │
+│  ├── Error Logging System                                │
+│  ├── StepLogger (Configuration-driven logging)           │
+│  ├── ExternalCommandManager (Race-safe commands)         │
+│  └── StateCoordinator (Adobe CLI state sync)             │
+├─────────────────────────────────────────────────────────┤
+│          Communication & Messaging Layer                 │
+│  ├── WebviewCommunicationManager (Handshake protocol)    │
+│  ├── BaseWebviewCommand (Standardized patterns)          │
+│  └── Message queuing & retry logic                       │
+├─────────────────────────────────────────────────────────┤
+│              Webview Layer (React)                       │
+│  ├── Wizard UI (Adobe Spectrum)                          │
+│  ├── Message Protocol (vscode.postMessage)              │
+│  └── Step Components                                     │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Directory Structure
+
+```
+demo-builder-vscode/
+├── src/                    # Source code (→ see src/CLAUDE.md)
+│   ├── commands/          # VS Code commands (→ see src/commands/CLAUDE.md)
+│   ├── webviews/          # React UI components (→ see src/webviews/CLAUDE.md)
+│   ├── utils/             # Utilities & systems (→ see src/utils/CLAUDE.md)
+│   ├── providers/         # VS Code providers
+│   └── types/             # TypeScript definitions
+├── templates/             # Configuration templates (→ see templates/CLAUDE.md)
+├── docs/                  # Documentation
+│   └── CLAUDE.md         # Development strategy & guidelines
+├── dist/                  # Compiled output
+└── media/                 # Static assets
+```
+
+## Key Components
+
+### 1. **Wizard System**
+- Multi-step project creation wizard
+- React-based UI using Adobe Spectrum
+- Maintains state across steps
+- Width constraint solution: Replace Spectrum Flex with div for layouts
+
+### 2. **Prerequisites System**
+- JSON-driven prerequisite definitions
+- Automatic tool installation
+- Progress tracking with multiple strategies
+- Supports Node.js multi-version management
+
+### 3. **Component Registry**
+- Defines available project components
+- Manages dependencies between components
+- Dynamic configuration based on selections
+
+### 4. **Webview Communication**
+- Bidirectional message passing with handshake protocol
+- Type-safe message protocol with request-response pattern
+- State synchronization between extension and UI
+- Message queuing until both sides ready
+- Automatic retry with exponential backoff
+
+### 5. **Logging System**
+- Configuration-driven logging via StepLogger
+- Template-based messages from logging.json
+- Smart context switching for operational logs
+- Consistent formatting across all components
+
+### 6. **Race Condition Management**
+- ExternalCommandManager for command queuing
+- Mutual exclusion for resource access
+- Smart polling with exponential backoff
+- StateCoordinator for Adobe CLI consistency
+
+### 7. **Auto-Update System**
+- GitHub Releases integration for version checking
+- Snapshot-based rollback for component updates
+- Smart .env merging preserves user configuration
+- Stable and beta update channels
+- Programmatic write suppression prevents false notifications
+- Pre-flight checks (demo running, concurrent updates)
+
+## Critical Design Decisions
+
+### Adobe Spectrum Integration
+- **Issue**: Flex component constrains width to 450px
+- **Solution**: Use standard HTML div with flex styles for critical layouts
+- **Details**: See `src/webviews/CLAUDE.md`
+
+### Adobe Setup Redesign (Two-Column Layout)
+- **Unified Experience**: Single step replaces separate auth/org/project steps
+- **Two-Column Design**: Active content (60%) + persistent summary (40%)
+- **Progressive Disclosure**: Auth → Projects → Workspaces flow
+- **Fast Feedback**: 1-second polling (3x faster than before)
+- **Always-Visible Controls**: Edit buttons shown at all times for transparency
+- **Details**: See `docs/architecture/adobe-setup.md`
+
+### Prerequisites UI
+- **Scrollable Container**: Fixed height (360px) with internal scrolling
+- **Auto-scroll**: Intelligent scrolling during prerequisite checking
+- **Visual Consistency**: Standardized status indicators with icons
+- **Details**: See `docs/systems/prerequisites-system.md`
+
+### State Management
+- Extension state persisted via StateManager
+- Webview state managed with React hooks
+- Message passing for state synchronization
+- Clear dependent state when parent selection changes
+
+## Key Files to Understand
+
+1. **extension.ts** - Entry point and command registration
+2. **src/commands/createProjectWebview.ts** - Main wizard orchestration
+3. **src/webviews/components/wizard/WizardContainer.tsx** - Wizard UI container
+4. **src/utils/adobeAuthManager.ts** - Adobe authentication and SDK integration
+5. **src/utils/updateManager.ts** - GitHub Releases integration and update checking
+6. **src/utils/componentUpdater.ts** - Safe component updates with snapshot/rollback
+7. **src/utils/stateManager.ts** - Project state persistence and management
+8. **templates/prerequisites.json** - Prerequisite definitions
+9. **templates/components.json** - Component registry
+
+## Common Tasks
+
+### Adding a New Prerequisite
+→ See `templates/CLAUDE.md` and `docs/systems/prerequisites-system.md`
+
+### Modifying Wizard Steps
+→ See `src/webviews/components/steps/` and `src/webviews/CLAUDE.md`
+
+### Debugging Width Issues
+→ See `docs/troubleshooting.md` and use WidthDebugger component
+
+### Adding New Commands
+→ See `src/commands/CLAUDE.md`
+
+### Debugging Issues
+→ Run "Demo Builder: Diagnostics" command
+→ Check "Demo Builder: Debug" output channel
+→ See `docs/systems/debugging.md`
+
+## Technology Stack
+
+- **Extension**: TypeScript, VS Code Extension API
+- **UI**: React, Adobe Spectrum, Webpack
+- **Build**: TypeScript compiler, Webpack
+- **Testing**: Manual testing checklist (automated tests planned)
+
+## Development Workflow
+
+1. Install dependencies: `npm install`
+2. Build: `npm run build`
+3. Watch mode: `npm run watch`
+4. Run extension: F5 in VS Code
+5. Package: `npm run package`
+
+## Recent Improvements
+
+### v1.6.0 (2025-01-XX) - Auto-Updates & Performance Optimizations
+- **Auto-Update System**: Extension and component updates via GitHub Releases
+  - Snapshot/rollback safety for component updates
+  - Smart .env merging preserves user configuration
+  - Stable and beta update channels
+  - Programmatic write suppression prevents false notifications
+  - Concurrent update lock prevents double-click accidents
+  - Post-update verification ensures component integrity
+- **Authentication Performance**: Adobe Console SDK integration for 30x faster operations
+  - Quick auth checks (< 1s vs 9+ seconds for full validation)
+  - Pre-flight authentication for Adobe I/O operations prevents unexpected browser launches
+  - Cached organization/project data with TTL (reduces API calls)
+  - Async SDK initialization (non-blocking, 5-second timeout)
+- **Mesh Deployment Enhancements**: Improved configuration detection and error handling
+  - Fetches deployed mesh config from Adobe I/O for accurate comparison
+  - Better staleness detection (compares local vs deployed state)
+  - Consolidated logging to single "Demo Builder: Logs" channel
+  - Pre-flight authentication check before deployment
+  - User-friendly error formatting for network/timeout/HTTP failures
+- **Dashboard Improvements**: Enhanced project control panel
+  - Smart Logs toggle remembers last active channel (Logs/Debug)
+  - Asynchronous mesh status checking doesn't block UI
+  - Focus retention for in-place actions (Logs toggle, Start/Stop)
+  - Component browser with .env file hiding
+  - Focus trap for keyboard navigation
+- **File Watcher Improvements**: Hash-based change detection with notification management
+  - Programmatic write suppression (Configure UI and updates don't trigger false alerts)
+  - Show-once-per-session notifications (no notification spam)
+  - 10-second startup grace period
+  - Separate tracking for restart vs mesh redeploy notifications
+
+### v1.5.0 (2025-01-16) - Backend Call on Continue & Critical Fixes
+- **Backend Call on Continue Pattern**: Major UX improvement for selection steps
+  - UI updates immediate, backend calls deferred to Continue button
+  - Eliminates loading delays during exploration
+  - Clear error handling at commitment points
+  - Consistent pattern across project/workspace selection
+- **Critical Async Handler Fix**: Resolved "Error Loading Projects" issue
+  - WebviewCommunicationManager now properly awaits async handlers
+  - Fixed Promise objects being sent to UI instead of resolved values
+  - Eliminates UI errors despite successful backend operations
+- **Adobe CLI Timeout Solutions**: Addressed frequent timeout failures
+  - Increased CONFIG_WRITE timeout from 5000ms to 10000ms
+  - Added success detection in timeout scenarios via stdout parsing
+  - Commands now succeed reliably despite Adobe CLI slowness
+- **UI/UX Standardization**: Consistent layout and interaction patterns
+  - Standardized 800px content width across selection steps
+  - Simple spinner overlays replace verbose loading text
+  - Disabled buttons during loading operations
+  - Eliminated blank screens during transitions
+
+### v1.4.0 (2025-01-11)
+- **Race Condition Solutions**: Comprehensive 4-phase implementation
+  - WebviewCommunicationManager with handshake protocol
+  - ExternalCommandManager for command queuing and mutual exclusion
+  - StateCoordinator for Adobe CLI state consistency
+  - BaseWebviewCommand for standardized patterns
+- **Configuration-Driven Logging**: StepLogger with templates
+  - Step names from wizard-steps.json
+  - Message templates from logging.json
+  - Smart context switching for operations
+- **Improved Reliability**: Eliminated brittle setTimeout delays
+  - Smart polling with exponential backoff
+  - Condition-based waiting
+  - Automatic retry logic
+
+### v1.3.0 (2025-01-10)
+- **Enhanced Debugging System**: Dual output channels ("Demo Builder: Logs" and "Demo Builder: Debug")
+- **Diagnostics Command**: Comprehensive system analysis for troubleshooting
+- **Unified Logging**: Consolidated from 4 channels to 2 clean channels
+- **Adobe Setup UX**: Consistent auto-advance, proper success display, eliminated double-loader
+- **Command Execution Logging**: Full stdout/stderr/timing capture for debugging
+
+### Previous Updates
+- Fixed wizard width inconsistencies (450px → 800px)
+- Improved prerequisites UI with scrollable container
+- Standardized status message displays
+- Enhanced error message parsing for Adobe I/O CLI
+- Comprehensive documentation updates
+
+## New Documentation (v1.5.0)
+
+### Design Patterns
+- **[Backend Call on Continue Pattern](docs/patterns/selection-pattern.md)**: Complete guide to the new selection UX pattern
+- **[State Management Patterns](docs/patterns/state-management.md)**: Comprehensive state handling strategies
+- **[Adobe CLI Timeout Troubleshooting](docs/troubleshooting/adobe-cli-timeouts.md)**: Debugging and fixing timeout issues
+
+### Key Implementation Files
+- **[WebView Integration](src/webviews/CLAUDE.md)**: Updated with Backend Call on Continue documentation
+- **[Utilities](src/utils/CLAUDE.md)**: Added async handler resolution and timeout configuration docs
+- **[Commands](src/commands/CLAUDE.md)**: Updated message handling patterns and timeout strategies
+
+## Future Enhancements
+
+- Automated testing framework
+- Performance monitoring
+- Enhanced error reporting
+- Accessibility improvements
+- Windows/Linux platform support
+
+---
+
+For detailed information about specific areas, navigate to the CLAUDE.md file in the relevant directory.

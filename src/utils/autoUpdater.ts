@@ -11,7 +11,7 @@ export class AutoUpdater {
     private context: vscode.ExtensionContext;
     private logger: Logger;
     private updateCheckInterval: NodeJS.Timeout | undefined;
-    private readonly UPDATE_CHECK_URL = 'https://api.github.com/repos/adobe/demo-builder-vscode/releases/latest';
+    private readonly UPDATE_CHECK_URL = 'https://api.github.com/repos/skukla/demo-builder-vscode/releases/latest';
 
     constructor(context: vscode.ExtensionContext, logger: Logger) {
         this.context = context;
@@ -28,7 +28,7 @@ export class AutoUpdater {
     public async checkForUpdates(): Promise<UpdateInfo | undefined> {
         try {
             const currentVersion = this.context.extension.packageJSON.version;
-            this.logger.info(`Checking for updates (current: ${currentVersion})...`);
+            this.logger.info(`[Extension] Checking for updates (current: ${currentVersion})...`);
 
             // For development, use mock data
             if (process.env.NODE_ENV === 'development') {
@@ -61,16 +61,21 @@ export class AutoUpdater {
                         minSupportedVersion: '1.0.0'
                     };
 
-                    this.logger.info(`Update available: ${latestVersion}`);
+                    this.logger.info(`[Extension] Update available: ${latestVersion}`);
                     return updateInfo;
                 }
             }
 
-            this.logger.info('No updates available');
+            this.logger.info('[Extension] No updates available');
             return undefined;
 
-        } catch (error) {
-            this.logger.error('Failed to check for updates', error as Error);
+        } catch (error: any) {
+            // Silently handle 404 errors (repository doesn't exist yet)
+            if (error.response?.status === 404) {
+                this.logger.debug('Update repository not available yet');
+            } else {
+                this.logger.error('Failed to check for updates', error as Error);
+            }
             return undefined;
         }
     }
@@ -82,7 +87,7 @@ export class AutoUpdater {
 
     public async downloadAndInstall(updateInfo: UpdateInfo): Promise<void> {
         try {
-            this.logger.info(`Downloading update ${updateInfo.version}...`);
+            this.logger.info(`[Extension] Downloading update ${updateInfo.version}...`);
             
             // Download VSIX to temp directory
             const tempDir = os.tmpdir();
@@ -100,7 +105,7 @@ export class AutoUpdater {
             });
 
             await fs.writeFile(vsixPath, Buffer.from(response.data));
-            this.logger.info(`Downloaded to: ${vsixPath}`);
+            this.logger.info(`[Extension] Downloaded to: ${vsixPath}`);
 
             // Install the extension
             await vscode.commands.executeCommand(

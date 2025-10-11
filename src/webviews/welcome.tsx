@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { WelcomeApp } from './welcome-app';
 import './styles/index.css';
 import './styles/vscode-theme.css';
+import './styles/custom-spectrum.css';
 
 // Get root element
 const container = document.getElementById('root');

@@ -10,6 +10,7 @@ import {
 } from '@adobe/react-spectrum';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Import from '@spectrum-icons/workflow/Import';
+import { cn } from '../utils/classNames';
 
 interface EmptyStateProps {
     onImport: () => void;
@@ -19,12 +20,7 @@ export function EmptyState({ onImport }: EmptyStateProps) {
     return (
         <View 
             padding="size-600" 
-            UNSAFE_style={{ 
-                textAlign: 'center',
-                background: 'var(--vscode-sideBar-background)',
-                borderRadius: '8px',
-                border: '1px solid var(--vscode-widget-border)'
-            }}
+            UNSAFE_className="empty-state-container"
         >
             <IllustratedMessage>
                 <FolderOpen size="XXL" />

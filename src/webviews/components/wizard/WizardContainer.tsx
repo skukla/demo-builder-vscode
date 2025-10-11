@@ -3,55 +3,73 @@ import {
     View, 
     Flex, 
     Heading, 
-    Button
+    Button,
+    Text
 } from '@adobe/react-spectrum';
 import { WizardState, WizardStep, FeedbackMessage } from '../../types';
 import { TimelineNav } from './TimelineNav';
 import { WelcomeStep } from '../steps/WelcomeStep';
+import { ComponentSelectionStep } from '../steps/ComponentSelectionStep';
 import { PrerequisitesStep } from '../steps/PrerequisitesStep';
 import { AdobeAuthStep } from '../steps/AdobeAuthStep';
-import { OrgSelectionStep } from '../steps/OrgSelectionStep';
-import { ProjectSelectionStep } from '../steps/ProjectSelectionStep';
-import { CommerceConfigStep } from '../steps/CommerceConfigStep';
+import { AdobeProjectStep } from '../steps/AdobeProjectStep';
+import { AdobeWorkspaceStep } from '../steps/AdobeWorkspaceStep';
+import { ApiMeshStep } from '../steps/ApiMeshStep';
+import { ComponentConfigStep } from '../steps/ComponentConfigStep';
 import { ReviewStep } from '../steps/ReviewStep';
-import { CreatingStep } from '../steps/CreatingStep';
+import { ProjectCreationStep } from '../steps/ProjectCreationStep';
 import { vscode } from '../../app/vscodeApi';
+import { cn } from '../../utils/classNames';
 
-const WIZARD_STEPS: { id: WizardStep; name: string }[] = [
-    { id: 'welcome', name: 'Project Details' },
-    { id: 'prerequisites', name: 'Prerequisites' },
-    { id: 'adobe-auth', name: 'Adobe Auth' },
-    { id: 'org-selection', name: 'Organization' },
-    { id: 'project-selection', name: 'Project' },
-    { id: 'commerce-config', name: 'Commerce' },
-    { id: 'review', name: 'Review' },
-    { id: 'creating', name: 'Creating' }
-];
+interface WizardContainerProps {
+    componentDefaults?: any;
+    wizardSteps?: { id: string; name: string; enabled: boolean }[];
+}
 
-export function WizardContainer() {
+export function WizardContainer({ componentDefaults, wizardSteps }: WizardContainerProps) {
+    // Configuration is required - no fallback
+    if (!wizardSteps || wizardSteps.length === 0) {
+        return (
+            <View padding="size-400" height="100vh">
+                <Heading level={2}>Configuration Error</Heading>
+                <Text>Wizard configuration not loaded. Please restart the extension.</Text>
+            </View>
+        );
+    }
+    
+    // Use the provided configuration, filtering out disabled steps
+    const WIZARD_STEPS = wizardSteps
+        .filter(step => step.enabled)
+        .map(step => ({ id: step.id as WizardStep, name: step.name }));
+    
     const [state, setState] = useState<WizardState>({
         currentStep: 'welcome',
         projectName: '',
         projectTemplate: 'commerce-paas',
+        componentConfigs: {},
         adobeAuth: {
-            isAuthenticated: false,
-            isChecking: false
-        }
+            isAuthenticated: undefined,  // Start as undefined to indicate not yet checked
+            isChecking: false  // Allow the check to proceed
+        },
+        components: componentDefaults || undefined
     });
 
     const [canProceed, setCanProceed] = useState(false);
     const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
     const [completedSteps, setCompletedSteps] = useState<WizardStep[]>([]);
+    const [highestCompletedStepIndex, setHighestCompletedStepIndex] = useState(-1);
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
-    const contentRef = useRef<HTMLDivElement>(null);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const [isConfirmingSelection, setIsConfirmingSelection] = useState(false);
+    const [componentsData, setComponentsData] = useState<any>(null);
 
     // Listen for feedback messages from extension
     useEffect(() => {
         const unsubscribe = vscode.onMessage('feedback', (message: FeedbackMessage) => {
             setFeedback(message);
             
-            // Update creation progress if in creating step
-            if (state.currentStep === 'creating' && state.creationProgress) {
+            // Update creation progress if in project-creation step
+            if (state.currentStep === 'project-creation' && state.creationProgress) {
                 setState(prev => ({
                     ...prev,
                     creationProgress: {
@@ -71,38 +89,216 @@ export function WizardContainer() {
         return unsubscribe;
     }, [state.currentStep, state.creationProgress]);
 
-    const getCurrentStepIndex = () => {
-        return WIZARD_STEPS.findIndex(step => step.id === state.currentStep);
-    };
+    // Listen for creationProgress messages from extension
+    useEffect(() => {
+        const unsubscribe = vscode.onMessage('creationProgress', (progressData: any) => {
+            console.log('Received creationProgress:', progressData);
+            setState(prev => ({
+                ...prev,
+                creationProgress: {
+                    currentOperation: progressData.currentOperation || 'Processing',
+                    progress: progressData.progress || 0,
+                    message: progressData.message || '',
+                    logs: progressData.logs || [],
+                    error: progressData.error
+                }
+            }));
+        });
 
-    const goToStep = useCallback((step: WizardStep) => {
-        const currentIndex = getCurrentStepIndex();
-        const targetIndex = WIZARD_STEPS.findIndex(s => s.id === step);
-        
-        setAnimationDirection(targetIndex > currentIndex ? 'forward' : 'backward');
-        
-        // Add animation class
-        if (contentRef.current) {
-            contentRef.current.classList.add('transitioning');
-            setTimeout(() => {
-                setState(prev => ({ ...prev, currentStep: step }));
-                contentRef.current?.classList.remove('transitioning');
-            }, 300);
-        } else {
-            setState(prev => ({ ...prev, currentStep: step }));
-        }
+        return unsubscribe;
+    }, []);
+
+    // Note: We no longer auto-close the wizard on success
+    // The ProjectCreationStep has Browse Files and Close buttons instead
+
+    // Listen for components data from extension
+    useEffect(() => {
+        const unsubscribe = vscode.onMessage('componentsLoaded', (data: any) => {
+            console.log('Received components data:', data);
+            setComponentsData(data);
+        });
+
+        // Request components when component mounts
+        vscode.postMessage('loadComponents');
+
+        return unsubscribe;
+    }, []);
+
+    const getCurrentStepIndex = useCallback(() => {
+        return WIZARD_STEPS.findIndex(step => step.id === state.currentStep);
     }, [state.currentStep]);
 
-    const goNext = useCallback(() => {
-        const currentIndex = getCurrentStepIndex();
-        if (currentIndex < WIZARD_STEPS.length - 1) {
-            // Mark current step as completed
-            if (!completedSteps.includes(state.currentStep)) {
-                setCompletedSteps(prev => [...prev, state.currentStep]);
+    // Internal navigation function used by both timeline and Continue button
+    const navigateToStep = useCallback((step: WizardStep, targetIndex: number, currentIndex: number) => {
+        setAnimationDirection(targetIndex > currentIndex ? 'forward' : 'backward');
+        setIsTransitioning(true);
+
+        // If moving backward, remove completions for the target step and all steps after it
+        if (targetIndex < currentIndex) {
+            // Special case for first step - clear all completions
+            if (targetIndex === 0) {
+                setCompletedSteps([]);
+            } else {
+                // Normal backward navigation logic
+                setCompletedSteps(prev => {
+                    const filtered = prev.filter(completedStep => {
+                        // For the target step, always remove it
+                        if (completedStep === step) {
+                            return false;
+                        }
+
+                        // For other steps, keep only those before the target
+                        const stepIndex = WIZARD_STEPS.findIndex(ws => ws.id === completedStep);
+                        return stepIndex < targetIndex;
+                    });
+
+                    return filtered;
+                });
             }
-            goToStep(WIZARD_STEPS[currentIndex + 1].id);
+
+            // For backward navigation, prepare state changes but don't switch step yet
+            // This prevents showing new content during fade-out animation
+            const workspaceIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-workspace');
+            const projectIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-project');
+
+            // Wait for fade-out to complete, then update state and fade in
+            setTimeout(() => {
+                setState(prev => {
+                    const newState = { ...prev, currentStep: step };
+
+                    // Clear selections only when going BEFORE selection steps (not TO them)
+                    // Clear workspace and its cache when going before workspace step
+                    if (workspaceIndex !== -1 && targetIndex < workspaceIndex) {
+                        newState.adobeWorkspace = undefined;
+                        newState.workspacesCache = undefined;
+                    }
+
+                    // Clear project and its cache (plus dependent caches) when going before project step
+                    if (projectIndex !== -1 && targetIndex < projectIndex) {
+                        newState.adobeProject = undefined;
+                        newState.projectsCache = undefined;
+                        // Also clear workspace cache since workspaces are project-specific
+                        newState.adobeWorkspace = undefined;
+                        newState.workspacesCache = undefined;
+                    }
+
+                    return newState;
+                });
+                setIsTransitioning(false);
+            }, 300);
+        } else {
+            // For forward navigation, keep original behavior with delayed state update
+            setTimeout(() => {
+                setState(prev => ({ ...prev, currentStep: step }));
+                setIsTransitioning(false);
+            }, 300);
         }
-    }, [state.currentStep, completedSteps]);
+    }, []);
+
+    // Timeline navigation (backward only)
+    const goToStepViaTimeline = useCallback((step: WizardStep) => {
+        console.log('Timeline navigation to:', step);
+        const currentIndex = getCurrentStepIndex();
+        const targetIndex = WIZARD_STEPS.findIndex(s => s.id === step);
+
+        // Only allow backward navigation via timeline
+        if (targetIndex > currentIndex) {
+            console.log('Forward navigation must use Continue button');
+            return;
+        }
+
+        // Use internal navigation function
+        navigateToStep(step, targetIndex, currentIndex);
+    }, [getCurrentStepIndex, navigateToStep]);
+
+    const goNext = useCallback(async () => {
+        const currentIndex = getCurrentStepIndex();
+
+        if (currentIndex < WIZARD_STEPS.length - 1) {
+            const nextStep = WIZARD_STEPS[currentIndex + 1];
+
+            // BACKEND CALL ON CONTINUE PATTERN:
+            // User selections update UI state immediately (in step components)
+            // Actual backend operations happen here when user commits via Continue
+            try {
+                // Show loading overlay while backend operations execute
+                // Content remains visible, buttons disabled
+                setIsConfirmingSelection(true);
+
+                // Project selection: Commit the UI selection to backend
+                if (state.currentStep === 'adobe-project' && state.adobeProject?.id) {
+                    console.log('Making backend call to select project:', state.adobeProject.id);
+                    const result = await vscode.request('select-project', { projectId: state.adobeProject.id });
+                    if (!result.success) {
+                        throw new Error(result.error || 'Failed to select project');
+                    }
+                }
+
+                // Workspace selection: Commit the UI selection to backend
+                if (state.currentStep === 'adobe-workspace' && state.adobeWorkspace?.id) {
+                    console.log('Making backend call to select workspace:', state.adobeWorkspace.id);
+                    const result = await vscode.request('select-workspace', { workspaceId: state.adobeWorkspace.id });
+                    if (!result.success) {
+                        throw new Error(result.error || 'Failed to select workspace');
+                    }
+                }
+
+                // Project creation: Trigger project creation when moving from review to project-creation step
+                if (state.currentStep === 'review' && nextStep.id === 'project-creation') {
+                    console.log('Triggering project creation with state:', state);
+                    
+                    // Build project configuration from wizard state
+                    const projectConfig = {
+                        projectName: state.projectName,
+                        projectTemplate: state.projectTemplate,
+                        adobe: {
+                            organization: state.adobeOrg?.id,
+                            projectId: state.adobeProject?.id,
+                            projectName: state.adobeProject?.name,
+                            workspace: state.adobeWorkspace?.id,
+                            workspaceName: state.adobeWorkspace?.name
+                        },
+                        components: {
+                            frontend: state.components?.frontend,
+                            backend: state.components?.backend,
+                            dependencies: state.components?.dependencies || [],
+                            externalSystems: state.components?.externalSystems || [],
+                            appBuilderApps: state.components?.appBuilderApps || []
+                        },
+                        apiMesh: state.apiMesh,
+                        componentConfigs: state.componentConfigs
+                    };
+                    
+                    // Send to backend - don't await, let it run asynchronously
+                    vscode.createProject(projectConfig);
+                }
+
+                // Mark current step as completed only after successful backend operation
+                if (!completedSteps.includes(state.currentStep)) {
+                    setCompletedSteps(prev => [...prev, state.currentStep]);
+                    // Track the highest completed step index for navigation purposes
+                    setHighestCompletedStepIndex(Math.max(highestCompletedStepIndex, currentIndex));
+                }
+
+                // Clear loading overlay before transition
+                setIsConfirmingSelection(false);
+
+                // Proceed to next step now that backend is synchronized
+                navigateToStep(nextStep.id, currentIndex + 1, currentIndex);
+
+            } catch (error) {
+                console.error('Failed to proceed to next step:', error);
+                setFeedback({
+                    type: 'error',
+                    message: error instanceof Error ? error.message : 'Failed to proceed. Please try again.'
+                });
+                // Clear loading state on error
+                setIsConfirmingSelection(false);
+            }
+        } else {
+            console.log('Already at last step');
+        }
+    }, [state.currentStep, state.adobeProject, state.adobeWorkspace, completedSteps, canProceed, getCurrentStepIndex, navigateToStep]);
 
     const handleCancel = useCallback(() => {
         vscode.postMessage('cancel');
@@ -114,13 +310,53 @@ export function WizardContainer() {
             // On first step, go back means cancel and return to welcome
             handleCancel();
         } else if (currentIndex > 0) {
-            goToStep(WIZARD_STEPS[currentIndex - 1].id);
+            const targetIndex = currentIndex - 1;
+            navigateToStep(WIZARD_STEPS[targetIndex].id, targetIndex, currentIndex);
         }
-    }, [state.currentStep, handleCancel]);
+    }, [getCurrentStepIndex, navigateToStep, handleCancel]);
 
     const updateState = useCallback((updates: Partial<WizardState>) => {
         setState(prev => ({ ...prev, ...updates }));
     }, []);
+
+    // Focus trap for tab navigation
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Tab') {
+                // Get all focusable elements within the wizard
+                const focusableElements = document.querySelectorAll(
+                    'button:not([disabled]):not([tabindex="-1"]), ' +
+                    'input:not([disabled]):not([tabindex="-1"]), ' +
+                    'select:not([disabled]):not([tabindex="-1"]), ' +
+                    'textarea:not([disabled]):not([tabindex="-1"]), ' +
+                    '[tabindex]:not([tabindex="-1"]):not([tabindex="0"])'
+                );
+
+                const focusableArray = Array.from(focusableElements);
+                if (focusableArray.length === 0) return;
+
+                const currentIndex = focusableArray.indexOf(document.activeElement as HTMLElement);
+
+                e.preventDefault(); // Prevent default tab behavior
+
+                if (e.shiftKey) {
+                    // Shift+Tab - go backwards
+                    const nextIndex = currentIndex <= 0 ? focusableArray.length - 1 : currentIndex - 1;
+                    (focusableArray[nextIndex] as HTMLElement).focus();
+                } else {
+                    // Tab - go forwards
+                    const nextIndex = currentIndex >= focusableArray.length - 1 ? 0 : currentIndex + 1;
+                    (focusableArray[nextIndex] as HTMLElement).focus();
+                }
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [state.currentStep]);
 
     const renderStep = () => {
         const props = {
@@ -128,26 +364,53 @@ export function WizardContainer() {
             updateState,
             onNext: goNext,
             onBack: goBack,
-            setCanProceed
+            setCanProceed,
+            componentsData
+        };
+
+        // Calculate required Node versions based on selected components
+        const getRequiredNodeVersions = (): string[] => {
+            const versions = new Set<string>();
+            
+            // Check if API Mesh is selected (requires Node 18)
+            if (state.components?.dependencies?.includes('commerce-mesh')) {
+                versions.add('18');
+            }
+            
+            // Check if App Builder apps are selected (require Node 22)
+            if (state.components?.appBuilderApps && state.components.appBuilderApps.length > 0) {
+                versions.add('22');
+            }
+            
+            // Frontend may require latest
+            if (state.components?.frontend === 'citisignal-nextjs') {
+                versions.add('latest');
+            }
+            
+            return Array.from(versions);
         };
 
         switch (state.currentStep) {
             case 'welcome':
                 return <WelcomeStep {...props} />;
+            case 'component-selection':
+                return <ComponentSelectionStep {...props} componentsData={componentsData} />;
             case 'prerequisites':
-                return <PrerequisitesStep {...props} />;
+                return <PrerequisitesStep {...props} requiredNodeVersions={getRequiredNodeVersions()} componentsData={componentsData} currentStep={state.currentStep} />;
             case 'adobe-auth':
                 return <AdobeAuthStep {...props} />;
-            case 'org-selection':
-                return <OrgSelectionStep {...props} />;
-            case 'project-selection':
-                return <ProjectSelectionStep {...props} />;
-            case 'commerce-config':
-                return <CommerceConfigStep {...props} />;
+            case 'adobe-project':
+                return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
+            case 'adobe-workspace':
+                return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
+            case 'api-mesh':
+                return <ApiMeshStep {...props} completedSteps={completedSteps} />;
+            case 'settings':
+                return <ComponentConfigStep {...props} />;
             case 'review':
                 return <ReviewStep {...props} />;
-            case 'creating':
-                return <CreatingStep state={state} />;
+            case 'project-creation':
+                return <ProjectCreationStep state={state} />;
             default:
                 return null;
         }
@@ -155,7 +418,7 @@ export function WizardContainer() {
 
     const currentStepIndex = getCurrentStepIndex();
     const isFirstStep = currentStepIndex === 0;
-    const isLastStep = state.currentStep === 'creating';
+    const isLastStep = state.currentStep === 'project-creation';
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
 
     return (
@@ -163,111 +426,140 @@ export function WizardContainer() {
             backgroundColor="gray-50"
             width="100%"
             height="100vh"
-            UNSAFE_style={{
-                display: 'flex',
-                overflow: 'hidden'
-            }}
+            UNSAFE_className={cn('flex', 'overflow-hidden')}
         >
-            <Flex height="100%">
+            <div style={{ display: 'flex', height: '100%', width: '100%' }}>
                 {/* Timeline Navigation */}
                 <View 
                     width="size-3000" 
                     height="100%"
-                    UNSAFE_style={{
-                        minWidth: '240px',
-                        maxWidth: '240px'
-                    }}
+                    UNSAFE_className={cn('min-w-240', 'max-w-240')}
                 >
                     <TimelineNav
                         steps={WIZARD_STEPS}
                         currentStep={state.currentStep}
                         completedSteps={completedSteps}
-                        onStepClick={goToStep}
+                        highestCompletedStepIndex={highestCompletedStepIndex}
+                        onStepClick={goToStepViaTimeline}
                     />
                 </View>
 
                 {/* Content Area */}
-                <Flex direction="column" flex height="100%">
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', width: '100%' }}>
                     {/* Header */}
                     <View 
                         padding="size-400"
-                        UNSAFE_style={{
-                            borderBottom: '1px solid var(--spectrum-global-color-gray-300)',
-                            background: 'var(--spectrum-global-color-gray-75)'
-                        }}
+                        UNSAFE_className={cn('border-b', 'bg-gray-75')}
                     >
                         <Heading level={1} marginBottom="size-100">
                             Create Demo Project
                         </Heading>
-                        <Heading level={3} UNSAFE_style={{ 
-                            fontWeight: 400,
-                            color: 'var(--spectrum-global-color-gray-600)'
-                        }}>
+                        <Heading level={3} UNSAFE_className={cn('font-normal', 'text-gray-600')}>
                             {currentStepName}
                         </Heading>
                     </View>
 
                     {/* Step Content */}
-                    <View 
-                        flex
-                        padding="size-400"
-                        UNSAFE_style={{ 
-                            overflow: 'hidden',
-                            position: 'relative'
-                        }}
+                    <div 
+                        style={{ width: '100%', height: '100%', overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}
+                        className={cn('overflow-y-auto', 'overflow-x-hidden', 'relative')}
                     >
-                        <View
-                            ref={contentRef}
-                            height="100%"
-                            UNSAFE_className={`step-content ${animationDirection}`}
-                            UNSAFE_style={{
-                                transition: 'transform 0.3s ease-in-out, opacity 0.3s ease-in-out'
-                            }}
+                        <div
+                            style={{ height: '100%', width: '100%' }}
+                            className={cn(
+                                'step-content',
+                                animationDirection,
+                                isTransitioning && 'transitioning',
+                                'transition-all'
+                            )}
                         >
                             {renderStep()}
-                        </View>
-                    </View>
+                        </div>
+
+                        {/* Confirmation overlay during backend calls */}
+                        {isConfirmingSelection && (
+                            <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                zIndex: 1000,
+                                borderRadius: '4px'
+                            }}>
+                                <div style={{
+                                    backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                                    padding: '24px',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <div style={{
+                                        width: '32px',
+                                        height: '32px',
+                                        borderRadius: '50%',
+                                        border: '3px solid var(--spectrum-global-color-blue-400)',
+                                        borderTopColor: 'transparent',
+                                        animation: 'spin 1s linear infinite'
+                                    }}></div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Footer */}
                     {!isLastStep && (
                         <View
                             padding="size-400"
-                            UNSAFE_style={{
-                                borderTop: '1px solid var(--spectrum-global-color-gray-300)',
-                                background: 'var(--spectrum-global-color-gray-75)'
-                            }}
+                            UNSAFE_className={cn('border-t', 'bg-gray-75')}
                         >
-                            <Flex justifyContent="space-between" width="100%">
-                                <Button 
-                                    variant="secondary" 
-                                    onPress={handleCancel}
-                                    isQuiet
-                                >
-                                    Cancel
-                                </Button>
-                                <Flex gap="size-100">
+                            <div style={{ maxWidth: '800px', width: '100%' }}>
+                                <Flex justifyContent="space-between" width="100%">
                                     <Button
                                         variant="secondary"
-                                        onPress={goBack}
+                                        onPress={handleCancel}
                                         isQuiet
+                                        isDisabled={isConfirmingSelection}
                                     >
-                                        Back
+                                        Cancel
                                     </Button>
-                                    <Button
-                                        variant="accent"
-                                        onPress={goNext}
-                                        isDisabled={!canProceed}
-                                    >
-                                        {currentStepIndex === WIZARD_STEPS.length - 2 ? 'Create Project' : 'Continue'}
-                                    </Button>
+                                    <Flex gap="size-100">
+                                        <Button
+                                            variant="secondary"
+                                            onPress={goBack}
+                                            isQuiet
+                                            isDisabled={isConfirmingSelection}
+                                        >
+                                            Back
+                                        </Button>
+                                        <Button
+                                            variant="accent"
+                                            onPress={() => {
+                                                console.log('Continue button clicked!');
+                                                goNext();
+                                            }}
+                                            isDisabled={!canProceed || isConfirmingSelection}
+                                        >
+                                            {isConfirmingSelection
+                                                ? 'Continue'
+                                                : (currentStepIndex === WIZARD_STEPS.length - 2 ? 'Create Project' : 'Continue')
+                                            }
+                                        </Button>
+                                    </Flex>
                                 </Flex>
-                            </Flex>
+                            </div>
                         </View>
                     )}
-                </Flex>
-            </Flex>
+                </div>
+            </div>
 
-            <style jsx>{`
+            <style>{`
                 .step-content {
                     opacity: 1;
                     transform: translateX(0);

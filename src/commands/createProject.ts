@@ -2,17 +2,17 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as os from 'os';
 import { BaseCommand } from './baseCommand';
-import { Project, ProjectTemplate, CommerceConfig, ValidationResult } from '../types';
-import { PrerequisitesChecker } from '../utils/prerequisitesChecker';
-import { AdobeAuthManager, AdobeOrg, AdobeProject } from '../utils/adobeAuthManager';
-import { CommerceValidator } from '../utils/commerceValidator';
+import { Project, ProjectTemplate, CommerceConfig } from '../types';
+import { PrerequisitesManager } from '../utils/prerequisitesManager';
+import { AdobeAuthManager } from '../utils/adobeAuthManager';
+import { getExternalCommandManager } from '../extension';
 import { MeshDeployer } from '../utils/meshDeployer';
 import { FrontendInstaller } from '../utils/frontendInstaller';
 
 export class CreateProjectCommand extends BaseCommand {
     public async execute(): Promise<void> {
         try {
-            this.logger.info('Starting project creation wizard...');
+            this.logger.info('[Project Creation] Starting CLI-based creation...');
             
             // Check if project already exists
             if (await this.stateManager.hasProject()) {
@@ -73,12 +73,15 @@ export class CreateProjectCommand extends BaseCommand {
 
     private async checkPrerequisites(): Promise<boolean> {
         return this.withProgress('Checking prerequisites...', async (progress) => {
-            const checker = new PrerequisitesChecker(this.logger);
+            const prereqManager = new PrerequisitesManager(this.context.extensionPath, this.logger);
             
-            progress.report({ message: 'Checking Node.js...' });
-            const prereqs = await checker.check();
+            progress.report({ message: 'Checking prerequisites...' });
+            await prereqManager.loadConfig();
+            const prerequisites = await prereqManager.getRequiredPrerequisites();
+            const statuses = await prereqManager.checkAllPrerequisites(prerequisites);
             
-            if (!prereqs.node.installed) {
+            const nodeStatus = statuses.find(s => s.id === 'node');
+            if (!nodeStatus?.installed) {
                 const install = await vscode.window.showErrorMessage(
                     'Node.js is not installed. Demo Builder requires Node.js to function.',
                     'Install Guide',
@@ -92,21 +95,18 @@ export class CreateProjectCommand extends BaseCommand {
             }
 
             progress.report({ message: 'Checking Adobe I/O CLI...' });
-            if (!prereqs.adobeIO.installed) {
+            const adobeStatus = statuses.find(s => s.id === 'aio-cli');
+            if (!adobeStatus?.installed) {
                 const install = await vscode.window.showWarningMessage(
                     'Adobe I/O CLI is not installed. It\'s required for mesh deployment.',
-                    'Install Now',
+                    'Use Webview Wizard',
                     'Continue Anyway'
                 );
                 
-                if (install === 'Install Now') {
-                    await checker.installAdobeIO();
-                    // Re-check
-                    const updated = await checker.check();
-                    if (!updated.adobeIO.installed) {
-                        await this.showError('Failed to install Adobe I/O CLI');
-                        return false;
-                    }
+                if (install === 'Use Webview Wizard') {
+                    // The webview wizard handles prerequisite installation
+                    await vscode.commands.executeCommand('demoBuilder.createProjectWebview');
+                    return false; // Exit this flow as user will use webview
                 }
             }
 
@@ -175,7 +175,11 @@ export class CreateProjectCommand extends BaseCommand {
 
     private async configureAdobe(): Promise<any> {
         return this.withProgress('Configuring Adobe services...', async (progress) => {
-            const authManager = new AdobeAuthManager(this.logger);
+            const authManager = new AdobeAuthManager(
+                this.context.extensionPath, 
+                this.logger,
+                getExternalCommandManager()
+            );
             
             progress.report({ message: 'Checking authentication...' });
             const isAuthenticated = await authManager.isAuthenticated();
@@ -240,8 +244,10 @@ export class CreateProjectCommand extends BaseCommand {
                     if (retry === 'Force Login') {
                         // Try force login through auth manager
                         progress.report({ message: 'Attempting forced login...' });
-                        const forceSuccess = await authManager.forceLogin();
-                        if (!forceSuccess) {
+                        // Force login not available in simplified API, try regular login again
+                        await authManager.logout();
+                        const loginSuccess = await authManager.login(true);
+                        if (!loginSuccess) {
                             await this.showError('Adobe authentication failed even with force login');
                             return undefined;
                         }
@@ -253,7 +259,7 @@ export class CreateProjectCommand extends BaseCommand {
 
             // Verify Adobe access is working
             progress.report({ message: 'Verifying Adobe access...' });
-            const hasAccess = await authManager.verifyAccess();
+            const hasAccess = await authManager.isAuthenticated();
             if (!hasAccess) {
                 await this.showError('Adobe authentication succeeded but cannot access Adobe Console');
                 return undefined;
@@ -278,12 +284,12 @@ export class CreateProjectCommand extends BaseCommand {
             } else if (orgs.length === 1) {
                 // Auto-select single org
                 selectedOrg = orgs[0];
-                await authManager.selectOrganization(selectedOrg.code);
+                await authManager.selectOrganization(selectedOrg.id);
                 this.logger.info(`Auto-selected organization: ${selectedOrg.name}`);
             } else {
                 // Let user choose org
                 const orgChoice = await this.showQuickPick(
-                    orgs.map(org => ({
+                    orgs.map((org: any) => ({
                         label: org.name,
                         description: `Code: ${org.code}`,
                         detail: `ID: ${org.id}`,
@@ -298,8 +304,8 @@ export class CreateProjectCommand extends BaseCommand {
                     return undefined;
                 }
                 
-                selectedOrg = orgChoice.value;
-                await authManager.selectOrganization(selectedOrg.code);
+                selectedOrg = (orgChoice as any).value;
+                await authManager.selectOrganization(selectedOrg.id);
             }
             
             progress.report({ message: `Getting projects for ${selectedOrg.name}...` });
@@ -320,20 +326,16 @@ export class CreateProjectCommand extends BaseCommand {
                     vscode.env.openExternal(vscode.Uri.parse('https://console.adobe.io'));
                     return undefined;
                 } else if (choices === 'Import console.json') {
-                    const filePath = await vscode.window.showInputBox({
-                        prompt: 'Enter path to console.json file',
-                        placeHolder: '/path/to/console.json'
-                    });
-                    if (filePath) {
-                        return authManager.importConsoleJson(filePath);
-                    }
+                    // Import from console.json is not supported in simplified API
+                    vscode.window.showWarningMessage('Import from console.json is not currently supported');
+                    return undefined;
                 }
                 return undefined;
             } else {
                 // Show searchable project list
                 const projectChoice = await this.showQuickPick(
                     [
-                        ...projects.map(proj => ({
+                        ...projects.map((proj: any) => ({
                             label: proj.title || proj.name,
                             description: proj.description || `Name: ${proj.name}`,
                             detail: `ID: ${proj.id}`,
@@ -357,13 +359,8 @@ export class CreateProjectCommand extends BaseCommand {
                 }
                 
                 if (projectChoice.value === 'import') {
-                    const filePath = await vscode.window.showInputBox({
-                        prompt: 'Enter path to console.json file',
-                        placeHolder: '/path/to/console.json'
-                    });
-                    if (filePath) {
-                        return authManager.importConsoleJson(filePath);
-                    }
+                    // Import from console.json is not supported in simplified API
+                    vscode.window.showWarningMessage('Import from console.json is not currently supported');
                     return undefined;
                 }
                 
@@ -386,7 +383,7 @@ export class CreateProjectCommand extends BaseCommand {
         });
     }
 
-    private async configureCommerce(template: ProjectTemplate): Promise<CommerceConfig | undefined> {
+    private async configureCommerce(_template: ProjectTemplate): Promise<CommerceConfig | undefined> {
         const commerceUrl = await this.showInputBox({
             prompt: 'Commerce Instance URL',
             placeHolder: 'https://my-store.adobe.com',
@@ -491,25 +488,9 @@ export class CreateProjectCommand extends BaseCommand {
                 created: new Date(),
                 lastModified: new Date(),
                 path: projectPath,
-                status: 'configuring',
+                status: 'created',
                 adobe: adobeConfig,
-                commerce: commerceConfig,
-                frontend: {
-                    path: path.join(projectPath, 'frontend'),
-                    version: 'latest',
-                    port: 3000,
-                    status: 'stopped'
-                },
-                mesh: {
-                    id: '',
-                    status: 'not-deployed',
-                    mode: 'deployed'
-                },
-                inspector: {
-                    enabled: true,
-                    version: '1.0.0',
-                    installed: false
-                }
+                commerce: commerceConfig
             };
 
             // Save project
@@ -521,10 +502,14 @@ export class CreateProjectCommand extends BaseCommand {
             const meshResult = await meshDeployer.deploy(project);
             
             if (meshResult.success && meshResult.endpoint) {
-                project.mesh!.endpoint = meshResult.endpoint;
-                project.mesh!.status = 'deployed';
-                project.mesh!.lastDeployed = new Date();
-                await this.stateManager.saveProject(project);
+                // Update mesh component instance with endpoint
+                const meshComponent = project.componentInstances?.['commerce-mesh'];
+                if (meshComponent) {
+                    meshComponent.endpoint = meshResult.endpoint;
+                    meshComponent.status = 'deployed';
+                    meshComponent.lastUpdated = new Date();
+                    await this.stateManager.saveProject(project);
+                }
             }
 
             // Install frontend

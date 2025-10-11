@@ -1,154 +1,237 @@
 import React, { useEffect } from 'react';
 import { 
     View, 
-    Heading, 
     Text, 
-    Well, 
-    Flex, 
+    Flex,
     Divider,
-    Content 
+    Well
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import Globe from '@spectrum-icons/workflow/Globe';
-import User from '@spectrum-icons/workflow/User';
-import Folder from '@spectrum-icons/workflow/Folder';
-import Link from '@spectrum-icons/workflow/Link';
-import Settings from '@spectrum-icons/workflow/Settings';
 import { WizardState } from '../../types';
+
+interface ComponentData {
+    id: string;
+    name: string;
+    description?: string;
+    configuration?: {
+        services?: Array<{
+            id: string;
+            name: string;
+            description: string;
+            required: boolean;
+        }>;
+    };
+}
+
+interface ComponentsData {
+    frontends?: ComponentData[];
+    backends?: ComponentData[];
+    dependencies?: ComponentData[];
+    externalSystems?: ComponentData[];
+    appBuilder?: ComponentData[];
+}
 
 interface ReviewStepProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
     setCanProceed: (canProceed: boolean) => void;
+    componentsData?: ComponentsData;
 }
 
-export function ReviewStep({ state, setCanProceed }: ReviewStepProps) {
+export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepProps) {
     useEffect(() => {
         // Can proceed if we have all required data
         const canProceed = !!(
             state.projectName &&
             state.adobeOrg?.id &&
             state.adobeProject?.id &&
-            state.commerceConfig?.url &&
-            state.commerceConfig?.adminUser &&
-            state.commerceConfig?.adminPassword
+            state.adobeWorkspace?.id
         );
         setCanProceed(canProceed);
     }, [state, setCanProceed]);
 
+    // Build component structure with architectural flow order (fully configuration-driven)
+    const getComponentSections = () => {
+        const sections: Array<{ type: string; label: string; name: string; children?: string[] }> = [];
+        
+        // 1. Frontend + associated dependencies
+        if (state.components?.frontend && componentsData?.frontends) {
+            const frontend = componentsData.frontends.find(f => f.id === state.components?.frontend);
+            if (frontend) {
+                const frontendChildren: string[] = [];
+                
+                // Find dependencies associated with frontend (like demo-inspector)
+                if (state.components?.dependencies && componentsData?.dependencies) {
+                    state.components.dependencies.forEach(depId => {
+                        const dep = componentsData.dependencies?.find(d => d.id === depId);
+                        // demo-inspector is frontend-associated
+                        if (dep && depId === 'demo-inspector') {
+                            frontendChildren.push(dep.name);
+                        }
+                    });
+                }
+                
+                sections.push({
+                    type: 'frontend',
+                    label: 'Frontend',
+                    name: frontend.name,
+                    children: frontendChildren.length > 0 ? frontendChildren : undefined
+                });
+            }
+        }
+        
+        // 2. API Mesh (middleware/gateway layer)
+        if (state.components?.dependencies && componentsData?.dependencies) {
+            state.components.dependencies.forEach(depId => {
+                const dep = componentsData.dependencies?.find(d => d.id === depId);
+                // API Mesh sits between frontend and backend
+                if (dep && depId === 'commerce-mesh') {
+                    sections.push({
+                        type: 'middleware',
+                        label: 'API Mesh',
+                        name: dep.name
+                    });
+                }
+            });
+        }
+        
+        // 3. Backend + associated services
+        if (state.components?.backend && componentsData?.backends) {
+            const backend = componentsData.backends.find(b => b.id === state.components?.backend);
+            if (backend) {
+                const backendChildren: string[] = [];
+                
+                // Extract services from backend configuration
+                if (backend.configuration?.services) {
+                    backend.configuration.services.forEach(service => {
+                        backendChildren.push(service.name);
+                    });
+                }
+                
+                sections.push({
+                    type: 'backend',
+                    label: 'Backend',
+                    name: backend.name,
+                    children: backendChildren.length > 0 ? backendChildren : undefined
+                });
+            }
+        }
+        
+        // 4. Other dependencies (not frontend-associated or API Mesh)
+        if (state.components?.dependencies && componentsData?.dependencies) {
+            state.components.dependencies.forEach(depId => {
+                const dep = componentsData.dependencies?.find(d => d.id === depId);
+                // Skip already-shown dependencies
+                if (dep && depId !== 'demo-inspector' && depId !== 'commerce-mesh') {
+                    sections.push({
+                        type: 'other',
+                        label: 'Additional',
+                        name: dep.name
+                    });
+                }
+            });
+        }
+        
+        // 5. External systems
+        if (state.components?.externalSystems && componentsData?.externalSystems) {
+            state.components.externalSystems.forEach(systemId => {
+                const system = componentsData.externalSystems?.find(s => s.id === systemId);
+                if (system) {
+                    sections.push({
+                        type: 'external',
+                        label: 'External System',
+                        name: system.name
+                    });
+                }
+            });
+        }
+        
+        // 6. App Builder apps
+        if (state.components?.appBuilderApps && componentsData?.appBuilder) {
+            state.components.appBuilderApps.forEach(appId => {
+                const app = componentsData.appBuilder?.find(a => a.id === appId);
+                if (app) {
+                    sections.push({
+                        type: 'app-builder',
+                        label: 'App Builder',
+                        name: app.name
+                    });
+                }
+            });
+        }
+        
+        return sections;
+    };
+
+    const componentSections = getComponentSections();
+
     return (
-        <View padding="size-400" maxWidth="size-6000">
-            <Heading level={2} marginBottom="size-300">
-                Review Configuration
-            </Heading>
+        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+            {/* Status Indicator with Icon */}
+            <Flex gap="size-150" alignItems="center" marginBottom="size-300">
+                <CheckmarkCircle size="M" UNSAFE_className="text-green-600" />
+                <Text UNSAFE_style={{ fontWeight: 600, fontSize: '16px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                    Ready to create
+                </Text>
+            </Flex>
             
-            <Text marginBottom="size-400">
-                Please review your configuration before creating the demo project. Click "Create Project" to proceed.
-            </Text>
-
-            {/* Project Details */}
-            <Well marginBottom="size-300">
-                <Flex direction="column" gap="size-200">
-                    <Flex gap="size-200" alignItems="center">
-                        <Globe />
-                        <Text><strong>Project Details</strong></Text>
-                    </Flex>
-                    <Divider size="S" />
-                    <View paddingStart="size-400">
-                        <Flex direction="column" gap="size-100">
-                            <Flex justifyContent="space-between">
-                                <Text color="gray-700">Name:</Text>
-                                <Text><strong>{state.projectName || 'Not set'}</strong></Text>
-                            </Flex>
-                            <Flex justifyContent="space-between">
-                                <Text color="gray-700">Template:</Text>
-                                <Text>{state.projectTemplate || 'commerce-paas'}</Text>
-                            </Flex>
-                        </Flex>
+            {/* Card Container with Background */}
+            <Well>
+                {/* Project Name - Hero Element */}
+                {state.projectName && (
+                    <View marginBottom="size-400">
+                        <Text UNSAFE_style={{ 
+                            fontSize: '26px', 
+                            fontWeight: 700,
+                            color: 'var(--spectrum-global-color-gray-900)',
+                            lineHeight: '1.3'
+                        }}>
+                            {state.projectName}
+                        </Text>
                     </View>
-                </Flex>
-            </Well>
-
-            {/* Adobe Configuration */}
-            <Well marginBottom="size-300">
-                <Flex direction="column" gap="size-200">
-                    <Flex gap="size-200" alignItems="center">
-                        <User />
-                        <Text><strong>Adobe Configuration</strong></Text>
-                    </Flex>
-                    <Divider size="S" />
-                    <View paddingStart="size-400">
-                        <Flex direction="column" gap="size-100">
-                            {state.adobeAuth?.email && (
-                                <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Authenticated as:</Text>
-                                    <Text>{state.adobeAuth.email}</Text>
+                )}
+                
+                {/* Component Sections */}
+                <Flex direction="column" gap="size-300">
+                    {componentSections.map((section, index) => (
+                        <View key={index}>
+                            {/* Component Name */}
+                            <Text UNSAFE_style={{ 
+                                fontSize: '15px', 
+                                fontWeight: 600,
+                                color: 'var(--spectrum-global-color-gray-800)',
+                                lineHeight: '1.5'
+                            }}>
+                                {section.name}
+                            </Text>
+                            
+                            {/* Child Components (if any) */}
+                            {section.children && section.children.length > 0 && (
+                                <Flex direction="column" gap="size-75" marginStart="size-300" marginTop="size-100">
+                                    {section.children.map((child, childIndex) => (
+                                        <Flex key={childIndex} gap="size-100" alignItems="center">
+                                            <Text UNSAFE_style={{ 
+                                                fontSize: '14px', 
+                                                lineHeight: '1',
+                                                color: 'var(--spectrum-global-color-gray-500)'
+                                            }}>
+                                                ›
+                                            </Text>
+                                            <Text UNSAFE_style={{ 
+                                                fontSize: '14px', 
+                                                color: 'var(--spectrum-global-color-gray-700)',
+                                                lineHeight: '1.5'
+                                            }}>
+                                                {child}
+                                            </Text>
+                                        </Flex>
+                                    ))}
                                 </Flex>
                             )}
-                            {state.adobeOrg && (
-                                <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Organization:</Text>
-                                    <Text><strong>{state.adobeOrg.name}</strong></Text>
-                                </Flex>
-                            )}
-                            {state.adobeProject && (
-                                <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Project:</Text>
-                                    <Text><strong>{state.adobeProject.title}</strong></Text>
-                                </Flex>
-                            )}
-                        </Flex>
-                    </View>
-                </Flex>
-            </Well>
-
-            {/* Commerce Configuration */}
-            {state.commerceConfig && (
-                <Well marginBottom="size-300">
-                    <Flex direction="column" gap="size-200">
-                        <Flex gap="size-200" alignItems="center">
-                            <Link />
-                            <Text><strong>Commerce Configuration</strong></Text>
-                        </Flex>
-                        <Divider size="S" />
-                        <View paddingStart="size-400">
-                            <Flex direction="column" gap="size-100">
-                                <Flex justifyContent="space-between">
-                                    <Text color="gray-700">URL:</Text>
-                                    <Text><strong>{state.commerceConfig.url}</strong></Text>
-                                </Flex>
-                                <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Environment:</Text>
-                                    <Text>{state.commerceConfig.environment || 'staging'}</Text>
-                                </Flex>
-                                <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Admin User:</Text>
-                                    <Text>{state.commerceConfig.adminUser}</Text>
-                                </Flex>
-                                <Flex justifyContent="space-between">
-                                    <Text color="gray-700">Sample Data:</Text>
-                                    <Text>{state.commerceConfig.sampleData ? 'Yes' : 'No'}</Text>
-                                </Flex>
-                            </Flex>
                         </View>
-                    </Flex>
-                </Well>
-            )}
-
-            {/* Ready to Create */}
-            <Well backgroundColor="green-100">
-                <Flex gap="size-200" alignItems="center">
-                    <CheckmarkCircle color="positive" />
-                    <Content>
-                        <Text>
-                            <strong>Ready to create your demo project!</strong>
-                        </Text>
-                        <Text elementType="small" color="gray-700">
-                            Click "Create Project" to start the setup process. This may take several minutes.
-                        </Text>
-                    </Content>
+                    ))}
                 </Flex>
             </Well>
-        </View>
+        </div>
     );
 }

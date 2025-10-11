@@ -4,6 +4,7 @@ import { App } from './app/App';
 import './styles/index.css';
 import './styles/vscode-theme.css';
 import './styles/wizard.css';
+import './styles/custom-spectrum.css';
 
 // Get root element
 const container = document.getElementById('root');

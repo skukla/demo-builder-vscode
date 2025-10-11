@@ -22,11 +22,20 @@ Create and manage Adobe Commerce demos with ease directly from Visual Studio Cod
 
 ## Installation
 
+### From VSIX Package
 1. Download the `.vsix` file from your team
 2. Open VSCode Command Palette (`Cmd+Shift+P` on Mac)
 3. Run: `Extensions: Install from VSIX...`
 4. Select the downloaded file
 5. Reload VSCode when prompted
+
+### From Source Code
+1. Clone the repository
+2. Checkout desired branch: `git checkout mvp/integration`
+3. Run setup: `npm run setup`
+4. Press `F5` to launch the extension in development mode
+
+See [build documentation](docs/build.md) for detailed build instructions.
 
 ## Quick Start
 
@@ -52,6 +61,7 @@ Create and manage Adobe Commerce demos with ease directly from Visual Studio Cod
 - `Demo Builder: Delete Project` - Remove the current project
 - `Demo Builder: View Status` - Display detailed project status
 - `Demo Builder: Check for Updates` - Manually check for extension updates
+- `Demo Builder: Diagnostics` - Run comprehensive system diagnostics
 
 ## Configuration
 
@@ -66,6 +76,34 @@ Configure Demo Builder through VSCode settings:
   "demoBuilder.logLevel": "info"
 }
 ```
+
+## Debugging and Troubleshooting
+
+### Running Diagnostics
+
+If you encounter issues, especially on different systems:
+
+1. Open Command Palette (`Cmd+Shift+P`)
+2. Run: `Demo Builder: Diagnostics`
+3. Check the output in:
+   - **Demo Builder: Logs** - User-friendly summary
+   - **Demo Builder: Debug** - Detailed diagnostic information
+
+### Output Channels
+
+The extension uses two output channels:
+- **Demo Builder: Logs** - General information, warnings, and errors
+- **Demo Builder: Debug** - Detailed debugging information for troubleshooting
+
+Access them via: View → Output → Select channel from dropdown
+
+### Common Issues
+
+- **Node.js not detected**: Run diagnostics to check PATH configuration
+- **Adobe CLI browser not opening**: Check Debug channel for command execution details
+- **Authentication issues**: Review token parsing in Debug channel
+
+For detailed troubleshooting, see the [Troubleshooting Guide](docs/troubleshooting.md).
 
 ## License Key
 
@@ -129,7 +167,12 @@ This extension is part of Adobe's Demo Builder toolkit. For development setup:
 3. Open in VSCode
 4. Press `F5` to launch Extension Development Host
 
-For detailed technical documentation, see `docs/technical.md`.
+### Documentation
+
+- **Technical Documentation**: See `docs/technical.md`
+- **Styling Guide**: See `docs/development/styling-guide.md` for CSS architecture
+- **Architecture**: See `docs/architecture/` for system design documents
+- **Changelog**: See `docs/CHANGELOG.md` for version history
 
 ## Security
 

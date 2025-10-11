@@ -1,0 +1,222 @@
+{
+  "$schema": "./prerequisites.schema.json",
+  "version": "1.0.0",
+  "prerequisites": [
+    {
+      "id": "homebrew",
+      "name": "Homebrew",
+      "description": "Package manager for macOS",
+      "optional": false,
+      "check": {
+        "command": "brew --version",
+        "parseVersion": "Homebrew ([0-9.]+)"
+      },
+      "install": {
+        "steps": [
+          {
+            "name": "Install Homebrew",
+            "message": "Installing Homebrew package manager",
+            "commands": [
+              "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+            ],
+            "estimatedDuration": 60000,
+            "progressStrategy": "milestones",
+            "milestones": [
+              { "pattern": "Downloading", "progress": 30, "message": "Downloading Homebrew..." },
+              { "pattern": "Installing", "progress": 60, "message": "Installing Homebrew..." },
+              { "pattern": "Installation successful", "progress": 100, "message": "Homebrew installed!" }
+            ]
+          }
+        ]
+      },
+      "uninstall": {
+        "commands": [
+          "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/uninstall.sh)\""
+        ]
+      }
+    },
+    {
+      "id": "fnm",
+      "name": "Fast Node Manager",
+      "description": "Node.js version manager for macOS",
+      "optional": false,
+      "check": {
+        "command": "fnm --version",
+        "parseVersion": "fnm ([0-9.]+)"
+      },
+      "install": {
+        "steps": [
+          {
+            "name": "Download and Install",
+            "message": "Installing Fast Node Manager via Homebrew",
+            "commands": ["brew install fnm"],
+            "estimatedDuration": 30000,
+            "progressStrategy": "milestones",
+            "milestones": [
+              { "pattern": "Updating Homebrew", "progress": 20, "message": "Updating Homebrew..." },
+              { "pattern": "==> Downloading", "progress": 40, "message": "Downloading fnm..." },
+              { "pattern": "==> Pouring", "progress": 70, "message": "Installing fnm..." },
+              { "pattern": "==> Installing", "progress": 70, "message": "Installing fnm..." },
+              { "pattern": "🍺", "progress": 100, "message": "Installation complete!" }
+            ]
+          },
+          {
+            "name": "Configure Shell",
+            "message": "Setting up shell environment",
+            "commands": ["configureFnmShell"],
+            "estimatedDuration": 2000,
+            "progressStrategy": "immediate"
+          }
+        ],
+        "requires": ["homebrew"]
+      },
+      "postInstall": {
+        "message": "fnm has been configured in your shell profile. Please restart your terminal or open a new terminal window for changes to take effect."
+      }
+    },
+    {
+      "id": "node",
+      "name": "Node.js",
+      "description": "JavaScript runtime",
+      "optional": false,
+      "depends": ["fnm"],
+      "check": {
+        "command": "node --version",
+        "parseVersion": "v([0-9.]+)"
+      },
+      "install": {
+        "dynamic": true,
+        "steps": [
+          {
+            "name": "Install Node.js",
+            "message": "Installing Node.js",
+            "commandTemplate": "fnm install {version}",
+            "estimatedDuration": 30000,
+            "progressStrategy": "synthetic"
+          },
+          {
+            "name": "Set as default",
+            "message": "Setting as default Node.js version",
+            "commandTemplate": "fnm default {version}",
+            "estimatedDuration": 2000,
+            "progressStrategy": "immediate"
+          }
+        ]
+      },
+      "multiVersion": true,
+      "versionCheck": {
+        "command": "fnm list",
+        "parseInstalledVersions": "\\* ([0-9.]+)"
+      }
+    },
+    {
+      "id": "aio-cli",
+      "name": "Adobe I/O CLI",
+      "description": "Command-line interface for Adobe services (required for App Builder and API Mesh)",
+      "optional": false,
+      "depends": ["node"],
+      "perNodeVersion": true,
+      "check": {
+        "command": "aio --version",
+        "parseVersion": "@adobe/aio-cli/([0-9.]+)"
+      },
+      "install": {
+        "steps": [
+          {
+            "name": "Install Adobe I/O CLI",
+            "message": "Installing Adobe I/O CLI globally",
+            "commands": ["npm install -g @adobe/aio-cli --verbose"],
+            "estimatedDuration": 60000,
+            "progressStrategy": "milestones",
+            "milestones": [
+              { "pattern": "npm http", "progress": 10, "message": "Starting package download..." },
+              { "pattern": "npm warn deprecated", "progress": 40, "message": "Resolving dependencies..." },
+              { "pattern": "npm info run", "progress": 70, "message": "Building native modules..." },
+              { "pattern": "added", "progress": 100, "message": "Installation complete!" }
+            ]
+          }
+        ]
+      },
+      "uninstall": {
+        "commands": ["npm uninstall -g @adobe/aio-cli"]
+      },
+      "plugins": [
+        {
+          "id": "api-mesh",
+          "name": "API Mesh Plugin",
+          "description": "Adobe API Mesh management plugin",
+          "check": {
+            "command": "aio plugins",
+            "contains": "@adobe/aio-cli-plugin-api-mesh"
+          },
+          "install": {
+            "steps": [
+              {
+                "name": "Install API Mesh Plugin",
+                "message": "Installing API Mesh plugin",
+                "commands": ["aio plugins:install @adobe/aio-cli-plugin-api-mesh"],
+                "estimatedDuration": 20000,
+                "progressStrategy": "milestones",
+                "milestones": [
+                  { "pattern": "Installing", "progress": 25, "message": "Starting plugin installation..." },
+                  { "pattern": "Fetching", "progress": 50, "message": "Fetching plugin files..." },
+                  { "pattern": "extract", "progress": 75, "message": "Extracting plugin..." },
+                  { "pattern": "@adobe/aio-cli-plugin-api-mesh", "progress": 100, "message": "API Mesh plugin installed!" }
+                ]
+              }
+            ]
+          },
+          "requiredFor": ["commerce-mesh"]
+        }
+      ]
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "description": "Version control system",
+      "optional": false,
+      "check": {
+        "command": "git --version",
+        "parseVersion": "git version ([0-9.]+)"
+      },
+      "install": {
+        "steps": [
+          {
+            "name": "Install Git",
+            "message": "Installing Git via Homebrew",
+            "commands": ["brew install git"],
+            "estimatedDuration": 20000,
+            "progressStrategy": "milestones",
+            "milestones": [
+              { "pattern": "==> Downloading", "progress": 30, "message": "Downloading Git..." },
+              { "pattern": "==> Pouring", "progress": 70, "message": "Installing Git..." },
+              { "pattern": "==> Installing", "progress": 70, "message": "Installing Git..." },
+              { "pattern": "🍺", "progress": 100, "message": "Git installed!" }
+            ]
+          }
+        ],
+        "requires": ["homebrew"]
+      }
+    }
+  ],
+  "componentRequirements": {
+    "adobe-commerce-paas": {
+      "prerequisites": ["aio-cli"],
+      "plugins": ["api-mesh"]
+    },
+    "adobe-commerce-saas": {
+      "prerequisites": ["aio-cli"],
+      "plugins": ["api-mesh"]
+    },
+    "commerce-mesh": {
+      "prerequisites": ["aio-cli"],
+      "plugins": ["api-mesh"]
+    },
+    "citisignal-nextjs": {
+      "prerequisites": ["node", "git"]
+    },
+    "integration-service": {
+      "prerequisites": ["aio-cli"]
+    }
+  }
+}

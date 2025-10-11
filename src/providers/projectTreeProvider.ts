@@ -2,8 +2,11 @@ import * as vscode from 'vscode';
 import { Project } from '../types';
 import { StateManager } from '../utils/stateManager';
 
-export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeItem> {
-    private _onDidChangeTreeData = new vscode.EventEmitter<ProjectTreeItem | undefined | null | void>();
+/**
+ * Tree provider for demo controls panel
+ */
+export class ProjectTreeProvider implements vscode.TreeDataProvider<ControlAction> {
+    private _onDidChangeTreeData = new vscode.EventEmitter<ControlAction | undefined | null | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
     
     private stateManager: StateManager;
@@ -11,7 +14,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
     constructor(stateManager: StateManager) {
         this.stateManager = stateManager;
         
-        // Refresh tree when state changes
+        // Refresh tree when project state changes
         stateManager.onProjectChanged(() => {
             this.refresh();
         });
@@ -21,216 +24,147 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ProjectTreeI
         this._onDidChangeTreeData.fire();
     }
 
-    getTreeItem(element: ProjectTreeItem): vscode.TreeItem {
+    getTreeItem(element: ControlAction): vscode.TreeItem {
         return element;
     }
 
-    async getChildren(element?: ProjectTreeItem): Promise<ProjectTreeItem[]> {
+    async getChildren(): Promise<ControlAction[]> {
         const project = await this.stateManager.getCurrentProject();
         
         if (!project) {
-            return [new ProjectTreeItem(
-                'No Project',
-                'Click to create a project',
-                vscode.TreeItemCollapsibleState.None,
-                'empty',
-                {
-                    command: 'demoBuilder.createProject',
-                    title: 'Create Project',
-                    arguments: []
-                }
-            )];
+            // No project - return empty (Components view handles welcome message)
+            return [];
         }
 
-        if (!element) {
-            // Root level items
+        return this.getControlActions(project);
+    }
+    
+    /**
+     * Get list of management actions
+     */
+    private getControlActions(project: Project): ControlAction[] {
+        try {
+            const actions: ControlAction[] = [];
+            
+            // Deploy Mesh (if mesh component exists)
+            try {
+                if (this.hasMeshComponent(project)) {
+                    actions.push(
+                        new ControlAction(
+                            'Deploy Mesh',
+                            'Deploy API Mesh to Adobe I/O',
+                            'cloud-upload',
+                            'demoBuilder.deployMesh'
+                        )
+                    );
+                }
+            } catch (meshError) {
+                console.error('[TreeView] Error checking mesh component:', meshError);
+            }
+            
+            // Configuration
+            actions.push(
+                new ControlAction(
+                    'Configure',
+                    'Edit environment variables',
+                    'settings-gear',
+                    'demoBuilder.configure'
+                )
+            );
+            
+            // Delete project
+            actions.push(
+                new ControlAction(
+                    'Delete Project',
+                    'Delete this project',
+                    'trash',
+                    'demoBuilder.deleteProject'
+                )
+            );
+            
+            return actions;
+        } catch (error) {
+            console.error('[TreeView] Error building control actions:', error);
             return [
-                new ProjectTreeItem(
-                    project.name,
-                    `Status: ${project.status}`,
-                    vscode.TreeItemCollapsibleState.Expanded,
-                    'project'
-                ),
-                new ProjectTreeItem(
-                    'Quick Actions',
-                    '',
-                    vscode.TreeItemCollapsibleState.Expanded,
-                    'actions'
+                new ControlAction(
+                    'Error',
+                    'Try reloading VSCode',
+                    'error',
+                    undefined
                 )
             ];
         }
-
-        if (element.contextValue === 'project') {
-            // Project details
-            const items: ProjectTreeItem[] = [];
+    }
+    
+    /**
+     * Check if project has a mesh component
+     */
+    private hasMeshComponent(project: Project): boolean {
+        try {
+            if (!project || !project.componentInstances) {
+                return false;
+            }
             
-            // Frontend
-            if (project.frontend) {
-                items.push(new ProjectTreeItem(
-                    'Frontend',
-                    `${project.frontend.status} (Port: ${project.frontend.port})`,
-                    vscode.TreeItemCollapsibleState.None,
-                    'frontend',
-                    project.frontend.status === 'running' ? {
-                        command: 'demoBuilder.stopDemo',
-                        title: 'Stop Demo',
-                        arguments: []
-                    } : {
-                        command: 'demoBuilder.startDemo',
-                        title: 'Start Demo',
-                        arguments: []
-                    }
-                ));
-            }
-
-            // Mesh
-            if (project.mesh) {
-                items.push(new ProjectTreeItem(
-                    'API Mesh',
-                    project.mesh.status,
-                    vscode.TreeItemCollapsibleState.None,
-                    'mesh'
-                ));
-            }
-
-            // Commerce
-            if (project.commerce) {
-                items.push(new ProjectTreeItem(
-                    'Commerce',
-                    project.commerce.type,
-                    vscode.TreeItemCollapsibleState.None,
-                    'commerce'
-                ));
-            }
-
-            // Inspector
-            if (project.inspector) {
-                items.push(new ProjectTreeItem(
-                    'Demo Inspector',
-                    project.inspector.enabled ? 'Enabled' : 'Disabled',
-                    vscode.TreeItemCollapsibleState.None,
-                    'inspector'
-                ));
-            }
-
-            return items;
+            return Object.values(project.componentInstances).some(c => c && c.subType === 'mesh');
+        } catch (error) {
+            console.error('[TreeView] Error checking mesh component:', error);
+            return false;
         }
-
-        if (element.contextValue === 'actions') {
-            // Quick action items
-            const actions: ProjectTreeItem[] = [];
+    }
+    
+    /**
+     * Get mesh component from project
+     */
+    private getMeshComponent(project: Project) {
+        try {
+            if (!project || !project.componentInstances) {
+                return null;
+            }
             
-            if (project.frontend?.status === 'running') {
-                actions.push(new ProjectTreeItem(
-                    'Stop Demo',
-                    '',
-                    vscode.TreeItemCollapsibleState.None,
-                    'action',
-                    {
-                        command: 'demoBuilder.stopDemo',
-                        title: 'Stop Demo',
-                        arguments: []
-                    }
-                ));
-                
-                actions.push(new ProjectTreeItem(
-                    'Open in Browser',
-                    '',
-                    vscode.TreeItemCollapsibleState.None,
-                    'action',
-                    {
-                        command: 'vscode.open',
-                        title: 'Open',
-                        arguments: [vscode.Uri.parse(`http://localhost:${project.frontend.port}`)]
-                    }
-                ));
-            } else {
-                actions.push(new ProjectTreeItem(
-                    'Start Demo',
-                    '',
-                    vscode.TreeItemCollapsibleState.None,
-                    'action',
-                    {
-                        command: 'demoBuilder.startDemo',
-                        title: 'Start Demo',
-                        arguments: []
-                    }
-                ));
+            // Find the mesh component by ID (commerce-mesh)
+            const meshComponent = project.componentInstances['commerce-mesh'];
+            if (meshComponent) {
+                return meshComponent;
             }
-
-            actions.push(new ProjectTreeItem(
-                'Configure',
-                '',
-                vscode.TreeItemCollapsibleState.None,
-                'action',
-                {
-                    command: 'demoBuilder.configure',
-                    title: 'Configure',
-                    arguments: []
-                }
-            ));
-
-            actions.push(new ProjectTreeItem(
-                'View Status',
-                '',
-                vscode.TreeItemCollapsibleState.None,
-                'action',
-                {
-                    command: 'demoBuilder.viewStatus',
-                    title: 'View Status',
-                    arguments: []
-                }
-            ));
-
-            return actions;
+            
+            // Fallback: search by subType or any component with 'mesh' in the ID
+            return Object.entries(project.componentInstances).find(([id, c]) => 
+                c && (c.subType === 'mesh' || id.includes('mesh'))
+            )?.[1] || null;
+        } catch (error) {
+            console.error('[TreeView] Error getting mesh component:', error);
+            return null;
         }
-
-        return [];
     }
 }
 
-class ProjectTreeItem extends vscode.TreeItem {
+/**
+ * Tree item representing a control action
+ */
+class ControlAction extends vscode.TreeItem {
     constructor(
         public readonly label: string,
         public readonly description: string,
-        public readonly collapsibleState: vscode.TreeItemCollapsibleState,
-        public readonly contextValue: string,
-        public readonly command?: vscode.Command
+        iconId?: string,
+        commandId?: string,
+        commandArgs?: any[]
     ) {
-        super(label, collapsibleState);
+        super(label, vscode.TreeItemCollapsibleState.None);
+        
         this.description = description;
-        this.contextValue = contextValue;
         
-        // Set icons based on context
-        switch (contextValue) {
-            case 'project':
-                this.iconPath = new vscode.ThemeIcon('project');
-                break;
-            case 'frontend':
-                this.iconPath = new vscode.ThemeIcon('window');
-                break;
-            case 'mesh':
-                this.iconPath = new vscode.ThemeIcon('cloud');
-                break;
-            case 'commerce':
-                this.iconPath = new vscode.ThemeIcon('database');
-                break;
-            case 'inspector':
-                this.iconPath = new vscode.ThemeIcon('eye');
-                break;
-            case 'actions':
-                this.iconPath = new vscode.ThemeIcon('zap');
-                break;
-            case 'action':
-                this.iconPath = new vscode.ThemeIcon('play');
-                break;
-            case 'empty':
-                this.iconPath = new vscode.ThemeIcon('add');
-                break;
+        if (iconId) {
+            this.iconPath = new vscode.ThemeIcon(iconId);
         }
         
-        if (command) {
-            this.command = command;
+        if (commandId) {
+            this.command = {
+                command: commandId,
+                title: label,
+                arguments: commandArgs || []
+            };
         }
+        
+        this.contextValue = 'action';
     }
 }

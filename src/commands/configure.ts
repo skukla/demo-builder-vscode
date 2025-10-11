@@ -11,6 +11,9 @@ export class ConfigureCommand extends BaseCommand {
                 return;
             }
 
+            const inspectorComponent = project.componentInstances?.['demo-inspector'];
+            const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
+            
             const options = [
                 {
                     label: '$(edit) Edit Environment Variables',
@@ -19,7 +22,7 @@ export class ConfigureCommand extends BaseCommand {
                 },
                 {
                     label: '$(eye) Toggle Demo Inspector',
-                    description: `Currently: ${project.inspector?.enabled ? 'Enabled' : 'Disabled'}`,
+                    description: `Currently: ${inspectorComponent ? 'Enabled' : 'Disabled'}`,
                     value: 'inspector'
                 },
                 {
@@ -29,7 +32,7 @@ export class ConfigureCommand extends BaseCommand {
                 },
                 {
                     label: '$(server) Change Frontend Port',
-                    description: `Current: ${project.frontend?.port || 3000}`,
+                    description: `Current: ${frontendComponent?.port || 3000}`,
                     value: 'port'
                 },
                 {
@@ -48,21 +51,21 @@ export class ConfigureCommand extends BaseCommand {
             }
 
             switch (selection.value) {
-                case 'env':
-                    await this.editEnvironmentFile(project);
-                    break;
-                case 'inspector':
-                    await this.toggleInspector(project);
-                    break;
-                case 'mesh':
-                    await this.updateMesh(project);
-                    break;
-                case 'port':
-                    await this.changePort(project);
-                    break;
-                case 'advanced':
-                    await this.openAdvancedConfig(project);
-                    break;
+            case 'env':
+                await this.editEnvironmentFile(project);
+                break;
+            case 'inspector':
+                await this.toggleInspector(project);
+                break;
+            case 'mesh':
+                await this.updateMesh(project);
+                break;
+            case 'port':
+                await this.changePort(project);
+                break;
+            case 'advanced':
+                await this.openAdvancedConfig(project);
+                break;
             }
             
         } catch (error) {
@@ -97,7 +100,7 @@ export class ConfigureCommand extends BaseCommand {
         }
     }
 
-    private async updateMesh(project: any): Promise<void> {
+    private async updateMesh(_project: any): Promise<void> {
         const confirm = await this.confirm(
             'Redeploy API Mesh?',
             'This will update the mesh configuration and redeploy it to Adobe.'

@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "API Mesh Configuration Template",
+  "description": "Initial API Mesh configuration template for Adobe Commerce integration. Based on Adobe API Mesh documentation: https://developer.adobe.com/graphql-mesh-gateway/gateway/create-mesh/",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "meshConfig": {
+      "type": "object",
+      "description": "API Mesh configuration",
+      "properties": {
+        "sources": {
+          "type": "array",
+          "description": "Array of GraphQL sources for the mesh. Must include at least one source.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the source (e.g., 'Commerce', 'CatalogService', 'LiveSearch')"
+              },
+              "handler": {
+                "type": "object",
+                "description": "Handler configuration for the source",
+                "properties": {
+                  "graphql": {
+                    "type": "object",
+                    "properties": {
+                      "endpoint": {
+                        "type": "string",
+                        "description": "GraphQL endpoint URL (e.g., 'https://your-store.com/graphql/')"
+                      },
+                      "operationHeaders": {
+                        "type": "object",
+                        "description": "Headers sent with runtime GraphQL operations",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      },
+                      "schemaHeaders": {
+                        "type": "object",
+                        "description": "Headers sent during schema introspection",
+                        "additionalProperties": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": ["endpoint"]
+                  }
+                },
+                "required": ["graphql"]
+              }
+            },
+            "required": ["name", "handler"]
+          },
+          "minItems": 1
+        }
+      },
+      "required": ["sources"]
+    }
+  },
+  "required": ["meshConfig"]
+}

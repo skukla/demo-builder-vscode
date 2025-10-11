@@ -1,79 +1,66 @@
-import * as vscode from 'vscode';
+import { getLogger, DebugLogger } from './debugLogger';
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
+/**
+ * Logger class that wraps the DebugLogger for backward compatibility
+ * All logging goes through the unified DebugLogger system
+ */
 export class Logger {
-    private outputChannel: vscode.OutputChannel | undefined;
     private name: string;
-    private logLevel: LogLevel;
+    private debugLogger: DebugLogger | undefined;
 
     constructor(name: string) {
         this.name = name;
-        this.logLevel = vscode.workspace
-            .getConfiguration('demoBuilder')
-            .get<LogLevel>('logLevel', 'info');
-    }
-
-    public setOutputChannel(channel: vscode.OutputChannel): void {
-        this.outputChannel = channel;
-    }
-
-    private shouldLog(level: LogLevel): boolean {
-        const levels: LogLevel[] = ['error', 'warn', 'info', 'debug'];
-        const currentIndex = levels.indexOf(this.logLevel);
-        const messageIndex = levels.indexOf(level);
-        return messageIndex <= currentIndex;
-    }
-
-    private formatMessage(level: LogLevel, message: string): string {
-        const timestamp = new Date().toISOString();
-        return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
-    }
-
-    private log(level: LogLevel, message: string, ...args: any[]): void {
-        if (!this.shouldLog(level)) {
-            return;
+        // Use the singleton DebugLogger instance
+        try {
+            this.debugLogger = getLogger();
+        } catch {
+            // DebugLogger might not be initialized yet during some tests
+            // In that case, methods will be no-ops
         }
+    }
 
-        const formattedMessage = this.formatMessage(level, message);
-        
-        // Log to console
-        console.log(formattedMessage, ...args);
-        
-        // Log to output channel if available
-        if (this.outputChannel) {
-            this.outputChannel.appendLine(formattedMessage);
-            if (args.length > 0) {
-                args.forEach(arg => {
-                    if (typeof arg === 'object') {
-                        this.outputChannel!.appendLine(JSON.stringify(arg, null, 2));
-                    } else {
-                        this.outputChannel!.appendLine(String(arg));
-                    }
-                });
-            }
-        }
+    public setOutputChannel(_channel: any): void {
+        // No-op for backward compatibility
+        // DebugLogger manages its own channels
     }
 
     public error(message: string, error?: Error): void {
-        this.log('error', message);
-        if (error) {
-            this.log('error', `Error details: ${error.message}`);
-            if (error.stack && this.shouldLog('debug')) {
-                this.log('debug', `Stack trace: ${error.stack}`);
-            }
-        }
+        if (!this.debugLogger) return;
+        
+        // Log to main channel
+        this.debugLogger.error(message, error);
     }
 
     public warn(message: string, ...args: any[]): void {
-        this.log('warn', message, ...args);
+        if (!this.debugLogger) return;
+        
+        // Log to main channel
+        this.debugLogger.warn(message);
+        
+        // Log additional args to debug channel if present
+        if (args.length > 0) {
+            this.debugLogger.debug(`Warning details for: ${message}`, args);
+        }
     }
 
     public info(message: string, ...args: any[]): void {
-        this.log('info', message, ...args);
+        if (!this.debugLogger) return;
+        
+        // Log to main channel
+        this.debugLogger.info(message);
+        
+        // Log additional args to debug channel if present
+        if (args.length > 0) {
+            this.debugLogger.debug(`Info details for: ${message}`, args);
+        }
     }
 
     public debug(message: string, ...args: any[]): void {
-        this.log('debug', message, ...args);
+        if (!this.debugLogger) return;
+        
+        // Debug messages go to debug channel
+        this.debugLogger.debug(message, args.length > 0 ? args : undefined);
     }
 }

@@ -27,53 +27,34 @@
   },
   "activationEvents": [
     "onStartupFinished",
-    "onCommand:demoBuilder.createProject",
-    "onCommand:demoBuilder.startDemo",
-    "onCommand:demoBuilder.stopDemo",
-    "onCommand:demoBuilder.deleteProject",
     "workspaceContains:.demo-builder"
   ],
   "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "Demo Builder requires workspace trust to execute external commands (git, npm, Adobe CLI). In untrusted workspaces, project creation and management features are disabled for security.",
+      "restrictedConfigurations": [
+        "demoBuilder.defaultPort",
+        "demoBuilder.autoUpdate"
+      ]
+    }
+  },
   "contributes": {
     "commands": [
       {
         "command": "demoBuilder.createProject",
-        "title": "Demo Builder: Create Project",
+        "title": "Create Project",
         "category": "Demo Builder"
       },
       {
-        "command": "demoBuilder.startDemo",
-        "title": "Demo Builder: Start",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.stopDemo",
-        "title": "Demo Builder: Stop",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.deleteProject",
-        "title": "Demo Builder: Delete Project",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.viewStatus",
-        "title": "Demo Builder: View Status",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.configure",
-        "title": "Demo Builder: Configure",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.checkUpdates",
-        "title": "Demo Builder: Check for Updates",
+        "command": "demoBuilder.checkForUpdates",
+        "title": "Check for Updates",
         "category": "Demo Builder"
       },
       {
         "command": "demoBuilder.resetAll",
-        "title": "Demo Builder: Reset All (Dev Only)",
+        "title": "Reset All (Dev Only)",
         "category": "Demo Builder"
       }
     ],
@@ -88,7 +69,7 @@
         "demoBuilder.autoUpdate": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically check for extension updates"
+          "description": "Automatically check for updates on startup"
         },
         "demoBuilder.updateChannel": {
           "type": "string",
@@ -97,7 +78,7 @@
             "beta"
           ],
           "default": "stable",
-          "description": "Update channel for extension updates"
+          "description": "Update channel: stable (production releases) or beta (testing)"
         },
         "demoBuilder.showStatusBar": {
           "type": "boolean",
@@ -122,25 +103,44 @@
         {
           "id": "demoBuilder",
           "title": "Demo Builder",
-          "icon": "media/sidebar-icon.svg"
+          "icon": "media/adobe-icon-dark.svg"
         }
       ]
     },
     "views": {
       "demoBuilder": [
         {
-          "id": "demoBuilder.projectView",
-          "name": "Current Project",
-          "icon": "$(project)",
-          "contextualTitle": "Demo Project"
+          "id": "demoBuilder.components",
+          "name": "Components"
         }
       ]
-    }
+    },
+    "commands": [
+      {
+        "command": "demoBuilder.showWelcome",
+        "title": "Show Welcome Screen",
+        "category": "Demo Builder",
+        "icon": "$(home)"
+      },
+      {
+        "command": "demoBuilder.showProjectDashboard",
+        "title": "Open Project Dashboard",
+        "category": "Demo Builder",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "demoBuilder.switchProject",
+        "title": "Switch Project",
+        "category": "Demo Builder",
+        "icon": "$(folder-opened)"
+      }
+    ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile && npm run compile:webview",
-    "compile": "tsc -p ./",
+    "compile": "npm run compile:typescript && npm run compile:webview && npm run copy:media",
+    "compile:typescript": "tsc -p ./",
     "compile:webview": "webpack --mode production",
+    "copy:media": "mkdir -p dist/media && cp -r media/* dist/media/",
     "watch": "tsc -watch -p ./",
     "watch:webview": "webpack --mode development --watch",
     "watch:all": "npm run watch & npm run watch:webview",
@@ -150,35 +150,45 @@
     "package": "vsce package",
     "publish": "vsce publish",
     "encrypt-keys": "node scripts/encrypt-keys.js",
-    "manage-keys": "node scripts/manage-keys.js"
+    "manage-keys": "node scripts/manage-keys.js",
+    "setup": "npm install && npm run compile",
+    "postinstall": "npm run compile",
+    "mesh:delete": "aio api-mesh delete --autoConfirmAction",
+    "mesh:status": "aio api-mesh get --active",
+    "hooks": "node scripts/hooks.js",
+    "docs:check": "node scripts/hooks.js coverage"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
-    "@types/node": "^20.x",
-    "@types/react": "^18.3.24",
-    "@types/react-dom": "^18.3.7",
+    "@types/node": "^24.3.1",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
     "@types/semver": "^7.5.8",
     "@types/vscode": "^1.74.0",
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.6.0",
-    "css-loader": "^6.11.0",
+    "css-loader": "^7.1.2",
     "eslint": "^9.15.0",
     "html-webpack-plugin": "^5.6.4",
     "process": "^0.11.10",
-    "style-loader": "^3.3.4",
+    "style-loader": "^4.0.0",
     "ts-loader": "^9.5.4",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.16.0",
     "webpack": "^5.101.3",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^6.0.1"
   },
   "dependencies": {
+    "@adobe/aio-lib-console": "^5.4.2",
+    "@adobe/aio-lib-ims": "^7.0.2",
     "@adobe/react-spectrum": "^3.44.0",
+    "@types/uuid": "^10.0.0",
     "axios": "^1.6.0",
     "crypto-js": "^4.2.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "semver": "^7.5.4",
+    "uuid": "^13.0.0",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
     "yaml": "^2.3.4"

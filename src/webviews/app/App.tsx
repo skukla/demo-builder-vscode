@@ -3,10 +3,13 @@ import { Provider, defaultTheme, View } from '@adobe/react-spectrum';
 import { WizardContainer } from '../components/wizard/WizardContainer';
 import { vscode } from './vscodeApi';
 import { ThemeMode } from '../types';
+import { cn } from '../utils/classNames';
 
 export function App() {
     const [theme, setTheme] = useState<ThemeMode>('light');
     const [isReady, setIsReady] = useState(false);
+    const [componentDefaults, setComponentDefaults] = useState<any>(null);
+    const [wizardSteps, setWizardSteps] = useState<any>(null);
 
     useEffect(() => {
         console.log('App mounted, setting up message listeners');
@@ -22,6 +25,13 @@ export function App() {
                 // Update body class based on theme
                 document.body.classList.remove('vscode-light', 'vscode-dark');
                 document.body.classList.add(data.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
+            }
+            if (data.componentDefaults) {
+                setComponentDefaults(data.componentDefaults);
+            }
+            if (data.wizardSteps) {
+                setWizardSteps(data.wizardSteps);
+                console.log('Loaded wizard steps from configuration:', data.wizardSteps);
             }
             setIsReady(true);
         });
@@ -58,14 +68,12 @@ export function App() {
             theme={defaultTheme} 
             colorScheme={theme}
             isQuiet // Enable quiet mode globally for minimal appearance
-            UNSAFE_style={{ 
-                width: '100%', 
-                height: '100vh',
-                margin: 0,
-                padding: 0
-            }}
+            UNSAFE_className="app-container"
         >
-            <WizardContainer />
+            <WizardContainer 
+                componentDefaults={componentDefaults} 
+                wizardSteps={wizardSteps}
+            />
         </Provider>
     );
 }

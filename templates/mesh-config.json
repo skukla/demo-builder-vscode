@@ -1,0 +1,14 @@
+{
+  "meshConfig": {
+    "sources": [
+      {
+        "name": "PlaceholderAPI",
+        "handler": {
+          "graphql": {
+            "endpoint": "https://countries.trevorblades.com/"
+          }
+        }
+      }
+    ]
+  }
+}

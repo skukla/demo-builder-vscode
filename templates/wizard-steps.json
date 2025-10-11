@@ -1,0 +1,54 @@
+{
+  "steps": [
+    {
+      "id": "welcome",
+      "name": "Demo Setup",
+      "enabled": true
+    },
+    {
+      "id": "component-selection",
+      "name": "Component Selection",
+      "enabled": true
+    },
+    {
+      "id": "prerequisites",
+      "name": "Prerequisites",
+      "enabled": true
+    },
+    {
+      "id": "adobe-auth",
+      "name": "Adobe Authentication",
+      "enabled": true
+    },
+    {
+      "id": "adobe-project",
+      "name": "I/O Project Selection",
+      "enabled": true
+    },
+    {
+      "id": "adobe-workspace",
+      "name": "Workspace Selection",
+      "enabled": true
+    },
+    {
+      "id": "api-mesh",
+      "name": "API Mesh Setup",
+      "enabled": true
+    },
+    {
+      "id": "settings",
+      "name": "Settings Collection",
+      "enabled": true
+    },
+    {
+      "id": "review",
+      "name": "Final Review",
+      "enabled": true
+    },
+    {
+      "id": "project-creation",
+      "name": "Project Creation",
+      "enabled": true
+    }
+  ]
+}
