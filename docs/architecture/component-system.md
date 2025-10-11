@@ -280,10 +280,110 @@ The component system generates a configuration object that includes:
 4. **Clear Dependencies**: Explicit required/optional relationships
 5. **Type Safety**: Full TypeScript support
 
+## Component Tree Provider
+
+The Component Tree Provider offers a VS Code tree view for browsing component source files within the Demo Builder sidebar.
+
+### Features
+
+- **File Browser**: Navigate component source code directly from VS Code
+- **Smart Filtering**: Hides `.env` files (managed via Configure UI)
+- **Quick Access**: Click to open component files in editor
+- **Status Indicators**: Visual indicators for component state
+
+### Implementation
+
+Located in `src/providers/componentTreeProvider.ts`:
+
+```typescript
+class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystemItem> {
+  // Provides tree structure for all project components
+  // Filters out .env files and build artifacts
+  // Updates automatically when components change
+}
+```
+
+### Usage
+
+Available in the Demo Builder sidebar view:
+- **Demo Builder: Components** tree view
+- Shows all installed components
+- Expandable file tree for each component
+- Click to open files in editor
+
+## Component Version Tracking
+
+The extension tracks component versions to support the auto-update system.
+
+### Version Storage
+
+Stored in project manifest (`.demo-builder.json`):
+
+```json
+{
+  "componentVersions": {
+    "citisignal-nextjs": {
+      "version": "1.0.0",
+      "lastUpdated": "2025-01-15T10:30:00Z"
+    },
+    "commerce-mesh": {
+      "version": "main",
+      "lastUpdated": "2025-01-15T10:35:00Z"
+    }
+  }
+}
+```
+
+### Version Lifecycle
+
+1. **Initial Creation**: Set to `"unknown"` when project is created
+2. **First Update**: Set to actual version after first component update
+3. **Subsequent Updates**: Updated after each successful component update
+
+### Update Detection
+
+```typescript
+// UpdateManager checks for newer versions
+const current = project.componentVersions[componentId]?.version || 'unknown';
+const latest = await fetchLatestRelease(repo, channel);
+
+if (isNewerVersion(latest, current)) {
+  // Show update notification
+}
+```
+
+### Integration Points
+
+- **UpdateManager**: Checks versions against GitHub Releases
+- **ComponentUpdater**: Updates version after successful component update
+- **Project Creation**: Initializes version tracking structure
+
+## Auto-Update System Integration
+
+Components integrate with the auto-update system introduced in v1.6.0.
+
+### Update Flow
+
+1. **Check for Updates**: UpdateManager queries GitHub Releases
+2. **User Confirmation**: Show notification with available updates
+3. **Component Update**: ComponentUpdater performs safe update with snapshot/rollback
+4. **Version Tracking**: Update componentVersions in project manifest
+5. **Restart Notification**: Prompt user to restart demo if running
+
+### Safety Features
+
+- **Snapshot Before Update**: Full component directory backed up
+- **Automatic Rollback**: Restore snapshot on ANY failure
+- **Smart .env Merging**: Preserve user config, add new variables
+- **Verification**: Check package.json validity after extraction
+- **Concurrent Lock**: Prevent multiple updates to same component
+
+See `src/utils/componentUpdater.ts` for implementation details.
+
 ## Future Enhancements
 
-- Dynamic component discovery
+- Dynamic component discovery from custom registries
 - Version compatibility matrix
 - Component marketplace integration
 - Custom component templates
-- Automated dependency updates
+- ~~Automated dependency updates~~ ✅ **Implemented in v1.6.0**
