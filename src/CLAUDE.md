@@ -70,11 +70,16 @@ export async function activate(context: ExtensionContext) {
 ## Module Responsibilities
 
 ### Commands (`commands/`)
-- **createProject**: Main wizard command
-- **createProjectWebview**: Webview-based wizard
-- **showLogs**: Display extension logs
-- **clearCache**: Clear cached data
-- **openDocumentation**: Open help docs
+- **createProject**: Legacy wizard command (deprecated)
+- **createProjectWebview**: Main webview-based wizard
+- **welcomeWebview**: Welcome screen
+- **startDemo**: Start demo server
+- **stopDemo**: Stop demo server
+- **deployMesh**: Deploy API mesh to Adobe I/O
+- **configure**: Open project configuration UI
+- **checkUpdates**: Check for extension and component updates
+- **diagnostics**: System diagnostics
+- **resetAll**: Reset all state (dev only)
 
 ### Webviews (`webviews/`)
 - React components for UI
@@ -87,12 +92,19 @@ export async function activate(context: ExtensionContext) {
 - **ProgressUnifier**: Unified progress tracking
 - **StateManager**: Persistent state storage
 - **ComponentRegistry**: Component definitions
+- **ComponentManager**: Component lifecycle management
 - **ErrorLogger**: Centralized error handling
+- **ErrorFormatter**: User-friendly error message formatting
+- **UpdateManager**: GitHub Releases checking for extension and components
+- **ComponentUpdater**: Component updates with snapshot/rollback
+- **ExtensionUpdater**: VSIX download and installation
+- **AdobeAuthManager**: Adobe authentication with SDK integration
+- **ExternalCommandManager**: Shell command execution with queuing
 
 ### Providers (`providers/`)
 - **ProjectTreeProvider**: Project explorer view
-- **PrerequisitesProvider**: Prerequisites status view
-- **WelcomeViewProvider**: Getting started view
+- **ComponentTreeProvider**: Component file browser with .env hiding
+- **StatusBar**: Status bar integration for demo state
 
 ### Types (`types/`)
 - Shared TypeScript interfaces

@@ -182,6 +182,122 @@ class DiagnosticsCommand {
 - Environment variables (PATH, HOME, etc.)
 - Test results (browser launch, file system access)
 
+### checkUpdates
+
+**Purpose**: Check for and apply extension/component updates
+
+**Key Features**:
+- Checks GitHub Releases for updates (extension and components)
+- Respects stable/beta channel preference (`demoBuilder.updateChannel`)
+- User confirmation required before applying updates
+- Demo running check before component updates
+- Automatic snapshot/rollback on failure
+- Smart .env merging preserves user configuration
+
+**Implementation**:
+```typescript
+class CheckUpdatesCommand extends BaseCommand {
+    async execute() {
+        // 1. Check for extension update
+        const extensionUpdate = await this.updateManager.checkExtensionUpdate();
+        
+        // 2. Check for component updates (if project loaded)
+        const project = this.stateManager.getCurrentProject();
+        const componentUpdates = project 
+            ? await this.updateManager.checkComponentUpdates(project)
+            : new Map();
+        
+        // 3. Show notification if updates available
+        if (extensionUpdate || componentUpdates.size > 0) {
+            const action = await vscode.window.showInformationMessage(
+                'Updates available',
+                'Update Now',
+                'Later'
+            );
+            
+            if (action === 'Update Now') {
+                await this.applyUpdates(extensionUpdate, componentUpdates);
+            }
+        } else {
+            vscode.window.showInformationMessage('No updates available');
+        }
+    }
+}
+```
+
+**Safety Features**:
+- Pre-flight check: Prevents updates while demo is running
+- Concurrent update lock: Prevents double-click accidents
+- Snapshot before update: Full component directory backup
+- Automatic rollback: Restore on ANY failure
+- Post-update verification: Validates package.json structure
+
+**User Experience**:
+- Auto-check on startup (if `demoBuilder.autoUpdate` enabled)
+- Manual check via command palette
+- Progress notifications during update process
+- Clear error messages on failure
+
+### deployMesh
+
+**Purpose**: Deploy API mesh configuration to Adobe I/O Runtime
+
+**Key Features**:
+- Pre-flight authentication check (prevents unexpected browser launch)
+- Builds mesh configuration from component settings
+- Deploys to Adobe I/O via `aio api-mesh:update`
+- Tracks deployment state for staleness detection
+- User-friendly error formatting
+
+**Implementation**:
+```typescript
+class DeployMeshCommand extends BaseCommand {
+    async execute() {
+        // 1. Pre-flight auth check
+        const isAuthenticated = await this.authManager.isAuthenticatedQuick();
+        if (!isAuthenticated) {
+            const action = await vscode.window.showWarningMessage(
+                'Authentication required to deploy mesh',
+                'Sign In',
+                'Cancel'
+            );
+            if (action !== 'Sign In') return;
+            
+            // Authenticate
+            await this.authManager.login();
+        }
+        
+        // 2. Build mesh configuration
+        const meshConfig = await this.buildMeshConfig();
+        
+        // 3. Deploy to Adobe I/O
+        const result = await this.externalCommandManager.execute(
+            'aio',
+            ['api-mesh:update', meshConfig],
+            { timeout: 60000 }
+        );
+        
+        // 4. Track deployment state
+        await this.updateMeshState(result);
+        
+        // 5. Show success notification (auto-dismiss)
+        vscode.window.showInformationMessage('Mesh deployed successfully');
+    }
+}
+```
+
+**Authentication Flow**:
+1. Quick token check (< 1 second)
+2. If not authenticated, show warning with "Sign In" option
+3. User confirms → Browser-based login via Adobe CLI
+4. After auth, retry mesh deployment
+
+**Error Handling**:
+- Network errors → "No internet connection. Please check your network."
+- Timeout errors → "Deployment timed out. Please try again."
+- HTTP errors → "Server error (status 500). Please try again later."
+- Config errors → "Invalid mesh configuration: [specific issue]"
+
 ### showLogs
 
 **Purpose**: Display extension logs
@@ -307,6 +423,57 @@ class SimpleCommand {
     }
 }
 ```
+
+### Authentication Pre-flight Pattern
+
+**Purpose**: Prevent unexpected browser auth launches during Adobe I/O operations
+
+**Problem**: Operations like mesh deployment or fetching org data would silently trigger browser authentication, confusing users who didn't expect it.
+
+**Solution**: Check authentication status before expensive operations and explicitly ask for permission.
+
+**Implementation**:
+
+```typescript
+class AdobeIOCommand extends BaseCommand {
+    async execute() {
+        // 1. Quick auth check (< 1 second, token only)
+        const isAuthenticated = await this.authManager.isAuthenticatedQuick();
+        
+        if (!isAuthenticated) {
+            // 2. Show explicit warning with user choice
+            const action = await vscode.window.showWarningMessage(
+                'Authentication required to [action]. Sign in to Adobe?',
+                'Sign In',
+                'Cancel'
+            );
+            
+            if (action !== 'Sign In') {
+                return; // User declined
+            }
+            
+            // 3. User confirmed → Browser-based login
+            await this.authManager.login();
+        }
+        
+        // 4. Proceed with Adobe I/O operation
+        await this.performAdobeIOOperation();
+    }
+}
+```
+
+**Used In**:
+- `deployMesh` command
+- Dashboard mesh status check (skips fetch if not authenticated)
+- `configure` command (when fetching Adobe data)
+
+**Key Benefits**:
+- No surprise browser windows
+- User remains in control
+- Clear context for why auth is needed
+- Graceful degradation (operation cancelled if user declines)
+
+**Performance Note**: `isAuthenticatedQuick()` only checks token validity (< 1s) vs full org validation (9+ seconds).
 
 ## Key Responsibilities
 

@@ -91,6 +91,14 @@ demo-builder-vscode/
 - Smart polling with exponential backoff
 - StateCoordinator for Adobe CLI consistency
 
+### 7. **Auto-Update System**
+- GitHub Releases integration for version checking
+- Snapshot-based rollback for component updates
+- Smart .env merging preserves user configuration
+- Stable and beta update channels
+- Programmatic write suppression prevents false notifications
+- Pre-flight checks (demo running, concurrent updates)
+
 ## Critical Design Decisions
 
 ### Adobe Spectrum Integration
@@ -123,8 +131,12 @@ demo-builder-vscode/
 1. **extension.ts** - Entry point and command registration
 2. **src/commands/createProjectWebview.ts** - Main wizard orchestration
 3. **src/webviews/components/wizard/WizardContainer.tsx** - Wizard UI container
-4. **templates/prerequisites.json** - Prerequisite definitions
-5. **templates/components.json** - Component registry
+4. **src/utils/adobeAuthManager.ts** - Adobe authentication and SDK integration
+5. **src/utils/updateManager.ts** - GitHub Releases integration and update checking
+6. **src/utils/componentUpdater.ts** - Safe component updates with snapshot/rollback
+7. **src/utils/stateManager.ts** - Project state persistence and management
+8. **templates/prerequisites.json** - Prerequisite definitions
+9. **templates/components.json** - Component registry
 
 ## Common Tasks
 
@@ -161,6 +173,37 @@ demo-builder-vscode/
 5. Package: `npm run package`
 
 ## Recent Improvements
+
+### v1.6.0 (2025-01-XX) - Auto-Updates & Performance Optimizations
+- **Auto-Update System**: Extension and component updates via GitHub Releases
+  - Snapshot/rollback safety for component updates
+  - Smart .env merging preserves user configuration
+  - Stable and beta update channels
+  - Programmatic write suppression prevents false notifications
+  - Concurrent update lock prevents double-click accidents
+  - Post-update verification ensures component integrity
+- **Authentication Performance**: Adobe Console SDK integration for 30x faster operations
+  - Quick auth checks (< 1s vs 9+ seconds for full validation)
+  - Pre-flight authentication for Adobe I/O operations prevents unexpected browser launches
+  - Cached organization/project data with TTL (reduces API calls)
+  - Async SDK initialization (non-blocking, 5-second timeout)
+- **Mesh Deployment Enhancements**: Improved configuration detection and error handling
+  - Fetches deployed mesh config from Adobe I/O for accurate comparison
+  - Better staleness detection (compares local vs deployed state)
+  - Consolidated logging to single "Demo Builder: Logs" channel
+  - Pre-flight authentication check before deployment
+  - User-friendly error formatting for network/timeout/HTTP failures
+- **Dashboard Improvements**: Enhanced project control panel
+  - Smart Logs toggle remembers last active channel (Logs/Debug)
+  - Asynchronous mesh status checking doesn't block UI
+  - Focus retention for in-place actions (Logs toggle, Start/Stop)
+  - Component browser with .env file hiding
+  - Focus trap for keyboard navigation
+- **File Watcher Improvements**: Hash-based change detection with notification management
+  - Programmatic write suppression (Configure UI and updates don't trigger false alerts)
+  - Show-once-per-session notifications (no notification spam)
+  - 10-second startup grace period
+  - Separate tracking for restart vs mesh redeploy notifications
 
 ### v1.5.0 (2025-01-16) - Backend Call on Continue & Critical Fixes
 - **Backend Call on Continue Pattern**: Major UX improvement for selection steps

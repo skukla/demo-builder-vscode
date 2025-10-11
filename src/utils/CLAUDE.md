@@ -552,7 +552,7 @@ abstract class BaseWebviewCommand extends BaseCommand {
 
 ### AdobeAuthManagerV2
 
-**Purpose**: Adobe CLI operations with race condition protection
+**Purpose**: Adobe CLI operations with race condition protection and SDK optimization
 
 **Key Features**:
 - Uses ExternalCommandManager for all CLI operations
@@ -560,12 +560,292 @@ abstract class BaseWebviewCommand extends BaseCommand {
 - Polling-based authentication checks
 - Atomic organization/project selection
 - Comprehensive error handling
+- **Adobe Console SDK integration for 30x faster operations**
+- **Quick authentication checks (< 1 second)**
+- **Cached organization/project data with TTL**
+
+**Performance Optimizations (v1.6.0)**:
+
+**Quick Authentication Check** (`isAuthenticatedQuick()`):
+- Token-only validation (no org validation)
+- < 1 second vs 9+ seconds for full check
+- Used for dashboard loads and wizard startup
+- Pre-flight checks before Adobe I/O operations
+
+```typescript
+async isAuthenticatedQuick(): Promise<boolean> {
+    // Only check token validity, skip org validation
+    const token = await this.getToken();
+    if (!token) return false;
+    
+    const expiry = this.getTokenExpiry(token);
+    return expiry > Date.now();
+}
+```
+
+**SDK Integration** (`ensureSDKInitialized()`):
+- Adobe Console SDK for org/project operations
+- 30x faster than pure CLI approach
+- Async initialization (non-blocking, 5-second timeout)
+- Automatic fallback to CLI if SDK unavailable
+
+```typescript
+async ensureSDKInitialized(): Promise<void> {
+    if (this.sdkInitialized) return;
+    
+    try {
+        // Initialize Adobe Console SDK
+        this.sdk = await ConsoleSDK.init({
+            accessToken: await this.getToken(),
+            apiKey: process.env.ADOBE_API_KEY
+        });
+        this.sdkInitialized = true;
+    } catch (error) {
+        // Fallback to CLI operations
+        this.logger.warn('[Auth] SDK init failed, using CLI fallback');
+    }
+}
+```
+
+**Optimized Operations**:
+- `getCurrentOrganization()`: Uses SDK for faster lookup, 1-minute cache
+- `getOrganizations()`: SDK-powered, cached for 1 minute
+- `getProjects()`: SDK-powered with caching
+- `console.where` results: 3-minute TTL cache (expensive 2s+ call)
 
 **Migration from V1**:
 - Replace direct `exec()` calls with `executeCommand()`
 - Use `executeExclusive()` for authentication operations
 - Replace `setTimeout` polling with `pollUntilCondition()`
 - Use StateCoordinator for all state updates
+- Use `isAuthenticatedQuick()` for pre-flight checks
+- Call `ensureSDKInitialized()` before org/project operations
+
+### UpdateManager
+
+**Purpose**: Checks for extension and component updates via GitHub Releases API
+
+**Key Features**:
+- Stable and beta channel support (`demoBuilder.updateChannel`)
+- Semantic version comparison
+- GitHub Releases API integration
+- Respects rate limiting (60 requests/hour unauthenticated)
+
+**Key Methods**:
+```typescript
+class UpdateManager {
+    // Check for extension update
+    async checkExtensionUpdate(): Promise<UpdateCheckResult | null>
+    
+    // Check for component updates
+    async checkComponentUpdates(project: Project): Promise<Map<string, UpdateCheckResult>>
+    
+    // Fetch latest release from GitHub
+    private async fetchLatestRelease(
+        repo: string, 
+        channel: 'stable' | 'beta'
+    ): Promise<ReleaseInfo | null>
+    
+    // Compare semantic versions
+    private isNewerVersion(latest: string, current: string): boolean
+}
+```
+
+**Update Check Flow**:
+```typescript
+// 1. Determine channel from settings
+const channel = vscode.workspace.getConfiguration('demoBuilder')
+    .get<'stable' | 'beta'>('updateChannel', 'stable');
+
+// 2. Check extension update
+const extensionUpdate = await updateManager.checkExtensionUpdate();
+
+// 3. Check component updates
+const componentUpdates = await updateManager.checkComponentUpdates(project);
+
+// 4. Show notification if updates available
+if (extensionUpdate || componentUpdates.size > 0) {
+    vscode.window.showInformationMessage('Updates available', 'Update Now');
+}
+```
+
+**Release Tag Format**:
+- Stable: `v1.6.0`, `v1.6.1`
+- Beta: `v1.6.0-beta.1`, `v1.7.0-beta.2`
+
+### ComponentUpdater
+
+**Purpose**: Updates git-based components with safety features
+
+**Key Features**:
+- **Automatic snapshot**: Full directory backup before update
+- **Automatic rollback**: Restores snapshot on ANY failure
+- **Post-update verification**: Checks package.json validity
+- **Smart .env merging**: Preserves user values, adds new variables
+- **Programmatic write suppression**: Prevents false restart notifications
+- **Concurrent update lock**: Prevents double-click accidents
+- **User-friendly errors**: Network/timeout/HTTP errors explained
+
+**Safety Flow**:
+```
+1. Check concurrent lock
+2. Create snapshot
+3. Download archive from GitHub
+4. Extract to temporary location
+5. Verify package.json structure
+6. Merge .env files (preserve user config)
+7. Replace component directory
+8. Update version tracking
+9. Remove snapshot
+   ↓ (on ANY failure at steps 3-8)
+   Restore snapshot automatically
+```
+
+**Key Methods**:
+```typescript
+class ComponentUpdater {
+    // Update single component
+    async updateComponent(
+        project: Project,
+        componentId: string,
+        releaseInfo: ReleaseInfo
+    ): Promise<void>
+    
+    // Merge .env files (smart preservation)
+    private async mergeEnvFiles(
+        oldEnvPath: string,
+        newEnvPath: string,
+        outputPath: string
+    ): Promise<void>
+    
+    // Create snapshot for rollback
+    private async createSnapshot(componentPath: string): Promise<string>
+    
+    // Restore snapshot on failure
+    private async restoreSnapshot(
+        componentPath: string,
+        snapshotPath: string
+    ): Promise<void>
+}
+```
+
+**Smart .env Merging**:
+```typescript
+// User's current .env
+COMMERCE_ENDPOINT=https://custom.magentosite.cloud
+API_KEY=user-secret-123
+
+// New component's .env.example
+COMMERCE_ENDPOINT=https://demo.magentosite.cloud
+API_KEY=demo-key
+NEW_FEATURE_FLAG=true
+
+// Merged result
+COMMERCE_ENDPOINT=https://custom.magentosite.cloud  // User value preserved
+API_KEY=user-secret-123                             // User value preserved
+NEW_FEATURE_FLAG=true                               // New variable added
+```
+
+**Programmatic Write Suppression**:
+```typescript
+// Register write before merging .env
+await vscode.commands.executeCommand(
+    'demoBuilder._internal.registerProgrammaticWrites',
+    [envPath]
+);
+
+// Write merged .env (file watcher will ignore)
+await fs.writeFile(envPath, mergedContent);
+```
+
+### ExtensionUpdater
+
+**Purpose**: Downloads and installs extension VSIX updates
+
+**Key Features**:
+- Downloads VSIX from GitHub Releases
+- Triggers VS Code installation API
+- Prompts for reload after installation
+
+**Key Methods**:
+```typescript
+class ExtensionUpdater {
+    // Download and install VSIX
+    async updateExtension(releaseInfo: ReleaseInfo): Promise<void>
+    
+    // Download VSIX file
+    private async downloadVSIX(url: string, targetPath: string): Promise<void>
+    
+    // Install VSIX via VS Code API
+    private async installVSIX(vsixPath: string): Promise<void>
+}
+```
+
+**Update Flow**:
+```typescript
+// 1. Download VSIX to temp directory
+const vsixPath = path.join(tmpdir(), 'demo-builder.vsix');
+await extensionUpdater.downloadVSIX(releaseInfo.vsixUrl, vsixPath);
+
+// 2. Install via VS Code API
+await vscode.commands.executeCommand('workbench.extensions.installExtension', 
+    vscode.Uri.file(vsixPath)
+);
+
+// 3. Prompt for reload
+const action = await vscode.window.showInformationMessage(
+    'Extension updated. Reload VS Code to activate.',
+    'Reload Now'
+);
+
+if (action === 'Reload Now') {
+    await vscode.commands.executeCommand('workbench.action.reloadWindow');
+}
+```
+
+### ErrorFormatter
+
+**Purpose**: Converts technical errors into user-friendly messages
+
+**Key Features**:
+- Network error detection (ENOTFOUND, ETIMEDOUT, ECONNREFUSED)
+- HTTP status code interpretation
+- Timeout error formatting
+- File system error explanation
+
+**Key Methods**:
+```typescript
+class ErrorFormatter {
+    // Format error for user display
+    static formatUserFriendlyError(error: unknown): string
+    
+    // Check if error is network-related
+    private static isNetworkError(error: Error): boolean
+    
+    // Format HTTP error with status code
+    private static formatHttpError(statusCode: number): string
+}
+```
+
+**Error Translations**:
+```typescript
+// Network errors
+'ENOTFOUND' → "No internet connection. Please check your network."
+'ETIMEDOUT' → "Connection timed out. Please try again."
+'ECONNREFUSED' → "Server refused connection. Service may be down."
+
+// HTTP errors
+404 → "Resource not found (404). The requested item may have been removed."
+500 → "Server error (500). Please try again later."
+503 → "Service unavailable (503). Adobe services may be experiencing issues."
+
+// Timeout errors
+'timeout' → "Operation timed out. Please try again."
+
+// File system errors
+'ENOENT' → "File or directory not found."
+'EACCES' → "Permission denied. Please check file permissions."
+```
 
 ## Integration Patterns
 

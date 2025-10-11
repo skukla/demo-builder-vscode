@@ -383,6 +383,223 @@ Clean loading feedback without verbose text:
 3. **Debouncing**: Debounce rapid state changes
 4. **Virtual Scrolling**: For long lists (planned)
 
+## Welcome Screen Disposal Pattern
+
+### Overview
+The Welcome screen automatically disposes itself before opening the Create Project wizard, preventing tab proliferation.
+
+### Implementation
+
+**In Welcome Screen**:
+```typescript
+const handleCreateProject = async () => {
+    // 1. Dispose the Welcome webview
+    WelcomeWebviewCommand.disposeActivePanel();
+    
+    // 2. Small delay to ensure disposal completes
+    await new Promise(resolve => setTimeout(resolve, 50));
+    
+    // 3. Open Create Project wizard
+    await vscode.commands.executeCommand('demoBuilder.createProject');
+};
+```
+
+**In Welcome Command**:
+```typescript
+class WelcomeWebviewCommand extends BaseWebviewCommand {
+    private static currentPanel: vscode.WebviewPanel | undefined;
+    
+    static disposeActivePanel() {
+        if (this.currentPanel) {
+            this.currentPanel.dispose();
+            this.currentPanel = undefined;
+        }
+    }
+}
+```
+
+### Auto-Reopen Logic
+
+If no webviews remain open after a webview is closed, the extension automatically reopens the Welcome screen:
+
+```typescript
+// In extension.ts or webview command disposal handler
+panel.onDidDispose(() => {
+    // Check if any webviews are still open
+    const hasOpenWebviews = this.checkOpenWebviews();
+    
+    if (!hasOpenWebviews) {
+        // Reopen Welcome screen after a brief delay
+        setTimeout(() => {
+            vscode.commands.executeCommand('demoBuilder.welcome');
+        }, 100);
+    }
+});
+```
+
+### User Experience Benefits
+- No tab clutter from multiple Welcome screens
+- Seamless transition from Welcome → Create Project
+- Automatic fallback to Welcome when all webviews close
+- Feels like a single-page application
+
+## Project Dashboard Enhancements
+
+### Smart Logs Toggle
+
+**Purpose**: Toggle the "Demo Builder: Logs" output channel from the dashboard
+
+**Implementation**:
+```typescript
+const handleLogsClick = async () => {
+    const result = await vscode.request('toggle-logs');
+    
+    if (result.isOpen) {
+        // Panel opened - focus remains on Logs button
+    } else {
+        // Panel closed - focus remains on Logs button
+    }
+};
+```
+
+**Features**:
+- Opens "Demo Builder: Logs" output channel
+- Remembers last active channel (Logs, Debug, or API Mesh)
+- Closes panel if clicked while open (toggle behavior)
+- Retains focus on Logs button after toggle
+
+**Backend Logic**:
+```typescript
+// In extension backend
+async toggleLogs(): Promise<{ isOpen: boolean }> {
+    const wasVisible = /* check if output panel is visible */;
+    
+    if (wasVisible) {
+        // Hide output panel
+        await vscode.commands.executeCommand('workbench.action.closePanel');
+        return { isOpen: false };
+    } else {
+        // Show logs channel
+        this.logChannel.show(true); // preserveFocus = true
+        return { isOpen: true };
+    }
+}
+```
+
+### Asynchronous Mesh Status
+
+**Purpose**: Check mesh deployment status without blocking UI render
+
+**Flow**:
+```typescript
+// 1. Initial render with 'checking' status
+const [meshStatus, setMeshStatus] = useState<MeshStatus>('checking');
+
+// 2. Request async mesh check
+useEffect(() => {
+    vscode.request('check-mesh-status-async').then(status => {
+        setMeshStatus(status);
+    });
+}, []);
+```
+
+**Backend Implementation**:
+```typescript
+async checkMeshStatusAsync(): Promise<MeshStatus> {
+    // 1. Pre-flight auth check (skip if not authenticated)
+    const isAuthenticated = await this.authManager.isAuthenticatedQuick();
+    if (!isAuthenticated) {
+        return 'unknown'; // Graceful degradation
+    }
+    
+    // 2. Fetch deployed mesh config from Adobe I/O
+    const deployedConfig = await this.fetchDeployedMeshConfig();
+    
+    // 3. Compare with local configuration
+    const isStale = await this.stalenessDetector.detect(
+        project.meshState,
+        project.componentConfigs,
+        deployedConfig
+    );
+    
+    return isStale ? 'stale' : 'deployed';
+}
+```
+
+**Status Indicators**:
+- **checking**: Initial state, loading spinner
+- **deployed**: Green indicator, configuration matches
+- **stale**: Amber indicator, needs redeployment
+- **error**: Red indicator, deployment failed
+- **unknown**: Gray indicator, cannot determine status
+
+### Focus Management
+
+**Pattern**: Buttons retain focus after in-place actions
+
+**Implementation**:
+```typescript
+const handleAction = async (buttonRef: React.RefObject<HTMLButtonElement>) => {
+    // Perform action
+    await performAction();
+    
+    // Restore focus after action
+    requestAnimationFrame(() => {
+        buttonRef.current?.focus();
+    });
+};
+```
+
+**Used For**:
+- Logs toggle button (focus stays on Logs)
+- Start/Stop button (focus stays on Start/Stop)
+- Deploy Mesh button (focus stays on Deploy Mesh)
+
+**Benefits**:
+- Consistent keyboard navigation
+- No focus jumping between controls
+- Better accessibility
+
+### Focus Trap
+
+**Purpose**: Trap keyboard focus within dashboard tiles
+
+**Implementation**:
+```typescript
+useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const focusableElements = containerRef.current.querySelectorAll(
+        'button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    
+    const firstElement = focusableElements[0] as HTMLElement;
+    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+    
+    const handleTab = (e: KeyboardEvent) => {
+        if (e.key !== 'Tab') return;
+        
+        if (e.shiftKey && document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement.focus();
+        }
+    };
+    
+    containerRef.current.addEventListener('keydown', handleTab);
+    
+    // Initial focus on Start/Stop button
+    firstElement?.focus();
+}, []);
+```
+
+**Benefits**:
+- Keyboard users can navigate dashboard efficiently
+- Focus doesn't escape to surrounding VS Code UI
+- Meets WCAG 2.1 AA accessibility requirements
+
 ## Common Issues & Solutions
 
 ### Prerequisites Container Scrolling

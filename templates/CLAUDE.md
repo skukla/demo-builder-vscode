@@ -359,6 +359,101 @@ This ensures:
 - graphql-server is installed second
 - pwa-studio is installed last
 
+### Component Version Tracking
+
+**Purpose**: Track component versions for update system (v1.6.0+)
+
+**Storage Location**: Project manifest (`.demo-builder.json`)
+
+**Structure**:
+```json
+{
+  "name": "my-demo-project",
+  "componentInstances": {
+    "citisignal-nextjs": {
+      "id": "citisignal-nextjs",
+      "path": "/path/to/citisignal-nextjs",
+      "status": "ready",
+      "port": 3000
+    }
+  },
+  "componentVersions": {
+    "citisignal-nextjs": {
+      "version": "1.0.0",
+      "lastUpdated": "2025-01-15T10:30:00Z"
+    }
+  }
+}
+```
+
+**Version Lifecycle**:
+
+1. **Project Creation**: Set to `"unknown"` when project is created
+   ```json
+   {
+     "componentVersions": {
+       "citisignal-nextjs": {
+         "version": "unknown",
+         "lastUpdated": "2025-01-15T10:00:00Z"
+       }
+     }
+   }
+   ```
+
+2. **First Update**: Set to actual version after first component update
+   ```json
+   {
+     "componentVersions": {
+       "citisignal-nextjs": {
+         "version": "1.0.0",
+         "lastUpdated": "2025-01-15T10:30:00Z"
+       }
+     }
+   }
+   ```
+
+3. **Subsequent Updates**: Updated after each successful component update
+   ```json
+   {
+     "componentVersions": {
+       "citisignal-nextjs": {
+         "version": "1.1.0",
+         "lastUpdated": "2025-01-20T14:22:00Z"
+       }
+     }
+   }
+   ```
+
+**Version Detection Flow**:
+```typescript
+// 1. Get current version from project manifest
+const current = project.componentVersions[componentId]?.version || 'unknown';
+
+// 2. Fetch latest release from GitHub
+const latest = await updateManager.fetchLatestRelease(
+    component.repository,
+    channel
+);
+
+// 3. Compare versions
+if (isNewerVersion(latest.version, current)) {
+    // Show update notification
+    vscode.window.showInformationMessage(
+        `Update available for ${component.name}: ${latest.version}`,
+        'Update Now'
+    );
+}
+```
+
+**Integration Points**:
+- **UpdateManager**: Checks versions against GitHub Releases
+- **ComponentUpdater**: Updates version after successful component update
+- **Project Creation**: Initializes version tracking structure
+
+**Update Channels**:
+- **stable**: Production releases only (e.g., `v1.0.0`, `v1.1.0`)
+- **beta**: Pre-release versions included (e.g., `v1.1.0-beta.1`)
+
 ## Project Templates
 
 ### Template Structure

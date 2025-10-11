@@ -377,6 +377,192 @@ setSelectedWorkspaceId(null);
 - Ensures clean state for new selections
 - Avoids confusing mixed states
 
+### Auto-Update System Patterns
+
+#### Snapshot-Based Rollback
+
+**Pattern**: Always create snapshot before risky operations
+
+**Implementation**:
+```typescript
+const snapshotPath = `${targetPath}.snapshot-${Date.now()}`;
+await fs.cp(targetPath, snapshotPath, { recursive: true });
+
+try {
+    // Risky operation (download, extract, replace)
+    await updateComponent();
+    
+    // Success - remove snapshot
+    await fs.rm(snapshotPath, { recursive: true, force: true });
+} catch (error) {
+    // Rollback - restore snapshot
+    await fs.rm(targetPath, { recursive: true, force: true });
+    await fs.rename(snapshotPath, targetPath);
+    throw error; // Re-throw for error handling
+}
+```
+
+**Use Cases**:
+- Component updates
+- Configuration file modifications
+- Any operation that could leave system in broken state
+
+**Benefits**:
+- Automatic recovery from partial failures
+- No manual cleanup required
+- Simple to reason about (snapshot exists = can rollback)
+
+#### Programmatic Write Suppression
+
+**Pattern**: Prevent file watcher from triggering on known programmatic writes
+
+**Implementation**:
+```typescript
+// 1. Register write before modifying file
+await vscode.commands.executeCommand(
+    'demoBuilder._internal.registerProgrammaticWrites',
+    ['/absolute/path/to/.env']
+);
+
+// 2. Write file (watcher will ignore this write)
+await fs.writeFile(envPath, updatedContent);
+
+// 3. File watcher automatically clears suppression after 2 seconds
+```
+
+**Use Cases**:
+- Configure UI saving settings to `.env` files
+- Component updater merging `.env` files
+- Any automated `.env` modifications that shouldn't trigger restart notifications
+
+**Benefits**:
+- No false "restart required" notifications
+- User only sees notifications for manual edits
+- Seamless automated updates
+
+**How It Works**:
+```typescript
+// In file watcher
+const hash = crypto.createHash('md5').update(content).digest('hex');
+
+if (this.programmaticWrites.has(filePath)) {
+    // Skip notification for this write
+    this.fileHashes.set(filePath, hash); // Update hash silently
+    return;
+}
+
+// Manual edit detected - show notification
+if (hash !== previousHash) {
+    vscode.window.showWarningMessage('Configuration changed. Restart required.');
+}
+```
+
+### Authentication Optimization Patterns
+
+#### Quick Check First
+
+**Pattern**: Use fast token-only check before expensive full validation
+
+**Implementation**:
+```typescript
+// Fast token check (< 1 second)
+const isQuickAuth = await authManager.isAuthenticatedQuick();
+
+if (!isQuickAuth) {
+    // Show prompt, don't proceed
+    vscode.window.showWarningMessage('Sign in required');
+    return;
+}
+
+// Then proceed with SDK-powered operations (30x faster than pure CLI)
+await authManager.ensureSDKInitialized();
+const orgs = await authManager.getOrganizations(); // Uses SDK, cached
+```
+
+**Use Cases**:
+- Dashboard loading (async mesh status check)
+- Wizard initialization
+- Pre-flight checks before Adobe I/O operations
+
+**Performance Impact**:
+- Old approach: 9+ seconds for full auth validation
+- New approach: < 1 second for quick check
+- **~9x faster** for most use cases
+
+#### Pre-flight Authentication
+
+**Pattern**: Check auth status before expensive operations and explicitly ask for permission
+
+**Implementation**:
+```typescript
+// Before expensive Adobe I/O operations
+const isAuthenticated = await authManager.isAuthenticatedQuick();
+
+if (!isAuthenticated) {
+    const action = await vscode.window.showWarningMessage(
+        'Authentication required to deploy mesh. Sign in to Adobe?',
+        'Sign In',
+        'Cancel'
+    );
+    
+    if (action !== 'Sign In') {
+        return; // User declined
+    }
+    
+    // User confirmed → Browser-based login
+    await authManager.login();
+}
+
+// Proceed with operation
+await performAdobeIOOperation();
+```
+
+**Use Cases**:
+- Mesh deployment
+- Fetching deployed mesh config
+- Opening Configure UI when Adobe data is needed
+
+**Benefits**:
+- No surprise browser windows
+- User remains in control
+- Clear context for why auth is needed
+- Graceful degradation if user declines
+
+#### SDK + CLI Hybrid Approach
+
+**Pattern**: Use CLI for authentication, SDK for data operations
+
+**Implementation**:
+```typescript
+// CLI for browser-based login (only option)
+await execCommand('aio auth login');
+
+// SDK for fast data operations (30x faster)
+await authManager.ensureSDKInitialized();
+const orgs = await sdk.getOrganizations(); // SDK call
+const projects = await sdk.getProjects(orgId); // SDK call
+
+// CLI for configuration writes (SDK doesn't support)
+await execCommand('aio console org select', [orgId]);
+```
+
+**Performance Comparison**:
+| Operation | CLI Time | SDK Time | Speedup |
+|-----------|----------|----------|---------|
+| Get orgs | 3-5s | < 200ms | 15-25x |
+| Get projects | 2-4s | < 150ms | 13-27x |
+| Get workspaces | 2-3s | < 100ms | 20-30x |
+
+**Caching Strategy**:
+- Organization list: 1-minute TTL
+- `console.where` result: 3-minute TTL (expensive 2s+ call)
+- Token validation: 5-minute TTL
+
+**Benefits**:
+- Best of both worlds (CLI auth + SDK speed)
+- Automatic fallback to CLI if SDK fails
+- Significantly improved user experience
+
 ## Contributing Guidelines
 
 ### Code Review Criteria
