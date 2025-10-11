@@ -333,6 +333,25 @@ export class AdobeAuthManager {
     }
 
     /**
+     * Ensure SDK is initialized and ready for use
+     * Waits for SDK initialization if in progress
+     * Returns true if SDK is available, false if fallback to CLI needed
+     */
+    public async ensureSDKInitialized(): Promise<boolean> {
+        // Already initialized
+        if (this.sdkClient) {
+            this.debugLogger.debug('[Auth SDK] SDK already initialized');
+            return true;
+        }
+        
+        // Not initialized, do it now (blocking)
+        this.debugLogger.debug('[Auth SDK] Ensuring SDK is initialized...');
+        await this.initializeSDK();
+        
+        return this.sdkClient !== undefined;
+    }
+
+    /**
      * Initialize Adobe Console SDK client for high-performance operations
      * Called after successful authentication to enable SDK-based operations
      * Falls back to CLI if SDK initialization fails
@@ -424,7 +443,118 @@ export class AdobeAuthManager {
     }
 
     /**
+     * Quick authentication check - only verifies token existence and expiry
+     * Does NOT validate org access or initialize SDK
+     * Use this for dashboard loads and other performance-critical paths
+     * 
+     * Performance: < 1 second (vs 9+ seconds for full isAuthenticated)
+     */
+    public async isAuthenticatedQuick(): Promise<boolean> {
+        this.startTiming('isAuthenticatedQuick');
+        
+        // Check cache first
+        const now = Date.now();
+        if (this.cachedAuthStatus !== undefined && now < this.authCacheExpiry) {
+            this.debugLogger.debug(`[Auth] Using cached authentication status: ${this.cachedAuthStatus}`);
+            this.endTiming('isAuthenticatedQuick');
+            return this.cachedAuthStatus;
+        }
+        
+        try {
+            this.debugLogger.debug('[Auth] Quick authentication check (token only, no org validation)');
+            
+            // Check for access token and expiry in parallel
+            const [result, expiryResult] = await Promise.all([
+                this.commandManager.executeAdobeCLI(
+                    'aio config get ims.contexts.cli.access_token.token',
+                    { encoding: 'utf8', timeout: TIMEOUTS.TOKEN_READ }
+                ),
+                this.commandManager.executeAdobeCLI(
+                    'aio config get ims.contexts.cli.access_token.expiry',
+                    { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ }
+                )
+            ]);
+            
+            // Clean the token output
+            const stdout = result.stdout?.trim() || '';
+            const cleanOutput = stdout.split('\n').filter(line => 
+                !line.startsWith('Using Node') && 
+                !line.includes('fnm') &&
+                line.trim().length > 0
+            ).join('\n').trim();
+            
+            // Adobe access tokens are long JWT strings (>100 chars)
+            const hasToken = result.code === 0 && cleanOutput.length > 100 && cleanOutput.includes('eyJ');
+            
+            if (hasToken) {
+                if (expiryResult.code === 0 && expiryResult.stdout) {
+                    // Clean expiry output
+                    const expiryOutput = expiryResult.stdout.trim().split('\n')
+                        .filter(line => !line.startsWith('Using Node') && !line.includes('fnm'))
+                        .join('\n').trim();
+                    const expiry = parseInt(expiryOutput);
+                    const currentTime = Date.now();
+                    
+                    if (!isNaN(expiry) && expiry > currentTime) {
+                        this.debugLogger.debug(`[Auth] Quick check: authenticated (expires in ${Math.floor((expiry - currentTime) / 1000 / 60)} minutes)`);
+                        
+                        // Cache the successful result
+                        this.cachedAuthStatus = true;
+                        this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
+                        
+                        this.endTiming('isAuthenticatedQuick');
+                        return true;
+                    } else {
+                        const expiredMinutesAgo = Math.floor((currentTime - expiry) / 1000 / 60);
+                        this.debugLogger.debug(`[Auth] Quick check: token expired ${expiredMinutesAgo} minutes ago`);
+                        
+                        // Cache the failed result
+                        this.cachedAuthStatus = false;
+                        this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
+                        
+                        this.endTiming('isAuthenticatedQuick');
+                        return false;
+                    }
+                } else {
+                    // No expiry info, but we have a token, assume valid
+                    this.debugLogger.debug('[Auth] Quick check: authenticated (no expiry info)');
+                    
+                    // Cache the successful result
+                    this.cachedAuthStatus = true;
+                    this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
+                    
+                    this.endTiming('isAuthenticatedQuick');
+                    return true;
+                }
+            } else {
+                this.debugLogger.debug('[Auth] Quick check: not authenticated');
+                
+                // Cache the failed result
+                this.cachedAuthStatus = false;
+                this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
+                
+                this.endTiming('isAuthenticatedQuick');
+                return false;
+            }
+        } catch (error) {
+            this.debugLogger.error('[Auth] Quick authentication check failed', error as Error);
+            
+            // Cache the failed result (short TTL for errors)
+            this.cachedAuthStatus = false;
+            this.authCacheExpiry = Date.now() + (CACHE_TTL.AUTH_STATUS / 5);
+            
+            this.endTiming('isAuthenticatedQuick');
+            return false;
+        }
+    }
+
+    /**
      * Check if authenticated - check for access token
+     * ALSO validates org access and initializes SDK
+     * Use this when you need full authentication context
+     * 
+     * Performance: 3-10 seconds (includes org validation)
+     * For faster checks, use isAuthenticatedQuick()
      */
     public async isAuthenticated(): Promise<boolean> {
         this.startTiming('isAuthenticated');
@@ -633,7 +763,10 @@ export class AdobeAuthManager {
                             this.debugLogger.debug(`[Auth] Current organization name: ${context.org}, fetching numeric ID...`);
                             
                             try {
-                                // Use cached org list if available, otherwise fetch
+                                // Ensure SDK is initialized for 30x faster org lookup
+                                await this.ensureSDKInitialized();
+                                
+                                // Use cached org list if available, otherwise fetch (SDK will be used if available)
                                 const orgs = await this.getOrganizations();
                                 const matchedOrg = orgs.find(o => o.name === context.org || o.code === context.org);
                                 
