@@ -37,8 +37,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private meshExistedBeforeSession?: string;  // Track workspace ID if mesh pre-existed (prevent deletion on cancel)
 
     /**
-     * Request Welcome reopen when wizard closes without completing
-     * This ensures users aren't left with just the Components panel
+     * Request Welcome reopen when wizard closes
+     * Extension will check if any other webviews are open
      */
     protected shouldReopenWelcomeOnDispose(): boolean {
         return true;
@@ -1491,7 +1491,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     // Adobe authentication methods
     private async handleCheckAuth(): Promise<void> {
         const checkStartTime = Date.now();
-        this.logger.debug('[Auth] Starting authentication check');
+        this.logger.debug('[Auth] Starting authentication check (quick mode for wizard)');
         this.logger.info('[Auth] User initiated authentication check');
         
         // Step 1: Initial check with user-friendly message
@@ -1503,16 +1503,20 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         });
 
         try {
-            const isAuthenticated = await this.authManager.isAuthenticated();
+            // Use quick auth check for faster wizard experience (< 1 second vs 9+ seconds)
+            const isAuthenticated = await this.authManager.isAuthenticatedQuick();
             const checkDuration = Date.now() - checkStartTime;
 
-            this.logger.info(`[Auth] Authentication check completed in ${checkDuration}ms: ${isAuthenticated}`);
+            this.logger.info(`[Auth] Quick authentication check completed in ${checkDuration}ms: ${isAuthenticated}`);
 
             // Get current organization if authenticated
             let currentOrg: AdobeOrg | undefined = undefined;
             let currentProject: AdobeProject | undefined = undefined;
 
             if (isAuthenticated) {
+                // Initialize SDK for 30x faster org/project operations
+                await this.authManager.ensureSDKInitialized();
+                
                 // Step 2: If authenticated, check organization (no intermediate messages)
                 const orgCheckStart = Date.now();
                 currentOrg = await this.authManager.getCurrentOrganization();
@@ -1605,12 +1609,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             // If not forcing, check if already authenticated
             if (!force) {
-                this.logger.debug('[Auth] Checking for existing valid authentication...');
-                const isAlreadyAuth = await this.authManager.isAuthenticated();
+                this.logger.debug('[Auth] Checking for existing valid authentication (quick mode)...');
+                // Use quick check to avoid 9+ second delay before showing browser
+                const isAlreadyAuth = await this.authManager.isAuthenticatedQuick();
                 
                 if (isAlreadyAuth) {
                     this.logger.info('[Auth] Already authenticated, skipping login');
                     this.isAuthenticating = false;
+                    
+                    // Initialize SDK for faster org/project operations
+                    await this.authManager.ensureSDKInitialized();
                     
                     // Get the current context
                     const currentOrg = await this.authManager.getCurrentOrganization();
@@ -2922,6 +2930,33 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 logs: []
             });
         };
+        
+        // Safety check: Ensure port is available (edge case protection)
+        // This catches scenarios where a demo was started via command palette during wizard
+        const existingProject = await this.stateManager.getCurrentProject();
+        if (existingProject && existingProject.status === 'running') {
+            // Check if the running demo is using a port that would conflict
+            const runningPort = existingProject.componentInstances?.['citisignal-nextjs']?.port;
+            const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
+            const targetPort = config.componentConfigs?.['citisignal-nextjs']?.PORT || defaultPort;
+            
+            if (runningPort === targetPort) {
+                this.logger.info(`[Project Creation] Stopping running demo on port ${runningPort} before creating new project`);
+                
+                // Show notification that we're auto-stopping the demo
+                vscode.window.setStatusBarMessage(
+                    `⚠️  Stopping "${existingProject.name}" demo (port ${runningPort} conflict)`, 
+                    5000
+                );
+                
+                await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                
+                // Wait for clean stop and port release
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            } else {
+                this.logger.debug(`[Project Creation] Running demo on different port (${runningPort}), no conflict`);
+            }
+        }
             
         // Import ComponentManager and other dependencies
         this.logger.debug('[Project Creation] Starting dynamic imports...');
