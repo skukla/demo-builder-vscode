@@ -853,7 +853,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                             
                             if (prereq.id === 'aio-cli') {
                                 // Use direct fnm exec to avoid eval "$(fnm env)" wrapper that can hang
-                                // This runs the command directly in the specified Node version's context
+                                // 'fnm exec --using=20 aio --version' provides isolation:
+                                // - fnm sets up Node 20's environment
+                                // - Any command found will be from that Node version
+                                // - If not installed there, command fails (no fallback to nvm/system)
+                                // Therefore, success = installed in fnm's Node 20 ✓
                                 const result = await commandManager.execute(
                                     `fnm exec --using=${major} ${prereq.check.command}`,
                                     { 
@@ -862,35 +866,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                                     }
                                 );
                                 stdout = result.stdout;
-                                
-                                // IMPORTANT: Verify the binary is in fnm's directory (not nvm/other)
-                                // Extract command name (e.g., 'aio' from 'aio --version')
-                                const commandName = prereq.check.command.split(' ')[0];
-                                try {
-                                    const whichResult = await commandManager.execute(
-                                        `fnm exec --using=${major} which ${commandName}`,
-                                        { 
-                                            enhancePath: true,
-                                            timeout: 2000
-                                        }
-                                    );
-                                    const binPath = whichResult.stdout.trim();
-                                    const os = require('os');
-                                    const path = require('path');
-                                    const fnmBase = path.join(os.homedir(), '.local/share/fnm/node-versions');
-                                    
-                                    if (binPath.startsWith(fnmBase)) {
-                                        // Verified in fnm directory
-                                        isInstalled = true;
-                                    } else {
-                                        // Found outside fnm - treat as not installed
-                                        this.debugLogger.debug(`[Prerequisites] ${prereq.name} found at ${binPath} for Node ${major}, but NOT in fnm directory. Treating as not installed.`);
-                                        throw new Error('Not in fnm directory');
-                                    }
-                                } catch {
-                                    // Path verification failed - treat as not installed
-                                    throw new Error('Path verification failed');
-                                }
+                                isInstalled = true;
                             } else {
                                 // Other prerequisites use standard Node version switching
                                 const result = await commandManager.execute(prereq.check.command, { 

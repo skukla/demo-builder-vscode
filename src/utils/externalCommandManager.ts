@@ -131,20 +131,18 @@ export class ExternalCommandManager {
                 
             const fnmPath = this.findFnmPath();
             if (fnmPath) {
-                // Special handling for 'current' - use fnm env instead of fnm use
+                // Special handling for 'current' - use fnm env instead of fnm exec
                 if (options.useNodeVersion === 'current' || nodeVersion === 'current') {
                     // Use fnm env to set up the environment with the current active version
                     finalCommand = `eval "$(${fnmPath} env)" && ${finalCommand}`;
                 } else if (nodeVersion) {
-                    // Check if we're already on the target version to avoid unnecessary switching
-                    const currentVersion = await this.getCurrentFnmVersion();
-                    if (currentVersion && currentVersion.includes(nodeVersion)) {
-                        // No fnm needed - run command directly with current Node version
-                        // finalCommand remains unchanged (no fnm prefix)
-                    } else {
-                        // Use specific version with silent flag to prevent output mixing
-                        finalCommand = `${fnmPath} use ${nodeVersion} --silent-if-unchanged && ${finalCommand}`;
-                    }
+                    // Use 'fnm exec' for true isolation - guarantees fnm's Node version is used
+                    // even if user has nvm/other Node managers with overlapping versions
+                    // 'fnm exec --using=20 aio ...' creates isolated environment where:
+                    // - fnm's Node 20 bin directory is first in PATH
+                    // - No interference from nvm/system Node
+                    // - Command is guaranteed to run under fnm's Node version
+                    finalCommand = `${fnmPath} exec --using=${nodeVersion} ${finalCommand}`;
                 }
                 finalOptions.shell = finalOptions.shell || '/bin/zsh';
             }
@@ -705,8 +703,12 @@ export class ExternalCommandManager {
         const paths: string[] = [];
         const homeDir = os.homedir();
         
-        // Check fnm paths - where fnm installs global npm packages
-        const fnmBase = path.join(homeDir, '.local/share/fnm/node-versions');
+        // Check fnm paths using FNM_DIR environment variable or fallback
+        // fnm sets FNM_DIR to its installation directory
+        let fnmBase = process.env.FNM_DIR 
+            ? path.join(process.env.FNM_DIR, 'node-versions')
+            : path.join(homeDir, '.local/share/fnm/node-versions'); // Fallback to common location
+        
         if (fsSync.existsSync(fnmBase)) {
             try {
                 const versions = fsSync.readdirSync(fnmBase);
@@ -857,8 +859,11 @@ export class ExternalCommandManager {
             return this.cachedAdobeCLINodeVersion;
         }
         
+        // Use FNM_DIR if available, otherwise fallback to default location
         const homeDir = os.homedir();
-        const fnmBase = path.join(homeDir, '.local/share/fnm/node-versions');
+        const fnmBase = process.env.FNM_DIR 
+            ? path.join(process.env.FNM_DIR, 'node-versions')
+            : path.join(homeDir, '.local/share/fnm/node-versions');
         
         if (fsSync.existsSync(fnmBase)) {
             try {

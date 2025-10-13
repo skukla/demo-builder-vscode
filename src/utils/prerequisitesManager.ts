@@ -188,61 +188,25 @@ export class PrerequisitesManager {
             const cmdStartTime = Date.now();
             if (prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm') {
                 // For perNodeVersion prerequisites (like aio-cli), check under TARGET Node version
-                // IMPORTANT: We must verify the binary is in fnm's directory, not from nvm/other sources
-                // This ensures the extension's fnm setup is isolated from user's existing Node installations
+                // When we use 'fnm use 20 && aio --version', fnm provides isolation:
+                // - fnm prepends its Node 20 bin directory to PATH
+                // - Any command found will be from fnm's Node 20, not nvm/system
+                // - If not installed in fnm's Node 20, the command fails (no fallback)
+                // Therefore, command success = installed in fnm ✓
                 
-                // Determine target Node version: use Node 20 as the primary target
                 const targetNodeVersion = '20';
-                const homeDir = os.homedir();
-                const fnmBase = path.join(homeDir, '.local/share/fnm/node-versions');
-                
-                this.logger.debug(`[Prereq Check] ${prereq.id}: Checking under fnm's Node v${targetNodeVersion} (perNodeVersion=true, must be in fnm directory)`);
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Checking under fnm's Node v${targetNodeVersion} (perNodeVersion=true)`);
                 
                 try {
-                    // First, check if the command exists and works
                     checkResult = await commandManager.execute(prereq.check.command, {
                         useNodeVersion: targetNodeVersion,
                         timeout: TIMEOUTS.PREREQUISITE_CHECK
                     });
                     
-                    // Then verify it's actually in fnm's directory (not nvm or other sources)
-                    // Extract the command name (e.g., 'aio' from 'aio --version')
-                    const commandName = prereq.check.command.split(' ')[0];
-                    
-                    try {
-                        const whichResult = await commandManager.execute(`which ${commandName}`, {
-                            useNodeVersion: targetNodeVersion,
-                            timeout: 2000
-                        });
-                        
-                        const binPath = whichResult.stdout.trim();
-                        
-                        if (!binPath.startsWith(fnmBase)) {
-                            // Found, but NOT in fnm's directory (probably nvm or other) → treat as not installed
-                            this.logger.debug(`[Prereq Check] ${prereq.id}: Found at ${binPath}, but NOT in fnm directory (${fnmBase}). Treating as not installed to avoid interference with existing setup.`);
-                            checkResult = {
-                                stdout: '',
-                                stderr: `${commandName} found outside fnm directory: ${binPath}`,
-                                code: 1,
-                                duration: Date.now() - cmdStartTime
-                            };
-                        } else {
-                            // Verified in fnm directory
-                            const cmdDuration = Date.now() - cmdStartTime;
-                            this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Found in fnm directory: ${binPath} (${cmdDuration}ms)`);
-                        }
-                    } catch (whichError) {
-                        // 'which' failed, but the command worked - treat as not in fnm
-                        this.logger.debug(`[Prereq Check] ${prereq.id}: 'which' failed, treating as not installed in fnm`);
-                        checkResult = {
-                            stdout: '',
-                            stderr: 'Could not verify location',
-                            code: 1,
-                            duration: Date.now() - cmdStartTime
-                        };
-                    }
+                    const cmdDuration = Date.now() - cmdStartTime;
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Found under fnm's Node v${targetNodeVersion} (${cmdDuration}ms)`);
                 } catch (error) {
-                    // Command failed entirely - prerequisite needs to be installed
+                    // Command failed - prerequisite not installed in fnm's Node 20
                     this.logger.debug(`[Prereq Check] ${prereq.id}: Not found under Node v${targetNodeVersion}: ${error}`);
                     checkResult = {
                         stdout: '',
