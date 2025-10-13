@@ -1,6 +1,8 @@
-# Adobe Demo Builder v1.0.2-beta.1
+# Adobe Demo Builder v1.0.0-beta.2
 
 **Release Date**: October 13, 2025
+
+> **Note**: This is the second beta iteration toward v1.0.0 stable release.
 
 ## 🐛 Critical Bug Fixes
 
@@ -117,22 +119,22 @@ private findFnmPath(): string | null {
 
 ### From VSIX
 
-1. Download `adobe-demo-builder-1.0.2-beta.1.vsix` from the [Releases page](https://github.com/skukla/demo-builder-vscode/releases/tag/v1.0.2-beta.1)
+1. Download `adobe-demo-builder-1.0.0-beta.2.vsix` from the [Releases page](https://github.com/skukla/demo-builder-vscode/releases/tag/v1.0.0-beta.2)
 2. Install via VS Code:
    ```bash
-   code --install-extension adobe-demo-builder-1.0.2-beta.1.vsix
+   code --install-extension adobe-demo-builder-1.0.0-beta.2.vsix
    ```
 3. Reload VS Code
 
-### Upgrading from v1.0.1-beta.1
+### Upgrading from v1.0.0-beta.1
 
-If you're on v1.0.1-beta.1:
+If you're on v1.0.0-beta.1:
 
 1. Uninstall the old version:
    ```bash
    code --uninstall-extension adobe-demo-team.adobe-demo-builder
    ```
-2. Install v1.0.2-beta.1 from the VSIX file (see above)
+2. Install v1.0.0-beta.2 from the VSIX file (see above)
 3. Reload VS Code
 
 ---
@@ -169,15 +171,12 @@ Thanks to our beta testers who reported these critical issues:
 
 ## 📝 Full Changelog
 
-**v1.0.2-beta.1** (Oct 13, 2025)
+**v1.0.0-beta.2** (Oct 13, 2025)
 - fix: restore missing commands in package.json
 - fix: ensure fnm is found and used for Node version management
+- fix: correct repository URL to skukla/demo-builder-vscode
+- fix: add author Steve Kukla
 - docs: document fnm path detection in ExternalCommandManager
-
-**v1.0.1-beta.1** (Oct 13, 2025)
-- chore: bump version for auto-update testing
-- fix: include SVG icons in VSIX package
-- fix: include node_modules and templates in VSIX package
 
 **v1.0.0-beta.1** (Oct 10, 2025)
 - Initial beta release
@@ -185,4 +184,6 @@ Thanks to our beta testers who reported these critical issues:
 - Adobe I/O integration
 - API Mesh deployment
 - Multi-component project wizard
+- Auto-update system
+- VSIX packaging fixes
 

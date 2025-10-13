@@ -1,26 +1,29 @@
-# GitHub Release Instructions for v1.0.2-beta.1
+# GitHub Release Instructions for v1.0.0-beta.2
 
 ## ✅ What's Been Done
 
-1. ✅ Version bumped to 1.0.2-beta.1 in `package.json`
-2. ✅ Release notes created in `RELEASE-NOTES-v1.0.2-beta.1.md`
-3. ✅ VSIX package built: `adobe-demo-builder-1.0.2-beta.1.vsix` (35 MB)
-4. ✅ Git tag will be created: `v1.0.2-beta.1`
-5. ✅ Changes will be pushed to GitHub
-6. ✅ VSIX and release notes will be copied to Desktop
+1. ✅ Version bumped to 1.0.0-beta.2 in `package.json`
+2. ✅ Release notes created in `RELEASE-NOTES-v1.0.0-beta.2.md`
+3. ✅ VSIX package built: `adobe-demo-builder-1.0.0-beta.2.vsix` (35 MB)
+4. ✅ Git tag will be created: `v1.0.0-beta.2`
+5. ✅ Incorrect tags deleted (v1.0.1-beta.1, v1.0.2-beta.1)
+6. ✅ Changes will be pushed to GitHub
+7. ✅ VSIX and release notes will be copied to Desktop
+
+> **Note**: This is beta.2 - the second iteration toward v1.0.0 stable release.
 
 ## 📋 Next Steps: Create GitHub Release
 
 ### 1. Go to GitHub Releases Page
-https://github.com/skukla/demo-builder-vscode/releases/new?tag=v1.0.2-beta.1
+https://github.com/skukla/demo-builder-vscode/releases/new?tag=v1.0.0-beta.2
 
 ### 2. Fill in Release Details
 
-**Tag**: `v1.0.2-beta.1` (already selected)
+**Tag**: `v1.0.0-beta.2` (already selected)
 
-**Release Title**: `Adobe Demo Builder v1.0.2-beta.1 - Critical Bug Fixes`
+**Release Title**: `Adobe Demo Builder v1.0.0-beta.2 - Critical Bug Fixes`
 
-**Description**: Copy the contents from `RELEASE-NOTES-v1.0.2-beta.1.md` (on your Desktop)
+**Description**: Copy the contents from `RELEASE-NOTES-v1.0.0-beta.2.md` (on your Desktop)
 
 **Key sections to include**:
 - 🐛 Critical Bug Fixes
@@ -32,7 +35,7 @@ https://github.com/skukla/demo-builder-vscode/releases/new?tag=v1.0.2-beta.1
 ### 3. Upload VSIX File
 
 Attach the file from your Desktop:
-- `adobe-demo-builder-1.0.2-beta.1.vsix` (35 MB)
+- `adobe-demo-builder-1.0.0-beta.2.vsix` (35 MB)
 
 ### 4. Publish Settings
 
@@ -48,7 +51,7 @@ Attach the file from your Desktop:
 1. Download from the release page
 2. Install in a fresh VS Code:
    ```bash
-   code --install-extension ~/Downloads/adobe-demo-builder-1.0.2-beta.1.vsix
+   code --install-extension ~/Downloads/adobe-demo-builder-1.0.0-beta.2.vsix
    ```
 3. Verify commands appear:
    - `Cmd+Shift+P` → "Demo Builder: Create Project" ✅
@@ -59,9 +62,9 @@ Attach the file from your Desktop:
 
 Draft message:
 ```
-📢 Adobe Demo Builder v1.0.2-beta.1 Released!
+📢 Adobe Demo Builder v1.0.0-beta.2 Released!
 
-Critical bug fixes for VSIX installation issues:
+Second beta iteration with critical bug fixes:
 
 ✅ Fixed: Missing commands in Command Palette
    - Create Project, Check for Updates, and Reset All now appear
@@ -70,10 +73,12 @@ Critical bug fixes for VSIX installation issues:
    - Adobe I/O CLI now runs with the correct Node version
    - No more ES module or node:util errors
 
-Download: https://github.com/skukla/demo-builder-vscode/releases/tag/v1.0.2-beta.1
+✅ Fixed: Repository URL and author metadata
+
+Download: https://github.com/skukla/demo-builder-vscode/releases/tag/v1.0.0-beta.2
 
 Install:
-code --install-extension adobe-demo-builder-1.0.2-beta.1.vsix
+code --install-extension adobe-demo-builder-1.0.0-beta.2.vsix
 
 Full release notes available on GitHub.
 ```
@@ -100,14 +105,14 @@ After release, expect:
 
 ## 🔗 Quick Links
 
-- **Release**: https://github.com/skukla/demo-builder-vscode/releases/tag/v1.0.2-beta.1
-- **Full Changelog**: https://github.com/skukla/demo-builder-vscode/compare/v1.0.1-beta.1...v1.0.2-beta.1
+- **Release**: https://github.com/skukla/demo-builder-vscode/releases/tag/v1.0.0-beta.2
+- **Full Changelog**: https://github.com/skukla/demo-builder-vscode/compare/v1.0.0-beta.1...v1.0.0-beta.2
 - **Issues**: https://github.com/skukla/demo-builder-vscode/issues
 
 ---
 
 **Pro Tip**: After publishing, test the auto-update system by:
-1. Installing v1.0.1-beta.1 on a test machine
+1. Installing v1.0.0-beta.1 on a test machine
 2. Running "Demo Builder: Check for Updates"
-3. Verifying it detects and offers to install v1.0.2-beta.1
+3. Verifying it detects and offers to install v1.0.0-beta.2
 
