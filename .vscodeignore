@@ -15,7 +15,6 @@ eslint.config.mjs
 test/**
 docs/**
 templates/**/*.md
-media/*.svg
 *.md
 !README.md
 !CHANGELOG.md
