@@ -764,8 +764,14 @@ export class ExternalCommandManager {
 
     /**
      * Find fnm executable path by checking common installation locations
+     * Cached per session to avoid repeated filesystem lookups
      */
     private findFnmPath(): string | null {
+        // Return cached value if already looked up
+        if (this.cachedFnmPath !== undefined) {
+            return this.cachedFnmPath;
+        }
+        
         const commonPaths = [
             '/opt/homebrew/bin/fnm',        // Homebrew on Apple Silicon
             '/usr/local/bin/fnm',           // Homebrew on Intel Mac
@@ -776,6 +782,7 @@ export class ExternalCommandManager {
         for (const fnmPath of commonPaths) {
             if (fsSync.existsSync(fnmPath)) {
                 this.logger.debug(`[fnm] Found at: ${fnmPath}`);
+                this.cachedFnmPath = fnmPath; // Cache the result
                 return fnmPath;
             }
         }
@@ -790,12 +797,14 @@ export class ExternalCommandManager {
             const fnmPath = result.trim().split('\n')[0];
             if (fnmPath) {
                 this.logger.debug(`[fnm] Found in PATH: ${fnmPath}`);
+                this.cachedFnmPath = fnmPath; // Cache the result
                 return fnmPath;
             }
         } catch {
             // Not in PATH
         }
         
+        this.cachedFnmPath = null; // Cache null result to avoid repeated lookups
         return null;
     }
 
@@ -839,6 +848,7 @@ export class ExternalCommandManager {
 
     // Cache for Adobe CLI Node version to avoid repeated filesystem lookups
     private cachedAdobeCLINodeVersion: string | null | undefined = undefined;
+    private cachedFnmPath: string | null | undefined = undefined;
     
     // Session-level Node version setup for Adobe CLI
     private isAdobeCLINodeVersionSet: boolean = false;
