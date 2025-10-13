@@ -40,9 +40,14 @@ export class CheckUpdatesCommand extends BaseCommand {
       }
       
       if (updates.length === 0) {
+        this.logger.info('[Updates] ✓ No updates available - Demo Builder is up to date');
         vscode.window.showInformationMessage('Demo Builder is up to date ✓');
         return;
       }
+      
+      // Log updates found
+      this.logger.info(`[Updates] Found ${updates.length} update(s):`);
+      updates.forEach(update => this.logger.info(`[Updates]   - ${update}`));
       
       // Show update prompt (simplified - no "View Details" button)
       const message = `Updates available:\n${updates.join('\n')}`;
@@ -96,6 +101,7 @@ export class CheckUpdatesCommand extends BaseCommand {
     const componentUpdater = new ComponentUpdater(this.logger);
     
     // Update components first (must complete before extension reload)
+    let componentUpdateCount = 0;
     for (const [componentId, update] of componentUpdates.entries()) {
       if (update.hasUpdate && update.releaseInfo) {
         try {
@@ -105,6 +111,7 @@ export class CheckUpdatesCommand extends BaseCommand {
             update.releaseInfo.downloadUrl,
             update.latest
           );
+          componentUpdateCount++;
         } catch (error) {
           vscode.window.showErrorMessage(
             `Failed to update ${componentId}: ${(error as Error).message}`
@@ -112,6 +119,10 @@ export class CheckUpdatesCommand extends BaseCommand {
           this.logger.error(`[Updates] Component update failed for ${componentId}`, error as Error);
         }
       }
+    }
+    
+    if (componentUpdateCount > 0) {
+      this.logger.info(`[Updates] ✓ ${componentUpdateCount} component(s) updated successfully`);
     }
     
     // Save project with updated versions

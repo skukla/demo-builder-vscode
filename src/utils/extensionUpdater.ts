@@ -16,6 +16,8 @@ export class ExtensionUpdater {
    * Download and install extension update via VSIX
    */
   async updateExtension(downloadUrl: string, newVersion: string): Promise<void> {
+    this.logger.info(`[Update] Starting extension update to v${newVersion}`);
+    
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
       title: `Updating Demo Builder to v${newVersion}`,
@@ -26,15 +28,19 @@ export class ExtensionUpdater {
       const vsixPath = await this.downloadVsix(downloadUrl, newVersion);
       
       // Install via VS Code command
+      this.logger.info(`[Update] Installing extension from ${vsixPath}`);
       progress.report({ message: 'Installing...' });
       await vscode.commands.executeCommand(
         'workbench.extensions.installExtension',
         vscode.Uri.file(vsixPath)
       );
       
+      this.logger.info(`[Update] ✓ Extension installed successfully`);
+      
       // Cleanup temp file
       try {
         await fs.unlink(vsixPath);
+        this.logger.debug(`[Update] Cleaned up temporary VSIX file`);
       } catch {}
       
       // Prompt for reload
@@ -45,7 +51,10 @@ export class ExtensionUpdater {
       );
       
       if (reload === 'Reload Now') {
+        this.logger.info(`[Update] Reloading window to apply extension update`);
         await vscode.commands.executeCommand('workbench.action.reloadWindow');
+      } else {
+        this.logger.info(`[Update] User chose to reload later`);
       }
     });
   }
