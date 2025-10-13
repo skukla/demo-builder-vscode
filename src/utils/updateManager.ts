@@ -23,7 +23,7 @@ export class UpdateManager {
   private context: vscode.ExtensionContext;
   
   // Repository configurations
-  private readonly EXTENSION_REPO = 'adobe/demo-builder-vscode';
+  private readonly EXTENSION_REPO = 'skukla/demo-builder-vscode';
   private readonly COMPONENT_REPOS: Record<string, string> = {
     'citisignal-nextjs': 'skukla/citisignal-nextjs',
     'commerce-mesh': 'skukla/commerce-mesh',
