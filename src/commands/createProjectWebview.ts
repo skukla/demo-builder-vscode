@@ -849,6 +849,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     for (const major of requiredMajors) {
                         try {
                             let stdout: string;
+                            let isInstalled = false;
                             
                             if (prereq.id === 'aio-cli') {
                                 // Use direct fnm exec to avoid eval "$(fnm env)" wrapper that can hang
@@ -861,6 +862,35 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                                     }
                                 );
                                 stdout = result.stdout;
+                                
+                                // IMPORTANT: Verify the binary is in fnm's directory (not nvm/other)
+                                // Extract command name (e.g., 'aio' from 'aio --version')
+                                const commandName = prereq.check.command.split(' ')[0];
+                                try {
+                                    const whichResult = await commandManager.execute(
+                                        `fnm exec --using=${major} which ${commandName}`,
+                                        { 
+                                            enhancePath: true,
+                                            timeout: 2000
+                                        }
+                                    );
+                                    const binPath = whichResult.stdout.trim();
+                                    const os = require('os');
+                                    const path = require('path');
+                                    const fnmBase = path.join(os.homedir(), '.local/share/fnm/node-versions');
+                                    
+                                    if (binPath.startsWith(fnmBase)) {
+                                        // Verified in fnm directory
+                                        isInstalled = true;
+                                    } else {
+                                        // Found outside fnm - treat as not installed
+                                        this.debugLogger.debug(`[Prerequisites] ${prereq.name} found at ${binPath} for Node ${major}, but NOT in fnm directory. Treating as not installed.`);
+                                        throw new Error('Not in fnm directory');
+                                    }
+                                } catch {
+                                    // Path verification failed - treat as not installed
+                                    throw new Error('Path verification failed');
+                                }
                             } else {
                                 // Other prerequisites use standard Node version switching
                                 const result = await commandManager.execute(prereq.check.command, { 
@@ -868,11 +898,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                                     timeout: TIMEOUTS.PREREQUISITE_CHECK
                                 });
                                 stdout = result.stdout;
+                                isInstalled = true;
                             }
                             
                             // Parse CLI version if regex provided
                             let cliVersion = '';
-                            if (prereq.check.parseVersion) {
+                            if (prereq.check.parseVersion && isInstalled) {
                                 try {
                                     const match = stdout.match(new RegExp(prereq.check.parseVersion));
                                     if (match) cliVersion = match[1] || '';
@@ -880,7 +911,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                                     // Ignore regex parse errors
                                 }
                             }
-                            perNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: true });
+                            perNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: isInstalled });
                         } catch {
                             perNodeVariantMissing = true;
                             missingVariantMajors.push(major);
