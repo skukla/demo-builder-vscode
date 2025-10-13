@@ -117,6 +117,21 @@
     },
     "commands": [
       {
+        "command": "demoBuilder.createProject",
+        "title": "Create Project",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.checkForUpdates",
+        "title": "Check for Updates",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.resetAll",
+        "title": "Reset All (Dev Only)",
+        "category": "Demo Builder"
+      },
+      {
         "command": "demoBuilder.showWelcome",
         "title": "Show Welcome Screen",
         "category": "Demo Builder",
