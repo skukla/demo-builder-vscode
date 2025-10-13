@@ -1,4 +1,4 @@
-import { ExecOptions, spawn } from 'child_process';
+import { ExecOptions, spawn, execSync } from 'child_process';
 import * as fsSync from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -129,11 +129,12 @@ export class ExternalCommandManager {
                 ? await this.findAdobeCLINodeVersion()
                 : options.useNodeVersion;
                 
-            if (await this.isFnmAvailable()) {
+            const fnmPath = this.findFnmPath();
+            if (fnmPath) {
                 // Special handling for 'current' - use fnm env instead of fnm use
                 if (options.useNodeVersion === 'current' || nodeVersion === 'current') {
                     // Use fnm env to set up the environment with the current active version
-                    finalCommand = `eval "$(fnm env)" && ${finalCommand}`;
+                    finalCommand = `eval "$(${fnmPath} env)" && ${finalCommand}`;
                 } else if (nodeVersion) {
                     // Check if we're already on the target version to avoid unnecessary switching
                     const currentVersion = await this.getCurrentFnmVersion();
@@ -142,7 +143,7 @@ export class ExternalCommandManager {
                         // finalCommand remains unchanged (no fnm prefix)
                     } else {
                         // Use specific version with silent flag to prevent output mixing
-                        finalCommand = `fnm use ${nodeVersion} --silent-if-unchanged && ${finalCommand}`;
+                        finalCommand = `${fnmPath} use ${nodeVersion} --silent-if-unchanged && ${finalCommand}`;
                     }
                 }
                 finalOptions.shell = finalOptions.shell || '/bin/zsh';
@@ -760,11 +761,53 @@ export class ExternalCommandManager {
     }
 
     /**
+     * Find fnm executable path by checking common installation locations
+     */
+    private findFnmPath(): string | null {
+        const commonPaths = [
+            '/opt/homebrew/bin/fnm',        // Homebrew on Apple Silicon
+            '/usr/local/bin/fnm',           // Homebrew on Intel Mac
+            path.join(os.homedir(), '.local/bin/fnm'),  // Manual install
+            path.join(os.homedir(), '.fnm/fnm'),        // fnm self-install
+        ];
+        
+        for (const fnmPath of commonPaths) {
+            if (fsSync.existsSync(fnmPath)) {
+                this.logger.debug(`[fnm] Found at: ${fnmPath}`);
+                return fnmPath;
+            }
+        }
+        
+        // If not found in common locations, check if it's in PATH
+        try {
+            const which = process.platform === 'win32' ? 'where' : 'which';
+            const result = execSync(`${which} fnm`, { 
+                encoding: 'utf8',
+                stdio: ['pipe', 'pipe', 'ignore'] // Suppress stderr
+            });
+            const fnmPath = result.trim().split('\n')[0];
+            if (fnmPath) {
+                this.logger.debug(`[fnm] Found in PATH: ${fnmPath}`);
+                return fnmPath;
+            }
+        } catch {
+            // Not in PATH
+        }
+        
+        return null;
+    }
+
+    /**
      * Check if fnm is available on the system
      */
     async isFnmAvailable(): Promise<boolean> {
+        const fnmPath = this.findFnmPath();
+        if (!fnmPath) {
+            return false;
+        }
+        
         try {
-            await this.execute('fnm --version', { 
+            await this.execute(`${fnmPath} --version`, { 
                 timeout: 2000 // Quick check
             });
             return true;
@@ -777,8 +820,13 @@ export class ExternalCommandManager {
      * Get the current Node version from fnm
      */
     async getCurrentFnmVersion(): Promise<string | null> {
+        const fnmPath = this.findFnmPath();
+        if (!fnmPath) {
+            return null;
+        }
+        
         try {
-            const result = await this.execute('fnm current', { 
+            const result = await this.execute(`${fnmPath} current`, { 
                 timeout: 2000 // Quick check
             });
             return result.stdout?.trim() || null;
@@ -900,12 +948,13 @@ export class ExternalCommandManager {
             }
 
             // Check if we're already on the correct version
-            if (await this.isFnmAvailable()) {
+            const fnmPath = this.findFnmPath();
+            if (fnmPath) {
                 const currentVersion = await this.getCurrentFnmVersion();
                 if (!currentVersion || !currentVersion.includes(requiredVersion)) {
                     // Switch to the required version (only log if actually switching)
                     this.logger.info(`[Adobe CLI] Switching to Node v${requiredVersion}`);
-                    await this.execute(`fnm use ${requiredVersion} --silent-if-unchanged`, { 
+                    await this.execute(`${fnmPath} use ${requiredVersion} --silent-if-unchanged`, { 
                         timeout: TIMEOUTS.COMMAND_DEFAULT // 30 second timeout for Node version switching
                     });
                 }
