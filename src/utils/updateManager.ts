@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as semver from 'semver';
 import { Project } from '../types';
 import { Logger } from './logger';
 import { TIMEOUTS } from './timeoutConfig';
@@ -42,13 +43,20 @@ export class UpdateManager {
     const currentVersion = this.context.extension.packageJSON.version;
     const channel = this.getUpdateChannel();
     
+    this.logger.debug(`[Update] Checking for updates: current=${currentVersion}, channel=${channel}`);
+    
     const latestRelease = await this.fetchLatestRelease(this.EXTENSION_REPO, channel);
     
     if (!latestRelease) {
+      this.logger.debug(`[Update] No release found`);
       return { hasUpdate: false, current: currentVersion, latest: currentVersion };
     }
     
+    this.logger.debug(`[Update] Latest release found: ${latestRelease.version}`);
+    
     const hasUpdate = this.isNewerVersion(latestRelease.version, currentVersion);
+    
+    this.logger.debug(`[Update] Comparison: ${latestRelease.version} > ${currentVersion} = ${hasUpdate}`);
     
     return {
       hasUpdate,
@@ -161,19 +169,14 @@ export class UpdateManager {
   }
 
   private isNewerVersion(latest: string, current: string): boolean {
-    const parseVersion = (v: string) => {
-      const parts = v.split('.').map(n => parseInt(n, 10));
-      return parts.length === 3 ? parts : [0, 0, 0];
-    };
-    
-    const [latestMajor, latestMinor, latestPatch] = parseVersion(latest);
-    const [currentMajor, currentMinor, currentPatch] = parseVersion(current);
-    
-    if (latestMajor > currentMajor) return true;
-    if (latestMajor < currentMajor) return false;
-    if (latestMinor > currentMinor) return true;
-    if (latestMinor < currentMinor) return false;
-    return latestPatch > currentPatch;
+    try {
+      // Use semver for proper version comparison including prerelease tags
+      // semver.gt() properly handles: 1.0.0-beta.6 > 1.0.0-beta.5
+      return semver.gt(latest, current);
+    } catch (error) {
+      this.logger.debug(`[Update] Version comparison failed: ${error}`);
+      return false;
+    }
   }
 }
 
