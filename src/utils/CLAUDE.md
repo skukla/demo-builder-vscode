@@ -388,7 +388,7 @@ stepLogger.logTemplate('adobe-auth', 'operations.fetching', { item: 'organizatio
 
 ### ExternalCommandManager
 
-**Purpose**: Manages external command execution with race condition protection
+**Purpose**: Manages external command execution with race condition protection and Node version management
 
 **Key Features**:
 - Command queuing for sequential execution
@@ -396,6 +396,7 @@ stepLogger.logTemplate('adobe-auth', 'operations.fetching', { item: 'organizatio
 - Smart polling with exponential backoff
 - Retry strategies for failed commands
 - File system change detection
+- **Automatic fnm path detection for Node version management**
 
 **Implementation**:
 ```typescript
@@ -413,6 +414,31 @@ class ExternalCommandManager {
     async executeSequence(commands: CommandConfig[], stopOnError?: boolean): Promise<CommandResult[]>
 }
 ```
+
+**Node Version Management**:
+
+The extension automatically finds and uses fnm even when it's not in VS Code's inherited PATH:
+
+```typescript
+findFnmPath(): string | null {
+    // Check common installation locations:
+    // - /opt/homebrew/bin/fnm (Homebrew Apple Silicon)
+    // - /usr/local/bin/fnm (Homebrew Intel)
+    // - ~/.local/bin/fnm (manual install)
+    // - ~/.fnm/fnm (fnm self-install)
+    // - Falls back to 'which fnm' if in PATH
+}
+```
+
+When executing commands with `useNodeVersion: 'auto'` or a specific version:
+1. Finds fnm path using `findFnmPath()`
+2. Prepends `fnm use {version} --silent-if-unchanged &&` to command
+3. Uses full fnm path: `/opt/homebrew/bin/fnm use 20 && aio ...`
+
+This ensures Adobe I/O CLI always runs with the correct Node version, even if:
+- fnm wasn't in PATH when VS Code started
+- User has multiple Node version managers (nvm + fnm)
+- Shell hasn't initialized fnm environment
 
 **Retry Strategies**:
 - **Network**: Retry on network errors with exponential backoff
