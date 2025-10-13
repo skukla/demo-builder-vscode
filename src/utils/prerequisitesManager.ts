@@ -185,25 +185,34 @@ export class PrerequisitesManager {
             let checkResult;
             
             const cmdStartTime = Date.now();
-            if (prereq.id === 'aio-cli') {
-                // Use executeAdobeCLI for proper Node version management and caching
-                // For prerequisite checks, disable retries to fail fast on timeout
-                // IMPORTANT: Check for aio-cli BEFORE perNodeVersion since aio-cli has perNodeVersion=true
-                this.logger.debug(`[Prereq Check] aio-cli: Executing via executeAdobeCLI with timeout=${TIMEOUTS.PREREQUISITE_CHECK}ms`);
-                checkResult = await commandManager.executeAdobeCLI(prereq.check.command, {
-                    timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                    retryStrategy: { 
-                        maxAttempts: 1,
-                        initialDelay: 0,
-                        maxDelay: 0,
-                        backoffFactor: 1
-                    }
-                });
-                const cmdDuration = Date.now() - cmdStartTime;
-                this.logger.debug(`[Prereq Check] aio-cli: Command completed in ${cmdDuration}ms`);
-                this.logger.debug(`[Prereq Check] aio-cli: stdout length=${checkResult.stdout?.length || 0}, stderr length=${checkResult.stderr?.length || 0}`);
-                this.logger.debug(`[Prereq Check] aio-cli: stdout preview: ${checkResult.stdout?.substring(0, 200)}`);
-            } else if (prereq.id === 'node' || prereq.id === 'npm' || prereq.perNodeVersion) {
+            if (prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm') {
+                // For perNodeVersion prerequisites (like aio-cli), check under TARGET Node version
+                // We need to check under the Node version we'll actually use (managed by fnm)
+                // Not where it's currently installed (might be under old nvm version)
+                
+                // Determine target Node version: use Node 20 as the primary target
+                const targetNodeVersion = '20';
+                
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Checking under Node v${targetNodeVersion} (perNodeVersion=true, target for Adobe CLI)`);
+                
+                try {
+                    checkResult = await commandManager.execute(prereq.check.command, {
+                        useNodeVersion: targetNodeVersion,
+                        timeout: TIMEOUTS.PREREQUISITE_CHECK
+                    });
+                    const cmdDuration = Date.now() - cmdStartTime;
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: Command completed in ${cmdDuration}ms under Node v${targetNodeVersion} (exit code: ${checkResult.code})`);
+                } catch (error) {
+                    // If check fails under Node 20, the prerequisite needs to be installed
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: Not found under Node v${targetNodeVersion}: ${error}`);
+                    checkResult = {
+                        stdout: '',
+                        stderr: error instanceof Error ? error.message : String(error),
+                        code: 1,
+                        duration: Date.now() - cmdStartTime
+                    };
+                }
+            } else if (prereq.id === 'node' || prereq.id === 'npm') {
                 this.logger.debug(`[Prereq Check] ${prereq.id}: Executing command with useNodeVersion=current`);
                 checkResult = await commandManager.execute(prereq.check.command, {
                     useNodeVersion: 'current',
@@ -214,10 +223,9 @@ export class PrerequisitesManager {
                 checkResult = await commandManager.execute(prereq.check.command, {
                     timeout: TIMEOUTS.PREREQUISITE_CHECK
                 });
+                const cmdDuration = Date.now() - cmdStartTime;
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Command completed in ${cmdDuration}ms (exit code: ${checkResult.code})`);
             }
-            
-            const cmdDuration = Date.now() - cmdStartTime;
-            this.logger.debug(`[Prereq Check] ${prereq.id}: Command execution took ${cmdDuration}ms`);
             
             const { stdout } = checkResult;
             
