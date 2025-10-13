@@ -4,6 +4,7 @@
   "description": "Create and manage Adobe Commerce demos with ease",
   "version": "1.0.2-beta.1",
   "publisher": "adobe-demo-team",
+  "author": "Steve Kukla",
   "engines": {
     "vscode": "^1.74.0"
   },
@@ -23,7 +24,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/adobe/demo-builder-vscode"
+    "url": "https://github.com/skukla/demo-builder-vscode"
   },
   "activationEvents": [
     "onStartupFinished",
