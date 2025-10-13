@@ -185,6 +185,42 @@ isInstalled = true;
 - ✅ No false negatives from path verification
 - ✅ Cleaner, more reliable code
 
+### 5. Performance: Cached fnm Path Lookup (`src/utils/externalCommandManager.ts`)
+
+**Issue**: Duplicate log messages appeared during aio-cli prerequisite checks:
+```
+[fnm] Found at: /opt/homebrew/bin/fnm
+[fnm] Found at: /opt/homebrew/bin/fnm  ← Duplicate!
+```
+
+**Root Cause**: 
+- aio-cli prerequisite runs **two** checks: `aio --version` and `aio plugins`
+- Both checks call `findFnmPath()` 
+- `findFnmPath()` wasn't caching results, causing repeated filesystem lookups and duplicate logs
+
+**Fix**: Added session-level caching
+```typescript
+// Added cache property
+private cachedFnmPath: string | null | undefined = undefined;
+
+private findFnmPath(): string | null {
+    // Return cached value if already looked up
+    if (this.cachedFnmPath !== undefined) {
+        return this.cachedFnmPath;
+    }
+    
+    // Search for fnm...
+    this.cachedFnmPath = fnmPath; // Cache the result
+    return fnmPath;
+}
+```
+
+**Impact**:
+- ✅ Eliminates duplicate log messages
+- ✅ Cleaner, less confusing logs
+- ✅ Minor performance improvement (no repeated filesystem checks)
+- ✅ Consistent with existing `cachedAdobeCLINodeVersion` pattern
+
 ---
 
 ## 🎯 Real-World Impact
@@ -364,9 +400,10 @@ If you have Adobe I/O access:
 
 1. **`package.json`**: Version bump to `1.0.0-beta.9`
 2. **`src/utils/externalCommandManager.ts`**:
-   - Replaced `fnm use` with `fnm exec`
+   - Replaced `fnm use` with `fnm exec` for true isolation
    - Added FNM_DIR environment variable support
    - Removed version check optimization
+   - Added session-level caching for fnm path to eliminate duplicate logs
 3. **`src/utils/prerequisitesManager.ts`**:
    - Removed hardcoded path verification
    - Simplified prerequisite detection logic
