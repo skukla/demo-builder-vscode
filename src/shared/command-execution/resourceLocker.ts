@@ -1,4 +1,4 @@
-import { getLogger } from '../../shared/logging';
+import { getLogger } from '@/shared/logging';
 
 /**
  * Manages mutual exclusion for command execution

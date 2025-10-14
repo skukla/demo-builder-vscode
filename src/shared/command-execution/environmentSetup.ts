@@ -1,8 +1,8 @@
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { getLogger } from '../../shared/logging';
-import { TIMEOUTS } from '../timeoutConfig';
+import { getLogger } from '@/shared/logging';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
 import type { CommandResult, ExecuteOptions } from './types';
 
 /**

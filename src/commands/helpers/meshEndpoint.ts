@@ -4,7 +4,7 @@
 
 import { Logger } from '../../types/logger';
 import { parseJSON } from '../../types/typeGuards';
-import { CommandExecutor } from '../../utils/commands';
+import { CommandExecutor } from '@/shared/command-execution';
 import { validateMeshId } from '../../utils/securityValidation';
 import { TIMEOUTS } from '../../utils/timeoutConfig';
 

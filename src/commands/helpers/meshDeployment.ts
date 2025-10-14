@@ -6,7 +6,7 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { Logger } from '../../types/logger';
 import { parseJSON } from '../../types/typeGuards';
-import { CommandExecutor } from '../../utils/commands';
+import { CommandExecutor } from '@/shared/command-execution';
 import { TIMEOUTS } from '../../utils/timeoutConfig';
 
 export interface MeshDeploymentResult {

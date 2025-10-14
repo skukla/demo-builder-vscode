@@ -17,7 +17,7 @@
  * @module services/serviceLocator
  */
 
-import { CommandExecutor } from '../utils/commands';
+import { CommandExecutor } from '@/shared/command-execution';
 
 /**
  * Centralized service registry for dependency injection

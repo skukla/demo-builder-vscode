@@ -6,7 +6,7 @@ import { StatusBarManager } from './providers/statusBar';
 import { ServiceLocator } from './services/serviceLocator';
 import { parseJSON } from './types/typeGuards';
 import { AutoUpdater } from './utils/autoUpdater';
-import { CommandExecutor } from './utils/commands';
+import { CommandExecutor } from '@/shared/command-execution';
 import { initializeLogger, Logger } from './shared/logging';
 import { StateManager } from './shared/state';
 

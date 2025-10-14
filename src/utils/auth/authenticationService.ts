@@ -1,5 +1,5 @@
 import * as path from 'path';
-import type { CommandExecutor } from '../commands';
+import type { CommandExecutor } from '@/shared/command-execution';
 import { getLogger } from '../../shared/logging';
 import { Logger } from '../../shared/logging';
 import { StepLogger } from '../../shared/logging';

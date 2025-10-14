@@ -1,4 +1,4 @@
-import type { CommandExecutor } from '../commands';
+import type { CommandExecutor } from '@/shared/command-execution';
 import { getLogger } from '../../shared/logging';
 import { validateAccessToken } from '../securityValidation';
 import { TIMEOUTS } from '../timeoutConfig';
