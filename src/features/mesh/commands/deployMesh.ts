@@ -1,14 +1,13 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { StatusBarManager } from '../providers/statusBar';
-import { ServiceLocator } from '../services/serviceLocator';
-import { Project } from '../types/base';
-import { parseJSON } from '../types/typeGuards';
-import { Logger } from '../shared/logging';
-import { updateMeshState } from '../utils/stalenessDetector';
-import { StateManager } from '../shared/state';
-import { TIMEOUTS } from '../utils/timeoutConfig';
+import { StatusBarManager } from '@/providers/statusBar';
+import { ServiceLocator } from '../../../services/serviceLocator';
+import { Project } from '@/types/base';
+import { parseJSON } from '@/types/typeGuards';
+import { Logger } from '@/shared/logging';
+import { StateManager } from '@/shared/state';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
 import { BaseCommand } from '@/shared/base';
 
 /**
@@ -34,7 +33,7 @@ export class DeployMeshCommand extends BaseCommand {
             }
 
             // PRE-FLIGHT: Check authentication
-            const { AuthenticationService } = await import('../utils/auth');
+            const { AuthenticationService } = await import('@/utils/auth');
             const authManager = new AuthenticationService(
                 this.context.extensionPath,
                 this.logger,
@@ -90,7 +89,7 @@ export class DeployMeshCommand extends BaseCommand {
             }
 
             // Import ProjectDashboardWebviewCommand for real-time updates
-            const { ProjectDashboardWebviewCommand } = await import('./projectDashboardWebview');
+            const { ProjectDashboardWebviewCommand } = await import('../../../commands/projectDashboardWebview');
             
             // Log deployment start
             this.logger.info('='.repeat(60));
@@ -214,9 +213,10 @@ export class DeployMeshCommand extends BaseCommand {
                         await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Waiting for deployment to complete...');
                         
                         this.logger.info('Waiting 20 seconds for mesh provisioning...');
-                        
-                        const { waitForMeshDeployment } = await import('../utils/meshDeploymentVerifier');
-                        
+
+                        // TODO: Update after services migration
+                        const { waitForMeshDeployment } = await import('../../../utils/meshDeploymentVerifier');
+
                         const verificationResult = await waitForMeshDeployment({
                             onProgress: (attempt, maxRetries, elapsedSeconds) => {
                                 progress.report({ message: 'Verifying deployment...' });
@@ -254,6 +254,8 @@ export class DeployMeshCommand extends BaseCommand {
                         
                         // Update mesh state (env vars + source hash) to match deployed configuration
                         // This ensures the dashboard knows the config is in sync
+                        // TODO: Update after services migration
+                        const { updateMeshState } = await import('../../../utils/stalenessDetector');
                         await updateMeshState(project);
                         this.logger.info('[Deploy Mesh] Updated mesh state after successful deployment');
                         
@@ -307,7 +309,7 @@ export class DeployMeshCommand extends BaseCommand {
                     await this.stateManager.saveProject(project);
                 }
                 
-                const { formatMeshDeploymentError } = await import('../utils/errorFormatter');
+                const { formatMeshDeploymentError } = await import('@/utils/errorFormatter');
                 
                 // Show error message (logs are already in Demo Builder: Logs channel)
                 vscode.window.showErrorMessage(formatMeshDeploymentError(error as Error));

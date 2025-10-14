@@ -14,7 +14,7 @@ import { StartDemoCommand } from './startDemo';
 import { StopDemoCommand } from './stopDemo';
 import { ViewStatusCommand } from './viewStatus';
 import { ResetAllCommand } from './resetAll';
-import { DeployMeshCommand } from './deployMesh';
+import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
 import { WelcomeWebviewCommand } from './welcomeWebview';
 
 export class CommandManager {
