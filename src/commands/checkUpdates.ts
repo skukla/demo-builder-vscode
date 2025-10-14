@@ -41,7 +41,7 @@ export class CheckUpdatesCommand extends BaseCommand {
       
       if (updates.length === 0) {
         this.logger.info('[Updates] ✓ No updates available - Demo Builder is up to date');
-        vscode.window.showInformationMessage('Demo Builder is up to date ✓');
+        vscode.window.showInformationMessage(`Demo Builder is up to date ✓ (v${extensionUpdate.current})`);
         return;
       }
       
