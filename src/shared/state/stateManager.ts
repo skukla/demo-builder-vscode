@@ -2,8 +2,8 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Project, StateData, ProcessInfo } from '../types';
-import { parseJSON } from '../types/typeGuards';
+import { Project, StateData, ProcessInfo } from '@/types';
+import { parseJSON } from '@/types/typeGuards';
 
 interface RecentProject {
     path: string;
@@ -327,7 +327,7 @@ export class StateManager {
             }
             
             // Reconstruct componentInstances from components/ directory
-            const componentInstances: Record<string, import('../types').ComponentInstance> = {};
+            const componentInstances: Record<string, import('@/types').ComponentInstance> = {};
             const componentsDir = path.join(projectPath, 'components');
             
             try {

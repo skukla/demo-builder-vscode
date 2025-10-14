@@ -21,7 +21,7 @@ module.exports = {
         '^@/shared/(.*)$': '<rootDir>/src/shared/$1',
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
-        '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
+        '^@/utils/(.*)$': '<rootDir>/src/utils/$1',        '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
       },
       globals: {
@@ -53,7 +53,7 @@ module.exports = {
         '^@/shared/(.*)$': '<rootDir>/src/shared/$1',
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
-        '^@/(.*)$': '<rootDir>/src/webviews/$1',
+        '^@/utils/(.*)$': '<rootDir>/src/utils/$1',        '^@/(.*)$': '<rootDir>/src/webviews/$1',
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',

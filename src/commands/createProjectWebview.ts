@@ -7,7 +7,7 @@ import { AuthenticationService } from '../utils/auth';
 import { getLogger, ErrorLogger, StepLogger } from '../shared/logging';
 import { PrerequisitesManager } from '../utils/prerequisitesManager';
 import { ProgressUnifier } from '../utils/progressUnifier';
-import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
+import { WebviewCommunicationManager } from '@/shared/communication';
 import { BaseWebviewCommand } from './baseWebviewCommand';
 // Prerequisites checking is handled by PrerequisitesManager
 import { ComponentHandler } from './componentHandler';

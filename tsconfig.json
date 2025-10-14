@@ -23,8 +23,10 @@
     "paths": {
       "@/features/*": ["src/features/*"],
       "@/shared/*": ["src/shared/*"],
+      "@/types": ["src/types"],
       "@/types/*": ["src/types/*"],
-      "@/providers/*": ["src/providers/*"]
+      "@/providers/*": ["src/providers/*"],
+      "@/utils/*": ["src/utils/*"]
     }
   },
   "include": ["src/**/*"],

@@ -5,7 +5,7 @@ import { Project } from '../types';
 import { parseJSON } from '../types/typeGuards';
 import { ComponentRegistryManager } from '../utils/componentRegistry';
 import { detectMeshChanges } from '../utils/stalenessDetector';
-import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
+import { WebviewCommunicationManager } from '@/shared/communication';
 import { BaseWebviewCommand } from './baseWebviewCommand';
 import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
 

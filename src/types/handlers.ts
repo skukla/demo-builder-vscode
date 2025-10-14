@@ -14,7 +14,7 @@ import {
     PrerequisiteStatus,
 } from '../utils/prerequisitesManager';
 import { ProgressUnifier } from '../utils/progressUnifier';
-import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
+import { WebviewCommunicationManager } from '@/shared/communication';
 import { ComponentSelection, ComponentConfigs } from './components';
 import { Logger } from './logger';
 import { StateManager } from './state';
