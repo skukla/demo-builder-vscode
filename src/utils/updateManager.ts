@@ -10,6 +10,7 @@ interface ReleaseInfo {
   releaseNotes: string;
   publishedAt: string;
   isPrerelease: boolean;
+  commitSha?: string; // Git commit SHA for the release
 }
 
 interface UpdateCheckResult {
@@ -91,8 +92,37 @@ export class UpdateManager {
         continue;
       }
       
-      const hasUpdate = currentVersion === 'unknown' || 
-                        this.isNewerVersion(latestRelease.version, currentVersion);
+      // Check if update is needed
+      let hasUpdate = false;
+      
+      if (currentVersion === 'unknown') {
+        // For unknown versions, check actual git commit hash
+        // If installed commit matches release commit, no update needed
+        const installedCommit = instance.version; // This is the git commit hash
+        const releaseCommit = latestRelease.commitSha;
+        
+        if (installedCommit && releaseCommit && installedCommit === releaseCommit) {
+          // Already at this version, just update the tracking
+          this.logger.debug(`[Updates] Component ${componentId} is already at ${latestRelease.version} (commit ${installedCommit.substring(0, 7)})`);
+          
+          // Update componentVersions to track properly going forward
+          if (!project.componentVersions) {
+            project.componentVersions = {};
+          }
+          project.componentVersions[componentId] = {
+            version: latestRelease.version,
+            lastUpdated: new Date().toISOString()
+          };
+          
+          hasUpdate = false;
+        } else {
+          // Different commit or unknown, show as update available
+          hasUpdate = true;
+        }
+      } else {
+        // Known version, use semver comparison
+        hasUpdate = this.isNewerVersion(latestRelease.version, currentVersion);
+      }
       
       results.set(componentId, {
         hasUpdate,
@@ -166,7 +196,8 @@ export class UpdateManager {
           downloadUrl: isExtension ? asset.browser_download_url : release.zipball_url,
           releaseNotes: release.body || 'No release notes available',
           publishedAt: release.published_at,
-          isPrerelease: release.prerelease
+          isPrerelease: release.prerelease,
+          commitSha: release.target_commitish // Git commit SHA
         };
       } finally {
         clearTimeout(timeout);

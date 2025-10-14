@@ -24,6 +24,9 @@ export class CheckUpdatesCommand extends BaseCommand {
       if (project) {
         this.logger.info('[Updates] Checking for component updates');
         componentUpdates = await updateManager.checkComponentUpdates(project);
+        
+        // Save project if componentVersions were auto-fixed during check
+        await this.stateManager.saveProject(project);
       }
       
       // Build update summary
