@@ -22,4 +22,4 @@ export {
 export {
     PrerequisiteDefinition,
     PrerequisiteStatus,
-} from '../../utils/prerequisitesManager';
+} from '@/features/prerequisites/services/prerequisitesManager';

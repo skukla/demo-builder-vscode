@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { ServiceLocator } from '../services/serviceLocator';
-import { parseJSON } from '../types/typeGuards';
-import { Logger } from '../shared/logging';
-import { TIMEOUTS } from './timeoutConfig';
+import { ServiceLocator } from '../../../services/serviceLocator';
+import { parseJSON } from '@/types/typeGuards';
+import { Logger } from '@/shared/logging';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
 
 export interface PrerequisiteCheck {
     command: string;

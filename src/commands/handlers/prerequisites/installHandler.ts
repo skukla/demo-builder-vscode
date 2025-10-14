@@ -10,7 +10,7 @@
 
 import * as vscode from 'vscode';
 import { ServiceLocator } from '../../../services/serviceLocator';
-import { InstallStep } from '../../../utils/prerequisitesManager';
+import { InstallStep } from '@/features/prerequisites/services/prerequisitesManager';
 import { TIMEOUTS } from '../../../utils/timeoutConfig';
 import { HandlerContext } from '../HandlerContext';
 import { getRequiredNodeVersions, getNodeVersionMapping } from './shared';

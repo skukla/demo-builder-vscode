@@ -6,7 +6,7 @@ import { Project, ProjectTemplate, CommerceConfig } from '../types';
 import { AuthenticationService, AdobeOrg, AdobeProject } from '@/features/authentication';
 import { FrontendInstaller } from '../utils/frontendInstaller';
 import { MeshDeployer } from '@/features/mesh/services/meshDeployer';
-import { PrerequisitesManager } from '../utils/prerequisitesManager';
+import { PrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManager';
 import { BaseCommand } from '@/shared/base';
 
 // Adobe configuration interface

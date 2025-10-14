@@ -5,7 +5,7 @@ import { ServiceLocator } from '../services/serviceLocator';
 import { parseJSON } from '../types/typeGuards';
 import { AuthenticationService } from '@/features/authentication';
 import { getLogger, ErrorLogger, StepLogger } from '../shared/logging';
-import { PrerequisitesManager } from '../utils/prerequisitesManager';
+import { PrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManager';
 import { ProgressUnifier } from '../utils/progressUnifier';
 import { WebviewCommunicationManager } from '@/shared/communication';
 import { BaseWebviewCommand } from '@/shared/base';

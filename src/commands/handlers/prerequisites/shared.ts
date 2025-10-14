@@ -69,7 +69,7 @@ export async function getRequiredNodeVersions(context: HandlerContext): Promise<
  * Used to gate installation until dependencies are satisfied.
  */
 export function areDependenciesInstalled(
-    prereq: import('../../../utils/prerequisitesManager').PrerequisiteDefinition,
+    prereq: import('@/features/prerequisites/services/prerequisitesManager').PrerequisiteDefinition,
     context: HandlerContext,
 ): boolean {
     if (!prereq.depends || prereq.depends.length === 0) {
@@ -98,7 +98,7 @@ export function areDependenciesInstalled(
  * checks which Node versions have it installed.
  */
 export async function checkPerNodeVersionStatus(
-    prereq: import('../../../utils/prerequisitesManager').PrerequisiteDefinition,
+    prereq: import('@/features/prerequisites/services/prerequisitesManager').PrerequisiteDefinition,
     nodeVersions: string[],
     context: HandlerContext,
 ): Promise<{

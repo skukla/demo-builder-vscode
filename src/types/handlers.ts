@@ -12,7 +12,7 @@ import {
     PrerequisitesManager,
     PrerequisiteDefinition,
     PrerequisiteStatus,
-} from '../utils/prerequisitesManager';
+} from '@/features/prerequisites/services/prerequisitesManager';
 import { ProgressUnifier } from '../utils/progressUnifier';
 import { WebviewCommunicationManager } from '@/shared/communication';
 import { ComponentSelection, ComponentConfigs } from './components';

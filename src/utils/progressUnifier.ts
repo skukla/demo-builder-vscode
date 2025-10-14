@@ -1,6 +1,6 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import { Logger } from '../shared/logging';
-import { InstallStep } from './prerequisitesManager';
+import { InstallStep } from '@/features/prerequisites/services/prerequisitesManager';
 
 export interface UnifiedProgress {
     overall: {
