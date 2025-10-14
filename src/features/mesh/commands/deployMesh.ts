@@ -214,8 +214,7 @@ export class DeployMeshCommand extends BaseCommand {
                         
                         this.logger.info('Waiting 20 seconds for mesh provisioning...');
 
-                        // TODO: Update after services migration
-                        const { waitForMeshDeployment } = await import('../../../utils/meshDeploymentVerifier');
+                        const { waitForMeshDeployment } = await import('../services/meshDeploymentVerifier');
 
                         const verificationResult = await waitForMeshDeployment({
                             onProgress: (attempt, maxRetries, elapsedSeconds) => {
@@ -254,8 +253,7 @@ export class DeployMeshCommand extends BaseCommand {
                         
                         // Update mesh state (env vars + source hash) to match deployed configuration
                         // This ensures the dashboard knows the config is in sync
-                        // TODO: Update after services migration
-                        const { updateMeshState } = await import('../../../utils/stalenessDetector');
+                        const { updateMeshState } = await import('../services/stalenessDetector');
                         await updateMeshState(project);
                         this.logger.info('[Deploy Mesh] Updated mesh state after successful deployment');
                         

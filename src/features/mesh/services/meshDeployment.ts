@@ -4,10 +4,10 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import { Logger } from '../../types/logger';
-import { parseJSON } from '../../types/typeGuards';
+import { Logger } from '@/types/logger';
+import { parseJSON } from '@/types/typeGuards';
 import { CommandExecutor } from '@/shared/command-execution';
-import { TIMEOUTS } from '../../utils/timeoutConfig';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
 
 export interface MeshDeploymentResult {
     success: boolean;
@@ -84,14 +84,14 @@ export async function deployMeshComponent(
 
         if (deployResult.code !== 0) {
             const errorMsg = deployResult.stderr || deployResult.stdout || 'Mesh deployment failed';
-            const { formatAdobeCliError } = await import('../../utils/errorFormatter');
+            const { formatAdobeCliError } = await import('@/utils/errorFormatter');
             throw new Error(formatAdobeCliError(errorMsg));
         }
 
         logger.info('[Deploy Mesh] Update command completed, verifying deployment...');
 
         // Use shared verification utility (same as manual deploy command)
-        const { waitForMeshDeployment } = await import('../../utils/meshDeploymentVerifier');
+        const { waitForMeshDeployment } = await import('./meshDeploymentVerifier');
 
         const verificationResult = await waitForMeshDeployment({
             onProgress: (_attempt, _maxRetries, _elapsedSeconds) => {

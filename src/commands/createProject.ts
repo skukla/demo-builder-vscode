@@ -5,7 +5,7 @@ import { ServiceLocator } from '../services/serviceLocator';
 import { Project, ProjectTemplate, CommerceConfig } from '../types';
 import { AuthenticationService, AdobeOrg, AdobeProject } from '../utils/auth';
 import { FrontendInstaller } from '../utils/frontendInstaller';
-import { MeshDeployer } from '../utils/meshDeployer';
+import { MeshDeployer } from '@/features/mesh/services/meshDeployer';
 import { PrerequisitesManager } from '../utils/prerequisitesManager';
 import { BaseCommand } from '@/shared/base';
 

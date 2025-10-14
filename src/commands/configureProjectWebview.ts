@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import { Project } from '../types';
 import { parseJSON } from '../types/typeGuards';
 import { ComponentRegistryManager } from '../utils/componentRegistry';
-import { detectMeshChanges } from '../utils/stalenessDetector';
+import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { WebviewCommunicationManager } from '@/shared/communication';
 import { BaseWebviewCommand } from '@/shared/base';
 import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';

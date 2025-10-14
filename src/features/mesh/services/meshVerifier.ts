@@ -3,9 +3,9 @@
  * Checks if mesh actually exists, not just if we think it's deployed
  */
 
-import { ServiceLocator } from '../services/serviceLocator';
-import { Project } from '../types';
-import { parseJSON } from '../types/typeGuards';
+import { ServiceLocator } from '../../../services/serviceLocator';
+import { Project } from '@/types';
+import { parseJSON } from '@/types/typeGuards';
 
 export interface MeshVerificationResult {
     exists: boolean;

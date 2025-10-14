@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { Project, ComponentInstance } from '../types';
 import { setLoadingState } from '../utils/loadingHTML';
 import { validateURL } from '@/shared/validation';
-import { detectMeshChanges, detectFrontendChanges } from '../utils/stalenessDetector';
+import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { BaseCommand } from '@/shared/base';
 
 /**
@@ -662,7 +662,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
      * Runs in background to avoid blocking UI
      */
     private async verifyMeshDeployment(project: Project): Promise<void> {
-        const { verifyMeshDeployment, syncMeshStatus } = await import('../utils/meshVerifier');
+        const { verifyMeshDeployment, syncMeshStatus } = await import('@/features/mesh/services/meshVerifier');
         
         this.logger.debug('[Project Dashboard] Verifying mesh deployment with Adobe I/O...');
         

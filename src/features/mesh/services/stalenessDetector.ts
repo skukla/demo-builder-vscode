@@ -9,9 +9,9 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { Project } from '../types';
-import { parseJSON } from '../types/typeGuards';
-import { Logger } from '../shared/logging';
+import { Project } from '@/types';
+import { parseJSON } from '@/types/typeGuards';
+import { Logger } from '@/shared/logging';
 
 // Create logger instance for this module
 const logger = new Logger('MeshStaleness');
@@ -99,16 +99,16 @@ export function getFrontendEnvVars(componentConfig: Record<string, unknown>): Re
  */
 export async function fetchDeployedMeshConfig(): Promise<Record<string, string> | null> {
     try {
-        const { ServiceLocator } = await import('../services/serviceLocator');
+        const { ServiceLocator } = await import('../../../services/serviceLocator');
         const commandManager = ServiceLocator.getCommandExecutor();
-        
+
         logger.debug('[MeshStaleness] Fetching deployed mesh config from Adobe I/O...');
-        
+
         // Pre-check: Verify authentication status without triggering browser auth
         // Use a fast command that doesn't trigger interactive login
         logger.debug('[MeshStaleness] Checking authentication status...');
         try {
-            const { TIMEOUTS } = await import('./timeoutConfig');
+            const { TIMEOUTS } = await import('@/utils/timeoutConfig');
             const authCheckResult = await commandManager.executeAdobeCLI('aio console where --json', {
                 timeout: TIMEOUTS.API_CALL, // Use existing timeout constant
             });

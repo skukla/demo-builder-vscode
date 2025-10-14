@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ServiceLocator } from '../services/serviceLocator';
-import { Project } from '../types';
-import { Logger } from '../shared/logging';
+import { ServiceLocator } from '../../../services/serviceLocator';
+import { Project } from '@/types';
+import { Logger } from '@/shared/logging';
 import { validateMeshId } from '@/shared/validation';
 
 export class MeshDeployer {

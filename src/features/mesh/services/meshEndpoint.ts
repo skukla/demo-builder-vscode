@@ -2,11 +2,11 @@
  * Mesh endpoint resolution utilities
  */
 
-import { Logger } from '../../types/logger';
-import { parseJSON } from '../../types/typeGuards';
+import { Logger } from '@/types/logger';
+import { parseJSON } from '@/types/typeGuards';
 import { CommandExecutor } from '@/shared/command-execution';
 import { validateMeshId } from '@/shared/validation';
-import { TIMEOUTS } from '../../utils/timeoutConfig';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
 
 /**
  * Get mesh endpoint - single source of truth approach:

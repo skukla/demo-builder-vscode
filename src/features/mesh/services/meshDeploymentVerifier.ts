@@ -3,11 +3,11 @@
  * Used by both project creation wizard and manual deploy command
  */
 
-import { ServiceLocator } from '../services/serviceLocator';
-import { Logger } from '../types/logger';
-import { parseJSON } from '../types/typeGuards';
+import { ServiceLocator } from '../../../services/serviceLocator';
+import { Logger } from '@/types/logger';
+import { parseJSON } from '@/types/typeGuards';
 import { validateMeshId } from '@/shared/validation';
-import { TIMEOUTS } from './timeoutConfig';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
 
 export interface MeshDeploymentResult {
     deployed: boolean;

@@ -277,7 +277,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 project.componentInstances!['commerce-mesh'] = meshComponent;
 
                 // Update meshState to track deployment (required for status detection)
-                const { updateMeshState } = await import('../../../utils/stalenessDetector');
+                const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
                 await updateMeshState(project);
                 context.logger.info('[Project Creation] Updated mesh state after successful deployment');
 
@@ -314,7 +314,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         };
 
         // Update meshState to track deployment (required for status detection)
-        const { updateMeshState } = await import('../../../utils/stalenessDetector');
+        const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
         await updateMeshState(project);
         context.logger.info('[Project Creation] Updated mesh state for existing mesh');
 

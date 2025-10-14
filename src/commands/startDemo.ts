@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '../services/serviceLocator';
-import { updateFrontendState } from '../utils/stalenessDetector';
+import { updateFrontendState } from '@/features/mesh/services/stalenessDetector';
 import { BaseCommand } from '@/shared/base';
 
 export class StartDemoCommand extends BaseCommand {
