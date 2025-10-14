@@ -226,12 +226,12 @@
     {
       "id": "git",
       "name": "Git",
-      "description": "Version control system (Homebrew version)",
+      "description": "Version control system",
       "optional": false,
       "depends": ["homebrew"],
       "check": {
-        "command": "brew list git --versions",
-        "parseVersion": "git ([0-9.]+)"
+        "command": "git --version",
+        "parseVersion": "git version ([0-9.]+)"
       },
       "install": {
         "steps": [
