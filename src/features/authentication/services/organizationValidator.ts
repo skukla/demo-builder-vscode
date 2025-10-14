@@ -1,8 +1,7 @@
-import { parseJSON } from '../../types/typeGuards';
+import { parseJSON } from '@/types/typeGuards';
 import type { CommandExecutor } from '@/shared/command-execution';
-import { getLogger } from '../../shared/logging';
-import { Logger } from '../../shared/logging';
-import { TIMEOUTS } from '../timeoutConfig';
+import { getLogger, Logger } from '@/shared/logging';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
 import type { AuthCacheManager } from './authCacheManager';
 
 /**

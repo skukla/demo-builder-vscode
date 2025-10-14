@@ -1,7 +1,7 @@
 import type { CommandExecutor } from '@/shared/command-execution';
-import { getLogger } from '../../shared/logging';
+import { getLogger } from '@/shared/logging';
 import { validateAccessToken } from '@/shared/validation';
-import { TIMEOUTS } from '../timeoutConfig';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
 import type { AuthToken } from './types';
 
 /**

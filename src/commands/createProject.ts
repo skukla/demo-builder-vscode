@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '../services/serviceLocator';
 import { Project, ProjectTemplate, CommerceConfig } from '../types';
-import { AuthenticationService, AdobeOrg, AdobeProject } from '../utils/auth';
+import { AuthenticationService, AdobeOrg, AdobeProject } from '@/features/authentication';
 import { FrontendInstaller } from '../utils/frontendInstaller';
 import { MeshDeployer } from '@/features/mesh/services/meshDeployer';
 import { PrerequisitesManager } from '../utils/prerequisitesManager';

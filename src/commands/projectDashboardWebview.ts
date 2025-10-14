@@ -254,7 +254,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                 this.logger.debug('[Dashboard] Checking mesh deployment status...');
                 
                 // Pre-check: Quick auth verification (< 1 second vs 9+ seconds for full check)
-                const { AuthenticationService } = await import('../utils/auth');
+                const { AuthenticationService } = await import('@/features/authentication');
                 const { ServiceLocator } = await import('../services/serviceLocator');
                 const authManager = new AuthenticationService(
                     this.context.extensionPath,
@@ -541,7 +541,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                     this.logger.debug('[Dashboard] Checking mesh deployment status...');
                     
                     // Pre-check: Verify auth before fetching (prevents browser popup)
-                    const { AuthenticationService } = await import('../utils/auth');
+                    const { AuthenticationService } = await import('@/features/authentication');
                     const { ServiceLocator } = await import('../services/serviceLocator');
                     const authManager = new AuthenticationService(
                         this.context.extensionPath,
@@ -761,7 +761,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             
             this.logger.info('[Dashboard] Starting re-authentication flow');
 
-            const { AuthenticationService } = await import('../utils/auth');
+            const { AuthenticationService } = await import('@/features/authentication');
             const { ServiceLocator } = await import('../services/serviceLocator');
             const authManager = new AuthenticationService(
                 this.context.extensionPath,

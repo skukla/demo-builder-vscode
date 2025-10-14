@@ -20,7 +20,7 @@ import { HandlerContext } from './HandlerContext';
 export async function handleGetWorkspaces(
     context: HandlerContext,
     payload?: { orgId?: string; projectId?: string },
-): Promise<{ success: boolean; workspaces?: import('../../utils/auth/types').AdobeWorkspace[]; error?: string }> {
+): Promise<{ success: boolean; workspaces?: import('@/features/authentication').AdobeWorkspace[]; error?: string }> {
     try {
         // Send loading status with sub-message
         const currentProject = await context.authManager.getCurrentProject();

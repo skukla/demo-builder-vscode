@@ -33,7 +33,7 @@ export class DeployMeshCommand extends BaseCommand {
             }
 
             // PRE-FLIGHT: Check authentication
-            const { AuthenticationService } = await import('@/utils/auth');
+            const { AuthenticationService } = await import('@/features/authentication');
             const authManager = new AuthenticationService(
                 this.context.extensionPath,
                 this.logger,

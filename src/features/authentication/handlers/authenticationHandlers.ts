@@ -6,8 +6,8 @@
  * - authenticate: Browser-based Adobe login flow
  */
 
-import { AdobeOrg, AdobeProject } from '../../utils/auth';
-import { HandlerContext } from './HandlerContext';
+import type { AdobeOrg, AdobeProject } from '../services/types';
+import type { HandlerContext } from '../../../commands/handlers/HandlerContext';
 
 /**
  * check-auth - Check Adobe authentication status

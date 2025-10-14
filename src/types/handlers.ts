@@ -6,7 +6,7 @@
  */
 
 import * as vscode from 'vscode';
-import { AuthenticationService } from '../utils/auth';
+import { AuthenticationService } from '@/features/authentication';
 import { ErrorLogger, StepLogger } from '../shared/logging';
 import {
     PrerequisitesManager,

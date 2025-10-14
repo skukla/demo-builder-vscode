@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '../services/serviceLocator';
 import { parseJSON } from '../types/typeGuards';
-import { AuthenticationService } from '../utils/auth';
+import { AuthenticationService } from '@/features/authentication';
 import { getLogger, ErrorLogger, StepLogger } from '../shared/logging';
 import { PrerequisitesManager } from '../utils/prerequisitesManager';
 import { ProgressUnifier } from '../utils/progressUnifier';

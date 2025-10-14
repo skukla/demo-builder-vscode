@@ -1,9 +1,7 @@
 import * as path from 'path';
 import type { CommandExecutor } from '@/shared/command-execution';
-import { getLogger } from '../../shared/logging';
-import { Logger } from '../../shared/logging';
-import { StepLogger } from '../../shared/logging';
-import { TIMEOUTS, CACHE_TTL } from '../timeoutConfig';
+import { getLogger, Logger, StepLogger } from '@/shared/logging';
+import { TIMEOUTS, CACHE_TTL } from '@/utils/timeoutConfig';
 import { AdobeEntityService } from './adobeEntityService';
 import { AdobeSDKClient } from './adobeSDKClient';
 import { AuthCacheManager } from './authCacheManager';

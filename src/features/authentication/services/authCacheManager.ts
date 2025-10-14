@@ -1,5 +1,5 @@
-import { getLogger } from '../../shared/logging';
-import { CACHE_TTL } from '../timeoutConfig';
+import { getLogger } from '@/shared/logging';
+import { CACHE_TTL } from '@/utils/timeoutConfig';
 import type {
     AdobeOrg,
     AdobeProject,

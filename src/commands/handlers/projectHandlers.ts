@@ -46,7 +46,7 @@ export async function handleEnsureOrgSelected(context: HandlerContext): Promise<
 export async function handleGetProjects(
     context: HandlerContext,
     payload?: { orgId?: string },
-): Promise<{ success: boolean; projects?: import('../../utils/auth/types').AdobeProject[]; error?: string }> {
+): Promise<{ success: boolean; projects?: import('@/features/authentication').AdobeProject[]; error?: string }> {
     try {
         // Send loading status with sub-message
         const currentOrg = await context.authManager.getCurrentOrganization();
