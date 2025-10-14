@@ -258,9 +258,14 @@ export class PrerequisitesManager {
             if (prereq.plugins && status.installed) {
                 this.logger.debug(`[Prereq Check] ${prereq.id}: Checking ${prereq.plugins.length} plugins`);
                 status.plugins = [];
+                // Determine the Node version to use for plugin checks
+                const pluginNodeVersion = prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm' 
+                    ? '20'  // Use same Node version as parent check
+                    : undefined; // Use auto-detection for non-perNodeVersion prereqs
+                
                 for (const plugin of prereq.plugins) {
                     const pluginStartTime = Date.now();
-                    const pluginStatus = await this.checkPlugin(plugin);
+                    const pluginStatus = await this.checkPlugin(plugin, pluginNodeVersion);
                     const pluginDuration = Date.now() - pluginStartTime;
                     this.logger.debug(`[Prereq Check] ${prereq.id}: Plugin ${plugin.id} check took ${pluginDuration}ms, installed=${pluginStatus.installed}`);
                     status.plugins.push(pluginStatus);
@@ -294,7 +299,7 @@ export class PrerequisitesManager {
         return status;
     }
 
-    private async checkPlugin(plugin: PrerequisitePlugin): Promise<{id: string; name: string; installed: boolean}> {
+    private async checkPlugin(plugin: PrerequisitePlugin, nodeVersion?: string): Promise<{id: string; name: string; installed: boolean}> {
         try {
             const commandManager = getExternalCommandManager();
             // Use executeAdobeCLI for proper Node version management and caching
@@ -306,7 +311,9 @@ export class PrerequisitesManager {
                     initialDelay: 0,
                     maxDelay: 0,
                     backoffFactor: 1
-                }
+                },
+                // Use the specified Node version, or 'auto' if not provided
+                useNodeVersion: nodeVersion || 'auto'
             });
             const installed = plugin.check.contains ? 
                 stdout.includes(plugin.check.contains) : true;

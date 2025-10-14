@@ -1192,7 +1192,16 @@ export class AdobeAuthManager {
                 }
             } else {
                 const exitCode = result?.code ?? 'unknown';
+                const stderr = result?.stderr?.trim() || '';
+                const stdout = result?.stdout?.trim() || '';
                 this.debugLogger.debug(`[Auth] Login command failed with exit code: ${exitCode}`);
+                if (stderr) {
+                    this.debugLogger.debug(`[Auth] Error output: ${stderr}`);
+                    this.logger.error(`Adobe login failed: ${stderr}`);
+                }
+                if (stdout && stdout.length < 500) {
+                    this.debugLogger.debug(`[Auth] Command output: ${stdout}`);
+                }
             }
             
             // Command failed or token verification failed
