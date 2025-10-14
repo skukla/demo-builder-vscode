@@ -861,6 +861,7 @@ export class ExternalCommandManager {
 
     /**
      * Find which Node version has Adobe CLI installed (fnm only)
+     * Tests actual execution rather than file existence for reliability
      * Returns the highest version number to ensure we use the most compatible/modern version
      * Cached per session for performance
      */
@@ -879,20 +880,35 @@ export class ExternalCommandManager {
         if (fsSync.existsSync(fnmBase)) {
             try {
                 const versions = fsSync.readdirSync(fnmBase);
-                // Find all versions with aio-cli and pick the highest one
                 const versionsWithAio: Array<{version: string, major: number}> = [];
                 
+                // Test each Node version by actually running aio --version
                 for (const version of versions) {
-                    const aioPath = path.join(fnmBase, version, 'installation/bin/aio');
-                    if (fsSync.existsSync(aioPath)) {
-                        // Extract major version number
-                        const match = version.match(/v?(\d+)/);
-                        if (match) {
-                            versionsWithAio.push({
-                                version: version,
-                                major: parseInt(match[1], 10)
-                            });
+                    const match = version.match(/v?(\d+)/);
+                    if (!match) continue;
+                    
+                    const major = parseInt(match[1], 10);
+                    
+                    // Try to run aio --version with this Node version
+                    try {
+                        const fnmPath = this.findFnmPath();
+                        if (!fnmPath) continue;
+                        
+                        const result = await this.execute(
+                            `${fnmPath} exec --using=${major} -- aio --version`,
+                            { 
+                                timeout: 5000, // 5 second timeout per version test
+                                configureTelemetry: false
+                            }
+                        );
+                        
+                        if (result.code === 0) {
+                            versionsWithAio.push({ version, major });
+                            this.logger.debug(`[Adobe CLI] Node v${major}: aio-cli works ✓`);
                         }
+                    } catch (error) {
+                        // This version doesn't have aio-cli or it failed - skip it
+                        this.logger.debug(`[Adobe CLI] Node v${major}: aio-cli not available`);
                     }
                 }
                 
@@ -900,17 +916,17 @@ export class ExternalCommandManager {
                 if (versionsWithAio.length > 0) {
                     versionsWithAio.sort((a, b) => b.major - a.major);
                     const best = versionsWithAio[0];
-                    this.logger.debug(`[Adobe CLI] Found ${versionsWithAio.length} fnm Node version(s) with aio-cli, using highest: Node ${best.version} (v${best.major})`);
+                    this.logger.debug(`[Adobe CLI] Found ${versionsWithAio.length} fnm Node version(s) with working aio-cli, using highest: Node v${best.major}`);
                     this.cachedAdobeCLINodeVersion = best.major.toString();
                     return best.major.toString();
                 }
             } catch (error) {
-                this.logger.debug(`[Adobe CLI] Error scanning fnm versions: ${error}`);
+                this.logger.debug(`[Adobe CLI] Error testing fnm Node versions: ${error}`);
             }
         }
         
         // Cache the null result to avoid repeated lookups
-        this.logger.debug('[Adobe CLI] No fnm Node versions found with aio-cli installed');
+        this.logger.debug('[Adobe CLI] No fnm Node versions found with working aio-cli');
         this.cachedAdobeCLINodeVersion = null;
         return null;
     }

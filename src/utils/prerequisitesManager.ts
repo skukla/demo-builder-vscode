@@ -187,14 +187,19 @@ export class PrerequisitesManager {
             
             const cmdStartTime = Date.now();
             if (prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm') {
-                // For perNodeVersion prerequisites (like aio-cli), check under TARGET Node version
-                // When we use 'fnm use 20 && aio --version', fnm provides isolation:
-                // - fnm prepends its Node 20 bin directory to PATH
-                // - Any command found will be from fnm's Node 20, not nvm/system
-                // - If not installed in fnm's Node 20, the command fails (no fallback)
-                // Therefore, command success = installed in fnm ✓
+                // For perNodeVersion prerequisites (like aio-cli), we REQUIRE fnm
+                // Check if fnm is installed first (simple check to avoid recursion)
+                const fnmInstalled = await commandManager.commandExists('fnm');
                 
-                const targetNodeVersion = '20';
+                if (!fnmInstalled) {
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: Skipping perNodeVersion check - fnm not installed (REQUIRED)`);
+                    this.logger.warn(`${prereq.name} requires fnm to be installed first`);
+                    status.installed = false;
+                    return status;
+                }
+                
+                // fnm is installed, find the highest Node version with aio-cli
+                const targetNodeVersion = await commandManager.findAdobeCLINodeVersion() || '20';
                 this.logger.debug(`[Prereq Check] ${prereq.id}: Checking under fnm's Node v${targetNodeVersion} (perNodeVersion=true)`);
                 
                 try {
@@ -259,9 +264,14 @@ export class PrerequisitesManager {
                 this.logger.debug(`[Prereq Check] ${prereq.id}: Checking ${prereq.plugins.length} plugins`);
                 status.plugins = [];
                 // Determine the Node version to use for plugin checks
-                const pluginNodeVersion = prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm' 
-                    ? '20'  // Use same Node version as parent check
-                    : undefined; // Use auto-detection for non-perNodeVersion prereqs
+                let pluginNodeVersion: string | undefined;
+                if (prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm') {
+                    // Use the same dynamically-detected Node version as parent check
+                    pluginNodeVersion = await commandManager.findAdobeCLINodeVersion() || '20';
+                } else {
+                    // Use auto-detection for non-perNodeVersion prereqs
+                    pluginNodeVersion = undefined;
+                }
                 
                 for (const plugin of prereq.plugins) {
                     const pluginStartTime = Date.now();

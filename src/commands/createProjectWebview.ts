@@ -844,6 +844,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     const requiredMajors = Object.keys(nodeVersionMapping);
                     const commandManager = getExternalCommandManager();
                     
+                    // Per-node-version checks REQUIRE fnm - skip if not installed
+                    const fnmInstalled = await commandManager.commandExists('fnm');
+                    if (!fnmInstalled) {
+                        this.debugLogger.debug(`[Prerequisites] Skipping per-node-version checks for ${prereq.id} - fnm not installed`);
+                        // Mark all required versions as NOT installed (so UI shows red X)
+                        for (const major of requiredMajors) {
+                            perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+                        }
+                    } else {
+                    
                     // For aio-cli, use direct fnm commands instead of eval wrapper to avoid shell hanging
                     // For other prerequisites, use standard approach
                     for (const major of requiredMajors) {
@@ -894,6 +904,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                             perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
                         }
                     }
+                    } // end else (fnm installed)
                 }
 
                 // Store state for this prerequisite (include nodeVersionStatus if available)
@@ -1086,6 +1097,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 if (prereq.perNodeVersion && Object.keys(nodeVersionMapping).length > 0) {
                     const requiredMajors = Object.keys(nodeVersionMapping);
                     const commandManager = getExternalCommandManager();
+                    
+                    // Per-node-version checks REQUIRE fnm - skip if not installed
+                    const fnmInstalled = await commandManager.commandExists('fnm');
+                    if (!fnmInstalled) {
+                        this.debugLogger.debug(`[Prerequisites] Skipping per-node-version checks for ${prereq.id} - fnm not installed`);
+                        // Mark all required versions as NOT installed (so UI shows red X)
+                        for (const major of requiredMajors) {
+                            perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+                        }
+                    } else {
                     for (const major of requiredMajors) {
                         try {
                             const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
@@ -1106,6 +1127,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                             perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
                         }
                     }
+                    } // end else (fnm installed)
                 }
 
                 // Dependency gating
@@ -1419,8 +1441,19 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 }
                 const requiredMajors = Object.keys(mapping);
                 if (requiredMajors.length > 0) {
-                    finalPerNodeVersionStatus = [];
                     const commandManager = getExternalCommandManager();
+                    
+                    // Per-node-version checks REQUIRE fnm - skip if not installed
+                    const fnmInstalled = await commandManager.commandExists('fnm');
+                    if (!fnmInstalled) {
+                        this.debugLogger.debug(`[Prerequisites] Skipping per-node-version verification for ${prereq.id} - fnm not installed`);
+                        // Mark all required versions as NOT installed (so UI shows red X)
+                        finalPerNodeVersionStatus = [];
+                        for (const major of requiredMajors) {
+                            finalPerNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+                        }
+                    } else {
+                    finalPerNodeVersionStatus = [];
                     for (const major of requiredMajors) {
                         try {
                             const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
@@ -1439,6 +1472,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                             finalPerNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
                         }
                     }
+                    } // end else (fnm installed)
                 }
             }
 
