@@ -38,13 +38,10 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
         const commandManager = getExternalCommandManager();
         
         // Call aio api-mesh:describe to verify mesh exists
-        const result = await commandManager.execute(
+        const result = await commandManager.executeAdobeCLI(
             'aio api-mesh:describe',
             {
-                timeout: 30000,
-                configureTelemetry: false,
-                useNodeVersion: null,
-                enhancePath: true
+                timeout: 30000
             }
         );
         

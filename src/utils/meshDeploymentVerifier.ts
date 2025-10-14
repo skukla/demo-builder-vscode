@@ -72,13 +72,10 @@ export async function waitForMeshDeployment(
         
         try {
             // Call aio api-mesh get to check deployment status
-            const verifyResult = await commandManager.execute(
+            const verifyResult = await commandManager.executeAdobeCLI(
                 'aio api-mesh get',
                 {
-                    timeout: 30000,
-                    configureTelemetry: false,
-                    useNodeVersion: null,
-                    enhancePath: true
+                    timeout: 30000
                 }
             );
             
@@ -144,13 +141,10 @@ export async function waitForMeshDeployment(
 async function getEndpoint(meshId: string, logger?: Logger): Promise<string | undefined> {
     try {
         const commandManager = getExternalCommandManager();
-        const result = await commandManager.execute(
+        const result = await commandManager.executeAdobeCLI(
             'aio api-mesh:describe',
             {
-                timeout: 30000,
-                configureTelemetry: false,
-                useNodeVersion: null,
-                enhancePath: true
+                timeout: 30000
             }
         );
 

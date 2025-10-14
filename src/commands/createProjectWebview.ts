@@ -400,13 +400,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 this.logger.info('[API Mesh] Deleting mesh for workspace', { workspaceId: data.workspaceId });
                 
                 const commandManager = getExternalCommandManager();
-                const result = await commandManager.execute(
+                const result = await commandManager.executeAdobeCLI(
                     'aio api-mesh delete --autoConfirmAction',
                     {
-                        timeout: TIMEOUTS.API_CALL,
-                        configureTelemetry: false,
-                        useNodeVersion: null,
-                        enhancePath: true
+                        timeout: TIMEOUTS.API_CALL
                     }
                 );
                 
@@ -2084,13 +2081,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         try {
             this.debugLogger.debug('[API Mesh] Fetching endpoint via describe command');
             const commandManager = getExternalCommandManager();
-            const result = await commandManager.execute(
+            const result = await commandManager.executeAdobeCLI(
                 'aio api-mesh:describe',
                 {
-                    timeout: TIMEOUTS.API_CALL,
-                    configureTelemetry: false,
-                    useNodeVersion: null,
-                    enhancePath: true
+                    timeout: TIMEOUTS.API_CALL
                 }
             );
             
@@ -2480,7 +2474,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 				
                     // Update the existing mesh to ensure proper deployment
                     try {
-                        const updateResult = await commandManager.execute(
+                        const updateResult = await commandManager.executeAdobeCLI(
                             `aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
                             {
                                 streaming: true,
@@ -2496,10 +2490,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                                     } else if (output.includes('success')) {
                                         onProgress?.('API Mesh Ready', 'Mesh deployed successfully');
                                     }
-                                },
-                                configureTelemetry: false,
-                                useNodeVersion: null,
-                                enhancePath: true
+                                }
                             }
                         );
 					
@@ -2576,13 +2567,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 			
                 try {
                     // Use 'get' without --active flag to get JSON response with meshStatus
-                    const verifyResult = await commandManager.execute(
+                    const verifyResult = await commandManager.executeAdobeCLI(
                         'aio api-mesh get',
                         {
-                            timeout: TIMEOUTS.API_CALL,
-                            configureTelemetry: false,
-                            useNodeVersion: null,
-                            enhancePath: true
+                            timeout: TIMEOUTS.API_CALL
                         }
                     );
 				
@@ -3533,7 +3521,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             // Always use 'update' during project creation since mesh was already created in wizard
             this.logger.info('[Deploy Mesh] Updating mesh with configuration from commerce-mesh component');
-            const deployResult = await commandManager.execute(
+            const deployResult = await commandManager.executeAdobeCLI(
                 `aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
                 {
                     cwd: componentPath, // Run from mesh component directory (where .env file is)
@@ -3550,10 +3538,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         } else if (output.includes('success')) {
                             onProgress?.('Deploying...', 'Mesh updated successfully');
                         }
-                    },
-                    configureTelemetry: false,
-                    useNodeVersion: null,
-                    enhancePath: true
+                    }
                 }
             );
             

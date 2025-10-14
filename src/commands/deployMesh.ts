@@ -147,7 +147,7 @@ export class DeployMeshCommand extends BaseCommand {
                         this.logger.info('-'.repeat(60));
                     
                         const commandManager = getExternalCommandManager();
-                        const updateResult = await commandManager.execute(
+                        const updateResult = await commandManager.executeAdobeCLI(
                             `aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
                             {
                                 cwd: meshComponent.path, // Run from mesh component directory (where .env file is)
@@ -174,10 +174,7 @@ export class DeployMeshCommand extends BaseCommand {
                                         progress.report({ message: 'Finalizing deployment...' });
                                         ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Finalizing...');
                                     }
-                                },
-                                configureTelemetry: false,
-                                useNodeVersion: null,
-                                enhancePath: true
+                                }
                             }
                         );
                         
