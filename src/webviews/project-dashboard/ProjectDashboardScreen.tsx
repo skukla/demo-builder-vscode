@@ -321,16 +321,23 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                             {meshStatus === 'needs-auth' ? (
                                 <Flex direction="row" alignItems="center" gap="size-100">
                                     <Text UNSAFE_style={{ fontSize: '13px', color: 'var(--spectrum-global-color-gray-700)' }}>
-                                        API Mesh: {meshStatusDisplay.text}
+                                        API Mesh: 
                                     </Text>
-                                    <ActionButton 
-                                        isQuiet 
-                                        onPress={handleReAuthenticate}
-                                        UNSAFE_style={{ marginLeft: '4px' }}
+                                    <span style={{
+                                        fontSize: '13px',
+                                        color: 'var(--spectrum-global-color-orange-600)',
+                                        fontWeight: 500,
+                                        padding: '2px 8px',
+                                        backgroundColor: 'var(--spectrum-global-color-orange-100)',
+                                        borderRadius: '4px',
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={handleReAuthenticate}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-orange-200)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--spectrum-global-color-orange-100)'}
                                     >
-                                        <Login size="XS" />
-                                        <Text>Sign in</Text>
-                                    </ActionButton>
+                                        Session expired - Sign in
+                                    </span>
                                 </Flex>
                             ) : meshStatus === 'authenticating' ? (
                                 <Flex direction="row" alignItems="center" gap="size-100">

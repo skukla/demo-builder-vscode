@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.23",
+  "version": "1.0.0-beta.24",
   "publisher": "adobe-demo-team",
   "author": "Steve Kukla",
   "engines": {

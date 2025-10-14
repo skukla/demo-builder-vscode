@@ -10,7 +10,7 @@
 
 export const TIMEOUTS = {
     // Adobe CLI operations
-    CONFIG_READ: 5000,              // Reading config values (expiry, other config)
+    CONFIG_READ: 10000,             // Reading config values (expiry, other config) - increased for fnm overhead
     TOKEN_READ: 10000,              // Reading JWT tokens (longer due to size)
     CONFIG_WRITE: 10000,            // Writing config values (CRITICAL FIX: increased from 5000ms)
     // Adobe CLI project/workspace selection often takes 8-10 seconds
