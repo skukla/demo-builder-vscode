@@ -6,7 +6,7 @@ import {
     MessagePayload,
     PendingRequest,
 } from '../types/messages';
-import { getLogger } from './debugLogger';
+import { getLogger } from '../shared/logging';
 import { TIMEOUTS } from './timeoutConfig';
 
 /**

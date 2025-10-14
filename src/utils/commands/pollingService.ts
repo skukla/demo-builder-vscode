@@ -1,4 +1,4 @@
-import { getLogger } from '../debugLogger';
+import { getLogger } from '../../shared/logging';
 import { RateLimiter } from './rateLimiter';
 import type { PollOptions } from './types';
 

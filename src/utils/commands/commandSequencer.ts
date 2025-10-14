@@ -1,4 +1,4 @@
-import { getLogger } from '../debugLogger';
+import { getLogger } from '../../shared/logging';
 import type { CommandResult, CommandConfig } from './types';
 
 /**

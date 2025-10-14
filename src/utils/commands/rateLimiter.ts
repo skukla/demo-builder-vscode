@@ -1,4 +1,4 @@
-import { getLogger } from '../debugLogger';
+import { getLogger } from '../../shared/logging';
 
 /**
  * Rate limiter for controlling operation frequency

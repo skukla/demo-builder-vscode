@@ -1,5 +1,5 @@
 import type { CommandExecutor } from '../commands';
-import { getLogger } from '../debugLogger';
+import { getLogger } from '../../shared/logging';
 import { validateAccessToken } from '../securityValidation';
 import { TIMEOUTS } from '../timeoutConfig';
 import type { AuthToken } from './types';

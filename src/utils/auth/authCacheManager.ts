@@ -1,4 +1,4 @@
-import { getLogger } from '../debugLogger';
+import { getLogger } from '../../shared/logging';
 import { CACHE_TTL } from '../timeoutConfig';
 import type {
     AdobeOrg,

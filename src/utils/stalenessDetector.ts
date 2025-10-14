@@ -11,7 +11,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { Project } from '../types';
 import { parseJSON } from '../types/typeGuards';
-import { Logger } from './logger';
+import { Logger } from '../shared/logging';
 
 // Create logger instance for this module
 const logger = new Logger('MeshStaleness');

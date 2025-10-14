@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Project } from '../types';
 import { parseJSON } from '../types/typeGuards';
-import { Logger } from './logger';
+import { Logger } from '../shared/logging';
 import { TIMEOUTS } from './timeoutConfig';
 
 export class ComponentUpdater {

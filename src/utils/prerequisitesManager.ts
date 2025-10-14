@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { ServiceLocator } from '../services/serviceLocator';
 import { parseJSON } from '../types/typeGuards';
-import { Logger } from './logger';
+import { Logger } from '../shared/logging';
 import { TIMEOUTS } from './timeoutConfig';
 
 export interface PrerequisiteCheck {

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { StatusBarManager } from '../providers/statusBar';
-import { Logger } from '../utils/logger';
+import { Logger } from '../shared/logging';
 import { StateManager } from '../utils/stateManager';
 
 export abstract class BaseCommand {

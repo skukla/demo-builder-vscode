@@ -5,5 +5,14 @@
  * Includes debug logging, error tracking, and step-based logging.
  */
 
-// Public API - will be populated during Phase 2 migration
-export {};
+// Debug Logger (main logging system)
+export { DebugLogger, initializeLogger, getLogger, CommandResult } from './debugLogger';
+
+// Logger (backward-compatible wrapper)
+export { Logger, LogLevel } from './logger';
+
+// Error Logger (error tracking with UI integration)
+export { ErrorLogger } from './errorLogger';
+
+// Step Logger (configuration-driven step logging)
+export { StepLogger, StepLoggerContext, getStepLogger } from './stepLogger';

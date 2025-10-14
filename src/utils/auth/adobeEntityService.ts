@@ -1,9 +1,9 @@
 import { parseJSON } from '../../types/typeGuards';
 import type { CommandExecutor } from '../commands';
-import { getLogger } from '../debugLogger';
-import { Logger } from '../logger';
+import { getLogger } from '../../shared/logging';
+import { Logger } from '../../shared/logging';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '../securityValidation';
-import { StepLogger } from '../stepLogger';
+import { StepLogger } from '../../shared/logging';
 import { TIMEOUTS } from '../timeoutConfig';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';

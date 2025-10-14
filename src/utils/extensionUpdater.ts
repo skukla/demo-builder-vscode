@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Logger } from './logger';
+import { Logger } from '../shared/logging';
 import { TIMEOUTS } from './timeoutConfig';
 
 export class ExtensionUpdater {

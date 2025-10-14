@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { sanitizeErrorForLogging } from './securityValidation';
+import { sanitizeErrorForLogging } from '../../utils/securityValidation';
 
 export interface CommandResult {
     stdout: string;

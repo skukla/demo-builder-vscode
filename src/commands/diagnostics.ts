@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '../services/serviceLocator';
 import { parseJSON } from '../types/typeGuards';
-import { getLogger, CommandResult } from '../utils/debugLogger';
+import { getLogger, CommandResult } from '../shared/logging';
 
 // Diagnostic Type Definitions
 interface SystemInfo {

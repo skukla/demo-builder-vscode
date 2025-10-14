@@ -11,7 +11,7 @@ import { MeshDeployer } from '../../src/utils/meshDeployer';
 import { Project } from '../../src/types';
 import { ServiceLocator } from '../../src/services/serviceLocator';
 import { CommandExecutor } from '../../src/utils/commands';
-import { Logger } from '../../src/utils/logger';
+import { Logger } from '../../src/shared/logging';
 import * as fs from 'fs/promises';
 
 // Mock ServiceLocator

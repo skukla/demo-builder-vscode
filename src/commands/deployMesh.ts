@@ -5,7 +5,7 @@ import { StatusBarManager } from '../providers/statusBar';
 import { ServiceLocator } from '../services/serviceLocator';
 import { Project } from '../types/base';
 import { parseJSON } from '../types/typeGuards';
-import { Logger } from '../utils/logger';
+import { Logger } from '../shared/logging';
 import { updateMeshState } from '../utils/stalenessDetector';
 import { StateManager } from '../utils/stateManager';
 import { TIMEOUTS } from '../utils/timeoutConfig';

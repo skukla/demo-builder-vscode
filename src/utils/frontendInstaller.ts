@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ServiceLocator } from '../services/serviceLocator';
 import { Project } from '../types';
-import { Logger } from './logger';
+import { Logger } from '../shared/logging';
 
 export class FrontendInstaller {
     private logger: Logger;

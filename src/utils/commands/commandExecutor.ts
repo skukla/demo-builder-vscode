@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import type { ExecOptions } from 'child_process';
-import { getLogger } from '../debugLogger';
+import { getLogger } from '../../shared/logging';
 import { TIMEOUTS } from '../timeoutConfig';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';

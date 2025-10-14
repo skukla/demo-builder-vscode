@@ -1,5 +1,5 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
-import { Logger } from './logger';
+import { Logger } from '../shared/logging';
 import { InstallStep } from './prerequisitesManager';
 
 export interface UnifiedProgress {

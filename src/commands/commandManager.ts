@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { StatusBarManager } from '../providers/statusBar';
 import { Project } from '../types';
-import { Logger } from '../utils/logger';
+import { Logger } from '../shared/logging';
 import { StateManager } from '../utils/stateManager';
 import { CheckUpdatesCommand } from './checkUpdates';
 import { ConfigureCommand } from './configure';

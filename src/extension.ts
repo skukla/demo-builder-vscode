@@ -7,8 +7,7 @@ import { ServiceLocator } from './services/serviceLocator';
 import { parseJSON } from './types/typeGuards';
 import { AutoUpdater } from './utils/autoUpdater';
 import { CommandExecutor } from './utils/commands';
-import { initializeLogger } from './utils/debugLogger';
-import { Logger } from './utils/logger';
+import { initializeLogger, Logger } from './shared/logging';
 import { StateManager } from './utils/stateManager';
 
 let logger: Logger;

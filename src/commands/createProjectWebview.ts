@@ -4,11 +4,9 @@ import * as vscode from 'vscode';
 import { ServiceLocator } from '../services/serviceLocator';
 import { parseJSON } from '../types/typeGuards';
 import { AuthenticationService } from '../utils/auth';
-import { getLogger } from '../utils/debugLogger';
-import { ErrorLogger } from '../utils/errorLogger';
+import { getLogger, ErrorLogger, StepLogger } from '../shared/logging';
 import { PrerequisitesManager } from '../utils/prerequisitesManager';
 import { ProgressUnifier } from '../utils/progressUnifier';
-import { StepLogger } from '../utils/stepLogger';
 import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
 import { BaseWebviewCommand } from './baseWebviewCommand';
 // Prerequisites checking is handled by PrerequisitesManager
@@ -69,7 +67,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         context: vscode.ExtensionContext,
         stateManager: import('../utils/stateManager').StateManager,
         statusBar: import('../providers/statusBar').StatusBarManager,
-        logger: import('../utils/logger').Logger,
+        logger: import('../shared/logging').Logger,
     ) {
         super(context, stateManager, statusBar, logger);
         // PrerequisitesManager is initialized with proper path
