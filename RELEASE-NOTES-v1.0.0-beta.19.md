@@ -7,6 +7,7 @@
   - API Mesh commands were running under Node 14 with old aio-cli 9.3.0, causing module compatibility errors
   - Changed mesh creation, deletion, and describe commands to use `executeAdobeCLI()` which automatically uses the correct Node version (Node 20/24)
   - This ensures all Adobe CLI commands consistently use the highest available fnm-managed Node version with aio-cli installed
+  - **Bonus:** Filters out harmless plugin loading warnings from stderr when commands succeed (cleaner logs!)
 
 ### 🔄 Bulletproof Component Update Rollback
 - **Eliminated "manual recovery required" failures during component updates**

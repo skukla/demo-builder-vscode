@@ -1029,6 +1029,36 @@ export class ExternalCommandManager {
     }
 
     /**
+     * Filter out harmless plugin loading warnings from stderr
+     * These warnings appear when plugins installed under different Node versions load
+     * but don't affect command execution when exit code is 0
+     */
+    private filterPluginWarnings(stderr: string): string {
+        const lines = stderr.split('\n');
+        const filtered = lines.filter(line => {
+            // Filter out Node.js plugin loading warnings
+            if (line.includes('ModuleLoadError Plugin:')) return false;
+            if (line.includes('Cannot find module \'node:')) return false;
+            if (line.includes('stripVTControlCharacters')) return false;
+            if (line.includes('UnhandledPromiseRejectionWarning')) return false;
+            if (line.includes('PromiseRejectionHandledWarning')) return false;
+            if (line.includes('DeprecationWarning')) return false;
+            if (line.includes('Use `node --trace-warnings')) return false;
+            if (line.includes('Require stack:')) return false;
+            if (line.includes('module:')) return false;
+            if (line.includes('task:')) return false;
+            if (line.includes('plugin:')) return false;
+            if (line.includes('root:')) return false;
+            if (line.includes('See more details with DEBUG=*')) return false;
+            if (line.trim() === '') return false;
+            
+            return true;
+        });
+        
+        return filtered.join('\n').trim();
+    }
+
+    /**
      * Execute Adobe CLI command with the correct Node version
      * This ensures Adobe CLI runs with a compatible Node version
      */
@@ -1056,6 +1086,16 @@ export class ExternalCommandManager {
             retryStrategy: this.getStrategy('adobe-cli')
             // Let Adobe CLI work normally - browsers may open for auth but that's acceptable
         });
+        
+        // Clean up stderr warnings when command succeeds
+        // Adobe CLI plugins may output warnings during startup even when command succeeds
+        if (result.code === 0 && result.stderr) {
+            const cleanStderr = this.filterPluginWarnings(result.stderr);
+            if (cleanStderr !== result.stderr) {
+                this.logger.debug('[CommandManager] Filtered plugin loading warnings from stderr');
+                result.stderr = cleanStderr;
+            }
+        }
         
         // Cache results for version and plugins commands
         if (command === 'aio --version' && result.code === 0) {
