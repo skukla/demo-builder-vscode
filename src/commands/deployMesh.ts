@@ -31,6 +31,15 @@ export class DeployMeshCommand extends BaseCommand {
                 return;
             }
 
+            // Import ProjectDashboardWebviewCommand for real-time updates
+            const { ProjectDashboardWebviewCommand } = await import('./projectDashboardWebview');
+            
+            // Send immediate feedback so user knows something is happening
+            await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Preparing deployment...');
+            
+            // Show quick status message for immediate feedback
+            vscode.window.setStatusBarMessage('$(sync~spin) Preparing mesh deployment...', 3000);
+
             // PRE-FLIGHT: Check authentication
             const { AdobeAuthManager } = await import('../utils/adobeAuthManager');
             const authManager = new AdobeAuthManager(
@@ -86,9 +95,6 @@ export class DeployMeshCommand extends BaseCommand {
                 );
                 return;
             }
-
-            // Import ProjectDashboardWebviewCommand for real-time updates
-            const { ProjectDashboardWebviewCommand } = await import('./projectDashboardWebview');
             
             // Log deployment start
             this.logger.info('='.repeat(60));
@@ -302,10 +308,16 @@ export class DeployMeshCommand extends BaseCommand {
                     await this.stateManager.saveProject(project);
                 }
                 
-                const { formatMeshDeploymentError } = await import('../utils/errorFormatter');
+                // Show shortened error message with View Logs button
+                const viewLogs = await vscode.window.showErrorMessage(
+                    'Mesh deployment failed',
+                    'View Logs'
+                );
                 
-                // Show error message (logs are already in Demo Builder: Logs channel)
-                vscode.window.showErrorMessage(formatMeshDeploymentError(error as Error));
+                if (viewLogs === 'View Logs') {
+                    // Show the Demo Builder: Logs output channel
+                    vscode.commands.executeCommand('demo-builder.showLogs');
+                }
             }
         } catch (error) {
             // Outer catch for any unexpected errors during validation/setup

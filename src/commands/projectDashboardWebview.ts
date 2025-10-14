@@ -326,8 +326,8 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                     meshStatus = 'deployed';
                 }
                 
-                // Check if we have a valid meshState now
-                if (project.meshState && Object.keys(project.meshState.envVars || {}).length > 0) {
+                // Check if we have a valid meshState now (deployed if lastDeployed is set)
+                if (project.meshState && project.meshState.lastDeployed) {
                     meshStatus = 'deployed';
                     
                     if (meshChanges.hasChanges) {

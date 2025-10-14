@@ -3347,8 +3347,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
             
             for (const componentId of Object.keys(project.componentInstances || {})) {
+                const instance = project.componentInstances?.[componentId];
                 project.componentVersions[componentId] = {
-                    version: 'unknown', // Will be set on first update
+                    version: instance?.version || 'unknown', // Use git commit hash from installation
                     lastUpdated: new Date().toISOString()
                 };
             }
