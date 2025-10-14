@@ -553,6 +553,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.info('[Project Creation] ✅ openProject message received');
             this.logger.debug(`[Project Creation] Current panel: ${this.panel ? 'exists' : 'undefined'}`);
             
+            // Set transitioning flag to prevent auto-welcome during transition
+            const { setWebviewTransitioning } = await import('../extension');
+            setWebviewTransitioning(true);
+            
             try {
                 // Get current project to access path
                 const project = await this.stateManager.getCurrentProject();
@@ -607,14 +611,19 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 
                 if (added) {
                     this.logger.info('[Project Creation] ✅ Workspace folder added (Extension Host will restart)');
+                    // Flag will auto-clear on Extension Host restart
                 } else {
                     this.logger.warn('[Project Creation] Workspace folder may already exist, opening dashboard directly');
                     // If folder already exists, open dashboard directly (no restart will occur)
                     await new Promise(resolve => setTimeout(resolve, 500));
                     await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+                    // Clear transition flag after dashboard opens
+                    setWebviewTransitioning(false);
                 }
                 
             } catch (error) {
+                // Clear transition flag on error
+                setWebviewTransitioning(false);
                 this.logger.error('[Project Creation] Error opening project', error as Error);
                 vscode.window.showErrorMessage('Failed to open project. Please use the tree view or status bar to access your project.');
             }

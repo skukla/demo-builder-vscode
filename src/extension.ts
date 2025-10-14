@@ -15,6 +15,9 @@ let stateManager: StateManager;
 let autoUpdater: AutoUpdater;
 let externalCommandManager: ExternalCommandManager;
 
+// Flag to prevent auto-welcome during webview transitions
+let isTransitioningWebview = false;
+
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
     const debugLogger = initializeLogger(context);
@@ -110,12 +113,14 @@ export async function activate(context: vscode.ExtensionContext) {
             // Check if any webviews are still open using the singleton map
             const activeWebviewCount = BaseWebviewCommand.getActivePanelCount();
             
-            logger.debug(`[Extension] Webview ${webviewId} closed. Active webviews remaining: ${activeWebviewCount}`);
+            logger.debug(`[Extension] Webview ${webviewId} closed. Active webviews remaining: ${activeWebviewCount}, transitioning: ${isTransitioningWebview}`);
             
-            // If no webviews are open, show Welcome to prevent user being stuck
-            if (activeWebviewCount === 0) {
+            // If no webviews are open AND we're not transitioning to another webview, show Welcome
+            if (activeWebviewCount === 0 && !isTransitioningWebview) {
                 logger.info('[Extension] No webviews open after disposal - opening Welcome');
                 await vscode.commands.executeCommand('demoBuilder.showWelcome');
+            } else if (isTransitioningWebview) {
+                logger.debug('[Extension] Skipping auto-welcome - webview transition in progress');
             }
         });
         
@@ -282,6 +287,24 @@ export function getExternalCommandManager(): ExternalCommandManager {
     return externalCommandManager;
 }
 
+/**
+ * Set webview transition flag to prevent auto-welcome during transitions
+ * Automatically clears after 2 seconds as a safety mechanism
+ */
+export function setWebviewTransitioning(transitioning: boolean) {
+    isTransitioningWebview = transitioning;
+    logger?.debug(`[Extension] Webview transitioning flag set to: ${transitioning}`);
+    
+    // Auto-clear after 2 seconds as safety mechanism
+    if (transitioning) {
+        setTimeout(() => {
+            if (isTransitioningWebview) {
+                logger?.debug('[Extension] Auto-clearing webview transition flag after timeout');
+                isTransitioningWebview = false;
+            }
+        }, 2000);
+    }
+}
 
 function registerFileWatchers(context: vscode.ExtensionContext) {
     // Watch for .env file changes in workspace (component directories)
