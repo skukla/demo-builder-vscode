@@ -770,7 +770,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     name: p.name,
                     description: p.description,
                     optional: p.optional || false,
-                    plugins: p.plugins
+                    plugins: p.plugins,
+                    requiresPassword: (p.install as any)?.requiresPassword || false,
+                    isInteractive: (p.install as any)?.interactive || false
                 })),
                 nodeVersionMapping
             });
@@ -1248,6 +1250,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 await vscode.env.openExternal(vscode.Uri.parse(installPlan.url));
                 return;
             }
+            
+            // Handle interactive installations (requires user input in terminal)
+            if ((prereq.install as any)?.interactive) {
+                await this.handleInteractiveInstall(prereqId, prereq, installPlan.steps || []);
+                return;
+            }
 
             const steps = installPlan.steps || [];
 
@@ -1525,6 +1533,69 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 index: prereqId,
                 status: 'error',
                 message: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
+    
+    /**
+     * Handle interactive installations that require user input (e.g., Homebrew)
+     * Opens terminal and runs command, letting user interact directly
+     */
+    private async handleInteractiveInstall(prereqId: number, prereq: any, steps: any[]): Promise<void> {
+        try {
+            if (!steps || steps.length === 0) {
+                throw new Error('No installation steps provided');
+            }
+            
+            const step = steps[0]; // Interactive installs typically have one step
+            const command = Array.isArray(step.commands) ? step.commands[0] : step.commands;
+            
+            // Log to all channels
+            this.logger.info(`[Prerequisites] Starting interactive installation for: ${prereq.name}`);
+            this.stepLogger.log('prerequisites', `🔧 Installing ${prereq.name} (interactive - requires user input)`, 'info');
+            this.debugLogger.debug(`[Prerequisites] Opening terminal for interactive install`, { 
+                prereq: prereq.id, 
+                name: prereq.name,
+                command: command.substring(0, 100) + '...' // truncate for security
+            });
+            
+            // Import terminalManager
+            const { TerminalManager } = await import('../utils/terminalManager');
+            const terminalManager = new TerminalManager();
+            
+            // Get or create terminal
+            const terminal = terminalManager.getOrCreateTerminal();
+            terminal.show(true); // Show and focus terminal
+            
+            // Send command to terminal
+            terminalManager.sendCommand(command);
+            
+            this.debugLogger.debug(`[Prerequisites] Terminal opened and command sent`, { prereq: prereq.id });
+            
+            // Update status with instructions from step
+            await this.sendMessage('prerequisite-status', {
+                index: prereqId,
+                name: prereq.name,
+                status: 'checking',
+                message: step.message || 'Installing in terminal - follow the prompts',
+                required: !prereq.optional,
+                instructions: step.instructions || []
+            });
+            
+            this.logger.info(`[Prerequisites] Interactive installation initiated. User must complete in terminal and click Recheck.`);
+            this.stepLogger.log('prerequisites', `⏸️ ${prereq.name}: Waiting for user to complete installation in terminal`, 'info');
+            
+        } catch (error) {
+            this.logger.error(`[Prerequisites] Interactive installation failed for ${prereq.name}`, error as Error);
+            this.stepLogger.log('prerequisites', `✗ ${prereq.name} interactive installation failed: ${error instanceof Error ? error.message : String(error)}`, 'error');
+            this.debugLogger.debug('[Prerequisites] Interactive installation error details:', { prereq: prereq.id, error });
+            
+            await this.sendMessage('prerequisite-status', {
+                index: prereqId,
+                name: prereq.name,
+                status: 'error',
+                message: `Failed to start installation: ${error instanceof Error ? error.message : String(error)}`,
+                required: !prereq.optional
             });
         }
     }

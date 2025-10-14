@@ -11,6 +11,7 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
+import Info from '@spectrum-icons/workflow/Info';
 import { WizardState, PrerequisiteCheck } from '../../types';
 import { vscode } from '../../app/vscodeApi';
 import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '../../utils/classNames';
@@ -63,7 +64,9 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                     canInstall: false,
                     isOptional: p.optional || false,
                     plugins: p.plugins,
-                    message: 'Waiting...'
+                    message: 'Waiting...',
+                    requiresPassword: p.requiresPassword || false,
+                    isInteractive: p.isInteractive || false
                 };
             });
             setChecks(prerequisites);
@@ -109,7 +112,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
 
         // Listen for feedback from extension
         const unsubscribe = vscode.onMessage('prerequisite-status', (data) => {
-            const { index, status, message, version, plugins, unifiedProgress, nodeVersionStatus, canInstall } = data;
+            const { index, status, message, version, plugins, unifiedProgress, nodeVersionStatus, canInstall, instructions } = data;
 
             // Auto-scroll within the container to the item being checked (skip first item as it's already visible)
             if (status === 'checking' && itemRefs.current[index] && scrollContainerRef.current && index > 0) {
@@ -167,7 +170,8 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                         // Respect backend gating for install button
                         canInstall: typeof canInstall === 'boolean' ? canInstall : newChecks[index].canInstall,
                         unifiedProgress,
-                        nodeVersionStatus: typeof nodeVersionStatus !== 'undefined' ? nodeVersionStatus : newChecks[index].nodeVersionStatus
+                        nodeVersionStatus: typeof nodeVersionStatus !== 'undefined' ? nodeVersionStatus : newChecks[index].nodeVersionStatus,
+                        instructions: instructions || newChecks[index].instructions
                     };
                 }
                 
@@ -352,6 +356,14 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                             <Text UNSAFE_className={cn('prerequisite-description')}>
                                                 {check.description}
                                             </Text>
+                                            {check.requiresPassword && check.status === 'error' && (
+                                                <Flex gap="size-75" alignItems="center" marginTop="size-75">
+                                                    <Info size="XS" UNSAFE_className="text-blue-600" />
+                                                    <Text UNSAFE_className={cn('text-xs', 'text-gray-600')}>
+                                                        Requires password confirmation
+                                                    </Text>
+                                                </Flex>
+                                            )}
                                             {check.nodeVersionStatus ? (
                                                 <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
                                                     {check.nodeVersionStatus.map((item, idx) => (
@@ -419,6 +431,17 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                                             </Text>
                                                         )
                                                     )}
+                                                </View>
+                                            )}
+                                            {check.status === 'checking' && check.instructions && check.instructions.length > 0 && (
+                                                <View marginTop="size-100" marginStart="size-200" UNSAFE_className="animate-fade-in">
+                                                    {check.instructions.map((instruction, idx) => (
+                                                        <Flex key={idx} alignItems="flex-start" marginBottom="size-50">
+                                                            <Text UNSAFE_className={cn('text-sm', 'text-gray-700')}>
+                                                                {idx === check.instructions!.length - 1 ? '└─' : '├─'} {instruction}
+                                                            </Text>
+                                                        </Flex>
+                                                    ))}
                                                 </View>
                                             )}
                                             {check.status === 'checking' && check.unifiedProgress && (
@@ -509,7 +532,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                             isDisabled={installingIndex !== null}
                                             UNSAFE_className={cn('btn-compact', 'min-w-100')}
                                         >
-                                            Install
+                                            {check.isInteractive ? 'Install in Terminal' : 'Install'}
                                 </Button>
                             )}
                         </Flex>

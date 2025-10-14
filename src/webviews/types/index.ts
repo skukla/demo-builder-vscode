@@ -194,6 +194,9 @@ export interface PrerequisiteCheck {
         component: string;
         installed: boolean;
     }>;
+    requiresPassword?: boolean;
+    isInteractive?: boolean;
+    instructions?: string[];
 }
 
 export interface ComponentSelection {

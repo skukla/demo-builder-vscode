@@ -12,32 +12,18 @@
         "parseVersion": "Homebrew ([0-9.]+)"
       },
       "install": {
+        "interactive": true,
+        "interactiveMode": "terminal",
+        "requiresPassword": true,
         "steps": [
           {
             "name": "Install Homebrew",
-            "message": "Installing Homebrew package manager",
+            "message": "Installing in terminal - follow the prompts",
             "commands": [
               "/bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
             ],
-            "estimatedDuration": 60000,
-            "progressStrategy": "milestones",
-            "milestones": [
-              {
-                "pattern": "Downloading",
-                "progress": 30,
-                "message": "Downloading Homebrew..."
-              },
-              {
-                "pattern": "Installing",
-                "progress": 60,
-                "message": "Installing Homebrew..."
-              },
-              {
-                "pattern": "Installation successful",
-                "progress": 100,
-                "message": "Homebrew installed!"
-              }
-            ]
+            "estimatedDuration": 180000,
+            "requiresUserInput": true
           }
         ]
       },
