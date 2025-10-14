@@ -8,7 +8,7 @@ import { getLogger, ErrorLogger, StepLogger } from '../shared/logging';
 import { PrerequisitesManager } from '../utils/prerequisitesManager';
 import { ProgressUnifier } from '../utils/progressUnifier';
 import { WebviewCommunicationManager } from '@/shared/communication';
-import { BaseWebviewCommand } from './baseWebviewCommand';
+import { BaseWebviewCommand } from '@/shared/base';
 // Prerequisites checking is handled by PrerequisitesManager
 import { ComponentHandler } from './componentHandler';
 // Extracted helper functions

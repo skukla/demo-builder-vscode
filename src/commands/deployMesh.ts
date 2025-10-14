@@ -9,7 +9,7 @@ import { Logger } from '../shared/logging';
 import { updateMeshState } from '../utils/stalenessDetector';
 import { StateManager } from '../shared/state';
 import { TIMEOUTS } from '../utils/timeoutConfig';
-import { BaseCommand } from './baseCommand';
+import { BaseCommand } from '@/shared/base';
 
 /**
  * Deploy (or redeploy) API Mesh using the mesh.json from the mesh component

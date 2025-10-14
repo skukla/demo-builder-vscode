@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseCommand } from './baseCommand';
+import { BaseCommand } from '@/shared/base';
 
 export class ResetAllCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -40,7 +40,7 @@ export class ResetAllCommand extends BaseCommand {
             try {
                 const { WelcomeWebviewCommand } = await import('./welcomeWebview');
                 const { ProjectDashboardWebviewCommand } = await import('./projectDashboardWebview');
-                const { BaseWebviewCommand } = await import('./baseWebviewCommand');
+                const { BaseWebviewCommand } = await import('@/shared/base');
                 
                 WelcomeWebviewCommand.disposeActivePanel();
                 ProjectDashboardWebviewCommand.disposeActivePanel();

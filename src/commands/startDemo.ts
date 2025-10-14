@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '../services/serviceLocator';
 import { updateFrontendState } from '../utils/stalenessDetector';
-import { BaseCommand } from './baseCommand';
+import { BaseCommand } from '@/shared/base';
 
 export class StartDemoCommand extends BaseCommand {
     public async execute(): Promise<void> {

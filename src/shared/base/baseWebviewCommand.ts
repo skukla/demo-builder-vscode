@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { setLoadingState } from '../utils/loadingHTML';
+import { setLoadingState } from '@/utils/loadingHTML';
 import { WebviewCommunicationManager, createWebviewCommunication } from '@/shared/communication';
 import { BaseCommand } from './baseCommand';
 
@@ -202,7 +202,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
 
         // Send initial data
         const initialData = await this.getInitialData();
-        await this.communicationManager.sendMessage('init', initialData as import('../types/messages').MessagePayload | undefined);
+        await this.communicationManager.sendMessage('init', initialData as import('@/types/messages').MessagePayload | undefined);
 
         this.logger.debug(`[${this.getWebviewTitle()}] Communication initialized`);
 
@@ -269,7 +269,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         }
 
         try {
-            await this.communicationManager.sendMessage(type, payload as import('../types/messages').MessagePayload | undefined);
+            await this.communicationManager.sendMessage(type, payload as import('@/types/messages').MessagePayload | undefined);
         } catch (error) {
             this.logger.error(`Failed to send message '${type}':`, error as Error);
             throw error;
@@ -285,7 +285,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         }
 
         try {
-            return await this.communicationManager.request<T>(type, payload as import('../types/messages').MessagePayload | undefined);
+            return await this.communicationManager.request<T>(type, payload as import('@/types/messages').MessagePayload | undefined);
         } catch (error) {
             this.logger.error(`Request '${type}' failed:`, error as Error);
             throw error;

@@ -4,7 +4,7 @@ import { Project, ComponentInstance } from '../types';
 import { setLoadingState } from '../utils/loadingHTML';
 import { validateURL } from '@/shared/validation';
 import { detectMeshChanges, detectFrontendChanges } from '../utils/stalenessDetector';
-import { BaseCommand } from './baseCommand';
+import { BaseCommand } from '@/shared/base';
 
 /**
  * Command to show the "Project Dashboard" after project creation

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BaseCommand } from './baseCommand';
+import { BaseCommand } from '@/shared/base';
 
 export class ViewStatusCommand extends BaseCommand {
     public async execute(): Promise<void> {

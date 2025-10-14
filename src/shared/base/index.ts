@@ -5,5 +5,5 @@
  * All feature commands extend these base classes.
  */
 
-// Public API - will be populated during Phase 2 migration
-export {};
+export { BaseCommand } from './baseCommand';
+export { BaseWebviewCommand } from './baseWebviewCommand';

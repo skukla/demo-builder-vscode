@@ -6,7 +6,7 @@ import { parseJSON } from '../types/typeGuards';
 import { ComponentRegistryManager } from '../utils/componentRegistry';
 import { detectMeshChanges } from '../utils/stalenessDetector';
 import { WebviewCommunicationManager } from '@/shared/communication';
-import { BaseWebviewCommand } from './baseWebviewCommand';
+import { BaseWebviewCommand } from '@/shared/base';
 import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
 
 // Component configuration type (key-value pairs for environment variables)

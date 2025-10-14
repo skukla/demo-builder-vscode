@@ -7,7 +7,7 @@ import { AuthenticationService, AdobeOrg, AdobeProject } from '../utils/auth';
 import { FrontendInstaller } from '../utils/frontendInstaller';
 import { MeshDeployer } from '../utils/meshDeployer';
 import { PrerequisitesManager } from '../utils/prerequisitesManager';
-import { BaseCommand } from './baseCommand';
+import { BaseCommand } from '@/shared/base';
 
 // Adobe configuration interface
 interface AdobeConfiguration {

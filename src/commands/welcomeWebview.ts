@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { setLoadingState } from '../utils/loadingHTML';
-import { BaseCommand } from './baseCommand';
+import { BaseCommand } from '@/shared/base';
 
 export class WelcomeWebviewCommand extends BaseCommand {
     // Singleton: Track the active Welcome panel to prevent duplicates

@@ -3,7 +3,7 @@ import { Project } from '../types';
 import { ComponentUpdater } from '../utils/componentUpdater';
 import { ExtensionUpdater } from '../utils/extensionUpdater';
 import { UpdateManager, UpdateCheckResult } from '../utils/updateManager';
-import { BaseCommand } from './baseCommand';
+import { BaseCommand } from '@/shared/base';
 
 /**
  * Command to check for and apply updates to extension and components

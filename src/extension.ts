@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from './commands/baseWebviewCommand';
+import { BaseWebviewCommand } from '@/shared/base';
 import { CommandManager } from './commands/commandManager';
 import { ComponentTreeProvider } from './providers/componentTreeProvider';
 import { StatusBarManager } from './providers/statusBar';
