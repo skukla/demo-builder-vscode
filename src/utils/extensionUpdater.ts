@@ -42,21 +42,21 @@ export class ExtensionUpdater {
         await fs.unlink(vsixPath);
         this.logger.debug(`[Update] Cleaned up temporary VSIX file`);
       } catch {}
-      
-      // Prompt for reload
-      const reload = await vscode.window.showInformationMessage(
-        `Demo Builder updated to v${newVersion}. Reload window to apply changes?`,
-        'Reload Now',
-        'Later'
-      );
-      
-      if (reload === 'Reload Now') {
-        this.logger.info(`[Update] Reloading window to apply extension update`);
-        await vscode.commands.executeCommand('workbench.action.reloadWindow');
-      } else {
-        this.logger.info(`[Update] User chose to reload later`);
-      }
     });
+    
+    // Show reload prompt AFTER progress notification completes
+    const reload = await vscode.window.showInformationMessage(
+      `Demo Builder updated to v${newVersion}. Reload window to apply changes?`,
+      'Reload Now',
+      'Later'
+    );
+    
+    if (reload === 'Reload Now') {
+      this.logger.info(`[Update] Reloading window to apply extension update`);
+      await vscode.commands.executeCommand('workbench.action.reloadWindow');
+    } else {
+      this.logger.info(`[Update] User chose to reload later`);
+    }
   }
 
   /**

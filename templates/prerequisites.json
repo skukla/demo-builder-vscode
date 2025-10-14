@@ -52,6 +52,7 @@
       "name": "Fast Node Manager",
       "description": "Node.js version manager for macOS",
       "optional": false,
+      "depends": ["homebrew"],
       "check": {
         "command": "fnm --version",
         "parseVersion": "fnm ([0-9.]+)"
@@ -241,6 +242,7 @@
       "name": "Git",
       "description": "Version control system (Homebrew version)",
       "optional": false,
+      "depends": ["homebrew"],
       "check": {
         "command": "brew list git --versions",
         "parseVersion": "git ([0-9.]+)"
