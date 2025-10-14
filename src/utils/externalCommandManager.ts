@@ -860,7 +860,8 @@ export class ExternalCommandManager {
     private adobePluginsCache: CommandResult | null = null;
 
     /**
-     * Find which Node version has Adobe CLI installed
+     * Find which Node version has Adobe CLI installed (fnm only)
+     * Returns the highest version number to ensure we use the most compatible/modern version
      * Cached per session for performance
      */
     async findAdobeCLINodeVersion(): Promise<string | null> {
@@ -878,51 +879,38 @@ export class ExternalCommandManager {
         if (fsSync.existsSync(fnmBase)) {
             try {
                 const versions = fsSync.readdirSync(fnmBase);
+                // Find all versions with aio-cli and pick the highest one
+                const versionsWithAio: Array<{version: string, major: number}> = [];
+                
                 for (const version of versions) {
                     const aioPath = path.join(fnmBase, version, 'installation/bin/aio');
                     if (fsSync.existsSync(aioPath)) {
-                        // Extract just the major version number for fnm version families
-                        // e.g., "v20.19.5" -> "20"
+                        // Extract major version number
                         const match = version.match(/v?(\d+)/);
                         if (match) {
-                            this.logger.debug(`[Adobe CLI] Found in Node ${version}, using version family: ${match[1]}`);
-                            this.cachedAdobeCLINodeVersion = match[1]; // Cache the result
-                            return match[1]; // Return just "20" instead of "v20.19.5"
+                            versionsWithAio.push({
+                                version: version,
+                                major: parseInt(match[1], 10)
+                            });
                         }
-                        this.cachedAdobeCLINodeVersion = version; // Cache the result
-                        return version; // Fallback to full version if pattern doesn't match
                     }
                 }
-            } catch {
-                // Ignore errors
-            }
-        }
-        
-        // Also check nvm
-        const nvmBase = path.join(homeDir, '.nvm/versions/node');
-        if (fsSync.existsSync(nvmBase)) {
-            try {
-                const versions = fsSync.readdirSync(nvmBase);
-                for (const version of versions) {
-                    const aioPath = path.join(nvmBase, version, 'bin/aio');
-                    if (fsSync.existsSync(aioPath)) {
-                        // Extract just the major version number
-                        const match = version.match(/v?(\d+)/);
-                        if (match) {
-                            this.logger.debug(`[Adobe CLI] Found in Node ${version}, using version family: ${match[1]}`);
-                            this.cachedAdobeCLINodeVersion = match[1]; // Cache the result
-                            return match[1];
-                        }
-                        this.cachedAdobeCLINodeVersion = version; // Cache the result
-                        return version;
-                    }
+                
+                // Sort by major version descending and pick the highest
+                if (versionsWithAio.length > 0) {
+                    versionsWithAio.sort((a, b) => b.major - a.major);
+                    const best = versionsWithAio[0];
+                    this.logger.debug(`[Adobe CLI] Found ${versionsWithAio.length} fnm Node version(s) with aio-cli, using highest: Node ${best.version} (v${best.major})`);
+                    this.cachedAdobeCLINodeVersion = best.major.toString();
+                    return best.major.toString();
                 }
-            } catch {
-                // Ignore errors
+            } catch (error) {
+                this.logger.debug(`[Adobe CLI] Error scanning fnm versions: ${error}`);
             }
         }
         
         // Cache the null result to avoid repeated lookups
+        this.logger.debug('[Adobe CLI] No fnm Node versions found with aio-cli installed');
         this.cachedAdobeCLINodeVersion = null;
         return null;
     }
@@ -955,33 +943,25 @@ export class ExternalCommandManager {
 
     private async doNodeVersionSetup(): Promise<void> {
         try {
-            // Find the required Node version for Adobe CLI
+            // Find which Node version has Adobe CLI installed
+            // We use fnm exec --using=X for all commands, so we don't need to globally switch
             const requiredVersion = await this.findAdobeCLINodeVersion();
             if (!requiredVersion) {
+                this.logger.debug('[Adobe CLI] Could not detect Node version with aio-cli installed');
                 this.isAdobeCLINodeVersionSet = true;
                 return;
             }
 
-            // Check if we're already on the correct version
-            const fnmPath = this.findFnmPath();
-            if (fnmPath) {
-                const currentVersion = await this.getCurrentFnmVersion();
-                if (!currentVersion || !currentVersion.includes(requiredVersion)) {
-                    // Switch to the required version (only log if actually switching)
-                    this.logger.info(`[Adobe CLI] Switching to Node v${requiredVersion}`);
-                    await this.execute(`${fnmPath} use ${requiredVersion} --silent-if-unchanged`, { 
-                        timeout: TIMEOUTS.COMMAND_DEFAULT // 30 second timeout for Node version switching
-                    });
-                }
-            }
-
-            // Mark as set for the session
+            // Store the detected version for all Adobe CLI commands
+            // Note: cachedAdobeCLINodeVersion is already set by findAdobeCLINodeVersion()
             this.sessionNodeVersion = requiredVersion;
             this.isAdobeCLINodeVersionSet = true;
+            
+            this.logger.debug(`[Adobe CLI] Will use Node v${requiredVersion} for all Adobe CLI commands`);
 
         } catch (error) {
-            this.logger.warn(`[Adobe CLI] Failed to set Node version: ${error instanceof Error ? error.message : String(error)}`);
-            // Continue anyway - Adobe CLI might work with current version
+            this.logger.warn(`[Adobe CLI] Failed to detect Node version: ${error instanceof Error ? error.message : String(error)}`);
+            // Continue anyway - commands will use 'auto' detection per-command
             this.isAdobeCLINodeVersionSet = true;
         }
     }
@@ -1047,14 +1027,15 @@ export class ExternalCommandManager {
             return this.adobePluginsCache;
         }
         
-        // Ensure Node version is set once per session for Adobe CLI
+        // Ensure we know which Node version has Adobe CLI installed (once per session)
         await this.ensureAdobeCLINodeVersion();
         
-        // Now execute command without version checking since we've already set it up
+        // Use the detected Node version (or 'auto' if not found, which will use fnm exec with detected version)
+        // This ensures all Adobe CLI commands use the same Node version consistently
         const result = await this.execute(command, {
             ...options,
             configureTelemetry: false, // Explicitly false to prevent redundant check
-            useNodeVersion: null, // Skip version checking - already handled by session setup
+            useNodeVersion: this.cachedAdobeCLINodeVersion || 'auto', // Use detected version or auto-detect
             enhancePath: true,
             retryStrategy: this.getStrategy('adobe-cli')
             // Let Adobe CLI work normally - browsers may open for auth but that's acceptable
