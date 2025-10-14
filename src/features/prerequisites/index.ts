@@ -8,5 +8,8 @@
  * - Other dependencies
  */
 
-// Public API - will be populated during Phase 3.3 migration
-export {};
+// Export services
+export * from './services/prerequisitesManager';
+
+// Export handlers
+export * from './handlers';
