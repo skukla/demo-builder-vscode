@@ -12,7 +12,7 @@ import { HandlerContext, MessageHandler } from './HandlerContext';
 import * as lifecycle from './lifecycleHandlers';
 import * as mesh from '@/features/mesh/handlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
-import * as creation from './projectCreation';
+import * as creation from '@/features/project-creation/handlers';
 import * as projects from './projectHandlers';
 import * as workspaces from './workspaceHandlers';
 

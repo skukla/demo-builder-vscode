@@ -7,13 +7,13 @@
 
 import * as vscode from 'vscode';
 import { ServiceLocator } from '../../../services/serviceLocator';
-import { AdobeConfig } from '../../../types/base';
-import { parseJSON } from '../../../types/typeGuards';
+import { AdobeConfig } from '@/types/base';
+import { parseJSON } from '@/types/typeGuards';
 import {
     generateComponentEnvFile as generateEnvFile,
     deployMeshComponent as deployMeshHelper,
-} from '../../helpers';
-import { HandlerContext } from '../HandlerContext';
+} from '../../../commands/helpers';
+import { HandlerContext } from '../../../commands/handlers/HandlerContext';
 import { ProgressTracker } from './shared';
 
 /**
@@ -83,9 +83,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     // Import ComponentManager and other dependencies
     context.logger.debug('[Project Creation] Starting dynamic imports...');
-    const { ComponentManager } = await import('../../../utils/componentManager');
+    const { ComponentManager } = await import('@/utils/componentManager');
     context.logger.debug('[Project Creation] ComponentManager imported');
-    const { ComponentRegistryManager } = await import('../../../utils/componentRegistry');
+    const { ComponentRegistryManager } = await import('@/utils/componentRegistry');
     context.logger.debug('[Project Creation] ComponentRegistryManager imported');
     const fs = await import('fs/promises');
     const path = await import('path');
@@ -126,7 +126,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // Step 2: Initialize project (15%)
     progressTracker('Setting Up Project', 15, 'Initializing project configuration...');
 
-    const project: import('../../../types').Project = {
+    const project: import('@/types').Project = {
         name: typedConfig.projectName,
         created: new Date(),
         lastModified: new Date(),
@@ -228,7 +228,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 meshComponent.path,
                 commandManager,
                 context.logger,
-                (message, subMessage) => {
+                (message: string, subMessage?: string) => {
                     progressTracker('Deploying API Mesh', 80, subMessage || message);
                 },
             );
@@ -288,7 +288,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         } catch (meshError) {
             context.logger.error('[Project Creation] Failed to deploy mesh', meshError as Error);
 
-            const { formatMeshDeploymentError } = await import('../../../utils/errorFormatter');
+            const { formatMeshDeploymentError } = await import('@/utils/errorFormatter');
             throw new Error(formatMeshDeploymentError(meshError as Error));
         }
     }
