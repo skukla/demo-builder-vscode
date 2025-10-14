@@ -22,9 +22,21 @@
             "estimatedDuration": 60000,
             "progressStrategy": "milestones",
             "milestones": [
-              { "pattern": "Downloading", "progress": 30, "message": "Downloading Homebrew..." },
-              { "pattern": "Installing", "progress": 60, "message": "Installing Homebrew..." },
-              { "pattern": "Installation successful", "progress": 100, "message": "Homebrew installed!" }
+              {
+                "pattern": "Downloading",
+                "progress": 30,
+                "message": "Downloading Homebrew..."
+              },
+              {
+                "pattern": "Installing",
+                "progress": 60,
+                "message": "Installing Homebrew..."
+              },
+              {
+                "pattern": "Installation successful",
+                "progress": 100,
+                "message": "Homebrew installed!"
+              }
             ]
           }
         ]
@@ -53,11 +65,31 @@
             "estimatedDuration": 30000,
             "progressStrategy": "milestones",
             "milestones": [
-              { "pattern": "Updating Homebrew", "progress": 20, "message": "Updating Homebrew..." },
-              { "pattern": "==> Downloading", "progress": 40, "message": "Downloading fnm..." },
-              { "pattern": "==> Pouring", "progress": 70, "message": "Installing fnm..." },
-              { "pattern": "==> Installing", "progress": 70, "message": "Installing fnm..." },
-              { "pattern": "🍺", "progress": 100, "message": "Installation complete!" }
+              {
+                "pattern": "Updating Homebrew",
+                "progress": 20,
+                "message": "Updating Homebrew..."
+              },
+              {
+                "pattern": "==> Downloading",
+                "progress": 40,
+                "message": "Downloading fnm..."
+              },
+              {
+                "pattern": "==> Pouring",
+                "progress": 70,
+                "message": "Installing fnm..."
+              },
+              {
+                "pattern": "==> Installing",
+                "progress": 70,
+                "message": "Installing fnm..."
+              },
+              {
+                "pattern": "🍺",
+                "progress": 100,
+                "message": "Installation complete!"
+              }
             ]
           },
           {
@@ -129,10 +161,26 @@
             "estimatedDuration": 60000,
             "progressStrategy": "milestones",
             "milestones": [
-              { "pattern": "npm http", "progress": 10, "message": "Starting package download..." },
-              { "pattern": "npm warn deprecated", "progress": 40, "message": "Resolving dependencies..." },
-              { "pattern": "npm info run", "progress": 70, "message": "Building native modules..." },
-              { "pattern": "added", "progress": 100, "message": "Installation complete!" }
+              {
+                "pattern": "npm http",
+                "progress": 10,
+                "message": "Starting package download..."
+              },
+              {
+                "pattern": "npm warn deprecated",
+                "progress": 40,
+                "message": "Resolving dependencies..."
+              },
+              {
+                "pattern": "npm info run",
+                "progress": 70,
+                "message": "Building native modules..."
+              },
+              {
+                "pattern": "added",
+                "progress": 100,
+                "message": "Installation complete!"
+              }
             ]
           }
         ]
@@ -154,14 +202,32 @@
               {
                 "name": "Install API Mesh Plugin",
                 "message": "Installing API Mesh plugin",
-                "commands": ["aio plugins:install @adobe/aio-cli-plugin-api-mesh"],
+                "commands": [
+                  "aio plugins:install @adobe/aio-cli-plugin-api-mesh"
+                ],
                 "estimatedDuration": 20000,
                 "progressStrategy": "milestones",
                 "milestones": [
-                  { "pattern": "Installing", "progress": 25, "message": "Starting plugin installation..." },
-                  { "pattern": "Fetching", "progress": 50, "message": "Fetching plugin files..." },
-                  { "pattern": "extract", "progress": 75, "message": "Extracting plugin..." },
-                  { "pattern": "@adobe/aio-cli-plugin-api-mesh", "progress": 100, "message": "API Mesh plugin installed!" }
+                  {
+                    "pattern": "Installing",
+                    "progress": 25,
+                    "message": "Starting plugin installation..."
+                  },
+                  {
+                    "pattern": "Fetching",
+                    "progress": 50,
+                    "message": "Fetching plugin files..."
+                  },
+                  {
+                    "pattern": "extract",
+                    "progress": 75,
+                    "message": "Extracting plugin..."
+                  },
+                  {
+                    "pattern": "@adobe/aio-cli-plugin-api-mesh",
+                    "progress": 100,
+                    "message": "API Mesh plugin installed!"
+                  }
                 ]
               }
             ]
@@ -173,11 +239,11 @@
     {
       "id": "git",
       "name": "Git",
-      "description": "Version control system",
+      "description": "Version control system (Homebrew version)",
       "optional": false,
       "check": {
-        "command": "git --version",
-        "parseVersion": "git version ([0-9.]+)"
+        "command": "brew list git --versions",
+        "parseVersion": "git ([0-9.]+)"
       },
       "install": {
         "steps": [
@@ -188,9 +254,21 @@
             "estimatedDuration": 20000,
             "progressStrategy": "milestones",
             "milestones": [
-              { "pattern": "==> Downloading", "progress": 30, "message": "Downloading Git..." },
-              { "pattern": "==> Pouring", "progress": 70, "message": "Installing Git..." },
-              { "pattern": "==> Installing", "progress": 70, "message": "Installing Git..." },
+              {
+                "pattern": "==> Downloading",
+                "progress": 30,
+                "message": "Downloading Git..."
+              },
+              {
+                "pattern": "==> Pouring",
+                "progress": 70,
+                "message": "Installing Git..."
+              },
+              {
+                "pattern": "==> Installing",
+                "progress": 70,
+                "message": "Installing Git..."
+              },
               { "pattern": "🍺", "progress": 100, "message": "Git installed!" }
             ]
           }
