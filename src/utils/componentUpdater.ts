@@ -88,11 +88,8 @@ export class ComponentUpdater {
         this.logger.error(`[Update] Update failed, rolling back to snapshot`, error as Error);
         
         try {
-          // Remove broken update (if exists)
-          await fs.rm(component.path, { recursive: true, force: true });
-          
-          // Restore snapshot
-          await fs.rename(snapshotPath, component.path);
+          // RESILIENT ROLLBACK: Try multiple strategies with retries
+          await this.performRobustRollback(component.path, snapshotPath);
           
           this.logger.info(`[Update] Rollback successful - component restored to previous state`);
           
@@ -109,6 +106,80 @@ export class ComponentUpdater {
     } finally {
       // Always release lock
       this.updatingComponents.delete(componentId);
+    }
+  }
+
+  /**
+   * PUBLIC: Retry rollback manually (called from UI when user clicks "Retry Rollback")
+   * This is the same logic as automatic rollback, made public for manual retries
+   */
+  async retryRollback(targetPath: string, snapshotPath: string): Promise<void> {
+    this.logger.info(`[Rollback] Manual retry requested for ${targetPath}`);
+    await this.performRobustRollback(targetPath, snapshotPath);
+    this.logger.info(`[Rollback] Manual retry successful`);
+  }
+
+  /**
+   * RESILIENT ROLLBACK: Multiple strategies to restore snapshot even with file locks
+   * Tries progressively more aggressive approaches:
+   * 1. Simple copy+remove (works across devices)
+   * 2. Retry with exponential backoff (handles transient locks)
+   * 3. Force removal with delays (gives processes time to release locks)
+   */
+  private async performRobustRollback(targetPath: string, snapshotPath: string): Promise<void> {
+    const maxRetries = 5;
+    const baseDelay = 500; // ms
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        this.logger.debug(`[Rollback] Attempt ${attempt}/${maxRetries}`);
+        
+        // Strategy 1: Remove broken directory (with force flag)
+        try {
+          await fs.rm(targetPath, { recursive: true, force: true, maxRetries: 3, retryDelay: 200 });
+          this.logger.debug(`[Rollback] Removed broken component directory`);
+        } catch (rmError) {
+          // If removal fails, it might not exist - that's OK, continue
+          this.logger.debug(`[Rollback] Could not remove target (might not exist): ${(rmError as Error).message}`);
+        }
+        
+        // Strategy 2: Copy snapshot to target (works across devices, unlike rename)
+        await fs.cp(snapshotPath, targetPath, { 
+          recursive: true,
+          force: true,
+          errorOnExist: false
+        });
+        this.logger.debug(`[Rollback] Copied snapshot to target location`);
+        
+        // Strategy 3: Verify restoration by checking critical file
+        const pkgPath = path.join(targetPath, 'package.json');
+        await fs.access(pkgPath);
+        this.logger.debug(`[Rollback] Verified restoration (package.json exists)`);
+        
+        // Success! Cleanup snapshot
+        try {
+          await fs.rm(snapshotPath, { recursive: true, force: true });
+          this.logger.debug(`[Rollback] Cleaned up snapshot after successful restoration`);
+        } catch {
+          // Snapshot cleanup failure is not critical - log and continue
+          this.logger.debug(`[Rollback] Could not remove snapshot (non-critical)`);
+        }
+        
+        return; // Success!
+        
+      } catch (attemptError) {
+        this.logger.debug(`[Rollback] Attempt ${attempt} failed: ${(attemptError as Error).message}`);
+        
+        if (attempt === maxRetries) {
+          // Final attempt failed - throw to trigger manual recovery message
+          throw attemptError;
+        }
+        
+        // Wait with exponential backoff before next attempt
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        this.logger.debug(`[Rollback] Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
   }
 

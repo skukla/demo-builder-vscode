@@ -49,16 +49,32 @@ export class CheckUpdatesCommand extends BaseCommand {
       this.logger.info(`[Updates] Found ${updates.length} update(s):`);
       updates.forEach(update => this.logger.info(`[Updates]   - ${update}`));
       
-      // Show update prompt (simplified - no "View Details" button)
+      // Show update prompt with granular options
       const message = `Updates available:\n${updates.join('\n')}`;
-      const action = await vscode.window.showInformationMessage(
-        message,
-        'Update All',
-        'Later'
-      );
+      
+      // Build button options based on what's available
+      const buttons: string[] = [];
+      const hasComponentUpdates = componentUpdates.size > 0 && Array.from(componentUpdates.values()).some(u => u.hasUpdate);
+      const hasExtensionUpdate = extensionUpdate.hasUpdate;
+      
+      if (hasComponentUpdates && hasExtensionUpdate) {
+        buttons.push('Update All', 'Components Only', 'Extension Only', 'Later');
+      } else if (hasComponentUpdates) {
+        buttons.push('Update Components', 'Later');
+      } else if (hasExtensionUpdate) {
+        buttons.push('Update Extension', 'Later');
+      }
+      
+      const action = await vscode.window.showInformationMessage(message, ...buttons);
       
       if (action === 'Update All') {
-        await this.performUpdates(extensionUpdate, componentUpdates, project);
+        await this.performComponentUpdates(componentUpdates, project);
+        await this.performExtensionUpdate(extensionUpdate);
+      } else if (action === 'Components Only' || action === 'Update Components') {
+        await this.performComponentUpdates(componentUpdates, project);
+        vscode.window.showInformationMessage('✓ Component updates completed');
+      } else if (action === 'Extension Only' || action === 'Update Extension') {
+        await this.performExtensionUpdate(extensionUpdate);
       }
       
     } catch (error) {
@@ -67,12 +83,10 @@ export class CheckUpdatesCommand extends BaseCommand {
   }
 
   /**
-   * Perform updates with user confirmation
-   * Components first, then extension (extension triggers reload)
+   * Perform component updates only
    * RESILIENCE: Checks if demo is running before updating components
    */
-  private async performUpdates(
-    extensionUpdate: any,
+  private async performComponentUpdates(
     componentUpdates: Map<string, any>,
     project: any
   ): Promise<void> {
@@ -85,7 +99,7 @@ export class CheckUpdatesCommand extends BaseCommand {
       );
       
       if (stop !== 'Stop & Update') {
-        this.logger.info('[Updates] User cancelled update (demo still running)');
+        this.logger.info('[Updates] User cancelled component update (demo still running)');
         return;
       }
       
@@ -97,7 +111,6 @@ export class CheckUpdatesCommand extends BaseCommand {
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
     
-    const extensionUpdater = new ExtensionUpdater(this.logger);
     const componentUpdater = new ComponentUpdater(this.logger);
     
     // Update components first (must complete before extension reload)
@@ -113,9 +126,45 @@ export class CheckUpdatesCommand extends BaseCommand {
           );
           componentUpdateCount++;
         } catch (error) {
-          vscode.window.showErrorMessage(
-            `Failed to update ${componentId}: ${(error as Error).message}`
-          );
+          const errorMsg = (error as Error).message;
+          
+          // Check if this is a rollback failure (contains snapshot path)
+          const snapshotMatch = errorMsg.match(/Snapshot at: (.+)$/);
+          
+          if (snapshotMatch) {
+            // Rollback failed - offer retry button
+            const snapshotPath = snapshotMatch[1];
+            const action = await vscode.window.showErrorMessage(
+              `Failed to update ${componentId}: ${errorMsg}`,
+              'Retry Rollback',
+              'Dismiss'
+            );
+            
+            if (action === 'Retry Rollback') {
+              this.logger.info(`[Updates] User requested manual rollback retry for ${componentId}`);
+              try {
+                const componentInstance = project.componentInstances?.[componentId];
+                if (componentInstance?.path) {
+                  await componentUpdater.retryRollback(componentInstance.path, snapshotPath);
+                  vscode.window.showInformationMessage(
+                    `✓ Successfully restored ${componentId} from backup`
+                  );
+                  this.logger.info(`[Updates] Manual rollback successful for ${componentId}`);
+                }
+              } catch (retryError) {
+                vscode.window.showErrorMessage(
+                  `Manual rollback failed: ${(retryError as Error).message}. Please restore manually from: ${snapshotPath}`
+                );
+                this.logger.error(`[Updates] Manual rollback failed for ${componentId}`, retryError as Error);
+              }
+            }
+          } else {
+            // Normal update failure (rollback succeeded)
+            vscode.window.showErrorMessage(
+              `Failed to update ${componentId}: ${errorMsg}`
+            );
+          }
+          
           this.logger.error(`[Updates] Component update failed for ${componentId}`, error as Error);
         }
       }
@@ -130,18 +179,35 @@ export class CheckUpdatesCommand extends BaseCommand {
       await this.stateManager.saveProject(project);
     }
     
-    // Update extension last (triggers reload prompt)
-    if (extensionUpdate.hasUpdate && extensionUpdate.releaseInfo) {
-      await extensionUpdater.updateExtension(
-        extensionUpdate.releaseInfo.downloadUrl,
-        extensionUpdate.latest
+    // Show restart notification if demo was running
+    if (componentUpdateCount > 0 && project && project.status === 'running') {
+      const restart = await vscode.window.showInformationMessage(
+        `${componentUpdateCount} component(s) updated. Restart demo to use new versions?`,
+        'Restart Now',
+        'Later'
       );
-    } else if (componentUpdates.size > 0) {
-      // Components updated but not extension - show success
-      vscode.window.showInformationMessage(
-        'Components updated successfully. Restart demo to apply changes.',
-        'OK'
-      );
+      
+      if (restart === 'Restart Now') {
+        await vscode.commands.executeCommand('demoBuilder.stopDemo');
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        await vscode.commands.executeCommand('demoBuilder.startDemo');
+      }
     }
+  }
+
+  /**
+   * Perform extension update only
+   * This will trigger a reload prompt after installation
+   */
+  private async performExtensionUpdate(extensionUpdate: any): Promise<void> {
+    if (!extensionUpdate.hasUpdate || !extensionUpdate.releaseInfo) {
+      return;
+    }
+    
+    const extensionUpdater = new ExtensionUpdater(this.logger);
+    await extensionUpdater.updateExtension(
+      extensionUpdate.releaseInfo.downloadUrl,
+      extensionUpdate.latest
+    );
   }
 }
