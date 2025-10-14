@@ -350,6 +350,11 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                 }
             } else {
                 this.logger.debug('[Dashboard] No component configs available for mesh status check');
+                // If meshState exists with lastDeployed, the mesh is deployed even if we can't check for config changes
+                if (project.meshState && project.meshState.lastDeployed) {
+                    meshStatus = 'deployed';
+                    this.logger.info('[Dashboard] Mesh marked as deployed based on meshState.lastDeployed (no componentConfigs)');
+                }
             }
             
             // Send updated status to UI
@@ -463,21 +468,22 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
         if (!project) return;
 
         // DEBUG: Log project structure
-        this.logger.debug('[Project Dashboard] Project data:', {
+        this.logger.info('[Project Dashboard] Project data:', {
             hasComponentInstances: !!project.componentInstances,
             componentKeys: Object.keys(project.componentInstances || {}),
             hasMeshState: !!project.meshState,
-            meshStateKeys: project.meshState ? Object.keys(project.meshState) : []
+            meshState: project.meshState
         });
 
         // Get mesh component for status
         const meshComponent = project.componentInstances?.['commerce-mesh'];
         
-        this.logger.debug('[Project Dashboard] Mesh component data:', {
+        this.logger.info('[Project Dashboard] Mesh component data:', {
             hasMeshComponent: !!meshComponent,
             meshStatus: meshComponent?.status,
             meshEndpoint: meshComponent?.endpoint,
-            meshPath: meshComponent?.path
+            meshPath: meshComponent?.path,
+            hasComponentConfigs: !!project.componentConfigs
         });
 
         // Send initial status immediately with mesh as 'checking' if mesh component exists
@@ -562,8 +568,8 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                             meshStatus = 'deployed';
                         }
                         
-                        // Check if we have a valid meshState now
-                        if (project.meshState && Object.keys(project.meshState.envVars || {}).length > 0) {
+                        // Check if we have a valid meshState now (deployed if lastDeployed is set)
+                        if (project.meshState && project.meshState.lastDeployed) {
                             meshStatus = 'deployed';
                             
                             if (meshChanges.hasChanges) {
@@ -588,6 +594,11 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                     }
                 } else {
                     this.logger.debug('[Dashboard] No component configs available for mesh status check');
+                    // If meshState exists with lastDeployed, the mesh is deployed even if we can't check for config changes
+                    if (project.meshState && project.meshState.lastDeployed) {
+                        meshStatus = 'deployed';
+                        this.logger.info('[Dashboard] Mesh marked as deployed based on meshState.lastDeployed (no componentConfigs)');
+                    }
                 }
             }
         }
