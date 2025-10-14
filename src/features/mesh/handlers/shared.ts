@@ -8,8 +8,8 @@ import { ServiceLocator } from '../../../services/serviceLocator';
 import {
     getSetupInstructions as getSetupInstructionsHelper,
     getEndpoint as getEndpointHelper,
-} from '../../helpers';
-import { HandlerContext } from '../HandlerContext';
+} from '../../../commands/helpers';
+import { HandlerContext } from '../../../commands/handlers/HandlerContext';
 
 /**
  * Get setup instructions for API Mesh

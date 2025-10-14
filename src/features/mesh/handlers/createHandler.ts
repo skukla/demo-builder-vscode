@@ -7,9 +7,9 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { ServiceLocator } from '../../../services/serviceLocator';
-import { parseJSON } from '../../../types/typeGuards';
-import { TIMEOUTS } from '../../../utils/timeoutConfig';
-import { HandlerContext } from '../HandlerContext';
+import { parseJSON } from '@/types/typeGuards';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { HandlerContext } from '../../../commands/handlers/HandlerContext';
 import { getEndpoint } from './shared';
 
 /**

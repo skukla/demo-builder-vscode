@@ -5,8 +5,8 @@
  */
 
 import { ServiceLocator } from '../../../services/serviceLocator';
-import { TIMEOUTS } from '../../../utils/timeoutConfig';
-import { HandlerContext } from '../HandlerContext';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { HandlerContext } from '../../../commands/handlers/HandlerContext';
 
 /**
  * Handler: delete-api-mesh
