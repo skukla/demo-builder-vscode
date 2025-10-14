@@ -113,10 +113,10 @@ export class UpdateManager {
   private async fetchLatestRelease(repo: string, channel: 'stable' | 'beta'): Promise<ReleaseInfo | null> {
     try {
       // For stable: use /releases/latest (non-prereleases only)
-      // For beta: use /releases?per_page=1 (includes prereleases)
+      // For beta: fetch recent releases and find the highest version by semver
       const url = channel === 'stable'
         ? `https://api.github.com/repos/${repo}/releases/latest`
-        : `https://api.github.com/repos/${repo}/releases?per_page=1`;
+        : `https://api.github.com/repos/${repo}/releases?per_page=20`;
       
       this.logger.debug(`[Update] Fetching latest ${channel} release for ${repo}`);
       
@@ -129,7 +129,21 @@ export class UpdateManager {
         const data = await response.json();
         
         // Beta channel returns array, stable returns object
-        const release = Array.isArray(data) ? data[0] : data;
+        let release;
+        if (Array.isArray(data)) {
+          // For beta: find the latest version by semver, not by GitHub's order
+          const nonDraftReleases = data.filter((r: any) => !r.draft);
+          if (nonDraftReleases.length === 0) return null;
+          
+          // Sort by version using semver
+          release = nonDraftReleases.sort((a: any, b: any) => {
+            const versionA = a.tag_name.replace(/^v/, '');
+            const versionB = b.tag_name.replace(/^v/, '');
+            return semver.gt(versionA, versionB) ? -1 : 1;
+          })[0];
+        } else {
+          release = data;
+        }
         
         if (!release || release.message === 'Not Found') {
           this.logger.debug(`[Update] No releases found for ${repo}`);
