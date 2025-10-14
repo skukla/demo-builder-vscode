@@ -7,7 +7,7 @@ import { Project } from '../types/base';
 import { parseJSON } from '../types/typeGuards';
 import { Logger } from '../shared/logging';
 import { updateMeshState } from '../utils/stalenessDetector';
-import { StateManager } from '../utils/stateManager';
+import { StateManager } from '../shared/state';
 import { TIMEOUTS } from '../utils/timeoutConfig';
 import { BaseCommand } from './baseCommand';
 

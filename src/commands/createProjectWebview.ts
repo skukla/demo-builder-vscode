@@ -65,7 +65,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     constructor(
         context: vscode.ExtensionContext,
-        stateManager: import('../utils/stateManager').StateManager,
+        stateManager: import('../shared/state').StateManager,
         statusBar: import('../providers/statusBar').StatusBarManager,
         logger: import('../shared/logging').Logger,
     ) {

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { Project } from '../types';
-import { StateManager } from '../utils/stateManager';
+import { StateManager } from '../shared/state';
 
 export class StatusBarManager {
     private statusBarItem: vscode.StatusBarItem;

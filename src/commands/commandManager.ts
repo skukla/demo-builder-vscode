@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { StatusBarManager } from '../providers/statusBar';
 import { Project } from '../types';
 import { Logger } from '../shared/logging';
-import { StateManager } from '../utils/stateManager';
+import { StateManager } from '../shared/state';
 import { CheckUpdatesCommand } from './checkUpdates';
 import { ConfigureCommand } from './configure';
 import { ConfigureProjectWebviewCommand } from './configureProjectWebview';

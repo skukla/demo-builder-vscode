@@ -8,7 +8,7 @@ import { parseJSON } from './types/typeGuards';
 import { AutoUpdater } from './utils/autoUpdater';
 import { CommandExecutor } from './utils/commands';
 import { initializeLogger, Logger } from './shared/logging';
-import { StateManager } from './utils/stateManager';
+import { StateManager } from './shared/state';
 
 let logger: Logger;
 let statusBar: StatusBarManager;

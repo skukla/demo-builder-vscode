@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { StatusBarManager } from '../providers/statusBar';
 import { Logger } from '../shared/logging';
-import { StateManager } from '../utils/stateManager';
+import { StateManager } from '../shared/state';
 
 export abstract class BaseCommand {
     protected context: vscode.ExtensionContext;

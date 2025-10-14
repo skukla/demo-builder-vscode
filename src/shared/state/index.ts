@@ -4,5 +4,5 @@
  * Provides project state persistence and management across all features.
  */
 
-// Public API - will be populated during Phase 2 migration
-export {};
+// State Manager (persistent state storage)
+export { StateManager } from './stateManager';
