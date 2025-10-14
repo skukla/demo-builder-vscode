@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { ServiceLocator } from '../services/serviceLocator';
 import { Project } from '../types';
 import { Logger } from './logger';
-import { getExternalCommandManager } from '../extension';
 
 export class FrontendInstaller {
     private logger: Logger;
@@ -21,7 +21,7 @@ export class FrontendInstaller {
 
             // Clone repository
             this.logger.info('Cloning frontend repository...');
-            const commandManager = getExternalCommandManager();
+            const commandManager = ServiceLocator.getCommandExecutor();
             await commandManager.execute(`git clone ${this.FRONTEND_REPO} "${frontendPath}"`);
             
             // Copy environment file
@@ -48,10 +48,10 @@ export class FrontendInstaller {
 
             // Pull latest changes
             if (version) {
-                const commandManager = getExternalCommandManager();
+                const commandManager = ServiceLocator.getCommandExecutor();
                 await commandManager.execute(`git checkout ${version}`, { cwd: frontendPath });
             } else {
-                const commandManager = getExternalCommandManager();
+                const commandManager = ServiceLocator.getCommandExecutor();
                 await commandManager.execute('git pull', { cwd: frontendPath });
             }
             
@@ -70,10 +70,10 @@ export class FrontendInstaller {
             }
 
             this.logger.info('Installing frontend dependencies...');
-            const commandManager = getExternalCommandManager();
+            const commandManager = ServiceLocator.getCommandExecutor();
             await commandManager.execute('npm install', { 
                 cwd: frontendPath,
-                env: { ...process.env, NODE_ENV: 'development' }
+                env: { ...process.env, NODE_ENV: 'development' },
             });
             
             this.logger.info('Dependencies installed successfully');
@@ -92,9 +92,9 @@ export class FrontendInstaller {
 
             // Install demo inspector package
             this.logger.info('Installing Demo Inspector...');
-            const commandManager = getExternalCommandManager();
+            const commandManager = ServiceLocator.getCommandExecutor();
             await commandManager.execute('npm install @adobe/demo-inspector', { 
-                cwd: frontendPath 
+                cwd: frontendPath, 
             });
             
             // Update environment variable
@@ -104,7 +104,7 @@ export class FrontendInstaller {
             if (envContent.includes('DEMO_INSPECTOR_ENABLED')) {
                 envContent = envContent.replace(
                     /DEMO_INSPECTOR_ENABLED=.*/,
-                    'DEMO_INSPECTOR_ENABLED=true'
+                    'DEMO_INSPECTOR_ENABLED=true',
                 );
             } else {
                 envContent += '\nDEMO_INSPECTOR_ENABLED=true\n';

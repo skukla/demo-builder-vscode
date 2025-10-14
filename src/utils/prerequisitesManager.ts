@@ -1,7 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { ServiceLocator } from '../services/serviceLocator';
+import { parseJSON } from '../types/typeGuards';
 import { Logger } from './logger';
-import { getExternalCommandManager } from '../extension';
 import { TIMEOUTS } from './timeoutConfig';
 
 export interface PrerequisiteCheck {
@@ -62,7 +63,7 @@ export interface PrerequisiteDefinition {
     depends?: string[];
     perNodeVersion?: boolean; // Install in each Node.js version
     check: PrerequisiteCheck;
-    install?: any; // Installation configuration
+    install?: PrerequisiteInstall; // Installation configuration
     uninstall?: {
         commands: string[];
         message?: string;
@@ -98,18 +99,18 @@ export interface PrerequisiteStatus {
     optional: boolean;
     canInstall: boolean;
     message?: string;
-    plugins?: Array<{
+    plugins?: {
         id: string;
         name: string;
         installed: boolean;
-    }>;
+    }[];
 }
 
 export class PrerequisitesManager {
     private config: PrerequisitesConfig | null = null;
     private configPath: string;
     private logger: Logger;
-    private resolvedVersionCache: Map<string, string> = new Map();
+    private resolvedVersionCache = new Map<string, string>();
 
     constructor(extensionPath: string, logger: Logger) {
         this.configPath = path.join(extensionPath, 'templates', 'prerequisites.json');
@@ -119,9 +120,13 @@ export class PrerequisitesManager {
     async loadConfig(): Promise<PrerequisitesConfig> {
         if (!this.config) {
             const content = await fs.promises.readFile(this.configPath, 'utf8');
-            this.config = JSON.parse(content);
+            const config = parseJSON<PrerequisitesConfig>(content);
+            if (!config) {
+                throw new Error('Failed to parse prerequisites configuration');
+            }
+            this.config = config;
         }
-        return this.config!;
+        return this.config;
     }
 
     async getPrerequisiteById(id: string): Promise<PrerequisiteDefinition | undefined> {
@@ -135,7 +140,7 @@ export class PrerequisitesManager {
             backend?: string;
             dependencies?: string[];
             appBuilderApps?: string[];
-        }
+        },
     ): Promise<PrerequisiteDefinition[]> {
         const config = await this.loadConfig();
         const required = new Set<string>();
@@ -176,11 +181,11 @@ export class PrerequisitesManager {
             description: prereq.description,
             installed: false,
             optional: prereq.optional || false,
-            canInstall: true
+            canInstall: true,
         };
 
         try {
-            const commandManager = getExternalCommandManager();
+            const commandManager = ServiceLocator.getCommandExecutor();
             // Use fnm wrapper for Node.js checks, enhanced path for others
             let checkResult;
             
@@ -192,27 +197,51 @@ export class PrerequisitesManager {
                 this.logger.debug(`[Prereq Check] aio-cli: Executing via executeAdobeCLI with timeout=${TIMEOUTS.PREREQUISITE_CHECK}ms`);
                 checkResult = await commandManager.executeAdobeCLI(prereq.check.command, {
                     timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                    retryStrategy: { 
+                    retryStrategy: {
                         maxAttempts: 1,
                         initialDelay: 0,
                         maxDelay: 0,
-                        backoffFactor: 1
-                    }
+                        backoffFactor: 1,
+                    },
                 });
                 const cmdDuration = Date.now() - cmdStartTime;
                 this.logger.debug(`[Prereq Check] aio-cli: Command completed in ${cmdDuration}ms`);
                 this.logger.debug(`[Prereq Check] aio-cli: stdout length=${checkResult.stdout?.length || 0}, stderr length=${checkResult.stderr?.length || 0}`);
                 this.logger.debug(`[Prereq Check] aio-cli: stdout preview: ${checkResult.stdout?.substring(0, 200)}`);
-            } else if (prereq.id === 'node' || prereq.id === 'npm' || prereq.perNodeVersion) {
+            } else if (prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm') {
+                // Fix #5 (5a22e45) + Fix #7 (01b94d6): Check under TARGET Node version (20)
+                // This prevents detecting aio-cli from old nvm installations (Node v14)
+                // which causes ES module errors. Trust fnm exec isolation instead of path verification.
+                const targetNodeVersion = '20';
+
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Checking under Node v${targetNodeVersion} (perNodeVersion=true)`);
+
+                try {
+                    checkResult = await commandManager.execute(prereq.check.command, {
+                        useNodeVersion: targetNodeVersion,
+                        timeout: TIMEOUTS.PREREQUISITE_CHECK,
+                    });
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: Command completed under Node v${targetNodeVersion}`);
+                } catch (error) {
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: Not found under Node v${targetNodeVersion}`);
+                    checkResult = {
+                        stdout: '',
+                        stderr: error instanceof Error ? error.message : String(error),
+                        code: 1,
+                        duration: Date.now() - cmdStartTime,
+                    };
+                }
+            } else if (prereq.id === 'node' || prereq.id === 'npm') {
+                // For node/npm themselves, check current version
                 this.logger.debug(`[Prereq Check] ${prereq.id}: Executing command with useNodeVersion=current`);
                 checkResult = await commandManager.execute(prereq.check.command, {
                     useNodeVersion: 'current',
-                    timeout: TIMEOUTS.PREREQUISITE_CHECK
+                    timeout: TIMEOUTS.PREREQUISITE_CHECK,
                 });
             } else {
                 this.logger.debug(`[Prereq Check] ${prereq.id}: Executing command normally`);
                 checkResult = await commandManager.execute(prereq.check.command, {
-                    timeout: TIMEOUTS.PREREQUISITE_CHECK
+                    timeout: TIMEOUTS.PREREQUISITE_CHECK,
                 });
             }
             
@@ -265,9 +294,10 @@ export class PrerequisitesManager {
             
             // Check if this is a timeout error
             const errorMessage = error instanceof Error ? error.message : String(error);
-            const isTimeout = errorMessage.toLowerCase().includes('timed out') || 
+            const errorObj = error as NodeJS.ErrnoException & { killed?: boolean; signal?: string };
+            const isTimeout = errorMessage.toLowerCase().includes('timed out') ||
                             errorMessage.toLowerCase().includes('timeout') ||
-                            (error as any).killed && (error as any).signal === 'SIGTERM';
+                            (errorObj.killed && errorObj.signal === 'SIGTERM');
             
             if (isTimeout) {
                 // Re-throw timeout errors so they can be handled at the command level
@@ -285,7 +315,7 @@ export class PrerequisitesManager {
 
     private async checkPlugin(plugin: PrerequisitePlugin): Promise<{id: string; name: string; installed: boolean}> {
         try {
-            const commandManager = getExternalCommandManager();
+            const commandManager = ServiceLocator.getCommandExecutor();
             // Use executeAdobeCLI for proper Node version management and caching
             // For prerequisite checks, disable retries to fail fast on timeout
             const { stdout } = await commandManager.executeAdobeCLI(plugin.check.command, {
@@ -294,8 +324,8 @@ export class PrerequisitesManager {
                     maxAttempts: 1,
                     initialDelay: 0,
                     maxDelay: 0,
-                    backoffFactor: 1
-                }
+                    backoffFactor: 1,
+                },
             });
             const installed = plugin.check.contains ? 
                 stdout.includes(plugin.check.contains) : true;
@@ -303,13 +333,13 @@ export class PrerequisitesManager {
             return {
                 id: plugin.id,
                 name: plugin.name,
-                installed
+                installed,
             };
         } catch {
             return {
                 id: plugin.id,
                 name: plugin.name,
-                installed: false
+                installed: false,
             };
         }
     }
@@ -319,7 +349,7 @@ export class PrerequisitesManager {
         options?: {
             nodeVersions?: string[];
             preferredMethod?: string;
-        }
+        },
     ): { steps: InstallStep[]; manual?: boolean; url?: string } | null {
         if (!prereq.install) {
             return null;
@@ -330,26 +360,26 @@ export class PrerequisitesManager {
             return {
                 steps: [],
                 manual: true,
-                url: prereq.install.url
+                url: prereq.install.url,
             };
         }
 
         // Return steps directly if available
         if (prereq.install.steps) {
             return {
-                steps: prereq.install.steps
+                steps: prereq.install.steps,
             };
         }
 
         // Handle dynamic installation (e.g., Node.js with versions) - convert to steps
-        if (prereq.install.dynamic && prereq.install.template) {
+        if (prereq.install && prereq.install.dynamic && prereq.install.template) {
             const versions = options?.nodeVersions || ['latest'];
             const steps: InstallStep[] = versions.map(version => ({
                 name: `Install Node.js ${version}`,
-                message: prereq.install.message?.replace(/{version}/g, version) || `Installing Node.js ${version}`,
-                commandTemplate: prereq.install.template,
+                message: prereq.install!.message?.replace(/{version}/g, version) || `Installing Node.js ${version}`,
+                commandTemplate: prereq.install!.template,
                 progressStrategy: 'exact' as const,
-                estimatedDuration: 30000
+                estimatedDuration: 30000,
             }));
             return { steps };
         }
@@ -359,7 +389,7 @@ export class PrerequisitesManager {
 
     getPluginInstallCommands(
         prereqId: string,
-        pluginId: string
+        pluginId: string,
     ): { commands: string[]; message?: string } | undefined {
         const config = this.config;
         if (!config) return undefined;
@@ -371,7 +401,7 @@ export class PrerequisitesManager {
         
         return {
             commands: plugin.install.commands,
-            message: plugin.install.message
+            message: plugin.install.message,
         };
     }
 
@@ -384,9 +414,21 @@ export class PrerequisitesManager {
     async getLatestInFamily(versionFamily: string): Promise<string | null> {
         // Get the actual installed version for a version family
         // This is used for display purposes after installation
+
+        // SECURITY: Validate versionFamily to prevent command injection
+        // Only allow digits (e.g., "18", "20", "22")
+        if (!/^\d+$/.test(versionFamily)) {
+            this.logger.warn(`[Prerequisites] Invalid version family rejected: ${versionFamily}`);
+            return null;
+        }
+
         try {
-            const commandManager = getExternalCommandManager();
-            const { stdout } = await commandManager.execute(`fnm list-remote | grep "^v${versionFamily}\\." | head -1`);
+            const commandManager = ServiceLocator.getCommandExecutor();
+            // SECURITY NOTE: This command uses pipes which requires shell
+            // However, versionFamily is validated above to only contain digits
+            const { stdout } = await commandManager.execute(`fnm list-remote | grep "^v${versionFamily}\\." | head -1`, {
+                shell: '/bin/sh',  // Required for pipes
+            });
             if (stdout) {
                 return stdout.trim().replace('v', '');
             }
@@ -402,7 +444,7 @@ export class PrerequisitesManager {
             backend?: string;
             dependencies?: string[];
             appBuilderApps?: string[];
-        }
+        },
     ): Promise<string[]> {
         // Node versions should come from components.json, not prerequisites.json
         // This method is deprecated - use ComponentRegistryManager.getRequiredNodeVersions() instead
@@ -410,12 +452,12 @@ export class PrerequisitesManager {
     }
 
     async checkMultipleNodeVersions(
-        versionToComponentMapping: { [version: string]: string }
+        versionToComponentMapping: Record<string, string>,
     ): Promise<{ version: string; component: string; installed: boolean }[]> {
         const results: { version: string; component: string; installed: boolean }[] = [];
 
         try {
-            const commandManager = getExternalCommandManager();
+            const commandManager = ServiceLocator.getCommandExecutor();
             const { stdout } = await commandManager.execute('fnm list');
 
             // Parse installed versions from fnm list output
@@ -424,7 +466,7 @@ export class PrerequisitesManager {
             const lines = stdout.split('\n');
             for (const line of lines) {
                 // Match patterns like "* v20.19.5 default" or "v18.17.0"
-                const match = line.match(/\*?\s*v?(\d+)\.([\d.]+)/);
+                const match = /\*?\s*v?(\d+)\.([\d.]+)/.exec(line);
                 if (match) {
                     const majorVersion = match[1];
                     const fullVersion = `${match[1]}.${match[2]}`;
@@ -443,7 +485,7 @@ export class PrerequisitesManager {
                 results.push({
                     version: fullVersion ? `Node ${fullVersion}` : `Node ${version}`,
                     component: componentName,
-                    installed: majorToFullVersion.has(version)
+                    installed: majorToFullVersion.has(version),
                 });
             }
 
@@ -454,7 +496,7 @@ export class PrerequisitesManager {
                 results.push({
                     version: `Node ${version}`,
                     component: componentName,
-                    installed: false
+                    installed: false,
                 });
             }
         }
@@ -463,7 +505,7 @@ export class PrerequisitesManager {
     }
 
     async checkAllPrerequisites(
-        prerequisites: PrerequisiteDefinition[]
+        prerequisites: PrerequisiteDefinition[],
     ): Promise<PrerequisiteStatus[]> {
         const results: PrerequisiteStatus[] = [];
         
@@ -476,7 +518,7 @@ export class PrerequisitesManager {
     }
 
     resolveDependencies(
-        prerequisites: PrerequisiteDefinition[]
+        prerequisites: PrerequisiteDefinition[],
     ): PrerequisiteDefinition[] {
         const resolved: PrerequisiteDefinition[] = [];
         const resolving = new Set<string>();
@@ -513,7 +555,7 @@ export class PrerequisitesManager {
 
 export function createPrerequisitesManager(
     extensionPath: string,
-    logger: Logger
+    logger: Logger,
 ): PrerequisitesManager {
     return new PrerequisitesManager(extensionPath, logger);
 }

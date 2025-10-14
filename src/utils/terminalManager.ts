@@ -19,7 +19,7 @@ export class TerminalManager {
         // Create new terminal
         this.terminal = vscode.window.createTerminal({
             name: this.terminalName,
-            cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+            cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
         });
 
         return this.terminal;

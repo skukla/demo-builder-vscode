@@ -1,31 +1,23 @@
-import * as vscode from 'vscode';
 import { v4 as uuidv4 } from 'uuid';
+import * as vscode from 'vscode';
+import {
+    Message,
+    MessageType,
+    MessagePayload,
+    PendingRequest,
+} from '../types/messages';
 import { getLogger } from './debugLogger';
 import { TIMEOUTS } from './timeoutConfig';
 
 /**
- * Message structure for webview communication
+ * Message Handler Function Type
+ *
+ * Handlers can return Promise or direct value.
+ * Payload type is flexible to support all message types.
  */
-interface Message {
-    id: string;
-    type: string;
-    payload?: any;
-    timestamp: number;
-    isResponse?: boolean;
-    responseToId?: string;
-    error?: string;
-}
-
-/**
- * Pending request tracking
- */
-interface PendingRequest {
-    resolve: (value: any) => void;
-    reject: (error: Error) => void;
-    timeout: NodeJS.Timeout;
-    retryCount: number;
-    message: Message;
-}
+type MessageHandlerFunction<P = MessagePayload, R = unknown> = (
+    payload: P
+) => Promise<R> | R;
 
 /**
  * Communication manager configuration
@@ -57,7 +49,7 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     // API Mesh operations
     'check-api-mesh': 60000,                         // 60s - workspace download + mesh describe
     'create-api-mesh': TIMEOUTS.API_MESH_CREATE,     // 120s - create and deploy mesh
-    'update-api-mesh': TIMEOUTS.API_MESH_UPDATE      // 120s - update and deploy mesh
+    'update-api-mesh': TIMEOUTS.API_MESH_UPDATE,      // 120s - update and deploy mesh
 };
 
 /**
@@ -76,7 +68,7 @@ export class WebviewCommunicationManager {
     private panel: vscode.WebviewPanel;
     private messageQueue: Message[] = [];
     private pendingRequests = new Map<string, PendingRequest>();
-    private messageHandlers = new Map<string, (payload: any) => any>();
+    private messageHandlers = new Map<string, MessageHandlerFunction>();
     private isWebviewReady = false;
     private isExtensionReady = false;
     private handshakeComplete = false;
@@ -92,7 +84,7 @@ export class WebviewCommunicationManager {
             messageTimeout: config.messageTimeout || 30000,
             maxRetries: config.maxRetries || 3,
             retryDelay: config.retryDelay || 1000,
-            enableLogging: config.enableLogging !== false
+            enableLogging: config.enableLogging !== false,
         };
     }
 
@@ -108,7 +100,7 @@ export class WebviewCommunicationManager {
         this.panel.webview.onDidReceiveMessage(
             message => this.handleWebviewMessage(message),
             undefined,
-            this.disposables
+            this.disposables,
         );
 
         // Mark extension as ready
@@ -124,7 +116,7 @@ export class WebviewCommunicationManager {
             this.sendRawMessage({
                 id: uuidv4(),
                 type: '__extension_ready__',
-                timestamp: Date.now()
+                timestamp: Date.now(),
             });
 
             // Set up handshake completion handler
@@ -136,7 +128,7 @@ export class WebviewCommunicationManager {
                     id: uuidv4(),
                     type: '__handshake_complete__',
                     timestamp: Date.now(),
-                    payload: { stateVersion: this.stateVersion }
+                    payload: { stateVersion: this.stateVersion },
                 });
 
                 this.handshakeComplete = true;
@@ -157,12 +149,12 @@ export class WebviewCommunicationManager {
     /**
      * Send a message to the webview (fire-and-forget)
      */
-    async sendMessage(type: string, payload?: any): Promise<void> {
+    async sendMessage(type: MessageType, payload?: MessagePayload): Promise<void> {
         const message: Message = {
             id: uuidv4(),
             type,
             payload,
-            timestamp: Date.now()
+            timestamp: Date.now(),
         };
 
         if (!this.handshakeComplete) {
@@ -179,12 +171,12 @@ export class WebviewCommunicationManager {
     /**
      * Send a request and wait for response
      */
-    async request<T = any>(type: string, payload?: any): Promise<T> {
+    async request<T = unknown>(type: MessageType, payload?: MessagePayload): Promise<T> {
         const message: Message = {
             id: uuidv4(),
             type,
             payload,
-            timestamp: Date.now()
+            timestamp: Date.now(),
         };
 
         if (!this.handshakeComplete) {
@@ -200,11 +192,11 @@ export class WebviewCommunicationManager {
 
             // Track pending request
             this.pendingRequests.set(message.id, {
-                resolve,
+                resolve: resolve as (value: unknown | PromiseLike<unknown>) => void,
                 reject,
                 timeout,
                 retryCount: 0,
-                message
+                message,
             });
 
             // Send the request
@@ -215,17 +207,23 @@ export class WebviewCommunicationManager {
     /**
      * Register a message handler
      */
-    on(type: string, handler: (payload: any) => any): void {
-        this.messageHandlers.set(type, handler);
+    on<P = MessagePayload, R = unknown>(
+        type: MessageType,
+        handler: MessageHandlerFunction<P, R>,
+    ): void {
+        this.messageHandlers.set(type, handler as MessageHandlerFunction);
     }
 
     /**
      * Register a one-time message handler
      */
-    once(type: string, handler: (payload: any) => any): void {
-        const wrappedHandler = (payload: any) => {
+    once<P = MessagePayload, R = unknown>(
+        type: MessageType,
+        handler: MessageHandlerFunction<P, R>,
+    ): void {
+        const wrappedHandler: MessageHandlerFunction = (payload: MessagePayload) => {
             this.messageHandlers.delete(type);
-            return handler(payload);
+            return handler(payload as P);
         };
         this.messageHandlers.set(type, wrappedHandler);
     }
@@ -266,7 +264,7 @@ export class WebviewCommunicationManager {
     /**
      * Handle incoming message from webview
      */
-    private async handleWebviewMessage(message: any): Promise<void> {
+    private async handleWebviewMessage(message: Message): Promise<void> {
         if (this.config.enableLogging) {
             this.logger.debug(`[WebviewComm] Received: ${message.type}`);
         }
@@ -275,7 +273,7 @@ export class WebviewCommunicationManager {
         if (message.type === '__webview_ready__') {
             const handler = this.messageHandlers.get('__webview_ready__');
             if (handler) {
-                await handler(message.payload);
+                await handler(message.payload ?? {} as MessagePayload);
             }
             return;
         }
@@ -315,9 +313,9 @@ export class WebviewCommunicationManager {
                                 type: '__timeout_hint__',
                                 payload: { 
                                     requestId: message.id,
-                                    timeout: requestTimeout 
+                                    timeout: requestTimeout, 
                                 },
-                                timestamp: Date.now()
+                                timestamp: Date.now(),
                             });
                         } catch (hintError) {
                             // Timeout hint is non-critical, log and continue
@@ -331,17 +329,17 @@ export class WebviewCommunicationManager {
                 // CRITICAL FIX (v1.5.0): Properly await async handler results
                 // Previously, Promise objects were being sent to UI instead of resolved values
                 // This caused "Error Loading Projects" despite successful backend operations
-                const result = await handler(message.payload);
+                const result = await handler(message.payload ?? {} as MessagePayload);
 
                 // If the message has an ID, send a response
                 if (message.id && message.expectsResponse) {
                     this.sendRawMessage({
                         id: uuidv4(),
                         type: '__response__',
-                        payload: result,
+                        payload: result as MessagePayload,
                         timestamp: Date.now(),
                         isResponse: true,
-                        responseToId: message.id
+                        responseToId: message.id,
                     });
                 }
             } catch (error) {
@@ -349,11 +347,11 @@ export class WebviewCommunicationManager {
                     this.sendRawMessage({
                         id: uuidv4(),
                         type: '__response__',
-                        payload: null,
+                        payload: undefined,
                         timestamp: Date.now(),
                         isResponse: true,
                         responseToId: message.id,
-                        error: error instanceof Error ? error.message : 'Unknown error'
+                        error: error instanceof Error ? error.message : 'Unknown error',
                     });
                 }
             }
@@ -365,7 +363,7 @@ export class WebviewCommunicationManager {
                 id: uuidv4(),
                 type: '__acknowledge__',
                 timestamp: Date.now(),
-                responseToId: message.id
+                responseToId: message.id,
             });
         }
     }
@@ -426,7 +424,7 @@ export class WebviewCommunicationManager {
  */
 export async function createWebviewCommunication(
     panel: vscode.WebviewPanel,
-    config?: CommunicationConfig
+    config?: CommunicationConfig,
 ): Promise<WebviewCommunicationManager> {
     const manager = new WebviewCommunicationManager(panel, config);
     await manager.initialize();

@@ -1,7 +1,7 @@
-import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 import * as os from 'os';
+import * as path from 'path';
+import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
 
 export class ResetAllCommand extends BaseCommand {
@@ -19,7 +19,7 @@ export class ResetAllCommand extends BaseCommand {
                 'This will delete all Demo Builder data and state. Are you sure?',
                 { modal: true },
                 'Yes, Reset Everything',
-                'Cancel'
+                'Cancel',
             );
 
             if (confirm !== 'Yes, Reset Everything') {

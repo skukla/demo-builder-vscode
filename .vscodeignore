@@ -6,13 +6,15 @@ src/**
 **/*.map
 **/*.ts
 **/.git/**
-node_modules/**
 scripts/keys.json
 tsconfig.json
+tsconfig.webview.json
 webpack.config.js
+eslint.config.mjs
 .github/**
 test/**
 docs/**
+templates/**/*.md
 *.md
 !README.md
 !CHANGELOG.md

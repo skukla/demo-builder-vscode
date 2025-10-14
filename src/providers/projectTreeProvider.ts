@@ -54,8 +54,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ControlActio
                             'Deploy Mesh',
                             'Deploy API Mesh to Adobe I/O',
                             'cloud-upload',
-                            'demoBuilder.deployMesh'
-                        )
+                            'demoBuilder.deployMesh',
+                        ),
                     );
                 }
             } catch (meshError) {
@@ -68,8 +68,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ControlActio
                     'Configure',
                     'Edit environment variables',
                     'settings-gear',
-                    'demoBuilder.configure'
-                )
+                    'demoBuilder.configure',
+                ),
             );
             
             // Delete project
@@ -78,8 +78,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ControlActio
                     'Delete Project',
                     'Delete this project',
                     'trash',
-                    'demoBuilder.deleteProject'
-                )
+                    'demoBuilder.deleteProject',
+                ),
             );
             
             return actions;
@@ -90,8 +90,8 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ControlActio
                     'Error',
                     'Try reloading VSCode',
                     'error',
-                    undefined
-                )
+                    undefined,
+                ),
             ];
         }
     }
@@ -101,7 +101,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ControlActio
      */
     private hasMeshComponent(project: Project): boolean {
         try {
-            if (!project || !project.componentInstances) {
+            if (!project?.componentInstances) {
                 return false;
             }
             
@@ -117,7 +117,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ControlActio
      */
     private getMeshComponent(project: Project) {
         try {
-            if (!project || !project.componentInstances) {
+            if (!project?.componentInstances) {
                 return null;
             }
             
@@ -129,7 +129,7 @@ export class ProjectTreeProvider implements vscode.TreeDataProvider<ControlActio
             
             // Fallback: search by subType or any component with 'mesh' in the ID
             return Object.entries(project.componentInstances).find(([id, c]) => 
-                c && (c.subType === 'mesh' || id.includes('mesh'))
+                c && (c.subType === 'mesh' || id.includes('mesh')),
             )?.[1] || null;
         } catch (error) {
             console.error('[TreeView] Error getting mesh component:', error);
@@ -147,7 +147,7 @@ class ControlAction extends vscode.TreeItem {
         public readonly description: string,
         iconId?: string,
         commandId?: string,
-        commandArgs?: any[]
+        commandArgs?: unknown[],
     ) {
         super(label, vscode.TreeItemCollapsibleState.None);
         
@@ -161,7 +161,7 @@ class ControlAction extends vscode.TreeItem {
             this.command = {
                 command: commandId,
                 title: label,
-                arguments: commandArgs || []
+                arguments: commandArgs || [],
             };
         }
         

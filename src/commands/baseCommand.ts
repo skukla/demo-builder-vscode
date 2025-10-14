@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import { StateManager } from '../utils/stateManager';
 import { StatusBarManager } from '../providers/statusBar';
 import { Logger } from '../utils/logger';
+import { StateManager } from '../utils/stateManager';
 
 export abstract class BaseCommand {
     protected context: vscode.ExtensionContext;
@@ -13,7 +13,7 @@ export abstract class BaseCommand {
         context: vscode.ExtensionContext,
         stateManager: StateManager,
         statusBar: StatusBarManager,
-        logger: Logger
+        logger: Logger,
     ) {
         this.context = context;
         this.stateManager = stateManager;
@@ -25,12 +25,12 @@ export abstract class BaseCommand {
 
     protected async withProgress<T>(
         title: string,
-        task: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<T>
+        task: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Promise<T>,
     ): Promise<T> {
         return vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title,
-            cancellable: false
+            cancellable: false,
         }, task);
     }
 
@@ -55,7 +55,7 @@ export abstract class BaseCommand {
      * @param message Success message to display
      * @param timeout Milliseconds to show (default 5000)
      */
-    protected showSuccessMessage(message: string, timeout: number = 5000): void {
+    protected showSuccessMessage(message: string, timeout = 5000): void {
         this.logger.info(message);
         vscode.window.setStatusBarMessage(`✅ ${message}`, timeout);
     }
@@ -66,14 +66,14 @@ export abstract class BaseCommand {
      * @param message Info message to display  
      * @param timeout Milliseconds to show (default 3000)
      */
-    protected showStatusMessage(message: string, timeout: number = 3000): void {
+    protected showStatusMessage(message: string, timeout = 3000): void {
         this.logger.info(message);
         vscode.window.setStatusBarMessage(`ℹ️  ${message}`, timeout);
     }
 
     protected async showQuickPick<T extends vscode.QuickPickItem>(
         items: T[],
-        options?: vscode.QuickPickOptions
+        options?: vscode.QuickPickOptions,
     ): Promise<T | undefined> {
         return vscode.window.showQuickPick(items, options);
     }
@@ -85,7 +85,7 @@ export abstract class BaseCommand {
     protected createTerminal(name: string, cwd?: string): vscode.Terminal {
         const terminal = vscode.window.createTerminal({
             name,
-            cwd: cwd || undefined // Only set cwd if explicitly provided
+            cwd: cwd || undefined, // Only set cwd if explicitly provided
         });
         this.context.subscriptions.push(terminal);
         return terminal;
@@ -96,7 +96,7 @@ export abstract class BaseCommand {
             message,
             { modal: true, detail },
             'Yes',
-            'No'
+            'No',
         );
         return result === 'Yes';
     }

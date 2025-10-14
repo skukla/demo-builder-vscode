@@ -6,10 +6,11 @@
  * - Source file hashes (resolvers, schemas, config)
  */
 
+import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as crypto from 'crypto';
 import { Project } from '../types';
+import { parseJSON } from '../types/typeGuards';
 import { Logger } from './logger';
 
 // Create logger instance for this module
@@ -26,7 +27,7 @@ const MESH_ENV_VARS = [
     'ADOBE_COMMERCE_ENVIRONMENT_ID',
     'ADOBE_COMMERCE_WEBSITE_CODE',
     'ADOBE_COMMERCE_STORE_VIEW_CODE',
-    'ADOBE_COMMERCE_STORE_CODE'
+    'ADOBE_COMMERCE_STORE_CODE',
 ];
 
 /**
@@ -42,7 +43,7 @@ const FRONTEND_ENV_VARS = [
     'ADOBE_COMMERCE_STORE_CODE',
     'ADOBE_CATALOG_API_KEY',
     'ADOBE_ASSETS_URL',
-    'ADOBE_COMMERCE_CUSTOMER_GROUP'
+    'ADOBE_COMMERCE_CUSTOMER_GROUP',
 ];
 
 export interface MeshState {
@@ -63,30 +64,32 @@ export interface MeshChanges {
 /**
  * Get current mesh-related environment variables from component config
  */
-export function getMeshEnvVars(componentConfig: Record<string, any>): Record<string, string> {
+export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
     const envVars: Record<string, string> = {};
-    
+
     MESH_ENV_VARS.forEach(key => {
         // Include ALL keys, even if empty/falsy, for accurate comparison
         // Normalize undefined to empty string for consistent comparison
-        envVars[key] = componentConfig[key] || '';
+        const value = componentConfig[key];
+        envVars[key] = (typeof value === 'string' ? value : '') || '';
     });
-    
+
     return envVars;
 }
 
 /**
  * Get current frontend-related environment variables from component config
  */
-export function getFrontendEnvVars(componentConfig: Record<string, any>): Record<string, string> {
+export function getFrontendEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
     const envVars: Record<string, string> = {};
-    
+
     FRONTEND_ENV_VARS.forEach(key => {
         // Include ALL keys, even if empty/falsy, for accurate comparison
         // Normalize undefined to empty string for consistent comparison
-        envVars[key] = componentConfig[key] || '';
+        const value = componentConfig[key];
+        envVars[key] = (typeof value === 'string' ? value : '') || '';
     });
-    
+
     return envVars;
 }
 
@@ -96,8 +99,8 @@ export function getFrontendEnvVars(componentConfig: Record<string, any>): Record
  */
 export async function fetchDeployedMeshConfig(): Promise<Record<string, string> | null> {
     try {
-        const { getExternalCommandManager } = await import('../extension');
-        const commandManager = getExternalCommandManager();
+        const { ServiceLocator } = await import('../services/serviceLocator');
+        const commandManager = ServiceLocator.getCommandExecutor();
         
         logger.debug('[MeshStaleness] Fetching deployed mesh config from Adobe I/O...');
         
@@ -107,7 +110,7 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         try {
             const { TIMEOUTS } = await import('./timeoutConfig');
             const authCheckResult = await commandManager.executeAdobeCLI('aio console where --json', {
-                timeout: TIMEOUTS.API_CALL // Use existing timeout constant
+                timeout: TIMEOUTS.API_CALL, // Use existing timeout constant
             });
             
             if (authCheckResult.code !== 0) {
@@ -123,13 +126,17 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         
         // Query the deployed mesh configuration
         const result = await commandManager.executeAdobeCLI('aio api-mesh:get --active --json', {
-            timeout: 30000
+            timeout: 30000,
         });
         
         logger.debug('[MeshStaleness] Raw mesh response received, parsing...');
-        
+
         // Parse the JSON response
-        const meshData = JSON.parse(result.stdout);
+        const meshData = parseJSON<{ meshConfig?: { sources?: { name?: string; handler?: { graphql?: { endpoint?: string; operationHeaders?: Record<string, string> } } }[] } }>(result.stdout);
+        if (!meshData) {
+            logger.debug('[MeshStaleness] Failed to parse mesh data');
+            return null;
+        }
         
         // Extract environment variables from the mesh configuration
         // Match the structure we generate in meshDeployer.ts
@@ -141,13 +148,13 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
             for (const source of meshData.meshConfig.sources) {
                 // Commerce GraphQL endpoint (source name: 'magento')
                 if (source.name === 'magento' && source.handler?.graphql?.endpoint) {
-                    deployedEnvVars['ADOBE_COMMERCE_GRAPHQL_ENDPOINT'] = source.handler.graphql.endpoint;
+                    deployedEnvVars.ADOBE_COMMERCE_GRAPHQL_ENDPOINT = source.handler.graphql.endpoint;
                     logger.debug(`[MeshStaleness] Found Commerce endpoint: ${source.handler.graphql.endpoint}`);
                 }
                 
                 // Catalog Service endpoint (source name: 'catalog')
                 if (source.name === 'catalog' && source.handler?.graphql?.endpoint) {
-                    deployedEnvVars['ADOBE_CATALOG_SERVICE_ENDPOINT'] = source.handler.graphql.endpoint;
+                    deployedEnvVars.ADOBE_CATALOG_SERVICE_ENDPOINT = source.handler.graphql.endpoint;
                     logger.debug(`[MeshStaleness] Found Catalog endpoint: ${source.handler.graphql.endpoint}`);
                 }
                 
@@ -157,7 +164,7 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
                     // The key might be a placeholder like {context.headers['x-api-key']}
                     // Or an actual value - we want the actual value
                     if (headers['x-api-key'] && !headers['x-api-key'].includes('context.headers')) {
-                        deployedEnvVars['ADOBE_CATALOG_API_KEY'] = headers['x-api-key'];
+                        deployedEnvVars.ADOBE_CATALOG_API_KEY = headers['x-api-key'];
                         logger.debug('[MeshStaleness] Found Catalog API key');
                     }
                 }
@@ -165,7 +172,7 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         }
         
         logger.info('[MeshStaleness] Successfully fetched deployed mesh config', {
-            keysFound: Object.keys(deployedEnvVars)
+            keysFound: Object.keys(deployedEnvVars),
         });
         
         return deployedEnvVars;
@@ -249,7 +256,7 @@ export function getCurrentMeshState(project: Project): MeshState | null {
     return {
         envVars: project.meshState.envVars || {},
         sourceHash: project.meshState.sourceHash || null,
-        lastDeployed: project.meshState.lastDeployed ? new Date(project.meshState.lastDeployed) : null
+        lastDeployed: project.meshState.lastDeployed ? new Date(project.meshState.lastDeployed) : null,
     };
 }
 
@@ -258,15 +265,15 @@ export function getCurrentMeshState(project: Project): MeshState | null {
  */
 export async function detectMeshChanges(
     project: Project,
-    newComponentConfigs: Record<string, any>
+    newComponentConfigs: Record<string, unknown>,
 ): Promise<MeshChanges> {
     const meshInstance = project.componentInstances?.['commerce-mesh'];
-    if (!meshInstance || !meshInstance.path) {
+    if (!meshInstance?.path) {
         return {
             hasChanges: false,
             envVarsChanged: false,
             sourceFilesChanged: false,
-            changedEnvVars: []
+            changedEnvVars: [],
         };
     }
     
@@ -279,7 +286,7 @@ export async function detectMeshChanges(
             hasChanges: true,
             envVarsChanged: true,
             sourceFilesChanged: true,
-            changedEnvVars: MESH_ENV_VARS
+            changedEnvVars: MESH_ENV_VARS,
         };
     }
     
@@ -313,13 +320,13 @@ export async function detectMeshChanges(
                 envVarsChanged: true,
                 sourceFilesChanged: false,
                 changedEnvVars: ['UNKNOWN_DEPLOYED_STATE'],
-                unknownDeployedState: true
+                unknownDeployedState: true,
             };
         }
     }
     
     // Check env vars changes
-    const newMeshConfig = newComponentConfigs['commerce-mesh'] || {};
+    const newMeshConfig = (newComponentConfigs['commerce-mesh'] as Record<string, unknown> | undefined) || {};
     const newEnvVars = getMeshEnvVars(newMeshConfig);
     
     logger.debug('[MeshStaleness] Comparing deployed state vs current config:');
@@ -363,7 +370,7 @@ export async function detectMeshChanges(
         envVarsChanged,
         sourceFilesChanged,
         changedEnvVars,
-        shouldSaveProject: didPopulateFromDeployedConfig  // Save if we fetched and populated config
+        shouldSaveProject: didPopulateFromDeployedConfig,  // Save if we fetched and populated config
     };
 }
 
@@ -372,7 +379,7 @@ export async function detectMeshChanges(
  */
 export async function updateMeshState(project: Project): Promise<void> {
     const meshInstance = project.componentInstances?.['commerce-mesh'];
-    if (!meshInstance || !meshInstance.path) {
+    if (!meshInstance?.path) {
         return;
     }
     
@@ -383,7 +390,7 @@ export async function updateMeshState(project: Project): Promise<void> {
     project.meshState = {
         envVars,
         sourceHash,
-        lastDeployed: new Date().toISOString()
+        lastDeployed: new Date().toISOString(),
     };
 }
 
@@ -429,7 +436,7 @@ export function updateFrontendState(project: Project): void {
     
     project.frontendEnvState = {
         envVars,
-        capturedAt: new Date().toISOString()
+        capturedAt: new Date().toISOString(),
     };
 }
 

@@ -39,7 +39,17 @@ module.exports = {
     ]
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.js', '.jsx']
+    extensions: ['.tsx', '.ts', '.js', '.jsx'],
+    alias: {
+      '@/features': path.resolve(__dirname, 'src/features'),
+      '@/shared': path.resolve(__dirname, 'src/shared'),
+      '@/components': path.resolve(__dirname, 'src/webviews/components'),
+      '@/hooks': path.resolve(__dirname, 'src/webviews/hooks'),
+      '@/contexts': path.resolve(__dirname, 'src/webviews/contexts'),
+      '@/screens': path.resolve(__dirname, 'src/webviews/screens'),
+      '@/types': path.resolve(__dirname, 'src/webviews/types'),
+      '@/utils': path.resolve(__dirname, 'src/webviews/utils')
+    }
   },
   plugins: [
     new HtmlWebpackPlugin({

@@ -1,5 +1,25 @@
-import { Logger } from './logger';
 import * as fs from 'fs';
+import { parseJSON } from '../types/typeGuards';
+import { Logger } from './logger';
+
+/**
+ * Wizard step configuration from wizard-steps.json
+ */
+interface WizardStepConfig {
+    id: string;
+    name: string;
+    enabled?: boolean;
+    [key: string]: unknown;
+}
+
+/**
+ * Logging templates structure
+ */
+interface LoggingTemplates {
+    operations: Record<string, string>;
+    statuses: Record<string, string>;
+    [key: string]: Record<string, string>;
+}
 
 /**
  * StepLogger provides consistent, configuration-driven logging for wizard steps.
@@ -8,9 +28,9 @@ import * as fs from 'fs';
 export class StepLogger {
     private stepNames: Map<string, string>;
     private logger: Logger;
-    private templates: any;
-    
-    constructor(logger: Logger, wizardSteps?: any[], templatesPath?: string) {
+    private templates: LoggingTemplates;
+
+    constructor(logger: Logger, wizardSteps?: WizardStepConfig[], templatesPath?: string) {
         this.logger = logger;
         this.stepNames = new Map();
         this.templates = this.loadTemplates(templatesPath);
@@ -20,7 +40,7 @@ export class StepLogger {
     /**
      * Load step names from configuration or use defaults
      */
-    private loadStepNames(wizardSteps?: any[]) {
+    private loadStepNames(wizardSteps?: WizardStepConfig[]) {
         // Default names (fallback if no config provided)
         const defaults = {
             'welcome': 'Project Setup',
@@ -34,7 +54,7 @@ export class StepLogger {
             'settings': 'Settings Collection',
             'commerce-config': 'Configuration',  // Legacy
             'review': 'Review',
-            'creating': 'Creating'
+            'creating': 'Creating',
         };
         
         // Start with defaults
@@ -55,9 +75,9 @@ export class StepLogger {
     /**
      * Load logging templates from configuration
      */
-    private loadTemplates(templatesPath?: string): any {
+    private loadTemplates(templatesPath?: string): LoggingTemplates {
         // Default templates
-        const defaults = {
+        const defaults: LoggingTemplates = {
             operations: {
                 checking: 'Checking {item}...',
                 fetching: 'Fetching {item}...',
@@ -68,7 +88,7 @@ export class StepLogger {
                 configuring: 'Configuring {item}...',
                 starting: 'Starting {item}...',
                 completed: '{item} completed successfully',
-                failed: '{item} failed'
+                failed: '{item} failed',
             },
             statuses: {
                 found: 'Found {count} {item}',
@@ -78,15 +98,18 @@ export class StepLogger {
                 ready: '{item} ready',
                 success: '✓ {item}',
                 error: '✗ {item}: {error}',
-                warning: '⚠ {item}'
-            }
+                warning: '⚠ {item}',
+            },
         };
         
         // Try to load custom templates if path provided
         if (templatesPath && fs.existsSync(templatesPath)) {
             try {
                 const content = fs.readFileSync(templatesPath, 'utf8');
-                return JSON.parse(content);
+                const templates = parseJSON<LoggingTemplates>(content);
+                if (templates) {
+                    return templates;
+                }
             } catch {
                 // Fall back to defaults on error
                 this.logger.debug('Failed to load logging templates, using defaults');
@@ -127,17 +150,17 @@ export class StepLogger {
         const formattedMessage = `[${stepName}] ${message}`;
         
         switch(level) {
-        case 'debug':
-            this.logger.debug(formattedMessage);
-            break;
-        case 'error':
-            this.logger.error(formattedMessage);
-            break;
-        case 'warn':
-            this.logger.warn(formattedMessage);
-            break;
-        default:
-            this.logger.info(formattedMessage);
+            case 'debug':
+                this.logger.debug(formattedMessage);
+                break;
+            case 'error':
+                this.logger.error(formattedMessage);
+                break;
+            case 'warn':
+                this.logger.warn(formattedMessage);
+                break;
+            default:
+                this.logger.info(formattedMessage);
         }
     }
     
@@ -168,7 +191,7 @@ export class StepLogger {
     /**
      * Log using a template with parameter substitution
      */
-    public logTemplate(stepId: string, templateKey: string, params: Record<string, any> = {}, level: 'info' | 'debug' | 'error' | 'warn' = 'info') {
+    public logTemplate(stepId: string, templateKey: string, params: Record<string, unknown> = {}, level: 'info' | 'debug' | 'error' | 'warn' = 'info') {
         // Try to find template in both sections
         const templatePath = templateKey.includes('.') ? templateKey.split('.') : [templateKey];
         
@@ -200,7 +223,8 @@ export class StepLogger {
         let finalMessage = template;
         Object.entries(params).forEach(([key, value]) => {
             const placeholder = `{${key}}`;
-            finalMessage = finalMessage.replace(new RegExp(placeholder, 'g'), value ?? '');
+            const stringValue = String(value ?? '');
+            finalMessage = finalMessage.replace(new RegExp(placeholder, 'g'), stringValue);
         });
         
         // Clean up any remaining placeholders
@@ -220,7 +244,7 @@ export class StepLogger {
     /**
      * Log the completion of a step
      */
-    public logStepComplete(stepId: string, success: boolean = true) {
+    public logStepComplete(stepId: string, success = true) {
         const stepName = this.getStepName(stepId);
         if (success) {
             this.logger.info(`[${stepName}] ✓ Complete`);
@@ -245,7 +269,7 @@ export class StepLogger {
 export class StepLoggerContext {
     constructor(
         private parent: StepLogger,
-        private stepId: string
+        private stepId: string,
     ) {}
     
     log(message: string, level: 'info' | 'debug' | 'error' | 'warn' = 'info') {
@@ -260,7 +284,7 @@ export class StepLoggerContext {
         this.parent.logStatus(this.stepId, status, count, itemName);
     }
     
-    logTemplate(templateKey: string, params: Record<string, any> = {}, level: 'info' | 'debug' | 'error' | 'warn' = 'info') {
+    logTemplate(templateKey: string, params: Record<string, unknown> = {}, level: 'info' | 'debug' | 'error' | 'warn' = 'info') {
         this.parent.logTemplate(this.stepId, templateKey, params, level);
     }
     
@@ -268,7 +292,7 @@ export class StepLoggerContext {
         this.parent.logStepStart(this.stepId);
     }
     
-    logComplete(success: boolean = true) {
+    logComplete(success = true) {
         this.parent.logStepComplete(this.stepId, success);
     }
 }

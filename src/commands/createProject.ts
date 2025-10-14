@@ -1,13 +1,29 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
 import * as os from 'os';
-import { BaseCommand } from './baseCommand';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import { ServiceLocator } from '../services/serviceLocator';
 import { Project, ProjectTemplate, CommerceConfig } from '../types';
-import { PrerequisitesManager } from '../utils/prerequisitesManager';
-import { AdobeAuthManager } from '../utils/adobeAuthManager';
-import { getExternalCommandManager } from '../extension';
-import { MeshDeployer } from '../utils/meshDeployer';
+import { AuthenticationService, AdobeOrg, AdobeProject } from '../utils/auth';
 import { FrontendInstaller } from '../utils/frontendInstaller';
+import { MeshDeployer } from '../utils/meshDeployer';
+import { PrerequisitesManager } from '../utils/prerequisitesManager';
+import { BaseCommand } from './baseCommand';
+
+// Adobe configuration interface
+interface AdobeConfiguration {
+    projectId: string;
+    projectName: string;
+    organization: string;
+    orgId: string;
+    orgCode: string;
+    workspace: string;
+    authenticated: boolean;
+}
+
+// Quick pick item with value
+interface QuickPickItemWithValue<T> extends vscode.QuickPickItem {
+    value: T;
+}
 
 export class CreateProjectCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -18,7 +34,7 @@ export class CreateProjectCommand extends BaseCommand {
             if (await this.stateManager.hasProject()) {
                 const overwrite = await this.confirm(
                     'A project already exists in this workspace.',
-                    'Creating a new project will overwrite the existing configuration. Continue?'
+                    'Creating a new project will overwrite the existing configuration. Continue?',
                 );
                 
                 if (!overwrite) {
@@ -59,7 +75,7 @@ export class CreateProjectCommand extends BaseCommand {
             this.logger.info('Project creation completed successfully!');
             await vscode.window.showInformationMessage(
                 `Project "${projectConfig.name}" created successfully!`,
-                'Start Demo'
+                'Start Demo',
             ).then(selection => {
                 if (selection === 'Start Demo') {
                     vscode.commands.executeCommand('demoBuilder.startDemo');
@@ -85,7 +101,7 @@ export class CreateProjectCommand extends BaseCommand {
                 const install = await vscode.window.showErrorMessage(
                     'Node.js is not installed. Demo Builder requires Node.js to function.',
                     'Install Guide',
-                    'Cancel'
+                    'Cancel',
                 );
                 
                 if (install === 'Install Guide') {
@@ -100,7 +116,7 @@ export class CreateProjectCommand extends BaseCommand {
                 const install = await vscode.window.showWarningMessage(
                     'Adobe I/O CLI is not installed. It\'s required for mesh deployment.',
                     'Use Webview Wizard',
-                    'Continue Anyway'
+                    'Continue Anyway',
                 );
                 
                 if (install === 'Use Webview Wizard') {
@@ -128,7 +144,7 @@ export class CreateProjectCommand extends BaseCommand {
                 if (value.length < 3) return 'Name must be at least 3 characters';
                 if (value.length > 30) return 'Name must be less than 30 characters';
                 return undefined;
-            }
+            },
         });
 
         if (!name) {
@@ -140,27 +156,27 @@ export class CreateProjectCommand extends BaseCommand {
             {
                 label: '$(cloud) Adobe Commerce (Platform-as-a-Service)',
                 description: 'Full Commerce instance with all services',
-                value: 'commerce-paas' as ProjectTemplate
+                value: 'commerce-paas' as ProjectTemplate,
             },
             {
                 label: '$(package) Adobe Commerce (Software-as-a-Service)',
                 description: 'Simplified SaaS endpoint (Coming Soon)',
                 value: 'commerce-saas' as ProjectTemplate,
-                disabled: true
+                disabled: true,
             },
             {
                 label: '$(layers) AEM + Commerce',
                 description: 'Hybrid content and commerce (Coming Soon)',
                 value: 'aem-commerce' as ProjectTemplate,
-                disabled: true
-            }
+                disabled: true,
+            },
         ];
 
         const selectedTemplate = await this.showQuickPick(
             templates.filter(t => !t.disabled),
             {
-                placeHolder: 'Select Commerce backend type'
-            }
+                placeHolder: 'Select Commerce backend type',
+            },
         );
 
         if (!selectedTemplate) {
@@ -169,16 +185,16 @@ export class CreateProjectCommand extends BaseCommand {
 
         return {
             name,
-            template: selectedTemplate.value
+            template: selectedTemplate.value,
         };
     }
 
-    private async configureAdobe(): Promise<any> {
+    private async configureAdobe(): Promise<AdobeConfiguration | undefined> {
         return this.withProgress('Configuring Adobe services...', async (progress) => {
-            const authManager = new AdobeAuthManager(
-                this.context.extensionPath, 
+            const authManager = new AuthenticationService(
+                this.context.extensionPath,
                 this.logger,
-                getExternalCommandManager()
+                ServiceLocator.getCommandExecutor(),
             );
             
             progress.report({ message: 'Checking authentication...' });
@@ -190,7 +206,7 @@ export class CreateProjectCommand extends BaseCommand {
                 const auth = await vscode.window.showWarningMessage(
                     'Adobe authentication required for API Mesh deployment',
                     'Login Now',
-                    'Cancel'
+                    'Cancel',
                 );
                 
                 if (auth !== 'Login Now') {
@@ -210,7 +226,7 @@ export class CreateProjectCommand extends BaseCommand {
                     'Complete the authentication in the terminal, then click Continue',
                     { modal: true },
                     'Continue',
-                    'Retry with Force'
+                    'Retry with Force',
                 );
                 
                 if (!result) {
@@ -226,7 +242,7 @@ export class CreateProjectCommand extends BaseCommand {
                     await vscode.window.showInformationMessage(
                         'Complete the forced authentication in the terminal, then click Continue',
                         { modal: true },
-                        'Continue'
+                        'Continue',
                     );
                 }
                 
@@ -238,7 +254,7 @@ export class CreateProjectCommand extends BaseCommand {
                     const retry = await vscode.window.showErrorMessage(
                         'Adobe authentication verification failed',
                         'Force Login',
-                        'Cancel'
+                        'Cancel',
                     );
                     
                     if (retry === 'Force Login') {
@@ -269,13 +285,13 @@ export class CreateProjectCommand extends BaseCommand {
             
             // Step 1: Get and select organization
             const orgs = await authManager.getOrganizations();
-            let selectedOrg: any;
-            
+            let selectedOrg: AdobeOrg;
+
             if (orgs.length === 0) {
                 const openConsole = await vscode.window.showErrorMessage(
                     'No Adobe organizations found. You may need to request access.',
                     'Open Adobe Console',
-                    'Cancel'
+                    'Cancel',
                 );
                 if (openConsole === 'Open Adobe Console') {
                     vscode.env.openExternal(vscode.Uri.parse('https://console.adobe.io'));
@@ -288,23 +304,23 @@ export class CreateProjectCommand extends BaseCommand {
                 this.logger.info(`Auto-selected organization: ${selectedOrg.name}`);
             } else {
                 // Let user choose org
-                const orgChoice = await this.showQuickPick(
-                    orgs.map((org: any) => ({
+                const orgChoice = await this.showQuickPick<QuickPickItemWithValue<AdobeOrg>>(
+                    orgs.map((org) => ({
                         label: org.name,
                         description: `Code: ${org.code}`,
                         detail: `ID: ${org.id}`,
-                        value: org
+                        value: org,
                     })),
                     {
-                        placeHolder: 'Select your Adobe organization'
-                    }
+                        placeHolder: 'Select your Adobe organization',
+                    },
                 );
-                
+
                 if (!orgChoice) {
                     return undefined;
                 }
-                
-                selectedOrg = (orgChoice as any).value;
+
+                selectedOrg = orgChoice.value;
                 await authManager.selectOrganization(selectedOrg.id);
             }
             
@@ -312,14 +328,14 @@ export class CreateProjectCommand extends BaseCommand {
             
             // Step 2: Get and select project
             const projects = await authManager.getProjects();
-            let selectedProject: any;
-            
+            let selectedProject: AdobeProject;
+
             if (projects.length === 0) {
                 const choices = await vscode.window.showWarningMessage(
                     `No projects found in ${selectedOrg.name}. You need to create a project first.`,
                     'Open Adobe Console',
                     'Import console.json',
-                    'Cancel'
+                    'Cancel',
                 );
                 
                 if (choices === 'Open Adobe Console') {
@@ -333,37 +349,37 @@ export class CreateProjectCommand extends BaseCommand {
                 return undefined;
             } else {
                 // Show searchable project list
-                const projectChoice = await this.showQuickPick(
+                const projectChoice = await this.showQuickPick<QuickPickItemWithValue<AdobeProject | 'import'>>(
                     [
-                        ...projects.map((proj: any) => ({
+                        ...projects.map((proj) => ({
                             label: proj.title || proj.name,
                             description: proj.description || `Name: ${proj.name}`,
                             detail: `ID: ${proj.id}`,
-                            value: proj
+                            value: proj as AdobeProject | 'import',
                         })),
                         {
                             label: '$(file) Import console.json instead',
                             description: 'Use a downloaded console.json file',
-                            value: 'import'
-                        }
+                            value: 'import' as AdobeProject | 'import',
+                        },
                     ],
                     {
                         placeHolder: 'Select your Adobe project (type to search)',
                         matchOnDescription: true,
-                        matchOnDetail: true
-                    }
+                        matchOnDetail: true,
+                    },
                 );
-                
+
                 if (!projectChoice) {
                     return undefined;
                 }
-                
+
                 if (projectChoice.value === 'import') {
                     // Import from console.json is not supported in simplified API
                     vscode.window.showWarningMessage('Import from console.json is not currently supported');
                     return undefined;
                 }
-                
+
                 selectedProject = projectChoice.value;
                 await authManager.selectProject(selectedProject.id);
             }
@@ -378,7 +394,7 @@ export class CreateProjectCommand extends BaseCommand {
                 orgId: selectedOrg.id,
                 orgCode: selectedOrg.code,
                 workspace: 'Stage',
-                authenticated: true
+                authenticated: true,
             };
         });
     }
@@ -395,7 +411,7 @@ export class CreateProjectCommand extends BaseCommand {
                 } catch {
                     return 'Invalid URL format';
                 }
-            }
+            },
         });
 
         if (!commerceUrl) {
@@ -405,7 +421,7 @@ export class CreateProjectCommand extends BaseCommand {
         const environmentId = await this.showInputBox({
             prompt: 'Environment ID',
             placeHolder: 'my-environment-id',
-            ignoreFocusOut: true
+            ignoreFocusOut: true,
         });
 
         if (!environmentId) {
@@ -415,7 +431,7 @@ export class CreateProjectCommand extends BaseCommand {
         const storeCode = await this.showInputBox({
             prompt: 'Store Code',
             placeHolder: 'main_website_store',
-            value: 'main_website_store'
+            value: 'main_website_store',
         });
 
         if (!storeCode) {
@@ -425,7 +441,7 @@ export class CreateProjectCommand extends BaseCommand {
         const storeView = await this.showInputBox({
             prompt: 'Store View Code',
             placeHolder: 'default',
-            value: 'default'
+            value: 'default',
         });
 
         if (!storeView) {
@@ -437,14 +453,14 @@ export class CreateProjectCommand extends BaseCommand {
             prompt: 'Catalog Service API Key (optional)',
             placeHolder: 'Enter API key or leave blank',
             password: true,
-            ignoreFocusOut: true
+            ignoreFocusOut: true,
         });
 
         const searchApiKey = await this.showInputBox({
             prompt: 'Live Search API Key (optional)',
             placeHolder: 'Enter API key or leave blank',
             password: true,
-            ignoreFocusOut: true
+            ignoreFocusOut: true,
         });
 
         return {
@@ -454,27 +470,27 @@ export class CreateProjectCommand extends BaseCommand {
                 environmentId,
                 storeView,
                 websiteCode: 'base',
-                storeCode
+                storeCode,
             },
             services: {
                 catalog: catalogApiKey ? {
                     enabled: true,
                     endpoint: 'https://catalog.adobe.io',
-                    apiKey: catalogApiKey
+                    apiKey: catalogApiKey,
                 } : undefined,
                 liveSearch: searchApiKey ? {
                     enabled: true,
                     endpoint: 'https://search.adobe.io',
-                    apiKey: searchApiKey
-                } : undefined
-            }
+                    apiKey: searchApiKey,
+                } : undefined,
+            },
         };
     }
 
     private async createProject(
         projectConfig: { name: string; template: ProjectTemplate },
-        adobeConfig: any,
-        commerceConfig: CommerceConfig
+        adobeConfig: AdobeConfiguration,
+        commerceConfig: CommerceConfig,
     ): Promise<void> {
         return this.withProgress('Creating project...', async (progress) => {
             const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', projectConfig.name);
@@ -490,7 +506,7 @@ export class CreateProjectCommand extends BaseCommand {
                 path: projectPath,
                 status: 'created',
                 adobe: adobeConfig,
-                commerce: commerceConfig
+                commerce: commerceConfig,
             };
 
             // Save project

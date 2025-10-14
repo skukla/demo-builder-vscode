@@ -1,8 +1,8 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
-import { BaseCommand } from './baseCommand';
-import { WebviewCommunicationManager, createWebviewCommunication } from '../utils/webviewCommunicationManager';
+import * as vscode from 'vscode';
 import { setLoadingState } from '../utils/loadingHTML';
+import { WebviewCommunicationManager, createWebviewCommunication } from '../utils/webviewCommunicationManager';
+import { BaseCommand } from './baseCommand';
 
 /**
  * Base class for commands that use webviews with robust communication
@@ -17,8 +17,8 @@ import { setLoadingState } from '../utils/loadingHTML';
  */
 export abstract class BaseWebviewCommand extends BaseCommand {
     // Singleton: Track active webview panels and their communication managers by ID to prevent duplicates
-    private static activePanels: Map<string, vscode.WebviewPanel> = new Map();
-    private static activeCommunicationManagers: Map<string, WebviewCommunicationManager> = new Map();
+    private static activePanels = new Map<string, vscode.WebviewPanel>();
+    private static activeCommunicationManagers = new Map<string, WebviewCommunicationManager>();
     
     // Static callback for disposal notifications
     private static disposalCallback?: (webviewId: string) => Promise<void>;
@@ -100,7 +100,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     /**
      * Get initial data to send to webview after handshake
      */
-    protected abstract getInitialData(): Promise<any>;
+    protected abstract getInitialData(): Promise<unknown>;
 
     /**
      * Get the loading message to display while initializing
@@ -147,9 +147,9 @@ export abstract class BaseWebviewCommand extends BaseCommand {
                 retainContextWhenHidden: true,
                 localResourceRoots: [
                     vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'webview')),
-                    vscode.Uri.file(path.join(this.context.extensionPath, 'media'))
-                ]
-            }
+                    vscode.Uri.file(path.join(this.context.extensionPath, 'media')),
+                ],
+            },
         );
 
         // Register in singleton map
@@ -160,7 +160,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         this.panel.onDidDispose(
             () => this.handlePanelDisposal(),
             undefined,
-            this.disposables
+            this.disposables,
         );
 
         return this.panel;
@@ -179,7 +179,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
             this.panel,
             () => this.getWebviewContent(),
             this.getLoadingMessage(),
-            this.logger
+            this.logger,
         );
 
         // Create communication manager
@@ -187,7 +187,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
             enableLogging: true,
             handshakeTimeout: 15000,
             messageTimeout: 30000,
-            maxRetries: 3
+            maxRetries: 3,
         });
 
         // Register in singleton map
@@ -202,7 +202,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
 
         // Send initial data
         const initialData = await this.getInitialData();
-        await this.communicationManager.sendMessage('init', initialData);
+        await this.communicationManager.sendMessage('init', initialData as import('../types/messages').MessagePayload | undefined);
 
         this.logger.debug(`[${this.getWebviewTitle()}] Communication initialized`);
 
@@ -219,17 +219,17 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         this.communicationManager.on('log', (data: { level: string; message: string }) => {
             const prefix = `[${this.getWebviewTitle()}:UI]`;
             switch (data.level) {
-            case 'error':
-                this.logger.error(`${prefix} ${data.message}`);
-                break;
-            case 'warn':
-                this.logger.warn(`${prefix} ${data.message}`);
-                break;
-            case 'debug':
-                this.logger.debug(`${prefix} ${data.message}`);
-                break;
-            default:
-                this.logger.info(`${prefix} ${data.message}`);
+                case 'error':
+                    this.logger.error(`${prefix} ${data.message}`);
+                    break;
+                case 'warn':
+                    this.logger.warn(`${prefix} ${data.message}`);
+                    break;
+                case 'debug':
+                    this.logger.debug(`${prefix} ${data.message}`);
+                    break;
+                default:
+                    this.logger.info(`${prefix} ${data.message}`);
             }
         });
 
@@ -247,8 +247,11 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         });
 
         // State update handler
-        this.communicationManager.on('update-state', async (updates: any) => {
+        this.communicationManager.on('update-state', async (updates: Record<string, unknown>) => {
             const current = await this.stateManager.getCurrentProject();
+            if (!current) {
+                throw new Error('No project loaded');
+            }
             const updated = { ...current, ...updates };
             await this.stateManager.saveProject(updated);
             this.communicationManager?.incrementStateVersion();
@@ -259,14 +262,14 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     /**
      * Send a message to the webview
      */
-    protected async sendMessage(type: string, payload?: any): Promise<void> {
+    protected async sendMessage(type: string, payload?: unknown): Promise<void> {
         if (!this.communicationManager) {
             this.logger.warn(`Cannot send message '${type}' - communication not initialized`);
             return;
         }
 
         try {
-            await this.communicationManager.sendMessage(type, payload);
+            await this.communicationManager.sendMessage(type, payload as import('../types/messages').MessagePayload | undefined);
         } catch (error) {
             this.logger.error(`Failed to send message '${type}':`, error as Error);
             throw error;
@@ -276,13 +279,13 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     /**
      * Send a request and wait for response
      */
-    protected async request<T = any>(type: string, payload?: any): Promise<T> {
+    protected async request<T = unknown>(type: string, payload?: unknown): Promise<T> {
         if (!this.communicationManager) {
             throw new Error('Communication not initialized');
         }
 
         try {
-            return await this.communicationManager.request<T>(type, payload);
+            return await this.communicationManager.request<T>(type, payload as import('../types/messages').MessagePayload | undefined);
         } catch (error) {
             this.logger.error(`Request '${type}' failed:`, error as Error);
             throw error;

@@ -1,7 +1,8 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseCommand } from './baseCommand';
-import { getExternalCommandManager } from '../extension';
+import { ServiceLocator } from '../services/serviceLocator';
 import { updateFrontendState } from '../utils/stalenessDetector';
+import { BaseCommand } from './baseCommand';
 
 export class StartDemoCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -12,7 +13,7 @@ export class StartDemoCommand extends BaseCommand {
                 const create = await vscode.window.showInformationMessage(
                     'No Demo Builder project found.',
                     'Create Project',
-                    'Cancel'
+                    'Cancel',
                 );
                 if (create === 'Create Project') {
                     await vscode.commands.executeCommand('demoBuilder.createProject');
@@ -27,23 +28,33 @@ export class StartDemoCommand extends BaseCommand {
             }
 
             // Pre-flight check: port availability (outside progress to allow user interaction)
-            const commandManager = getExternalCommandManager();
+            const commandManager = ServiceLocator.getCommandExecutor();
             const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
             
             // Get port: use component's configured port, fallback to extension setting, then 3000
             const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
             const port = frontendComponent?.port || defaultPort;
-            
+
+            // SECURITY: Validate port number to prevent command injection
+            // Port must be a number between 1 and 65535
+            if (!Number.isInteger(port) || port < 1 || port > 65535) {
+                this.logger.error(`[Start Demo] Invalid port number: ${port}`);
+                await this.showError(`Invalid port number: ${port}. Must be between 1 and 65535.`);
+                return;
+            }
+
             const portAvailable = await commandManager.isPortAvailable(port);
             if (!portAvailable) {
                 // Find out what's running on the port
                 let processInfo = 'Unknown process';
                 try {
+                    // SECURITY: port is validated above as a valid integer
                     const result = await commandManager.execute(`lsof -i:${port}`, {
                         timeout: 5000,
                         configureTelemetry: false,
                         useNodeVersion: null,
-                        enhancePath: false
+                        enhancePath: false,
+                        shell: '/bin/sh',  // Required for command syntax
                     });
                     
                     if (result.code === 0 && result.stdout) {
@@ -67,7 +78,7 @@ export class StartDemoCommand extends BaseCommand {
                 const action = await vscode.window.showWarningMessage(
                     `Port ${port} in use by ${processInfo}. Stop it and start demo?`,
                     'Stop & Start',
-                    'Cancel'
+                    'Cancel',
                 );
                 
                 if (action !== 'Stop & Start') {
@@ -78,11 +89,13 @@ export class StartDemoCommand extends BaseCommand {
                 // Kill the process
                 this.logger.info(`[Start Demo] Stopping process on port ${port}...`);
                 try {
+                    // SECURITY: port is validated above as a valid integer
                     await commandManager.execute(`lsof -ti:${port} | xargs kill`, {
                         timeout: 5000,
                         configureTelemetry: false,
                         useNodeVersion: null,
-                        enhancePath: false
+                        enhancePath: false,
+                        shell: '/bin/sh',  // Required for pipes
                     });
                     
                     // Wait a moment for port to be freed
@@ -100,11 +113,11 @@ export class StartDemoCommand extends BaseCommand {
                 progress.report({ message: 'Starting frontend application' });
                 
                 // Validate frontend component
-                if (!frontendComponent || !frontendComponent.path) {
+                if (!frontendComponent?.path) {
                     const debugInfo = JSON.stringify({
                         hasComponentInstances: !!project.componentInstances,
                         componentKeys: project.componentInstances ? Object.keys(project.componentInstances) : [],
-                        frontendComponent: frontendComponent
+                        frontendComponent: frontendComponent,
                     });
                     this.logger.error(`[Start Demo] Frontend component not found: ${debugInfo}`);
                     await this.showError('Frontend component not found or path not set');
@@ -146,28 +159,31 @@ export class StartDemoCommand extends BaseCommand {
                 
                 // Initialize file hashes for change detection (capture baseline state)
                 // Find all .env files in component directories
-                const path = require('path');
                 const envFiles: string[] = [];
-                
+
                 // Collect .env files from all component instances
                 if (project.componentInstances) {
-                    for (const [componentKey, componentInstance] of Object.entries(project.componentInstances)) {
+                    for (const componentInstance of Object.values(project.componentInstances)) {
                         if (componentInstance.path) {
                             const componentPath = componentInstance.path;
                             const envPath = path.join(componentPath, '.env');
                             const envLocalPath = path.join(componentPath, '.env.local');
-                            
+
                             // Check if files exist
-                            const fs = require('fs').promises;
+                            const fsPromises = (await import('fs')).promises;
                             try {
-                                await fs.access(envPath);
+                                await fsPromises.access(envPath);
                                 envFiles.push(envPath);
-                            } catch {}
-                            
+                            } catch {
+                                // File doesn't exist
+                            }
+
                             try {
-                                await fs.access(envLocalPath);
+                                await fsPromises.access(envLocalPath);
                                 envFiles.push(envLocalPath);
-                            } catch {}
+                            } catch {
+                                // File doesn't exist
+                            }
                         }
                     }
                 }

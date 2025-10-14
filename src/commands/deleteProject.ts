@@ -1,6 +1,6 @@
+import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
-import * as fs from 'fs/promises';
 
 export class DeleteProjectCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -13,7 +13,7 @@ export class DeleteProjectCommand extends BaseCommand {
 
             const confirm = await this.confirm(
                 `Are you sure you want to delete project "${project.name}"?`,
-                'This will remove all project files and configuration. This action cannot be undone.'
+                'This will remove all project files and configuration. This action cannot be undone.',
             );
 
             if (!confirm) {
@@ -43,8 +43,9 @@ export class DeleteProjectCommand extends BaseCommand {
                             await fs.access(projectPath);
                             // If we get here, the directory still exists
                             throw new Error('Project directory still exists after deletion attempt');
-                        } catch (accessError: any) {
-                            if (accessError.code !== 'ENOENT') {
+                        } catch (accessError: unknown) {
+                            const err = accessError as { code?: string };
+                            if (err.code !== 'ENOENT') {
                                 // Some other error besides "file not found" - deletion may have failed
                                 throw accessError;
                             }

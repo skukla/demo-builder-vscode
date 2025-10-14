@@ -1,10 +1,17 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { 
-    ComponentDefinition, 
-    ComponentRegistry, 
-    PresetDefinition 
+import {
+    ComponentDefinition,
+    ComponentRegistry,
+    TransformedComponentDefinition,
+    RawComponentRegistry,
+    RawComponentDefinition,
+    EnvVarDefinition,
+    ServiceDefinition,
+    PresetDefinition,
 } from '../types';
+import { ProjectConfig } from '../types/handlers';
+import { parseJSON } from '../types/typeGuards';
 
 export class ComponentRegistryManager {
     private registry: ComponentRegistry | null = null;
@@ -17,30 +24,40 @@ export class ComponentRegistryManager {
     async loadRegistry(): Promise<ComponentRegistry> {
         if (!this.registry) {
             const content = await fs.promises.readFile(this.registryPath, 'utf8');
-            const rawRegistry = JSON.parse(content);
+            const rawRegistry = parseJSON<RawComponentRegistry>(content);
+            if (!rawRegistry) {
+                throw new Error('Failed to parse component registry');
+            }
             this.registry = this.transformToGroupedStructure(rawRegistry);
         }
-        return this.registry!;
+        return this.registry;
     }
 
     /**
      * Transform v2.0 flat structure to grouped structure for internal use
      * Uses selectionGroups to organize components, builds envVars arrays from shared registry
      */
-    private transformToGroupedStructure(raw: any): ComponentRegistry {
-        const components: any = {
+    private transformToGroupedStructure(raw: RawComponentRegistry): ComponentRegistry {
+        const components: {
+            frontends: TransformedComponentDefinition[];
+            backends: TransformedComponentDefinition[];
+            dependencies: TransformedComponentDefinition[];
+            externalSystems: TransformedComponentDefinition[];
+            appBuilder: TransformedComponentDefinition[];
+        } = {
             frontends: [],
             backends: [],
             dependencies: [],
             externalSystems: [],
-            appBuilder: []
+            appBuilder: [],
         };
 
         const groups = raw.selectionGroups || {};
-        
+        const components_map = raw.components || {};
+
         // Helper to enhance a component with envVars and services
-        const enhanceComponent = (id: string) => {
-            const comp = raw.components[id];
+        const enhanceComponent = (id: string): TransformedComponentDefinition | null => {
+            const comp = components_map[id];
             if (!comp) return null;
             
             return {
@@ -51,28 +68,28 @@ export class ComponentRegistryManager {
                     envVars: this.buildEnvVarsForComponent(id, comp, raw.envVars || {}),
                     services: comp.configuration.requiredServices 
                         ? this.buildServicesForComponent(comp.configuration.requiredServices, raw.services || {}, raw.envVars || {})
-                        : undefined
-                } : undefined
+                        : undefined,
+                } : undefined,
             };
         };
 
         // Map selectionGroups to internal buckets
-        (groups.frontends || []).forEach((id: string) => {
+        (groups.frontend || []).forEach((id: string) => {
             const enhanced = enhanceComponent(id);
             if (enhanced) components.frontends.push(enhanced);
         });
 
-        (groups.backends || []).forEach((id: string) => {
+        (groups.backend || []).forEach((id: string) => {
             const enhanced = enhanceComponent(id);
             if (enhanced) components.backends.push(enhanced);
         });
 
-        (groups.appBuilderApps || []).forEach((id: string) => {
+        (groups.appBuilder || []).forEach((id: string) => {
             const enhanced = enhanceComponent(id);
             if (enhanced) components.appBuilder.push(enhanced);
         });
 
-        (groups.integrations || []).forEach((id: string) => {
+        (groups.externalSystems || []).forEach((id: string) => {
             const enhanced = enhanceComponent(id);
             if (enhanced) components.externalSystems.push(enhanced);
         });
@@ -87,17 +104,22 @@ export class ComponentRegistryManager {
             version: raw.version,
             components,
             services: raw.services || {},
-            envVars: raw.envVars || {}
+            envVars: raw.envVars || {},
         };
     }
 
     /**
      * Build envVars array for a component from the shared envVars registry
      */
-    private buildEnvVarsForComponent(componentId: string, component: any, sharedEnvVars: any): any[] {
-        const envVars: any[] = [];
-        const requiredKeys = component.configuration?.requiredEnvVars || [];
-        const optionalKeys = component.configuration?.optionalEnvVars || [];
+    private buildEnvVarsForComponent(
+        componentId: string,
+        component: RawComponentDefinition,
+        sharedEnvVars: Record<string, Omit<EnvVarDefinition, 'key'>>,
+    ): EnvVarDefinition[] {
+        const envVars: EnvVarDefinition[] = [];
+        const envVarConfig = component.configuration?.envVars;
+        const requiredKeys = envVarConfig?.requiredEnvVars || [];
+        const optionalKeys = envVarConfig?.optionalEnvVars || [];
         const allKeys = [...requiredKeys, ...optionalKeys];
 
         for (const key of allKeys) {
@@ -106,7 +128,7 @@ export class ComponentRegistryManager {
                 envVars.push({
                     key,
                     ...envVar,
-                    usedBy: [componentId]
+                    usedBy: [componentId],
                 });
             }
         }
@@ -118,14 +140,18 @@ export class ComponentRegistryManager {
      * Build services array for a component from service IDs
      * Expands service references to full definitions with envVars
      */
-    private buildServicesForComponent(serviceIds: string[], services: any, sharedEnvVars: any): any[] {
-        const expandedServices: any[] = [];
+    private buildServicesForComponent(
+        serviceIds: string[],
+        services: Record<string, ServiceDefinition>,
+        sharedEnvVars: Record<string, Omit<EnvVarDefinition, 'key'>>,
+    ): ServiceDefinition[] {
+        const expandedServices: ServiceDefinition[] = [];
 
         for (const serviceId of serviceIds) {
             const service = services[serviceId];
             if (service) {
                 // Build envVars for this service
-                const serviceEnvVars: any[] = [];
+                const serviceEnvVars: EnvVarDefinition[] = [];
                 const requiredKeys = service.requiredEnvVars || [];
                 
                 for (const key of requiredKeys) {
@@ -133,15 +159,14 @@ export class ComponentRegistryManager {
                     if (envVar) {
                         serviceEnvVars.push({
                             key,
-                            ...envVar
+                            ...envVar,
                         });
                     }
                 }
 
                 expandedServices.push({
-                    id: serviceId,
                     ...service,
-                    envVars: serviceEnvVars
+                    envVars: serviceEnvVars,
                 });
             }
         }
@@ -149,37 +174,37 @@ export class ComponentRegistryManager {
         return expandedServices;
     }
 
-    async getFrontends(): Promise<ComponentDefinition[]> {
+    async getFrontends(): Promise<TransformedComponentDefinition[]> {
         const registry = await this.loadRegistry();
         return registry.components.frontends;
     }
 
-    async getBackends(): Promise<ComponentDefinition[]> {
+    async getBackends(): Promise<TransformedComponentDefinition[]> {
         const registry = await this.loadRegistry();
         return registry.components.backends;
     }
 
-    async getDependencies(): Promise<ComponentDefinition[]> {
+    async getDependencies(): Promise<TransformedComponentDefinition[]> {
         const registry = await this.loadRegistry();
         return registry.components.dependencies;
     }
 
-    async getExternalSystems(): Promise<ComponentDefinition[]> {
+    async getExternalSystems(): Promise<TransformedComponentDefinition[]> {
         const registry = await this.loadRegistry();
         return registry.components.externalSystems || [];
     }
 
-    async getAppBuilder(): Promise<ComponentDefinition[]> {
+    async getAppBuilder(): Promise<TransformedComponentDefinition[]> {
         const registry = await this.loadRegistry();
         return registry.components.appBuilder || [];
     }
 
-    async getServices(): Promise<Record<string, any>> {
+    async getServices(): Promise<Record<string, ServiceDefinition>> {
         const registry = await this.loadRegistry();
         return registry.services || {};
     }
 
-    async getServiceById(id: string): Promise<any | undefined> {
+    async getServiceById(id: string): Promise<ServiceDefinition | undefined> {
         const registry = await this.loadRegistry();
         return registry.services?.[id];
     }
@@ -191,9 +216,9 @@ export class ComponentRegistryManager {
             ...registry.components.backends,
             ...registry.components.dependencies,
             ...(registry.components.externalSystems || []),
-            ...(registry.components.appBuilder || [])
+            ...(registry.components.appBuilder || []),
         ];
-        return allComponents.find(c => c.id === id);
+        return allComponents.find(c => c.id === id) as ComponentDefinition | undefined;
     }
 
     async getPresets(): Promise<PresetDefinition[]> {
@@ -213,7 +238,7 @@ export class ComponentRegistryManager {
         backendId?: string,
         dependencies?: string[],
         externalSystems?: string[],
-        appBuilder?: string[]
+        appBuilder?: string[],
     ): Promise<Set<string>> {
         const nodeVersions = new Set<string>();
 
@@ -261,9 +286,9 @@ export class ComponentRegistryManager {
         backendId?: string,
         dependencies?: string[],
         externalSystems?: string[],
-        appBuilder?: string[]
-    ): Promise<{ [version: string]: string }> {
-        const mapping: { [version: string]: string } = {};
+        appBuilder?: string[],
+    ): Promise<Record<string, string>> {
+        const mapping: Record<string, string> = {};
 
         // Check frontend node version
         if (frontendId) {
@@ -311,7 +336,7 @@ export class DependencyResolver {
     async resolveDependencies(
         frontendId: string,
         backendId: string,
-        selectedOptional: string[] = []
+        selectedOptional: string[] = [],
     ): Promise<{
         required: ComponentDefinition[];
         optional: ComponentDefinition[];
@@ -348,14 +373,14 @@ export class DependencyResolver {
         // Combine all dependencies
         const allDependencies = [
             ...required,
-            ...selected
+            ...selected,
         ];
 
         return {
             required,
             optional,
             selected,
-            all: allDependencies
+            all: allDependencies,
         };
     }
 
@@ -428,16 +453,16 @@ export class DependencyResolver {
         return {
             valid: errors.length === 0,
             errors,
-            warnings
+            warnings,
         };
     }
 
     async generateConfiguration(
         frontend: ComponentDefinition,
         backend: ComponentDefinition,
-        dependencies: ComponentDefinition[]
-    ): Promise<Record<string, any>> {
-        const config: Record<string, any> = {};
+        dependencies: ComponentDefinition[],
+    ): Promise<ProjectConfig> {
+        const config: Partial<ProjectConfig> = {};
 
         // Collect all environment variables
         const envVars: Record<string, string> = {};
@@ -452,11 +477,11 @@ export class DependencyResolver {
         // Dependency-specific configurations
         for (const dep of dependencies) {
             if (dep.id === 'commerce-mesh' && dep.configuration?.providesEndpoint) {
-                envVars['MESH_ENDPOINT'] = '${MESH_ENDPOINT}';
+                envVars.MESH_ENDPOINT = '${MESH_ENDPOINT}';
             }
             
             if (dep.id === 'demo-inspector') {
-                envVars['DEMO_INSPECTOR_ENABLED'] = dep.configuration?.defaultEnabled ? 'true' : 'false';
+                envVars.DEMO_INSPECTOR_ENABLED = dep.configuration?.defaultEnabled ? 'true' : 'false';
             }
 
             // Add any dependency-specific env vars
@@ -476,19 +501,19 @@ export class DependencyResolver {
         config.frontend = {
             id: frontend.id,
             port: frontend.configuration?.port || defaultPort,
-            nodeVersion: frontend.configuration?.nodeVersion || '20'
+            nodeVersion: frontend.configuration?.nodeVersion || '20',
         };
         config.backend = {
             id: backend.id,
-            configuration: backend.configuration?.required || {}
+            configuration: (backend.configuration?.required as Record<string, unknown>) || {},
         };
         config.dependencies = dependencies.map(d => ({
             id: d.id,
-            type: d.subType || d.type,
-            configuration: d.configuration || {}
+            type: (d.subType || d.type) as string,
+            configuration: (d.configuration as Record<string, unknown>) || {},
         }));
 
-        return config;
+        return config as ProjectConfig;
     }
 }
 

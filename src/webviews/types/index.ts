@@ -84,6 +84,58 @@ export interface Project {
     org_id?: number;  // Numeric organization ID from Adobe Console
 }
 
+// Adobe configuration (embedded in DemoProject)
+export interface AdobeProjectConfig {
+    projectId: string;
+    projectName: string;
+    organization: string;
+    workspace: string;
+    authenticated: boolean;
+}
+
+// Commerce configuration (embedded in DemoProject)
+export interface CommerceProjectConfig {
+    type: 'platform-as-a-service' | 'software-as-a-service';
+    instance: {
+        url: string;
+        environmentId: string;
+        storeView: string;
+        websiteCode: string;
+        storeCode: string;
+    };
+    services: {
+        catalog?: {
+            enabled: boolean;
+            endpoint: string;
+            apiKey?: string;
+        };
+        liveSearch?: {
+            enabled: boolean;
+            endpoint: string;
+            apiKey?: string;
+        };
+    };
+}
+
+// Component instance (embedded in DemoProject)
+export interface ComponentInstance {
+    id: string;
+    name: string;
+    type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder';
+    subType?: 'mesh' | 'inspector' | 'utility' | 'service';
+    icon?: string | { light: string; dark: string };
+    path?: string;
+    repoUrl?: string;
+    branch?: string;
+    version?: string;
+    status: string;
+    port?: number;
+    pid?: number;
+    endpoint?: string;
+    lastUpdated?: Date;
+    metadata?: Record<string, unknown>;
+}
+
 // Full Demo Builder project (different from Adobe Project above)
 export interface DemoProject {
     name: string;
@@ -93,15 +145,15 @@ export interface DemoProject {
     path: string;
     status: string;
     organization?: string;
-    adobe?: any;
-    commerce?: any;
-    // Legacy configs
-    frontend?: any;
-    mesh?: any;
-    inspector?: any;
+    adobe?: AdobeProjectConfig;
+    commerce?: CommerceProjectConfig;
+    // Legacy configs (deprecated but kept for backward compatibility)
+    frontend?: Record<string, unknown>;
+    mesh?: Record<string, unknown>;
+    inspector?: Record<string, unknown>;
     // Component-based structure
     componentInstances?: {
-        [componentId: string]: any;
+        [componentId: string]: ComponentInstance;
     };
     componentSelections?: {
         frontend?: string;

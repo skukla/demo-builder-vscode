@@ -15,7 +15,7 @@ const INIT_DELAY = 100; // milliseconds - prevents VSCode's "Initializing web vi
  * @param message - The loading message to display
  * @returns HTML string for the loading state
  */
-function getLoadingHTML(message: string = 'Loading...'): string {
+function getLoadingHTML(message = 'Loading...'): string {
     const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
     
     return `<!DOCTYPE html>
@@ -96,8 +96,8 @@ function getLoadingHTML(message: string = 'Loading...'): string {
 export async function setLoadingState(
     panel: vscode.WebviewPanel,
     getContent: () => Promise<string>,
-    message: string = 'Loading...',
-    logger?: { info: (msg: string) => void; debug?: (msg: string) => void }
+    message = 'Loading...',
+    logger?: { info: (msg: string) => void; debug?: (msg: string) => void },
 ): Promise<void> {
     // Give VSCode a moment to fully initialize the panel
     // This helps prevent the "Initializing web view..." message
@@ -105,7 +105,7 @@ export async function setLoadingState(
     
     // Set loading HTML
     panel.webview.html = getLoadingHTML(message);
-    if (logger && logger.debug) {
+    if (logger?.debug) {
         logger.debug(`Loading HTML set with message: "${message}"`);
     }
     
@@ -122,7 +122,7 @@ export async function setLoadingState(
     
     // Set actual HTML content
     panel.webview.html = contentHTML;
-    if (logger && logger.debug) {
+    if (logger?.debug) {
         logger.debug('Actual content HTML set for webview');
     }
 }

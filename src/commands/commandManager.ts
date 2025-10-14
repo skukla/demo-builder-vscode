@@ -1,20 +1,21 @@
 import * as vscode from 'vscode';
-import { CreateProjectWebviewCommand } from './createProjectWebview';
-import { WelcomeWebviewCommand } from './welcomeWebview';
-import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
+import { StatusBarManager } from '../providers/statusBar';
+import { Project } from '../types';
+import { Logger } from '../utils/logger';
+import { StateManager } from '../utils/stateManager';
+import { CheckUpdatesCommand } from './checkUpdates';
+import { ConfigureCommand } from './configure';
 import { ConfigureProjectWebviewCommand } from './configureProjectWebview';
+import { CreateProjectWebviewCommand } from './createProjectWebview';
+import { DeleteProjectCommand } from './deleteProject';
+import { DiagnosticsCommand } from './diagnostics';
+import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
 import { StartDemoCommand } from './startDemo';
 import { StopDemoCommand } from './stopDemo';
-import { DeleteProjectCommand } from './deleteProject';
 import { ViewStatusCommand } from './viewStatus';
-import { ConfigureCommand } from './configure';
-import { CheckUpdatesCommand } from './checkUpdates';
 import { ResetAllCommand } from './resetAll';
-import { DiagnosticsCommand } from './diagnostics';
 import { DeployMeshCommand } from './deployMesh';
-import { StateManager } from '../utils/stateManager';
-import { StatusBarManager } from '../providers/statusBar';
-import { Logger } from '../utils/logger';
+import { WelcomeWebviewCommand } from './welcomeWebview';
 
 export class CommandManager {
     private context: vscode.ExtensionContext;
@@ -29,7 +30,7 @@ export class CommandManager {
         context: vscode.ExtensionContext,
         stateManager: StateManager,
         statusBar: StatusBarManager,
-        logger: Logger
+        logger: Logger,
     ) {
         this.context = context;
         this.stateManager = stateManager;
@@ -47,7 +48,7 @@ export class CommandManager {
             this.context,
             this.stateManager,
             this.statusBar,
-            this.logger
+            this.logger,
         );
         this.registerCommand('demoBuilder.showWelcome', async () => {
             // Close other webviews when going "home" to Welcome
@@ -61,7 +62,7 @@ export class CommandManager {
             this.context,
             this.stateManager,
             this.statusBar,
-            this.logger
+            this.logger,
         );
         this.registerCommand('demoBuilder.createProject', async () => {
             // Port conflicts are automatically handled during project creation
@@ -74,7 +75,7 @@ export class CommandManager {
             this.context,
             this.stateManager,
             this.statusBar,
-            this.logger
+            this.logger,
         );
         this.registerCommand('demoBuilder.showProjectDashboard', async () => {
             // Close Welcome when opening Dashboard (prevent confusion)
@@ -90,7 +91,7 @@ export class CommandManager {
                 const action = await vscode.window.showWarningMessage(
                     `Demo is currently running for "${currentProject.name}". Stop it before switching projects?`,
                     'Stop & Switch',
-                    'Cancel'
+                    'Cancel',
                 );
                 
                 if (action !== 'Stop & Switch') {
@@ -119,12 +120,12 @@ export class CommandManager {
                 label: project.name,
                 description: project.path,
                 detail: `Last modified: ${project.lastModified.toLocaleDateString()}`,
-                projectPath: project.path
+                projectPath: project.path,
             }));
             
             const selected = await vscode.window.showQuickPick(items, {
                 placeHolder: 'Select a project to open',
-                title: 'Switch Project'
+                title: 'Switch Project',
             });
             
             if (selected) {
@@ -140,16 +141,18 @@ export class CommandManager {
         });
 
         // Load Project (from tree view click)
-        this.registerCommand('demoBuilder.loadProject', async (projectPath: string) => {
+        this.registerCommand('demoBuilder.loadProject', async (...args: unknown[]) => {
+            const projectPath = args[0] as string;
+
             // Check if current project has a running demo
             const currentProject = await this.stateManager.getCurrentProject();
             if (currentProject && currentProject.status === 'running') {
                 const action = await vscode.window.showWarningMessage(
                     `Demo is currently running for "${currentProject.name}". Stop it before switching projects?`,
                     'Stop & Switch',
-                    'Cancel'
+                    'Cancel',
                 );
-                
+
                 if (action !== 'Stop & Switch') {
                     // User cancelled - reopen Welcome screen if no project exists
                     const hasProject = await this.stateManager.hasProject();
@@ -159,12 +162,12 @@ export class CommandManager {
                     }
                     return;
                 }
-                
+
                 // Stop the current demo
                 this.logger.info('[LoadProject] Stopping current demo before switching...');
                 await vscode.commands.executeCommand('demoBuilder.stopDemo');
             }
-            
+
             const project = await this.stateManager.loadProjectFromPath(projectPath);
             if (project) {
                 this.logger.info(`[LoadProject] Loaded project: ${project.name}`);
@@ -180,7 +183,7 @@ export class CommandManager {
             this.context,
             this.stateManager,
             this.statusBar,
-            this.logger
+            this.logger,
         );
         this.registerCommand('demoBuilder.startDemo', () => startDemo.execute());
 
@@ -189,7 +192,7 @@ export class CommandManager {
             this.context,
             this.stateManager,
             this.statusBar,
-            this.logger
+            this.logger,
         );
         this.registerCommand('demoBuilder.stopDemo', () => stopDemo.execute());
 
@@ -198,7 +201,7 @@ export class CommandManager {
             this.context,
             this.stateManager,
             this.statusBar,
-            this.logger
+            this.logger,
         );
         this.registerCommand('demoBuilder.deleteProject', () => deleteProject.execute());
 
@@ -207,7 +210,7 @@ export class CommandManager {
             this.context,
             this.stateManager,
             this.statusBar,
-            this.logger
+            this.logger,
         );
         this.registerCommand('demoBuilder.viewStatus', () => viewStatus.execute());
 
@@ -216,7 +219,7 @@ export class CommandManager {
             this.context,
             this.stateManager,
             this.statusBar,
-            this.logger
+            this.logger,
         );
         this.registerCommand('demoBuilder.configure', () => configure.execute());
 
@@ -225,7 +228,7 @@ export class CommandManager {
             this.context,
             this.stateManager,
             this.statusBar,
-            this.logger
+            this.logger,
         );
         this.registerCommand('demoBuilder.configureProject', async () => {
             // Close Welcome when opening Configure (prevent confusion)
@@ -238,7 +241,7 @@ export class CommandManager {
             this.context,
             this.stateManager,
             this.statusBar,
-            this.logger
+            this.logger,
         );
         this.registerCommand('demoBuilder.deployMesh', () => deployMesh.execute());
 
@@ -247,7 +250,7 @@ export class CommandManager {
             this.context,
             this.stateManager,
             this.statusBar,
-            this.logger
+            this.logger,
         );
         this.registerCommand('demoBuilder.checkForUpdates', () => checkUpdates.execute());
 
@@ -257,7 +260,7 @@ export class CommandManager {
                 this.context,
                 this.stateManager,
                 this.statusBar,
-                this.logger
+                this.logger,
             );
             this.registerCommand('demoBuilder.resetAll', () => resetAll.execute());
         }
@@ -267,37 +270,40 @@ export class CommandManager {
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
 
         // Open Component (reveal in Explorer)
-        this.registerCommand('demoBuilder.openComponent', async (componentId: string, project?: any) => {
+        this.registerCommand('demoBuilder.openComponent', async (...args: unknown[]) => {
+            const componentId = args[0] as string;
+            let project = args[1] as Project | undefined;
+
             try {
                 // Get project if not provided
                 if (!project) {
                     project = await this.stateManager.getCurrentProject();
                 }
-                
+
                 if (!project?.componentInstances?.[componentId]) {
                     vscode.window.showErrorMessage(`Component ${componentId} not found`);
                     return;
                 }
-                
+
                 const component = project.componentInstances[componentId];
-                
+
                 if (!component.path) {
                     vscode.window.showErrorMessage(`Component ${component.name} has no local files`);
                     return;
                 }
-                
+
                 const componentUri = vscode.Uri.file(component.path);
-                
+
                 // Switch to Explorer view
                 await vscode.commands.executeCommand('workbench.view.explorer');
-                
+
                 // Reveal in Explorer
                 await vscode.commands.executeCommand('revealInExplorer', componentUri);
-                
+
                 // Try to open README.md or package.json for quick reference
                 const fs = await import('fs/promises');
                 const path = await import('path');
-                
+
                 try {
                     const readmePath = path.join(component.path, 'README.md');
                     await fs.access(readmePath);
@@ -313,7 +319,7 @@ export class CommandManager {
                         this.logger.debug(`[OpenComponent] No README or package.json found for ${componentId}`);
                     }
                 }
-                
+
                 this.logger.info(`[OpenComponent] Opened ${component.name} in Explorer`);
             } catch (error) {
                 this.logger.error('[OpenComponent] Failed to open component', error as Error);
@@ -325,7 +331,7 @@ export class CommandManager {
         this.logger.debug(`Registered ${this.commands.size} commands: ${commandList.slice(0, 3).join(', ')}${commandList.length > 3 ? ` ... (and ${commandList.length - 3} more)` : ''}`);
     }
 
-    private registerCommand(command: string, callback: (...args: any[]) => any): void {
+    private registerCommand(command: string, callback: (...args: unknown[]) => unknown): void {
         const disposable = vscode.commands.registerCommand(command, callback);
         this.commands.set(command, disposable);
         this.context.subscriptions.push(disposable);

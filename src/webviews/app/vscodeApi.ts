@@ -7,15 +7,15 @@ declare global {
 }
 
 interface VSCodeApi {
-    postMessage(message: any): void;
-    getState(): any;
-    setState(state: any): void;
+    postMessage(message: Message): void;
+    getState<T = unknown>(): T | undefined;
+    setState<T = unknown>(state: T): void;
 }
 
-interface Message {
+interface Message<T = unknown> {
     id: string;
     type: string;
-    payload?: any;
+    payload?: T;
     timestamp: number;
     isResponse?: boolean;
     responseToId?: string;
@@ -23,26 +23,26 @@ interface Message {
     expectsResponse?: boolean;
 }
 
-interface PendingRequest {
-    resolve: (value: any) => void;
+interface PendingRequest<T = unknown> {
+    resolve: (value: T) => void;
     reject: (error: Error) => void;
     timeout: number; // Browser setTimeout returns number
 }
 
 class VSCodeAPIWrapper {
     private vscodeApi: VSCodeApi | null = null;
-    private listeners: Map<string, Set<(data: any) => void>>;
+    private listeners: Map<string, Set<(data: unknown) => void>>;
     private initialized = false;
     private handshakeComplete = false;
     private readyPromise: Promise<void>;
     private readyResolve?: () => void;
     private messageQueue: Message[] = [];
-    private pendingRequests = new Map<string, PendingRequest>();
+    private pendingRequests = new Map<string, PendingRequest<unknown>>();
     private messageIdCounter = 0;
 
     constructor() {
         // Initialize listeners map immediately
-        this.listeners = new Map<string, Set<(data: any) => void>>();
+        this.listeners = new Map<string, Set<(data: unknown) => void>>();
         
         // Create ready promise
         this.readyPromise = new Promise<void>((resolve) => {
@@ -156,7 +156,7 @@ class VSCodeAPIWrapper {
     }
     
     // Send message to extension
-    public postMessage(type: string, payload?: any): void {
+    public postMessage(type: string, payload?: unknown): void {
         const message: Message = {
             id: this.generateMessageId(),
             type,
@@ -183,7 +183,7 @@ class VSCodeAPIWrapper {
      * @param payload - Request payload
      * @param timeoutMs - Initial timeout (default 30s, may be extended by backend)
      */
-    public async request<T = any>(type: string, payload?: any, timeoutMs: number = 30000): Promise<T> {
+    public async request<T = unknown>(type: string, payload?: unknown, timeoutMs: number = 30000): Promise<T> {
         const message: Message = {
             id: this.generateMessageId(),
             type,
@@ -233,7 +233,7 @@ class VSCodeAPIWrapper {
     }
 
     // Subscribe to messages from extension
-    public onMessage(type: string, handler: (data: any) => void): () => void {
+    public onMessage(type: string, handler: (data: unknown) => void): () => void {
         // Initialize if not already done to set up event listener
         if (!this.initialized) {
             this.initialize();
@@ -280,7 +280,7 @@ class VSCodeAPIWrapper {
         this.postMessage('get-projects', { orgId });
     }
 
-    public createProject(config: any): void {
+    public createProject(config: unknown): void {
         this.postMessage('create-project', config);
     }
 

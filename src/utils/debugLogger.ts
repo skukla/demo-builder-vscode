@@ -1,6 +1,7 @@
-import * as vscode from 'vscode';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import * as vscode from 'vscode';
+import { sanitizeErrorForLogging } from './securityValidation';
 
 export interface CommandResult {
     stdout: string;
@@ -14,11 +15,11 @@ export interface CommandResult {
 export class DebugLogger {
     private outputChannel: vscode.OutputChannel;
     private debugChannel: vscode.OutputChannel;
-    private debugEnabled: boolean = true; // Can be controlled by settings later
+    private debugEnabled = true; // Can be controlled by settings later
     private logBuffer: string[] = []; // Track all main channel logs for persistence
     private debugBuffer: string[] = []; // Track all debug channel logs for persistence
-    private isLogsVisible: boolean = false; // Track visibility for toggle functionality
-    private isDebugVisible: boolean = false; // Track debug channel visibility
+    private isLogsVisible = false; // Track visibility for toggle functionality
+    private isDebugVisible = false; // Track debug channel visibility
 
     constructor(context: vscode.ExtensionContext) {
         // Main channel for user-facing messages
@@ -54,31 +55,37 @@ export class DebugLogger {
         const logLine = `[${timestamp}] ❌ ${message}`;
         this.outputChannel.appendLine(logLine);
         this.logBuffer.push(logLine);
+
+        // SECURITY: Sanitize error message for user-facing logs
         if (error?.message) {
-            const errorLine = `  Error: ${error.message}`;
+            const sanitizedMessage = sanitizeErrorForLogging(error);
+            const errorLine = `  Error: ${sanitizedMessage}`;
             this.outputChannel.appendLine(errorLine);
             this.logBuffer.push(errorLine);
         }
-        
-        // Also log full error to debug channel
+
+        // Log full (unsanitized) error details to debug channel only
         if (error && this.debugEnabled) {
             this.debug('Full error details:', {
                 message: error.message,
                 stack: error.stack,
-                name: error.name
+                name: error.name,
             });
         }
     }
 
     // Debug messages (debug channel)
-    public debug(message: string, data?: any): void {
-        if (!this.debugEnabled) return;
+    public debug(message: string, data?: unknown): void {
+        // SECURITY: Disable debug logging in production to prevent information disclosure
+        if (!this.debugEnabled || this.isProduction()) {
+            return;
+        }
 
         const timestamp = new Date().toISOString();
         const logLine = `[${timestamp}] DEBUG: ${message}`;
         this.debugChannel.appendLine(logLine);
         this.debugBuffer.push(logLine);
-        
+
         if (data !== undefined) {
             try {
                 const formatted = JSON.stringify(data, null, 2);
@@ -93,6 +100,14 @@ export class DebugLogger {
         }
     }
 
+    /**
+     * Check if running in production environment
+     * SECURITY: Used to disable debug logging in production
+     */
+    private isProduction(): boolean {
+        return process.env.NODE_ENV === 'production';
+    }
+
     // Helper to append to debug channel and buffer
     private appendDebug(line: string): void {
         this.debugChannel.appendLine(line);
@@ -101,7 +116,10 @@ export class DebugLogger {
 
     // Command execution logging (debug channel)
     public logCommand(command: string, result: CommandResult, args?: string[]): void {
-        if (!this.debugEnabled) return;
+        // SECURITY: Disable command logging in production
+        if (!this.debugEnabled || this.isProduction()) {
+            return;
+        }
 
         const timestamp = new Date().toISOString();
         this.appendDebug(`\n${'='.repeat(80)}`);
@@ -145,7 +163,10 @@ export class DebugLogger {
 
     // Log environment information
     public logEnvironment(label: string, env: NodeJS.ProcessEnv): void {
-        if (!this.debugEnabled) return;
+        // SECURITY: Disable environment logging in production
+        if (!this.debugEnabled || this.isProduction()) {
+            return;
+        }
 
         this.debug(`Environment - ${label}`, {
             PATH: env.PATH?.split(':').join('\n  '),
@@ -153,12 +174,12 @@ export class DebugLogger {
             SHELL: env.SHELL,
             USER: env.USER,
             NODE_PATH: env.NODE_PATH,
-            npm_config_prefix: env.npm_config_prefix
+            npm_config_prefix: env.npm_config_prefix,
         });
     }
 
     // Show the output channel
-    public show(preserveFocus: boolean = true): void {
+    public show(preserveFocus = true): void {
         this.outputChannel.show(preserveFocus);
         this.isLogsVisible = true;
         this.isDebugVisible = false; // Logs is now active, not Debug
@@ -189,7 +210,7 @@ export class DebugLogger {
     }
 
     // Show the debug channel
-    public showDebug(preserveFocus: boolean = true): void {
+    public showDebug(preserveFocus = true): void {
         this.debugChannel.show(preserveFocus);
         this.isDebugVisible = true;
         this.isLogsVisible = false; // Debug is now active, not Logs
@@ -215,17 +236,20 @@ export class DebugLogger {
         const uri = await vscode.window.showSaveDialog({
             defaultUri: vscode.Uri.file('demo-builder-debug.log'),
             filters: {
-                'Log files': ['log', 'txt']
-            }
+                'Log files': ['log', 'txt'],
+            },
         });
 
         if (uri) {
-            const content = (this.debugChannel as any)._content || 'No debug content available';
+            // Use debug buffer instead of accessing private _content property
+            const content = this.debugBuffer.length > 0
+                ? this.debugBuffer.join('\n')
+                : 'No debug content available';
             await fs.writeFile(uri.fsPath, content);
             this.info(`Debug log exported to: ${uri.fsPath}`);
             return uri.fsPath;
         }
-        
+
         return undefined;
     }
 

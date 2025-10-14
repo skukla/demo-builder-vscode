@@ -10,7 +10,7 @@ export class ViewStatusCommand extends BaseCommand {
                 const create = await vscode.window.showInformationMessage(
                     'No Demo Builder project found.',
                     'Create Project',
-                    'Cancel'
+                    'Cancel',
                 );
                 if (create === 'Create Project') {
                     await vscode.commands.executeCommand('demoBuilder.createProject');
@@ -68,7 +68,7 @@ export class ViewStatusCommand extends BaseCommand {
 
             const action = await vscode.window.showInformationMessage(
                 `Project "${project.name}" is ${project.status}`,
-                ...actions
+                ...actions,
             );
 
             if (action === 'Start Demo') {

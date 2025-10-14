@@ -1,9 +1,10 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
-import { BaseCommand } from './baseCommand';
+import * as vscode from 'vscode';
+import { Project, ComponentInstance } from '../types';
 import { setLoadingState } from '../utils/loadingHTML';
+import { validateURL } from '../utils/securityValidation';
 import { detectMeshChanges, detectFrontendChanges } from '../utils/stalenessDetector';
-import { Project } from '../types';
+import { BaseCommand } from './baseCommand';
 
 /**
  * Command to show the "Project Dashboard" after project creation
@@ -15,7 +16,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
     private static activeInstance: ProjectDashboardWebviewCommand | undefined;
     
     private panel: vscode.WebviewPanel | undefined;
-    private currentProject: any = null; // Store project for message handler access
+    private currentProject: Project | null = null; // Store project for message handler access
 
     /**
      * Static method to dispose any active Project Dashboard panel
@@ -62,9 +63,9 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                     enableScripts: true,
                     retainContextWhenHidden: true,
                     localResourceRoots: [
-                        vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'webview'))
-                    ]
-                }
+                        vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'webview')),
+                    ],
+                },
             );
 
             // Register in singleton
@@ -87,7 +88,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                             setTimeout(() => {
                                 vscode.commands.executeCommand('demoBuilder.showWelcome').then(
                                     () => this.logger.debug('[Project Dashboard] Welcome screen opened successfully'),
-                                    (err) => this.logger.debug(`[Project Dashboard] Could not open Welcome screen: ${err?.message || err}`)
+                                    (err) => this.logger.debug(`[Project Dashboard] Could not open Welcome screen: ${err?.message || err}`),
                                 );
                             }, 100);
                         }
@@ -97,7 +98,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                     }
                 },
                 undefined,
-                this.context.subscriptions
+                this.context.subscriptions,
             );
 
             // Set up message handler BEFORE loading content (so React can communicate)
@@ -111,100 +112,112 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                                 await this.panel.webview.postMessage({
                                     id: `msg_${Date.now()}`,
                                     type: '__handshake_complete__',
-                                    timestamp: Date.now()
+                                    timestamp: Date.now(),
                                 });
                             }
                             return;
                         }
                         
                         switch (message.type) {
-                        case 'ready':
+                            case 'ready':
                             // Send initialization data
-                            if (this.currentProject && this.panel) {
-                                this.panel.webview.postMessage({
-                                    type: 'init',
-                                    payload: {
-                                        theme: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
-                                        project: {
-                                            name: this.currentProject.name,
-                                            path: this.currentProject.path
-                                        }
-                                    }
-                                });
-                            }
-                            break;
-                        case 'requestStatus':
+                                if (this.currentProject && this.panel) {
+                                    this.panel.webview.postMessage({
+                                        type: 'init',
+                                        payload: {
+                                            theme: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
+                                            project: {
+                                                name: this.currentProject.name,
+                                                path: this.currentProject.path,
+                                            },
+                                        },
+                                    });
+                                }
+                                break;
+                            case 'requestStatus':
                             // Send current project status
-                            await this.sendProjectStatus();
-                            break;
-                        case 're-authenticate':
+                                await this.sendProjectStatus();
+                                break;
+                            case 're-authenticate':
                             // Trigger browser authentication flow
-                            await this.handleReAuthentication();
-                            break;
-                        case 'startDemo':
-                            await vscode.commands.executeCommand('demoBuilder.startDemo');
-                            // Update demo status only (don't re-check mesh)
-                            setTimeout(() => this.sendDemoStatusUpdate(), 1000);
-                            break;
-                        case 'stopDemo':
-                            await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                            // Update demo status only (don't re-check mesh)
-                            setTimeout(() => this.sendDemoStatusUpdate(), 1000);
-                            break;
-                        case 'openBrowser': {
+                                await this.handleReAuthentication();
+                                break;
+                            case 'startDemo':
+                                await vscode.commands.executeCommand('demoBuilder.startDemo');
+                                // Update demo status only (don't re-check mesh)
+                                setTimeout(() => this.sendDemoStatusUpdate(), 1000);
+                                break;
+                            case 'stopDemo':
+                                await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                                // Update demo status only (don't re-check mesh)
+                                setTimeout(() => this.sendDemoStatusUpdate(), 1000);
+                                break;
+                            case 'openBrowser': {
                             // Open demo in browser
-                            const currentProject = await this.stateManager.getCurrentProject();
-                            const frontendPort = currentProject?.componentInstances?.['citisignal-nextjs']?.port;
-                            if (frontendPort) {
-                                const url = `http://localhost:${frontendPort}`;
-                                await vscode.env.openExternal(vscode.Uri.parse(url));
-                                this.logger.info(`[Project Dashboard] Opening browser: ${url}`);
+                            // SECURITY NOTE: localhost URLs are intentionally allowed here as this is
+                            // for local development. The port comes from internal component state,
+                            // not user input. validateURL() would block localhost, so we skip it.
+                                const currentProject = await this.stateManager.getCurrentProject();
+                                const frontendPort = currentProject?.componentInstances?.['citisignal-nextjs']?.port;
+                                if (frontendPort) {
+                                    const url = `http://localhost:${frontendPort}`;
+                                    await vscode.env.openExternal(vscode.Uri.parse(url));
+                                    this.logger.info(`[Project Dashboard] Opening browser: ${url}`);
+                                }
+                                break;
                             }
-                            break;
-                        }
-                        case 'viewLogs':
-                            await vscode.commands.executeCommand('demoBuilder.showLogs');
-                            break;
-                        case 'configure':
-                            await vscode.commands.executeCommand('demoBuilder.configureProject');
-                            break;
-                        case 'deployMesh':
-                            await vscode.commands.executeCommand('demoBuilder.deployMesh');
-                            break;
-                        case 'openDevConsole': {
+                            case 'viewLogs':
+                                await vscode.commands.executeCommand('demoBuilder.showLogs');
+                                break;
+                            case 'configure':
+                                await vscode.commands.executeCommand('demoBuilder.configureProject');
+                                break;
+                            case 'deployMesh':
+                                await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                break;
+                            case 'openDevConsole': {
                             // Open Adobe Developer Console for this project/workspace
-                            const project = await this.stateManager.getCurrentProject();
-                            let consoleUrl = 'https://developer.adobe.com/console';
-                                
-                            if (project?.adobe?.organization && project?.adobe?.projectId && project?.adobe?.workspace) {
+                            // SECURITY: Validates constructed URL even though base domain is hardcoded
+                                const project = await this.stateManager.getCurrentProject();
+                                let consoleUrl = 'https://developer.adobe.com/console';
+
+                                if (project?.adobe?.organization && project?.adobe?.projectId && project?.adobe?.workspace) {
                                 // Direct link to workspace (same as API Mesh modal)
-                                consoleUrl = `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/workspaces/${project.adobe.workspace}/details`;
-                                this.logger.info('[Dev Console] Opening workspace-specific URL', {
-                                    org: project.adobe.organization,
-                                    project: project.adobe.projectId,
-                                    workspace: project.adobe.workspace
-                                });
-                            } else if (project?.adobe?.organization && project?.adobe?.projectId) {
+                                    consoleUrl = `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/workspaces/${project.adobe.workspace}/details`;
+                                    this.logger.info('[Dev Console] Opening workspace-specific URL', {
+                                        org: project.adobe.organization,
+                                        project: project.adobe.projectId,
+                                        workspace: project.adobe.workspace,
+                                    });
+                                } else if (project?.adobe?.organization && project?.adobe?.projectId) {
                                 // Fallback: project overview if no workspace
-                                consoleUrl = `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/overview`;
-                                this.logger.info('[Dev Console] Opening project-specific URL (no workspace)');
-                            } else {
-                                this.logger.info('[Dev Console] Opening generic console URL (missing IDs)');
+                                    consoleUrl = `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/overview`;
+                                    this.logger.info('[Dev Console] Opening project-specific URL (no workspace)');
+                                } else {
+                                    this.logger.info('[Dev Console] Opening generic console URL (missing IDs)');
+                                }
+
+                                // Validate URL before opening
+                                try {
+                                    validateURL(consoleUrl);
+                                } catch (validationError) {
+                                    this.logger.error('[Dev Console] URL validation failed', validationError as Error);
+                                    break;
+                                }
+
+                                await vscode.env.openExternal(vscode.Uri.parse(consoleUrl));
+                                break;
                             }
-                                
-                            await vscode.env.openExternal(vscode.Uri.parse(consoleUrl));
-                            break;
-                        }
-                        case 'deleteProject':
-                            await vscode.commands.executeCommand('demoBuilder.deleteProject');
-                            // Close cockpit after delete
-                            this.panel?.dispose();
-                            break;
+                            case 'deleteProject':
+                                await vscode.commands.executeCommand('demoBuilder.deleteProject');
+                                // Close cockpit after delete
+                                this.panel?.dispose();
+                                break;
                         }
                     }
                 },
                 undefined,
-                this.context.subscriptions
+                this.context.subscriptions,
             );
 
             // Set loading state with spinner (matching Welcome screen UX)
@@ -212,14 +225,14 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                 this.panel,
                 async () => this.getHtmlContent(this.panel!.webview),
                 'Loading Project Dashboard...',
-                this.logger
+                this.logger,
             );
 
             // Initiate handshake protocol (required by vscodeApi wrapper)
             await this.panel.webview.postMessage({
                 id: `msg_${Date.now()}`,
                 type: '__extension_ready__',
-                timestamp: Date.now()
+                timestamp: Date.now(),
             });
 
         } catch (error) {
@@ -231,7 +244,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
      * Check mesh status asynchronously and update UI when complete
      * This prevents blocking the initial UI render on slow auth checks
      */
-    private async checkMeshStatusAsync(project: Project, meshComponent: any, frontendConfigChanged: boolean): Promise<void> {
+    private async checkMeshStatusAsync(project: Project, meshComponent: ComponentInstance, frontendConfigChanged: boolean): Promise<void> {
         try {
             let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = 'not-deployed';
             let meshEndpoint: string | undefined;
@@ -241,12 +254,12 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                 this.logger.debug('[Dashboard] Checking mesh deployment status...');
                 
                 // Pre-check: Quick auth verification (< 1 second vs 9+ seconds for full check)
-                const { AdobeAuthManager } = await import('../utils/adobeAuthManager');
-                const { getExternalCommandManager } = await import('../extension');
-                const authManager = new AdobeAuthManager(
+                const { AuthenticationService } = await import('../utils/auth');
+                const { ServiceLocator } = await import('../services/serviceLocator');
+                const authManager = new AuthenticationService(
                     this.context.extensionPath,
                     this.logger,
-                    getExternalCommandManager()
+                    ServiceLocator.getCommandExecutor(),
                 );
                 
                 // Use quick check - doesn't validate org access or init SDK (much faster)
@@ -268,9 +281,9 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                                 frontendConfigChanged,
                                 mesh: {
                                     status: 'needs-auth',
-                                    message: 'Sign in to verify mesh status'
-                                }
-                            }
+                                    message: 'Sign in to verify mesh status',
+                                },
+                            },
                         });
                     }
                     return;
@@ -298,9 +311,9 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                                     frontendConfigChanged,
                                     mesh: {
                                         status: 'error',
-                                        message: 'Organization access lost'
-                                    }
-                                }
+                                        message: 'Organization access lost',
+                                    },
+                                },
                             });
                         }
                         return;
@@ -313,7 +326,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                     project.meshState = {
                         envVars: {},
                         sourceHash: null,
-                        lastDeployed: ''
+                        lastDeployed: '',
                     };
                 }
                 
@@ -367,9 +380,9 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                         mesh: {
                             status: meshStatus,
                             endpoint: meshEndpoint,
-                            message: meshMessage
-                        }
-                    }
+                            message: meshMessage,
+                        },
+                    },
                 });
             }
         } catch (error) {
@@ -389,9 +402,9 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                         frontendConfigChanged,
                         mesh: {
                             status: 'error',
-                            message: 'Failed to check deployment status'
-                        }
-                    }
+                            message: 'Failed to check deployment status',
+                        },
+                    },
                 });
             }
         }
@@ -412,7 +425,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
         
         // Get mesh component and derive status from current state (no re-check)
         const meshComponent = project.componentInstances?.['commerce-mesh'];
-        let meshStatus: any = undefined;
+        let meshStatus: { status: string; message?: string; endpoint?: string } | undefined = undefined;
         
         if (meshComponent) {
             // Use component status for transient states
@@ -426,7 +439,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                     const meshChanges = await detectMeshChanges(project, project.componentConfigs);
                     meshStatus = {
                         status: meshChanges.hasChanges ? 'config-changed' : 'deployed',
-                        endpoint: meshComponent.endpoint
+                        endpoint: meshComponent.endpoint,
                     };
                 } else {
                     meshStatus = { status: 'deployed', endpoint: meshComponent.endpoint };
@@ -448,8 +461,8 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                 adobeOrg: project.adobe?.organization,
                 adobeProject: project.adobe?.projectName,
                 frontendConfigChanged,
-                mesh: meshStatus
-            }
+                mesh: meshStatus,
+            },
         });
     }
 
@@ -467,7 +480,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             hasComponentInstances: !!project.componentInstances,
             componentKeys: Object.keys(project.componentInstances || {}),
             hasMeshState: !!project.meshState,
-            meshStateKeys: project.meshState ? Object.keys(project.meshState) : []
+            meshStateKeys: project.meshState ? Object.keys(project.meshState) : [],
         });
 
         // Get mesh component for status
@@ -477,7 +490,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             hasMeshComponent: !!meshComponent,
             meshStatus: meshComponent?.status,
             meshEndpoint: meshComponent?.endpoint,
-            meshPath: meshComponent?.path
+            meshPath: meshComponent?.path,
         });
 
         // Send initial status immediately with mesh as 'checking' if mesh component exists
@@ -497,9 +510,9 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                     frontendConfigChanged,
                     mesh: {
                         status: 'checking',
-                        message: 'Verifying deployment status...'
-                    }
-                }
+                        message: 'Verifying deployment status...',
+                    },
+                },
             });
             
             // Check mesh status asynchronously and update when complete
@@ -528,12 +541,12 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                     this.logger.debug('[Dashboard] Checking mesh deployment status...');
                     
                     // Pre-check: Verify auth before fetching (prevents browser popup)
-                    const { AdobeAuthManager } = await import('../utils/adobeAuthManager');
-                    const { getExternalCommandManager } = await import('../extension');
-                    const authManager = new AdobeAuthManager(
+                    const { AuthenticationService } = await import('../utils/auth');
+                    const { ServiceLocator } = await import('../services/serviceLocator');
+                    const authManager = new AuthenticationService(
                         this.context.extensionPath,
                         this.logger,
-                        getExternalCommandManager()
+                        ServiceLocator.getCommandExecutor(),
                     );
                     
                     const isAuthenticated = await authManager.isAuthenticated();
@@ -549,7 +562,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                             project.meshState = {
                                 envVars: {},
                                 sourceHash: null,
-                                lastDeployed: '' // Empty string, not null (Project type expects string)
+                                lastDeployed: '', // Empty string, not null (Project type expects string)
                             };
                         }
                         
@@ -605,13 +618,13 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             mesh: meshComponent ? {
                 status: meshStatus,
                 endpoint: meshComponent.endpoint,
-                message: undefined
-            } : undefined
+                message: undefined,
+            } : undefined,
         };
 
         this.panel.webview.postMessage({
             type: 'statusUpdate',
-            payload: statusData
+            payload: statusData,
         });
     }
     
@@ -621,7 +634,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
     public static async sendMeshStatusUpdate(
         status: 'deploying' | 'deployed' | 'config-changed' | 'error' | 'not-deployed',
         message?: string,
-        endpoint?: string
+        endpoint?: string,
     ): Promise<void> {
         if (ProjectDashboardWebviewCommand.activePanel) {
             await ProjectDashboardWebviewCommand.activePanel.webview.postMessage({
@@ -629,8 +642,8 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                 payload: {
                     status,
                     message,
-                    endpoint
-                }
+                    endpoint,
+                },
             });
         }
     }
@@ -657,7 +670,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
         
         if (!verificationResult.exists) {
             this.logger.warn('[Project Dashboard] Mesh verification failed - mesh may not exist in Adobe I/O', {
-                error: verificationResult.error
+                error: verificationResult.error,
             });
             
             // Sync project state with reality
@@ -673,14 +686,14 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                     type: 'meshStatusUpdate',
                     payload: {
                         status: 'not-deployed',
-                        message: 'Mesh not found in Adobe I/O - may have been deleted externally'
-                    }
+                        message: 'Mesh not found in Adobe I/O - may have been deleted externally',
+                    },
                 });
             }
         } else {
             this.logger.debug('[Project Dashboard] Mesh verified successfully', {
                 meshId: verificationResult.meshId,
-                endpoint: verificationResult.endpoint
+                endpoint: verificationResult.endpoint,
             });
             
             // Update endpoint if it changed
@@ -697,7 +710,7 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
             this.context.extensionUri,
             'dist',
             'webview',
-            'projectDashboard-bundle.js'
+            'projectDashboard-bundle.js',
         );
         const bundleUri = webview.asWebviewUri(bundlePath);
 
@@ -742,18 +755,18 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                 type: 'meshStatusUpdate',
                 payload: { 
                     status: 'authenticating', 
-                    message: 'Opening browser for authentication...' 
-                }
+                    message: 'Opening browser for authentication...', 
+                },
             });
             
             this.logger.info('[Dashboard] Starting re-authentication flow');
-            
-            const { AdobeAuthManager } = await import('../utils/adobeAuthManager');
-            const { getExternalCommandManager } = await import('../extension');
-            const authManager = new AdobeAuthManager(
+
+            const { AuthenticationService } = await import('../utils/auth');
+            const { ServiceLocator } = await import('../services/serviceLocator');
+            const authManager = new AuthenticationService(
                 this.context.extensionPath,
                 this.logger,
-                getExternalCommandManager()
+                ServiceLocator.getCommandExecutor(),
             );
             
             // Trigger browser auth (reuses wizard pattern)
@@ -786,8 +799,8 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                 type: 'meshStatusUpdate',
                 payload: { 
                     status: 'error', 
-                    message: 'Authentication failed. Please try again.' 
-                }
+                    message: 'Authentication failed. Please try again.', 
+                },
             });
         }
     }
@@ -803,23 +816,27 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
         
         // Collect .env files from all component instances
         if (project.componentInstances) {
-            for (const [componentKey, componentInstance] of Object.entries(project.componentInstances)) {
+            for (const componentInstance of Object.values(project.componentInstances)) {
                 if (componentInstance.path) {
                     const componentPath = componentInstance.path;
                     const envPath = path.join(componentPath, '.env');
                     const envLocalPath = path.join(componentPath, '.env.local');
-                    
+
                     // Check if files exist
-                    const fs = require('fs').promises;
+                    const fsPromises = (await import('fs')).promises;
                     try {
-                        await fs.access(envPath);
+                        await fsPromises.access(envPath);
                         envFiles.push(envPath);
-                    } catch {}
-                    
+                    } catch {
+                        // File doesn't exist
+                    }
+
                     try {
-                        await fs.access(envLocalPath);
+                        await fsPromises.access(envLocalPath);
                         envFiles.push(envLocalPath);
-                    } catch {}
+                    } catch {
+                        // File doesn't exist
+                    }
                 }
             }
         }

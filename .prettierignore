@@ -1,0 +1,37 @@
+# Build outputs
+dist/
+out/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Configuration
+*.config.js
+*.config.mjs
+
+# Lock files
+package-lock.json
+yarn.lock
+
+# Logs
+*.log
+
+# VS Code
+.vscode/
+
+# Compiled bundles
+webpack.config.js
+
+# Git
+.git/
+
+# Temp files
+*.tmp
+*.temp
+
+# Documentation (preserve manual formatting)
+CHANGELOG.md
+
+# Generated files
+*.d.ts

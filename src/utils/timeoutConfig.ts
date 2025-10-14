@@ -49,6 +49,7 @@ export const TIMEOUTS = {
 export const CACHE_TTL = {
     // Authentication and session caches
     AUTH_STATUS: 5 * 60 * 1000,     // 5 minutes - authentication status
+    AUTH_STATUS_ERROR: 60 * 1000,   // 1 minute - authentication status on error (shorter to allow retry)
     VALIDATION: 5 * 60 * 1000,      // 5 minutes - organization access validation
 
     // API response caches (shorter TTLs for fresher data)

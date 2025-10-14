@@ -1,6 +1,6 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
-import { InstallStep } from './prerequisitesManager';
 import { Logger } from './logger';
+import { InstallStep } from './prerequisitesManager';
 
 export interface UnifiedProgress {
     overall: {
@@ -19,9 +19,7 @@ export interface UnifiedProgress {
     };
 }
 
-interface ProgressHandler {
-    (progress: UnifiedProgress): Promise<void>;
-}
+type ProgressHandler = (progress: UnifiedProgress) => Promise<void>;
 
 export class ProgressUnifier {
     private logger: Logger;
@@ -38,7 +36,7 @@ export class ProgressUnifier {
         stepIndex: number,
         totalSteps: number,
         onProgress: ProgressHandler,
-        options?: { nodeVersion?: string }
+        options?: { nodeVersion?: string },
     ): Promise<void> {
         const commands = this.resolveCommands(step, options);
         const totalCommands = commands.length;
@@ -55,28 +53,28 @@ export class ProgressUnifier {
                     percent: Math.round(stepProgress),
                     currentStep: stepIndex + 1,
                     totalSteps,
-                    stepName: this.resolveStepName(step, options)
+                    stepName: this.resolveStepName(step, options),
                 },
                 command: {
                     type: 'indeterminate',
                     detail: 'Starting...',
-                    confidence: 'synthetic'
-                }
+                    confidence: 'synthetic',
+                },
             });
             
             // Execute based on strategy
             switch (step.progressStrategy) {
-            case 'exact':
-                await this.executeWithExactProgress(command, step, stepIndex, totalSteps, onProgress, options);
-                break;
-            case 'milestones':
-                await this.executeWithMilestones(command, step, stepIndex, totalSteps, onProgress, options);
-                break;
-            case 'immediate':
-                await this.executeImmediate(command, step, stepIndex, totalSteps, onProgress, options);
-                break;
-            default:
-                await this.executeWithSyntheticProgress(command, step, stepIndex, totalSteps, onProgress, options);
+                case 'exact':
+                    await this.executeWithExactProgress(command, step, stepIndex, totalSteps, onProgress, options);
+                    break;
+                case 'milestones':
+                    await this.executeWithMilestones(command, step, stepIndex, totalSteps, onProgress, options);
+                    break;
+                case 'immediate':
+                    await this.executeImmediate(command, step, stepIndex, totalSteps, onProgress, options);
+                    break;
+                default:
+                    await this.executeWithSyntheticProgress(command, step, stepIndex, totalSteps, onProgress, options);
             }
         }
         
@@ -86,8 +84,8 @@ export class ProgressUnifier {
                 percent: Math.round(((stepIndex + 1) / totalSteps) * 100),
                 currentStep: stepIndex + 1,
                 totalSteps,
-                stepName: this.resolveStepName(step, options)
-            }
+                stepName: this.resolveStepName(step, options),
+            },
         });
     }
     
@@ -127,7 +125,7 @@ export class ProgressUnifier {
         stepIndex: number,
         totalSteps: number,
         onProgress: ProgressHandler,
-        options?: { nodeVersion?: string }
+        options?: { nodeVersion?: string },
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
@@ -148,14 +146,14 @@ export class ProgressUnifier {
                                 percent: Math.round(((stepIndex + (percent / 100)) / totalSteps) * 100),
                                 currentStep: stepIndex + 1,
                                 totalSteps,
-                                stepName: this.resolveStepName(step, options)
+                                stepName: this.resolveStepName(step, options),
                             },
                             command: {
                                 type: 'determinate',
                                 percent,
                                 detail: output.trim(),
-                                confidence: 'exact'
-                            }
+                                confidence: 'exact',
+                            },
                         });
                     }
                 }
@@ -186,7 +184,7 @@ export class ProgressUnifier {
         stepIndex: number,
         totalSteps: number,
         onProgress: ProgressHandler,
-        options?: { nodeVersion?: string }
+        options?: { nodeVersion?: string },
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
@@ -206,7 +204,7 @@ export class ProgressUnifier {
                                 percent: Math.round(((stepIndex + (currentProgress / 100)) / totalSteps) * 100),
                                 currentStep: stepIndex + 1,
                                 totalSteps,
-                                stepName: this.resolveStepName(step, options)
+                                stepName: this.resolveStepName(step, options),
                             },
                             command: {
                                 type: 'determinate',
@@ -214,8 +212,8 @@ export class ProgressUnifier {
                                 detail: milestone.message || text.trim().substring(0, 100),
                                 confidence: 'estimated',
                                 currentMilestoneIndex,
-                                totalMilestones: milestones.length
-                            }
+                                totalMilestones: milestones.length,
+                            },
                         });
                         break;
                     }
@@ -253,7 +251,7 @@ export class ProgressUnifier {
         stepIndex: number,
         totalSteps: number,
         onProgress: ProgressHandler,
-        _options?: { nodeVersion?: string }
+        _options?: { nodeVersion?: string },
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
@@ -270,14 +268,14 @@ export class ProgressUnifier {
                         percent: Math.round(((stepIndex + (progress / 100)) / totalSteps) * 100),
                         currentStep: stepIndex + 1,
                         totalSteps,
-                        stepName: step.name
+                        stepName: step.name,
                     },
                     command: {
                         type: 'indeterminate',
                         percent: Math.round(progress),
                         detail: `Processing... (${Math.round(progress)}% estimated)`,
-                        confidence: 'synthetic'
-                    }
+                        confidence: 'synthetic',
+                    },
                 });
             }, 1000);
             
@@ -298,14 +296,14 @@ export class ProgressUnifier {
                         percent: Math.round(((stepIndex + 1) / totalSteps) * 100),
                         currentStep: stepIndex + 1,
                         totalSteps,
-                        stepName: step.name
+                        stepName: step.name,
                     },
                     command: {
                         type: 'determinate',
                         percent: 100,
                         detail: 'Complete',
-                        confidence: 'synthetic'
-                    }
+                        confidence: 'synthetic',
+                    },
                 });
                 
                 if (code === 0 || step.continueOnError) {
@@ -326,7 +324,7 @@ export class ProgressUnifier {
         stepIndex: number,
         totalSteps: number,
         onProgress: ProgressHandler,
-        options?: { nodeVersion?: string }
+        options?: { nodeVersion?: string },
     ): Promise<void> {
         // Special handling for internal commands
         if (command === 'configureFnmShell') {
@@ -336,14 +334,14 @@ export class ProgressUnifier {
                     percent: Math.round(((stepIndex + 1) / totalSteps) * 100),
                     currentStep: stepIndex + 1,
                     totalSteps,
-                    stepName: step.name
+                    stepName: step.name,
                 },
                 command: {
                     type: 'determinate',
                     percent: 100,
                     detail: 'Configuring shell...',
-                    confidence: 'exact'
-                }
+                    confidence: 'exact',
+                },
             });
             return;
         }
@@ -360,7 +358,7 @@ export class ProgressUnifier {
             const progressSteps = [
                 { time: minDuration * 0.2, percent: 20, detail: 'Processing...' },
                 { time: minDuration * 0.5, percent: 50, detail: 'Configuring...' },
-                { time: minDuration * 0.8, percent: 80, detail: 'Finishing...' }
+                { time: minDuration * 0.8, percent: 80, detail: 'Finishing...' },
             ];
             
             const progressTimeouts: NodeJS.Timeout[] = [];
@@ -374,14 +372,14 @@ export class ProgressUnifier {
                                 percent: Math.round(((stepIndex + (percent / 100)) / totalSteps) * 100),
                                 currentStep: stepIndex + 1,
                                 totalSteps,
-                                stepName: this.resolveStepName(step, options)
+                                stepName: this.resolveStepName(step, options),
                             },
                             command: {
                                 type: 'determinate',
                                 percent,
                                 detail,
-                                confidence: 'exact'
-                            }
+                                confidence: 'exact',
+                            },
                         });
                     }
                 }, time);
@@ -406,14 +404,14 @@ export class ProgressUnifier {
                             percent: Math.round(((stepIndex + 1) / totalSteps) * 100),
                             currentStep: stepIndex + 1,
                             totalSteps,
-                            stepName: this.resolveStepName(step, options)
+                            stepName: this.resolveStepName(step, options),
                         },
                         command: {
                             type: 'determinate',
                             percent: 100,
                             detail: 'Complete',
-                            confidence: 'exact'
-                        }
+                            confidence: 'exact',
+                        },
                     });
                     
                     if (commandExitCode === 0 || step.continueOnError) {
@@ -428,6 +426,30 @@ export class ProgressUnifier {
     
     /**
      * Spawn a command with proper shell configuration
+     *
+     * SECURITY: shell: true usage
+     *
+     * This method uses shell: true for the following reasons:
+     * 1. fnm environment setup requires shell evaluation: eval "$(fnm env)"
+     * 2. Command chaining with && for fnm initialization + actual command
+     * 3. Commands come from prerequisites.json (controlled configuration file)
+     *
+     * SAFE because:
+     * ✅ All commands originate from prerequisites.json (not user input)
+     * ✅ Node versions are validated before reaching this code
+     * ✅ File paths would be validated by validateProjectPath() if used
+     * ✅ No external API data flows into command strings here
+     * ✅ Template variables ({version}) are replaced with validated values
+     *
+     * VALIDATION APPLIED:
+     * - Node versions: Checked to be valid fnm versions before use
+     * - Commands: Hardcoded in prerequisites.json configuration
+     * - Paths: Would be validated by prerequisitesManager if present
+     *
+     * EXAMPLES of commands processed:
+     * - "fnm install 20.11.0" (version from validated input)
+     * - "fnm exec --using 20.11.0 npm install" (version validated)
+     * - "brew install git" (command from config)
      */
     private spawnCommand(command: string): ChildProcessWithoutNullStreams {
         // Wrap fnm commands with environment initialization
@@ -435,7 +457,7 @@ export class ProgressUnifier {
         if (command.startsWith('fnm ')) {
             actualCommand = `eval "$(fnm env)" && ${command}`;
         }
-        
+
         // For complex commands, use shell
         return spawn(actualCommand, [], {
             shell: true,
@@ -443,8 +465,8 @@ export class ProgressUnifier {
                 ...process.env,
                 // Ensure colors are disabled for cleaner parsing
                 NO_COLOR: '1',
-                FORCE_COLOR: '0'
-            }
+                FORCE_COLOR: '0',
+            },
         });
     }
 }

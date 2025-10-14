@@ -39,3 +39,12 @@ yarn-error.log*
 .claude/hooks/lib/__pycache__/
 .claude/hooks/state/
 *.pyc
+
+# Claude Project Orchestrator
+# The orchestrator itself is external (github.com/skukla/claude-project-orchestrator)
+# Workflows and analysis are temporary - valuable docs extracted to docs/architecture/
+.claude/
+
+# Analysis artifacts
+report/
+jscpd-output/

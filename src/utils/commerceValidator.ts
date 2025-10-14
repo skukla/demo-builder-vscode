@@ -14,14 +14,14 @@ export class CommerceValidator {
             const response = await axios.post(
                 graphqlUrl,
                 {
-                    query: '{ storeConfig { store_name } }'
+                    query: '{ storeConfig { store_name } }',
                 },
                 {
                     timeout: 10000,
                     headers: {
-                        'Content-Type': 'application/json'
-                    }
-                }
+                        'Content-Type': 'application/json',
+                    },
+                },
             );
 
             if (response.data?.data?.storeConfig) {
@@ -40,9 +40,9 @@ export class CommerceValidator {
         try {
             const response = await axios.get(endpoint, {
                 headers: {
-                    'x-api-key': apiKey
+                    'x-api-key': apiKey,
                 },
-                timeout: 10000
+                timeout: 10000,
             });
 
             return response.status === 200;

@@ -20,7 +20,7 @@ export class ErrorLogger {
         // Create status bar item for quick error/warning indicator
         this.statusBarItem = vscode.window.createStatusBarItem(
             vscode.StatusBarAlignment.Left,
-            100
+            100,
         );
         this.statusBarItem.command = 'demoBuilder.showLogs';
         context.subscriptions.push(this.statusBarItem);
@@ -58,7 +58,7 @@ export class ErrorLogger {
     /**
      * Log an error message with optional detailed information
      */
-    logError(error: Error | string, context?: string, critical: boolean = false, details?: string): void {
+    logError(error: Error | string, context?: string, critical = false, details?: string): void {
         if (!this.debugLogger) return;
         
         const contextStr = context ? ` [${context}]` : '';
@@ -79,7 +79,7 @@ export class ErrorLogger {
         if (critical) {
             vscode.window.showErrorMessage(
                 `Demo Builder Error: ${errorMessage}`,
-                'Show Logs'
+                'Show Logs',
             ).then(selection => {
                 if (selection === 'Show Logs') {
                     this.show();
@@ -132,12 +132,12 @@ export class ErrorLogger {
         uri: vscode.Uri,
         message: string,
         severity: vscode.DiagnosticSeverity = vscode.DiagnosticSeverity.Error,
-        range?: vscode.Range
+        range?: vscode.Range,
     ): void {
         const diagnostic = new vscode.Diagnostic(
             range || new vscode.Range(0, 0, 0, 0),
             message,
-            severity
+            severity,
         );
         
         const existingDiagnostics = this.diagnostics.get(uri) || [];

@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
+import { IComponentHandler, SimpleMessage } from '../types/handlers';
 import { ComponentRegistryManager, DependencyResolver } from '../utils/componentRegistry';
 
-export class ComponentHandler {
+export class ComponentHandler implements IComponentHandler {
     private registryManager: ComponentRegistryManager;
     private dependencyResolver: DependencyResolver;
 
@@ -10,26 +11,26 @@ export class ComponentHandler {
         this.dependencyResolver = new DependencyResolver(this.registryManager);
     }
 
-    async handleMessage(message: any, panel: vscode.WebviewPanel) {
+    async handleMessage(message: SimpleMessage, panel: vscode.WebviewPanel) {
         switch (message.type) {
-        case 'loadComponents':
-            await this.loadComponents(panel);
-            break;
-        case 'get-components-data':
-            await this.getComponentsData(panel);
-            break;
-        case 'checkCompatibility':
-            await this.checkCompatibility(message.payload, panel);
-            break;
-        case 'loadDependencies':
-            await this.loadDependencies(message.payload, panel);
-            break;
-        case 'loadPreset':
-            await this.loadPreset(message.payload, panel);
-            break;
-        case 'validateSelection':
-            await this.validateSelection(message.payload, panel);
-            break;
+            case 'loadComponents':
+                await this.loadComponents(panel);
+                break;
+            case 'get-components-data':
+                await this.getComponentsData(panel);
+                break;
+            case 'checkCompatibility':
+                await this.checkCompatibility(message.payload as { frontend: string; backend: string }, panel);
+                break;
+            case 'loadDependencies':
+                await this.loadDependencies(message.payload as { frontend: string; backend: string }, panel);
+                break;
+            case 'loadPreset':
+                await this.loadPreset(message.payload as { presetId: string }, panel);
+                break;
+            case 'validateSelection':
+                await this.validateSelection(message.payload as { frontend: string; backend: string; dependencies: string[] }, panel);
+                break;
         }
     }
 
@@ -49,53 +50,53 @@ export class ComponentHandler {
                     description: f.description,
                     features: f.features,
                     configuration: f.configuration,
-                    recommended: f.id === 'citisignal-nextjs'
+                    recommended: f.id === 'citisignal-nextjs',
                 })),
                 backends: backends.map(b => ({
                     id: b.id,
                     name: b.name,
                     description: b.description,
-                    configuration: b.configuration
+                    configuration: b.configuration,
                 })),
                 externalSystems: externalSystems.map(e => ({
                     id: e.id,
                     name: e.name,
                     description: e.description,
-                    configuration: e.configuration
+                    configuration: e.configuration,
                 })),
                 appBuilder: appBuilder.map(a => ({
                     id: a.id,
                     name: a.name,
                     description: a.description,
-                    configuration: a.configuration
+                    configuration: a.configuration,
                 })),
                 dependencies: dependencies.map(d => ({
                     id: d.id,
                     name: d.name,
                     description: d.description,
-                    configuration: d.configuration
+                    configuration: d.configuration,
                 })),
-                presets
+                presets,
             };
 
             // Send components to webview
             panel.webview.postMessage({
                 type: 'componentsLoaded',
-                payload: componentsData
+                payload: componentsData,
             });
             
             // Also send to backend for reference
             panel.webview.postMessage({
                 type: 'update-components-data',
-                payload: componentsData
+                payload: componentsData,
             });
         } catch (error) {
             panel.webview.postMessage({
                 type: 'error',
                 payload: {
                     message: 'Failed to load components',
-                    error: error instanceof Error ? error.message : 'Unknown error'
-                }
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                },
             });
         }
     }
@@ -115,90 +116,90 @@ export class ComponentHandler {
                     name: f.name,
                     description: f.description,
                     dependencies: f.dependencies, // Include dependency relationships
-                    configuration: f.configuration
+                    configuration: f.configuration,
                 })),
                 backends: backends.map(b => ({
                     id: b.id,
                     name: b.name,
                     description: b.description,
                     dependencies: b.dependencies, // Include dependency relationships
-                    configuration: b.configuration
+                    configuration: b.configuration,
                 })),
                 externalSystems: externalSystems.map(e => ({
                     id: e.id,
                     name: e.name,
                     description: e.description,
                     dependencies: e.dependencies, // Include dependency relationships
-                    configuration: e.configuration
+                    configuration: e.configuration,
                 })),
                 appBuilder: appBuilder.map(a => ({
                     id: a.id,
                     name: a.name,
                     description: a.description,
                     dependencies: a.dependencies, // Include dependency relationships
-                    configuration: a.configuration
+                    configuration: a.configuration,
                 })),
                 dependencies: dependencies.map(d => ({
                     id: d.id,
                     name: d.name,
                     description: d.description,
                     dependencies: d.dependencies, // Include dependency relationships
-                    configuration: d.configuration
+                    configuration: d.configuration,
                 })),
-                envVars: registry.envVars || {} // Include top-level envVars definitions
+                envVars: registry.envVars || {}, // Include top-level envVars definitions
             };
 
             // Send components data to webview
             panel.webview.postMessage({
                 type: 'components-data',
-                payload: componentsData
+                payload: componentsData,
             });
         } catch (error) {
             panel.webview.postMessage({
                 type: 'error',
                 payload: {
                     message: 'Failed to load component configurations',
-                    error: error instanceof Error ? error.message : 'Unknown error'
-                }
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                },
             });
         }
     }
 
     private async checkCompatibility(
         payload: { frontend: string; backend: string },
-        panel: vscode.WebviewPanel
+        panel: vscode.WebviewPanel,
     ) {
         try {
             const compatible = await this.registryManager.checkCompatibility(
                 payload.frontend,
-                payload.backend
+                payload.backend,
             );
 
             panel.webview.postMessage({
                 type: 'compatibilityResult',
                 payload: {
-                    compatible
-                }
+                    compatible,
+                },
             });
         } catch (error) {
             panel.webview.postMessage({
                 type: 'error',
                 payload: {
                     message: 'Failed to check compatibility',
-                    error: error instanceof Error ? error.message : 'Unknown error'
-                }
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                },
             });
         }
     }
 
     private async loadDependencies(
         payload: { frontend: string; backend: string },
-        panel: vscode.WebviewPanel
+        panel: vscode.WebviewPanel,
     ) {
         try {
             const resolved = await this.dependencyResolver.resolveDependencies(
                 payload.frontend,
-                payload.backend
+                payload.backend,
             );
 
             const dependencies = [
@@ -207,35 +208,35 @@ export class ComponentHandler {
                     name: d.name,
                     description: d.description,
                     required: true,
-                    impact: d.configuration?.impact
+                    impact: d.configuration?.impact,
                 })),
                 ...resolved.optional.map(d => ({
                     id: d.id,
                     name: d.name,
                     description: d.description,
                     required: false,
-                    impact: d.configuration?.impact
-                }))
+                    impact: d.configuration?.impact,
+                })),
             ];
 
             panel.webview.postMessage({
                 type: 'dependenciesLoaded',
-                payload: { dependencies }
+                payload: { dependencies },
             });
         } catch (error) {
             panel.webview.postMessage({
                 type: 'error',
                 payload: {
                     message: 'Failed to load dependencies',
-                    error: error instanceof Error ? error.message : 'Unknown error'
-                }
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                },
             });
         }
     }
 
     private async loadPreset(
         payload: { presetId: string },
-        panel: vscode.WebviewPanel
+        panel: vscode.WebviewPanel,
     ) {
         try {
             const presets = await this.registryManager.getPresets();
@@ -247,8 +248,8 @@ export class ComponentHandler {
                     payload: {
                         frontend: preset.selections.frontend,
                         backend: preset.selections.backend,
-                        dependencies: preset.selections.dependencies
-                    }
+                        dependencies: preset.selections.dependencies,
+                    },
                 });
             } else {
                 throw new Error(`Preset ${payload.presetId} not found`);
@@ -258,38 +259,38 @@ export class ComponentHandler {
                 type: 'error',
                 payload: {
                     message: 'Failed to load preset',
-                    error: error instanceof Error ? error.message : 'Unknown error'
-                }
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                },
             });
         }
     }
 
     private async validateSelection(
         payload: { frontend: string; backend: string; dependencies: string[] },
-        panel: vscode.WebviewPanel
+        panel: vscode.WebviewPanel,
     ) {
         try {
             const resolved = await this.dependencyResolver.resolveDependencies(
                 payload.frontend,
                 payload.backend,
-                payload.dependencies
+                payload.dependencies,
             );
 
             const validation = await this.dependencyResolver.validateDependencyChain(
-                resolved.all
+                resolved.all,
             );
 
             panel.webview.postMessage({
                 type: 'validationResult',
-                payload: validation
+                payload: validation,
             });
         } catch (error) {
             panel.webview.postMessage({
                 type: 'error',
                 payload: {
                     message: 'Failed to validate selection',
-                    error: error instanceof Error ? error.message : 'Unknown error'
-                }
+                    error: error instanceof Error ? error.message : 'Unknown error',
+                },
             });
         }
     }
@@ -297,14 +298,14 @@ export class ComponentHandler {
     async generateProjectConfig(
         frontend: string,
         backend: string,
-        dependencies: string[]
+        dependencies: string[],
     ) {
         const frontendComponent = await this.registryManager.getComponentById(frontend);
         const backendComponent = await this.registryManager.getComponentById(backend);
         const resolved = await this.dependencyResolver.resolveDependencies(
             frontend,
             backend,
-            dependencies
+            dependencies,
         );
 
         if (!frontendComponent || !backendComponent) {
@@ -314,7 +315,7 @@ export class ComponentHandler {
         return await this.dependencyResolver.generateConfiguration(
             frontendComponent,
             backendComponent,
-            resolved.all
+            resolved.all,
         );
     }
 }

@@ -1,8 +1,9 @@
-import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 import * as os from 'os';
+import * as path from 'path';
+import * as vscode from 'vscode';
 import { Project, StateData, ProcessInfo } from '../types';
+import { parseJSON } from '../types/typeGuards';
 
 interface RecentProject {
     path: string;
@@ -28,7 +29,7 @@ export class StateManager {
             version: 1,
             currentProject: undefined,
             processes: new Map(),
-            lastUpdated: new Date()
+            lastUpdated: new Date(),
         };
     }
 
@@ -48,11 +49,15 @@ export class StateManager {
     private async loadState(): Promise<void> {
         try {
             const data = await fs.readFile(this.stateFile, 'utf-8');
-            const parsed = JSON.parse(data);
-            
+            const parsed = parseJSON<{ version?: number; currentProject?: Project; processes?: Record<string, ProcessInfo>; lastUpdated?: string }>(data);
+            if (!parsed) {
+                console.warn('Failed to parse state file, using defaults');
+                return;
+            }
+
             // Validate that project path exists if there's a current project
             let validProject = parsed.currentProject;
-            if (validProject && validProject.path) {
+            if (validProject?.path) {
                 try {
                     await fs.access(validProject.path);
                 } catch {
@@ -66,7 +71,7 @@ export class StateManager {
                 version: parsed.version || 1,
                 currentProject: validProject,
                 processes: new Map(Object.entries(parsed.processes || {})),
-                lastUpdated: new Date(parsed.lastUpdated || Date.now())
+                lastUpdated: new Date(parsed.lastUpdated || Date.now()),
             };
         } catch {
             // State file doesn't exist or is invalid, use defaults
@@ -82,7 +87,7 @@ export class StateManager {
                 version: this.state.version,
                 currentProject: this.state.currentProject,
                 processes: Object.fromEntries(this.state.processes),
-                lastUpdated: this.state.lastUpdated
+                lastUpdated: this.state.lastUpdated,
             };
 
             await fs.writeFile(this.stateFile, JSON.stringify(data, null, 2));
@@ -132,7 +137,7 @@ export class StateManager {
                 componentInstances: project.componentInstances,
                 componentConfigs: project.componentConfigs,
                 meshState: project.meshState,
-                components: Object.keys(project.componentInstances || {})
+                components: Object.keys(project.componentInstances || {}),
             };
             
             await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
@@ -161,7 +166,7 @@ export class StateManager {
             `CATALOG_API_KEY=${project.commerce?.services.catalog?.apiKey || ''}`,
             `SEARCH_API_KEY=${project.commerce?.services.liveSearch?.apiKey || ''}`,
             '',
-            '# Note: Component-specific environment variables are now stored in each component\'s .env file'
+            '# Note: Component-specific environment variables are now stored in each component\'s .env file',
         ].join('\n');
 
         try {
@@ -184,7 +189,7 @@ export class StateManager {
             version: 1,
             currentProject: undefined,
             processes: new Map(),
-            lastUpdated: new Date()
+            lastUpdated: new Date(),
         };
         
         // Clear context state
@@ -224,7 +229,13 @@ export class StateManager {
     private async loadRecentProjects(): Promise<void> {
         try {
             const data = await fs.readFile(this.recentProjectsFile, 'utf-8');
-            this.recentProjects = JSON.parse(data);
+            const parsed = parseJSON<RecentProject[]>(data);
+            if (!parsed) {
+                console.warn('Failed to parse recent projects file, using empty list');
+                this.recentProjects = [];
+                return;
+            }
+            this.recentProjects = parsed;
             
             // Validate that paths still exist
             this.recentProjects = await Promise.all(
@@ -235,8 +246,8 @@ export class StateManager {
                     } catch {
                         return null;
                     }
-                })
-            ).then(projects => projects.filter(p => p !== null) as RecentProject[]);
+                }),
+            ).then(projects => projects.filter(p => p !== null));
             
             // Limit to 10 recent projects
             this.recentProjects = this.recentProjects.slice(0, 10);
@@ -251,7 +262,7 @@ export class StateManager {
             await fs.writeFile(
                 this.recentProjectsFile,
                 JSON.stringify(this.recentProjects, null, 2),
-                'utf-8'
+                'utf-8',
             );
         } catch (error) {
             console.error('Failed to save recent projects:', error);
@@ -274,7 +285,7 @@ export class StateManager {
             path: project.path,
             name: project.name,
             organization: project.organization,
-            lastOpened: new Date().toISOString()
+            lastOpened: new Date().toISOString(),
         });
         
         // Keep only 10 most recent
@@ -300,10 +311,23 @@ export class StateManager {
             
             // Load project manifest
             const manifestData = await fs.readFile(manifestPath, 'utf-8');
-            const manifest = JSON.parse(manifestData);
+            const manifest = parseJSON<{
+                name?: string;
+                created?: string;
+                lastModified?: string;
+                adobe?: Project['adobe'];
+                commerce?: Project['commerce'];
+                componentInstances?: Project['componentInstances'];
+                componentSelections?: Project['componentSelections'];
+                componentConfigs?: Project['componentConfigs'];
+                meshState?: Project['meshState'];
+            }>(manifestData);
+            if (!manifest) {
+                throw new Error('Failed to parse project manifest');
+            }
             
             // Reconstruct componentInstances from components/ directory
-            const componentInstances: { [key: string]: any } = {};
+            const componentInstances: Record<string, import('../types').ComponentInstance> = {};
             const componentsDir = path.join(projectPath, 'components');
             
             try {
@@ -323,7 +347,7 @@ export class StateManager {
                             type: 'dependency', // Default, should be refined
                             status: 'ready',
                             path: componentPath,
-                            lastUpdated: new Date()
+                            lastUpdated: new Date(),
                         };
                     }
                 }
@@ -343,7 +367,7 @@ export class StateManager {
                 componentInstances: manifest.componentInstances || componentInstances,
                 componentSelections: manifest.componentSelections,
                 componentConfigs: manifest.componentConfigs,
-                meshState: manifest.meshState
+                meshState: manifest.meshState,
             };
             
             // Detect if demo is actually running by checking for project-specific terminal
@@ -386,9 +410,9 @@ export class StateManager {
     /**
      * Get all projects from the projects directory
      */
-    public async getAllProjects(): Promise<Array<{ name: string; path: string; lastModified: Date }>> {
+    public async getAllProjects(): Promise<{ name: string; path: string; lastModified: Date }[]> {
         const projectsDir = path.join(os.homedir(), '.demo-builder', 'projects');
-        const projects: Array<{ name: string; path: string; lastModified: Date }> = [];
+        const projects: { name: string; path: string; lastModified: Date }[] = [];
         
         try {
             const entries = await fs.readdir(projectsDir, { withFileTypes: true });
@@ -406,7 +430,7 @@ export class StateManager {
                         projects.push({
                             name: entry.name,
                             path: projectPath,
-                            lastModified: stats.mtime
+                            lastModified: stats.mtime,
                         });
                     } catch {
                         // Not a valid project, skip

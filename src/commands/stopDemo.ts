@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
 import * as net from 'net';
+import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
 
 export class StopDemoCommand extends BaseCommand {
@@ -26,7 +26,7 @@ export class StopDemoCommand extends BaseCommand {
     /**
      * Wait for a port to become available (with timeout)
      */
-    private async waitForPortToFree(port: number, timeoutMs: number = 10000): Promise<boolean> {
+    private async waitForPortToFree(port: number, timeoutMs = 10000): Promise<boolean> {
         const startTime = Date.now();
         const checkInterval = 500; // Check every 500ms
         
@@ -88,7 +88,7 @@ export class StopDemoCommand extends BaseCommand {
                 if (!portFreed) {
                     this.logger.warn(`Port ${port} still in use after 10 seconds, but marking as stopped`);
                     vscode.window.showWarningMessage(
-                        `Port ${port} may still be in use. Wait a moment before restarting.`
+                        `Port ${port} may still be in use. Wait a moment before restarting.`,
                     );
                 }
                 

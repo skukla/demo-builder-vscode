@@ -1,13 +1,15 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
 import * as fs from 'fs/promises';
-import { BaseCommand } from './baseCommand';
-import { StateManager } from '../utils/stateManager';
+import * as path from 'path';
+import * as vscode from 'vscode';
 import { StatusBarManager } from '../providers/statusBar';
+import { ServiceLocator } from '../services/serviceLocator';
+import { Project } from '../types/base';
+import { parseJSON } from '../types/typeGuards';
 import { Logger } from '../utils/logger';
-import { getExternalCommandManager } from '../extension';
 import { updateMeshState } from '../utils/stalenessDetector';
+import { StateManager } from '../utils/stateManager';
 import { TIMEOUTS } from '../utils/timeoutConfig';
+import { BaseCommand } from './baseCommand';
 
 /**
  * Deploy (or redeploy) API Mesh using the mesh.json from the mesh component
@@ -17,7 +19,7 @@ export class DeployMeshCommand extends BaseCommand {
         context: vscode.ExtensionContext,
         stateManager: StateManager,
         statusBar: StatusBarManager,
-        logger: Logger
+        logger: Logger,
     ) {
         super(context, stateManager, statusBar, logger);
     }
@@ -32,11 +34,11 @@ export class DeployMeshCommand extends BaseCommand {
             }
 
             // PRE-FLIGHT: Check authentication
-            const { AdobeAuthManager } = await import('../utils/adobeAuthManager');
-            const authManager = new AdobeAuthManager(
+            const { AuthenticationService } = await import('../utils/auth');
+            const authManager = new AuthenticationService(
                 this.context.extensionPath,
                 this.logger,
-                getExternalCommandManager()
+                ServiceLocator.getCommandExecutor(),
             );
             
             const isAuthenticated = await authManager.isAuthenticated();
@@ -45,7 +47,7 @@ export class DeployMeshCommand extends BaseCommand {
                 // Direct user to dashboard for authentication (dashboard handles browser auth gracefully)
                 const selection = await vscode.window.showWarningMessage(
                     'Adobe authentication required to deploy mesh. Please sign in via the Project Dashboard.',
-                    'Open Dashboard'
+                    'Open Dashboard',
                 );
                 
                 if (selection === 'Open Dashboard') {
@@ -62,8 +64,8 @@ export class DeployMeshCommand extends BaseCommand {
                 if (!currentOrg || currentOrg.id !== project.adobe.organization) {
                     vscode.window.showWarningMessage(
                         `You no longer have access to the organization for "${project.name}". ` +
-                        `Local demo will continue working, but mesh deployment is unavailable.\n\n` +
-                        `Contact your administrator to restore access.`
+                        'Local demo will continue working, but mesh deployment is unavailable.\n\n' +
+                        'Contact your administrator to restore access.',
                     );
                     return;
                 }
@@ -71,7 +73,7 @@ export class DeployMeshCommand extends BaseCommand {
 
             // Find mesh component
             const meshComponent = this.getMeshComponent(project);
-            if (!meshComponent || !meshComponent.path) {
+            if (!meshComponent?.path) {
                 vscode.window.showWarningMessage('This project does not have an API Mesh component.');
                 return;
             }
@@ -82,7 +84,7 @@ export class DeployMeshCommand extends BaseCommand {
                 await fs.access(meshConfigPath);
             } catch {
                 vscode.window.showErrorMessage(
-                    `mesh.json not found in ${meshComponent.path}. Please ensure the mesh configuration file exists.`
+                    `mesh.json not found in ${meshComponent.path}. Please ensure the mesh configuration file exists.`,
                 );
                 return;
             }
@@ -113,7 +115,7 @@ export class DeployMeshCommand extends BaseCommand {
                     {
                         location: vscode.ProgressLocation.Notification,
                         title: 'Deploying API Mesh',
-                        cancellable: false
+                        cancellable: false,
                     },
                     async (progress) => {
                         progress.report({ message: 'Reading mesh configuration...' });
@@ -123,7 +125,10 @@ export class DeployMeshCommand extends BaseCommand {
                         // Validate mesh config exists and is valid JSON
                         const meshConfigContent = await fs.readFile(meshConfigPath, 'utf-8');
                         try {
-                            JSON.parse(meshConfigContent);
+                            const config = parseJSON<Record<string, unknown>>(meshConfigContent);
+                            if (!config) {
+                                throw new Error('Invalid JSON');
+                            }
                             this.logger.info('✓ Configuration validated');
                         } catch (parseError) {
                             this.logger.error(`✗ Invalid JSON: ${(parseError as Error).message}`);
@@ -140,7 +145,7 @@ export class DeployMeshCommand extends BaseCommand {
                         this.logger.info('[2/3] Deploying to Adobe I/O...');
                         this.logger.info('-'.repeat(60));
                     
-                        const commandManager = getExternalCommandManager();
+                        const commandManager = ServiceLocator.getCommandExecutor();
                         const updateResult = await commandManager.execute(
                             `aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
                             {
@@ -171,8 +176,8 @@ export class DeployMeshCommand extends BaseCommand {
                                 },
                                 configureTelemetry: false,
                                 useNodeVersion: null,
-                                enhancePath: true
-                            }
+                                enhancePath: true,
+                            },
                         );
                         
                         if (updateResult.code !== 0) {
@@ -217,11 +222,11 @@ export class DeployMeshCommand extends BaseCommand {
                                 progress.report({ message: 'Verifying deployment...' });
                                 ProjectDashboardWebviewCommand.sendMeshStatusUpdate(
                                     'deploying',
-                                    `Verifying deployment (attempt ${attempt}/${maxRetries})...`
+                                    `Verifying deployment (attempt ${attempt}/${maxRetries})...`,
                                 );
                                 this.logger.info(`Attempt ${attempt}/${maxRetries} (${elapsedSeconds}s elapsed)...`);
                             },
-                            logger: this.logger
+                            logger: this.logger,
                         });
                         
                         if (!verificationResult.deployed) {
@@ -267,7 +272,7 @@ export class DeployMeshCommand extends BaseCommand {
                         
                         // Reset mesh notification flag (user has deployed)
                         await vscode.commands.executeCommand('demoBuilder._internal.meshActionTaken');
-                    }
+                    },
                 );
             
             } catch (error) {
@@ -317,7 +322,7 @@ export class DeployMeshCommand extends BaseCommand {
     /**
      * Get the mesh component from project
      */
-    private getMeshComponent(project: any) {
+    private getMeshComponent(project: Project) {
         if (!project.componentInstances) {
             return null;
         }

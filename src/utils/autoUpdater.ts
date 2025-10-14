@@ -1,9 +1,9 @@
-import * as vscode from 'vscode';
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import axios from 'axios';
 import * as semver from 'semver';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as os from 'os';
+import * as vscode from 'vscode';
 import { UpdateInfo } from '../types';
 import { Logger } from './logger';
 
@@ -38,17 +38,17 @@ export class AutoUpdater {
             // Fetch latest release from GitHub
             const response = await axios.get(this.UPDATE_CHECK_URL, {
                 headers: {
-                    'Accept': 'application/vnd.github.v3+json'
+                    'Accept': 'application/vnd.github.v3+json',
                 },
-                timeout: 10000
+                timeout: 10000,
             });
 
             const latestVersion = response.data.tag_name.replace('v', '');
             
             // Compare versions
             if (semver.gt(latestVersion, currentVersion)) {
-                const vsixAsset = response.data.assets.find((asset: any) => 
-                    asset.name.endsWith('.vsix')
+                const vsixAsset = response.data.assets.find((asset: { name: string }) =>
+                    asset.name.endsWith('.vsix'),
                 );
 
                 if (vsixAsset) {
@@ -58,7 +58,7 @@ export class AutoUpdater {
                         downloadUrl: vsixAsset.browser_download_url,
                         changelogUrl: response.data.html_url,
                         releaseDate: response.data.published_at,
-                        minSupportedVersion: '1.0.0'
+                        minSupportedVersion: '1.0.0',
                     };
 
                     this.logger.info(`[Extension] Update available: ${latestVersion}`);
@@ -69,10 +69,15 @@ export class AutoUpdater {
             this.logger.info('[Extension] No updates available');
             return undefined;
 
-        } catch (error: any) {
+        } catch (error) {
             // Silently handle 404 errors (repository doesn't exist yet)
-            if (error.response?.status === 404) {
-                this.logger.debug('Update repository not available yet');
+            if (error && typeof error === 'object' && 'response' in error) {
+                const axiosError = error as { response?: { status: number } };
+                if (axiosError.response?.status === 404) {
+                    this.logger.debug('Update repository not available yet');
+                } else {
+                    this.logger.error('Failed to check for updates', error as unknown as Error);
+                }
             } else {
                 this.logger.error('Failed to check for updates', error as Error);
             }
@@ -101,7 +106,7 @@ export class AutoUpdater {
                         ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
                         : 0;
                     this.logger.debug(`Download progress: ${percentCompleted}%`);
-                }
+                },
             });
 
             await fs.writeFile(vsixPath, Buffer.from(response.data));
@@ -110,14 +115,14 @@ export class AutoUpdater {
             // Install the extension
             await vscode.commands.executeCommand(
                 'workbench.extensions.installExtension',
-                vscode.Uri.file(vsixPath)
+                vscode.Uri.file(vsixPath),
             );
 
             // Prompt to reload
             const reload = await vscode.window.showInformationMessage(
                 `Demo Builder ${updateInfo.version} has been installed. Reload to apply the update?`,
                 'Reload Now',
-                'Later'
+                'Later',
             );
 
             if (reload === 'Reload Now') {

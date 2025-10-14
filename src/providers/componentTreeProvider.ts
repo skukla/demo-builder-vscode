@@ -1,6 +1,6 @@
-import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { CustomIconPaths } from '../types';
 import { StateManager } from '../utils/stateManager';
 
@@ -47,14 +47,14 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
                     new FileItem(
                         'Get Started',
                         'Click here or use the Activity Bar icon to create your first demo project',
-                        true
-                    )
+                        true,
+                    ),
                 ];
             }
             
             // Show list of available projects
             return allProjects.map((proj: { name: string; path: string; lastModified: Date }) => 
-                new ProjectItem(proj.name, proj.path, proj.lastModified)
+                new ProjectItem(proj.name, proj.path, proj.lastModified),
             );
         }
 
@@ -64,7 +64,7 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
             
             if (project.componentInstances) {
                 for (const [, component] of Object.entries(project.componentInstances)) {
-                    if (component && component.path) {
+                    if (component?.path) {
                         // Pass component icon and subType for custom icons
                         const icon = component.icon || null;
                         const subType = component.subType || null;
@@ -136,7 +136,7 @@ class ComponentFolder extends vscode.TreeItem {
         public readonly fsPath: string,
         customIcon?: string | CustomIconPaths | null,
         subType?: string | null,
-        private extensionPath?: string
+        private extensionPath?: string,
     ) {
         super(label, vscode.TreeItemCollapsibleState.Collapsed);
         
@@ -153,11 +153,11 @@ class ComponentFolder extends vscode.TreeItem {
             }
         } else if (subType) {
             // Fallback: use subType-based icon if no custom icon
-            const iconMap: { [key: string]: string } = {
+            const iconMap: Record<string, string> = {
                 'mesh': 'server-process',
                 'inspector': 'eye',
                 'service': 'link',
-                'utility': 'tools'
+                'utility': 'tools',
             };
             this.iconPath = new vscode.ThemeIcon(iconMap[subType] || 'folder');
         } else {
@@ -191,7 +191,7 @@ class ComponentFolder extends vscode.TreeItem {
 
         return {
             light: resolvePath(iconPaths.light),
-            dark: resolvePath(iconPaths.dark)
+            dark: resolvePath(iconPaths.dark),
         };
     }
 }
@@ -203,7 +203,7 @@ class FileItem extends vscode.TreeItem {
     constructor(
         public readonly label: string,
         public readonly fsPath: string,
-        isWelcome: boolean = false
+        isWelcome = false,
     ) {
         super(label, vscode.TreeItemCollapsibleState.None);
         
@@ -216,13 +216,13 @@ class FileItem extends vscode.TreeItem {
             this.command = {
                 command: 'vscode.open',
                 title: 'Open File',
-                arguments: [vscode.Uri.file(fsPath)]
+                arguments: [vscode.Uri.file(fsPath)],
             };
         } else {
             this.iconPath = new vscode.ThemeIcon('info');
             this.command = {
                 command: 'demoBuilder.showWelcome',
-                title: 'Show Welcome'
+                title: 'Show Welcome',
             };
         }
     }
@@ -235,7 +235,7 @@ class ProjectItem extends vscode.TreeItem {
     constructor(
         public readonly label: string,
         public readonly projectPath: string,
-        public readonly lastModified: Date
+        public readonly lastModified: Date,
     ) {
         super(label, vscode.TreeItemCollapsibleState.None);
         
@@ -248,7 +248,7 @@ class ProjectItem extends vscode.TreeItem {
         this.command = {
             command: 'demoBuilder.loadProject',
             title: 'Load Project',
-            arguments: [projectPath]
+            arguments: [projectPath],
         };
     }
 }

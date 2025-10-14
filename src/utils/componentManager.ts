@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { Project, ComponentInstance, ComponentDefinition, ComponentStatus } from '../types';
-import { Logger } from './logger';
-import { getExternalCommandManager } from '../extension';
+import { ServiceLocator } from '../services/serviceLocator';
+import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '../types';
+import { Logger } from '../types/logger';
 
 export interface ComponentInstallOptions {
     branch?: string;
@@ -38,8 +38,8 @@ export class ComponentManager {
      */
     public async installComponent(
         project: Project,
-        componentDef: ComponentDefinition,
-        options: ComponentInstallOptions = {}
+        componentDef: TransformedComponentDefinition,
+        options: ComponentInstallOptions = {},
     ): Promise<ComponentInstallResult> {
         try {
             this.logger.debug(`[ComponentManager] Installing component: ${componentDef.name}`);
@@ -52,7 +52,7 @@ export class ComponentManager {
                 subType: componentDef.subType,
                 icon: componentDef.icon,  // Preserve icon from component definition
                 status: 'not-installed',
-                lastUpdated: new Date()
+                lastUpdated: new Date(),
             };
 
             // Determine installation method based on source type
@@ -63,38 +63,38 @@ export class ComponentManager {
             }
 
             switch (componentDef.source.type) {
-            case 'git':
-                return await this.installGitComponent(
-                    project,
-                    componentDef,
-                    componentInstance,
-                    options
-                );
+                case 'git':
+                    return await this.installGitComponent(
+                        project,
+                        componentDef,
+                        componentInstance,
+                        options,
+                    );
                 
-            case 'npm':
-                return await this.installNpmComponent(
-                    project,
-                    componentDef,
-                    componentInstance,
-                    options
-                );
+                case 'npm':
+                    return await this.installNpmComponent(
+                        project,
+                        componentDef,
+                        componentInstance,
+                        options,
+                    );
                 
-            case 'local':
-                return await this.linkLocalComponent(
-                    project,
-                    componentDef,
-                    componentInstance
-                );
+                case 'local':
+                    return await this.linkLocalComponent(
+                        project,
+                        componentDef,
+                        componentInstance,
+                    );
                 
-            default:
-                throw new Error(`Unsupported source type: ${componentDef.source.type}`);
+                default:
+                    throw new Error(`Unsupported source type: ${componentDef.source.type}`);
             }
 
         } catch (error) {
             this.logger.error(`[ComponentManager] Failed to install ${componentDef.name}`, error as Error);
             return {
                 success: false,
-                error: (error as Error).message
+                error: (error as Error).message,
             };
         }
     }
@@ -104,9 +104,9 @@ export class ComponentManager {
      */
     private async installGitComponent(
         project: Project,
-        componentDef: ComponentDefinition,
+        componentDef: TransformedComponentDefinition,
         componentInstance: ComponentInstance,
-        options: ComponentInstallOptions
+        options: ComponentInstallOptions,
     ): Promise<ComponentInstallResult> {
         if (!componentDef.source?.url) {
             throw new Error('Git source URL not provided');
@@ -136,7 +136,7 @@ export class ComponentManager {
         this.logger.debug(`[ComponentManager] Cloning ${componentDef.name} from ${componentDef.source.url}`);
         
         // Clone repository
-        const commandManager = getExternalCommandManager();
+        const commandManager = ServiceLocator.getCommandExecutor();
         
         // Build git clone command with options
         const cloneFlags: string[] = [];
@@ -168,7 +168,7 @@ export class ComponentManager {
         
         const result = await commandManager.execute(cloneCommand, {
             timeout: cloneTimeout,
-            enhancePath: true
+            enhancePath: true,
         });
 
         if (result.code !== 0) {
@@ -183,8 +183,8 @@ export class ComponentManager {
             'git rev-parse HEAD',
             {
                 cwd: componentPath,
-                enhancePath: true
-            }
+                enhancePath: true,
+            },
         );
 
         if (commitResult.code === 0) {
@@ -195,7 +195,7 @@ export class ComponentManager {
         if (componentDef.configuration?.nodeVersion) {
             componentInstance.metadata = {
                 ...componentInstance.metadata,
-                nodeVersion: componentDef.configuration.nodeVersion
+                nodeVersion: componentDef.configuration.nodeVersion,
             };
         }
 
@@ -238,7 +238,7 @@ export class ComponentManager {
                     cwd: componentPath,  // Run from component directory
                     timeout: installTimeout,
                     enhancePath: true,
-                    useNodeVersion: nodeVersion || null  // CommandManager handles fnm use
+                    useNodeVersion: nodeVersion || null,  // CommandManager handles fnm use
                 });
                 
                 if (installResult.code !== 0) {
@@ -263,7 +263,7 @@ export class ComponentManager {
                         cwd: componentPath,  // Run from component directory
                         timeout: buildTimeout,
                         enhancePath: true,
-                        useNodeVersion: nodeVersion || null  // CommandManager handles fnm use
+                        useNodeVersion: nodeVersion || null,  // CommandManager handles fnm use
                     });
                     
                     if (buildResult.code !== 0) {
@@ -287,7 +287,7 @@ export class ComponentManager {
 
         return {
             success: true,
-            component: componentInstance
+            component: componentInstance,
         };
     }
 
@@ -296,9 +296,9 @@ export class ComponentManager {
      */
     private async installNpmComponent(
         project: Project,
-        componentDef: ComponentDefinition,
+        componentDef: TransformedComponentDefinition,
         componentInstance: ComponentInstance,
-        options: ComponentInstallOptions
+        options: ComponentInstallOptions,
     ): Promise<ComponentInstallResult> {
         if (!componentDef.source?.package) {
             throw new Error('NPM package name not provided');
@@ -317,12 +317,12 @@ export class ComponentManager {
         componentInstance.lastUpdated = new Date();
         componentInstance.metadata = {
             packageName: componentDef.source.package,
-            installTarget: 'frontend' // Default target for npm packages
+            installTarget: 'frontend', // Default target for npm packages
         };
 
         return {
             success: true,
-            component: componentInstance
+            component: componentInstance,
         };
     }
 
@@ -331,8 +331,8 @@ export class ComponentManager {
      */
     private async linkLocalComponent(
         project: Project,
-        componentDef: ComponentDefinition,
-        componentInstance: ComponentInstance
+        componentDef: TransformedComponentDefinition,
+        componentInstance: ComponentInstance,
     ): Promise<ComponentInstallResult> {
         if (!componentDef.source?.url) {
             throw new Error('Local path not provided');
@@ -351,12 +351,12 @@ export class ComponentManager {
         componentInstance.status = 'ready';
         componentInstance.lastUpdated = new Date();
         componentInstance.metadata = {
-            isLocal: true
+            isLocal: true,
         };
 
         return {
             success: true,
-            component: componentInstance
+            component: componentInstance,
         };
     }
 
@@ -367,7 +367,7 @@ export class ComponentManager {
         project: Project,
         componentId: string,
         status: ComponentStatus,
-        metadata?: Record<string, any>
+        metadata?: Record<string, unknown>,
     ): Promise<void> {
         if (!project.componentInstances) {
             project.componentInstances = {};
@@ -383,7 +383,7 @@ export class ComponentManager {
         if (metadata) {
             project.componentInstances[componentId].metadata = {
                 ...project.componentInstances[componentId].metadata,
-                ...metadata
+                ...metadata,
             };
         }
 
@@ -402,14 +402,14 @@ export class ComponentManager {
      */
     public getComponentsByType(
         project: Project,
-        type: ComponentInstance['type']
+        type: ComponentInstance['type'],
     ): ComponentInstance[] {
         if (!project.componentInstances) {
             return [];
         }
 
         return Object.values(project.componentInstances).filter(
-            comp => comp.type === type
+            comp => comp.type === type,
         );
     }
 
@@ -419,7 +419,7 @@ export class ComponentManager {
     public async removeComponent(
         project: Project,
         componentId: string,
-        deleteFiles: boolean = false
+        deleteFiles = false,
     ): Promise<void> {
         const component = this.getComponent(project, componentId);
         

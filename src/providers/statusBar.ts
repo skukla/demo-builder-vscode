@@ -14,7 +14,7 @@ export class StatusBarManager {
         
         this.statusBarItem = vscode.window.createStatusBarItem(
             vscode.StatusBarAlignment.Left,
-            100
+            100,
         );
         
         context.subscriptions.push(this.statusBarItem);
@@ -77,36 +77,36 @@ export class StatusBarManager {
         let statusLabel = '';
         
         switch (status) {
-        case 'starting':
-            statusDot = '$(sync~spin)';
-            statusLabel = 'Starting';
-            break;
-        case 'running':
-            statusDot = '●';
-            backgroundColor = new vscode.ThemeColor('statusBarItem.prominentBackground');
-            statusLabel = 'Running';
-            break;
-        case 'stopping':
-            statusDot = '$(sync~spin)';
-            statusLabel = 'Stopping';
-            break;
-        case 'stopped':
-        case 'ready':
-            statusDot = '○';
-            statusLabel = 'Stopped';
-            break;
-        case 'configuring':
-            statusDot = '$(sync~spin)';
-            statusLabel = 'Configuring';
-            break;
-        case 'error':
-            statusDot = '$(error)';
-            backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
-            statusLabel = 'Error';
-            break;
-        default:
-            statusDot = '○';
-            statusLabel = 'Ready';
+            case 'starting':
+                statusDot = '$(sync~spin)';
+                statusLabel = 'Starting';
+                break;
+            case 'running':
+                statusDot = '●';
+                backgroundColor = new vscode.ThemeColor('statusBarItem.prominentBackground');
+                statusLabel = 'Running';
+                break;
+            case 'stopping':
+                statusDot = '$(sync~spin)';
+                statusLabel = 'Stopping';
+                break;
+            case 'stopped':
+            case 'ready':
+                statusDot = '○';
+                statusLabel = 'Stopped';
+                break;
+            case 'configuring':
+                statusDot = '$(sync~spin)';
+                statusLabel = 'Configuring';
+                break;
+            case 'error':
+                statusDot = '$(error)';
+                backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+                statusLabel = 'Error';
+                break;
+            default:
+                statusDot = '○';
+                statusLabel = 'Ready';
         }
         
         // Build status text - minimal and clean
@@ -119,7 +119,7 @@ export class StatusBarManager {
         // Build tooltip
         const tooltipLines = [
             `Project: ${project.name}`,
-            `Status: ${statusLabel}`
+            `Status: ${statusLabel}`,
         ];
 
         if (status === 'running' && port) {
@@ -151,7 +151,7 @@ export class StatusBarManager {
         }
     }
 
-    public setLoading(message: string = 'Loading...'): void {
+    public setLoading(message = 'Loading...'): void {
         this.statusBarItem.text = `$(sync~spin) ${message}`;
         this.statusBarItem.tooltip = message;
         this.statusBarItem.command = undefined;

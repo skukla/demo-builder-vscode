@@ -3,8 +3,9 @@
  * Checks if mesh actually exists, not just if we think it's deployed
  */
 
+import { ServiceLocator } from '../services/serviceLocator';
 import { Project } from '../types';
-import { getExternalCommandManager } from '../extension';
+import { parseJSON } from '../types/typeGuards';
 
 export interface MeshVerificationResult {
     exists: boolean;
@@ -30,12 +31,12 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
     if (!meshId) {
         return { 
             exists: false, 
-            error: 'No mesh ID found in project metadata' 
+            error: 'No mesh ID found in project metadata', 
         };
     }
     
     try {
-        const commandManager = getExternalCommandManager();
+        const commandManager = ServiceLocator.getCommandExecutor();
         
         // Call aio api-mesh:describe to verify mesh exists
         const result = await commandManager.execute(
@@ -44,15 +45,15 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
                 timeout: 30000,
                 configureTelemetry: false,
                 useNodeVersion: null,
-                enhancePath: true
-            }
+                enhancePath: true,
+            },
         );
         
         if (result.code !== 0) {
             // Mesh doesn't exist or command failed
             return {
                 exists: false,
-                error: result.stderr || 'Failed to verify mesh deployment'
+                error: result.stderr || 'Failed to verify mesh deployment',
             };
         }
         
@@ -60,45 +61,47 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
         const output = result.stdout;
         
         // Try to find mesh ID in output
-        const meshIdMatch = output.match(/mesh[_-]?id[:\s]+([a-f0-9-]+)/i);
+        const meshIdMatch = /mesh[_-]?id[:\s]+([a-f0-9-]+)/i.exec(output);
         const foundMeshId = meshIdMatch ? meshIdMatch[1] : null;
         
         // Try to find endpoint
-        const endpointMatch = output.match(/endpoint[:\s]+([^\s\n]+)/i);
+        const endpointMatch = /endpoint[:\s]+([^\s\n]+)/i.exec(output);
         const endpoint = endpointMatch ? endpointMatch[1] : undefined;
         
         // Try JSON parsing as fallback
         if (!foundMeshId || !endpoint) {
             try {
-                const meshData = JSON.parse(output);
-                return {
-                    exists: true,
-                    meshId: meshData.meshId || foundMeshId || meshId,
-                    endpoint: meshData.endpoint || endpoint
-                };
+                const meshData = parseJSON<{ meshId?: string; endpoint?: string }>(output);
+                if (meshData) {
+                    return {
+                        exists: true,
+                        meshId: (meshData.meshId || foundMeshId || meshId) as string,
+                        endpoint: meshData.endpoint || endpoint,
+                    };
+                }
             } catch {
                 // Not JSON, use regex matches
             }
         }
-        
+
         // Verify the mesh ID matches what we expect
         if (foundMeshId && foundMeshId !== meshId) {
             return {
                 exists: false,
-                error: `Mesh ID mismatch: expected ${meshId}, found ${foundMeshId}`
+                error: `Mesh ID mismatch: expected ${meshId}, found ${foundMeshId}`,
             };
         }
-        
+
         return {
             exists: true,
-            meshId: foundMeshId || meshId,
-            endpoint
+            meshId: foundMeshId ?? (meshId as string),
+            endpoint,
         };
         
     } catch (error) {
         return {
             exists: false,
-            error: error instanceof Error ? error.message : 'Unknown error verifying mesh'
+            error: error instanceof Error ? error.message : 'Unknown error verifying mesh',
         };
     }
 }
@@ -109,7 +112,7 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
  */
 export async function syncMeshStatus(
     project: Project, 
-    verificationResult: MeshVerificationResult
+    verificationResult: MeshVerificationResult,
 ): Promise<void> {
     const meshComponent = project.componentInstances?.['commerce-mesh'];
     if (!meshComponent) {

@@ -42,7 +42,7 @@ export interface WithTimeoutResult<T> {
  */
 export async function withTimeout<T>(
     promise: Promise<T>,
-    options: TimeoutOptions
+    options: TimeoutOptions,
 ): Promise<T> {
     const { timeoutMs, timeoutMessage, signal } = options;
 
@@ -50,7 +50,7 @@ export async function withTimeout<T>(
     const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
             reject(new Error(
-                timeoutMessage || `Operation timed out after ${timeoutMs}ms`
+                timeoutMessage || `Operation timed out after ${timeoutMs}ms`,
             ));
         }, timeoutMs);
     });
@@ -101,14 +101,14 @@ export async function withTimeout<T>(
  */
 export async function tryWithTimeout<T>(
     promise: Promise<T>,
-    options: TimeoutOptions
+    options: TimeoutOptions,
 ): Promise<WithTimeoutResult<T>> {
     try {
         const result = await withTimeout(promise, options);
         return {
             result,
             timedOut: false,
-            cancelled: false
+            cancelled: false,
         };
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -116,7 +116,7 @@ export async function tryWithTimeout<T>(
         return {
             timedOut: errorMessage.includes('timed out'),
             cancelled: errorMessage.includes('cancelled'),
-            error: error instanceof Error ? error : new Error(errorMessage)
+            error: error instanceof Error ? error : new Error(errorMessage),
         };
     }
 }

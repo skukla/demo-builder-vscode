@@ -13,7 +13,7 @@ import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import { WizardState } from '../../types';
 import { vscode } from '../../app/vscodeApi';
-import { useMinimumLoadingTime } from '../../utils/useMinimumLoadingTime';
+import { useMinimumLoadingTime } from '@/hooks';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
 
 interface AdobeAuthStepProps {

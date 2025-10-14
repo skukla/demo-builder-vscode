@@ -15,7 +15,22 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "noEmit": false,
-    "types": ["react", "react-dom"]
+    "types": ["react", "react-dom"],
+    "baseUrl": ".",
+    "paths": {
+      "@/components": ["src/webviews/components"],
+      "@/components/*": ["src/webviews/components/*"],
+      "@/hooks": ["src/webviews/hooks"],
+      "@/hooks/*": ["src/webviews/hooks/*"],
+      "@/contexts": ["src/webviews/contexts"],
+      "@/contexts/*": ["src/webviews/contexts/*"],
+      "@/screens": ["src/webviews/screens"],
+      "@/screens/*": ["src/webviews/screens/*"],
+      "@/types": ["src/webviews/types"],
+      "@/types/*": ["src/webviews/types/*"],
+      "@/utils": ["src/webviews/utils"],
+      "@/utils/*": ["src/webviews/utils/*"]
+    }
   },
   "include": [
     "src/webviews/**/*"

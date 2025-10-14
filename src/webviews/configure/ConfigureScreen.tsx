@@ -1,23 +1,19 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import {
     Heading,
     Text,
-    TextField,
-    Checkbox,
     Flex,
-    Picker,
-    Item,
     Form,
-    Divider,
     Button,
     View
 } from '@adobe/react-spectrum';
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import { ComponentEnvVar, ComponentConfigs, DemoProject } from '../types';
 import { vscode } from '../app/vscodeApi';
 import { useSelectableDefault } from '../hooks/useSelectableDefault';
+import { useDebouncedValue } from '@/hooks';
 import { cn } from '../utils/classNames';
+import { FormField, ConfigSection } from '@/components/molecules';
+import { NavigationPanel, NavigationSection, NavigationField } from '@/components/organisms';
 
 interface ComponentsData {
     frontends?: ComponentData[];
@@ -25,7 +21,7 @@ interface ComponentsData {
     dependencies?: ComponentData[];
     externalSystems?: ComponentData[];
     appBuilder?: ComponentData[];
-    envVars?: Record<string, ComponentEnvVar>; // Top-level envVars object
+    envVars?: Record<string, ComponentEnvVar>;
 }
 
 interface ConfigureScreenProps {
@@ -49,7 +45,7 @@ interface ComponentData {
 }
 
 interface UniqueField extends ComponentEnvVar {
-    componentIds: string[]; // Which components need this field
+    componentIds: string[];
 }
 
 interface ServiceGroup {
@@ -59,9 +55,7 @@ interface ServiceGroup {
 }
 
 export function ConfigureScreen({ project, componentsData, existingEnvValues }: ConfigureScreenProps) {
-    // Initialize componentConfigs with existing values from .env files
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
-    
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [isSaving, setIsSaving] = useState(false);
@@ -70,46 +64,22 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     const [activeField, setActiveField] = useState<string | null>(null);
     const lastFocusedSectionRef = useRef<string | null>(null);
     const fieldCountInSectionRef = useRef<number>(0);
-    
-    // Hook for making default values easily replaceable (auto-select on focus)
+
     const selectableDefaultProps = useSelectableDefault();
-    
+
     // Update componentConfigs when existingEnvValues becomes available
     useEffect(() => {
-        console.log('[ConfigureScreen useEffect] Triggered with:', {
-            hasExistingEnvValues: !!existingEnvValues,
-            existingEnvValuesKeys: existingEnvValues ? Object.keys(existingEnvValues) : [],
-            existingEnvValues: existingEnvValues,
-            hasProjectComponentConfigs: !!project.componentConfigs,
-            projectComponentConfigs: project.componentConfigs
-        });
-        
         if (existingEnvValues && Object.keys(existingEnvValues).length > 0) {
-            console.log('[ConfigureScreen] ✅ Updating componentConfigs with existingEnvValues');
             setComponentConfigs(existingEnvValues);
         } else if (project.componentConfigs) {
-            console.log('[ConfigureScreen] ⚠️ Using project.componentConfigs as fallback');
             setComponentConfigs(project.componentConfigs);
-        } else {
-            console.log('[ConfigureScreen] ❌ No env values available at all!');
         }
     }, [existingEnvValues, project.componentConfigs]);
 
     // Get all selected components with their data
     const selectedComponents = useMemo(() => {
         const components: Array<{ id: string; data: ComponentData; type: string }> = [];
-        
-        // Debug: Log what we're working with
-        console.log('[ConfigureScreen] Project componentSelections:', project.componentSelections);
-        console.log('[ConfigureScreen] Project componentInstances:', project.componentInstances ? Object.keys(project.componentInstances) : 'none');
-        console.log('[ConfigureScreen] Available componentsData:', {
-            frontends: componentsData.frontends?.map(f => f.id),
-            backends: componentsData.backends?.map(b => b.id),
-            dependencies: componentsData.dependencies?.map(d => d.id),
-            hasEnvVars: !!componentsData.envVars
-        });
-        
-        // Helper to find component by ID across all categories
+
         const findComponent = (componentId: string): ComponentData | undefined => {
             return componentsData.frontends?.find(c => c.id === componentId) ||
                    componentsData.backends?.find(c => c.id === componentId) ||
@@ -117,31 +87,27 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                    componentsData.externalSystems?.find(c => c.id === componentId) ||
                    componentsData.appBuilder?.find(c => c.id === componentId);
         };
-        
-        // Helper to add component and its dependencies
+
         const addComponentWithDeps = (comp: ComponentData, type: string) => {
             components.push({ id: comp.id, data: comp, type });
-            
-            // Also add required dependencies
+
             comp.dependencies?.required?.forEach(depId => {
                 const dep = findComponent(depId);
                 if (dep && !components.some(c => c.id === depId)) {
-                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
                                        (dep.configuration?.optionalEnvVars?.length || 0) > 0;
                     if (hasEnvVars) {
                         components.push({ id: dep.id, data: dep, type: 'Dependency' });
                     }
                 }
             });
-            
-            // Also add optional dependencies (if selected)
+
             comp.dependencies?.optional?.forEach(depId => {
                 const dep = findComponent(depId);
                 if (dep && !components.some(c => c.id === depId)) {
-                    // Check if this optional dependency was actually selected
                     const isSelected = project.componentSelections?.dependencies?.includes(depId);
                     if (isSelected) {
-                        const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                        const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
                                            (dep.configuration?.optionalEnvVars?.length || 0) > 0;
                         if (hasEnvVars) {
                             components.push({ id: dep.id, data: dep, type: 'Dependency' });
@@ -150,24 +116,22 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 }
             });
         };
-        
-        // Try using componentSelections first
+
         if (project.componentSelections?.frontend) {
             const frontend = componentsData.frontends?.find((f: ComponentData) => f.id === project.componentSelections?.frontend);
             if (frontend) addComponentWithDeps(frontend, 'Frontend');
         }
-        
+
         if (project.componentSelections?.backend) {
             const backend = componentsData.backends?.find((b: ComponentData) => b.id === project.componentSelections?.backend);
             if (backend) addComponentWithDeps(backend, 'Backend');
         }
-        
-        // Add explicitly selected dependencies (that weren't already added via relationships)
+
         project.componentSelections?.dependencies?.forEach(depId => {
             if (!components.some(c => c.id === depId)) {
                 const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId);
                 if (dep) {
-                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
                                        (dep.configuration?.optionalEnvVars?.length || 0) > 0;
                     if (hasEnvVars) {
                         components.push({ id: dep.id, data: dep, type: 'Dependency' });
@@ -175,23 +139,19 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 }
             }
         });
-        
+
         project.componentSelections?.externalSystems?.forEach(sysId => {
             const sys = componentsData.externalSystems?.find((s: ComponentData) => s.id === sysId);
             if (sys) components.push({ id: sys.id, data: sys, type: 'External System' });
         });
-        
+
         project.componentSelections?.appBuilder?.forEach(appId => {
             const app = componentsData.appBuilder?.find((a: ComponentData) => a.id === appId);
             if (app) addComponentWithDeps(app, 'App Builder');
         });
-        
-        console.log('[ConfigureScreen] Selected components after relationships:', components.map(c => ({ id: c.id, type: c.type })));
-        
-        // Fallback: If no components found via componentSelections, try componentInstances
+
         if (components.length === 0 && project.componentInstances) {
             Object.entries(project.componentInstances).forEach(([id, instance]) => {
-                // Try to find component definition in all categories
                 const allComponentDefs = [
                     ...(componentsData.frontends || []),
                     ...(componentsData.backends || []),
@@ -199,44 +159,31 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     ...(componentsData.externalSystems || []),
                     ...(componentsData.appBuilder || [])
                 ];
-                
+
                 const componentDef = allComponentDefs.find((c: ComponentData) => c.id === id);
                 if (componentDef) {
-                    const hasEnvVars = (componentDef.configuration?.requiredEnvVars?.length || 0) > 0 || 
+                    const hasEnvVars = (componentDef.configuration?.requiredEnvVars?.length || 0) > 0 ||
                                        (componentDef.configuration?.optionalEnvVars?.length || 0) > 0;
                     if (hasEnvVars) {
-                        components.push({ 
-                            id: componentDef.id, 
-                            data: componentDef, 
+                        components.push({
+                            id: componentDef.id,
+                            data: componentDef,
                             type: instance.type.charAt(0).toUpperCase() + instance.type.slice(1)
                         });
                     }
                 }
             });
         }
-        
+
         return components;
     }, [project.componentSelections, project.componentInstances, componentsData]);
 
     // Deduplicate fields and organize by service
     const serviceGroups = useMemo(() => {
-        console.log('[ConfigureScreen] Building serviceGroups from selectedComponents:', 
-            selectedComponents.map(c => ({ 
-                id: c.id, 
-                requiredEnvVars: c.data.configuration?.requiredEnvVars,
-                optionalEnvVars: c.data.configuration?.optionalEnvVars
-            }))
-        );
-        
         const fieldMap = new Map<string, UniqueField>();
-        
-        // Get the top-level envVars definitions
         const envVarDefs = componentsData.envVars || {};
-        console.log('[ConfigureScreen] envVarDefs keys:', Object.keys(envVarDefs));
-        
-        // Collect all unique fields by key
+
         selectedComponents.forEach(({ id, data }) => {
-            // Collect required env vars
             data.configuration?.requiredEnvVars?.forEach(envVarKey => {
                 const envVarDef = envVarDefs[envVarKey];
                 if (envVarDef) {
@@ -254,8 +201,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     }
                 }
             });
-            
-            // Collect optional env vars
+
             data.configuration?.optionalEnvVars?.forEach(envVarKey => {
                 const envVarDef = envVarDefs[envVarKey];
                 if (envVarDef) {
@@ -275,27 +221,22 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             });
         });
 
-        console.log('[ConfigureScreen] fieldMap after collection:', Array.from(fieldMap.keys()));
-
-        // Group fields by service using the 'group' metadata from configuration
         const groups: Record<string, UniqueField[]> = {};
 
         fieldMap.forEach((field) => {
-            // Use the 'group' metadata from JSON configuration
             const metadata = field as UniqueField & { group?: string };
             const groupKey = metadata.group || 'other';
-            
+
             if (!groups[groupKey]) {
                 groups[groupKey] = [];
             }
             groups[groupKey].push(field);
         });
 
-        // Define service group labels and order
         const serviceGroupDefs: Array<{ id: string; label: string; order: number; fieldOrder?: string[] }> = [
-            { 
-                id: 'adobe-commerce', 
-                label: 'Adobe Commerce', 
+            {
+                id: 'adobe-commerce',
+                label: 'Adobe Commerce',
                 order: 1,
                 fieldOrder: [
                     'ADOBE_COMMERCE_URL',
@@ -308,9 +249,9 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     'ADOBE_COMMERCE_ADMIN_PASSWORD'
                 ]
             },
-            { 
-                id: 'catalog-service', 
-                label: 'Catalog Service', 
+            {
+                id: 'catalog-service',
+                label: 'Catalog Service',
                 order: 2,
                 fieldOrder: [
                     'ADOBE_CATALOG_SERVICE_ENDPOINT',
@@ -325,12 +266,10 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             { id: 'other', label: 'Additional Settings', order: 99 }
         ];
 
-        // Build final service groups with fields, ordered and filtered
         const orderedGroups: ServiceGroup[] = serviceGroupDefs
             .map(def => {
                 const fields = groups[def.id] || [];
-                
-                // Apply field ordering based on configuration
+
                 const sortedFields = def.fieldOrder
                     ? fields.sort((a, b) => {
                         const aIndex = def.fieldOrder!.indexOf(a.key);
@@ -340,7 +279,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         return aPos - bPos;
                     })
                     : fields;
-                
+
                 return {
                     id: def.id,
                     label: def.label,
@@ -354,74 +293,54 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 return aOrder - bOrder;
             });
 
-        console.log('[ConfigureScreen] Final service groups:', orderedGroups.map(g => ({ 
-            id: g.id, 
-            label: g.label, 
-            fieldCount: g.fields.length,
-            fields: g.fields.map(f => f.key)
-        })));
-
         return orderedGroups;
-    }, [selectedComponents]);
+    }, [selectedComponents, componentsData.envVars]);
 
-    // Handle field focus to scroll section header into view when entering new section
+    // Handle field focus to scroll section header into view
     useEffect(() => {
         if (serviceGroups.length === 0) return;
 
         const handleFieldFocus = (event: FocusEvent) => {
             const target = event.target as HTMLElement;
-            
-            // Find the field wrapper div
             const fieldWrapper = target.closest('[id^="field-"]');
             if (!fieldWrapper) return;
-            
+
             const fieldId = fieldWrapper.id.replace('field-', '');
-            
-            // Find which section this field belongs to
-            const section = serviceGroups.find(group => 
+            const section = serviceGroups.find(group =>
                 group.fields.some(f => f.key === fieldId)
             );
-            
+
             if (!section) return;
-            
-            // Track the active field for navigation highlighting
+
             setActiveField(fieldId);
-            
-            // Check if we're entering a different section
+
             const isNewSection = lastFocusedSectionRef.current !== section.id;
-            
-            // Determine if this is the first field in the section
             const fieldIndex = section.fields.findIndex(f => f.key === fieldId);
             const isFirstFieldInSection = fieldIndex === 0;
             const isBackwardNavigation = isNewSection && !isFirstFieldInSection;
-            
-            // Reset field count when entering new section
+
             if (isNewSection) {
                 fieldCountInSectionRef.current = isFirstFieldInSection ? 1 : fieldIndex + 1;
                 lastFocusedSectionRef.current = section.id;
             } else {
                 fieldCountInSectionRef.current += 1;
             }
-            
-            // Update active section
+
             setActiveSection(section.id);
-            
-            // Auto-expand the section in navigation
             setExpandedNavSections(prev => {
                 const newSet = new Set(prev);
                 newSet.add(section.id);
                 return newSet;
             });
-            
-            // Scroll logic
+
             const shouldScroll = isNewSection || (fieldCountInSectionRef.current % 3 === 0);
-            
+
             if (shouldScroll) {
                 const navSectionElement = document.getElementById(`nav-${section.id}`);
                 if (navSectionElement) {
                     navSectionElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-                
+
                 if (isNewSection) {
                     if (isBackwardNavigation) {
                         fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -434,7 +353,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 } else {
                     fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
-                
+
                 setTimeout(() => {
                     const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
                     if (navFieldElement) {
@@ -449,7 +368,6 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             }
         };
 
-        // Add focus listeners to all input elements
         const inputs = document.querySelectorAll('input, select, textarea');
         inputs.forEach(input => {
             input.addEventListener('focus', handleFieldFocus as EventListener);
@@ -465,28 +383,26 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     // Validate all fields
     useEffect(() => {
         const errors: Record<string, string> = {};
-        
+
         serviceGroups.forEach(group => {
             group.fields.forEach(field => {
                 const isDeferredField = field.key === 'MESH_ENDPOINT';
-                
+
                 if (field.required && !isDeferredField) {
-                    // Check if ANY component that needs this field has it filled
-                    const hasValue = field.componentIds.some(compId => 
+                    const hasValue = field.componentIds.some(compId =>
                         componentConfigs[compId]?.[field.key]
                     );
-                    
+
                     if (!hasValue) {
                         errors[field.key] = `${field.label} is required`;
                     }
                 }
-                
-                // URL validation
+
                 if (field.type === 'url') {
-                    const firstComponentWithValue = field.componentIds.find(compId => 
+                    const firstComponentWithValue = field.componentIds.find(compId =>
                         componentConfigs[compId]?.[field.key]
                     );
-                    
+
                     if (firstComponentWithValue) {
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
                         try {
@@ -496,13 +412,12 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         }
                     }
                 }
-                
-                // Custom validation
+
                 if (field.validation?.pattern) {
-                    const firstComponentWithValue = field.componentIds.find(compId => 
+                    const firstComponentWithValue = field.componentIds.find(compId =>
                         componentConfigs[compId]?.[field.key]
                     );
-                    
+
                     if (firstComponentWithValue) {
                         const value = componentConfigs[firstComponentWithValue][field.key] as string;
                         const pattern = new RegExp(field.validation.pattern);
@@ -513,31 +428,28 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 }
             });
         });
-        
+
         setValidationErrors(errors);
     }, [componentConfigs, serviceGroups]);
 
-    const updateField = (field: UniqueField, value: string | boolean) => {
-        // Mark field as touched
+    const updateField = useCallback((field: UniqueField, value: string | boolean) => {
         setTouchedFields(prev => new Set(prev).add(field.key));
-        
-        // Update the field value for ALL components that need it
+
         setComponentConfigs(prev => {
             const newConfigs = { ...prev };
-            
+
             field.componentIds.forEach(componentId => {
                 if (!newConfigs[componentId]) {
                     newConfigs[componentId] = {};
                 }
                 newConfigs[componentId][field.key] = value;
             });
-            
+
             return newConfigs;
         });
-    };
+    }, []);
 
-    const getFieldValue = (field: UniqueField): string | boolean | undefined => {
-        // Special handling for MESH_ENDPOINT - check project data first
+    const getFieldValue = useCallback((field: UniqueField): string | boolean | undefined => {
         if (field.key === 'MESH_ENDPOINT') {
             const projectData = project as unknown as Record<string, unknown>;
             const apiMeshData = projectData.apiMesh as Record<string, unknown> | undefined;
@@ -546,74 +458,59 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 return meshEndpoint;
             }
         }
-        
-        // Check declared components first (from field.componentIds)
+
         for (const componentId of field.componentIds) {
             const value = componentConfigs[componentId]?.[field.key];
             if (value !== undefined && value !== '') {
                 return typeof value === 'number' ? String(value) : value;
             }
         }
-        
-        // Fallback: Check ALL other components in componentConfigs
-        // This handles cases where a value exists in a different component
-        // (e.g., values in commerce-mesh that citisignal-nextjs also needs)
+
         for (const [componentId, config] of Object.entries(componentConfigs)) {
             if (!field.componentIds.includes(componentId)) {
                 const value = config[field.key];
                 if (value !== undefined && value !== '') {
-                    console.log(`[getFieldValue] Found ${field.key} in ${componentId} (not in declared componentIds)`);
                     return typeof value === 'number' ? String(value) : value;
                 }
             }
         }
-        
-        // Fall back to default from field definition
+
         if (field.default !== undefined && field.default !== '') {
             return field.default;
         }
-        
+
         return '';
-    };
+    }, [componentConfigs, project]);
 
-    const getSectionCompletion = (group: ServiceGroup) => {
-        const requiredFields = group.fields.filter(f => f.required);
-        
-        const completedFields = requiredFields.filter(f => {
-            // Use getFieldValue to check for value (includes fallback logic)
-            const value = getFieldValue(f);
-            
-            // Field is complete if it has ANY non-empty value (including defaults)
-            return value !== undefined && value !== '';
+    const isFieldComplete = useCallback((field: UniqueField): boolean => {
+        const value = getFieldValue(field);
+        return value !== undefined && value !== '';
+    }, [getFieldValue]);
+
+    // Navigation sections for NavigationPanel
+    const navigationSections = useMemo<NavigationSection[]>(() => {
+        return serviceGroups.map(group => {
+            const requiredFields = group.fields.filter(f => f.required);
+            const completedFields = requiredFields.filter(f => isFieldComplete(f));
+
+            return {
+                id: group.id,
+                label: group.label,
+                fields: group.fields.map(f => ({
+                    key: f.key,
+                    label: f.label,
+                    isComplete: isFieldComplete(f)
+                })),
+                isComplete: requiredFields.length === 0 || completedFields.length === requiredFields.length,
+                completedCount: completedFields.length,
+                totalCount: requiredFields.length
+            };
         });
-        
-        return {
-            total: requiredFields.length,
-            completed: completedFields.length,
-            isComplete: requiredFields.length === 0 || completedFields.length === requiredFields.length
-        };
-    };
+    }, [serviceGroups, isFieldComplete]);
 
-    const navigateToSection = (sectionId: string) => {
-        const element = document.getElementById(`section-${sectionId}`);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    };
-
-    const navigateToField = (fieldKey: string) => {
-        const fieldElement = document.getElementById(`field-${fieldKey}`);
-        if (!fieldElement) return;
-        
-        const input = fieldElement.querySelector('input, select, textarea');
-        if (input instanceof HTMLElement) {
-            input.focus();
-        }
-    };
-
-    const toggleNavSection = (sectionId: string) => {
+    const toggleNavSection = useCallback((sectionId: string) => {
         const wasExpanded = expandedNavSections.has(sectionId);
-        
+
         setExpandedNavSections(prev => {
             const newSet = new Set(prev);
             if (newSet.has(sectionId)) {
@@ -623,19 +520,26 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             }
             return newSet;
         });
-        
+
         if (!wasExpanded) {
-            navigateToSection(sectionId);
+            const element = document.getElementById(`section-${sectionId}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
-    };
+    }, [expandedNavSections]);
 
-    const isFieldComplete = (field: UniqueField): boolean => {
-        const value = getFieldValue(field);
-        // Complete if has ANY non-empty value (including defaults)
-        return value !== undefined && value !== '';
-    };
+    const navigateToField = useCallback((fieldKey: string) => {
+        const fieldElement = document.getElementById(`field-${fieldKey}`);
+        if (!fieldElement) return;
 
-    const handleSave = async () => {
+        const input = fieldElement.querySelector('input, select, textarea');
+        if (input instanceof HTMLElement) {
+            input.focus();
+        }
+    }, []);
+
+    const handleSave = useCallback(async () => {
         setIsSaving(true);
         try {
             const result = await vscode.request('save-configuration', { componentConfigs });
@@ -649,102 +553,16 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         } finally {
             setIsSaving(false);
         }
-    };
+    }, [componentConfigs]);
 
-    const handleCancel = () => {
+    const handleCancel = useCallback(() => {
         vscode.postMessage('cancel');
-    };
-
-    const renderField = (field: UniqueField) => {
-        const value = getFieldValue(field);
-        const error = validationErrors[field.key];
-        const showError = error && touchedFields.has(field.key);
-
-        const isFieldRequired = field.required;
-        const hasDefault = value && field.default && value === field.default;
-        
-        switch (field.type) {
-            case 'text':
-            case 'url':
-                return (
-                    <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
-                        <TextField
-                            label={field.label}
-                            value={value as string}
-                            onChange={(val) => updateField(field, val)}
-                            placeholder={field.placeholder}
-                            description={field.description}
-                            isRequired={isFieldRequired}
-                            validationState={showError ? 'invalid' : undefined}
-                            errorMessage={showError ? error : undefined}
-                            width="100%"
-                            marginBottom="size-200"
-                            {...(hasDefault ? selectableDefaultProps : {})}
-                        />
-                    </div>
-                );
-            
-            case 'password':
-                return (
-                    <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
-                        <TextField
-                            label={field.label}
-                            type="password"
-                            value={value as string}
-                            onChange={(val) => updateField(field, val)}
-                            placeholder={field.placeholder}
-                            description={field.description}
-                            isRequired={isFieldRequired}
-                            validationState={showError ? 'invalid' : undefined}
-                            errorMessage={showError ? error : undefined}
-                            width="100%"
-                            marginBottom="size-200"
-                            {...(hasDefault ? selectableDefaultProps : {})}
-                        />
-                    </div>
-                );
-            
-            case 'select':
-                return (
-                    <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
-                        <Picker
-                            label={field.label}
-                            selectedKey={value as string}
-                            onSelectionChange={(key) => updateField(field, String(key || ''))}
-                            width="100%"
-                            isRequired={field.required}
-                            marginBottom="size-200"
-                        >
-                            {field.options?.map(option => (
-                                <Item key={option.value}>{option.label}</Item>
-                            )) || []}
-                        </Picker>
-                    </div>
-                );
-            
-            case 'boolean':
-                return (
-                    <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
-                        <Checkbox
-                            isSelected={value as boolean}
-                            onChange={(val) => updateField(field, val)}
-                            aria-label={field.label}
-                            marginBottom="size-200"
-                        >
-                            {field.label}
-                        </Checkbox>
-                    </div>
-                );
-            
-            default:
-                return null;
-        }
-    };
+    }, []);
 
     const canSave = Object.keys(validationErrors).length === 0;
 
     return (
-        <View 
+        <View
             backgroundColor="gray-50"
             width="100%"
             height="100vh"
@@ -752,7 +570,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         >
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
                 {/* Header */}
-                <View 
+                <View
                     padding="size-400"
                     UNSAFE_className={cn('border-b', 'bg-gray-75')}
                 >
@@ -788,156 +606,51 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         ) : (
                             <Form UNSAFE_style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
                                 {serviceGroups.map((group, index) => (
-                                    <React.Fragment key={group.id}>
-                                        {index > 0 && (
-                                            <Divider 
-                                                size="S" 
-                                                marginTop="size-100" 
-                                                marginBottom="size-100"
-                                            />
-                                        )}
-                                        
-                                        <div id={`section-${group.id}`} style={{ 
-                                            scrollMarginTop: '-16px',
-                                            paddingTop: index > 0 ? '4px' : '0',
-                                            paddingBottom: '4px'
-                                        }}>
-                                            <div style={{
-                                                paddingBottom: '4px',
-                                                marginBottom: '12px',
-                                                borderBottom: '1px solid var(--spectrum-global-color-gray-200)'
-                                            }}>
-                                                <Heading level={3}>{group.label}</Heading>
-                                            </div>
-                                            
-                                            <Flex direction="column" marginBottom="size-100">
-                                                {group.fields.map(field => renderField(field))}
-                                            </Flex>
-                                        </div>
-                                    </React.Fragment>
+                                    <ConfigSection
+                                        key={group.id}
+                                        id={group.id}
+                                        label={group.label}
+                                        showDivider={index > 0}
+                                    >
+                                        {group.fields.map(field => {
+                                            const value = getFieldValue(field);
+                                            const error = validationErrors[field.key];
+                                            const showError = error && touchedFields.has(field.key);
+                                            const hasDefault = value && field.default && value === field.default;
+
+                                            return (
+                                                <FormField
+                                                    key={field.key}
+                                                    fieldKey={field.key}
+                                                    label={field.label}
+                                                    type={field.type as any}
+                                                    value={value || ''}
+                                                    onChange={(val) => updateField(field, val)}
+                                                    placeholder={field.placeholder}
+                                                    description={field.description}
+                                                    required={field.required}
+                                                    error={error}
+                                                    showError={showError}
+                                                    options={field.options}
+                                                    selectableDefaultProps={hasDefault ? selectableDefaultProps : undefined}
+                                                />
+                                            );
+                                        })}
+                                    </ConfigSection>
                                 ))}
                             </Form>
                         )}
                     </div>
-                    
+
                     {/* Right: Navigation Panel */}
-                    <div style={{
-                        flex: '1',
-                        padding: '24px',
-                        backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                        borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        overflow: 'hidden'
-                    }}>
-                        <Heading level={3} marginBottom="size-200">Sections</Heading>
-                        
-                        <Flex direction="column" gap="size-150" UNSAFE_style={{ overflowY: 'auto', flex: 1 }}>
-                            {serviceGroups.map((group) => {
-                                const completion = getSectionCompletion(group);
-                                const isExpanded = expandedNavSections.has(group.id);
-                                const isActive = activeSection === group.id;
-                            
-                                return (
-                                    <div key={group.id} style={{ width: '100%' }}>
-                                        <button
-                                            id={`nav-${group.id}`}
-                                            onClick={() => toggleNavSection(group.id)}
-                                            tabIndex={-1}
-                                            style={{
-                                                width: '100%',
-                                                padding: '12px',
-                                                background: isActive ? 'var(--spectrum-global-color-gray-200)' : 'transparent',
-                                                border: '1px solid var(--spectrum-global-color-gray-300)',
-                                                borderLeft: isActive ? '3px solid var(--spectrum-global-color-blue-500)' : '1px solid var(--spectrum-global-color-gray-300)',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                alignItems: 'flex-start',
-                                                gap: '4px',
-                                                transition: 'all 0.2s ease'
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (!isActive) {
-                                                    e.currentTarget.style.background = 'var(--spectrum-global-color-gray-100)';
-                                                }
-                                            }}
-                                            onMouseLeave={(e) => {
-                                                if (!isActive) {
-                                                    e.currentTarget.style.background = 'transparent';
-                                                }
-                                            }}
-                                        >
-                                            <Flex width="100%" justifyContent="space-between" alignItems="center">
-                                                <Flex gap="size-100" alignItems="center">
-                                                    {isExpanded ? <ChevronDown size="S" /> : <ChevronRight size="S" />}
-                                                    <Text UNSAFE_className={`text-sm ${isActive ? 'font-bold' : 'font-medium'}`}>{group.label}</Text>
-                                                </Flex>
-                                                {completion.isComplete ? (
-                                                    <Text UNSAFE_className="text-green-600" UNSAFE_style={{ fontSize: '16px', lineHeight: '16px' }}>✓</Text>
-                                                ) : (
-                                                    <Text UNSAFE_className="text-gray-600" UNSAFE_style={{ fontSize: '14px', lineHeight: '14px' }}>
-                                                        {completion.total === 0 ? 'Optional' : `${completion.completed}/${completion.total}`}
-                                                    </Text>
-                                                )}
-                                            </Flex>
-                                        </button>
-
-                                        {isExpanded && (
-                                            <div style={{
-                                                marginTop: '4px',
-                                                marginLeft: '12px',
-                                                paddingLeft: '12px',
-                                                borderLeft: '2px solid var(--spectrum-global-color-gray-300)'
-                                            }}>
-                                                {group.fields.map((field) => {
-                                                    const isComplete = isFieldComplete(field);
-                                                    const isActiveField = activeField === field.key;
-
-                                                    return (
-                                                        <button
-                                                            key={field.key}
-                                                            id={`nav-field-${field.key}`}
-                                                            onClick={() => navigateToField(field.key)}
-                                                            tabIndex={-1}
-                                                            style={{
-                                                                width: '100%',
-                                                                padding: '8px 12px',
-                                                                background: isActiveField ? 'var(--spectrum-global-color-blue-100)' : 'transparent',
-                                                                border: 'none',
-                                                                borderLeft: isActiveField ? '2px solid var(--spectrum-global-color-blue-500)' : 'none',
-                                                                cursor: 'pointer',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'space-between',
-                                                                textAlign: 'left',
-                                                                transition: 'all 0.2s',
-                                                                borderRadius: '4px'
-                                                            }}
-                                                            onMouseEnter={(e) => {
-                                                                if (!isActiveField) {
-                                                                    e.currentTarget.style.background = 'var(--spectrum-global-color-gray-100)';
-                                                                }
-                                                            }}
-                                                            onMouseLeave={(e) => {
-                                                                if (!isActiveField) {
-                                                                    e.currentTarget.style.background = 'transparent';
-                                                                }
-                                                            }}
-                                                        >
-                                                            <Text UNSAFE_className={`text-xs ${isActiveField ? 'text-blue-600 font-medium' : 'text-gray-700'}`}>{field.label}</Text>
-                                                            {isComplete && <Text UNSAFE_className="text-green-600" UNSAFE_style={{ fontSize: '14px', lineHeight: '14px' }}>✓</Text>}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </Flex>
-                    </div>
+                    <NavigationPanel
+                        sections={navigationSections}
+                        activeSection={activeSection}
+                        activeField={activeField}
+                        expandedSections={expandedNavSections}
+                        onToggleSection={toggleNavSection}
+                        onNavigateToField={navigateToField}
+                    />
                 </div>
 
                 {/* Footer */}
@@ -969,4 +682,3 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         </View>
     );
 }
-

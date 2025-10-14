@@ -1,12 +1,31 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
 import * as fs from 'fs/promises';
-import { BaseWebviewCommand } from './baseWebviewCommand';
-import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
+import * as path from 'path';
+import * as vscode from 'vscode';
+import { Project } from '../types';
+import { parseJSON } from '../types/typeGuards';
 import { ComponentRegistryManager } from '../utils/componentRegistry';
 import { detectMeshChanges } from '../utils/stalenessDetector';
+import { WebviewCommunicationManager } from '../utils/webviewCommunicationManager';
+import { BaseWebviewCommand } from './baseWebviewCommand';
 import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
-import { Project } from '../types';
+
+// Component configuration type (key-value pairs for environment variables)
+type ComponentConfigs = Record<string, Record<string, string>>;
+
+// Initial data structure sent to webview
+interface ConfigureInitialData {
+    theme: 'dark' | 'light';
+    project: Project;
+    componentsData: {
+        frontends?: unknown[];
+        backends?: unknown[];
+        dependencies?: unknown[];
+        externalSystems?: unknown[];
+        appBuilder?: unknown[];
+        envVars: Record<string, unknown>;
+    };
+    existingEnvValues: Record<string, Record<string, string>>;
+}
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     // Singleton: Track the active Configure panel
@@ -61,7 +80,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     protected async getWebviewContent(): Promise<string> {
         const nonce = this.getNonce();
         const scriptUri = this.panel!.webview.asWebviewUri(
-            vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'webview', 'configure-bundle.js'))
+            vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'webview', 'configure-bundle.js')),
         );
 
         return `<!DOCTYPE html>
@@ -79,7 +98,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 </html>`;
     }
 
-    protected async getInitialData(): Promise<any> {
+    protected async getInitialData(): Promise<ConfigureInitialData> {
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
             throw new Error('No project found');
@@ -96,7 +115,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             dependencies: registry.components.dependencies,
             externalSystems: registry.components.externalSystems,
             appBuilder: registry.components.appBuilder,
-            envVars: registry.envVars || {}
+            envVars: registry.envVars || {},
         };
 
         // Load existing env values from component .env files
@@ -120,13 +139,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             theme,
             project,
             componentsData,
-            existingEnvValues
+            existingEnvValues,
         };
     }
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
         // Handle save configuration
-        comm.on('save-configuration', async (data: { componentConfigs: any }) => {
+        comm.on('save-configuration', async (data: { componentConfigs: ComponentConfigs }) => {
             try {
                 const project = await this.stateManager.getCurrentProject();
                 if (!project) {
@@ -168,7 +187,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                             vscode.window.showWarningMessage(
                                 'API Mesh configuration changed. Redeploy mesh and restart demo to apply changes.',
                                 'Redeploy Mesh',
-                                'Later'
+                                'Later',
                             ).then(selection => {
                                 if (selection === 'Redeploy Mesh') {
                                     vscode.commands.executeCommand('demoBuilder.deployMesh');
@@ -185,7 +204,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                             vscode.window.showInformationMessage(
                                 'API Mesh configuration changed. Redeploy mesh to apply changes.',
                                 'Redeploy Mesh',
-                                'Later'
+                                'Later',
                             ).then(selection => {
                                 if (selection === 'Redeploy Mesh') {
                                     vscode.commands.executeCommand('demoBuilder.deployMesh');
@@ -201,7 +220,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                             await vscode.commands.executeCommand('demoBuilder._internal.markRestartNotificationShown');
                             vscode.window.showInformationMessage(
                                 'Restart the demo to apply configuration changes.',
-                                'Restart Demo'
+                                'Restart Demo',
                             ).then(selection => {
                                 if (selection === 'Restart Demo') {
                                     vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
@@ -232,7 +251,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         comm.on('get-components-data', async () => {
             const componentsPath = path.join(this.context.extensionPath, 'templates', 'components.json');
             const componentsContent = await fs.readFile(componentsPath, 'utf-8');
-            return JSON.parse(componentsContent);
+            const componentsData = parseJSON<Record<string, unknown>>(componentsContent);
+            if (!componentsData) {
+                throw new Error('Failed to parse components.json');
+            }
+            return componentsData;
         });
     }
 
@@ -255,7 +278,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             // Next.js uses .env.local, others use .env
             const possibleEnvFiles = [
                 path.join(instance.path, '.env.local'),
-                path.join(instance.path, '.env')
+                path.join(instance.path, '.env'),
             ];
 
             let loaded = false;
@@ -295,7 +318,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             }
 
             // Parse KEY=VALUE
-            const match = trimmed.match(/^([^=]+)=(.*)$/);
+            const match = /^([^=]+)=(.*)$/.exec(trimmed);
             if (match) {
                 const key = match[1].trim();
                 let value = match[2].trim();
@@ -316,7 +339,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     /**
      * Register programmatic writes to suppress file watcher notifications
      */
-    private async registerProgrammaticWrites(project: Project, componentConfigs: any): Promise<void> {
+    private async registerProgrammaticWrites(project: Project, componentConfigs: ComponentConfigs): Promise<void> {
         const filePaths: string[] = [];
         
         // Project root .env
@@ -340,7 +363,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     /**
      * Regenerate .env files for project and components
      */
-    private async regenerateEnvFiles(project: Project, componentConfigs: any): Promise<void> {
+    private async regenerateEnvFiles(project: Project, componentConfigs: ComponentConfigs): Promise<void> {
         try {
             // Regenerate project root .env file
             await this.generateProjectEnvFile(project, componentConfigs);
@@ -352,7 +375,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                         await this.generateComponentEnvFile(
                             instance.path,
                             componentId,
-                            componentConfigs[componentId]
+                            componentConfigs[componentId],
                         );
                     }
                 }
@@ -368,7 +391,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     /**
      * Generate project root .env file
      */
-    private async generateProjectEnvFile(project: Project, componentConfigs: any): Promise<void> {
+    private async generateProjectEnvFile(project: Project, componentConfigs: ComponentConfigs): Promise<void> {
         const envPath = path.join(project.path, '.env');
         
         const lines: string[] = [
@@ -376,13 +399,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             '# Generated: ' + new Date().toISOString(),
             '',
             `PROJECT_NAME=${project.name}`,
-            ''
+            '',
         ];
 
         // Add project-wide configuration from componentConfigs
         // Collect all unique keys across all components
         const allKeys = new Set<string>();
-        Object.values(componentConfigs).forEach((config: any) => {
+        Object.values(componentConfigs).forEach((config) => {
             Object.keys(config).forEach(key => allKeys.add(key));
         });
 
@@ -390,7 +413,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         // Skip empty, null, or undefined values
         allKeys.forEach(key => {
             // Find first component that has this key with a non-empty value
-            for (const config of Object.values(componentConfigs) as any[]) {
+            for (const config of Object.values(componentConfigs)) {
                 const value = config[key];
                 if (value !== undefined && value !== null && value !== '') {
                     lines.push(`${key}=${value}`);
@@ -409,7 +432,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     private async generateComponentEnvFile(
         componentPath: string,
         componentId: string,
-        config: Record<string, any>
+        config: Record<string, string>,
     ): Promise<void> {
         // Next.js uses .env.local, others use .env
         const envFileName = componentId.includes('nextjs') ? '.env.local' : '.env';
@@ -419,7 +442,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             `# ${componentId} - Environment Configuration`,
             '# Generated by Demo Builder',
             '# Generated: ' + new Date().toISOString(),
-            ''
+            '',
         ];
 
         // Add all configuration values for this component

@@ -1,26 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
     View,
     Flex,
     Heading,
     Text,
-    Grid,
     Divider,
-    ActionButton,
-    Button,
-    DialogTrigger,
-    Dialog,
-    Content,
-    ButtonGroup,
-    AlertDialog,
-    Well
+    ActionButton
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Book from '@spectrum-icons/workflow/Book';
 import Settings from '@spectrum-icons/workflow/Settings';
-import Star from '@spectrum-icons/workflow/Star';
 import { vscode } from '../app/vscodeApi';
+import { useFocusTrap } from '@/hooks';
+import { GridLayout } from '@/components/templates';
 import { cn } from '../utils/classNames';
 
 interface WelcomeScreenProps {
@@ -28,88 +21,36 @@ interface WelcomeScreenProps {
 }
 
 export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
+    const containerRef = useFocusTrap<HTMLDivElement>({
+        enabled: true,
+        autoFocus: true
+    });
+
     useEffect(() => {
-        // Request initialization
         vscode.postMessage('ready');
     }, []);
 
-    const handleCreateNew = () => {
-        console.log('handleCreateNew called');
-        console.log('Sending create-new message');
+    // Action handlers with useCallback
+    const handleCreateNew = useCallback(() => {
         vscode.postMessage('create-new');
-    };
-
-    const handleOpenExisting = () => {
-        vscode.postMessage('open-project');
-    };
-
-    const handleOpenDocs = () => {
-        vscode.postMessage('open-docs');
-    };
-
-    const handleOpenSettings = () => {
-        vscode.postMessage('open-settings');
-    };
-
-    // Focus trap for Tab navigation — matches wizard implementation
-    useEffect(() => {
-        const selector = 'button:not([disabled]):not([tabindex="-1"]), ' +
-            'input:not([disabled]):not([tabindex="-1"]), ' +
-            'select:not([disabled]):not([tabindex="-1"]), ' +
-            'textarea:not([disabled]):not([tabindex="-1"]), ' +
-            '[tabindex]:not([tabindex="-1"]):not([tabindex="0"])';
-
-        const focusDefaultElement = () => {
-            // Focus first element (autoFocus on Create button handles initial focus)
-            const focusableElements = document.querySelectorAll(selector);
-            if (focusableElements.length > 0) {
-                const first = focusableElements[0] as HTMLElement;
-                if (document.activeElement === document.body || !document.activeElement) {
-                    first.focus();
-                }
-            }
-        };
-
-        // Ensure focus starts inside the webview
-        const focusTimeout = window.setTimeout(focusDefaultElement, 0);
-        window.addEventListener('focus', focusDefaultElement);
-
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Tab') {
-                const focusableElements = document.querySelectorAll(selector);
-
-                const focusableArray = Array.from(focusableElements) as HTMLElement[];
-                if (focusableArray.length === 0) {
-                    return;
-                }
-
-                const currentIndex = focusableArray.indexOf(document.activeElement as HTMLElement);
-
-                e.preventDefault();
-
-                if (e.shiftKey) {
-                    const nextIndex = currentIndex <= 0 ? focusableArray.length - 1 : currentIndex - 1;
-                    focusableArray[nextIndex].focus();
-                } else {
-                    const nextIndex = currentIndex >= focusableArray.length - 1 ? 0 : currentIndex + 1;
-                    focusableArray[nextIndex].focus();
-                }
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.clearTimeout(focusTimeout);
-            window.removeEventListener('focus', focusDefaultElement);
-            document.removeEventListener('keydown', handleKeyDown);
-        };
     }, []);
 
-    // Main welcome screen
+    const handleOpenExisting = useCallback(() => {
+        vscode.postMessage('open-project');
+    }, []);
+
+    const handleOpenDocs = useCallback(() => {
+        vscode.postMessage('open-docs');
+    }, []);
+
+    const handleOpenSettings = useCallback(() => {
+        vscode.postMessage('open-settings');
+    }, []);
+
     return (
         <View height="100vh" backgroundColor="gray-50">
             <Flex direction="column" alignItems="center" justifyContent="center" height="100%">
-                <View width="100%" maxWidth="900px" padding="size-400">
+                <View ref={containerRef} width="100%" maxWidth="900px" padding="size-400">
                     {/* Header */}
                     <View marginBottom="size-400">
                         <Flex justifyContent="space-between" alignItems="center">
@@ -137,10 +78,7 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
                     <Divider size="S" marginBottom="size-400" />
 
                     {/* Main Actions */}
-                    <Grid
-                        columns={['1fr', '1fr']}
-                        gap="size-300"
-                    >
+                    <GridLayout columns={2} gap="size-300">
                         {/* Create New Project Card */}
                         <ActionButton
                             onPress={handleCreateNew}
@@ -175,7 +113,7 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
                                 Continue working on a demo
                             </Text>
                         </ActionButton>
-                    </Grid>
+                    </GridLayout>
                 </View>
             </Flex>
         </View>

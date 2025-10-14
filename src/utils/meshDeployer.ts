@@ -1,8 +1,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { ServiceLocator } from '../services/serviceLocator';
 import { Project } from '../types';
 import { Logger } from './logger';
-import { getExternalCommandManager } from '../extension';
+import { validateMeshId } from './securityValidation';
 
 export class MeshDeployer {
     private logger: Logger;
@@ -23,13 +24,13 @@ export class MeshDeployer {
 
             // Deploy mesh
             this.logger.info('Deploying API Mesh...');
-            const commandManager = getExternalCommandManager();
+            const commandManager = ServiceLocator.getCommandExecutor();
             const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:create mesh.json', {
-                cwd: project.path
+                cwd: project.path,
             });
 
             // Extract endpoint from output
-            const endpointMatch = stdout.match(/https:\/\/[^\s]+/);
+            const endpointMatch = /https:\/\/[^\s]+/.exec(stdout);
             const endpoint = endpointMatch ? endpointMatch[0] : undefined;
 
             if (endpoint) {
@@ -44,8 +45,8 @@ export class MeshDeployer {
         }
     }
 
-    private generateMeshConfig(project: Project): any {
-        const sources: any[] = [];
+    private generateMeshConfig(project: Project): Record<string, unknown> {
+        const sources: Record<string, unknown>[] = [];
 
         // Add main Commerce GraphQL source
         if (project.commerce) {
@@ -53,9 +54,9 @@ export class MeshDeployer {
                 name: 'magento',
                 handler: {
                     graphql: {
-                        endpoint: `${project.commerce.instance.url}/graphql`
-                    }
-                }
+                        endpoint: `${project.commerce.instance.url}/graphql`,
+                    },
+                },
             });
         }
 
@@ -67,10 +68,10 @@ export class MeshDeployer {
                     graphql: {
                         endpoint: project.commerce.services.catalog.endpoint,
                         operationHeaders: {
-                            'x-api-key': '{context.headers[\'x-api-key\']}'
-                        }
-                    }
-                }
+                            'x-api-key': '{context.headers[\'x-api-key\']}',
+                        },
+                    },
+                },
             });
         }
 
@@ -82,17 +83,17 @@ export class MeshDeployer {
                     graphql: {
                         endpoint: project.commerce.services.liveSearch.endpoint,
                         operationHeaders: {
-                            'x-api-key': '{context.headers[\'x-api-key\']}'
-                        }
-                    }
-                }
+                            'x-api-key': '{context.headers[\'x-api-key\']}',
+                        },
+                    },
+                },
             });
         }
 
         return {
             meshConfig: {
-                sources
-            }
+                sources,
+            },
         };
     }
 
@@ -103,12 +104,12 @@ export class MeshDeployer {
             
             await fs.writeFile(meshPath, JSON.stringify(meshConfig, null, 2));
             
-            const commandManager = getExternalCommandManager();
+            const commandManager = ServiceLocator.getCommandExecutor();
             const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:update mesh.json', {
-                cwd: project.path
+                cwd: project.path,
             });
 
-            const endpointMatch = stdout.match(/https:\/\/[^\s]+/);
+            const endpointMatch = /https:\/\/[^\s]+/.exec(stdout);
             const endpoint = endpointMatch ? endpointMatch[0] : undefined;
 
             if (endpoint) {
@@ -125,7 +126,11 @@ export class MeshDeployer {
 
     public async delete(meshId: string): Promise<boolean> {
         try {
-            const commandManager = getExternalCommandManager();
+            // SECURITY: Validate meshId before using in shell command to prevent command injection
+            // Example attack: meshId = "abc123; rm -rf / #"
+            validateMeshId(meshId);
+
+            const commandManager = ServiceLocator.getCommandExecutor();
             await commandManager.executeAdobeCLI(`aio api-mesh:delete ${meshId}`);
             this.logger.info(`Mesh ${meshId} deleted`);
             return true;

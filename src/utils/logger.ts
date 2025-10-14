@@ -21,45 +21,45 @@ export class Logger {
         }
     }
 
-    public setOutputChannel(_channel: any): void {
+    public setOutputChannel(_channel: unknown): void {
         // No-op for backward compatibility
         // DebugLogger manages its own channels
     }
 
     public error(message: string, error?: Error): void {
         if (!this.debugLogger) return;
-        
+
         // Log to main channel
         this.debugLogger.error(message, error);
     }
 
-    public warn(message: string, ...args: any[]): void {
+    public warn(message: string, ...args: unknown[]): void {
         if (!this.debugLogger) return;
-        
+
         // Log to main channel
         this.debugLogger.warn(message);
-        
+
         // Log additional args to debug channel if present
         if (args.length > 0) {
             this.debugLogger.debug(`Warning details for: ${message}`, args);
         }
     }
 
-    public info(message: string, ...args: any[]): void {
+    public info(message: string, ...args: unknown[]): void {
         if (!this.debugLogger) return;
-        
+
         // Log to main channel
         this.debugLogger.info(message);
-        
+
         // Log additional args to debug channel if present
         if (args.length > 0) {
             this.debugLogger.debug(`Info details for: ${message}`, args);
         }
     }
 
-    public debug(message: string, ...args: any[]): void {
+    public debug(message: string, ...args: unknown[]): void {
         if (!this.debugLogger) return;
-        
+
         // Debug messages go to debug channel
         this.debugLogger.debug(message, args.length > 0 ? args : undefined);
     }

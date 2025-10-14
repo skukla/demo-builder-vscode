@@ -18,7 +18,7 @@ import { LoadingDisplay } from '../shared/LoadingDisplay';
 import { ConfigurationSummary } from '../shared/ConfigurationSummary';
 import { FadeTransition } from '../shared/FadeTransition';
 import { WizardState, Workspace, WizardStep } from '../../types';
-import { useDebouncedLoading } from '../../utils/useDebouncedLoading';
+import { useDebouncedLoading } from '@/hooks';
 
 interface AdobeWorkspaceStepProps {
     state: WizardState;

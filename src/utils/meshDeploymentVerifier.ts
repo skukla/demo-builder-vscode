@@ -3,8 +3,10 @@
  * Used by both project creation wizard and manual deploy command
  */
 
-import { getExternalCommandManager } from '../extension';
-import { Logger } from './logger';
+import { ServiceLocator } from '../services/serviceLocator';
+import { Logger } from '../types/logger';
+import { parseJSON } from '../types/typeGuards';
+import { validateMeshId } from './securityValidation';
 import { TIMEOUTS } from './timeoutConfig';
 
 export interface MeshDeploymentResult {
@@ -28,7 +30,7 @@ export interface VerificationOptions {
  * This function waits until Adobe confirms deployment is complete
  */
 export async function waitForMeshDeployment(
-    options: VerificationOptions = {}
+    options: VerificationOptions = {},
 ): Promise<MeshDeploymentResult> {
     const pollInterval = options.pollInterval ?? 10000;     // 10 seconds between attempts
     const initialWait = options.initialWait ?? 20000;       // 20 seconds initial wait
@@ -40,10 +42,10 @@ export async function waitForMeshDeployment(
     
     const {
         onProgress,
-        logger
+        logger,
     } = options;
     
-    const commandManager = getExternalCommandManager();
+    const commandManager = ServiceLocator.getCommandExecutor();
     
     // Initial wait - mesh won't be ready immediately after update command
     logger?.info(`[Mesh Verification] Waiting ${initialWait / 1000}s for mesh provisioning...`);
@@ -78,15 +80,19 @@ export async function waitForMeshDeployment(
                     timeout: 30000,
                     configureTelemetry: false,
                     useNodeVersion: null,
-                    enhancePath: true
-                }
+                    enhancePath: true,
+                },
             );
             
             if (verifyResult.code === 0) {
                 // Parse JSON response
-                const jsonMatch = verifyResult.stdout.match(/\{[\s\S]*\}/);
+                const jsonMatch = /\{[\s\S]*\}/.exec(verifyResult.stdout);
                 if (jsonMatch) {
-                    const meshData = JSON.parse(jsonMatch[0]);
+                    const meshData = parseJSON<{ meshStatus?: string; meshId?: string; endpoint?: string; error?: string }>(jsonMatch[0]);
+                    if (!meshData) {
+                        logger?.warn('[Mesh Verification] Failed to parse mesh data');
+                        continue;
+                    }
                     const meshStatus = meshData.meshStatus?.toLowerCase();
                     
                     logger?.info(`[Mesh Verification] Status: ${meshStatus || 'unknown'}`);
@@ -110,7 +116,7 @@ export async function waitForMeshDeployment(
                         logger?.error(`[Mesh Verification] ${error}`);
                         return {
                             deployed: false,
-                            error
+                            error,
                         };
                     }
                     // Otherwise continue polling (status is pending/building/etc)
@@ -127,14 +133,14 @@ export async function waitForMeshDeployment(
         logger?.warn(`[Mesh Verification] ${error}`);
         return {
             deployed: false,
-            error
+            error,
         };
     }
     
     return {
         deployed: true,
         meshId: deployedMeshId,
-        endpoint: deployedEndpoint
+        endpoint: deployedEndpoint,
     };
 }
 
@@ -142,29 +148,32 @@ export async function waitForMeshDeployment(
  * Get mesh endpoint using aio api-mesh:describe
  */
 async function getEndpoint(meshId: string, logger?: Logger): Promise<string | undefined> {
+    // SECURITY: Validate meshId before using in URL construction (defense-in-depth)
+    validateMeshId(meshId);
+
     try {
-        const commandManager = getExternalCommandManager();
+        const commandManager = ServiceLocator.getCommandExecutor();
         const result = await commandManager.execute(
             'aio api-mesh:describe',
             {
                 timeout: 30000,
                 configureTelemetry: false,
                 useNodeVersion: null,
-                enhancePath: true
-            }
+                enhancePath: true,
+            },
         );
 
         if (result.code === 0 && result.stdout) {
             // Parse the output to extract endpoint
-            const endpointMatch = result.stdout.match(/endpoint[:\s]+([^\s\n]+)/i);
+            const endpointMatch = /endpoint[:\s]+([^\s\n]+)/i.exec(result.stdout);
             if (endpointMatch && endpointMatch[1]) {
                 return endpointMatch[1].trim();
             }
 
             // Try JSON parsing
             try {
-                const meshData = JSON.parse(result.stdout);
-                if (meshData.endpoint) {
+                const meshData = parseJSON<{ endpoint?: string }>(result.stdout);
+                if (meshData?.endpoint) {
                     return meshData.endpoint;
                 }
             } catch {

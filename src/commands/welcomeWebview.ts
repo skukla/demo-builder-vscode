@@ -1,7 +1,7 @@
-import * as vscode from 'vscode';
 import * as path from 'path';
-import { BaseCommand } from './baseCommand';
+import * as vscode from 'vscode';
 import { setLoadingState } from '../utils/loadingHTML';
+import { BaseCommand } from './baseCommand';
 
 export class WelcomeWebviewCommand extends BaseCommand {
     // Singleton: Track the active Welcome panel to prevent duplicates
@@ -59,9 +59,9 @@ export class WelcomeWebviewCommand extends BaseCommand {
                     enableScripts: true,
                     retainContextWhenHidden: true,
                     localResourceRoots: [
-                        vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'webview'))
-                    ]
-                }
+                        vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'webview')),
+                    ],
+                },
             );
             
             // Register in singleton
@@ -76,7 +76,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
                 this.panel,
                 () => this.getWebviewContent(),
                 'Loading Demo Builder...',
-                this.logger
+                this.logger,
             );
             this.logger.debug('[UI] Loading state set, content should be loaded');
             
@@ -90,7 +90,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
                         await this.sendRawMessage({
                             id: this.generateMessageId(),
                             type: '__handshake_complete__',
-                            timestamp: Date.now()
+                            timestamp: Date.now(),
                         });
                         this.handshakeComplete = true;
                         this.logger.debug('[UI] Handshake complete');
@@ -100,7 +100,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
                     await this.handleWebviewMessage(message);
                 },
                 undefined,
-                this.context.subscriptions
+                this.context.subscriptions,
             );
             
             // Initiate handshake protocol
@@ -108,7 +108,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
             await this.sendRawMessage({
                 id: this.generateMessageId(),
                 type: '__extension_ready__',
-                timestamp: Date.now()
+                timestamp: Date.now(),
             });
 
             // Clean up on dispose
@@ -120,7 +120,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
                     this.logger.debug('[UI] Welcome panel disposed');
                 },
                 undefined,
-                this.context.subscriptions
+                this.context.subscriptions,
             );
 
         } catch (error) {
@@ -141,7 +141,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
         }
         
         const bundleUri = this.panel.webview.asWebviewUri(
-            vscode.Uri.file(bundlePath)
+            vscode.Uri.file(bundlePath),
         );
         
         const nonce = this.getNonce();
@@ -153,7 +153,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' 'unsafe-eval'; style-src 'unsafe-inline' ${this.panel!.webview.cspSource}; img-src data: https: ${this.panel!.webview.cspSource}; font-src data:;">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' 'unsafe-eval'; style-src 'unsafe-inline' ${this.panel.webview.cspSource}; img-src data: https: ${this.panel.webview.cspSource}; font-src data:;">
             <title>Demo Builder</title>
             <style>
                 :root {
@@ -232,7 +232,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
                     if (e.filename && e.filename.includes('welcome-bundle.js')) {
                         console.warn('Welcome bundle not found, falling back to main bundle');
                         const script = document.createElement('script');
-                        script.src = '${this.panel!.webview.asWebviewUri(vscode.Uri.file(path.join(webviewPath, 'main-bundle.js')))}';
+                        script.src = '${this.panel.webview.asWebviewUri(vscode.Uri.file(path.join(webviewPath, 'main-bundle.js')))}';
                         script.nonce = '${nonce}';
                         document.body.appendChild(script);
                     }
@@ -260,54 +260,56 @@ export class WelcomeWebviewCommand extends BaseCommand {
         // Send initialization data
         await this.sendMessage('init', {
             theme: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
-            workspacePath: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+            workspacePath: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
         });
         
         this.logger.debug('Initial data sent to webview');
     }
 
-    private async handleWebviewMessage(message: any): Promise<void> {
+    private async handleWebviewMessage(message: { type: string; payload?: unknown }): Promise<void> {
         const { type, payload } = message;
         this.logger.debug(`Welcome screen action: ${type}`);
 
         switch (type) {
-        case 'ready':
-            await this.sendInitialData();
-            break;
+            case 'ready':
+                await this.sendInitialData();
+                break;
 
-        case 'create-new':
+            case 'create-new':
             // Close welcome panel first, then open wizard (makes it appear like tab replacement)
-            this.logger.info('[Project Creation] Starting wizard from welcome screen');
+                this.logger.info('[Project Creation] Starting wizard from welcome screen');
             
-            // Dispose welcome panel BEFORE opening wizard for seamless transition
-            // Welcome will auto-reopen via extension.ts logic if wizard closes without completion
-            WelcomeWebviewCommand.disposeActivePanel();
+                // Dispose welcome panel BEFORE opening wizard for seamless transition
+                // Welcome will auto-reopen via extension.ts logic if wizard closes without completion
+                WelcomeWebviewCommand.disposeActivePanel();
             
-            // Small delay to ensure disposal completes before new panel opens
-            await new Promise(resolve => setTimeout(resolve, 50));
+                // Small delay to ensure disposal completes before new panel opens
+                await new Promise(resolve => setTimeout(resolve, 50));
             
-            await vscode.commands.executeCommand('demoBuilder.createProject');
-            break;
+                await vscode.commands.executeCommand('demoBuilder.createProject');
+                break;
 
-        case 'open-project':
-            await this.browseForProject();
-            break;
+            case 'open-project':
+                await this.browseForProject();
+                break;
 
-        case 'import-project':
-            await this.importProject();
-            break;
+            case 'import-project':
+                await this.importProject();
+                break;
 
-        case 'open-docs':
-            vscode.env.openExternal(vscode.Uri.parse('https://docs.adobe.com/demo-builder'));
-            break;
+            case 'open-docs':
+                vscode.env.openExternal(vscode.Uri.parse('https://docs.adobe.com/demo-builder'));
+                break;
 
-        case 'open-settings':
-            vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder');
-            break;
+            case 'open-settings':
+                vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder');
+                break;
 
-        case 'log':
-            this.logger.info(`[Welcome] ${payload.message}`);
-            break;
+            case 'log':
+                if (payload && typeof payload === 'object' && 'message' in payload) {
+                    this.logger.info(`[Welcome] ${(payload as { message: string }).message}`);
+                }
+                break;
         }
     }
 
@@ -315,20 +317,20 @@ export class WelcomeWebviewCommand extends BaseCommand {
         return `ext-${Date.now()}-${++this.messageIdCounter}`;
     }
     
-    private async sendRawMessage(message: any): Promise<void> {
+    private async sendRawMessage(message: Record<string, unknown>): Promise<void> {
         if (this.panel) {
             await this.panel.webview.postMessage(message);
         }
     }
-    
-    private async sendMessage(type: string, payload?: any): Promise<void> {
+
+    private async sendMessage(type: string, payload?: unknown): Promise<void> {
         if (this.panel) {
             // Send message with proper format for new vscodeApi
             await this.sendRawMessage({
                 id: this.generateMessageId(),
                 type,
                 payload,
-                timestamp: Date.now()
+                timestamp: Date.now(),
             });
         }
     }
@@ -369,12 +371,12 @@ export class WelcomeWebviewCommand extends BaseCommand {
             label: project.name,
             description: project.path,
             detail: `Last modified: ${project.lastModified.toLocaleDateString()}`,
-            projectPath: project.path
+            projectPath: project.path,
         }));
         
         const selected = await vscode.window.showQuickPick(items, {
             placeHolder: 'Select a project to open',
-            title: 'Open Existing Project'
+            title: 'Open Existing Project',
         });
         
         if (selected) {
@@ -390,10 +392,10 @@ export class WelcomeWebviewCommand extends BaseCommand {
             canSelectMany: false,
             filters: {
                 'Console Config': ['json'],
-                'All Files': ['*']
+                'All Files': ['*'],
             },
             openLabel: 'Import',
-            title: 'Import Adobe Console Configuration'
+            title: 'Import Adobe Console Configuration',
         });
 
         if (result && result.length > 0) {
