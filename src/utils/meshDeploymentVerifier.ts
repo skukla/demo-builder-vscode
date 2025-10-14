@@ -6,7 +6,7 @@
 import { ServiceLocator } from '../services/serviceLocator';
 import { Logger } from '../types/logger';
 import { parseJSON } from '../types/typeGuards';
-import { validateMeshId } from './securityValidation';
+import { validateMeshId } from '@/shared/validation';
 import { TIMEOUTS } from './timeoutConfig';
 
 export interface MeshDeploymentResult {

@@ -4,7 +4,7 @@ import * as sdk from '@adobe/aio-lib-console';
 import { getToken } from '@adobe/aio-lib-ims';
 import { getLogger } from '../../shared/logging';
 import { Logger } from '../../shared/logging';
-import { validateAccessToken } from '../securityValidation';
+import { validateAccessToken } from '@/shared/validation';
 import { TIMEOUTS } from '../timeoutConfig';
 
 /**

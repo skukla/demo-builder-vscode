@@ -9,7 +9,7 @@
  * - cancel-auth-polling: User cancels authentication
  */
 
-import { validateProjectPath, validateURL } from '../../utils/securityValidation';
+import { validateProjectPath, validateURL } from '@/shared/validation';
 import { HandlerContext } from './HandlerContext';
 
 /**

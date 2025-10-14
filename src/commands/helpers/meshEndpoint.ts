@@ -5,7 +5,7 @@
 import { Logger } from '../../types/logger';
 import { parseJSON } from '../../types/typeGuards';
 import { CommandExecutor } from '@/shared/command-execution';
-import { validateMeshId } from '../../utils/securityValidation';
+import { validateMeshId } from '@/shared/validation';
 import { TIMEOUTS } from '../../utils/timeoutConfig';
 
 /**

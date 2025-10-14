@@ -11,7 +11,7 @@
 import { ServiceLocator } from '../../services/serviceLocator';
 import { parseJSON } from '../../types/typeGuards';
 import { withTimeout } from '../../utils/promiseUtils';
-import { validateProjectId } from '../../utils/securityValidation';
+import { validateProjectId } from '@/shared/validation';
 import { TIMEOUTS } from '../../utils/timeoutConfig';
 import { HandlerContext } from './HandlerContext';
 

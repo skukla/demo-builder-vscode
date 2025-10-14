@@ -8,4 +8,4 @@ export { generateComponentEnvFile } from './envFileGenerator';
 export { getSetupInstructions, SetupInstruction } from './setupInstructions';
 export { getEndpoint } from './meshEndpoint';
 export { deployMeshComponent, MeshDeploymentResult } from './meshDeployment';
-export { validateFieldUI as validateField, validateProjectNameUI as validateProjectName, validateCommerceUrlUI as validateCommerceUrl, ValidationResult } from '../../utils/fieldValidation';
+export { validateFieldUI as validateField, validateProjectNameUI as validateProjectName, validateCommerceUrlUI as validateCommerceUrl, ValidationResult } from '@/shared/validation';

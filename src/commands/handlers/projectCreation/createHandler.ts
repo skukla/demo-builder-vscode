@@ -11,7 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '../../../services/serviceLocator';
 import { withTimeout } from '../../../utils/promiseUtils';
-import { validateProjectNameSecurity as validateProjectName } from '../../../utils/securityValidation';
+import { validateProjectNameSecurity as validateProjectName } from '@/shared/validation';
 import { TIMEOUTS } from '../../../utils/timeoutConfig';
 import { HandlerContext } from '../HandlerContext';
 import { executeProjectCreation } from './executor';

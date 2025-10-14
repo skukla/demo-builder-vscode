@@ -7,7 +7,7 @@
  */
 
 import { withTimeout } from '../../utils/promiseUtils';
-import { validateWorkspaceId } from '../../utils/securityValidation';
+import { validateWorkspaceId } from '@/shared/validation';
 import { TIMEOUTS } from '../../utils/timeoutConfig';
 import { HandlerContext } from './HandlerContext';
 

@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Project, ComponentInstance } from '../types';
 import { setLoadingState } from '../utils/loadingHTML';
-import { validateURL } from '../utils/securityValidation';
+import { validateURL } from '@/shared/validation';
 import { detectMeshChanges, detectFrontendChanges } from '../utils/stalenessDetector';
 import { BaseCommand } from './baseCommand';
 

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Logger } from '../shared/logging';
+import { Logger } from '@/shared/logging';
 
 export class CommerceValidator {
     private logger: Logger;

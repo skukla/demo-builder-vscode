@@ -2,7 +2,7 @@ import { parseJSON } from '../../types/typeGuards';
 import type { CommandExecutor } from '@/shared/command-execution';
 import { getLogger } from '../../shared/logging';
 import { Logger } from '../../shared/logging';
-import { validateOrgId, validateProjectId, validateWorkspaceId } from '../securityValidation';
+import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/shared/validation';
 import { StepLogger } from '../../shared/logging';
 import { TIMEOUTS } from '../timeoutConfig';
 import type { AdobeSDKClient } from './adobeSDKClient';
