@@ -11,8 +11,8 @@
 import * as vscode from 'vscode';
 import { ServiceLocator } from '../../../services/serviceLocator';
 import { InstallStep } from '@/features/prerequisites/services/prerequisitesManager';
-import { TIMEOUTS } from '../../../utils/timeoutConfig';
-import { HandlerContext } from '../HandlerContext';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { HandlerContext } from '../../../commands/handlers/HandlerContext';
 import { getRequiredNodeVersions, getNodeVersionMapping } from './shared';
 
 /**

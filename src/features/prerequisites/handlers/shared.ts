@@ -6,8 +6,8 @@
  */
 
 import { ServiceLocator } from '../../../services/serviceLocator';
-import { TIMEOUTS } from '../../../utils/timeoutConfig';
-import { HandlerContext } from '../HandlerContext';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { HandlerContext } from '../../../commands/handlers/HandlerContext';
 
 /**
  * Get Node version mapping from component selection

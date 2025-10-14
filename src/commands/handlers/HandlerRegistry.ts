@@ -11,7 +11,7 @@ import { HandlerContext, MessageHandler } from './HandlerContext';
 // Import all handler modules
 import * as lifecycle from './lifecycleHandlers';
 import * as mesh from '@/features/mesh/handlers';
-import * as prerequisites from './prerequisites';
+import * as prerequisites from '@/features/prerequisites/handlers';
 import * as creation from './projectCreation';
 import * as projects from './projectHandlers';
 import * as workspaces from './workspaceHandlers';

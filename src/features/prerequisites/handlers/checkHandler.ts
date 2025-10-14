@@ -8,8 +8,8 @@
  */
 
 import { ServiceLocator } from '../../../services/serviceLocator';
-import { TIMEOUTS } from '../../../utils/timeoutConfig';
-import { HandlerContext } from '../HandlerContext';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { HandlerContext } from '../../../commands/handlers/HandlerContext';
 import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled } from './shared';
 
 /**
