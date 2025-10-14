@@ -4,9 +4,15 @@
 
 > **Note**: This is the twelfth beta iteration toward v1.0.0 stable release.
 
-## 🐛 Fixed Per-Node-Version Plugin Checks
+## 🐛 Bug Fixes
+
+### Fixed Per-Node-Version Plugin Checks
 
 Fixed a critical bug where aio-cli plugin checks (like `api-mesh`) were running under the wrong Node version.
+
+### Improved Authentication Error Logging
+
+Added detailed error logging for Adobe authentication failures to help diagnose login issues.
 
 ### The Problem
 
