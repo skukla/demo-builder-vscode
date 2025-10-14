@@ -2435,7 +2435,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             onProgress?.('Creating API Mesh...', 'Submitting configuration to Adobe');
 		
             let lastOutput = '';
-            const createResult = await commandManager.execute(
+            const createResult = await commandManager.executeAdobeCLI(
                 `aio api-mesh create "${meshConfigPath}" --autoConfirmAction`,
                 {
                     streaming: true,
@@ -2455,10 +2455,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                             onProgress?.('Creating API Mesh...', 'Finalizing mesh setup');
                         }
                         // Note: Don't show raw CLI output - it may contain masked credentials (*******) or other noise
-                    },
-                    configureTelemetry: false,
-                    useNodeVersion: null,
-                    enhancePath: true
+                    }
                 }
             );
 			
@@ -2974,10 +2971,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     this.logger.debug('[Project Creation] Mesh was created in this session and did not exist before - safe to delete');
                     try {
                         const commandManager = getExternalCommandManager();
-                        const deleteResult = await commandManager.execute('aio api-mesh:delete --autoConfirmAction', {
-                            timeout: TIMEOUTS.API_MESH_UPDATE,
-                            configureTelemetry: false,
-                            enhancePath: true
+                        const deleteResult = await commandManager.executeAdobeCLI('aio api-mesh:delete --autoConfirmAction', {
+                            timeout: TIMEOUTS.API_MESH_UPDATE
                         });
                         
                         if (deleteResult.code === 0) {
@@ -3231,10 +3226,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         this.logger.debug('[Project Creation] Fetching mesh info via describe...');
                         try {
                             const commandManager = getExternalCommandManager();
-                            const describeResult = await commandManager.execute('aio api-mesh:describe', {
-                                timeout: 30000,
-                                configureTelemetry: false,
-                                enhancePath: true
+                            const describeResult = await commandManager.executeAdobeCLI('aio api-mesh:describe', {
+                                timeout: 30000
                             });
                                 
                             if (describeResult.code === 0) {
