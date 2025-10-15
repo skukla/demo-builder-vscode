@@ -1,6 +1,6 @@
 /**
  * Detects changes that require API Mesh redeployment
- * 
+ *
  * Tracks:
  * - Environment variables used in mesh.json
  * - Source file hashes (resolvers, schemas, config)
@@ -13,6 +13,9 @@ import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
 import { Logger } from '@/shared/logging';
 import { getFrontendEnvVars, updateFrontendState } from '@/shared/state';
+import type { MeshState, MeshChanges } from './types';
+
+export type { MeshState, MeshChanges };
 
 // Create logger instance for this module
 const logger = new Logger('MeshStaleness');
@@ -30,21 +33,6 @@ const MESH_ENV_VARS = [
     'ADOBE_COMMERCE_STORE_VIEW_CODE',
     'ADOBE_COMMERCE_STORE_CODE',
 ];
-
-export interface MeshState {
-    envVars: Record<string, string>;
-    sourceHash: string | null;
-    lastDeployed: Date | null;
-}
-
-export interface MeshChanges {
-    hasChanges: boolean;
-    envVarsChanged: boolean;
-    sourceFilesChanged: boolean;
-    changedEnvVars: string[];
-    unknownDeployedState?: boolean;  // True if meshState.envVars was empty and couldn't fetch deployed config
-    shouldSaveProject?: boolean;  // True if we populated meshState.envVars and caller should save
-}
 
 /**
  * Get current mesh-related environment variables from component config

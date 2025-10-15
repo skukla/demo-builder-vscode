@@ -6,13 +6,9 @@
 import { ServiceLocator } from '../../../services/serviceLocator';
 import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
+import type { MeshVerificationResult } from './types';
 
-export interface MeshVerificationResult {
-    exists: boolean;
-    meshId?: string;
-    endpoint?: string;
-    error?: string;
-}
+export type { MeshVerificationResult };
 
 /**
  * Verify that a mesh actually exists in Adobe I/O

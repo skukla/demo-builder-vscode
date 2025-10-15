@@ -8,13 +8,9 @@ import { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 import { CommandExecutor } from '@/shared/command-execution';
 import { TIMEOUTS } from '@/utils/timeoutConfig';
+import type { MeshDeploymentResult } from './types';
 
-export interface MeshDeploymentResult {
-    success: boolean;
-    meshId?: string;
-    endpoint?: string;
-    error?: string;
-}
+export type { MeshDeploymentResult };
 
 /**
  * Deploy mesh component from cloned repository
