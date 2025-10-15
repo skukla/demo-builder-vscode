@@ -50,13 +50,16 @@ export abstract class BaseCommand {
     }
 
     /**
-     * Show a temporary success message in status bar (auto-dismissing)
+     * Show a temporary success message in notification popup (auto-dismissing)
      * Use for simple confirmations that don't require user interaction
      * @param message Success message to display
-     * @param timeout Milliseconds to show (default 5000)
+     * @param timeout Milliseconds to show in status bar (default 5000)
      */
     protected showSuccessMessage(message: string, timeout: number = 5000): void {
         this.logger.info(message);
+        // Show prominent notification popup (auto-dismisses)
+        vscode.window.showInformationMessage(`✅ ${message}`);
+        // Also show in status bar as secondary indicator
         vscode.window.setStatusBarMessage(`✅ ${message}`, timeout);
     }
 
