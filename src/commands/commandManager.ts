@@ -3,7 +3,7 @@ import { StatusBarManager } from '../providers/statusBar';
 import { Project } from '../types';
 import { Logger } from '../shared/logging';
 import { StateManager } from '../shared/state';
-import { CheckUpdatesCommand } from './checkUpdates';
+import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { ConfigureCommand } from './configure';
 import { ConfigureProjectWebviewCommand } from './configureProjectWebview';
 import { CreateProjectWebviewCommand } from './createProjectWebview';
