@@ -10,7 +10,7 @@ import { ProgressUnifier } from '../utils/progressUnifier';
 import { WebviewCommunicationManager } from '@/shared/communication';
 import { BaseWebviewCommand } from '@/shared/base';
 // Prerequisites checking is handled by PrerequisitesManager
-import { ComponentHandler } from './componentHandler';
+import { ComponentHandler } from '@/features/components/commands/componentHandler';
 // Extracted helper functions
 import { HandlerContext, SharedState } from './handlers/HandlerContext';
 import { HandlerRegistry } from './handlers/HandlerRegistry';
