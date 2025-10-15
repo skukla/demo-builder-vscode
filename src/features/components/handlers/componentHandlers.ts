@@ -12,8 +12,8 @@
  * - validateSelection: Validate component selection
  */
 
-import { ComponentSelection } from '../../types/components';
-import { HandlerContext } from './HandlerContext';
+import { ComponentSelection } from '@/types/components';
+import { HandlerContext } from '../../../commands/handlers/HandlerContext';
 
 /**
  * update-component-selection - Update current component selection
@@ -36,7 +36,7 @@ export async function handleUpdateComponentSelection(
  */
 export async function handleUpdateComponentsData(
     context: HandlerContext,
-    payload: import('../../types/components').ComponentConfigs,
+    payload: import('@/types/components').ComponentConfigs,
 ): Promise<{ success: boolean }> {
     context.sharedState.componentsData = payload;
     context.logger.debug('Updated components data');

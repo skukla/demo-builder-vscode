@@ -5,7 +5,7 @@
  */
 
 import * as authentication from '@/features/authentication';
-import * as components from './componentHandlers';
+import * as components from '@/features/components/handlers/componentHandlers';
 import { HandlerContext, MessageHandler } from './HandlerContext';
 
 // Import all handler modules
