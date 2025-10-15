@@ -125,7 +125,8 @@ export class CheckUpdatesCommand extends BaseCommand {
             project,
             componentId,
             update.releaseInfo.downloadUrl,
-            update.latest
+            update.latest,
+            update.releaseInfo.commitSha // Pass commit SHA to update instance.version
           );
           componentUpdateCount++;
         } catch (error) {

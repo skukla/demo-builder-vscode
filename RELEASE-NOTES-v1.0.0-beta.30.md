@@ -1,10 +1,10 @@
 # Release Notes - v1.0.0-beta.30
 
-## 🐛 Critical Fix: Component Version Tracking (The Real Fix!)
+## 🐛 Critical Fix: Component Version Tracking (Complete Fix!)
 
 ### Root Cause Discovered
 
-The diagnostic logs revealed **two critical bugs** that prevented component version auto-fix from ever working:
+The diagnostic logs revealed **three critical bugs** that prevented component version auto-fix from ever working:
 
 #### Bug #1: Short SHA Storage
 ```
@@ -20,16 +20,30 @@ Expected: "9404d6a3e5f6..." (commit SHA)
 ```
 GitHub's `target_commitish` field returns the **branch name** ("master"), not the actual commit SHA.
 
-### Why Auto-Fix Never Worked
-
-**Comparison That Could Never Match:**
+#### Bug #3: Instance Version Not Updated After Component Update
 ```
-installedCommit: "9404d6a3"  (8-char short SHA)
-releaseCommit: "master"       (branch name)
-"9404d6a3" === "master"  → FALSE ❌ ALWAYS
-```
+After updating citisignal-nextjs to v1.0.0-beta.1:
+✅ componentVersions['citisignal-nextjs'].version = "1.0.0-beta.1" (updated)
+❌ componentInstances['citisignal-nextjs'].version = "9404d6a3" (OLD SHA!)
 
-No matter what logic we added (v1.0.0-beta.22, v1.0.0-beta.28, v1.0.0-beta.29), the comparison could **never** succeed because we were comparing completely different data types!
+Next update check:
+Compares "9404d6a3" vs "62148f2a" → Shows false update notification!
+```
+After updating a component, `componentVersions` was updated but `componentInstances[].version` (the commit SHA) was **never updated**, causing false update notifications after every successful update.
+
+### Why Updates Appeared to Fail
+
+**The Loop:**
+```
+1. User clicks "Update Components"
+2. Component downloads and installs successfully ✅
+3. componentVersions updated to v1.0.0-beta.1 ✅
+4. componentInstances.version still has OLD commit SHA ❌
+5. User reloads extension
+6. Update check compares OLD SHA with release SHA
+7. Shows same "update available" notification ❌
+8. User thinks update failed!
+```
 
 ---
 
@@ -72,115 +86,72 @@ if (installedCommit.length === 8) {
 }
 ```
 
-**Now the comparison works:**
-```
-installedCommit: "9404d6a3"  (8 chars)
-releaseCommit: "9404d6a3e5f6..."  (40 chars)
-"9404d6a3e5f6...".startsWith("9404d6a3")  → TRUE ✅
+### 3. Update Instance Version After Component Update
+
+After successfully updating a component, we now update `componentInstances[].version` with the new commit SHA:
+
+```typescript
+// 8. Update instance.version to new commit SHA (prevents false update notifications)
+if (commitSha && component) {
+  component.version = commitSha.substring(0, 8); // Store short SHA (first 8 chars)
+  this.logger.debug(`[Update] Updated instance.version to ${component.version}`);
+}
 ```
 
----
-
-## How It Works Now
-
-### For Existing Projects (Your Case)
+**Now after update:**
 ```
-Update Check:
-├─ currentVersion: "unknown"
-├─ instance.version: "9404d6a3" (short SHA)
-├─ Fetch GitHub release
-├─ Fetch tag details → commitSha: "9404d6a3e5f6..." ✅
-├─ Compare: "9404d6a3e5f6...".startsWith("9404d6a3") → TRUE ✅
-├─ Auto-fix: version = "v1.0.0-beta.1" ✅
-└─ Save → No update notification ✅
-```
+✅ componentVersions['citisignal-nextjs'].version = "1.0.0-beta.1"
+✅ componentInstances['citisignal-nextjs'].version = "62148f2a"
 
-### For New Projects
-```
-Project Creation:
-├─ Install components → short SHA stored
-├─ Run checkComponentUpdates()
-├─ Fetch GitHub + resolve tag to commit SHA
-├─ Compare short SHA with full SHA (first 8 chars)
-├─ Match found! ✅
-└─ Proper version stored from creation ✅
+Next update check:
+Compares "62148f2a" vs "62148f2a" → Match! No false notification! ✅
 ```
 
 ---
 
 ## Changes
 
-**Modified:** `src/utils/updateManager.ts`
+**Modified:**
+1. **`src/utils/updateManager.ts`:**
+   - Added tag SHA resolution (fetch `/git/ref/tags/{tagName}`)
+   - Added short SHA comparison logic
+   - Enhanced debug logging
 
-1. **Added tag SHA resolution:**
-   - Fetches `/git/ref/tags/{tagName}` to get actual commit SHA
-   - Falls back to `target_commitish` if fetch fails
+2. **`src/utils/componentUpdater.ts`:**
+   - Added `commitSha` parameter to `updateComponent()`
+   - Update `componentInstances[].version` after successful update
 
-2. **Added short SHA comparison:**
-   - Detects 8-character SHAs
-   - Compares using `startsWith()` for short SHAs
-   - Uses exact match for full SHAs
-
-3. **Enhanced debug logging:**
-   - Logs all version values
-   - Shows comparison method used
-   - Reveals why decisions are made
+3. **`src/commands/checkUpdates.ts`:**
+   - Pass `releaseInfo.commitSha` to `updateComponent()`
 
 ---
 
 ## User Impact
 
 ### Before (v1.0.0-beta.22 through v1.0.0-beta.29)
-**New Projects:**
-- ❌ Stored short SHAs as versions
-- ❌ Auto-fix attempted but always failed
-- ❌ Showed `vunknown → v1.0.0-beta.1` notifications
-- ❌ Required manual update check (which also failed)
+**Component Updates:**
+- ❌ Update appeared to succeed
+- ❌ But after reload, same "update available" notification
+- ❌ Endless update loop - component never marked as up-to-date
+- ❌ Users thought updates were broken
 
-**Existing Projects:**
-- ❌ Same issue - auto-fix never worked
-- ❌ False notifications persisted
-- ❌ Only solution: delete and recreate project
-
-**Root Cause:** Comparing branch name ("master") with short SHA ("9404d6a3") - impossible to match!
+**Root Cause:** `instance.version` never updated after component update
 
 ### After (v1.0.0-beta.30)
+**Component Updates:**
+- ✅ Update downloads and installs
+- ✅ Both `componentVersions` AND `componentInstances.version` updated
+- ✅ After reload, no false update notification
+- ✅ Update check correctly shows "No updates available"
+- ✅ Update once, stays updated!
+
 **New Projects:**
-- ✅ Short SHAs stored (unchanged)
-- ✅ Auto-fix resolves tag to commit SHA
-- ✅ Short SHA comparison works correctly
 - ✅ Proper versions from creation
 - ✅ No false update notifications
 
 **Existing Projects:**
-- ✅ Next update check auto-detects short SHA
-- ✅ Resolves GitHub tag to commit SHA
-- ✅ Compares correctly using `startsWith()`
-- ✅ Auto-fixes to proper version
-- ✅ No manual intervention needed
-
----
-
-## Testing Results
-
-Based on your logs, the fix will work like this:
-
-**Before (v1.0.0-beta.30 diagnostic):**
-```
-installedCommit: "9404d6a3"
-releaseCommit: "master"
-Commits match: false ❌
-Result: SHOW UPDATE
-```
-
-**After (v1.0.0-beta.30 fixed):**
-```
-installedCommit: "9404d6a3"
-releaseCommit: "9404d6a3e5f6..." (fetched from tag)
-Comparing short SHA: "9404d6a3" vs "9404d6a3"
-Commits match: true ✅
-Result: NO UPDATE (auto-fixed to v1.0.0-beta.1)
-```
+- ✅ First update will fix version tracking
+- ✅ All subsequent updates work correctly
 
 ---
 
@@ -188,29 +159,32 @@ Result: NO UPDATE (auto-fixed to v1.0.0-beta.1)
 
 **The Journey to This Fix:**
 
-- **v1.0.0-beta.22:** Added SHA comparison (but compared wrong values)
-- **v1.0.0-beta.28:** Added project creation auto-fix (still wrong values)
-- **v1.0.0-beta.29:** Added git SHA detection (still wrong values)
-- **v1.0.0-beta.30 (diagnostic):** Added logging → **discovered root cause!**
-- **v1.0.0-beta.30 (this fix):** Fetch real commit SHAs + short SHA comparison ✅
+- **v1.0.0-beta.22:** Added SHA comparison (compared wrong values)
+- **v1.0.0-beta.28:** Added project creation auto-fix (wrong values)
+- **v1.0.0-beta.29:** Added git SHA detection (wrong values)
+- **v1.0.0-beta.30 (diagnostic):** Added logging → discovered bugs #1 and #2
+- **v1.0.0-beta.30 (second attempt):** Fixed SHA fetching + comparison
+- **v1.0.0-beta.30 (this fix):** Fixed instance.version update after component update ✅
 
 ---
 
 ## Upgrade Impact
 
 **What Users Will Notice:**
-1. ✅ **Existing projects:** Next update check will silently fix versions (no notification if at latest)
+1. ✅ **Component updates work correctly:** Update once → stays updated (no endless loops)
 2. ✅ **New projects:** Proper versions from creation (no false notifications)
-3. ✅ **All scenarios:** Clean, accurate update experience finally works!
+3. ✅ **Existing projects:** If components differ from v1.0.0-beta.1, update notification is correct
+4. ✅ **After updating components:** Reload and check again → "No updates available" ✅
 
-**No Action Required:**
-- No need to delete and recreate projects
-- No manual intervention needed
-- Just update and run "Check for Updates"
+**What To Do:**
+1. Update extension to v1.0.0-beta.30
+2. If offered component updates, accept them
+3. Reload VS Code
+4. Check for updates again → Should show "No updates available"
 
 **Breaking Changes:** None
 
-**Migration:** Automatic on first update check
+**Migration:** Automatic after first component update
 
 ---
 

@@ -28,7 +28,8 @@ export class ComponentUpdater {
     project: Project,
     componentId: string,
     downloadUrl: string,
-    newVersion: string
+    newVersion: string,
+    commitSha?: string // NEW: Commit SHA from release
   ): Promise<void> {
     const component = project.componentInstances?.[componentId];
     if (!component || !component.path) {
@@ -76,10 +77,16 @@ export class ComponentUpdater {
           version: newVersion,
           lastUpdated: new Date().toISOString()
         };
+        
+        // 8. Update instance.version to new commit SHA (prevents false update notifications)
+        if (commitSha && component) {
+          component.version = commitSha.substring(0, 8); // Store short SHA (first 8 chars)
+          this.logger.debug(`[Update] Updated instance.version to ${component.version}`);
+        }
 
         this.logger.info(`[Update] Successfully updated ${componentId} to ${newVersion}`);
 
-        // 8. Cleanup snapshot on success
+        // 9. Cleanup snapshot on success
         await fs.rm(snapshotPath, { recursive: true, force: true });
         this.logger.debug(`[Update] Removed snapshot (update successful)`);
 
