@@ -12,22 +12,36 @@ import { ComponentUpdater } from '../utils/componentUpdater';
 export class CheckUpdatesCommand extends BaseCommand {
   async execute(): Promise<void> {
     try {
-      const updateManager = new UpdateManager(this.context, this.logger);
-      const project = await this.stateManager.getCurrentProject();
-      
-      // Check extension updates
-      this.logger.info('[Updates] Checking for extension updates');
-      const extensionUpdate = await updateManager.checkExtensionUpdate();
-      
-      // Check component updates (if project loaded)
-      let componentUpdates = new Map();
-      if (project) {
-        this.logger.info('[Updates] Checking for component updates');
-        componentUpdates = await updateManager.checkComponentUpdates(project);
-        
-        // Save project if componentVersions were auto-fixed during check
-        await this.stateManager.saveProject(project);
-      }
+      // Run update check with visible progress notification
+      const { extensionUpdate, componentUpdates, project } = await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Checking for updates...',
+          cancellable: false
+        },
+        async (progress) => {
+          const updateManager = new UpdateManager(this.context, this.logger);
+          const project = await this.stateManager.getCurrentProject();
+          
+          // Check extension updates
+          this.logger.info('[Updates] Checking for extension updates');
+          progress.report({ message: 'Checking extension...' });
+          const extensionUpdate = await updateManager.checkExtensionUpdate();
+          
+          // Check component updates (if project loaded)
+          let componentUpdates = new Map();
+          if (project) {
+            this.logger.info('[Updates] Checking for component updates');
+            progress.report({ message: 'Checking components...' });
+            componentUpdates = await updateManager.checkComponentUpdates(project);
+            
+            // Save project if componentVersions were auto-fixed during check
+            await this.stateManager.saveProject(project);
+          }
+          
+          return { extensionUpdate, componentUpdates, project };
+        }
+      );
       
       // Build update summary
       const updates: string[] = [];
@@ -44,9 +58,12 @@ export class CheckUpdatesCommand extends BaseCommand {
       
       if (updates.length === 0) {
         this.logger.info('[Updates] ✓ No updates available - Demo Builder is up to date');
-        vscode.window.showInformationMessage(`Demo Builder is up to date ✓ (v${extensionUpdate.current})`);
+        // Progress notification auto-dismisses, show brief status bar confirmation
+        vscode.window.setStatusBarMessage(`$(check) Demo Builder is up to date (v${extensionUpdate.current})`, 5000);
         return;
       }
+      
+      // Progress notification has auto-dismissed, now show update prompt
       
       // Log updates found
       this.logger.info(`[Updates] Found ${updates.length} update(s):`);
