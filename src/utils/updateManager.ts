@@ -118,16 +118,30 @@ export class UpdateManager {
       if (isUnknownVersion) {
         // For unknown versions or git SHAs, check actual git commit hash
         // If installed commit matches release commit, no update needed
-        const installedCommit = instance?.version; // This is the git commit hash
+        const installedCommit = instance?.version; // This is the git commit hash (may be short SHA)
         const releaseCommit = latestRelease.commitSha;
         
         this.logger.debug(`[Updates]   - installedCommit: "${installedCommit || 'undefined'}"`);
         this.logger.debug(`[Updates]   - releaseCommit: "${releaseCommit || 'undefined'}"`);
-        this.logger.debug(`[Updates]   - Commits match: ${installedCommit && releaseCommit && installedCommit === releaseCommit}`);
         
-        if (installedCommit && releaseCommit && installedCommit === releaseCommit) {
+        // Compare commits (support both full and short SHAs)
+        let commitsMatch = false;
+        if (installedCommit && releaseCommit) {
+          // If installed is short SHA (8 chars), compare first 8 chars of release
+          if (installedCommit.length === 8) {
+            commitsMatch = releaseCommit.toLowerCase().startsWith(installedCommit.toLowerCase());
+            this.logger.debug(`[Updates]   - Comparing short SHA: "${installedCommit}" vs "${releaseCommit.substring(0, 8)}"`);
+          } else {
+            // Full SHA comparison
+            commitsMatch = installedCommit.toLowerCase() === releaseCommit.toLowerCase();
+          }
+        }
+        
+        this.logger.debug(`[Updates]   - Commits match: ${commitsMatch}`);
+        
+        if (commitsMatch) {
           // Already at this version, just update the tracking
-          this.logger.debug(`[Updates] Component ${componentId} is already at ${latestRelease.version} (commit ${installedCommit.substring(0, 7)})`);
+          this.logger.debug(`[Updates] Component ${componentId} is already at ${latestRelease.version} (commit ${installedCommit?.substring(0, 7) || 'unknown'})`);
           
           // Update componentVersions to track properly going forward
           if (!project.componentVersions) {
@@ -219,13 +233,32 @@ export class UpdateManager {
           return null;
         }
         
+        // Fetch the actual commit SHA for this tag (target_commitish is often just the branch name)
+        let commitSha = release.target_commitish;
+        try {
+          const tagName = release.tag_name;
+          const tagUrl = `https://api.github.com/repos/${repo}/git/ref/tags/${tagName}`;
+          const tagResponse = await fetch(tagUrl);
+          if (tagResponse.ok) {
+            const tagData = await tagResponse.json() as { object?: { sha?: string } };
+            // tagData.object.sha is the commit SHA
+            if (tagData.object && tagData.object.sha) {
+              commitSha = tagData.object.sha;
+              this.logger.debug(`[Update] Resolved tag ${tagName} to commit ${commitSha.substring(0, 8)}`);
+            }
+          }
+        } catch (error) {
+          this.logger.debug(`[Update] Could not resolve tag to commit SHA: ${error}`);
+          // Fall back to target_commitish
+        }
+        
         return {
           version: release.tag_name.replace(/^v/, ''),
           downloadUrl: isExtension ? asset.browser_download_url : release.zipball_url,
           releaseNotes: release.body || 'No release notes available',
           publishedAt: release.published_at,
           isPrerelease: release.prerelease,
-          commitSha: release.target_commitish // Git commit SHA
+          commitSha: commitSha // Git commit SHA
         };
       } finally {
         clearTimeout(timeout);
