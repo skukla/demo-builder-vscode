@@ -109,81 +109,101 @@ export class CheckUpdatesCommand extends BaseCommand {
       // Stop demo
       this.logger.info('[Updates] Stopping demo before component updates');
       await vscode.commands.executeCommand('demoBuilder.stopDemo');
-      
-      // Wait for clean shutdown
-      await new Promise(resolve => setTimeout(resolve, 2000));
+
     }
     
-    const componentUpdater = new ComponentUpdater(this.logger);
-    
-    // Update components first (must complete before extension reload)
-    let componentUpdateCount = 0;
-    for (const [componentId, update] of componentUpdates.entries()) {
-      if (update.hasUpdate && update.releaseInfo) {
-        try {
-          await componentUpdater.updateComponent(
-            project,
-            componentId,
-            update.releaseInfo.downloadUrl,
-            update.latest,
-            update.releaseInfo.commitSha // Pass commit SHA to update instance.version
-          );
-          componentUpdateCount++;
-        } catch (error) {
-          const errorMsg = (error as Error).message;
-          
-          // Check if this is a rollback failure (contains snapshot path)
-          const snapshotMatch = errorMsg.match(/Snapshot at: (.+)$/);
-          
-          if (snapshotMatch) {
-            // Rollback failed - offer retry button
-            const snapshotPath = snapshotMatch[1];
-            const action = await vscode.window.showErrorMessage(
-              `Failed to update ${componentId}: ${errorMsg}`,
-              'Retry Rollback',
-              'Dismiss'
-            );
+    // Run updates with visual progress indicator
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: 'Updating Components',
+        cancellable: false
+      },
+      async (progress) => {
+        const componentUpdater = new ComponentUpdater(this.logger);
+        
+        // Update components first (must complete before extension reload)
+        let componentUpdateCount = 0;
+        const totalComponents = Array.from(componentUpdates.entries()).filter(([_, update]) => update.hasUpdate && update.releaseInfo).length;
+        
+        let currentComponent = 0;
+        for (const [componentId, update] of componentUpdates.entries()) {
+          if (update.hasUpdate && update.releaseInfo) {
+            currentComponent++;
+            progress.report({
+              message: `(${currentComponent}/${totalComponents}) Updating ${componentId}...`,
+              increment: (100 / totalComponents)
+            });
             
-            if (action === 'Retry Rollback') {
-              this.logger.info(`[Updates] User requested manual rollback retry for ${componentId}`);
-              try {
-                const componentInstance = project.componentInstances?.[componentId];
-                if (componentInstance?.path) {
-                  await componentUpdater.retryRollback(componentInstance.path, snapshotPath);
-                  vscode.window.showInformationMessage(
-                    `✓ Successfully restored ${componentId} from backup`
-                  );
-                  this.logger.info(`[Updates] Manual rollback successful for ${componentId}`);
-                }
-              } catch (retryError) {
-                vscode.window.showErrorMessage(
-                  `Manual rollback failed: ${(retryError as Error).message}. Please restore manually from: ${snapshotPath}`
+            try {
+              await componentUpdater.updateComponent(
+                project,
+                componentId,
+                update.releaseInfo.downloadUrl,
+                update.latest,
+                update.releaseInfo.commitSha // Pass commit SHA to update instance.version
+              );
+              componentUpdateCount++;
+              this.logger.info(`[Updates] ✓ Successfully updated ${componentId}`);
+            } catch (error) {
+              const errorMsg = (error as Error).message;
+              
+              // Check if this is a rollback failure (contains snapshot path)
+              const snapshotMatch = errorMsg.match(/Snapshot at: (.+)$/);
+              
+              if (snapshotMatch) {
+                // Rollback failed - offer retry button
+                const snapshotPath = snapshotMatch[1];
+                const action = await vscode.window.showErrorMessage(
+                  `Failed to update ${componentId}: ${errorMsg}`,
+                  'Retry Rollback',
+                  'Dismiss'
                 );
-                this.logger.error(`[Updates] Manual rollback failed for ${componentId}`, retryError as Error);
+                
+                if (action === 'Retry Rollback') {
+                  this.logger.info(`[Updates] User requested manual rollback retry for ${componentId}`);
+                  try {
+                    const componentInstance = project.componentInstances?.[componentId];
+                    if (componentInstance?.path) {
+                      await componentUpdater.retryRollback(componentInstance.path, snapshotPath);
+                      vscode.window.showInformationMessage(
+                        `✓ Successfully restored ${componentId} from backup`
+                      );
+                      this.logger.info(`[Updates] Manual rollback successful for ${componentId}`);
+                    }
+                  } catch (retryError) {
+                    vscode.window.showErrorMessage(
+                      `Manual rollback failed: ${(retryError as Error).message}. Please restore manually from: ${snapshotPath}`
+                    );
+                    this.logger.error(`[Updates] Manual rollback failed for ${componentId}`, retryError as Error);
+                  }
+                }
+              } else {
+                // Normal update failure (rollback succeeded)
+                vscode.window.showErrorMessage(
+                  `Failed to update ${componentId}: ${errorMsg}`
+                );
               }
+              
+              this.logger.error(`[Updates] Component update failed for ${componentId}`, error as Error);
             }
-          } else {
-            // Normal update failure (rollback succeeded)
-            vscode.window.showErrorMessage(
-              `Failed to update ${componentId}: ${errorMsg}`
-            );
           }
-          
-          this.logger.error(`[Updates] Component update failed for ${componentId}`, error as Error);
+        }
+        
+        if (componentUpdateCount > 0) {
+          this.logger.info(`[Updates] ✓ ${componentUpdateCount} component(s) updated successfully`);
+          progress.report({ message: 'Saving project state...' });
+        }
+        
+        // Save project with updated versions
+        if (project) {
+          await this.stateManager.saveProject(project);
         }
       }
-    }
+    );
     
-    if (componentUpdateCount > 0) {
-      this.logger.info(`[Updates] ✓ ${componentUpdateCount} component(s) updated successfully`);
-    }
-    
-    // Save project with updated versions
-    if (project) {
-      await this.stateManager.saveProject(project);
-    }
-    
-    // Show restart notification if demo was running
+    // Show restart notification if demo was running (outside withProgress for better visibility)
+    const componentUpdateCount = Array.from(componentUpdates.entries()).filter(([_, update]) => update.hasUpdate && update.releaseInfo).length;
     if (componentUpdateCount > 0 && project && project.status === 'running') {
       const restart = await vscode.window.showInformationMessage(
         `${componentUpdateCount} component(s) updated. Restart demo to use new versions?`,
