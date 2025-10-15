@@ -1,8 +1,17 @@
 // Shared types for the webview application
 
+// Import shared types from extension
+import type {
+    ComponentInstance,
+    AdobeConfig,
+    CommerceConfig,
+    Project,
+    ProjectTemplate
+} from '@/types';
+
 export type ThemeMode = 'light' | 'dark';
 
-export type WizardStep = 
+export type WizardStep =
     | 'welcome'
     | 'component-selection'
     | 'prerequisites'
@@ -29,7 +38,7 @@ export interface WizardState {
     adobeOrg?: Organization;  // Renamed for consistency
     adobeProject?: AdobeProject;  // Renamed for consistency
     adobeWorkspace?: Workspace;  // New field for workspace
-    commerceConfig?: CommerceConfig;  // Kept for compatibility
+    commerceConfig?: WizardCommerceConfig;  // Wizard-specific commerce config (simplified)
     creationProgress?: CreationProgress;
     projectSearchFilter?: string;  // Filter persistence for project selection
 
@@ -59,8 +68,6 @@ export interface WizardState {
     };
 }
 
-export type ProjectTemplate = 'commerce-paas' | 'commerce-saas' | 'aem-commerce';
-
 export interface AdobeAuthState {
     isAuthenticated: boolean;
     isChecking: boolean;
@@ -84,90 +91,8 @@ export interface AdobeProject {
     org_id?: number;  // Numeric organization ID from Adobe Console
 }
 
-// Adobe configuration (embedded in DemoProject)
-export interface AdobeProjectConfig {
-    projectId: string;
-    projectName: string;
-    organization: string;
-    workspace: string;
-    authenticated: boolean;
-}
-
-// Commerce configuration (embedded in DemoProject)
-export interface CommerceProjectConfig {
-    type: 'platform-as-a-service' | 'software-as-a-service';
-    instance: {
-        url: string;
-        environmentId: string;
-        storeView: string;
-        websiteCode: string;
-        storeCode: string;
-    };
-    services: {
-        catalog?: {
-            enabled: boolean;
-            endpoint: string;
-            apiKey?: string;
-        };
-        liveSearch?: {
-            enabled: boolean;
-            endpoint: string;
-            apiKey?: string;
-        };
-    };
-}
-
-// Component instance (embedded in DemoProject)
-export interface ComponentInstance {
-    id: string;
-    name: string;
-    type?: 'frontend' | 'backend' | 'dependency' | 'external-system' | 'app-builder';
-    subType?: 'mesh' | 'inspector' | 'utility' | 'service';
-    icon?: string | { light: string; dark: string };
-    path?: string;
-    repoUrl?: string;
-    branch?: string;
-    version?: string;
-    status: string;
-    port?: number;
-    pid?: number;
-    endpoint?: string;
-    lastUpdated?: Date;
-    metadata?: Record<string, unknown>;
-}
-
-// Full Demo Builder project (different from Adobe Project above)
-export interface DemoProject {
-    name: string;
-    template?: ProjectTemplate;
-    created: Date;
-    lastModified: Date;
-    path: string;
-    status: string;
-    organization?: string;
-    adobe?: AdobeProjectConfig;
-    commerce?: CommerceProjectConfig;
-    // Legacy configs (deprecated but kept for backward compatibility)
-    frontend?: Record<string, unknown>;
-    mesh?: Record<string, unknown>;
-    inspector?: Record<string, unknown>;
-    // Component-based structure
-    componentInstances?: {
-        [componentId: string]: ComponentInstance;
-    };
-    componentSelections?: {
-        frontend?: string;
-        backend?: string;
-        dependencies?: string[];
-        externalSystems?: string[];
-        appBuilder?: string[];
-    };
-    componentConfigs?: {
-        [componentId: string]: {
-            [key: string]: string | boolean | number | undefined;
-        };
-    };
-}
+// Re-export shared types for convenience
+export type { ComponentInstance, AdobeConfig, CommerceConfig, Project, ProjectTemplate };
 
 export interface Workspace {
     id: string;
@@ -175,7 +100,8 @@ export interface Workspace {
     title?: string;
 }
 
-export interface CommerceConfig {
+// Wizard-specific simplified commerce config (different from full CommerceConfig in @/types)
+export interface WizardCommerceConfig {
     url: string;
     environmentId: string;
     storeCode: string;

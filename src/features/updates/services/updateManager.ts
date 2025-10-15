@@ -3,21 +3,9 @@ import * as vscode from 'vscode';
 import { Project } from '@/types';
 import { Logger } from '@/shared/logging';
 import { TIMEOUTS } from '@/utils/timeoutConfig';
+import type { ReleaseInfo, UpdateCheckResult } from './types';
 
-interface ReleaseInfo {
-  version: string;
-  downloadUrl: string;
-  releaseNotes: string;
-  publishedAt: string;
-  isPrerelease: boolean;
-}
-
-export interface UpdateCheckResult {
-  hasUpdate: boolean;
-  current: string;
-  latest: string;
-  releaseInfo?: ReleaseInfo;
-}
+export type { UpdateCheckResult };
 
 export class UpdateManager {
     private logger: Logger;

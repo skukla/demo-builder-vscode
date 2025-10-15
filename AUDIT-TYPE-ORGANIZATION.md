@@ -139,13 +139,17 @@ export type MessageHandler<P = unknown, R = HandlerResponse> = (
 ) => Promise<R>;
 ```
 
-**Current Workaround**: `src/types/index.ts:53-57` documents the conflict:
+**Resolution Status**: ✅ RESOLVED - Webview handler renamed to `WebviewMessageHandler`
+
+**Previous Workaround**: Required explicit imports to avoid conflicts.
+
+**Current State** (as of refactor):
 ```typescript
-// Note: MessageHandler from messages is for webview communication
-// MessageHandler from handlers is for command handlers
-// Import them explicitly when needed with:
-//   import { MessageHandler } from './types/messages' (for webview)
-//   import { MessageHandler } from './types/handlers' (for command handlers)
+// src/types/messages.ts
+export type WebviewMessageHandler<P = MessagePayload, R = MessageResponse> = ...
+
+// src/types/handlers.ts
+export type MessageHandler<P = unknown, R = HandlerResponse> = ...
 ```
 
 **Impact**:
@@ -153,20 +157,18 @@ export type MessageHandler<P = unknown, R = HandlerResponse> = (
 - Confusing for new developers
 - IDE autocomplete suggests wrong type
 
-**Recommendation**:
+**Resolution**: ✅ COMPLETED
 ```typescript
-// Rename to be specific
-// src/types/messages.ts
+// src/types/messages.ts - Renamed to WebviewMessageHandler
 export type WebviewMessageHandler<P = MessagePayload, R = MessageResponse> = ...
 
-// src/types/handlers.ts
-export type CommandMessageHandler<P = unknown, R = HandlerResponse> = ...
-
-// Or keep MessageHandler in handlers.ts (more common) and rename messages one
-export type MessageCallback<P = MessagePayload, R = MessageResponse> = ...
+// src/types/handlers.ts - Kept as MessageHandler (more common usage)
+export type MessageHandler<P = unknown, R = HandlerResponse> = ...
 ```
 
-**Priority**: 🟠 High - Causes confusion and requires workarounds
+**Status**: Resolved in refactor/claude-first-attempt branch
+**Impact**: Zero imports to update (type was unused)
+**Priority**: ✅ Complete - No longer causes confusion
 
 ---
 

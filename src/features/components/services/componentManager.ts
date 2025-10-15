@@ -3,18 +3,9 @@ import * as path from 'path';
 import { ServiceLocator } from '@/services/serviceLocator';
 import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '@/types';
 import { Logger } from '@/types/logger';
+import type { ComponentInstallOptions, ComponentInstallResult } from './types';
 
-export interface ComponentInstallOptions {
-    branch?: string;
-    version?: string;
-    skipDependencies?: boolean;
-}
-
-export interface ComponentInstallResult {
-    success: boolean;
-    component?: ComponentInstance;
-    error?: string;
-}
+export type { ComponentInstallOptions, ComponentInstallResult };
 
 /**
  * ComponentManager handles the installation, lifecycle, and management

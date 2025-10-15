@@ -4,107 +4,29 @@ import { ServiceLocator } from '../../../services/serviceLocator';
 import { parseJSON } from '@/types/typeGuards';
 import { Logger } from '@/shared/logging';
 import { TIMEOUTS } from '@/utils/timeoutConfig';
+import type {
+    PrerequisiteCheck,
+    ProgressMilestone,
+    InstallStep,
+    PrerequisiteInstall,
+    PrerequisitePlugin,
+    PrerequisiteDefinition,
+    ComponentRequirement,
+    PrerequisitesConfig,
+    PrerequisiteStatus,
+} from './types';
 
-export interface PrerequisiteCheck {
-    command: string;
-    parseVersion?: string;
-    contains?: string;
-}
-
-export interface ProgressMilestone {
-    pattern: string;
-    progress: number;
-    message?: string;
-}
-
-export interface InstallStep {
-    name: string;
-    message: string;
-    commands?: string[];
-    commandTemplate?: string;
-    estimatedDuration?: number;
-    progressStrategy?: 'exact' | 'milestones' | 'synthetic' | 'immediate';
-    milestones?: ProgressMilestone[];
-    progressParser?: string;
-    continueOnError?: boolean;
-}
-
-export interface PrerequisiteInstall {
-    // Legacy format
-    commands?: string[];
-    message?: string;
-    requires?: string[];
-    dynamic?: boolean;
-    template?: string;
-    versions?: Record<string, string[]>;
-    manual?: boolean;
-    url?: string;
-    // New step-based format
-    steps?: InstallStep[];
-}
-
-export interface PrerequisitePlugin {
-    id: string;
-    name: string;
-    description: string;
-    check: PrerequisiteCheck;
-    install: {
-        commands: string[];
-        message?: string;
-    };
-    requiredFor?: string[];
-}
-
-export interface PrerequisiteDefinition {
-    id: string;
-    name: string;
-    description: string;
-    optional?: boolean;
-    depends?: string[];
-    perNodeVersion?: boolean; // Install in each Node.js version
-    check: PrerequisiteCheck;
-    install?: PrerequisiteInstall; // Installation configuration
-    uninstall?: {
-        commands: string[];
-        message?: string;
-    };
-    postInstall?: {
-        message: string;
-    };
-    multiVersion?: boolean;
-    versionCheck?: {
-        command: string;
-        parseInstalledVersions: string;
-    };
-    plugins?: PrerequisitePlugin[];
-}
-
-export interface ComponentRequirement {
-    prerequisites?: string[];
-    plugins?: string[];
-}
-
-export interface PrerequisitesConfig {
-    version: string;
-    prerequisites: PrerequisiteDefinition[];
-    componentRequirements?: Record<string, ComponentRequirement>;
-}
-
-export interface PrerequisiteStatus {
-    id: string;
-    name: string;
-    description: string;
-    installed: boolean;
-    version?: string;
-    optional: boolean;
-    canInstall: boolean;
-    message?: string;
-    plugins?: {
-        id: string;
-        name: string;
-        installed: boolean;
-    }[];
-}
+export type {
+    PrerequisiteCheck,
+    ProgressMilestone,
+    InstallStep,
+    PrerequisiteInstall,
+    PrerequisitePlugin,
+    PrerequisiteDefinition,
+    ComponentRequirement,
+    PrerequisitesConfig,
+    PrerequisiteStatus,
+};
 
 export class PrerequisitesManager {
     private config: PrerequisitesConfig | null = null;

@@ -45,13 +45,12 @@ export {
     GenericPayload,
     Message,
     PendingRequest,
+    WebviewMessageHandler,
 } from './messages';
 
-// Note: MessageHandler from messages is for webview communication
-// MessageHandler from handlers is for command handlers
-// Import them explicitly when needed with:
-//   import { MessageHandler } from './types/messages' (for webview)
-//   import { MessageHandler } from './types/handlers' (for command handlers)
+// Note: WebviewMessageHandler (from messages.ts) is for webview communication handlers
+// MessageHandler (from handlers.ts) is for extension backend command handlers
+// These are distinct types with different signatures
 
 // Component types (enhanced) - includes enhanced ServiceDefinition
 export * from './components';

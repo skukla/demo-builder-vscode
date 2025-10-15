@@ -206,9 +206,12 @@ export interface Message<T = MessagePayload> {
 }
 
 /**
- * MessageHandler - Type-safe message handler function
+ * WebviewMessageHandler - Type-safe message handler function for webview communication
+ *
+ * Used for handling messages in the webview context.
+ * This is distinct from MessageHandler in handlers.ts which is for extension backend handlers.
  */
-export type MessageHandler<P = MessagePayload, R = MessageResponse> = (
+export type WebviewMessageHandler<P = MessagePayload, R = MessageResponse> = (
     payload: P
 ) => Promise<R> | R;
 
