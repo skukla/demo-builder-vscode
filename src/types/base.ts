@@ -145,12 +145,6 @@ export interface ProcessInfo {
     status: 'running' | 'stopped' | 'error';
 }
 
-export interface ValidationResult {
-    valid: boolean;
-    errors: string[];
-    warnings: string[];
-}
-
 export interface ComponentDefinition {
     id: string;
     name: string;
@@ -220,12 +214,6 @@ export interface ComponentConfiguration {
     defaultEnabled?: boolean;
 }
 
-export interface CompatibilityInfo {
-    compatible: boolean;
-    recommended?: boolean;
-    notes?: string;
-}
-
 export interface StateData {
     version: number;
     currentProject?: Project;
@@ -265,13 +253,4 @@ export interface Prerequisites {
         installed: boolean;
         version?: string;
     };
-}
-
-export interface WizardStep {
-    id: string;
-    title: string;
-    description: string;
-    validate?: () => Promise<ValidationResult>;
-    execute: () => Promise<void>;
-    rollback?: () => Promise<void>;
 }

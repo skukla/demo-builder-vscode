@@ -22,14 +22,12 @@ export { verifyMeshDeployment, syncMeshStatus, type MeshVerificationResult } fro
 export { waitForMeshDeployment, type MeshDeploymentResult as MeshDeploymentVerificationResult } from './services/meshDeploymentVerifier';
 export {
     getMeshEnvVars,
-    getFrontendEnvVars,
     fetchDeployedMeshConfig,
     calculateMeshSourceHash,
     getCurrentMeshState,
     detectMeshChanges,
     updateMeshState,
     detectFrontendChanges,
-    updateFrontendState,
     type MeshState,
     type MeshChanges,
 } from './services/stalenessDetector';

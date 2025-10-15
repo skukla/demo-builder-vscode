@@ -42,22 +42,15 @@ export interface ProjectConfig {
 }
 
 /**
- * SimpleMessage - Simplified message structure for internal handlers
- * (Used by ComponentHandler which predates the full Message protocol)
- */
-export interface SimpleMessage {
-    type: string;
-    payload?: unknown;
-}
-
-/**
  * IComponentHandler - Interface for component handling operations
  *
- * Defines the contract for component handlers without creating circular dependencies.
- * The actual implementation is in commands/componentHandler.ts
+ * Defines the contract for component handlers.
+ * The actual implementation is in features/components/handlers/componentHandler.ts
+ *
+ * Note: Message handling has been migrated to MessageHandler pattern.
+ * See features/components/handlers/componentHandlers.ts for handler implementations.
  */
 export interface IComponentHandler {
-    handleMessage(message: SimpleMessage, panel: vscode.WebviewPanel): Promise<void>;
     generateProjectConfig(
         frontend: string,
         backend: string,

@@ -11,17 +11,14 @@ export {
     AdobeConfig,
     CommerceConfig,
     ProcessInfo,
-    ValidationResult,
     ComponentDefinition,
     ComponentSource,
     ComponentDependencies,
     ComponentConfiguration,
     ConfigField,
-    CompatibilityInfo,
     StateData,
     UpdateInfo,
     Prerequisites,
-    WizardStep,
 } from './base';
 
 // ===== Re-export new type modules =====

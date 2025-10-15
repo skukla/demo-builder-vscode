@@ -14,8 +14,16 @@ import {
     ProcessInfo,
     ComponentStatus,
     ProjectStatus,
-    ValidationResult,
 } from './index';
+
+/**
+ * ValidationResult - Represents validation result
+ */
+export interface ValidationResult {
+    valid: boolean;
+    errors: string[];
+    warnings: string[];
+}
 
 /**
  * isProject - Type guard for Project

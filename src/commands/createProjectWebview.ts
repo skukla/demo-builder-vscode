@@ -10,7 +10,7 @@ import { ProgressUnifier } from '@/utils/progressUnifier';
 import { WebviewCommunicationManager } from '@/shared/communication';
 import { BaseWebviewCommand } from '@/shared/base';
 // Prerequisites checking is handled by PrerequisitesManager
-import { ComponentHandler } from '@/features/components/commands/componentHandler';
+import { ComponentHandler } from '@/features/components/handlers/componentHandler';
 // Extracted helper functions
 import { HandlerContext, SharedState } from './handlers/HandlerContext';
 import { HandlerRegistry } from './handlers/HandlerRegistry';
@@ -409,15 +409,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             actionParams,
             timestamp: Date.now(),
         });
-    }
-
-    // Load components
-    private async loadComponents(): Promise<void> {
-        try {
-            await this.componentHandler.handleMessage({ type: 'loadComponents' }, this.panel!);
-        } catch (error) {
-            this.logger.error('Failed to load components:', error as Error);
-        }
     }
 
     // Helper methods that delegate to extracted helpers

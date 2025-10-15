@@ -301,13 +301,19 @@ export async function handleOpenAdobeConsole(
  * Helper: Load components
  *
  * Loads component definitions from templates/components.json
+ * Uses the modern handler pattern by directly invoking the handler
  */
 async function loadComponents(context: HandlerContext): Promise<void> {
     try {
-        await context.componentHandler.handleMessage(
-            { type: 'loadComponents' },
-            context.panel!,
-        );
+        // Invoke the loadComponents handler directly
+        const { handleLoadComponents } = await import('@/features/components/handlers/componentHandlers');
+        const result = await handleLoadComponents(context);
+
+        // Send result to webview if successful
+        if (result.success && result.data && context.communicationManager) {
+            const messageType = (result as { type?: string }).type || 'componentsLoaded';
+            await context.communicationManager.sendMessage(messageType, result.data);
+        }
     } catch (error) {
         context.logger.error('Failed to load components:', error as Error);
     }

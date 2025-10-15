@@ -12,6 +12,7 @@ import * as path from 'path';
 import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
 import { Logger } from '@/shared/logging';
+import { getFrontendEnvVars, updateFrontendState } from '@/shared/state';
 
 // Create logger instance for this module
 const logger = new Logger('MeshStaleness');
@@ -28,22 +29,6 @@ const MESH_ENV_VARS = [
     'ADOBE_COMMERCE_WEBSITE_CODE',
     'ADOBE_COMMERCE_STORE_VIEW_CODE',
     'ADOBE_COMMERCE_STORE_CODE',
-];
-
-/**
- * Environment variables that affect frontend runtime
- * These are read by the Next.js frontend at runtime
- */
-const FRONTEND_ENV_VARS = [
-    'MESH_ENDPOINT',
-    'ADOBE_COMMERCE_URL',
-    'ADOBE_COMMERCE_ENVIRONMENT_ID',
-    'ADOBE_COMMERCE_STORE_VIEW_CODE',
-    'ADOBE_COMMERCE_WEBSITE_CODE',
-    'ADOBE_COMMERCE_STORE_CODE',
-    'ADOBE_CATALOG_API_KEY',
-    'ADOBE_ASSETS_URL',
-    'ADOBE_COMMERCE_CUSTOMER_GROUP',
 ];
 
 export interface MeshState {
@@ -68,22 +53,6 @@ export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record
     const envVars: Record<string, string> = {};
 
     MESH_ENV_VARS.forEach(key => {
-        // Include ALL keys, even if empty/falsy, for accurate comparison
-        // Normalize undefined to empty string for consistent comparison
-        const value = componentConfig[key];
-        envVars[key] = (typeof value === 'string' ? value : '') || '';
-    });
-
-    return envVars;
-}
-
-/**
- * Get current frontend-related environment variables from component config
- */
-export function getFrontendEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
-    const envVars: Record<string, string> = {};
-
-    FRONTEND_ENV_VARS.forEach(key => {
         // Include ALL keys, even if empty/falsy, for accurate comparison
         // Normalize undefined to empty string for consistent comparison
         const value = componentConfig[key];
@@ -403,40 +372,21 @@ export function detectFrontendChanges(project: Project): boolean {
     if (!frontendInstance || !project.frontendEnvState) {
         return false;
     }
-    
+
     const currentConfig = project.componentConfigs?.['citisignal-nextjs'] || {};
     const currentEnvVars = getFrontendEnvVars(currentConfig);
     const deployedEnvVars = project.frontendEnvState.envVars;
-    
-    // Check if any frontend-relevant var changed
-    for (const key of FRONTEND_ENV_VARS) {
+
+    // Get the keys from currentEnvVars (since FRONTEND_ENV_VARS is now in shared)
+    for (const key of Object.keys(currentEnvVars)) {
         const oldValue = deployedEnvVars[key];
         const newValue = currentEnvVars[key];
-        
+
         if (oldValue !== newValue) {
             return true;
         }
     }
-    
-    return false;
-}
 
-/**
- * Update frontend state after demo starts
- * Captures the env vars that were active when demo started
- */
-export function updateFrontendState(project: Project): void {
-    const frontendInstance = project.componentInstances?.['citisignal-nextjs'];
-    if (!frontendInstance || !project.componentConfigs) {
-        return;
-    }
-    
-    const frontendConfig = project.componentConfigs['citisignal-nextjs'] || {};
-    const envVars = getFrontendEnvVars(frontendConfig);
-    
-    project.frontendEnvState = {
-        envVars,
-        capturedAt: new Date().toISOString(),
-    };
+    return false;
 }
 

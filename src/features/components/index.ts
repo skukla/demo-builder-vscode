@@ -10,9 +10,7 @@ export * from './services/componentRegistry';
 
 // Export handlers
 export * from './handlers/componentHandlers';
-
-// Export commands
-export * from './commands/componentHandler';
+export * from './handlers/componentHandler';
 
 // Export providers
 export * from './providers/componentTreeProvider';
