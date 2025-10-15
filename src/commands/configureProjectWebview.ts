@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Project } from '../types';
-import { parseJSON } from '../types/typeGuards';
+import { Project } from '@/types';
+import { parseJSON } from '@/types/typeGuards';
 import { ComponentRegistryManager } from '@/features/components/services/componentRegistry';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { WebviewCommunicationManager } from '@/shared/communication';

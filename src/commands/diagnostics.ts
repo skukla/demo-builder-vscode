@@ -2,9 +2,9 @@ import { promises as fs } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '../services/serviceLocator';
-import { parseJSON } from '../types/typeGuards';
-import { getLogger, CommandResultWithContext } from '../shared/logging';
+import { ServiceLocator } from '@/services/serviceLocator';
+import { parseJSON } from '@/types/typeGuards';
+import { getLogger, CommandResultWithContext } from '@/shared/logging';
 
 // Diagnostic Type Definitions
 interface SystemInfo {

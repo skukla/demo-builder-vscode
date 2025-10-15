@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Project } from '../types';
+import { Project } from '@/types';
 import { BaseCommand } from '@/shared/base';
 
 export class ConfigureCommand extends BaseCommand {

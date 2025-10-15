@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '../services/serviceLocator';
-import { parseJSON } from '../types/typeGuards';
+import { ServiceLocator } from '@/services/serviceLocator';
+import { parseJSON } from '@/types/typeGuards';
 import { AuthenticationService } from '@/features/authentication';
-import { getLogger, ErrorLogger, StepLogger } from '../shared/logging';
+import { getLogger, ErrorLogger, StepLogger } from '@/shared/logging';
 import { PrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManager';
-import { ProgressUnifier } from '../utils/progressUnifier';
+import { ProgressUnifier } from '@/utils/progressUnifier';
 import { WebviewCommunicationManager } from '@/shared/communication';
 import { BaseWebviewCommand } from '@/shared/base';
 // Prerequisites checking is handled by PrerequisitesManager
@@ -65,9 +65,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     constructor(
         context: vscode.ExtensionContext,
-        stateManager: import('../shared/state').StateManager,
-        statusBar: import('../providers/statusBar').StatusBarManager,
-        logger: import('../shared/logging').Logger,
+        stateManager: import('@/shared/state').StateManager,
+        statusBar: import('@/providers/statusBar').StatusBarManager,
+        logger: import('@/shared/logging').Logger,
     ) {
         super(context, stateManager, statusBar, logger);
         // PrerequisitesManager is initialized with proper path
@@ -422,7 +422,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     // Helper methods that delegate to extracted helpers
     private getSetupInstructions(selectedComponents: string[] = []): { step: string; details: string; important?: boolean }[] | undefined {
-        return getSetupInstructionsHelper(this.sharedState.apiServicesConfig, selectedComponents, this.sharedState.componentsData as import('../types/components').ComponentRegistry | undefined);
+        return getSetupInstructionsHelper(this.sharedState.apiServicesConfig, selectedComponents, this.sharedState.componentsData as import('@/types/components').ComponentRegistry | undefined);
     }
 
     /**
@@ -455,7 +455,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         componentDef: unknown,
         config: Record<string, unknown>,
     ): Promise<void> {
-        await generateEnvFile(componentPath, componentId, componentDef as import('../types/components').TransformedComponentDefinition, config, this.logger);
+        await generateEnvFile(componentPath, componentId, componentDef as import('@/types/components').TransformedComponentDefinition, config, this.logger);
     }
     
     /**

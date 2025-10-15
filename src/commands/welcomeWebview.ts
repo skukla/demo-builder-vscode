@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { setLoadingState } from '../utils/loadingHTML';
+import { setLoadingState } from '@/utils/loadingHTML';
 import { BaseCommand } from '@/shared/base';
 
 export class WelcomeWebviewCommand extends BaseCommand {
