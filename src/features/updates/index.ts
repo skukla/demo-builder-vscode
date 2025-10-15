@@ -5,5 +5,10 @@
  * including background checking, auto-updates, and manual updates.
  */
 
-// Public API - will be populated during Phase 3.6 migration
-export {};
+// Export services
+export * from './services/updateManager';
+export * from './services/componentUpdater';
+export * from './services/extensionUpdater';
+
+// Export commands
+export * from './commands/checkUpdates';
