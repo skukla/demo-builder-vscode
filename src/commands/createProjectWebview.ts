@@ -1554,7 +1554,19 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
             
             const step = steps[0]; // Interactive installs typically have one step
-            const command = Array.isArray(step.commands) ? step.commands[0] : step.commands;
+            let command = Array.isArray(step.commands) ? step.commands[0] : step.commands;
+            
+            // For Homebrew, add completion/failure signals
+            let completionMarkerPath: string | undefined;
+            let failureMarkerPath: string | undefined;
+            if (prereq.id === 'homebrew') {
+                const timestamp = Date.now();
+                completionMarkerPath = path.join(os.tmpdir(), `demo-builder-homebrew-${timestamp}.complete`);
+                failureMarkerPath = path.join(os.tmpdir(), `demo-builder-homebrew-${timestamp}.failed`);
+                // Append success/failure markers: write success OR failure based on exit code
+                command = `${command} && echo "SUCCESS" > "${completionMarkerPath}" || echo "FAILED" > "${failureMarkerPath}"`;
+                this.debugLogger.debug(`[Prerequisites] Added completion markers`, { completionMarkerPath, failureMarkerPath });
+            }
             
             // Log to all channels
             this.logger.info(`[Prerequisites] Starting interactive installation for: ${prereq.name}`);
@@ -1588,8 +1600,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 instructions: step.instructions || []
             });
             
-            this.logger.info(`[Prerequisites] Interactive installation initiated. User must complete in terminal and click Recheck.`);
+            this.logger.info(`[Prerequisites] Interactive installation initiated. Monitoring for completion...`);
             this.stepLogger.log('prerequisites', `⏸️ ${prereq.name}: Waiting for user to complete installation in terminal`, 'info');
+            
+            // Start monitoring for installation completion (Homebrew-specific)
+            if (prereq.id === 'homebrew' && completionMarkerPath && failureMarkerPath) {
+                this.monitorHomebrewInstallation(prereqId, prereq, terminal, completionMarkerPath, failureMarkerPath);
+            }
             
         } catch (error) {
             this.logger.error(`[Prerequisites] Interactive installation failed for ${prereq.name}`, error as Error);
@@ -1603,6 +1620,266 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 message: `Failed to start installation: ${error instanceof Error ? error.message : String(error)}`,
                 required: !prereq.optional
             });
+        }
+    }
+
+    private async monitorHomebrewInstallation(prereqId: number, prereq: any, terminal: vscode.Terminal, completionMarkerPath: string, failureMarkerPath: string): Promise<void> {
+        this.logger.info('[Prerequisites] Monitoring for Homebrew installation completion via file markers');
+        this.debugLogger.debug(`[Prerequisites] Watching for markers`, { completionMarkerPath, failureMarkerPath });
+        
+        // Set up timeout fallback (2 minutes - should be plenty since we detect success/failure instantly)
+        // Timeout only triggers if: user cancels (Ctrl+C), closes terminal, or script hangs
+        const timeoutDuration = 2 * 60 * 1000;
+        const timeoutHandle = setTimeout(() => {
+            this.logger.warn('[Prerequisites] Homebrew installation monitoring timed out (no completion signal received).');
+            this.stepLogger.log('prerequisites', '⏸️ Homebrew: Installation appears incomplete. If you cancelled or closed the terminal, click Install to try again.', 'info');
+        }, timeoutDuration);
+        
+        // Watch the tmp directory for completion or failure markers
+        const watchDir = path.dirname(completionMarkerPath);
+        const successFilename = path.basename(completionMarkerPath);
+        const failureFilename = path.basename(failureMarkerPath);
+        
+        try {
+            // Check if markers already exist (fast completion/failure)
+            try {
+                await fsPromises.access(completionMarkerPath, fs.constants.F_OK);
+                // Success file exists! Installation completed before we started watching
+                this.debugLogger.debug('[Prerequisites] Success marker found immediately');
+                clearTimeout(timeoutHandle);
+                await this.handleHomebrewInstallationComplete(prereq, terminal, completionMarkerPath, failureMarkerPath);
+                return;
+            } catch {
+                // Success file doesn't exist yet, check for failure
+            }
+            
+            try {
+                await fsPromises.access(failureMarkerPath, fs.constants.F_OK);
+                // Failure file exists! Installation failed before we started watching
+                this.debugLogger.debug('[Prerequisites] Failure marker found immediately');
+                clearTimeout(timeoutHandle);
+                await this.handleHomebrewInstallationFailure(prereqId, prereq, terminal, completionMarkerPath, failureMarkerPath);
+                return;
+            } catch {
+                // Neither file exists yet, start watching
+            }
+            
+            const watcher = fs.watch(watchDir, async (eventType, filename) => {
+                this.debugLogger.debug(`[Prerequisites] File system event: ${eventType} ${filename}`);
+                
+                if ((eventType === 'rename' || eventType === 'change')) {
+                    if (filename === successFilename) {
+                        // Success marker detected!
+                        this.logger.info('[Prerequisites] ✅ Homebrew installation completion detected!');
+                        
+                        // Clean up
+                        clearTimeout(timeoutHandle);
+                        watcher.close();
+                        
+                        // Small delay to ensure file write is complete
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        // Handle completion
+                        await this.handleHomebrewInstallationComplete(prereq, terminal, completionMarkerPath, failureMarkerPath);
+                    } else if (filename === failureFilename) {
+                        // Failure marker detected!
+                        this.logger.warn('[Prerequisites] ❌ Homebrew installation failure detected');
+                        
+                        // Clean up
+                        clearTimeout(timeoutHandle);
+                        watcher.close();
+                        
+                        // Small delay to ensure file write is complete
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        // Handle failure
+                        await this.handleHomebrewInstallationFailure(prereqId, prereq, terminal, completionMarkerPath, failureMarkerPath);
+                    }
+                }
+            });
+            
+            // Store watcher for potential cleanup
+            this.debugLogger.debug('[Prerequisites] File watcher established - waiting for installation to complete or fail');
+            
+        } catch (error) {
+            this.logger.error('[Prerequisites] Failed to set up installation monitoring', error as Error);
+            this.stepLogger.log('prerequisites', '⚠️ Could not monitor installation. Please click Recheck when done.', 'warn');
+            clearTimeout(timeoutHandle);
+        }
+    }
+    
+    private async handleHomebrewInstallationComplete(prereq: any, terminal: vscode.Terminal, completionMarkerPath: string, failureMarkerPath: string): Promise<void> {
+        try {
+            this.stepLogger.log('prerequisites', '✓ Homebrew installation completed', 'info');
+            
+            // Import terminalManager for injecting messages
+            const { TerminalManager } = await import('../utils/terminalManager');
+            const terminalManager = new TerminalManager();
+            
+            // Inject status message into terminal
+            terminalManager.sendCommand('echo ""');  // Blank line for spacing
+            terminalManager.sendCommand('echo "✓ Installation complete! Configuring PATH..."');
+            
+            // Verify Homebrew is actually available
+            const commandManager = getExternalCommandManager();
+            try {
+                await commandManager.execute('brew --version', { timeout: 3000 });
+                this.logger.info('[Prerequisites] Verified: Homebrew is operational');
+            } catch (error) {
+                this.logger.warn('[Prerequisites] Homebrew completion marker found but brew command not yet available');
+                this.debugLogger.debug('[Prerequisites] This may indicate PATH needs configuration');
+            }
+            
+            // Auto-configure PATH
+            await this.configureHomebrewPath();
+            
+            // Inject completion message into terminal
+            terminalManager.sendCommand('echo "✓ PATH configured successfully!"');
+            terminalManager.sendCommand('echo ""');  // Blank line
+            terminalManager.sendCommand('echo "✅ All done! The wizard will continue automatically."');
+            terminalManager.sendCommand('echo "   You can close this terminal (Cmd+W) or leave it open for reference."');
+            
+            // Clean up both marker files
+            try {
+                await fsPromises.unlink(completionMarkerPath);
+                this.debugLogger.debug('[Prerequisites] Cleaned up success marker file');
+            } catch (error) {
+                this.debugLogger.debug('[Prerequisites] Could not clean up success marker (non-critical):', error);
+            }
+            try {
+                await fsPromises.unlink(failureMarkerPath);
+                this.debugLogger.debug('[Prerequisites] Cleaned up failure marker file');
+            } catch (error) {
+                // Expected if failure marker was never created
+                this.debugLogger.debug('[Prerequisites] No failure marker to clean up (expected)');
+            }
+            
+            // Show notification with Continue button (closes terminal) or dismiss to leave open
+            const action = await vscode.window.showInformationMessage(
+                '✅ Homebrew installed successfully! PATH configured.',
+                'Continue & Close Terminal',
+                'Continue'
+            );
+            
+            if (action === 'Continue & Close Terminal') {
+                // User wants to close terminal immediately
+                terminal.dispose();
+                this.logger.debug('[Prerequisites] Terminal closed by user action');
+            } else {
+                // User clicked "Continue" or dismissed notification
+                // Terminal stays open for reference, but wizard continues either way
+                this.logger.debug('[Prerequisites] Terminal left open for user reference');
+            }
+            
+            // ALWAYS auto-recheck prerequisites regardless of user's choice
+            // This ensures wizard never appears "stuck"
+            this.logger.info('[Prerequisites] Auto-rechecking prerequisites after Homebrew installation');
+            await this.handleCheckPrerequisites();
+            
+        } catch (error) {
+            this.logger.error('[Prerequisites] Error handling Homebrew installation completion', error as Error);
+        }
+    }
+    
+    private async handleHomebrewInstallationFailure(prereqId: number, prereq: any, terminal: vscode.Terminal, completionMarkerPath: string, failureMarkerPath: string): Promise<void> {
+        try {
+            this.logger.error('[Prerequisites] Homebrew installation failed');
+            this.stepLogger.log('prerequisites', '✗ Homebrew installation failed - check terminal for details', 'error');
+            
+            // Update UI to show error state
+            await this.sendMessage('prerequisite-status', {
+                index: prereqId,
+                name: prereq.name,
+                status: 'error',
+                message: 'Installation failed. Check terminal for error details, then click Recheck to try again.',
+                required: !prereq.optional
+            });
+            
+            // Clean up both marker files
+            try {
+                await fsPromises.unlink(failureMarkerPath);
+                this.debugLogger.debug('[Prerequisites] Cleaned up failure marker file');
+            } catch (error) {
+                this.debugLogger.debug('[Prerequisites] Could not clean up failure marker (non-critical):', error);
+            }
+            try {
+                await fsPromises.unlink(completionMarkerPath);
+                this.debugLogger.debug('[Prerequisites] Cleaned up success marker file');
+            } catch (error) {
+                // Expected if success marker was never created
+                this.debugLogger.debug('[Prerequisites] No success marker to clean up (expected)');
+            }
+            
+            // Keep terminal open so user can see error details
+            this.logger.info('[Prerequisites] Terminal left open for user to review error details');
+            
+        } catch (error) {
+            this.logger.error('[Prerequisites] Error handling Homebrew installation failure', error as Error);
+        }
+    }
+
+    private async configureHomebrewPath(): Promise<void> {
+        try {
+            this.logger.info('[Prerequisites] Configuring Homebrew PATH...');
+            
+            const homeDir = process.env.HOME || process.env.USERPROFILE;
+            if (!homeDir) {
+                this.logger.warn('[Prerequisites] Cannot determine home directory for PATH configuration');
+                return;
+            }
+            
+            // Determine shell profile file
+            const shell = process.env.SHELL || '/bin/zsh';
+            let profileFile = '';
+            
+            if (shell.includes('zsh')) {
+                profileFile = path.join(homeDir, '.zprofile');
+            } else if (shell.includes('bash')) {
+                profileFile = path.join(homeDir, '.bash_profile');
+            } else {
+                this.logger.warn(`[Prerequisites] Unknown shell: ${shell}, defaulting to .zprofile`);
+                profileFile = path.join(homeDir, '.zprofile');
+            }
+            
+            this.debugLogger.debug('[Prerequisites] Detected shell profile', { shell, profileFile });
+            
+            // Check if Homebrew PATH already exists in profile
+            let profileContent = '';
+            try {
+                profileContent = await fsPromises.readFile(profileFile, 'utf-8');
+            } catch (error) {
+                // File doesn't exist yet, will be created
+                this.debugLogger.debug('[Prerequisites] Profile file does not exist, will create');
+            }
+            
+            const homebrewPathConfig = 'eval "$(/opt/homebrew/bin/brew shellenv)"';
+            
+            if (profileContent.includes(homebrewPathConfig)) {
+                this.logger.info('[Prerequisites] Homebrew PATH already configured in shell profile');
+                return;
+            }
+            
+            // Append Homebrew PATH configuration
+            const configLines = [
+                '', // Empty line for separation
+                '# Homebrew PATH (auto-configured by Adobe Demo Builder)',
+                homebrewPathConfig
+            ].join('\n');
+            
+            await fsPromises.appendFile(profileFile, configLines + '\n');
+            
+            this.logger.info('[Prerequisites] ✅ Homebrew PATH configured successfully');
+            this.stepLogger.log('prerequisites', '✓ Homebrew PATH added to shell profile automatically', 'info');
+            
+            // Also evaluate in current process environment
+            const commandManager = getExternalCommandManager();
+            await commandManager.execute('eval "$(/opt/homebrew/bin/brew shellenv)"', { timeout: 3000 });
+            
+            this.debugLogger.debug('[Prerequisites] Homebrew PATH evaluated in current environment');
+            
+        } catch (error) {
+            this.logger.error('[Prerequisites] Failed to configure Homebrew PATH', error as Error);
+            this.stepLogger.log('prerequisites', `⚠️ Could not auto-configure Homebrew PATH: ${error instanceof Error ? error.message : String(error)}`, 'warn');
         }
     }
 
