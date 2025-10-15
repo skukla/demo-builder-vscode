@@ -81,9 +81,19 @@ export class UpdateManager {
       if (!repoPath) continue; // Skip components without repos
       
       const currentVersion = project.componentVersions?.[componentId]?.version || 'unknown';
+      
+      // DEBUG: Log what we're working with
+      this.logger.debug(`[Updates] Component ${componentId}:`);
+      this.logger.debug(`[Updates]   - currentVersion: "${currentVersion}"`);
+      this.logger.debug(`[Updates]   - instance: ${instance ? 'exists' : 'undefined'}`);
+      if (instance) {
+        this.logger.debug(`[Updates]   - instance.version: "${instance.version || 'undefined'}"`);
+      }
+      
       const latestRelease = await this.fetchLatestRelease(repoPath, channel);
       
       if (!latestRelease) {
+        this.logger.debug(`[Updates]   - No release found on GitHub`);
         results.set(componentId, {
           hasUpdate: false,
           current: currentVersion,
@@ -92,6 +102,9 @@ export class UpdateManager {
         continue;
       }
       
+      this.logger.debug(`[Updates]   - latestRelease.version: "${latestRelease.version}"`);
+      this.logger.debug(`[Updates]   - latestRelease.commitSha: "${latestRelease.commitSha || 'undefined'}"`);
+      
       // Check if update is needed
       let hasUpdate = false;
       
@@ -99,11 +112,18 @@ export class UpdateManager {
       const looksLikeGitSHA = /^[0-9a-f]{40}$/i.test(currentVersion);
       const isUnknownVersion = currentVersion === 'unknown' || looksLikeGitSHA;
       
+      this.logger.debug(`[Updates]   - looksLikeGitSHA: ${looksLikeGitSHA}`);
+      this.logger.debug(`[Updates]   - isUnknownVersion: ${isUnknownVersion}`);
+      
       if (isUnknownVersion) {
         // For unknown versions or git SHAs, check actual git commit hash
         // If installed commit matches release commit, no update needed
-        const installedCommit = instance.version; // This is the git commit hash
+        const installedCommit = instance?.version; // This is the git commit hash
         const releaseCommit = latestRelease.commitSha;
+        
+        this.logger.debug(`[Updates]   - installedCommit: "${installedCommit || 'undefined'}"`);
+        this.logger.debug(`[Updates]   - releaseCommit: "${releaseCommit || 'undefined'}"`);
+        this.logger.debug(`[Updates]   - Commits match: ${installedCommit && releaseCommit && installedCommit === releaseCommit}`);
         
         if (installedCommit && releaseCommit && installedCommit === releaseCommit) {
           // Already at this version, just update the tracking
@@ -121,12 +141,16 @@ export class UpdateManager {
           hasUpdate = false;
         } else {
           // Different commit or unknown, show as update available
+          this.logger.debug(`[Updates]   - Result: SHOW UPDATE (commits don't match or missing)`);
           hasUpdate = true;
         }
       } else {
         // Known version, use semver comparison
         hasUpdate = this.isNewerVersion(latestRelease.version, currentVersion);
+        this.logger.debug(`[Updates]   - Result: ${hasUpdate ? 'SHOW UPDATE' : 'NO UPDATE'} (semver comparison)`);
       }
+      
+      this.logger.debug(`[Updates]   - Final hasUpdate: ${hasUpdate}`);
       
       results.set(componentId, {
         hasUpdate,
