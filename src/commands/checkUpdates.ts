@@ -13,7 +13,7 @@ export class CheckUpdatesCommand extends BaseCommand {
   async execute(): Promise<void> {
     try {
       // Run update check with visible progress notification
-      const { extensionUpdate, componentUpdates, project } = await vscode.window.withProgress(
+      const { extensionUpdate, componentUpdates, project, hasUpdates } = await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
           title: 'Checking for updates...',
@@ -24,14 +24,12 @@ export class CheckUpdatesCommand extends BaseCommand {
           const project = await this.stateManager.getCurrentProject();
           
           // Check extension updates
-          this.logger.info('[Updates] Checking for extension updates');
           progress.report({ message: 'Checking extension...' });
           const extensionUpdate = await updateManager.checkExtensionUpdate();
           
           // Check component updates (if project loaded)
           let componentUpdates = new Map();
           if (project) {
-            this.logger.info('[Updates] Checking for component updates');
             progress.report({ message: 'Checking components...' });
             componentUpdates = await updateManager.checkComponentUpdates(project);
             
@@ -39,9 +37,27 @@ export class CheckUpdatesCommand extends BaseCommand {
             await this.stateManager.saveProject(project);
           }
           
-          return { extensionUpdate, componentUpdates, project };
+          // Check if any updates available
+          const hasUpdates = extensionUpdate.hasUpdate || 
+            Array.from(componentUpdates.values()).some(u => u.hasUpdate);
+          
+          if (!hasUpdates) {
+            // Show "up to date" result in the progress notification for 3 seconds
+            progress.report({ 
+              message: `✓ Demo Builder is up to date (v${extensionUpdate.current})` 
+            });
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
+          
+          return { extensionUpdate, componentUpdates, project, hasUpdates };
         }
       );
+      
+      // If no updates, we already showed the result - just return
+      if (!hasUpdates) {
+        this.logger.info('[Updates] ✓ No updates available - Demo Builder is up to date');
+        return;
+      }
       
       // Build update summary
       const updates: string[] = [];
@@ -55,15 +71,6 @@ export class CheckUpdatesCommand extends BaseCommand {
           updates.push(`${componentId}: v${update.current} → v${update.latest}`);
         }
       }
-      
-      if (updates.length === 0) {
-        this.logger.info('[Updates] ✓ No updates available - Demo Builder is up to date');
-        // Progress notification auto-dismisses, show brief status bar confirmation
-        vscode.window.setStatusBarMessage(`$(check) Demo Builder is up to date (v${extensionUpdate.current})`, 5000);
-        return;
-      }
-      
-      // Progress notification has auto-dismissed, now show update prompt
       
       // Log updates found
       this.logger.info(`[Updates] Found ${updates.length} update(s):`);
