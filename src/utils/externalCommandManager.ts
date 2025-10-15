@@ -144,8 +144,9 @@ export class ExternalCommandManager {
                     // This avoids fnm exec overhead (5-6s → <1s for aio commands)
                     if (this.cachedNodeBinaryPath && this.cachedAioBinaryPath && command.startsWith('aio ')) {
                         // Replace 'aio' with direct paths: node /path/to/aio
+                        // Quote paths to handle spaces in directory names (e.g., "Application Support")
                         const aioCommand = command.substring(4); // Remove 'aio ' prefix
-                        finalCommand = `${this.cachedNodeBinaryPath} ${this.cachedAioBinaryPath} ${aioCommand}`;
+                        finalCommand = `"${this.cachedNodeBinaryPath}" "${this.cachedAioBinaryPath}" ${aioCommand}`;
                         this.logger.debug(`[Adobe CLI] Using cached paths (fast): ${finalCommand.substring(0, 100)}...`);
                     } else {
                         // Fallback to fnm exec (slower but reliable)
