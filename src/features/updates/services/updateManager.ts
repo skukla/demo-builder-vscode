@@ -1,8 +1,8 @@
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { Project } from '../types';
-import { Logger } from '../shared/logging';
-import { TIMEOUTS } from './timeoutConfig';
+import { Project } from '@/types';
+import { Logger } from '@/shared/logging';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
 
 interface ReleaseInfo {
   version: string;

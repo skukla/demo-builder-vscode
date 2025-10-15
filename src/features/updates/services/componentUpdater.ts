@@ -1,10 +1,10 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Project } from '../types';
-import { parseJSON } from '../types/typeGuards';
-import { Logger } from '../shared/logging';
-import { TIMEOUTS } from './timeoutConfig';
+import { Project } from '@/types';
+import { parseJSON } from '@/types/typeGuards';
+import { Logger } from '@/shared/logging';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
 
 export class ComponentUpdater {
     private logger: Logger;
@@ -223,7 +223,7 @@ export class ComponentUpdater {
         targetPath: string,
         componentId: string,
     ): Promise<void> {
-        const { ServiceLocator } = await import('../services/serviceLocator');
+        const { ServiceLocator } = await import('@/services/serviceLocator');
         const commandManager = ServiceLocator.getCommandExecutor();
     
         const tempZip = path.join(path.dirname(targetPath), `${componentId}-temp.zip`);

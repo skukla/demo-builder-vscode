@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { Project } from '../types';
-import { ComponentUpdater } from '../utils/componentUpdater';
-import { ExtensionUpdater } from '../utils/extensionUpdater';
-import { UpdateManager, UpdateCheckResult } from '../utils/updateManager';
+import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
+import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
+import { UpdateManager, UpdateCheckResult } from '@/features/updates/services/updateManager';
 import { BaseCommand } from '@/shared/base';
 
 /**
