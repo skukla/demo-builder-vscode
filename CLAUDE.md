@@ -42,8 +42,25 @@ The Adobe Demo Builder is a VS Code extension that streamlines the creation of A
 demo-builder-vscode/
 ├── src/                    # Source code (→ see src/CLAUDE.md)
 │   ├── commands/          # VS Code commands (→ see src/commands/CLAUDE.md)
+│   ├── features/          # Feature modules (→ see src/features/CLAUDE.md)
+│   │   ├── authentication/   # Adobe authentication
+│   │   ├── components/       # Component management
+│   │   ├── dashboard/        # Project dashboard
+│   │   ├── lifecycle/        # Project lifecycle
+│   │   ├── mesh/             # API Mesh deployment
+│   │   ├── prerequisites/    # Prerequisites system
+│   │   ├── project-creation/ # Project creation
+│   │   └── updates/          # Auto-update system
+│   ├── shared/            # Shared infrastructure (→ see src/shared/CLAUDE.md)
+│   │   ├── base/             # Base types & utilities
+│   │   ├── command-execution/# Command execution
+│   │   ├── communication/    # Webview communication
+│   │   ├── logging/          # Logging system
+│   │   ├── state/            # State management
+│   │   ├── utils/            # Common utilities
+│   │   └── validation/       # Validation utilities
 │   ├── webviews/          # React UI components (→ see src/webviews/CLAUDE.md)
-│   ├── utils/             # Utilities & systems (→ see src/utils/CLAUDE.md)
+│   ├── utils/             # Legacy utilities (→ see src/utils/CLAUDE.md)
 │   ├── providers/         # VS Code providers
 │   └── types/             # TypeScript definitions
 ├── templates/             # Configuration templates (→ see templates/CLAUDE.md)

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `src/` directory contains all TypeScript source code for the Adobe Demo Builder VS Code extension. The code is organized into logical modules that separate concerns between VS Code integration, UI components, business logic, and utilities.
+The `src/` directory contains all TypeScript source code for the Adobe Demo Builder VS Code extension. The code is organized using a **feature-based architecture** that groups related functionality into self-contained modules, with shared infrastructure available to all features.
 
 ## Module Organization
 
@@ -10,12 +10,62 @@ The `src/` directory contains all TypeScript source code for the Adobe Demo Buil
 src/
 ├── extension.ts           # Entry point - activates extension
 ├── commands/             # VS Code command implementations (→ CLAUDE.md)
+├── features/            # Feature modules (→ features/CLAUDE.md)
+│   ├── authentication/  # Adobe authentication & SDK integration
+│   ├── components/      # Component management & registry
+│   ├── dashboard/       # Project dashboard & controls
+│   ├── lifecycle/       # Project lifecycle management
+│   ├── mesh/            # API Mesh deployment & verification
+│   ├── prerequisites/   # Prerequisites checking & installation
+│   ├── project-creation/# Project creation workflow
+│   └── updates/         # Auto-update system (extension & components)
+├── shared/              # Shared infrastructure (→ shared/CLAUDE.md)
+│   ├── base/            # Base types & utilities
+│   ├── command-execution/ # Command execution infrastructure
+│   ├── communication/   # Webview communication protocol
+│   ├── logging/         # Logging system (StepLogger, ErrorLogger)
+│   ├── state/           # State management (StateManager, StateCoordinator)
+│   ├── utils/           # Common utilities
+│   └── validation/      # Validation utilities
 ├── webviews/            # React-based UI layer (→ CLAUDE.md)
-├── utils/               # Core utilities and systems (→ CLAUDE.md)
+├── utils/               # Legacy utilities - being phased out (→ CLAUDE.md)
 ├── providers/           # VS Code providers (tree views, etc.)
 ├── types/               # TypeScript type definitions
 └── license/             # License validation logic
 ```
+
+## Feature-Based Architecture
+
+The codebase uses a **feature-based architecture** (also called "vertical slice architecture") where code is organized by business domain rather than technical layer:
+
+**Benefits:**
+- **Cohesion**: Related code lives together (types, services, UI, tests)
+- **Discoverability**: Easy to find all code related to a feature
+- **Modularity**: Features are self-contained and loosely coupled
+- **Scalability**: New features don't impact existing structure
+
+**Feature Structure:**
+```
+features/authentication/
+├── index.ts              # Public API exports
+├── services/
+│   ├── authenticationService.ts
+│   ├── authCacheManager.ts
+│   └── types.ts
+└── README.md            # Feature documentation
+```
+
+**Import Rules:**
+- Features can import from `@/shared/*` (shared infrastructure)
+- Features can import from `@/types` (global types)
+- Features **should not** import from other features (keep loosely coupled)
+- Commands can import from any feature (orchestration layer)
+
+**Path Aliases:**
+- `@/features/*` - Feature modules
+- `@/shared/*` - Shared infrastructure
+- `@/types` - Global type definitions
+- `@/utils` - Legacy utilities (being phased out)
 
 ## Key Architectural Patterns
 
@@ -81,25 +131,45 @@ export async function activate(context: ExtensionContext) {
 - **diagnostics**: System diagnostics
 - **resetAll**: Reset all state (dev only)
 
+Commands orchestrate features and coordinate workflows. See `commands/CLAUDE.md` for details.
+
+### Features (`features/`)
+- **authentication**: Adobe authentication with Console SDK, token caching, org/project/workspace selection
+- **components**: Component registry, definitions, and lifecycle management
+- **dashboard**: Project dashboard UI, mesh status, component browser
+- **lifecycle**: Project start/stop, process management, terminal integration
+- **mesh**: API Mesh deployment, verification, staleness detection, configuration fetching
+- **prerequisites**: Tool detection, installation, version checking, Node.js multi-version support
+- **project-creation**: Project creation workflow, template application, environment setup
+- **updates**: Auto-update system (extension and components), GitHub Releases integration, snapshot/rollback
+
+Features are self-contained modules that own specific business domains. See `features/CLAUDE.md` for architecture.
+
+### Shared (`shared/`)
+- **base**: Base types, interfaces, and utilities used across features
+- **command-execution**: ExternalCommandManager for shell command execution with race protection
+- **communication**: WebviewCommunicationManager for robust extension-webview messaging
+- **logging**: StepLogger, ErrorLogger, DebugLogger for consistent logging across features
+- **state**: StateManager and StateCoordinator for state persistence and synchronization
+- **utils**: Common utilities like ProgressUnifier, file system helpers, loading HTML
+- **validation**: Field validation utilities for user input (UI and CLI)
+
+Shared infrastructure is available to all features. See `shared/CLAUDE.md` for details.
+
 ### Webviews (`webviews/`)
 - React components for UI
 - Adobe Spectrum integration
 - Message handling with extension
 - Step-based wizard flow
 
-### Utils (`utils/`)
-- **PrerequisitesManager**: Tool detection/installation
-- **ProgressUnifier**: Unified progress tracking
-- **StateManager**: Persistent state storage
-- **ComponentRegistry**: Component definitions
-- **ComponentManager**: Component lifecycle management
-- **ErrorLogger**: Centralized error handling
-- **ErrorFormatter**: User-friendly error message formatting
-- **UpdateManager**: GitHub Releases checking for extension and components
-- **ComponentUpdater**: Component updates with snapshot/rollback
-- **ExtensionUpdater**: VSIX download and installation
-- **AdobeAuthManager**: Adobe authentication with SDK integration
-- **ExternalCommandManager**: Shell command execution with queuing
+See `webviews/CLAUDE.md` for UI architecture.
+
+### Utils (`utils/`) - LEGACY
+**Status**: Being phased out in favor of feature-based organization.
+
+Remaining utilities are being migrated to `features/` or `shared/`:
+- Most utilities moved to appropriate features or shared modules
+- See `utils/CLAUDE.md` for migration status and guidance
 
 ### Providers (`providers/`)
 - **ProjectTreeProvider**: Project explorer view
@@ -111,6 +181,7 @@ export async function activate(context: ExtensionContext) {
 - Message protocol definitions
 - State shape definitions
 - Component type definitions
+- Handler context and response types
 
 ## Key Design Patterns
 

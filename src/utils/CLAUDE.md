@@ -1,8 +1,19 @@
 # Utils Module
 
+> **⚠️ MIGRATION NOTICE**: This module is being phased out in favor of a feature-based architecture.
+>
+> - Most utilities have been migrated to `@/features/*` (feature-specific) or `@/shared/*` (shared infrastructure)
+> - Remaining code in this directory is legacy and will be gradually migrated
+> - **For new code**: Use `@/features/*` for feature-specific logic, `@/shared/*` for shared infrastructure
+> - **See**: `src/features/CLAUDE.md` and `src/shared/CLAUDE.md` for the new architecture
+>
+> **Migration Status**: Phases 1-3 complete (authentication, components, mesh, prerequisites, updates, project-creation, dashboard, lifecycle)
+
 ## Overview
 
 The utils module contains core utilities and systems that power the Demo Builder extension. These utilities handle everything from prerequisite checking to progress tracking, state management, and error logging.
+
+**Note**: Much of this functionality has been migrated to features/ and shared/. See migration notice above.
 
 ## Module Structure
 
