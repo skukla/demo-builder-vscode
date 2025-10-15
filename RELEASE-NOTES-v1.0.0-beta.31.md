@@ -215,6 +215,49 @@ This release builds on v1.0.0-beta.30's component version tracking fixes:
 
 ---
 
+## Bonus: Debug Logging Cleanup
+
+**Modified:** `src/utils/updateManager.ts`
+
+Reduced verbose debug logging by ~85% for better log readability:
+
+**Before (14 lines per component):**
+```
+[Updates] Component citisignal-nextjs:
+[Updates]   - currentVersion: "unknown"
+[Updates]   - instance: exists
+[Updates]   - instance.version: "9404d6a3"
+[Updates]   - latestRelease.version: "1.0.0-beta.1"
+[Updates]   - latestRelease.commitSha: "62148..."
+[Updates]   - looksLikeGitSHA: false
+[Updates]   - isUnknownVersion: true
+[Updates]   - installedCommit: "9404d6a3"
+[Updates]   - releaseCommit: "62148f2a..."
+[Updates]   - Comparing short SHA: "9404d6a3" vs...
+[Updates]   - Commits match: false
+[Updates]   - Result: SHOW UPDATE...
+[Updates]   - Final hasUpdate: true
+```
+
+**After (1-2 lines per component):**
+```
+[Updates] citisignal-nextjs: Update available (installed=9404d6a → release=62148f2)
+```
+
+or
+
+```
+[Updates] citisignal-nextjs: Already at 1.0.0-beta.1 (9404d6a)
+```
+
+**Impact:**
+- ✅ Cleaner logs (reduced from 28 to 2-4 lines for typical updates)
+- ✅ Still includes all critical information
+- ✅ Easier to scan and debug
+- ✅ No loss of functionality
+
+---
+
 ## Summary
 
 v1.0.0-beta.31 makes updates **seamless and transparent**:
@@ -222,5 +265,6 @@ v1.0.0-beta.31 makes updates **seamless and transparent**:
 - ✅ Always know what's happening
 - ✅ Smooth flow from check to result
 - ✅ Professional, polished UX
+- ✅ Clean, readable debug logs
 
 **Combined with v1.0.0-beta.30's fixes, updates now work reliably AND feel great!** 🎉

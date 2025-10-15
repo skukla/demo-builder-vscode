@@ -44,20 +44,19 @@ export class UpdateManager {
     const currentVersion = this.context.extension.packageJSON.version;
     const channel = this.getUpdateChannel();
     
-    this.logger.debug(`[Update] Checking for updates: current=${currentVersion}, channel=${channel}`);
-    
     const latestRelease = await this.fetchLatestRelease(this.EXTENSION_REPO, channel);
     
     if (!latestRelease) {
-      this.logger.debug(`[Update] No release found`);
       return { hasUpdate: false, current: currentVersion, latest: currentVersion };
     }
     
-    this.logger.debug(`[Update] Latest release found: ${latestRelease.version}`);
-    
     const hasUpdate = this.isNewerVersion(latestRelease.version, currentVersion);
     
-    this.logger.debug(`[Update] Comparison: ${latestRelease.version} > ${currentVersion} = ${hasUpdate}`);
+    if (hasUpdate) {
+      this.logger.info(`[Update] Extension update available: v${currentVersion} → v${latestRelease.version}`);
+    } else {
+      this.logger.debug(`[Update] Extension up to date: v${currentVersion}`);
+    }
     
     return {
       hasUpdate,
@@ -82,18 +81,9 @@ export class UpdateManager {
       
       const currentVersion = project.componentVersions?.[componentId]?.version || 'unknown';
       
-      // DEBUG: Log what we're working with
-      this.logger.debug(`[Updates] Component ${componentId}:`);
-      this.logger.debug(`[Updates]   - currentVersion: "${currentVersion}"`);
-      this.logger.debug(`[Updates]   - instance: ${instance ? 'exists' : 'undefined'}`);
-      if (instance) {
-        this.logger.debug(`[Updates]   - instance.version: "${instance.version || 'undefined'}"`);
-      }
-      
       const latestRelease = await this.fetchLatestRelease(repoPath, channel);
       
       if (!latestRelease) {
-        this.logger.debug(`[Updates]   - No release found on GitHub`);
         results.set(componentId, {
           hasUpdate: false,
           current: currentVersion,
@@ -102,9 +92,6 @@ export class UpdateManager {
         continue;
       }
       
-      this.logger.debug(`[Updates]   - latestRelease.version: "${latestRelease.version}"`);
-      this.logger.debug(`[Updates]   - latestRelease.commitSha: "${latestRelease.commitSha || 'undefined'}"`);
-      
       // Check if update is needed
       let hasUpdate = false;
       
@@ -112,17 +99,11 @@ export class UpdateManager {
       const looksLikeGitSHA = /^[0-9a-f]{40}$/i.test(currentVersion);
       const isUnknownVersion = currentVersion === 'unknown' || looksLikeGitSHA;
       
-      this.logger.debug(`[Updates]   - looksLikeGitSHA: ${looksLikeGitSHA}`);
-      this.logger.debug(`[Updates]   - isUnknownVersion: ${isUnknownVersion}`);
-      
       if (isUnknownVersion) {
         // For unknown versions or git SHAs, check actual git commit hash
         // If installed commit matches release commit, no update needed
         const installedCommit = instance?.version; // This is the git commit hash (may be short SHA)
         const releaseCommit = latestRelease.commitSha;
-        
-        this.logger.debug(`[Updates]   - installedCommit: "${installedCommit || 'undefined'}"`);
-        this.logger.debug(`[Updates]   - releaseCommit: "${releaseCommit || 'undefined'}"`);
         
         // Compare commits (support both full and short SHAs)
         let commitsMatch = false;
@@ -130,18 +111,15 @@ export class UpdateManager {
           // If installed is short SHA (8 chars), compare first 8 chars of release
           if (installedCommit.length === 8) {
             commitsMatch = releaseCommit.toLowerCase().startsWith(installedCommit.toLowerCase());
-            this.logger.debug(`[Updates]   - Comparing short SHA: "${installedCommit}" vs "${releaseCommit.substring(0, 8)}"`);
           } else {
             // Full SHA comparison
             commitsMatch = installedCommit.toLowerCase() === releaseCommit.toLowerCase();
           }
         }
         
-        this.logger.debug(`[Updates]   - Commits match: ${commitsMatch}`);
-        
         if (commitsMatch) {
           // Already at this version, just update the tracking
-          this.logger.debug(`[Updates] Component ${componentId} is already at ${latestRelease.version} (commit ${installedCommit?.substring(0, 7) || 'unknown'})`);
+          this.logger.debug(`[Updates] ${componentId}: Already at ${latestRelease.version} (${installedCommit?.substring(0, 7)})`);
           
           // Update componentVersions to track properly going forward
           if (!project.componentVersions) {
@@ -155,16 +133,16 @@ export class UpdateManager {
           hasUpdate = false;
         } else {
           // Different commit or unknown, show as update available
-          this.logger.debug(`[Updates]   - Result: SHOW UPDATE (commits don't match or missing)`);
+          this.logger.debug(`[Updates] ${componentId}: Update available (installed=${installedCommit?.substring(0, 7)} → release=${releaseCommit?.substring(0, 7)})`);
           hasUpdate = true;
         }
       } else {
         // Known version, use semver comparison
         hasUpdate = this.isNewerVersion(latestRelease.version, currentVersion);
-        this.logger.debug(`[Updates]   - Result: ${hasUpdate ? 'SHOW UPDATE' : 'NO UPDATE'} (semver comparison)`);
+        if (!hasUpdate) {
+          this.logger.debug(`[Updates] ${componentId}: Already at ${currentVersion} (latest=${latestRelease.version})`);
+        }
       }
-      
-      this.logger.debug(`[Updates]   - Final hasUpdate: ${hasUpdate}`);
       
       results.set(componentId, {
         hasUpdate,
@@ -189,8 +167,6 @@ export class UpdateManager {
       const url = channel === 'stable'
         ? `https://api.github.com/repos/${repo}/releases/latest`
         : `https://api.github.com/repos/${repo}/releases?per_page=20`;
-      
-      this.logger.debug(`[Update] Fetching latest ${channel} release for ${repo}`);
       
       // Create timeout controller
       const controller = new AbortController();
@@ -218,7 +194,6 @@ export class UpdateManager {
         }
         
         if (!release || release.message === 'Not Found') {
-          this.logger.debug(`[Update] No releases found for ${repo}`);
           return null;
         }
         
@@ -229,7 +204,6 @@ export class UpdateManager {
           : release.zipball_url;
         
         if (!asset) {
-          this.logger.debug(`[Update] No valid asset found in release for ${repo}`);
           return null;
         }
         
@@ -241,14 +215,11 @@ export class UpdateManager {
           const tagResponse = await fetch(tagUrl);
           if (tagResponse.ok) {
             const tagData = await tagResponse.json() as { object?: { sha?: string } };
-            // tagData.object.sha is the commit SHA
             if (tagData.object && tagData.object.sha) {
               commitSha = tagData.object.sha;
-              this.logger.debug(`[Update] Resolved tag ${tagName} to commit ${commitSha.substring(0, 8)}`);
             }
           }
         } catch (error) {
-          this.logger.debug(`[Update] Could not resolve tag to commit SHA: ${error}`);
           // Fall back to target_commitish
         }
         
@@ -264,7 +235,7 @@ export class UpdateManager {
         clearTimeout(timeout);
       }
     } catch (error) {
-      this.logger.debug(`[Update] Failed to fetch release for ${repo}:`, error);
+      // Silently fail for fetch errors (network issues, rate limits, etc.)
       return null;
     }
   }
@@ -280,7 +251,6 @@ export class UpdateManager {
       // semver.gt() properly handles: 1.0.0-beta.6 > 1.0.0-beta.5
       return semver.gt(latest, current);
     } catch (error) {
-      this.logger.debug(`[Update] Version comparison failed: ${error}`);
       return false;
     }
   }
