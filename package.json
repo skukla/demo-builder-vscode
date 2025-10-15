@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.27",
+  "version": "1.0.0-beta.28",
   "publisher": "adobe-demo-team",
   "author": "Steve Kukla",
   "engines": {
@@ -57,6 +57,24 @@
         "command": "demoBuilder.resetAll",
         "title": "Reset All (Dev Only)",
         "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.showWelcome",
+        "title": "Show Welcome Screen",
+        "category": "Demo Builder",
+        "icon": "$(home)"
+      },
+      {
+        "command": "demoBuilder.showProjectDashboard",
+        "title": "Open Project Dashboard",
+        "category": "Demo Builder",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "demoBuilder.switchProject",
+        "title": "Switch Project",
+        "category": "Demo Builder",
+        "icon": "$(folder-opened)"
       }
     ],
     "configuration": {
@@ -115,42 +133,7 @@
           "name": "Components"
         }
       ]
-    },
-    "commands": [
-      {
-        "command": "demoBuilder.createProject",
-        "title": "Create Project",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.checkForUpdates",
-        "title": "Check for Updates",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.resetAll",
-        "title": "Reset All (Dev Only)",
-        "category": "Demo Builder"
-      },
-      {
-        "command": "demoBuilder.showWelcome",
-        "title": "Show Welcome Screen",
-        "category": "Demo Builder",
-        "icon": "$(home)"
-      },
-      {
-        "command": "demoBuilder.showProjectDashboard",
-        "title": "Open Project Dashboard",
-        "category": "Demo Builder",
-        "icon": "$(dashboard)"
-      },
-      {
-        "command": "demoBuilder.switchProject",
-        "title": "Switch Project",
-        "category": "Demo Builder",
-        "icon": "$(folder-opened)"
-      }
-    ]
+    }
   },
   "scripts": {
     "compile": "npm run compile:typescript && npm run compile:webview && npm run copy:media",
