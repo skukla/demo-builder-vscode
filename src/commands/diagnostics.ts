@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '../services/serviceLocator';
 import { parseJSON } from '../types/typeGuards';
-import { getLogger, CommandResult } from '../shared/logging';
+import { getLogger, CommandResultWithContext } from '../shared/logging';
 
 // Diagnostic Type Definitions
 interface SystemInfo {
@@ -363,7 +363,7 @@ export class DiagnosticsCommand {
             const { stdout, stderr } = execResult;
             const duration = Date.now() - startTime;
 
-            const result: CommandResult = {
+            const result: CommandResultWithContext = {
                 stdout: stdout.trim(),
                 stderr: stderr.trim(),
                 code: 0,
@@ -383,7 +383,7 @@ export class DiagnosticsCommand {
             const duration = Date.now() - startTime;
             const err = error as { stdout?: string; stderr?: string; message: string; code?: number };
 
-            const result: CommandResult = {
+            const result: CommandResultWithContext = {
                 stdout: err.stdout || '',
                 stderr: err.stderr || err.message,
                 code: err.code || -1,

@@ -28,7 +28,7 @@ export type {
     AdobeWorkspace,
     AdobeContext,
     AuthToken,
-    ValidationResult,
+    AuthTokenValidation,
     CacheEntry,
     PerformanceMetric,
 } from './services/types';

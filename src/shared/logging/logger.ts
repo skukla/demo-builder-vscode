@@ -1,6 +1,5 @@
+import type { LogLevel } from '@/types/logger';
 import { getLogger, DebugLogger } from './debugLogger';
-
-export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 /**
  * Logger class that wraps the DebugLogger for backward compatibility

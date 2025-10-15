@@ -2,14 +2,15 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { sanitizeErrorForLogging } from '@/shared/validation';
+import type { CommandResult } from '@/shared/command-execution/types';
 
-export interface CommandResult {
-    stdout: string;
-    stderr: string;
-    code: number | null;
+/**
+ * Extended CommandResult with additional context for logging
+ * Extends the canonical CommandResult from command-execution module
+ */
+export interface CommandResultWithContext extends CommandResult {
     cwd?: string;
     env?: NodeJS.ProcessEnv;
-    duration?: number;
 }
 
 export class DebugLogger {
@@ -115,7 +116,7 @@ export class DebugLogger {
     }
 
     // Command execution logging (debug channel)
-    public logCommand(command: string, result: CommandResult, args?: string[]): void {
+    public logCommand(command: string, result: CommandResultWithContext, args?: string[]): void {
         // SECURITY: Disable command logging in production
         if (!this.debugEnabled || this.isProduction()) {
             return;

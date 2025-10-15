@@ -17,7 +17,7 @@ import { vscode } from '../../app/vscodeApi';
 import { LoadingDisplay } from '../shared/LoadingDisplay';
 import { ConfigurationSummary } from '../shared/ConfigurationSummary';
 import { FadeTransition } from '../shared/FadeTransition';
-import { WizardState, Project, WizardStep } from '../../types';
+import { WizardState, AdobeProject, WizardStep } from '../../types';
 import { useDebouncedLoading } from '@/hooks';
 
 interface AdobeProjectStepProps {
@@ -106,7 +106,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
         vscode.postMessage('get-projects', { orgId: state.adobeOrg.id });
     };
     
-    const selectProject = (project: Project) => {
+    const selectProject = (project: AdobeProject) => {
         // BACKEND CALL ON CONTINUE PATTERN - UI PHASE:
         // This function provides immediate visual feedback to user selection
         // NO backend operations - those happen in WizardContainer.goNext()

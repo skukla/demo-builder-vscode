@@ -4,7 +4,7 @@ import type {
     AdobeOrg,
     AdobeProject,
     AdobeWorkspace,
-    ValidationResult,
+    AuthTokenValidation,
     CacheEntry,
     AdobeConsoleWhereResponse,
 } from './types';
@@ -47,7 +47,7 @@ export class AuthCacheManager {
     private authCacheExpiry = 0;
 
     // Organization validation caching (org-specific)
-    private validationCache: ValidationResult | undefined;
+    private validationCache: AuthTokenValidation | undefined;
 
     // API result caching for performance
     private orgListCache: CacheEntry<AdobeOrg[]> | undefined;
@@ -152,7 +152,7 @@ export class AuthCacheManager {
     /**
      * Get validation cache
      */
-    getValidationCache(): ValidationResult | undefined {
+    getValidationCache(): AuthTokenValidation | undefined {
         if (!this.validationCache) {
             return undefined;
         }

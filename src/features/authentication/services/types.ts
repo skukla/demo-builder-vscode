@@ -34,7 +34,7 @@ export interface AuthToken {
     expiry: number;
 }
 
-export interface ValidationResult {
+export interface AuthTokenValidation {
     isValid: boolean;
     org: string;
     expiry: number;

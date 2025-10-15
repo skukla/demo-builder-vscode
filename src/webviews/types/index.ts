@@ -27,14 +27,14 @@ export interface WizardState {
     componentConfigs?: ComponentConfigs;  // Component-specific environment configurations
     adobeAuth: AdobeAuthState;
     adobeOrg?: Organization;  // Renamed for consistency
-    adobeProject?: Project;  // Renamed for consistency
+    adobeProject?: AdobeProject;  // Renamed for consistency
     adobeWorkspace?: Workspace;  // New field for workspace
     commerceConfig?: CommerceConfig;  // Kept for compatibility
     creationProgress?: CreationProgress;
     projectSearchFilter?: string;  // Filter persistence for project selection
-    
+
     // Persistent caches to prevent re-fetching on backward navigation
-    projectsCache?: Project[];
+    projectsCache?: AdobeProject[];
     workspacesCache?: Workspace[];
     organizationsCache?: Organization[];
     
@@ -76,7 +76,7 @@ export interface Organization {
     name: string;
 }
 
-export interface Project {
+export interface AdobeProject {
     id: string;
     name: string;
     title?: string;
@@ -203,7 +203,7 @@ export interface FeedbackMessage {
     canRetry?: boolean;
 }
 
-export interface ValidationResult {
+export interface FormValidation {
     isValid: boolean;
     message?: string;
     field: string;
