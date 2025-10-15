@@ -3663,16 +3663,31 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             project.status = 'ready';
             
             // Initialize component versions (for future update tracking)
+            // Run update check to resolve "unknown" versions to proper version numbers
             if (!project.componentVersions) {
                 project.componentVersions = {};
             }
             
+            // Initialize with git commit SHAs first
             for (const componentId of Object.keys(project.componentInstances || {})) {
                 const instance = project.componentInstances?.[componentId];
                 project.componentVersions[componentId] = {
-                    version: instance?.version || 'unknown', // Use git commit hash from installation
+                    version: instance?.version || 'unknown', // Git commit hash from installation
                     lastUpdated: new Date().toISOString()
                 };
+            }
+            
+            // Now run update check - it will auto-fix "unknown" to proper versions
+            this.logger.info('[Project Creation] Resolving component versions from GitHub...');
+            try {
+                const { UpdateManager } = await import('../utils/updateManager');
+                const updateManager = new UpdateManager(this.context, this.logger);
+                await updateManager.checkComponentUpdates(project);
+                // checkComponentUpdates auto-fixes project.componentVersions when commits match releases
+                this.logger.debug('[Project Creation] Component versions resolved');
+            } catch (error) {
+                this.logger.warn(`[Project Creation] Could not resolve component versions: ${error instanceof Error ? error.message : String(error)}`);
+                // Continue anyway - versions will be resolved on first manual update check
             }
             
             await this.stateManager.saveProject(project);
