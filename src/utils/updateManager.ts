@@ -95,8 +95,12 @@ export class UpdateManager {
       // Check if update is needed
       let hasUpdate = false;
       
-      if (currentVersion === 'unknown') {
-        // For unknown versions, check actual git commit hash
+      // Detect if current version is "unknown" or looks like a git SHA (40-char hex)
+      const looksLikeGitSHA = /^[0-9a-f]{40}$/i.test(currentVersion);
+      const isUnknownVersion = currentVersion === 'unknown' || looksLikeGitSHA;
+      
+      if (isUnknownVersion) {
+        // For unknown versions or git SHAs, check actual git commit hash
         // If installed commit matches release commit, no update needed
         const installedCommit = instance.version; // This is the git commit hash
         const releaseCommit = latestRelease.commitSha;
