@@ -9,7 +9,7 @@ import * as components from './componentHandlers';
 import { HandlerContext, MessageHandler } from './HandlerContext';
 
 // Import all handler modules
-import * as lifecycle from './lifecycleHandlers';
+import * as lifecycle from '@/features/lifecycle/handlers';
 import * as mesh from '@/features/mesh/handlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
 import * as creation from '@/features/project-creation/handlers';

@@ -10,7 +10,7 @@
  */
 
 import { validateProjectPath, validateURL } from '@/shared/validation';
-import { HandlerContext } from './HandlerContext';
+import { HandlerContext } from '../../../commands/handlers/HandlerContext';
 
 /**
  * ready - Initial wizard ready event
@@ -134,7 +134,7 @@ export async function handleOpenProject(context: HandlerContext): Promise<{ succ
         }
 
         // Close any existing Welcome webview before opening project
-        const { WelcomeWebviewCommand } = await import('../welcomeWebview');
+        const { WelcomeWebviewCommand } = await import('../../../commands/welcomeWebview');
         WelcomeWebviewCommand.disposeActivePanel();
         context.logger.debug('[Project Creation] Closed Welcome webview if it was open');
 
