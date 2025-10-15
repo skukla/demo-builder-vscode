@@ -16,7 +16,7 @@ export class CheckUpdatesCommand extends BaseCommand {
       const { extensionUpdate, componentUpdates, project, hasUpdates } = await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: 'Checking for updates...',
+          title: 'Checking Updates',
           cancellable: false
         },
         async (progress) => {
