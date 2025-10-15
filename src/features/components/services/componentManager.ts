@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ServiceLocator } from '../services/serviceLocator';
-import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '../types';
-import { Logger } from '../types/logger';
+import { ServiceLocator } from '@/services/serviceLocator';
+import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '@/types';
+import { Logger } from '@/types/logger';
 
 export interface ComponentInstallOptions {
     branch?: string;

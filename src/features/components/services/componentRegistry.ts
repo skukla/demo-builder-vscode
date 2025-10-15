@@ -9,9 +9,9 @@ import {
     EnvVarDefinition,
     ServiceDefinition,
     PresetDefinition,
-} from '../types';
-import { ProjectConfig } from '../types/handlers';
-import { parseJSON } from '../types/typeGuards';
+} from '@/types';
+import { ProjectConfig } from '@/types/handlers';
+import { parseJSON } from '@/types/typeGuards';
 
 export class ComponentRegistryManager {
     private registry: ComponentRegistry | null = null;

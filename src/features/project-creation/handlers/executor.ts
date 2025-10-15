@@ -83,9 +83,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     // Import ComponentManager and other dependencies
     context.logger.debug('[Project Creation] Starting dynamic imports...');
-    const { ComponentManager } = await import('@/utils/componentManager');
+    const { ComponentManager } = await import('@/features/components/services/componentManager');
     context.logger.debug('[Project Creation] ComponentManager imported');
-    const { ComponentRegistryManager } = await import('@/utils/componentRegistry');
+    const { ComponentRegistryManager } = await import('@/features/components/services/componentRegistry');
     context.logger.debug('[Project Creation] ComponentRegistryManager imported');
     const fs = await import('fs/promises');
     const path = await import('path');
@@ -168,13 +168,13 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
         if (comp.type === 'frontend') {
             const frontends = await registryManager.getFrontends();
-            componentDef = frontends.find(f => f.id === comp.id);
+            componentDef = frontends.find((f: { id: string }) => f.id === comp.id);
         } else if (comp.type === 'dependency') {
             const dependencies = await registryManager.getDependencies();
-            componentDef = dependencies.find(d => d.id === comp.id);
+            componentDef = dependencies.find((d: { id: string }) => d.id === comp.id);
         } else if (comp.type === 'app-builder') {
             const appBuilder = await registryManager.getAppBuilder();
-            componentDef = appBuilder.find(a => a.id === comp.id);
+            componentDef = appBuilder.find((a: { id: string }) => a.id === comp.id);
         }
 
         if (!componentDef) {

@@ -22,7 +22,7 @@ export async function getNodeVersionMapping(
     }
 
     try {
-        const { ComponentRegistryManager } = await import('../../../utils/componentRegistry');
+        const { ComponentRegistryManager } = await import('@/features/components/services/componentRegistry');
         const registryManager = new ComponentRegistryManager(context.context.extensionPath);
         return await registryManager.getNodeVersionToComponentMapping(
             context.sharedState.currentComponentSelection.frontend,
@@ -48,7 +48,7 @@ export async function getRequiredNodeVersions(context: HandlerContext): Promise<
     }
 
     try {
-        const { ComponentRegistryManager } = await import('../../../utils/componentRegistry');
+        const { ComponentRegistryManager } = await import('@/features/components/services/componentRegistry');
         const registryManager = new ComponentRegistryManager(context.context.extensionPath);
         const mapping = await registryManager.getRequiredNodeVersions(
             context.sharedState.currentComponentSelection.frontend,

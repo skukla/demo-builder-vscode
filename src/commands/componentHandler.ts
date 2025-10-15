@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { IComponentHandler, SimpleMessage } from '../types/handlers';
-import { ComponentRegistryManager, DependencyResolver } from '../utils/componentRegistry';
+import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/componentRegistry';
 
 export class ComponentHandler implements IComponentHandler {
     private registryManager: ComponentRegistryManager;
