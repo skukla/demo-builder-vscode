@@ -1,6 +1,6 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '../services/serviceLocator';
+import { ServiceLocator } from '../../../services/serviceLocator';
 import { updateFrontendState } from '@/features/mesh/services/stalenessDetector';
 import { BaseCommand } from '@/shared/base';
 
