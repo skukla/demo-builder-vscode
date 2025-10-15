@@ -1,9 +1,12 @@
 /**
  * Lifecycle Feature
  *
- * Handles starting and stopping the demo server,
- * frontend installation, and terminal management.
+ * Manages demo lifecycle operations (start, stop, project management)
  */
 
-// Public API - will be populated during Phase 3.5 migration
-export {};
+// Export commands
+export * from './commands/startDemo';
+export * from './commands/stopDemo';
+
+// Export handlers
+export * from './handlers';
