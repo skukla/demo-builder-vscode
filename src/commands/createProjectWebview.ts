@@ -3469,6 +3469,60 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 
             currentProgress += progressPerComponent;
         }
+        
+        // Step 4.5: Run build scripts AFTER .env files are generated (70-75%)
+        // This ensures build scripts have access to all required environment variables
+        this.logger.info('[Project Creation] Running component build scripts...');
+        
+        for (const comp of allComponents) {
+            // Get component definition the same way as installation loop
+            let componentDef;
+            if (comp.type === 'frontend') {
+                const frontends = await registryManager.getFrontends();
+                componentDef = frontends.find(f => f.id === comp.id);
+            } else if (comp.type === 'dependency') {
+                const dependencies = await registryManager.getDependencies();
+                componentDef = dependencies.find(d => d.id === comp.id);
+            } else if (comp.type === 'app-builder') {
+                const appBuilder = await registryManager.getAppBuilder();
+                componentDef = appBuilder.find(a => a.id === comp.id);
+            }
+            
+            if (!componentDef) {
+                continue; // Skip if component definition not found
+            }
+            
+            const componentInstance = project.componentInstances?.[comp.id];
+            const buildScript = componentDef.configuration?.buildScript;
+            
+            if (buildScript && componentInstance?.path) {
+                progressTracker(`Building ${componentDef.name}`, currentProgress, 'Running build script with environment configuration...');
+                this.logger.info(`[Project Creation] Running build script for ${componentDef.name}`);
+                
+                const nodeVersion = componentDef.configuration?.nodeVersion;
+                const buildCommand = `npm run ${buildScript}`;
+                const buildTimeout = 180000; // 3 minutes for build
+                
+                this.logger.debug(`[Project Creation] Running: ${buildCommand} with Node ${nodeVersion || 'default'} in ${componentInstance.path}`);
+                
+                const commandManager = getExternalCommandManager();
+                const buildResult = await commandManager.execute(buildCommand, {
+                    cwd: componentInstance.path,
+                    timeout: buildTimeout,
+                    enhancePath: true,
+                    useNodeVersion: nodeVersion || null
+                });
+                
+                if (buildResult.code !== 0) {
+                    this.logger.warn(`[Project Creation] Build script failed for ${componentDef.name}`);
+                    this.stepLogger.log('component-install', `⚠️ Build script warning for ${componentDef.name} (continuing anyway)`, 'warn');
+                    this.debugLogger.debug(`[Project Creation] Build stderr: ${buildResult.stderr?.substring(0, 500)}`);
+                } else {
+                    this.logger.info(`[Project Creation] ✅ Build completed successfully for ${componentDef.name}`);
+                    this.stepLogger.log('component-install', `✓ Built ${componentDef.name}`, 'info');
+                }
+            }
+        }
             
         // Step 5: Deploy Components (75-85%)
         // Deploy any components that were downloaded and need deployment (e.g., API Mesh)

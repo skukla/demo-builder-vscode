@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.26",
+  "version": "1.0.0-beta.27",
   "publisher": "adobe-demo-team",
   "author": "Steve Kukla",
   "engines": {
@@ -163,7 +163,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src/**/*.ts",
     "test": "node ./out/test/runTest.js",
-    "package": "vsce package",
+    "package": "npm prune --omit=dev && npx --yes @vscode/vsce package && npm install",
     "publish": "vsce publish",
     "encrypt-keys": "node scripts/encrypt-keys.js",
     "manage-keys": "node scripts/manage-keys.js",

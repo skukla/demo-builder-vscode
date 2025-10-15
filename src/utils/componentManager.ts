@@ -247,32 +247,9 @@ export class ComponentManager {
                     this.logger.debug(`[ComponentManager] Dependencies installed successfully for ${componentDef.name}`);
                 }
                 
-                // Run build script if configured
-                const buildScript = componentDef.configuration?.buildScript;
-                if (buildScript && !options.skipDependencies) {
-                    this.logger.debug(`[ComponentManager] Running build script for ${componentDef.name}`);
-                    
-                    // Don't include fnm use in command - CommandManager handles it via useNodeVersion option
-                    const buildCommand = `npm run ${buildScript}`;
-                    
-                    this.logger.debug(`[ComponentManager] Running: ${buildCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
-                    
-                    const buildTimeout = 180000; // 3 minutes for build
-                    
-                    const buildResult = await commandManager.execute(buildCommand, {
-                        cwd: componentPath,  // Run from component directory
-                        timeout: buildTimeout,
-                        enhancePath: true,
-                        useNodeVersion: nodeVersion || null  // CommandManager handles fnm use
-                    });
-                    
-                    if (buildResult.code !== 0) {
-                        this.logger.warn(`[ComponentManager] Build script failed for ${componentDef.name}`);
-                        this.logger.debug(`[ComponentManager] Build stderr: ${buildResult.stderr?.substring(0, 500)}`);
-                    } else {
-                        this.logger.debug(`[ComponentManager] Build completed successfully for ${componentDef.name}`);
-                    }
-                }
+                // NOTE: Build scripts are NOT run here anymore!
+                // They must be run AFTER .env files are generated (see createProjectWebview.ts)
+                // This ensures build scripts have access to all required environment variables
             }
         } catch {
             // No package.json, skip dependency installation
