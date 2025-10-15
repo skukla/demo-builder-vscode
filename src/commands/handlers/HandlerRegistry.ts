@@ -13,8 +13,6 @@ import * as lifecycle from '@/features/lifecycle/handlers';
 import * as mesh from '@/features/mesh/handlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
 import * as creation from '@/features/project-creation/handlers';
-import * as projects from '@/features/authentication/handlers/projectHandlers';
-import * as workspaces from '@/features/authentication/handlers/workspaceHandlers';
 
 /**
  * HandlerRegistry class
@@ -64,14 +62,14 @@ export class HandlerRegistry {
         this.handlers.set('authenticate', authentication.handleAuthenticate as MessageHandler);
 
         // Project handlers
-        this.handlers.set('ensure-org-selected', projects.handleEnsureOrgSelected as MessageHandler);
-        this.handlers.set('get-projects', projects.handleGetProjects as MessageHandler);
-        this.handlers.set('select-project', projects.handleSelectProject as MessageHandler);
-        this.handlers.set('check-project-apis', projects.handleCheckProjectApis as MessageHandler);
+        this.handlers.set('ensure-org-selected', authentication.handleEnsureOrgSelected as MessageHandler);
+        this.handlers.set('get-projects', authentication.handleGetProjects as MessageHandler);
+        this.handlers.set('select-project', authentication.handleSelectProject as MessageHandler);
+        this.handlers.set('check-project-apis', authentication.handleCheckProjectApis as MessageHandler);
 
         // Workspace handlers
-        this.handlers.set('get-workspaces', workspaces.handleGetWorkspaces as MessageHandler);
-        this.handlers.set('select-workspace', workspaces.handleSelectWorkspace as MessageHandler);
+        this.handlers.set('get-workspaces', authentication.handleGetWorkspaces as MessageHandler);
+        this.handlers.set('select-workspace', authentication.handleSelectWorkspace as MessageHandler);
 
         // Mesh handlers
         this.handlers.set('check-api-mesh', mesh.handleCheckApiMesh as MessageHandler);
