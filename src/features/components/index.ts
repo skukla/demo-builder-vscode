@@ -1,9 +1,18 @@
 /**
- * Components Feature
+ * Components Feature - Barrel Export
  *
- * Handles component configuration, management, and operations
- * for installed project components.
+ * Exports all public APIs from the components feature domain.
  */
 
-// Public API - will be populated during Phase 3.7 migration
-export {};
+// Export services
+export * from './services/componentManager';
+export * from './services/componentRegistry';
+
+// Export handlers
+export * from './handlers/componentHandlers';
+
+// Export commands
+export * from './commands/componentHandler';
+
+// Export providers
+export * from './providers/componentTreeProvider';
