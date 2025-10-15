@@ -935,6 +935,10 @@ export class ExternalCommandManager {
             return this.cachedAdobeCLINodeVersion;
         }
         
+        // Adobe CLI SDK supports Node 18, 20, and 22 only (not 24+)
+        // See: https://github.com/adobe/aio-lib-core-console-api
+        const SUPPORTED_NODE_VERSIONS = [18, 20, 22];
+        
         // Use FNM_DIR if available, otherwise fallback to default location
         const homeDir = os.homedir();
         const fnmBase = process.env.FNM_DIR 
@@ -952,6 +956,12 @@ export class ExternalCommandManager {
                     if (!match) continue;
                     
                     const major = parseInt(match[1], 10);
+                    
+                    // Skip Node versions not supported by Adobe CLI SDK
+                    if (!SUPPORTED_NODE_VERSIONS.includes(major)) {
+                        this.logger.debug(`[Adobe CLI] Node v${major}: skipping (Adobe CLI SDK requires ^18 || ^20 || ^22)`);
+                        continue;
+                    }
                     
                     // Try to run aio --version with this Node version
                     try {
@@ -976,7 +986,7 @@ export class ExternalCommandManager {
                     }
                 }
                 
-                // Sort by major version descending and pick the highest
+                // Sort by major version descending and pick the highest compatible version
                 if (versionsWithAio.length > 0) {
                     versionsWithAio.sort((a, b) => b.major - a.major);
                     const best = versionsWithAio[0];
