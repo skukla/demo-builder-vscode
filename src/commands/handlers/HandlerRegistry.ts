@@ -13,8 +13,8 @@ import * as lifecycle from '@/features/lifecycle/handlers';
 import * as mesh from '@/features/mesh/handlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
 import * as creation from '@/features/project-creation/handlers';
-import * as projects from './projectHandlers';
-import * as workspaces from './workspaceHandlers';
+import * as projects from '@/features/authentication/handlers/projectHandlers';
+import * as workspaces from '@/features/authentication/handlers/workspaceHandlers';
 
 /**
  * HandlerRegistry class

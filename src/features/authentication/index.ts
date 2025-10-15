@@ -18,6 +18,8 @@ export { PerformanceTracker } from './services/performanceTracker';
 
 // Handlers
 export { handleCheckAuth, handleAuthenticate } from './handlers/authenticationHandlers';
+export * from './handlers/projectHandlers';
+export * from './handlers/workspaceHandlers';
 
 // Types
 export type {

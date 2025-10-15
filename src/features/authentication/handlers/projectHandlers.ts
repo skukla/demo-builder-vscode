@@ -8,12 +8,13 @@
  * - check-project-apis: Verify API Mesh access
  */
 
-import { ServiceLocator } from '../../services/serviceLocator';
-import { parseJSON } from '../../types/typeGuards';
-import { withTimeout } from '../../utils/promiseUtils';
+import { ServiceLocator } from '@/services/serviceLocator';
+import { parseJSON } from '@/types/typeGuards';
+import { withTimeout } from '@/utils/promiseUtils';
 import { validateProjectId } from '@/shared/validation';
-import { TIMEOUTS } from '../../utils/timeoutConfig';
-import { HandlerContext } from './HandlerContext';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { HandlerContext } from '@/types/handlers';
+import type { AdobeProject } from '../services/types';
 
 /**
  * ensure-org-selected - Check if organization is selected
@@ -46,7 +47,7 @@ export async function handleEnsureOrgSelected(context: HandlerContext): Promise<
 export async function handleGetProjects(
     context: HandlerContext,
     payload?: { orgId?: string },
-): Promise<{ success: boolean; projects?: import('@/features/authentication').AdobeProject[]; error?: string }> {
+): Promise<{ success: boolean; projects?: AdobeProject[]; error?: string }> {
     try {
         // Send loading status with sub-message
         const currentOrg = await context.authManager.getCurrentOrganization();

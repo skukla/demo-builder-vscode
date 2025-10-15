@@ -6,10 +6,11 @@
  * - select-workspace: Select a specific workspace
  */
 
-import { withTimeout } from '../../utils/promiseUtils';
+import { withTimeout } from '@/utils/promiseUtils';
 import { validateWorkspaceId } from '@/shared/validation';
-import { TIMEOUTS } from '../../utils/timeoutConfig';
-import { HandlerContext } from './HandlerContext';
+import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { HandlerContext } from '@/types/handlers';
+import type { AdobeWorkspace } from '../services/types';
 
 /**
  * get-workspaces - Fetch workspaces for current project
@@ -20,7 +21,7 @@ import { HandlerContext } from './HandlerContext';
 export async function handleGetWorkspaces(
     context: HandlerContext,
     payload?: { orgId?: string; projectId?: string },
-): Promise<{ success: boolean; workspaces?: import('@/features/authentication').AdobeWorkspace[]; error?: string }> {
+): Promise<{ success: boolean; workspaces?: AdobeWorkspace[]; error?: string }> {
     try {
         // Send loading status with sub-message
         const currentProject = await context.authManager.getCurrentProject();
