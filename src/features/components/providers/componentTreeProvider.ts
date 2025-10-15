@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { CustomIconPaths } from '../types';
-import { StateManager } from '../shared/state';
+import { CustomIconPaths } from '@/types';
+import { StateManager } from '@/shared/state';
 
 type FileSystemItem = ComponentFolder | FileItem | ProjectItem;
 

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/shared/base';
 import { CommandManager } from './commands/commandManager';
-import { ComponentTreeProvider } from './providers/componentTreeProvider';
+import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
 import { StatusBarManager } from './providers/statusBar';
 import { ServiceLocator } from './services/serviceLocator';
 import { parseJSON } from './types/typeGuards';
