@@ -179,7 +179,6 @@
   },
   "dependencies": {
     "@adobe/aio-lib-console": "^5.4.2",
-    "@adobe/aio-lib-ims": "^7.0.2",
     "@adobe/react-spectrum": "^3.44.0",
     "@types/uuid": "^10.0.0",
     "axios": "^1.6.0",
