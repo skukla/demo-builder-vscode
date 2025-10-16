@@ -6,8 +6,8 @@ import { TIMEOUTS, CACHE_TTL } from './timeoutConfig';
 import * as path from 'path';
 // @ts-expect-error - Adobe SDK lacks TypeScript declarations
 import * as sdk from '@adobe/aio-lib-console';
-// @ts-expect-error - Adobe SDK lacks TypeScript declarations
-import { getToken } from '@adobe/aio-lib-ims';
+import { AuthState, AuthContext, AuthRequirements } from './adobeAuthTypes';
+import { AdobeAuthError, AuthErrorCode } from './adobeAuthErrors';
 
 export interface AdobeOrg {
     id: string;
@@ -291,22 +291,14 @@ export class AdobeAuthManager {
 
             if (orgs.length === 1) {
                 // Auto-select single organization
-                this.debugLogger.debug(`[Auth] Auto-selecting single organization: ${orgs[0].name}`);
+                // DON'T call aio console org select (it times out / requires browser)
+                // Just cache the org - Adobe CLI works fine without explicit select when authenticated
                 this.logger.info(`Auto-selecting organization: ${orgs[0].name}`);
-
-                const selected = await this.selectOrganization(orgs[0].id);
-
-                if (selected) {
-                    // Cache and return the selected org
-                    this.cachedOrganization = orgs[0];
-                    this.debugLogger.debug(`[Auth] Successfully auto-selected organization: ${orgs[0].name}`);
-                    return orgs[0];
-                }
+                this.cachedOrganization = orgs[0];
+                return orgs[0];
             } else if (orgs.length > 1) {
-                this.debugLogger.debug(`[Auth] Multiple organizations available (${orgs.length}), manual selection required`);
                 this.logger.info(`Found ${orgs.length} organizations - manual selection required`);
             } else {
-                this.debugLogger.warn('[Auth] No organizations available');
                 this.logger.warn('No organizations available for this user');
             }
 
@@ -357,36 +349,43 @@ export class AdobeAuthManager {
      * Falls back to CLI if SDK initialization fails
      */
     private async initializeSDK(): Promise<void> {
+        const sdkStartTime = Date.now();
         try {
             if (this.sdkClient) {
-                this.debugLogger.debug('[Auth SDK] SDK client already initialized');
                 return;
             }
 
-            this.debugLogger.debug('[Auth SDK] Initializing Adobe Console SDK...');
+            this.debugLogger.debug('[Auth SDK] Initializing SDK for faster operations');
             
-            // Get CLI access token with timeout protection
-            const accessToken = await Promise.race([
-                getToken('cli'),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('SDK token fetch timed out')), TIMEOUTS.SDK_INIT)
-                )
-            ]) as string;
+            // Get CLI access token directly from CLI config (avoid Adobe's getToken which can open browser)
+            const result = await this.commandManager.executeAdobeCLI(
+                'aio config get ims.contexts.cli.access_token.token',
+                { encoding: 'utf8', timeout: TIMEOUTS.SDK_INIT }
+            );
+            
+            if (result.code !== 0 || !result.stdout) {
+                return;
+            }
+            
+            // Clean the token output
+            const accessToken = result.stdout.trim().split('\n')
+                .filter(line => !line.startsWith('Using Node') && !line.includes('fnm'))
+                .join('\n').trim();
             
             if (!accessToken) {
-                this.debugLogger.debug('[Auth SDK] No access token available, skipping SDK initialization');
                 return;
             }
 
             // Initialize SDK with CLI token
             this.sdkClient = await sdk.init(accessToken, 'aio-cli-console-auth');
             
-            this.debugLogger.debug('[Auth SDK] SDK initialized successfully - enabling 30x faster operations');
+            const totalDuration = Date.now() - sdkStartTime;
+            this.debugLogger.debug(`[Auth SDK] Initialized successfully in ${totalDuration}ms`);
             this.logger.info('[Auth] Enabled high-performance mode for Adobe operations');
             
         } catch (error) {
-            // SDK initialization failure is not critical - we'll fall back to CLI
-            this.debugLogger.debug('[Auth SDK] Failed to initialize SDK, will use CLI fallback:', error);
+            const totalDuration = Date.now() - sdkStartTime;
+            this.debugLogger.debug(`[Auth SDK] Initialization failed (${totalDuration}ms) - using CLI fallback`);
             this.sdkClient = undefined;
         }
     }
@@ -443,31 +442,15 @@ export class AdobeAuthManager {
     }
 
     /**
-     * Quick authentication check - only verifies token existence and expiry
-     * Does NOT validate org access or initialize SDK
-     * Use this for dashboard loads and other performance-critical paths
-     * 
-     * Performance: < 1 second (vs 9+ seconds for full isAuthenticated)
+     * Inspect Adobe CLI token without making API calls
+     * Returns token validity, expiration time, and optionally the token itself
      */
-    public async isAuthenticatedQuick(): Promise<boolean> {
-        this.startTiming('isAuthenticatedQuick');
-        
-        // Check cache first
-        const now = Date.now();
-        if (this.cachedAuthStatus !== undefined && now < this.authCacheExpiry) {
-            this.debugLogger.debug(`[Auth] Using cached authentication status: ${this.cachedAuthStatus}`);
-            this.endTiming('isAuthenticatedQuick');
-            return this.cachedAuthStatus;
-        }
-        
+    private async inspectToken(): Promise<{ valid: boolean; expiresIn: number; token?: string }> {
         try {
-            this.debugLogger.debug('[Auth] Quick authentication check (token only, no org validation)');
-            
-            // Check for access token and expiry in parallel
-            const [result, expiryResult] = await Promise.all([
+            const [tokenResult, expiryResult] = await Promise.all([
                 this.commandManager.executeAdobeCLI(
                     'aio config get ims.contexts.cli.access_token.token',
-                    { encoding: 'utf8', timeout: TIMEOUTS.TOKEN_READ }
+                    { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ }
                 ),
                 this.commandManager.executeAdobeCLI(
                     'aio config get ims.contexts.cli.access_token.expiry',
@@ -475,77 +458,292 @@ export class AdobeAuthManager {
                 )
             ]);
             
-            // Clean the token output
-            const stdout = result.stdout?.trim() || '';
-            const cleanOutput = stdout.split('\n').filter(line => 
-                !line.startsWith('Using Node') && 
-                !line.includes('fnm') &&
-                line.trim().length > 0
-            ).join('\n').trim();
+            const token = tokenResult.stdout?.trim().split('\n')
+                .filter(line => !line.startsWith('Using Node') && !line.includes('fnm'))
+                .join('').trim();
+            const expiry = parseInt(expiryResult.stdout?.trim() || '0');
+            const now = Date.now();
             
-            // Adobe access tokens are long JWT strings (>100 chars)
-            const hasToken = result.code === 0 && cleanOutput.length > 100 && cleanOutput.includes('eyJ');
+            if (!token || token.length < 100) {
+                return { valid: false, expiresIn: 0 };
+            }
             
-            if (hasToken) {
-                if (expiryResult.code === 0 && expiryResult.stdout) {
-                    // Clean expiry output
-                    const expiryOutput = expiryResult.stdout.trim().split('\n')
-                        .filter(line => !line.startsWith('Using Node') && !line.includes('fnm'))
-                        .join('\n').trim();
-                    const expiry = parseInt(expiryOutput);
-                    const currentTime = Date.now();
-                    
-                    if (!isNaN(expiry) && expiry > currentTime) {
-                        this.debugLogger.debug(`[Auth] Quick check: authenticated (expires in ${Math.floor((expiry - currentTime) / 1000 / 60)} minutes)`);
-                        
-                        // Cache the successful result
-                        this.cachedAuthStatus = true;
-                        this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
-                        
-                        this.endTiming('isAuthenticatedQuick');
-                        return true;
-                    } else {
-                        const expiredMinutesAgo = Math.floor((currentTime - expiry) / 1000 / 60);
-                        this.debugLogger.debug(`[Auth] Quick check: token expired ${expiredMinutesAgo} minutes ago`);
-                        
-                        // Cache the failed result
-                        this.cachedAuthStatus = false;
-                        this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
-                        
-                        this.endTiming('isAuthenticatedQuick');
-                        return false;
-                    }
-                } else {
-                    // No expiry info, but we have a token, assume valid
-                    this.debugLogger.debug('[Auth] Quick check: authenticated (no expiry info)');
-                    
-                    // Cache the successful result
-                    this.cachedAuthStatus = true;
-                    this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
-                    
-                    this.endTiming('isAuthenticatedQuick');
-                    return true;
+            if (!expiry || expiry <= now) {
+                const expiresIn = expiry > 0 ? Math.floor((expiry - now) / 1000 / 60) : 0;
+                return { valid: false, expiresIn, token };
+            }
+            
+            const expiresIn = Math.floor((expiry - now) / 1000 / 60);
+            return { valid: true, expiresIn, token };
+        } catch (error) {
+            return { valid: false, expiresIn: 0 };
+        }
+    }
+
+    /**
+     * Inspect Adobe CLI context (org/project/workspace) without making API calls
+     * Returns currently selected context from CLI config
+     */
+    private async inspectContext(): Promise<{ org?: string; project?: string; workspace?: string } | null> {
+        try {
+            const result = await this.commandManager.executeAdobeCLI(
+                'aio console where --json',
+                { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ }
+            );
+            
+            if (result.code === 0 && result.stdout) {
+                const cleanOutput = result.stdout.trim().split('\n')
+                    .filter(line => !line.startsWith('Using Node') && !line.includes('fnm'))
+                    .join('\n').trim();
+                const context = JSON.parse(cleanOutput);
+                return context.org ? context : null;
+            }
+            
+            return null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    /**
+     * Sync in-memory cache from CLI context
+     * Reads org/project/workspace from CLI and populates cache with full details
+     * SAFE: getOrganizations/getProjects/getWorkspaces use withAuthCheck without recursive calls
+     */
+    private async syncContextFromCLI(): Promise<void> {
+        const context = await this.inspectContext();
+        
+        if (!context || !context.org) {
+            this.cachedOrganization = undefined;
+            this.cachedProject = undefined;
+            this.cachedWorkspace = undefined;
+            return;
+        }
+        
+        // Sync org - fetch full details including numeric ID
+        if (!this.cachedOrganization || this.cachedOrganization.name !== context.org) {
+            try {
+                // SAFE: getOrganizations() uses withAuthCheck({ needsOrg: false })
+                // so it won't recursively call getCurrentOrganization()
+                const orgs = await this.getOrganizations();
+                this.cachedOrganization = orgs.find(o => o.name === context.org);
+                if (this.cachedOrganization) {
+                    this.debugLogger.debug(`[Auth] Synced org from CLI: ${this.cachedOrganization.name} (ID: ${this.cachedOrganization.id})`);
+                }
+            } catch (error) {
+                this.debugLogger.debug('[Auth] Failed to sync org:', error);
+            }
+        }
+        
+        // Sync project - only if org is available
+        if (this.cachedOrganization && context.project && (!this.cachedProject || this.cachedProject.name !== context.project)) {
+            try {
+                // SAFE: getProjects() needs org but we just set it above
+                const projects = await this.getProjects();
+                this.cachedProject = projects.find(p => p.name === context.project);
+                if (this.cachedProject) {
+                    this.debugLogger.debug(`[Auth] Synced project from CLI: ${this.cachedProject.name}`);
+                }
+            } catch (error) {
+                this.debugLogger.debug('[Auth] Failed to sync project:', error);
+            }
+        }
+        
+        // Sync workspace - only if org and project are available
+        if (this.cachedOrganization && this.cachedProject && context.workspace && 
+            (!this.cachedWorkspace || this.cachedWorkspace.name !== context.workspace)) {
+            try {
+                // SAFE: getWorkspaces() needs org+project but we have both above
+                const workspaces = await this.getWorkspaces();
+                this.cachedWorkspace = workspaces.find(w => w.name === context.workspace);
+                if (this.cachedWorkspace) {
+                    this.debugLogger.debug(`[Auth] Synced workspace from CLI: ${this.cachedWorkspace.name}`);
+                }
+            } catch (error) {
+                this.debugLogger.debug('[Auth] Failed to sync workspace:', error);
+            }
+        }
+    }
+
+    /**
+     * Execute operation with auth check wrapper
+     * Automatically validates token and context before operation
+     */
+    private async withAuthCheck<T>(
+        requirements: AuthRequirements,
+        operation: () => Promise<T>
+    ): Promise<T> {
+        // Check token - use cached status if available (refreshed every 30s)
+        if (requirements.needsToken) {
+            const now = Date.now();
+            const hasCachedStatus = this.cachedAuthStatus !== undefined && now < this.authCacheExpiry;
+            
+            if (hasCachedStatus) {
+                // Use cached status - avoid redundant CLI calls
+                if (!this.cachedAuthStatus) {
+                    throw AdobeAuthError.tokenExpired(0);
                 }
             } else {
-                this.debugLogger.debug('[Auth] Quick check: not authenticated');
+                // Cache expired or empty - inspect token
+                const { valid, expiresIn } = await this.inspectToken();
+                if (!valid) {
+                    throw AdobeAuthError.tokenExpired(expiresIn);
+                }
                 
-                // Cache the failed result
-                this.cachedAuthStatus = false;
-                this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
-                
-                this.endTiming('isAuthenticatedQuick');
-                return false;
+                // Update cache
+                this.cachedAuthStatus = true;
+                this.authCacheExpiry = now + CACHE_TTL.AUTH_STATUS;
             }
-        } catch (error) {
-            this.debugLogger.error('[Auth] Quick authentication check failed', error as Error);
-            
-            // Cache the failed result (short TTL for errors)
-            this.cachedAuthStatus = false;
-            this.authCacheExpiry = Date.now() + (CACHE_TTL.AUTH_STATUS / 5);
-            
-            this.endTiming('isAuthenticatedQuick');
-            return false;
         }
+        
+        // Check org
+        if (requirements.needsOrg) {
+            const org = await this.getCurrentOrganization();
+            if (!org) {
+                throw AdobeAuthError.noOrganization();
+            }
+        }
+        
+        // Check project
+        if (requirements.needsProject) {
+            const project = await this.getCurrentProject();
+            if (!project) {
+                throw AdobeAuthError.noProject();
+            }
+        }
+        
+        // Check workspace
+        if (requirements.needsWorkspace) {
+            const workspace = await this.getCurrentWorkspace();
+            if (!workspace) {
+                throw AdobeAuthError.noWorkspace();
+            }
+        }
+        
+        // Execute operation with proper error wrapping
+        try {
+            return await operation();
+        } catch (error) {
+            // Convert CLI/API errors to AdobeAuthError
+            if (error instanceof AdobeAuthError) {
+                throw error;
+            }
+            
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            
+            if (errorMsg.includes('401') || errorMsg.includes('unauthorized')) {
+                throw AdobeAuthError.tokenExpired(0);
+            }
+            
+            if (errorMsg.includes('403') || errorMsg.includes('forbidden')) {
+                throw AdobeAuthError.permissionDenied(errorMsg);
+            }
+            
+            throw AdobeAuthError.apiError(errorMsg);
+        }
+    }
+
+    /**
+     * Get current auth context (state + all cached data)
+     * Central method for checking authentication state
+     */
+    public async getAuthContext(): Promise<AuthContext> {
+        // Use cached token status if available (30s cache)
+        const now = Date.now();
+        let valid: boolean;
+        let expiresIn: number;
+        
+        if (this.cachedAuthStatus !== undefined && now < this.authCacheExpiry) {
+            // Use cached status
+            valid = this.cachedAuthStatus;
+            expiresIn = 0; // We don't cache the expiresIn, just validity
+            
+            // If cached as invalid, we can return early
+            if (!valid) {
+                return {
+                    state: AuthState.TOKEN_EXPIRED
+                };
+            }
+        } else {
+            // Cache expired or empty - inspect token
+            const inspection = await this.inspectToken();
+            valid = inspection.valid;
+            expiresIn = inspection.expiresIn;
+            
+            // Update cache
+            this.cachedAuthStatus = valid;
+            this.authCacheExpiry = now + CACHE_TTL.AUTH_STATUS;
+        }
+        
+        if (!valid) {
+            return {
+                state: expiresIn < 0 ? AuthState.TOKEN_EXPIRED : AuthState.UNAUTHENTICATED
+            };
+        }
+        
+        // Initialize SDK for 30x faster operations (non-blocking)
+        if (!this.sdkClient) {
+            this.debugLogger.debug('[Auth] Attempting SDK initialization...');
+            this.initializeSDK().catch((error) => {
+                // SDK failure is not critical - will use CLI fallback
+                this.debugLogger.debug('[Auth] SDK initialization promise rejected:', error);
+            });
+        } else {
+            this.debugLogger.debug('[Auth] SDK already initialized');
+        }
+        
+        // Sync from CLI if cache is empty (e.g., after browser login)
+        if (!this.cachedOrganization) {
+            await this.syncContextFromCLI();
+        }
+        
+        const org = this.cachedOrganization;
+        
+        if (!org) {
+            return {
+                state: AuthState.AUTHENTICATED_NO_ORG,
+                token: { valid, expiresIn }
+            };
+        }
+        
+        if (expiresIn < 30) {
+            return {
+                state: AuthState.TOKEN_EXPIRING_SOON,
+                token: { valid, expiresIn },
+                org,
+                project: this.cachedProject,
+                workspace: this.cachedWorkspace
+            };
+        }
+        
+        return {
+            state: AuthState.AUTHENTICATED_WITH_ORG,
+            token: { valid, expiresIn },
+            org,
+            project: this.cachedProject,
+            workspace: this.cachedWorkspace
+        };
+    }
+
+    /**
+     * Quick authentication check - only verifies token existence and expiry
+     * Does NOT validate org access or initialize SDK
+     * Use this for dashboard loads and other performance-critical paths
+     * 
+     * Performance: < 1 second (vs 9+ seconds for full isAuthenticated)
+     */
+    public async isAuthenticatedQuick(): Promise<boolean> {
+        const now = Date.now();
+        if (this.cachedAuthStatus !== undefined && now < this.authCacheExpiry) {
+            return this.cachedAuthStatus;
+        }
+        
+        const { valid } = await this.inspectToken();
+        
+        this.cachedAuthStatus = valid;
+        this.authCacheExpiry = now + CACHE_TTL.AUTH_STATUS;
+        
+        return valid;
     }
 
     /**
@@ -556,152 +754,32 @@ export class AdobeAuthManager {
      * Performance: 3-10 seconds (includes org validation)
      * For faster checks, use isAuthenticatedQuick()
      */
-    public async isAuthenticated(): Promise<boolean> {
-        this.startTiming('isAuthenticated');
-        
-        // Check cache first
+    public async isAuthenticated(bypassCache: boolean = false): Promise<boolean> {
         const now = Date.now();
-        if (this.cachedAuthStatus !== undefined && now < this.authCacheExpiry) {
-            this.debugLogger.debug(`[Auth] Using cached authentication status: ${this.cachedAuthStatus}`);
-            this.endTiming('isAuthenticated');
+        if (!bypassCache && this.cachedAuthStatus !== undefined && now < this.authCacheExpiry) {
             return this.cachedAuthStatus;
         }
         
-        try {
-            this.debugLogger.debug('[Auth] Checking authentication status');
-            this.stepLogger.logTemplate('adobe-setup', 'operations.checking', { item: 'authentication status' });
-            
-            // Check for access token and expiry in parallel for better performance
-            // Use CONFIG_READ timeout to account for fnm startup time + Adobe CLI
-            this.debugLogger.debug('[Auth] Running token and expiry checks in parallel');
-            const [result, expiryResult] = await Promise.all([
-                this.commandManager.executeAdobeCLI(
-                    'aio config get ims.contexts.cli.access_token.token',
-                    { encoding: 'utf8', timeout: TIMEOUTS.TOKEN_READ }
-                ),
-                this.commandManager.executeAdobeCLI(
-                    'aio config get ims.contexts.cli.access_token.expiry',
-                    { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ }
-                )
-            ]);
-            
-            // Clean the token output to remove any fnm messages that might have leaked through
-            const stdout = result.stdout?.trim() || '';
-            const cleanOutput = stdout.split('\n').filter(line => 
-                !line.startsWith('Using Node') && 
-                !line.includes('fnm') &&
-                line.trim().length > 0
-            ).join('\n').trim();
-            
-            // Adobe access tokens are long JWT strings (>100 chars), check for that
-            const hasToken = result.code === 0 && cleanOutput.length > 100 && 
-                             cleanOutput.includes('eyJ'); // JWT tokens start with eyJ
-            
-            if (hasToken) {
-                
-                if (expiryResult.code === 0 && expiryResult.stdout) {
-                    // Clean expiry output as well
-                    const expiryOutput = expiryResult.stdout.trim().split('\n')
-                        .filter(line => !line.startsWith('Using Node') && !line.includes('fnm'))
-                        .join('\n').trim();
-                    const expiry = parseInt(expiryOutput);
-                    const now = Date.now();
-                    
-                    if (!isNaN(expiry) && expiry > now) {
-                        this.debugLogger.debug(`[Auth] Authentication valid (expires in ${Math.floor((expiry - now) / 1000 / 60)} minutes)`);
-
-                        // Check if we have an org context and validate it's accessible
-                        await this.validateAndClearInvalidOrgContext();
-
-                        // Initialize SDK in background (non-blocking) for future high-performance operations
-                        this.initializeSDK().catch(error => {
-                            // SDK initialization failure is not critical - operations will fall back to CLI
-                            this.debugLogger.debug('[Auth SDK] Background SDK init failed, using CLI fallback:', error);
-                        });
-
-                        this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
-
-                        // Cache the successful result
-                        this.cachedAuthStatus = true;
-                        this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
-
-                        this.endTiming('isAuthenticated');
-                        return true;
-                    } else {
-                        const expiredMinutesAgo = Math.floor((now - expiry) / 1000 / 60);
-                        this.debugLogger.debug(`[Auth] Token expired ${expiredMinutesAgo} minutes ago`);
-                        this.logger.warn('[Auth] Your Adobe authentication has expired. Please log in again.');
-                        this.stepLogger.logTemplate('adobe-setup', 'statuses.not-authenticated', {});
-                        
-                        // Cache the failed result  
-                        this.cachedAuthStatus = false;
-                        this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
-                        
-                        this.endTiming('isAuthenticated');
-                        return false;
-                    }
-                } else {
-                    // No expiry info, but we have a token, assume valid
-                    this.debugLogger.debug('[Auth] Authentication status: authenticated (no expiry info)');
-
-                    // Check if we have an org context and validate it's accessible
-                    await this.validateAndClearInvalidOrgContext();
-
-                    // Initialize SDK in background (non-blocking) for future high-performance operations
-                    this.initializeSDK().catch(error => {
-                        // SDK initialization failure is not critical - operations will fall back to CLI
-                        this.debugLogger.debug('[Auth SDK] Background SDK init failed, using CLI fallback:', error);
-                    });
-
-                    this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
-
-                    // Cache the successful result
-                    this.cachedAuthStatus = true;
-                    this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
-
-                    this.endTiming('isAuthenticated');
-                    return true;
-                }
-            } else {
-                // Be specific about why authentication failed
-                if (result.code !== 0) {
-                    this.debugLogger.debug(`[Auth] Config command failed with code ${result.code}`);
-                    this.logger.info('[Auth] Unable to access Adobe configuration. You may need to log in.');
-                } else {
-                    this.debugLogger.debug('[Auth] No access token found in configuration');
-                    this.logger.info('[Auth] Not authenticated with Adobe. Please click "Log in to Adobe" to authenticate.');
-                }
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.not-authenticated', {});
-                
-                // Cache the failed result
-                this.cachedAuthStatus = false;
-                this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
-                
-                this.endTiming('isAuthenticated');
-                return false;
-            }
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            this.debugLogger.error('[Auth] Authentication check failed', error as Error);
-            
-            // Provide helpful error messages based on common issues
-            if (errorMessage.includes('ENOENT') || errorMessage.includes('not found')) {
-                this.logger.error('[Auth] Adobe CLI configuration not found. Please ensure Adobe CLI is properly installed.');
-            } else if (errorMessage.includes('timeout')) {
-                this.logger.error('[Auth] Authentication check timed out. Please check your network connection.');
-            } else {
-                this.logger.error(`[Auth] Failed to check authentication status: ${errorMessage}`);
-            }
-            
-            this.stepLogger.logTemplate('adobe-setup', 'error', { item: 'Authentication check', error: errorMessage });
-            
-            // Cache the failed result (but with shorter TTL for errors to allow retry)
+        const { valid, expiresIn } = await this.inspectToken();
+        
+        if (!valid) {
             this.cachedAuthStatus = false;
-            this.authCacheExpiry = Date.now() + (CACHE_TTL.AUTH_STATUS / 5); // 1 minute for errors
-            
-            this.endTiming('isAuthenticated');
+            this.authCacheExpiry = now + CACHE_TTL.AUTH_STATUS;
             return false;
         }
+        
+        this.debugLogger.debug(`[Auth] Token valid, expires in ${expiresIn} minutes`);
+        
+        if (!this.sdkClient) {
+            this.initializeSDK().catch(() => {
+                // SDK failure is not critical
+            });
+        }
+        
+        this.cachedAuthStatus = true;
+        this.authCacheExpiry = now + CACHE_TTL.AUTH_STATUS;
+        
+        return true;
     }
 
     /**
@@ -709,124 +787,11 @@ export class AdobeAuthManager {
      * Uses session caching for better performance
      */
     public async getCurrentOrganization(): Promise<AdobeOrg | undefined> {
-        this.startTiming('getCurrentOrganization');
-        
-        // Check cache first
         if (this.cachedOrganization) {
-            this.debugLogger.debug('[Auth] Using cached organization data');
-            this.endTiming('getCurrentOrganization');
             return this.cachedOrganization;
         }
-        
-        try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            let context: any;
-
-            // Check console.where cache first
-            const now = Date.now();
-            if (this.consoleWhereCache && now < this.consoleWhereCache.expiry) {
-                this.debugLogger.debug('[Auth] Using cached console.where response');
-                context = this.consoleWhereCache.data;
-            } else {
-                this.debugLogger.debug('[Auth] Fetching organization data from Adobe CLI');
-                const result = await this.commandManager.executeAdobeCLI(
-                    'aio console where --json',
-                    { encoding: 'utf8', timeout: TIMEOUTS.API_CALL }
-                );
-
-                if (result.code === 0 && result.stdout) {
-                    context = JSON.parse(result.stdout);
-
-                    // Cache the result
-                    this.consoleWhereCache = {
-                        data: context,
-                        expiry: now + CACHE_TTL.CONSOLE_WHERE
-                    };
-
-                    this.debugLogger.debug('[Auth] Raw Adobe CLI response:', JSON.stringify(context));
-                } else {
-                    this.endTiming('getCurrentOrganization');
-                    return undefined;
-                }
-            }
-
-            if (context) {
-
-                // Check if organization is present in the response
-                if (context.org) {
-                    // Handle both string and object formats for org data
-                    let orgData;
-                    if (typeof context.org === 'string') {
-                        // Adobe CLI returns org name as string
-                        // We need to look up the numeric ID from the org list for SDK compatibility
-                        if (context.org.trim()) {
-                            this.debugLogger.debug(`[Auth] Current organization name: ${context.org}, fetching numeric ID...`);
-                            
-                            try {
-                                // Ensure SDK is initialized for 30x faster org lookup
-                                await this.ensureSDKInitialized();
-                                
-                                // Use cached org list if available, otherwise fetch (SDK will be used if available)
-                                const orgs = await this.getOrganizations();
-                                const matchedOrg = orgs.find(o => o.name === context.org || o.code === context.org);
-                                
-                                if (matchedOrg) {
-                                    this.debugLogger.debug(`[Auth] Resolved org "${context.org}" to ID: ${matchedOrg.id}`);
-                                    orgData = matchedOrg;
-                                } else {
-                                    this.debugLogger.warn(`[Auth] Could not find numeric ID for org "${context.org}", using name as fallback`);
-                                    orgData = {
-                                        id: context.org, // Fallback to name if lookup fails
-                                        code: context.org,
-                                        name: context.org
-                                    };
-                                }
-                            } catch (error) {
-                                this.debugLogger.debug('[Auth] Failed to fetch org list for ID lookup:', error);
-                                // Fallback to using name as ID
-                                orgData = {
-                                    id: context.org,
-                                    code: context.org,
-                                    name: context.org
-                                };
-                            }
-                        } else {
-                            this.debugLogger.debug('[Auth] Organization name is empty string');
-                            this.endTiming('getCurrentOrganization');
-                            return undefined;
-                        }
-                    } else if (context.org && typeof context.org === 'object') {
-                        // Adobe CLI returns org as object (older format)
-                        const orgName = context.org.name || context.org.id || 'Unknown';
-                        this.debugLogger.debug(`[Auth] Current organization: ${orgName}`);
-                        orgData = {
-                            id: context.org.id || orgName,
-                            code: context.org.code || orgName,
-                            name: orgName
-                        };
-                    } else {
-                        this.debugLogger.debug('[Auth] Organization data is not string or object');
-                        this.endTiming('getCurrentOrganization');
-                        return undefined;
-                    }
-
-                    // Cache the result for future calls
-                    this.cachedOrganization = orgData;
-                    this.debugLogger.debug('[Auth] Organization data cached for session');
-
-                    this.endTiming('getCurrentOrganization');
-                    return orgData;
-                }
-            }
-            
-            this.debugLogger.debug('[Auth] No organization currently selected');
-            this.endTiming('getCurrentOrganization');
-            return undefined;
-        } catch (error) {
-            this.debugLogger.debug('[Auth] Failed to get current organization:', error);
-            this.endTiming('getCurrentOrganization');
-            return undefined;
-        }
+        await this.syncContextFromCLI();
+        return this.cachedOrganization;
     }
 
     /**
@@ -834,117 +799,11 @@ export class AdobeAuthManager {
      * Uses session caching for better performance
      */
     public async getCurrentProject(): Promise<AdobeProject | undefined> {
-        this.startTiming('getCurrentProject');
-        
-        // Check cache first
         if (this.cachedProject) {
-            this.debugLogger.debug('[Auth] Using cached project data');
-            this.endTiming('getCurrentProject');
             return this.cachedProject;
         }
-        
-        try {
-            let context;
-
-            // Check console.where cache first
-            const now = Date.now();
-            if (this.consoleWhereCache && now < this.consoleWhereCache.expiry) {
-                this.debugLogger.debug('[Auth] Using cached console.where response');
-                context = this.consoleWhereCache.data;
-            } else {
-                this.debugLogger.debug('[Auth] Fetching project data from Adobe CLI');
-                const result = await this.commandManager.executeAdobeCLI(
-                    'aio console where --json',
-                    { encoding: 'utf8', timeout: TIMEOUTS.API_CALL }
-                );
-
-                if (result.code === 0 && result.stdout) {
-                    context = JSON.parse(result.stdout);
-
-                    // Cache the result
-                    this.consoleWhereCache = {
-                        data: context,
-                        expiry: now + CACHE_TTL.CONSOLE_WHERE
-                    };
-
-                    this.debugLogger.debug('[Auth] Raw Adobe CLI response:', JSON.stringify(context));
-                } else {
-                    this.endTiming('getCurrentProject');
-                    return undefined;
-                }
-            }
-
-            if (context) {
-                
-                // Check if project is present in the response
-                if (context.project) {
-                    let projectData;
-                    
-                    if (typeof context.project === 'string') {
-                        // Adobe CLI returns project name as string
-                        // We need to look up the numeric ID from the project list for SDK compatibility
-                        this.debugLogger.debug(`[Auth] Current project name: ${context.project}, fetching numeric ID...`);
-                        
-                        try {
-                            // Use cached project list if available, otherwise fetch
-                            const projects = await this.getProjects();
-                            const matchedProject = projects.find(p => p.name === context.project || p.title === context.project);
-                            
-                            if (matchedProject) {
-                                this.debugLogger.debug(`[Auth] Resolved project "${context.project}" to ID: ${matchedProject.id}`);
-                                projectData = matchedProject;
-                            } else {
-                                this.debugLogger.warn(`[Auth] Could not find numeric ID for project "${context.project}", using name as fallback`);
-                                projectData = {
-                                    id: context.project,
-                                    name: context.project,
-                                    title: context.project
-                                };
-                            }
-                        } catch (error) {
-                            this.debugLogger.debug('[Auth] Failed to fetch project list for ID lookup:', error);
-                            // Fallback to using name as ID
-                            projectData = {
-                                id: context.project,
-                                name: context.project,
-                                title: context.project
-                            };
-                        }
-                    } else if (typeof context.project === 'object') {
-                        // Adobe CLI returns project as object (older format or full details)
-                        const projectName = context.project.name || context.project.id || 'Unknown';
-                        this.debugLogger.debug(`[Auth] Current project: ${projectName}`);
-                        projectData = {
-                            id: context.project.id,
-                            name: context.project.name,
-                            title: context.project.title || context.project.name,
-                            description: context.project.description,
-                            type: context.project.type,
-                            org_id: context.project.org_id
-                        };
-                    } else {
-                        this.debugLogger.debug('[Auth] Project data is not string or object');
-                        this.endTiming('getCurrentProject');
-                        return undefined;
-                    }
-                    
-                    // Cache the result for future calls
-                    this.cachedProject = projectData;
-                    this.debugLogger.debug('[Auth] Project data cached for session');
-                    
-                    this.endTiming('getCurrentProject');
-                    return projectData;
-                }
-            }
-            
-            this.debugLogger.debug('[Auth] No project currently selected');
-            this.endTiming('getCurrentProject');
-            return undefined;
-        } catch (error) {
-            this.debugLogger.debug('[Auth] Failed to get current project:', error);
-            this.endTiming('getCurrentProject');
-            return undefined;
-        }
+        await this.syncContextFromCLI();
+        return this.cachedProject;
     }
 
     /**
@@ -952,72 +811,11 @@ export class AdobeAuthManager {
      * Uses session caching for better performance
      */
     public async getCurrentWorkspace(): Promise<AdobeWorkspace | undefined> {
-        this.startTiming('getCurrentWorkspace');
-        
-        // Check cache first
         if (this.cachedWorkspace) {
-            this.debugLogger.debug('[Auth] Using cached workspace data');
-            this.endTiming('getCurrentWorkspace');
             return this.cachedWorkspace;
         }
-        
-        try {
-            let context;
-
-            // Check console.where cache first
-            const now = Date.now();
-            if (this.consoleWhereCache && now < this.consoleWhereCache.expiry) {
-                this.debugLogger.debug('[Auth] Using cached console.where response');
-                context = this.consoleWhereCache.data;
-            } else {
-                this.debugLogger.debug('[Auth] Fetching workspace data from Adobe CLI');
-                const result = await this.commandManager.executeAdobeCLI(
-                    'aio console where --json',
-                    { encoding: 'utf8', timeout: TIMEOUTS.API_CALL }
-                );
-
-                if (result.code === 0 && result.stdout) {
-                    context = JSON.parse(result.stdout);
-
-                    // Cache the result
-                    this.consoleWhereCache = {
-                        data: context,
-                        expiry: now + CACHE_TTL.CONSOLE_WHERE
-                    };
-                } else {
-                    this.endTiming('getCurrentWorkspace');
-                    return undefined;
-                }
-            }
-
-            if (context) {
-                
-                // Check if workspace is present in the response
-                if (context.workspace) {
-                    this.debugLogger.debug(`[Auth] Current workspace: ${context.workspace.name}`);
-                    const result = {
-                        id: context.workspace.id,
-                        name: context.workspace.name,
-                        title: context.workspace.title || context.workspace.name
-                    };
-                    
-                    // Cache the result for future calls
-                    this.cachedWorkspace = result;
-                    this.debugLogger.debug('[Auth] Workspace data cached for session');
-                    
-                    this.endTiming('getCurrentWorkspace');
-                    return result;
-                }
-            }
-            
-            this.debugLogger.debug('[Auth] No workspace currently selected');
-            this.endTiming('getCurrentWorkspace');
-            return undefined;
-        } catch (error) {
-            this.debugLogger.debug('[Auth] Failed to get current workspace:', error);
-            this.endTiming('getCurrentWorkspace');
-            return undefined;
-        }
+        await this.syncContextFromCLI();
+        return this.cachedWorkspace;
     }
 
     /**
@@ -1087,7 +885,6 @@ export class AdobeAuthManager {
             ).catch(error => {
                 // Check if it's a timeout
                 if (error.message?.includes('timeout')) {
-                    this.debugLogger.debug('[Auth] Login timed out - user may have closed browser');
                     this.logger.warn('[Auth] Authentication timed out. The browser window may have been closed or the session expired.');
                     this.stepLogger.logTemplate('adobe-setup', 'error', { 
                         item: 'Authentication', 
@@ -1105,30 +902,22 @@ export class AdobeAuthManager {
                     this.logger.error(`[Auth] Login failed: ${errorMsg}`);
                 }
                 
-                this.debugLogger.error('[Auth] Login command failed', error);
                 return null;
             });
             
             // Check if command succeeded
             if (result && result.code === 0) {
-                this.debugLogger.debug('[Auth] Login command completed successfully');
-                
                 // The token is returned in stdout
                 const token = result.stdout?.trim();
                 
                 // Check if we got a valid token (JWT tokens are typically >100 chars)
                 if (token && token.length > 50 && !token.includes('Error') && !token.includes('error')) {
-                    this.debugLogger.debug('[Auth] Received access token from login command');
-                    
                     // Manually store the token in the config where we expect it
                     try {
                         // Calculate expiry (2 hours from now, typical for Adobe tokens)
                         const expiry = Date.now() + (2 * 60 * 60 * 1000);
                         
                         // Run both config operations in parallel for better performance
-                        // Use shorter timeout (5s) for config operations as they should be quick
-                        this.debugLogger.debug('[Auth] Storing token and expiry in config...');
-                        
                         const [tokenResult, expiryResult] = await Promise.all([
                             this.commandManager.executeAdobeCLI(
                                 `aio config set ims.contexts.cli.access_token.token "${token}"`,
@@ -1142,12 +931,7 @@ export class AdobeAuthManager {
                         
                         // Check if both operations succeeded
                         if (tokenResult.code === 0 && expiryResult.code === 0) {
-                            this.debugLogger.debug('[Auth] Token stored in config successfully');
                             this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
-                            
-                            // Since we just successfully logged in and stored the token,
-                            // we can trust it's valid without re-verification
-                            this.debugLogger.debug('[Auth] Authentication completed successfully');
                             
                             // Clear auth cache to force fresh check next time
                             this.cachedAuthStatus = undefined;
@@ -1159,7 +943,6 @@ export class AdobeAuthManager {
                             // If this was a forced login, just clear cache (console context already cleared before login)
                             if (force) {
                                 this.clearCache();
-                                this.debugLogger.debug('[Auth] Cleared cache after forced login - preserving any org selection from browser');
                             }
 
                             return true;
@@ -1208,7 +991,6 @@ export class AdobeAuthManager {
             return false;
             
         } catch (error) {
-            this.debugLogger.error('[Auth] Login failed', error as Error);
             this.logger.error('[Auth] Adobe login failed', error as Error);
             return false;
         }
@@ -1232,97 +1014,138 @@ export class AdobeAuthManager {
     }
 
     /**
+     * Resolve numeric org ID for current organization if not already cached
+     * This is called lazily when numeric ID is needed (e.g., for listing projects)
+     * Returns true if org cache was updated with numeric ID, false otherwise
+     */
+    private async resolveOrgNumericId(): Promise<boolean> {
+        try {
+            // Check if we already have a cached org with numeric ID
+            if (this.cachedOrganization && this.cachedOrganization.id !== this.cachedOrganization.name) {
+                this.debugLogger.debug('[Auth] Org already has numeric ID, no resolution needed');
+                return true;
+            }
+            
+            if (!this.cachedOrganization) {
+                this.debugLogger.debug('[Auth] No cached org to resolve ID for');
+                return false;
+            }
+            
+            this.debugLogger.debug(`[Auth] Resolving numeric ID for org: ${this.cachedOrganization.name}`);
+            
+            // Try to get org list (this may trigger re-auth if needed)
+            const orgs = await this.getOrganizations();
+            const matchedOrg = orgs.find(o => 
+                o.name === this.cachedOrganization!.name || 
+                o.code === this.cachedOrganization!.code
+            );
+            
+            if (matchedOrg) {
+                this.debugLogger.debug(`[Auth] Resolved org "${this.cachedOrganization.name}" to ID: ${matchedOrg.id}`);
+                this.cachedOrganization = matchedOrg;
+                return true;
+            } else {
+                this.debugLogger.warn(`[Auth] Could not find numeric ID for org "${this.cachedOrganization.name}"`);
+                return false;
+            }
+        } catch (error) {
+            this.debugLogger.debug('[Auth] Failed to resolve org numeric ID:', error);
+            return false;
+        }
+    }
+
+    /**
      * Get organizations (SDK with CLI fallback)
      */
     public async getOrganizations(): Promise<AdobeOrg[]> {
-        const startTime = Date.now();
-        
-        try {
-            // Check cache first
-            const now = Date.now();
-            if (this.orgListCache && now < this.orgListCache.expiry) {
-                this.debugLogger.debug('[Auth] Using cached organization list');
-                return this.orgListCache.data;
-            }
+        return this.withAuthCheck(
+            { needsToken: true, needsOrg: false, needsProject: false, needsWorkspace: false },
+            async () => {
+                const startTime = Date.now();
+                
+                // Check cache first
+                const now = Date.now();
+                if (this.orgListCache && now < this.orgListCache.expiry) {
+                    this.debugLogger.debug('[Auth] Using cached organization list');
+                    return this.orgListCache.data;
+                }
 
-            this.stepLogger.logTemplate('adobe-setup', 'loading-organizations', {});
+                this.stepLogger.logTemplate('adobe-setup', 'loading-organizations', {});
 
-            let mappedOrgs: AdobeOrg[] = [];
+                let mappedOrgs: AdobeOrg[] = [];
 
-            // Try SDK first for 30x performance improvement
-            if (this.sdkClient) {
-                try {
-                    this.debugLogger.debug('[Auth SDK] Fetching organizations via SDK (fast path)');
-                    
-                    const sdkResult = await this.sdkClient.getOrganizations();
-                    const sdkDuration = Date.now() - startTime;
-                    
-                    if (sdkResult.body && Array.isArray(sdkResult.body)) {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        mappedOrgs = sdkResult.body.map((org: any) => ({
-                            id: org.id,
-                            code: org.code,
-                            name: org.name
-                        }));
+                // Try SDK first for 30x performance improvement
+                if (this.sdkClient) {
+                    try {
+                        this.debugLogger.debug('[Auth SDK] Fetching organizations via SDK (fast path)');
                         
-                        this.debugLogger.debug(`[Auth SDK] Retrieved ${mappedOrgs.length} organizations via SDK in ${sdkDuration}ms`);
-                    } else {
-                        throw new Error('Invalid SDK response format');
+                        const sdkResult = await this.sdkClient.getOrganizations();
+                        const sdkDuration = Date.now() - startTime;
+                        
+                        if (sdkResult.body && Array.isArray(sdkResult.body)) {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            mappedOrgs = sdkResult.body.map((org: any) => ({
+                                id: org.id,
+                                code: org.code,
+                                name: org.name
+                            }));
+                            
+                            this.debugLogger.debug(`[Auth SDK] Retrieved ${mappedOrgs.length} organizations via SDK in ${sdkDuration}ms`);
+                        } else {
+                            throw new Error('Invalid SDK response format');
+                        }
+                    } catch (sdkError) {
+                        // SDK failed, fall back to CLI
+                        this.debugLogger.debug('[Auth SDK] SDK failed, falling back to CLI:', sdkError);
+                        this.debugLogger.warn('[Auth] SDK unavailable, using slower CLI fallback for organizations');
                     }
-                } catch (sdkError) {
-                    // SDK failed, fall back to CLI
-                    this.debugLogger.debug('[Auth SDK] SDK failed, falling back to CLI:', sdkError);
-                    this.debugLogger.warn('[Auth] SDK unavailable, using slower CLI fallback for organizations');
                 }
+
+                // CLI fallback (if SDK not available or failed)
+                if (mappedOrgs.length === 0) {
+                    this.debugLogger.debug('[Auth CLI] Fetching organizations via CLI (fallback path)');
+                    
+                    const result = await this.commandManager.executeAdobeCLI(
+                        'aio console org list --json',
+                        { encoding: 'utf8' }
+                    );
+                    
+                    const cliDuration = Date.now() - startTime;
+
+                    if (result.code !== 0) {
+                        throw new Error(`Failed to get organizations: ${result.stderr}`);
+                    }
+
+                    const orgs = JSON.parse(result.stdout);
+
+                    if (!Array.isArray(orgs)) {
+                        throw new Error('Invalid organizations response format');
+                    }
+
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    mappedOrgs = orgs.map((org: any) => ({
+                        id: org.id,
+                        code: org.code,
+                        name: org.name
+                    }));
+                    
+                    this.debugLogger.debug(`[Auth CLI] Retrieved ${mappedOrgs.length} organizations via CLI in ${cliDuration}ms`);
+                }
+
+                // Cache the result
+                this.orgListCache = {
+                    data: mappedOrgs,
+                    expiry: now + CACHE_TTL.ORG_LIST
+                };
+
+                this.stepLogger.logTemplate('adobe-setup', 'found', {
+                    count: mappedOrgs.length,
+                    item: mappedOrgs.length === 1 ? 'organization' : 'organizations'
+                });
+
+                return mappedOrgs;
             }
-
-            // CLI fallback (if SDK not available or failed)
-            if (mappedOrgs.length === 0) {
-                this.debugLogger.debug('[Auth CLI] Fetching organizations via CLI (fallback path)');
-                
-                const result = await this.commandManager.executeAdobeCLI(
-                    'aio console org list --json',
-                    { encoding: 'utf8' }
-                );
-                
-                const cliDuration = Date.now() - startTime;
-
-                if (result.code !== 0) {
-                    throw new Error(`Failed to get organizations: ${result.stderr}`);
-                }
-
-                const orgs = JSON.parse(result.stdout);
-
-                if (!Array.isArray(orgs)) {
-                    throw new Error('Invalid organizations response format');
-                }
-
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                mappedOrgs = orgs.map((org: any) => ({
-                    id: org.id,
-                    code: org.code,
-                    name: org.name
-                }));
-                
-                this.debugLogger.debug(`[Auth CLI] Retrieved ${mappedOrgs.length} organizations via CLI in ${cliDuration}ms`);
-            }
-
-            // Cache the result
-            this.orgListCache = {
-                data: mappedOrgs,
-                expiry: now + CACHE_TTL.ORG_LIST
-            };
-
-            this.stepLogger.logTemplate('adobe-setup', 'found', {
-                count: mappedOrgs.length,
-                item: mappedOrgs.length === 1 ? 'organization' : 'organizations'
-            });
-
-            return mappedOrgs;
-        } catch (error) {
-            this.debugLogger.error('[Auth] Failed to get organizations', error as Error);
-            throw error;
-        }
+        );
     }
 
     /**
@@ -1393,94 +1216,118 @@ export class AdobeAuthManager {
      * Get projects (SDK with CLI fallback)
      */
     public async getProjects(): Promise<AdobeProject[]> {
-        this.startTiming('getProjects');
-        const startTime = Date.now();
-        
-        try {
-            this.stepLogger.logTemplate('adobe-setup', 'operations.loading-projects', {});
-            
-            let mappedProjects: AdobeProject[] = [];
+        return this.withAuthCheck(
+            { needsToken: true, needsOrg: true, needsProject: false, needsWorkspace: false },
+            async () => {
+                this.startTiming('getProjects');
+                const startTime = Date.now();
+                
+                this.stepLogger.logTemplate('adobe-setup', 'operations.loading-projects', {});
+                
+                // Note: We deliberately do NOT resolve numeric org ID here to avoid triggering browser auth
+                // The CLI command `aio console project list` works with org name, not numeric ID
+                // Only resolve numeric ID if SDK is available and we want to use it
+                
+                let mappedProjects: AdobeProject[] = [];
 
-            // Try SDK first if available and we have an org ID
-            if (this.sdkClient && this.cachedOrganization?.id) {
-                try {
-                    this.debugLogger.debug(`[Auth SDK] Fetching projects for org ${this.cachedOrganization.id} via SDK (fast path)`);
-                    
-                    const sdkResult = await this.sdkClient.getProjectsForOrg(this.cachedOrganization.id);
-                    const sdkDuration = Date.now() - startTime;
-                    
-                    if (sdkResult.body && Array.isArray(sdkResult.body)) {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        mappedProjects = sdkResult.body.map((proj: any) => ({
-                            id: proj.id,
-                            name: proj.name,
-                            title: proj.title || proj.name,
-                            description: proj.description,
-                            type: proj.type,
-                            org_id: proj.org_id
-                        }));
+                // Try SDK first if available and we have a NUMERIC org ID
+                // (SDK requires numeric ID, won't work with org name)
+                const hasNumericOrgId = this.cachedOrganization?.id && 
+                                       this.cachedOrganization.id !== this.cachedOrganization.name &&
+                                       !isNaN(Number(this.cachedOrganization.id));
+                
+                if (this.sdkClient && hasNumericOrgId) {
+                    try {
+                        this.debugLogger.debug(`[Auth SDK] Fetching projects for org ${this.cachedOrganization!.id} via SDK (fast path)`);
                         
-                        this.debugLogger.debug(`[Auth SDK] Retrieved ${mappedProjects.length} projects via SDK in ${sdkDuration}ms`);
+                        const sdkResult = await this.sdkClient.getProjectsForOrg(this.cachedOrganization!.id);
+                        const sdkDuration = Date.now() - startTime;
+                        
+                        if (sdkResult.body && Array.isArray(sdkResult.body)) {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            mappedProjects = sdkResult.body.map((proj: any) => ({
+                                id: proj.id,
+                                name: proj.name,
+                                title: proj.title || proj.name,
+                                description: proj.description,
+                                type: proj.type,
+                                org_id: proj.org_id
+                            }));
+                            
+                            this.debugLogger.debug(`[Auth SDK] Retrieved ${mappedProjects.length} projects via SDK in ${sdkDuration}ms`);
+                        } else {
+                            throw new Error('Invalid SDK response format');
+                        }
+                    } catch (sdkError) {
+                        this.debugLogger.debug('[Auth SDK] SDK failed, falling back to CLI:', sdkError);
+                        this.debugLogger.warn('[Auth] SDK unavailable, using slower CLI fallback for projects');
+                    }
+                } else {
+                    if (this.sdkClient) {
+                        this.debugLogger.debug('[Auth CLI] Using CLI for projects (cached org ID is name, not numeric)');
                     } else {
-                        throw new Error('Invalid SDK response format');
+                        this.debugLogger.debug('[Auth CLI] Using CLI for projects (SDK not available)');
                     }
-                } catch (sdkError) {
-                    this.debugLogger.debug('[Auth SDK] SDK failed, falling back to CLI:', sdkError);
-                    this.debugLogger.warn('[Auth] SDK unavailable, using slower CLI fallback for projects');
                 }
-            } else if (this.sdkClient && !this.cachedOrganization?.id) {
-                this.debugLogger.debug('[Auth SDK] SDK available but no cached org ID, using CLI');
-            }
 
-            // CLI fallback
-            if (mappedProjects.length === 0) {
-                this.debugLogger.debug('[Auth CLI] Fetching projects via CLI (fallback path)');
-                
-                const result = await this.commandManager.executeAdobeCLI(
-                    'aio console project list --json',
-                    { encoding: 'utf8' }
-                );
-                
-                const cliDuration = Date.now() - startTime;
-                
-                if (result.code !== 0) {
-                    // Check if it's just no projects
-                    if (result.stderr?.includes('does not have any projects')) {
-                        this.debugLogger.debug('[Auth CLI] No projects found for organization');
-                        return [];
+                // CLI fallback
+                if (mappedProjects.length === 0) {
+                    this.debugLogger.debug('[Auth CLI] Fetching projects via CLI (fallback path)');
+                    
+                    // Get current org to pass as parameter (Adobe CLI requires org context)
+                    const currentOrg = await this.getCurrentOrganization();
+                    if (!currentOrg) {
+                        throw new Error('No organization selected. Please select an organization first.');
                     }
-                    throw new Error(`Failed to get projects: ${result.stderr}`);
+                    
+                    // Pass org ID to the command (Adobe CLI needs to know which org to list projects for)
+                    // Note: Parameter is --orgId (camelCase), not --org-id
+                    const orgIdParam = currentOrg.id ? ` --orgId=${currentOrg.id}` : '';
+                    this.debugLogger.debug(`[Auth CLI] Listing projects for org ${currentOrg.name} (ID: ${currentOrg.id})`);
+                    
+                    const result = await this.commandManager.executeAdobeCLI(
+                        `aio console project list --json${orgIdParam}`,
+                        { encoding: 'utf8' }
+                    );
+                    
+                    const cliDuration = Date.now() - startTime;
+                    
+                    if (result.code !== 0) {
+                        // Check if it's just no projects
+                        if (result.stderr?.includes('does not have any projects')) {
+                            this.debugLogger.debug('[Auth CLI] No projects found for organization');
+                            return [];
+                        }
+                        throw new Error(`Failed to get projects: ${result.stderr}`);
+                    }
+                    
+                    const projects = JSON.parse(result.stdout);
+                    
+                    if (!Array.isArray(projects)) {
+                        throw new Error('Invalid projects response format');
+                    }
+                    
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    mappedProjects = projects.map((proj: any) => ({
+                        id: proj.id,
+                        name: proj.name,
+                        title: proj.title || proj.name,
+                        description: proj.description,
+                        type: proj.type,
+                        org_id: proj.org_id
+                    }));
+                    
+                    this.debugLogger.debug(`[Auth CLI] Retrieved ${mappedProjects.length} projects via CLI in ${cliDuration}ms`);
                 }
                 
-                const projects = JSON.parse(result.stdout);
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.projects-loaded', { 
+                    count: mappedProjects.length, 
+                    plural: mappedProjects.length === 1 ? '' : 's' 
+                });
                 
-                if (!Array.isArray(projects)) {
-                    throw new Error('Invalid projects response format');
-                }
-                
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                mappedProjects = projects.map((proj: any) => ({
-                    id: proj.id,
-                    name: proj.name,
-                    title: proj.title || proj.name,
-                    description: proj.description,
-                    type: proj.type,
-                    org_id: proj.org_id
-                }));
-                
-                this.debugLogger.debug(`[Auth CLI] Retrieved ${mappedProjects.length} projects via CLI in ${cliDuration}ms`);
+                return mappedProjects;
             }
-            
-            this.stepLogger.logTemplate('adobe-setup', 'statuses.projects-loaded', { 
-                count: mappedProjects.length, 
-                plural: mappedProjects.length === 1 ? '' : 's' 
-            });
-            
-            return mappedProjects;
-        } catch (error) {
-            this.debugLogger.error('[Auth] Failed to get projects', error as Error);
-            throw error;
-        }
+        );
     }
 
     /**
@@ -1533,8 +1380,23 @@ export class AdobeAuthManager {
             }
 
             this.debugLogger.debug(`[Auth] Project select failed with code: ${result.code}, stderr: ${result.stderr}`);
+            
+            // Check for 403 Forbidden - wrong org or expired token
+            if (result.stderr?.includes('403') || result.stderr?.includes('Forbidden') || 
+                result.stderr?.includes('not allowed to access')) {
+                this.logger.warn('[Auth] Project selection denied - token may be for wrong organization');
+                throw AdobeAuthError.permissionDenied(
+                    'Your Adobe session may be for a different organization. Please sign in again.'
+                );
+            }
+            
             return false;
         } catch (error) {
+            // Check if it's already an AdobeAuthError
+            if (error instanceof AdobeAuthError) {
+                throw error;
+            }
+            
             // Check if command succeeded despite timeout
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const err = error as any;
@@ -1575,86 +1437,86 @@ export class AdobeAuthManager {
      * Get workspaces (SDK with CLI fallback)
      */
     public async getWorkspaces(): Promise<AdobeWorkspace[]> {
-        this.startTiming('getWorkspaces');
-        const startTime = Date.now();
-        
-        try {
-            this.stepLogger.logTemplate('adobe-setup', 'operations.retrieving-workspaces', {});
-            
-            let mappedWorkspaces: AdobeWorkspace[] = [];
+        return this.withAuthCheck(
+            { needsToken: true, needsOrg: true, needsProject: true, needsWorkspace: false },
+            async () => {
+                this.startTiming('getWorkspaces');
+                const startTime = Date.now();
+                
+                this.stepLogger.logTemplate('adobe-setup', 'operations.retrieving-workspaces', {});
+                
+                let mappedWorkspaces: AdobeWorkspace[] = [];
 
-            // Try SDK first if available and we have both org ID and project ID
-            if (this.sdkClient && this.cachedOrganization?.id && this.cachedProject?.id) {
-                try {
-                    this.debugLogger.debug(`[Auth SDK] Fetching workspaces for project ${this.cachedProject.id} via SDK (fast path)`);
-                    
-                    const sdkResult = await this.sdkClient.getWorkspacesForProject(
-                        this.cachedOrganization.id,
-                        this.cachedProject.id
-                    );
-                    const sdkDuration = Date.now() - startTime;
-                    
-                    if (sdkResult.body && Array.isArray(sdkResult.body)) {
-                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                        mappedWorkspaces = sdkResult.body.map((ws: any) => ({
-                            id: ws.id,
-                            name: ws.name,
-                            title: ws.title || ws.name
-                        }));
+                // Try SDK first if available and we have both org ID and project ID
+                if (this.sdkClient && this.cachedOrganization?.id && this.cachedProject?.id) {
+                    try {
+                        this.debugLogger.debug(`[Auth SDK] Fetching workspaces for project ${this.cachedProject.id} via SDK (fast path)`);
                         
-                        this.debugLogger.debug(`[Auth SDK] Retrieved ${mappedWorkspaces.length} workspaces via SDK in ${sdkDuration}ms`);
-                    } else {
-                        throw new Error('Invalid SDK response format');
+                        const sdkResult = await this.sdkClient.getWorkspacesForProject(
+                            this.cachedOrganization.id,
+                            this.cachedProject.id
+                        );
+                        const sdkDuration = Date.now() - startTime;
+                        
+                        if (sdkResult.body && Array.isArray(sdkResult.body)) {
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            mappedWorkspaces = sdkResult.body.map((ws: any) => ({
+                                id: ws.id,
+                                name: ws.name,
+                                title: ws.title || ws.name
+                            }));
+                            
+                            this.debugLogger.debug(`[Auth SDK] Retrieved ${mappedWorkspaces.length} workspaces via SDK in ${sdkDuration}ms`);
+                        } else {
+                            throw new Error('Invalid SDK response format');
+                        }
+                    } catch (sdkError) {
+                        this.debugLogger.debug('[Auth SDK] SDK failed, falling back to CLI:', sdkError);
+                        this.debugLogger.warn('[Auth] SDK unavailable, using slower CLI fallback for workspaces');
                     }
-                } catch (sdkError) {
-                    this.debugLogger.debug('[Auth SDK] SDK failed, falling back to CLI:', sdkError);
-                    this.debugLogger.warn('[Auth] SDK unavailable, using slower CLI fallback for workspaces');
+                } else if (this.sdkClient && (!this.cachedOrganization?.id || !this.cachedProject?.id)) {
+                    this.debugLogger.debug('[Auth SDK] SDK available but missing org/project ID, using CLI');
                 }
-            } else if (this.sdkClient && (!this.cachedOrganization?.id || !this.cachedProject?.id)) {
-                this.debugLogger.debug('[Auth SDK] SDK available but missing org/project ID, using CLI');
-            }
 
-            // CLI fallback
-            if (mappedWorkspaces.length === 0) {
-                this.debugLogger.debug('[Auth CLI] Fetching workspaces via CLI (fallback path)');
-                
-                const result = await this.commandManager.executeAdobeCLI(
-                    'aio console workspace list --json',
-                    { encoding: 'utf8' }
-                );
-                
-                const cliDuration = Date.now() - startTime;
-                
-                if (result.code !== 0) {
-                    throw new Error(`Failed to get workspaces: ${result.stderr}`);
+                // CLI fallback
+                if (mappedWorkspaces.length === 0) {
+                    this.debugLogger.debug('[Auth CLI] Fetching workspaces via CLI (fallback path)');
+                    
+                    const result = await this.commandManager.executeAdobeCLI(
+                        'aio console workspace list --json',
+                        { encoding: 'utf8' }
+                    );
+                    
+                    const cliDuration = Date.now() - startTime;
+                    
+                    if (result.code !== 0) {
+                        throw new Error(`Failed to get workspaces: ${result.stderr}`);
+                    }
+                    
+                    const workspaces = JSON.parse(result.stdout);
+                    
+                    if (!Array.isArray(workspaces)) {
+                        throw new Error('Invalid workspaces response format');
+                    }
+                    
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    mappedWorkspaces = workspaces.map((ws: any) => ({
+                        id: ws.id,
+                        name: ws.name,
+                        title: ws.title || ws.name
+                    }));
+                    
+                    this.debugLogger.debug(`[Auth CLI] Retrieved ${mappedWorkspaces.length} workspaces via CLI in ${cliDuration}ms`);
                 }
                 
-                const workspaces = JSON.parse(result.stdout);
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.workspaces-loaded', { 
+                    count: mappedWorkspaces.length, 
+                    plural: mappedWorkspaces.length === 1 ? '' : 's' 
+                });
                 
-                if (!Array.isArray(workspaces)) {
-                    throw new Error('Invalid workspaces response format');
-                }
-                
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                mappedWorkspaces = workspaces.map((ws: any) => ({
-                    id: ws.id,
-                    name: ws.name,
-                    title: ws.title || ws.name
-                }));
-                
-                this.debugLogger.debug(`[Auth CLI] Retrieved ${mappedWorkspaces.length} workspaces via CLI in ${cliDuration}ms`);
+                return mappedWorkspaces;
             }
-            
-            this.stepLogger.logTemplate('adobe-setup', 'statuses.workspaces-loaded', { 
-                count: mappedWorkspaces.length, 
-                plural: mappedWorkspaces.length === 1 ? '' : 's' 
-            });
-            
-            return mappedWorkspaces;
-        } catch (error) {
-            this.debugLogger.error('[Auth] Failed to get workspaces', error as Error);
-            throw error;
-        }
+        );
     }
 
     /**
