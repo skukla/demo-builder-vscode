@@ -7,9 +7,11 @@ import { TIMEOUTS } from './timeoutConfig';
 
 export class ExtensionUpdater {
   private logger: Logger;
+  private context: vscode.ExtensionContext;
 
-  constructor(logger: Logger) {
+  constructor(logger: Logger, context: vscode.ExtensionContext) {
     this.logger = logger;
+    this.context = context;
   }
 
   /**
@@ -36,6 +38,10 @@ export class ExtensionUpdater {
       );
       
       this.logger.info(`[Update] ✓ Extension installed successfully`);
+      
+      // Set flag to skip auto-update check on next activation
+      await this.context.globalState.update('justUpdatedExtension', true);
+      this.logger.debug(`[Update] Set flag to skip auto-check on next reload`);
       
       // Cleanup temp file
       try {

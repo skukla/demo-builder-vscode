@@ -57,6 +57,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Initialize external command manager
         externalCommandManager = new ExternalCommandManager();
+        externalCommandManager.setStateManager(stateManager);
         
 
         // Check workspace trust
@@ -247,17 +248,26 @@ export async function activate(context: vscode.ExtensionContext) {
             .get<boolean>('autoUpdate', true);
 
         if (autoCheck) {
-            // Check in background, don't block activation
-            setTimeout(() => {
-                vscode.commands.executeCommand('demoBuilder.checkForUpdates').then(
-                    () => {
-                        // Success - no action needed
-                    },
-                    (err: Error) => {
-                        logger.debug('[Updates] Background check failed:', err);
-                    }
-                );
-            }, 10000); // 10 second delay
+            // Skip update check if we just installed an update (prevents redundant check after reload)
+            const justUpdated = context.globalState.get<boolean>('justUpdatedExtension', false);
+            
+            if (justUpdated) {
+                logger.debug('[Updates] Skipping auto-check - extension was just updated');
+                // Clear the flag
+                await context.globalState.update('justUpdatedExtension', false);
+            } else {
+                // Check in background, don't block activation
+                setTimeout(() => {
+                    vscode.commands.executeCommand('demoBuilder.checkForUpdates').then(
+                        () => {
+                            // Success - no action needed
+                        },
+                        (err: Error) => {
+                            logger.debug('[Updates] Background check failed:', err);
+                        }
+                    );
+                }, 10000); // 10 second delay
+            }
         }
 
         logger.info('[Extension] Ready');
