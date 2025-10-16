@@ -58,9 +58,9 @@ export abstract class BaseCommand {
     protected showSuccessMessage(message: string, timeout: number = 5000): void {
         this.logger.info(message);
         // Show prominent notification popup (auto-dismisses)
-        vscode.window.showInformationMessage(`✅ ${message}`);
+        vscode.window.showInformationMessage(message);
         // Also show in status bar as secondary indicator
-        vscode.window.setStatusBarMessage(`✅ ${message}`, timeout);
+        vscode.window.setStatusBarMessage(message, timeout);
     }
 
     /**

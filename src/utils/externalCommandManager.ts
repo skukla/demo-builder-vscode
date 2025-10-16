@@ -91,14 +91,44 @@ export class ExternalCommandManager {
     private logger = getLogger();
     private fileWatchers = new Map<string, vscode.FileSystemWatcher>();
     private disposables: vscode.Disposable[] = [];
+    private stateManager?: any;  // Optional StateManager for project-specific Node version
     
     // Cache Node and aio binary paths to avoid fnm exec overhead
     private cachedNodeBinaryPath?: string;
     private cachedAioBinaryPath?: string;
+    
+    // Allowed Node versions for project (used during prerequisite checks before project is created)
+    private allowedNodeVersions?: number[];
 
     constructor() {
         // Set up default retry strategies
         this.setupDefaultStrategies();
+    }
+    
+    /**
+     * Set the StateManager for accessing project-specific configuration
+     */
+    setStateManager(stateManager: any): void {
+        this.stateManager = stateManager;
+    }
+    
+    /**
+     * Set allowed Node versions for prerequisite checks (before project exists)
+     * This ensures we only scan/use Node versions required by the selected components
+     */
+    setAllowedNodeVersions(versions: number[]): void {
+        this.allowedNodeVersions = versions;
+        this.logger.debug(`[Adobe CLI] Set allowed Node versions: ${versions.join(', ')}`);
+        // Clear cache so next findAdobeCLINodeVersion() uses new allowed versions
+        this.cachedAdobeCLINodeVersion = undefined;
+    }
+    
+    /**
+     * Clear allowed Node versions (typically after project is created)
+     */
+    clearAllowedNodeVersions(): void {
+        this.allowedNodeVersions = undefined;
+        this.logger.debug('[Adobe CLI] Cleared allowed Node versions');
     }
 
     /**
@@ -147,7 +177,7 @@ export class ExternalCommandManager {
                         // Quote paths to handle spaces in directory names (e.g., "Application Support")
                         const aioCommand = command.substring(4); // Remove 'aio ' prefix
                         finalCommand = `"${this.cachedNodeBinaryPath}" "${this.cachedAioBinaryPath}" ${aioCommand}`;
-                        this.logger.debug(`[Adobe CLI] Using cached paths (fast): ${finalCommand.substring(0, 100)}...`);
+                        this.logger.debug(`[Adobe CLI] (Node v${nodeVersion}) ${command}`);
                     } else {
                         // Fallback to fnm exec (slower but reliable)
                         // Use 'fnm exec' for true isolation - guarantees fnm's Node version is used
@@ -157,7 +187,7 @@ export class ExternalCommandManager {
                         // - No interference from nvm/system Node
                         // - Command is guaranteed to run under fnm's Node version
                         finalCommand = `${fnmPath} exec --using=${nodeVersion} ${finalCommand}`;
-                        this.logger.debug(`[Adobe CLI] Using fnm exec (slow): ${finalCommand.substring(0, 100)}...`);
+                        this.logger.debug(`[Adobe CLI] (Node v${nodeVersion} via exec) ${command}`);
                     }
                 }
                 finalOptions.shell = finalOptions.shell || '/bin/zsh';
@@ -929,15 +959,57 @@ export class ExternalCommandManager {
         }
     }
     
-    async findAdobeCLINodeVersion(): Promise<string | null> {
+    async findAdobeCLINodeVersion(allowedVersions?: number[]): Promise<string | null> {
         // Return cached value if we've already looked it up
         if (this.cachedAdobeCLINodeVersion !== undefined) {
-            return this.cachedAdobeCLINodeVersion;
+            return this.cachedAdobeCLINodeVersion ?? null;
         }
         
-        // Adobe CLI SDK supports Node 18, 20, and 22 only (not 24+)
-        // See: https://github.com/adobe/aio-lib-core-console-api
+        // Check if we have a project with configured Node versions
+        if (this.stateManager) {
+            try {
+                const project = await this.stateManager.getCurrentProject();
+                const cliVersion = project?.nodeVersions?.infrastructure?.['adobe-cli'];
+                
+                if (cliVersion) {
+                    // Use configured version for Adobe CLI operations
+                    const versionString = cliVersion.toString();
+                    this.logger.debug(`[Adobe CLI] Using configured Node v${versionString} (from project infrastructure)`);
+                    this.cachedAdobeCLINodeVersion = versionString;
+                    await this.cacheBinaryPaths(versionString);
+                    return versionString;
+                }
+                
+                // If project exists but no adobe-cli version configured, get unique versions from project
+                if (project?.nodeVersions) {
+                    const projectVersions = new Set<number>();
+                    Object.values(project.nodeVersions.infrastructure || {}).forEach(v => projectVersions.add(v as number));
+                    Object.values(project.nodeVersions.components || {}).forEach(v => projectVersions.add(v as number));
+                    if (projectVersions.size > 0) {
+                        allowedVersions = Array.from(projectVersions);
+                        this.logger.debug(`[Adobe CLI] Using project Node versions: ${allowedVersions.join(', ')}`);
+                    }
+                }
+            } catch (error) {
+                // If project access fails, fall back to detection
+                this.logger.debug(`[Adobe CLI] Could not access project Node versions: ${error}`);
+            }
+        }
+        
+        // Determine which versions to scan
         const SUPPORTED_NODE_VERSIONS = [18, 20, 22];
+        const effectiveAllowedVersions = allowedVersions || this.allowedNodeVersions;
+        const versionsToScan = effectiveAllowedVersions 
+            ? effectiveAllowedVersions.filter(v => SUPPORTED_NODE_VERSIONS.includes(v))
+            : SUPPORTED_NODE_VERSIONS;
+        
+        if (versionsToScan.length === 0) {
+            this.logger.warn('[Adobe CLI] No compatible Node versions to scan');
+            this.cachedAdobeCLINodeVersion = null;
+            return null;
+        }
+        
+        this.logger.debug(`[Adobe CLI] Scanning Node versions: ${versionsToScan.join(', ')}`);
         
         // Use FNM_DIR if available, otherwise fallback to default location
         const homeDir = os.homedir();
@@ -950,16 +1022,16 @@ export class ExternalCommandManager {
                 const versions = fsSync.readdirSync(fnmBase);
                 const versionsWithAio: Array<{version: string, major: number}> = [];
                 
-                // Test each Node version by actually running aio --version
+                // Test each ALLOWED Node version by actually running aio --version
                 for (const version of versions) {
                     const match = version.match(/v?(\d+)/);
                     if (!match) continue;
                     
                     const major = parseInt(match[1], 10);
                     
-                    // Skip Node versions not supported by Adobe CLI SDK
-                    if (!SUPPORTED_NODE_VERSIONS.includes(major)) {
-                        this.logger.debug(`[Adobe CLI] Node v${major}: skipping (Adobe CLI SDK requires ^18 || ^20 || ^22)`);
+                    // ONLY scan versions in our allowed list
+                    if (!versionsToScan.includes(major)) {
+                        this.logger.debug(`[Adobe CLI] Node v${major}: skipping (not in project-required versions)`);
                         continue;
                     }
                     

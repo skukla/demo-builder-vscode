@@ -44,7 +44,7 @@ export class CheckUpdatesCommand extends BaseCommand {
           if (!hasUpdates) {
             // Show "up to date" result in the progress notification for 3 seconds
             progress.report({ 
-              message: `✓ Demo Builder is up to date (v${extensionUpdate.current})` 
+              message: `Demo Builder is up to date (v${extensionUpdate.current})` 
             });
             await new Promise(resolve => setTimeout(resolve, 3000));
           }
@@ -55,7 +55,7 @@ export class CheckUpdatesCommand extends BaseCommand {
       
       // If no updates, we already showed the result - just return
       if (!hasUpdates) {
-        this.logger.info('[Updates] ✓ No updates available - Demo Builder is up to date');
+        this.logger.info('[Updates] No updates available - Demo Builder is up to date');
         return;
       }
       
@@ -99,7 +99,7 @@ export class CheckUpdatesCommand extends BaseCommand {
         await this.performExtensionUpdate(extensionUpdate);
       } else if (action === 'Components Only' || action === 'Update Components') {
         await this.performComponentUpdates(componentUpdates, project);
-        vscode.window.showInformationMessage('✓ Component updates completed');
+        vscode.window.showInformationMessage('Component updates completed');
       } else if (action === 'Extension Only' || action === 'Update Extension') {
         await this.performExtensionUpdate(extensionUpdate);
       }
@@ -191,7 +191,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                     if (componentInstance?.path) {
                       await componentUpdater.retryRollback(componentInstance.path, snapshotPath);
                       vscode.window.showInformationMessage(
-                        `✓ Successfully restored ${componentId} from backup`
+                        `Successfully restored ${componentId} from backup`
                       );
                       this.logger.info(`[Updates] Manual rollback successful for ${componentId}`);
                     }
@@ -252,7 +252,7 @@ export class CheckUpdatesCommand extends BaseCommand {
       return;
     }
     
-    const extensionUpdater = new ExtensionUpdater(this.logger);
+    const extensionUpdater = new ExtensionUpdater(this.logger, this.context);
     await extensionUpdater.updateExtension(
       extensionUpdate.releaseInfo.downloadUrl,
       extensionUpdate.latest
