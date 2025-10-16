@@ -1839,18 +1839,19 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.debug(`[Prerequisites] User action: ${action || 'dismissed'}`);
             
             if (action === 'Continue') {
-                // User clicked Continue - close terminal and proceed
-                this.logger.debug('[Prerequisites] Disposing terminal...');
+                // User clicked Continue - close terminal AND panel
+                this.logger.debug('[Prerequisites] Closing terminal and panel...');
                 try {
                     // Check if terminal is still in the terminal list
                     const terminalStillExists = vscode.window.terminals.includes(terminal);
                     this.logger.debug(`[Prerequisites] Terminal exists before dispose: ${terminalStillExists}`);
                     
                     if (terminalStillExists) {
+                        // Dispose the terminal first
                         terminal.dispose();
-                        this.logger.info('[Prerequisites] ✅ Terminal disposed successfully');
+                        this.logger.debug('[Prerequisites] Terminal disposed');
                         
-                        // Give VS Code time to close the terminal
+                        // Give VS Code time to process the terminal disposal
                         await new Promise(resolve => setTimeout(resolve, 100));
                         
                         const terminalStillExistsAfter = vscode.window.terminals.includes(terminal);
@@ -1858,8 +1859,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     } else {
                         this.logger.warn('[Prerequisites] Terminal was already closed/disposed');
                     }
+                    
+                    // Now close the entire bottom panel (Terminal, Output, Problems, etc.)
+                    // This is what the user wants - hide the whole panel UI
+                    this.logger.debug('[Prerequisites] Closing bottom panel...');
+                    await vscode.commands.executeCommand('workbench.action.closePanel');
+                    this.logger.info('[Prerequisites] ✅ Bottom panel closed successfully');
+                    
                 } catch (disposeError) {
-                    this.logger.error('[Prerequisites] Error disposing terminal:', disposeError as Error);
+                    this.logger.error('[Prerequisites] Error closing terminal/panel:', disposeError as Error);
                 }
             } else {
                 // User dismissed notification (Esc) - leave terminal open for reference
