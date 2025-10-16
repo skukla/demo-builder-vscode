@@ -948,7 +948,17 @@ export class AdobeAuthManager {
                 // CRITICAL: Verify token has valid expiry after login
                 this.debugLogger.debug('[Auth] Checking if token has valid expiry...');
                 const postLoginToken = await this.inspectToken();
+                
+                // DEBUG: Log what we got back from inspectToken
+                this.debugLogger.debug(`[Auth] Post-login token inspection result:`);
+                this.debugLogger.debug(`[Auth]   - valid: ${postLoginToken.valid}`);
+                this.debugLogger.debug(`[Auth]   - expiresIn: ${postLoginToken.expiresIn}`);
+                this.debugLogger.debug(`[Auth]   - token exists: ${!!postLoginToken.token}`);
+                this.debugLogger.debug(`[Auth]   - token length: ${postLoginToken.token?.length || 0}`);
+                this.debugLogger.debug(`[Auth] Checking corruption condition: token=${!!postLoginToken.token}, expiresIn=${postLoginToken.expiresIn}, condition=${postLoginToken.token && postLoginToken.expiresIn === 0}`);
+                
                 if (postLoginToken.token && postLoginToken.expiresIn === 0) {
+                    this.debugLogger.debug('[Auth] CORRUPTION DETECTED - entering error path');
                     this.logger.error('[Auth] Login completed but token still has expiry = 0 (corrupted)');
                     this.logger.error('[Auth] This indicates Adobe CLI is not storing the token correctly');
                     this.logger.error('[Auth] Try running: aio auth logout && aio auth login in a terminal');
