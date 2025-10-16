@@ -8,6 +8,8 @@ import { WebviewCommunicationManager } from '../utils/webviewCommunicationManage
 // Prerequisites checking is handled by PrerequisitesManager
 import { PrerequisitesManager, InstallStep } from '../utils/prerequisitesManager';
 import { AdobeAuthManager, AdobeOrg, AdobeProject } from '../utils/adobeAuthManager';
+import { AuthState, AuthContext, AuthRequirements } from '../utils/adobeAuthTypes';
+import { AdobeAuthError } from '../utils/adobeAuthErrors';
 import { ComponentHandler } from './componentHandler';
 import { ErrorLogger } from '../utils/errorLogger';
 import { ProgressUnifier } from '../utils/progressUnifier';
@@ -399,6 +401,21 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             try {
                 this.logger.info('[API Mesh] Deleting mesh for workspace', { workspaceId: data.workspaceId });
                 
+                try {
+                    await this.requireAuthContext({ 
+                        needsToken: true, 
+                        needsOrg: true, 
+                        needsProject: true, 
+                        needsWorkspace: true 
+                    });
+                } catch (error) {
+                    this.logger.warn('[API Mesh] Token expired - cannot delete mesh');
+                    return {
+                        success: false,
+                        error: 'Your Adobe session has expired. Please refresh your authentication.'
+                    };
+                }
+                
                 const commandManager = getExternalCommandManager();
                 const result = await commandManager.executeAdobeCLI(
                     'aio api-mesh delete --autoConfirmAction',
@@ -749,21 +766,78 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Initialize state tracking
             this.currentPrerequisiteStates = new Map();
 
-            // Get Node version to component mapping if we have components selected
+            // Collect Node versions based on component selection
             let nodeVersionMapping: { [version: string]: string } = {};
+            
             if (this.currentComponentSelection) {
                 try {
                     const { ComponentRegistryManager } = await import('../utils/componentRegistry');
+                    const { NodeVersionResolver } = await import('../utils/nodeVersionResolver');
                     const registryManager = new ComponentRegistryManager(this.context.extensionPath);
-                    nodeVersionMapping = await registryManager.getNodeVersionToComponentMapping(
-                        this.currentComponentSelection.frontend,
-                        this.currentComponentSelection.backend,
-                        this.currentComponentSelection.dependencies,
-                        this.currentComponentSelection.externalSystems,
-                        this.currentComponentSelection.appBuilder
-                    );
+                    
+                    // Get all component definitions
+                    const componentDefs = [];
+                    const allSelections = [
+                        ...(this.currentComponentSelection.frontend ? [{ id: this.currentComponentSelection.frontend, type: 'frontend' }] : []),
+                        ...(this.currentComponentSelection.dependencies || []).map((id: string) => ({ id, type: 'dependency' })),
+                        ...(this.currentComponentSelection.appBuilder || []).map((id: string) => ({ id, type: 'app-builder' }))
+                    ];
+                    
+                    for (const sel of allSelections) {
+                        let componentDef;
+                        if (sel.type === 'frontend') {
+                            const frontends = await registryManager.getFrontends();
+                            componentDef = frontends.find((f: any) => f.id === sel.id);
+                        } else if (sel.type === 'dependency') {
+                            const dependencies = await registryManager.getDependencies();
+                            componentDef = dependencies.find((d: any) => d.id === sel.id);
+                        } else if (sel.type === 'app-builder') {
+                            const appBuilder = await registryManager.getAppBuilder();
+                            componentDef = appBuilder.find((a: any) => a.id === sel.id);
+                        }
+                        if (componentDef) {
+                            componentDefs.push(componentDef);
+                        }
+                    }
+                    
+                    // Load infrastructure items
+                    const infrastructure = await registryManager.getInfrastructure();
+                    
+                    // Collect Node versions (no strategy, just collect)
+                    const nodeVersions = NodeVersionResolver.collectVersions(componentDefs, infrastructure);
+                    
+                    // Build version mapping for UI (group items by version)
+                    // Use component display names instead of IDs for better readability
+                    for (const [componentId, version] of Object.entries(nodeVersions.components)) {
+                        const componentDef = componentDefs.find((c: any) => c.id === componentId);
+                        const displayName = componentDef?.name || componentId;
+                        const existing = nodeVersionMapping[version.toString()];
+                        if (existing) {
+                            nodeVersionMapping[version.toString()] = `${existing}, ${displayName}`;
+                        } else {
+                            nodeVersionMapping[version.toString()] = displayName;
+                        }
+                    }
+                    for (const [infraId, version] of Object.entries(nodeVersions.infrastructure)) {
+                        const infraItem = infrastructure.find((i: any) => i.id === infraId);
+                        const displayName = infraItem?.name || infraId;
+                        const existing = nodeVersionMapping[version.toString()];
+                        if (existing) {
+                            nodeVersionMapping[version.toString()] = `${existing}, ${displayName}`;
+                        } else {
+                            nodeVersionMapping[version.toString()] = displayName;
+                        }
+                    }
+                    
+                    const uniqueVersions = NodeVersionResolver.getUniqueVersions(nodeVersions);
+                    this.logger.info(`[Prerequisites] Node versions needed: ${uniqueVersions.join(', ')}`);
+                    
+                    // Set allowed Node versions in command manager for Adobe CLI detection
+                    // This ensures we only scan/use project-required versions
+                    const commandManager = getExternalCommandManager();
+                    commandManager.setAllowedNodeVersions(uniqueVersions);
                 } catch (error) {
-                    this.logger.warn('Failed to get Node version mapping:', error as Error);
+                    this.logger.warn('Failed to collect Node versions:', error as Error);
                 }
             }
 
@@ -1756,7 +1830,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             // Show notification with Continue button (closes terminal) or dismiss to leave open
             const action = await vscode.window.showInformationMessage(
-                '✅ Homebrew installed successfully! PATH configured.',
+                'Homebrew installed successfully! PATH configured.',
                 'Continue & Close Terminal',
                 'Continue'
             );
@@ -1883,112 +1957,98 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
+    // Adobe authentication helper methods
+    
+    /**
+     * Unified auth context checker
+     * Validates auth requirements and sends appropriate messages to UI
+     */
+    private async requireAuthContext(requirements: AuthRequirements): Promise<AuthContext> {
+        const context = await this.authManager.getAuthContext();
+        
+        // Check token
+        if (requirements.needsToken && context.state === AuthState.UNAUTHENTICATED) {
+            await this.sendMessage('auth-required', {
+                message: 'Sign in required',
+                subMessage: 'Please sign in to continue'
+            });
+            throw new Error('Authentication required');
+        }
+        
+        if (requirements.needsToken && context.state === AuthState.TOKEN_EXPIRED) {
+            await this.sendMessage('auth-expired', {
+                message: 'Your Adobe session has expired',
+                subMessage: 'Please sign in again to continue'
+            });
+            throw new Error('Token expired');
+        }
+        
+        // Check org
+        if (requirements.needsOrg && !context.org) {
+            await this.sendMessage('org-required', {
+                message: 'Organization selection required',
+                subMessage: 'Please select an organization to continue'
+            });
+            throw new Error('Organization required');
+        }
+        
+        // Check project
+        if (requirements.needsProject && !context.project) {
+            await this.sendMessage('project-required', {
+                message: 'Project selection required',
+                subMessage: 'Please select a project to continue'
+            });
+            throw new Error('Project required');
+        }
+        
+        // Check workspace
+        if (requirements.needsWorkspace && !context.workspace) {
+            await this.sendMessage('workspace-required', {
+                message: 'Workspace selection required',
+                subMessage: 'Please select a workspace to continue'
+            });
+            throw new Error('Workspace required');
+        }
+        
+        return context;
+    }
+
     // Adobe authentication methods
     private async handleCheckAuth(): Promise<void> {
-        const checkStartTime = Date.now();
-        this.logger.debug('[Auth] Starting authentication check (quick mode for wizard)');
-        this.logger.info('[Auth] User initiated authentication check');
+        this.logger.debug('[Auth] Starting authentication check');
+        const context = await this.authManager.getAuthContext();
         
-        // Step 1: Initial check with user-friendly message
-        await this.sendMessage('auth-status', {
-            isChecking: true,
-            message: 'Connecting to Adobe services...',
-            subMessage: 'Verifying your credentials'
-            // Don't set isAuthenticated here - leave it undefined while checking
-        });
-
-        try {
-            // Use quick auth check for faster wizard experience (< 1 second vs 9+ seconds)
-            const isAuthenticated = await this.authManager.isAuthenticatedQuick();
-            const checkDuration = Date.now() - checkStartTime;
-
-            this.logger.info(`[Auth] Quick authentication check completed in ${checkDuration}ms: ${isAuthenticated}`);
-
-            // Get current organization if authenticated
-            let currentOrg: AdobeOrg | undefined = undefined;
-            let currentProject: AdobeProject | undefined = undefined;
-
-            if (isAuthenticated) {
-                // Initialize SDK for 30x faster org/project operations
-                await this.authManager.ensureSDKInitialized();
-                
-                // Step 2: If authenticated, check organization (no intermediate messages)
-                const orgCheckStart = Date.now();
-                currentOrg = await this.authManager.getCurrentOrganization();
-                
-                if (currentOrg) {
-                    this.logger.info(`[Auth] Current organization: ${currentOrg.name} (took ${Date.now() - orgCheckStart}ms)`);
-
-                    // Step 3: Check project if org exists
-                    const projectCheckStart = Date.now();
-                    currentProject = await this.authManager.getCurrentProject();
-                    
-                    if (currentProject) {
-                        this.logger.info(`[Auth] Current project: ${currentProject.name} (took ${Date.now() - projectCheckStart}ms)`);
-                    }
-                } else {
-                    // Authenticated but no org - likely interrupted switch or cleared due to mismatch
-                    this.logger.warn('[Auth] Authenticated but no organization selected - likely interrupted switch or access issue');
-                }
-            }
-            
-            // Determine final status with user-friendly messaging
-            let message: string;
-            let subMessage: string | undefined;
-            let requiresOrgSelection = false;
-            let orgLacksAccess = false;
-
-            if (isAuthenticated) {
-                if (!currentOrg) {
-                    // Check if org was just cleared due to validation failure
-                    orgLacksAccess = this.authManager.wasOrgClearedDueToValidation();
-                    
-                    message = 'Action required';
-                    if (orgLacksAccess) {
-                        subMessage = 'Organization no longer accessible or lacks App Builder access';
-                    } else {
-                        subMessage = 'Your previous organization is no longer accessible';
-                    }
-                    requiresOrgSelection = true;
-                } else if (!currentProject) {
-                    message = 'Ready to continue';
-                    subMessage = `Connected to ${currentOrg.name}`;
-                } else {
-                    message = 'Ready to continue';
-                    subMessage = `Connected to ${currentOrg.name} - ${currentProject.name}`;
-                }
-            } else {
-                message = 'Sign in required';
-                subMessage = 'Connect your Adobe account to access App Builder services';
-            }
-
-            // Log the final status message
-            this.logger.info(`[Auth] ${message}${subMessage ? ' - ' + subMessage : ''}`);
-
-            await this.sendMessage('auth-status', {
-                authenticated: isAuthenticated,
-                isAuthenticated: isAuthenticated,
-                isChecking: false,
-                organization: currentOrg,
-                project: currentProject,
-                message,
-                subMessage,
-                requiresOrgSelection,
-                orgLacksAccess
-            });
-        } catch (error) {
-            const checkDuration = Date.now() - checkStartTime;
-            this.logger.error(`[Auth] Failed to check auth after ${checkDuration}ms:`, error as Error);
-            
-            await this.sendMessage('auth-status', {
-                authenticated: false,
-                isAuthenticated: false,
-                isChecking: false,
-                error: true,
-                message: 'Connection issue',
-                subMessage: 'Unable to reach Adobe services. Please check your connection and try again.'
-            });
+        let message = 'Sign in required';
+        let subMessage = 'Please sign in to continue';
+        
+        if (context.state === AuthState.AUTHENTICATED_WITH_ORG) {
+            message = `Signed in as ${context.org?.name}`;
+            subMessage = 'Ready to proceed';
+        } else if (context.state === AuthState.AUTHENTICATED_NO_ORG) {
+            message = 'Signed in';
+            subMessage = 'Select an organization to continue';
+        } else if (context.state === AuthState.TOKEN_EXPIRED) {
+            message = 'Your Adobe session has expired';
+            subMessage = 'Please sign in again';
+        } else if (context.state === AuthState.TOKEN_EXPIRING_SOON) {
+            message = `Signed in as ${context.org?.name}`;
+            subMessage = `Token expires in ${context.token?.expiresIn} minutes`;
         }
+        
+        this.logger.info(`[Auth] ${message} - ${subMessage}`);
+
+        await this.sendMessage('auth-status', {
+            authenticated: context.state === AuthState.AUTHENTICATED_WITH_ORG || context.state === AuthState.TOKEN_EXPIRING_SOON,
+            isAuthenticated: context.state !== AuthState.UNAUTHENTICATED && context.state !== AuthState.TOKEN_EXPIRED,
+            isChecking: false,
+            organization: context.org,
+            project: context.project,
+            message,
+            subMessage,
+            expiresIn: context.token?.expiresIn,
+            requiresOrgSelection: context.state === AuthState.AUTHENTICATED_NO_ORG,
+            orgLacksAccess: false
+        });
     }
 
     private async handleAuthenticate(force: boolean = false): Promise<void> {
@@ -2002,57 +2062,42 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         try {
             this.isAuthenticating = true;
             
-            // If not forcing, check if already authenticated
+            // Check if already authenticated with valid token (skip if force)
             if (!force) {
-                this.logger.debug('[Auth] Checking for existing valid authentication (quick mode)...');
-                // Use quick check to avoid 9+ second delay before showing browser
-                const isAlreadyAuth = await this.authManager.isAuthenticatedQuick();
-                
-                if (isAlreadyAuth) {
-                    this.logger.info('[Auth] Already authenticated, skipping login');
+                const context = await this.authManager.getAuthContext();
+                if (context.state === AuthState.AUTHENTICATED_WITH_ORG || 
+                    context.state === AuthState.TOKEN_EXPIRING_SOON) {
+                    this.logger.info('[Auth] Already authenticated with valid token');
                     this.isAuthenticating = false;
-                    
-                    // Initialize SDK for faster org/project operations
-                    await this.authManager.ensureSDKInitialized();
-                    
-                    // Get the current context
-                    const currentOrg = await this.authManager.getCurrentOrganization();
-                    const currentProject = await this.authManager.getCurrentProject();
-                    
-                    // Check if org was cleared due to validation failure
-                    const orgLacksAccess = !currentOrg ? this.authManager.wasOrgClearedDueToValidation() : false;
-                    
                     await this.sendMessage('auth-status', {
                         authenticated: true,
                         isAuthenticated: true,
                         isChecking: false,
-                        organization: currentOrg,
-                        project: currentProject,
-                        message: orgLacksAccess ? 'Organization selection required' : 'Already authenticated',
-                        subMessage: orgLacksAccess 
-                            ? 'Organization no longer accessible or lacks App Builder access'
-                            : currentOrg ? `Connected to ${currentOrg?.name || 'your organization'}` : 'Please complete authentication to continue',
-                        requiresOrgSelection: !currentOrg,
-                        orgLacksAccess
+                        organization: context.org,
+                        project: context.project,
+                        message: 'Already authenticated',
+                        subMessage: `Connected to ${context.org?.name}`
                     });
                     return;
                 }
             }
             
-            this.logger.info(`[Auth] Starting Adobe authentication process${force ? ' (forced)' : ''} - opening browser...`);
+            // Only logout if explicitly switching orgs
+            if (force) {
+                this.logger.debug('[Auth] Clearing existing context for org switch');
+                await this.authManager.logout();
+            }
             
-            // Start authentication - pass force flag to authManager
-            this.logger.debug(`[Auth] Initiating browser-based login${force ? ' with force flag' : ''}`);
-            
-            // Show "opening browser" message immediately to inform user
+            // Show "opening browser" message
             await this.sendMessage('auth-status', {
                 isChecking: true,
                 message: 'Opening browser for authentication...',
-                subMessage: force ? 'Starting fresh login...' : 'If you\'re already logged in, the browser will complete automatically.',
+                subMessage: 'Please sign in to your Adobe account in the browser',
                 isAuthenticated: false
             });
             
-            // Start login process
+            // Perform login
+            this.logger.debug('[Auth] Starting login process...');
             const loginSuccess = await this.authManager.login(force);
             
             const loginDuration = Date.now() - authStartTime;
@@ -2061,129 +2106,48 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             if (loginSuccess) {
                 this.logger.info(`[Auth] Authentication completed successfully after ${loginDuration}ms`);
 
-                // Clear cache if this was a forced login (organization switch)
-                if (force) {
-                    this.authManager.clearCache();
-                    // Note: Console context was cleared before login to preserve browser selection
-                    this.logger.info('[Auth] Cleared caches after forced login - checking for organization selection');
-                }
-
-                // After fresh authentication, check what org was selected (if any)
-                // For forced login, user may have selected org in browser
-                this.logger.info('[Auth] Checking for organization selection after login');
-
-                // Start the overall post-login setup (no intermediate messages)
-                const setupStart = Date.now();
+                // Clear cache after login
+                this.authManager.clearCache();
                 
-                // First, check if user selected an org in the browser
-                const orgCheckStart = Date.now();
-                let currentOrg = await this.authManager.getCurrentOrganization();
-                let availableOrgs: any[] = [];
+                // Get current context
+                const context = await this.authManager.getAuthContext();
+                let currentOrg = context.org;
                 
-                if (currentOrg) {
-                    this.logger.info(`[Auth] Organization found after browser login: ${currentOrg.name} (took ${Date.now() - orgCheckStart}ms)`);
-                } else {
-                    // No org selected in browser
-                    // Check if user has orgs available (to distinguish "no access" from "rejected org")
-                    this.logger.debug('[Auth] No org in context, checking available organizations...');
-                    
+                // Auto-select single org if none selected
+                if (!currentOrg) {
                     try {
-                        availableOrgs = await this.authManager.getOrganizations();
-                        this.logger.debug(`[Auth] User has access to ${availableOrgs.length} organization(s)`);
-                    } catch (error) {
-                        this.logger.debug('[Auth] Failed to get organizations:', error as Error);
-                    }
-                    
-                    if (availableOrgs.length === 1) {
-                        // Only one org available, auto-select it
-                        this.logger.info('[Auth] Auto-selecting single available organization');
-                        const autoSelectStart = Date.now();
-                        currentOrg = await this.authManager.autoSelectOrganizationIfNeeded(true);
-                        
-                        if (currentOrg) {
-                            this.logger.info(`[Auth] Auto-selected organization: ${currentOrg.name} (took ${Date.now() - autoSelectStart}ms)`);
-                        } else {
-                            this.logger.warn(`[Auth] Failed to auto-select single org (took ${Date.now() - autoSelectStart}ms)`);
+                        const availableOrgs = await this.authManager.getOrganizations();
+                        if (availableOrgs.length === 1) {
+                            this.logger.info('[Auth] Auto-selecting single available organization');
+                            await this.authManager.selectOrganization(availableOrgs[0].id);
+                            currentOrg = availableOrgs[0];
                         }
-                    } else if (availableOrgs.length > 1 && force) {
-                        // Multiple orgs + forced login + no org set = user likely selected invalid org
-                        this.logger.info('[Auth] Multiple orgs available but none selected after forced login - likely selected org without App Builder access');
-                        this.authManager.setOrgRejectedFlag();
-                    } else if (availableOrgs.length === 0 && force) {
-                        // Forced login + 0 orgs = could be token issue, no orgs, or rejected org
-                        // Set flag to show honest message about the ambiguous situation
-                        this.logger.warn('[Auth] No organizations returned after forced login - could be auth issue, no org access, or selected org lacks App Builder');
-                        this.authManager.setOrgRejectedFlag();
-                    } else if (availableOrgs.length === 0) {
-                        this.logger.warn('[Auth] No organizations accessible to this user');
-                    } else {
-                        this.logger.info('[Auth] Multiple organizations available, manual selection required');
+                    } catch (error) {
+                        this.logger.debug('[Auth] Failed to auto-select org:', error);
                     }
                 }
-
-                // Validate the organization has App Builder access (critical for browser-selected orgs)
+                
+                // Send final status
                 if (currentOrg) {
-                    const validationStart = Date.now();
-                    this.logger.debug(`[Auth] Validating "${currentOrg.name}" has App Builder access...`);
-                    await this.authManager.validateAndClearInvalidOrgContext(true);
-                    
-                    // Re-check if org is still set after validation (it may have been cleared)
-                    const orgAfterValidation = await this.authManager.getCurrentOrganization();
-                    if (!orgAfterValidation) {
-                        this.logger.info(`[Auth] Organization "${currentOrg.name}" was cleared - lacks App Builder access (took ${Date.now() - validationStart}ms)`);
-                        currentOrg = undefined; // Update our local variable
-                    } else {
-                        this.logger.debug(`[Auth] Organization "${currentOrg.name}" validation passed (took ${Date.now() - validationStart}ms)`);
-                    }
-                }
-
-                // Get current project (usually fast with SDK)
-                const projectCheckStart = Date.now();
-                const currentProject = await this.authManager.getCurrentProject();
-                if (currentProject) {
-                    this.logger.info(`[Auth] Current project: ${currentProject.name} (took ${Date.now() - projectCheckStart}ms)`);
+                    await this.sendMessage('auth-status', {
+                        authenticated: true,
+                        isAuthenticated: true,
+                        isChecking: false,
+                        organization: currentOrg,
+                        project: context.project,
+                        message: 'Ready to continue',
+                        subMessage: `Connected to ${currentOrg.name}`
+                    });
                 } else {
-                    this.logger.debug(`[Auth] No current project (took ${Date.now() - projectCheckStart}ms)`);
-                }
-
-                // Log total post-login setup time
-                const totalSetupTime = Date.now() - setupStart;
-                this.logger.info(`[Auth] Post-login setup completed in ${totalSetupTime}ms`);
-
-                // Handle the case where organization wasn't set during browser login (expected for forced login)
-                if (!currentOrg && force) {
-                    // Check if org was cleared due to lack of App Builder access
-                    const orgLacksAccess = this.authManager.wasOrgClearedDueToValidation();
-                    
-                    this.logger.debug(`[Auth] orgLacksAccess flag value: ${orgLacksAccess}`);
-                    
-                    if (orgLacksAccess) {
-                        this.logger.info('[Auth] No orgs accessible - could be rejected org or auth issue');
-                    } else {
-                        this.logger.info('[Auth] No organization set after forced login - this is expected, user needs to select organization');
-                    }
-
                     await this.sendMessage('auth-status', {
                         authenticated: true,
                         isAuthenticated: true,
                         isChecking: false,
                         organization: undefined,
                         project: undefined,
-                        message: orgLacksAccess ? 'Organization selection required' : 'Authentication successful',
-                        subMessage: orgLacksAccess ? 'No organizations currently accessible' : 'Please select your organization to continue',
-                        requiresOrgSelection: true,
-                        orgLacksAccess
-                    });
-                } else {
-                    // Normal case - organization is available
-                    await this.sendMessage('auth-status', {
-                        authenticated: true,
-                        isAuthenticated: true,
-                        isChecking: false,
-                        organization: currentOrg,
-                        project: currentProject,
-                        message: 'Ready to continue',
-                        subMessage: currentOrg ? `Connected to ${currentOrg.name}` : 'Authentication verified'
+                        message: 'Authentication successful',
+                        subMessage: 'Please select your organization to continue',
+                        requiresOrgSelection: true
                     });
                 }
             } else {
@@ -2210,6 +2174,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
+
     // Organization management
 
 
@@ -2230,7 +2195,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     // Project management
     private async handleGetProjects(_orgId: string): Promise<void> {
         try {
-            // Send loading status with sub-message
+            await this.requireAuthContext({ 
+                needsToken: true, 
+                needsOrg: true, 
+                needsProject: false, 
+                needsWorkspace: false 
+            });
+            
+            // Send loading status
             const currentOrg = await this.authManager.getCurrentOrganization();
             if (currentOrg) {
                 await this.sendMessage('project-loading-status', {
@@ -2240,7 +2212,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 });
             }
             
-            // Wrap getProjects with timeout (30 seconds)
+            // Get projects with timeout
             const projects = await withTimeout(
                 this.authManager.getProjects(),
                 {
@@ -2249,15 +2221,21 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 }
             );
             await this.sendMessage('projects', projects);
-        } catch (error) {
-            const errorMessage = error instanceof Error && error.message.includes('timed out')
-                ? error.message
-                : 'Failed to load projects. Please try again.';
-            
-            this.logger.error('Failed to get projects:', error as Error);
-            await this.sendMessage('projects', {
-                error: errorMessage
-            });
+        } catch (error: unknown) {
+            const err = error as Error;
+            if (err.message !== 'Authentication required' && 
+                err.message !== 'Token expired' &&
+                err.message !== 'Organization required') {
+                const errorMessage = err.message?.includes('timed out')
+                    ? err.message
+                    : 'Failed to load projects. Please try again.';
+                
+                this.logger.error('Failed to get projects:', err);
+                await this.sendMessage('projects', {
+                    error: errorMessage
+                });
+            }
+            // Auth errors already handled by requireAuthContext
         }
     }
 
@@ -2297,11 +2275,44 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
         } catch (error) {
             this.debugLogger.debug('[Project] Exception caught in handleSelectProject:', error);
-            this.logger.error('Failed to select project:', error as Error);
-            await this.sendMessage('error', {
-                message: 'Failed to select project',
-                details: error instanceof Error ? error.message : String(error)
-            });
+            
+            // Import AdobeAuthError to check error type
+            const { AdobeAuthError, AuthErrorCode } = await import('../utils/adobeAuthErrors');
+            
+            // Handle auth errors specially (show re-auth button)
+            if (error instanceof AdobeAuthError) {
+                this.logger.warn(`[Project] Auth error during project selection: ${error.code}`);
+                
+                if (error.code === AuthErrorCode.PERMISSION_DENIED) {
+                    // Token is for wrong org or expired - show re-auth UI
+                    await this.sendMessage('auth-status', {
+                        authenticated: false,
+                        isAuthenticated: false,
+                        isChecking: false,
+                        error: 'permission_denied',
+                        message: 'Your Adobe session may have expired',
+                        subMessage: error.userMessage || 'Please sign in again to continue'
+                    });
+                } else {
+                    // Other auth errors
+                    await this.sendMessage('auth-status', {
+                        authenticated: false,
+                        isAuthenticated: false,
+                        isChecking: false,
+                        error: error.code,
+                        message: 'Authentication Error',
+                        subMessage: error.userMessage
+                    });
+                }
+            } else {
+                // Generic error
+                this.logger.error('Failed to select project:', error as Error);
+                await this.sendMessage('error', {
+                    message: 'Failed to select project',
+                    details: error instanceof Error ? error.message : String(error)
+                });
+            }
+            
             // Re-throw so the handler can send proper response
             throw error;
         }
@@ -2407,6 +2418,22 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     }> {
         this.logger.info('[API Mesh] Checking API Mesh availability for workspace', { workspaceId });
         this.debugLogger.debug('[API Mesh] Starting multi-layer check');
+        
+        try {
+            await this.requireAuthContext({ 
+                needsToken: true, 
+                needsOrg: true, 
+                needsProject: true, 
+                needsWorkspace: true 
+            });
+        } catch (error) {
+            this.logger.warn('[API Mesh Check] Token expired - cannot check mesh status');
+            return {
+                apiEnabled: false,
+                meshExists: false,
+                error: 'Your Adobe session has expired. Please refresh your authentication.'
+            };
+        }
         
         const commandManager = getExternalCommandManager();
 
@@ -2687,6 +2714,22 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 	}> {
         this.logger.info('[API Mesh] Creating new mesh for workspace', { workspaceId });
 		
+        try {
+            await this.requireAuthContext({ 
+                needsToken: true, 
+                needsOrg: true, 
+                needsProject: true, 
+                needsWorkspace: true 
+            });
+        } catch (error) {
+            this.logger.warn('[API Mesh] Token expired - cannot create mesh');
+            return {
+                success: false,
+                error: 'Your Adobe session has expired. Please go back and sign in again.',
+                meshStatus: 'error'
+            };
+        }
+        
         const commandManager = getExternalCommandManager();
         const storagePath = this.context.globalStorageUri.fsPath;
         let meshConfigPath: string | undefined;
@@ -3052,7 +3095,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     // Workspace management
     private async handleGetWorkspaces(_orgId: string, _projectId: string): Promise<void> {
         try {
-            // Send loading status with sub-message
+            await this.requireAuthContext({ 
+                needsToken: true, 
+                needsOrg: true, 
+                needsProject: true, 
+                needsWorkspace: false 
+            });
+            
+            // Send loading status
             const currentProject = await this.authManager.getCurrentProject();
             if (currentProject) {
                 await this.sendMessage('workspace-loading-status', {
@@ -3062,7 +3112,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 });
             }
             
-            // Wrap getWorkspaces with timeout (30 seconds)
+            // Get workspaces with timeout
             const workspaces = await withTimeout(
                 this.authManager.getWorkspaces(),
                 {
@@ -3071,15 +3121,22 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 }
             );
             await this.sendMessage('workspaces', workspaces);
-        } catch (error) {
-            const errorMessage = error instanceof Error && error.message.includes('timed out')
-                ? error.message
-                : 'Failed to load workspaces. Please try again.';
-            
-            this.logger.error('Failed to get workspaces:', error as Error);
-            await this.sendMessage('workspaces', {
-                error: errorMessage
-            });
+        } catch (error: unknown) {
+            const err = error as Error;
+            if (err.message !== 'Authentication required' && 
+                err.message !== 'Token expired' &&
+                err.message !== 'Organization required' &&
+                err.message !== 'Project required') {
+                const errorMessage = err.message?.includes('timed out')
+                    ? err.message
+                    : 'Failed to load workspaces. Please try again.';
+                
+                this.logger.error('Failed to get workspaces:', err);
+                await this.sendMessage('workspaces', {
+                    error: errorMessage
+                });
+            }
+            // Auth errors already handled by requireAuthContext
         }
     }
 
@@ -3130,6 +3187,23 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 } else if (value.length > 50) {
                     isValid = false;
                     message = 'Project name must be 50 characters or less';
+                } else {
+                    // Check if project with this name already exists
+                    const existingProjects = await this.stateManager.getAllProjects();
+                    this.logger.debug(`[Validation] Checking project name "${value}" against ${existingProjects.length} existing projects:`);
+                    existingProjects.forEach(p => {
+                        this.logger.debug(`[Validation]   - "${p.name}" (match: ${p.name.toLowerCase() === value.toLowerCase()})`);
+                    });
+                    
+                    const projectExists = existingProjects.some(p => p.name.toLowerCase() === value.toLowerCase());
+                    
+                    if (projectExists) {
+                        isValid = false;
+                        message = 'A project with this name already exists';
+                        this.logger.debug(`[Validation] Project name "${value}" is a DUPLICATE`);
+                    } else {
+                        this.logger.debug(`[Validation] Project name "${value}" is UNIQUE`);
+                    }
                 }
                 break;
                     
@@ -3178,7 +3252,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             await this.context.globalState.update('demoBuilder.trustTipShown', true);
             
             const choice = await vscode.window.showInformationMessage(
-                '💡 Tip: Trust all Demo Builder projects at once for the best experience',
+                'Tip: Trust all Demo Builder projects at once for the best experience',
                 'Learn How',
                 'Skip for Now'
             );
@@ -3326,7 +3400,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 
                 // Show notification that we're auto-stopping the demo
                 vscode.window.setStatusBarMessage(
-                    `⚠️  Stopping "${existingProject.name}" demo (port ${runningPort} conflict)`, 
+                    `Stopping "${existingProject.name}" demo (port ${runningPort} conflict)`, 
                     5000
                 );
                 
@@ -3411,12 +3485,46 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const registryManager = new ComponentRegistryManager(this.context.extensionPath);
         const componentManager = new ComponentManager(this.logger);
             
-        // Step 4: Install selected components (25-80%)
+        // Step 3.5: Collect Node versions for this project
+        this.logger.info('[Project Creation] Collecting Node.js versions...');
+        const { NodeVersionResolver } = await import('../utils/nodeVersionResolver');
+        
         const allComponents = [
             ...(config.components?.frontend ? [{ id: config.components.frontend, type: 'frontend' }] : []),
             ...(config.components?.dependencies || []).map((id: string) => ({ id, type: 'dependency' })),
             ...(config.components?.appBuilderApps || []).map((id: string) => ({ id, type: 'app-builder' }))
         ];
+        
+        // Fetch component definitions
+        const componentDefs = [];
+        for (const comp of allComponents) {
+            let componentDef;
+            if (comp.type === 'frontend') {
+                const frontends = await registryManager.getFrontends();
+                componentDef = frontends.find(f => f.id === comp.id);
+            } else if (comp.type === 'dependency') {
+                const dependencies = await registryManager.getDependencies();
+                componentDef = dependencies.find(d => d.id === comp.id);
+            } else if (comp.type === 'app-builder') {
+                const appBuilder = await registryManager.getAppBuilder();
+                componentDef = appBuilder.find(a => a.id === comp.id);
+            }
+            if (componentDef) {
+                componentDefs.push(componentDef);
+            }
+        }
+        
+        // Load infrastructure items (Adobe CLI, SDK, etc.)
+        const infrastructure = await registryManager.getInfrastructure();
+        
+        // Collect all Node versions (no strategy calculation)
+        const nodeVersions = NodeVersionResolver.collectVersions(componentDefs, infrastructure);
+        project.nodeVersions = nodeVersions;
+        
+        const uniqueVersions = NodeVersionResolver.getUniqueVersions(nodeVersions);
+        this.logger.info(`[Project Creation] Node versions needed: ${uniqueVersions.join(', ')}`);
+            
+        // Step 4: Install selected components (25-80%)
             
         const progressPerComponent = 55 / Math.max(allComponents.length, 1);
         let currentProgress = 25;

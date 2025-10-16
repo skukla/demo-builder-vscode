@@ -46,11 +46,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
 
         // Listen for auth status updates
         const unsubscribe = vscode.onMessage('auth-status', (data) => {
-            // Debug logging to see what we're receiving
-            console.log('Auth status received:', data);
-            console.log('Message:', data.message);
-            console.log('SubMessage:', data.subMessage);
-
             // Clear timeout on any auth status update
             if (authTimeoutRef.current) {
                 clearTimeout(authTimeoutRef.current);
@@ -114,7 +109,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
         // Don't check if we're already in the process of switching organizations
         // Use ref for immediate check, not waiting for state updates
         if (isSwitchingRef.current || state.adobeAuth.isChecking) {
-            console.log('Skipping auth check - switching org or already checking');
             return;
         }
         setAuthStatus('Checking Adobe authentication...');
