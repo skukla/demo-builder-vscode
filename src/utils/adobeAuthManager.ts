@@ -907,71 +907,66 @@ export class AdobeAuthManager {
             
             // Check if command succeeded
             if (result && result.code === 0) {
-                // The token is returned in stdout
-                const token = result.stdout?.trim();
+                this.debugLogger.debug('[Auth] Login command completed successfully');
                 
-                // Check if we got a valid token (JWT tokens are typically >100 chars)
-                if (token && token.length > 50 && !token.includes('Error') && !token.includes('error')) {
-                    // Manually store the token in the config where we expect it
-                    try {
-                        // Calculate expiry (2 hours from now, typical for Adobe tokens)
-                        const expiry = Date.now() + (2 * 60 * 60 * 1000);
+                // CRITICAL: Don't manually extract/store token from stdout!
+                // Modern Adobe CLI versions store the token automatically in their own format.
+                // Manually overwriting it can corrupt the token or make it invalid for API calls.
+                // Instead, trust that Adobe CLI has stored the token correctly and verify it works.
+                
+                this.debugLogger.debug('[Auth] Waiting for CLI to complete token storage...');
+                
+                // Wait for CLI config files to be fully written
+                // The browser login writes org context + token asynchronously
+                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.POST_LOGIN_DELAY));
+                
+                // Verify that we can actually fetch organizations before declaring success
+                this.debugLogger.debug('[Auth] Verifying org access after login...');
+                try {
+                    const orgs = await this.getOrganizations();
+                    
+                    if (orgs.length === 0) {
+                        this.debugLogger.warn('[Auth] Login succeeded but no organizations found - CLI context may not be ready yet');
                         
-                        // Run both config operations in parallel for better performance
-                        const [tokenResult, expiryResult] = await Promise.all([
-                            this.commandManager.executeAdobeCLI(
-                                `aio config set ims.contexts.cli.access_token.token "${token}"`,
-                                { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_WRITE }
-                            ),
-                            this.commandManager.executeAdobeCLI(
-                                `aio config set ims.contexts.cli.access_token.expiry ${expiry}`,
-                                { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_WRITE }
-                            )
-                        ]);
+                        // Wait a bit longer and retry once
+                        this.debugLogger.debug('[Auth] Waiting additional time for org context...');
+                        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.POST_LOGIN_RETRY_DELAY));
                         
-                        // Check if both operations succeeded
-                        if (tokenResult.code === 0 && expiryResult.code === 0) {
-                            this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
-                            
-                            // Clear auth cache to force fresh check next time
-                            this.cachedAuthStatus = undefined;
-                            this.authCacheExpiry = 0;
-
-                            // Clear validation cache after login to ensure fresh validation for new user
-                            this.validationCache = undefined;
-
-                            // If this was a forced login, just clear cache (console context already cleared before login)
-                            if (force) {
-                                this.clearCache();
-                            }
-
-                            return true;
-                        } else {
-                            this.debugLogger.warn('[Auth] Config storage returned non-zero exit code');
-                            // Fall through to verification check below
+                        const retryOrgs = await this.getOrganizations();
+                        if (retryOrgs.length === 0) {
+                            this.logger.error('[Auth] No organizations accessible even after retry. This could mean:');
+                            this.logger.error('[Auth]   - Your Adobe account has no organizations');
+                            this.logger.error('[Auth]   - The authentication scope is incorrect');
+                            this.logger.error('[Auth]   - There is a permissions issue with your account');
+                            return false;
                         }
                         
-                    } catch (error) {
-                        this.debugLogger.error('[Auth] Failed to store token in config', error as Error);
-                        
-                        // If storage failed, we might still be authenticated from a previous session
-                        // Do a verification check as fallback
-                        const isAuth = await this.isAuthenticated();
-                        if (isAuth) {
-                            this.debugLogger.info('[Auth] Token storage failed but existing authentication found');
-                            return true;
-                        }
+                        this.debugLogger.debug(`[Auth] Found ${retryOrgs.length} organizations after retry`);
+                    } else {
+                        this.debugLogger.debug(`[Auth] Successfully verified access to ${orgs.length} organizations`);
                     }
-                } else {
-                    this.debugLogger.warn('[Auth] Command succeeded but no valid token in output');
-                    this.debugLogger.debug(`[Auth] Output length: ${result.stdout?.length}, first 100 chars: ${result.stdout?.substring(0, 100)}`);
-                }
-                
-                // If we didn't get a valid token and force wasn't used, retry with force
-                if (!force) {
-                    this.debugLogger.info('[Auth] Retrying with force flag to ensure fresh authentication');
-                    this.stepLogger.logTemplate('adobe-setup', 'operations.retrying', { item: 'authentication with fresh login' });
-                    return await this.login(true);
+                    
+                    this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
+                    
+                    // Clear auth cache to force fresh check next time
+                    this.cachedAuthStatus = undefined;
+                    this.authCacheExpiry = 0;
+
+                    // Clear validation cache after login to ensure fresh validation for new user
+                    this.validationCache = undefined;
+
+                    // If this was a forced login, just clear cache (console context already cleared before login)
+                    if (force) {
+                        this.clearCache();
+                    }
+
+                    return true;
+                    
+                } catch (orgError) {
+                    this.debugLogger.error('[Auth] Failed to verify org access after login', orgError as Error);
+                    this.logger.error('[Auth] Login succeeded but could not access organizations. Please try again.');
+                    this.logger.error('[Auth] If this persists, try: aio auth logout && aio auth login');
+                    return false;
                 }
             } else {
                 const exitCode = result?.code ?? 'unknown';

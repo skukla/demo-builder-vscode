@@ -172,7 +172,12 @@ export class ExternalCommandManager {
                 } else if (nodeVersion) {
                     // PERFORMANCE OPTIMIZATION: Use cached binary paths if available
                     // This avoids fnm exec overhead (5-6s → <1s for aio commands)
-                    if (this.cachedNodeBinaryPath && this.cachedAioBinaryPath && command.startsWith('aio ')) {
+                    // BUT: Only use cache if the requested Node version matches the cached version
+                    // This ensures prerequisite checks get accurate per-version results
+                    if (this.cachedNodeBinaryPath && 
+                        this.cachedAioBinaryPath && 
+                        command.startsWith('aio ') &&
+                        this.cachedAdobeCLINodeVersion === String(nodeVersion)) {
                         // Replace 'aio' with direct paths: node /path/to/aio
                         // Quote paths to handle spaces in directory names (e.g., "Application Support")
                         const aioCommand = command.substring(4); // Remove 'aio ' prefix
@@ -870,7 +875,7 @@ export class ExternalCommandManager {
         
         try {
             await this.execute(`${fnmPath} --version`, { 
-                timeout: 2000 // Quick check
+                timeout: TIMEOUTS.QUICK_CONFIG_CHECK
             });
             return true;
         } catch {
@@ -889,7 +894,7 @@ export class ExternalCommandManager {
         
         try {
             const result = await this.execute(`${fnmPath} current`, { 
-                timeout: 2000 // Quick check
+                timeout: TIMEOUTS.QUICK_CONFIG_CHECK
             });
             return result.stdout?.trim() || null;
         } catch {
@@ -931,7 +936,7 @@ export class ExternalCommandManager {
             // Get Node binary path
             const nodeResult = await this.execute(
                 `${fnmPath} exec --using=${nodeVersion} -- sh -c 'which node'`,
-                { timeout: 5000, configureTelemetry: false }
+                { timeout: TIMEOUTS.BINARY_PATH_CACHE, configureTelemetry: false }
             );
             
             if (nodeResult.code === 0 && nodeResult.stdout) {
@@ -942,7 +947,7 @@ export class ExternalCommandManager {
             // Get aio binary path
             const aioResult = await this.execute(
                 `${fnmPath} exec --using=${nodeVersion} -- sh -c 'which aio'`,
-                { timeout: 5000, configureTelemetry: false }
+                { timeout: TIMEOUTS.BINARY_PATH_CACHE, configureTelemetry: false }
             );
             
             if (aioResult.code === 0 && aioResult.stdout) {
@@ -1043,7 +1048,7 @@ export class ExternalCommandManager {
                         const result = await this.execute(
                             `${fnmPath} exec --using=${major} -- aio --version`,
                             { 
-                                timeout: 5000, // 5 second timeout per version test
+                                timeout: TIMEOUTS.NODE_VERSION_TEST,
                                 configureTelemetry: false
                             }
                         );
@@ -1155,10 +1160,10 @@ export class ExternalCommandManager {
             // Checking with "aio config get" can trigger the interactive prompt on first run!
             await this.execute(
                 'aio config set aio-cli-telemetry.optOut true',
-                { 
+                {
                     configureTelemetry: false,  // CRITICAL: Don't check telemetry for telemetry commands
                     encoding: 'utf8',
-                    timeout: 5000 // 5 second timeout - should be quick
+                    timeout: TIMEOUTS.QUICK_CONFIG_CHECK
                 }
             ).catch(error => {
                 // Log but don't fail - telemetry config is not critical

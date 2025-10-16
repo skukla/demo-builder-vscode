@@ -1797,7 +1797,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Verify Homebrew is actually available
             const commandManager = getExternalCommandManager();
             try {
-                await commandManager.execute('brew --version', { timeout: 3000 });
+                await commandManager.execute('brew --version', { timeout: TIMEOUTS.HOMEBREW_CHECK });
                 this.logger.info('[Prerequisites] Verified: Homebrew is operational');
             } catch (error) {
                 this.logger.warn('[Prerequisites] Homebrew completion marker found but brew command not yet available');
@@ -1828,21 +1828,20 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 this.debugLogger.debug('[Prerequisites] No failure marker to clean up (expected)');
             }
             
-            // Show notification with Continue button (closes terminal) or dismiss to leave open
+            // Show notification with Continue button (always closes terminal)
+            // Users who want to keep terminal open can dismiss notification (Esc)
             const action = await vscode.window.showInformationMessage(
                 'Homebrew installed successfully! PATH configured.',
-                'Continue & Close Terminal',
                 'Continue'
             );
             
-            if (action === 'Continue & Close Terminal') {
-                // User wants to close terminal immediately
+            if (action === 'Continue') {
+                // User clicked Continue - close terminal and proceed
                 terminal.dispose();
-                this.logger.debug('[Prerequisites] Terminal closed by user action');
+                this.logger.debug('[Prerequisites] Terminal closed after user confirmation');
             } else {
-                // User clicked "Continue" or dismissed notification
-                // Terminal stays open for reference, but wizard continues either way
-                this.logger.debug('[Prerequisites] Terminal left open for user reference');
+                // User dismissed notification (Esc) - leave terminal open for reference
+                this.logger.debug('[Prerequisites] Terminal left open (notification dismissed)');
             }
             
             // ALWAYS auto-recheck prerequisites regardless of user's choice
@@ -1947,7 +1946,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             // Also evaluate in current process environment
             const commandManager = getExternalCommandManager();
-            await commandManager.execute('eval "$(/opt/homebrew/bin/brew shellenv)"', { timeout: 3000 });
+            await commandManager.execute('eval "$(/opt/homebrew/bin/brew shellenv)"', { timeout: TIMEOUTS.HOMEBREW_CHECK });
             
             this.debugLogger.debug('[Prerequisites] Homebrew PATH evaluated in current environment');
             
@@ -3663,7 +3662,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         try {
                             const commandManager = getExternalCommandManager();
                             const describeResult = await commandManager.executeAdobeCLI('aio api-mesh:describe', {
-                                timeout: 30000
+                                timeout: TIMEOUTS.API_CALL
                             });
                                 
                             if (describeResult.code === 0) {

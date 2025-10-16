@@ -11,6 +11,7 @@ import * as path from 'path';
 import * as crypto from 'crypto';
 import { Project } from '../types';
 import { Logger } from './logger';
+import { TIMEOUTS } from './timeoutConfig';
 
 // Create logger instance for this module
 const logger = new Logger('MeshStaleness');
@@ -123,7 +124,7 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         
         // Query the deployed mesh configuration
         const result = await commandManager.executeAdobeCLI('aio api-mesh:get --active --json', {
-            timeout: 30000
+            timeout: TIMEOUTS.API_CALL
         });
         
         logger.debug('[MeshStaleness] Raw mesh response received, parsing...');

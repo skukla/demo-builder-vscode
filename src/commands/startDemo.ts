@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
 import { getExternalCommandManager } from '../extension';
 import { updateFrontendState } from '../utils/stalenessDetector';
+import { TIMEOUTS } from '../utils/timeoutConfig';
 
 export class StartDemoCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -40,7 +41,7 @@ export class StartDemoCommand extends BaseCommand {
                 let processInfo = 'Unknown process';
                 try {
                     const result = await commandManager.execute(`lsof -i:${port}`, {
-                        timeout: 5000,
+                        timeout: TIMEOUTS.DEMO_START_CHECK,
                         configureTelemetry: false,
                         useNodeVersion: null,
                         enhancePath: false
@@ -79,7 +80,7 @@ export class StartDemoCommand extends BaseCommand {
                 this.logger.info(`[Start Demo] Stopping process on port ${port}...`);
                 try {
                     await commandManager.execute(`lsof -ti:${port} | xargs kill`, {
-                        timeout: 5000,
+                        timeout: TIMEOUTS.DEMO_START_CHECK,
                         configureTelemetry: false,
                         useNodeVersion: null,
                         enhancePath: false

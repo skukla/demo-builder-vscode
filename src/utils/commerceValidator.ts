@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Logger } from './logger';
+import { TIMEOUTS } from './timeoutConfig';
 
 export class CommerceValidator {
     private logger: Logger;
@@ -17,7 +18,7 @@ export class CommerceValidator {
                     query: '{ storeConfig { store_name } }'
                 },
                 {
-                    timeout: 10000,
+                    timeout: TIMEOUTS.COMMERCE_VALIDATION,
                     headers: {
                         'Content-Type': 'application/json'
                     }
@@ -42,7 +43,7 @@ export class CommerceValidator {
                 headers: {
                     'x-api-key': apiKey
                 },
-                timeout: 10000
+                timeout: TIMEOUTS.COMMERCE_VALIDATION
             });
 
             return response.status === 200;

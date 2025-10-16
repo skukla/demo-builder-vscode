@@ -5,6 +5,7 @@
 
 import { Project } from '../types';
 import { getExternalCommandManager } from '../extension';
+import { TIMEOUTS } from './timeoutConfig';
 
 export interface MeshVerificationResult {
     exists: boolean;
@@ -41,7 +42,7 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
         const result = await commandManager.executeAdobeCLI(
             'aio api-mesh:describe',
             {
-                timeout: 30000
+                timeout: TIMEOUTS.API_CALL
             }
         );
         

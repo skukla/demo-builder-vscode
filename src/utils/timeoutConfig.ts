@@ -16,6 +16,8 @@ export const TIMEOUTS = {
     // Adobe CLI project/workspace selection often takes 8-10 seconds
     API_CALL: 10000,                // API-based commands (console where, org list)
     BROWSER_AUTH: 60000,            // Browser-based authentication flow (1 minute)
+    POST_LOGIN_DELAY: 2000,         // Wait for CLI to finish writing config after browser login (2 seconds)
+    POST_LOGIN_RETRY_DELAY: 3000,   // Additional delay before retrying org fetch if 0 orgs found (3 seconds)
     API_MESH_CREATE: 120000,        // API Mesh creation (2 minutes)
     API_MESH_UPDATE: 120000,        // API Mesh update/deployment (2 minutes)
     
@@ -38,6 +40,27 @@ export const TIMEOUTS = {
     UPDATE_DOWNLOAD: 60000,         // Downloading VSIX or component archives (1 minute)
     UPDATE_EXTRACT: 30000,          // Extracting downloaded archives
 
+    // Binary path caching and validation
+    BINARY_PATH_CACHE: 5000,        // Caching Node/aio binary paths
+    QUICK_CONFIG_CHECK: 2000,       // Fast config validation (non-critical checks)
+    NODE_VERSION_TEST: 5000,        // Testing aio-cli installation per Node version
+    
+    // Homebrew operations
+    HOMEBREW_CHECK: 3000,           // Quick Homebrew version check
+    
+    // Demo operations
+    DEMO_START_CHECK: 5000,         // Checking if demo can start/stop
+    
+    // Validation operations
+    COMMERCE_VALIDATION: 10000,     // Adobe Commerce instance validation
+    
+    // UI timing (delays for user experience, not operation timeouts)
+    UI_SHORT_DELAY: 100,            // Quick UI refresh/animation
+    UI_MEDIUM_DELAY: 500,           // Short animation delay
+    UI_POLLING_DELAY: 1000,         // Status polling interval
+    UI_MESSAGE_DISPLAY: 2000,       // Error/info message display duration
+    UI_MESSAGE_AUTODISMISS: 3000,   // Auto-dismiss duration for success messages
+    
     // Default fallbacks
     COMMAND_DEFAULT: 30000,         // Default command timeout
 } as const;

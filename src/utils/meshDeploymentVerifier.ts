@@ -75,7 +75,7 @@ export async function waitForMeshDeployment(
             const verifyResult = await commandManager.executeAdobeCLI(
                 'aio api-mesh get',
                 {
-                    timeout: 30000
+                    timeout: TIMEOUTS.API_CALL
                 }
             );
             
@@ -144,7 +144,7 @@ async function getEndpoint(meshId: string, logger?: Logger): Promise<string | un
         const result = await commandManager.executeAdobeCLI(
             'aio api-mesh:describe',
             {
-                timeout: 30000
+                timeout: TIMEOUTS.API_CALL
             }
         );
 
