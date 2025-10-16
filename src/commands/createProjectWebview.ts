@@ -1830,15 +1830,37 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             // Show notification with Continue button (always closes terminal)
             // Users who want to keep terminal open can dismiss notification (Esc)
+            this.logger.debug('[Prerequisites] Showing completion notification...');
             const action = await vscode.window.showInformationMessage(
                 'Homebrew installed successfully! PATH configured.',
                 'Continue'
             );
             
+            this.logger.debug(`[Prerequisites] User action: ${action || 'dismissed'}`);
+            
             if (action === 'Continue') {
                 // User clicked Continue - close terminal and proceed
-                terminal.dispose();
-                this.logger.debug('[Prerequisites] Terminal closed after user confirmation');
+                this.logger.debug('[Prerequisites] Disposing terminal...');
+                try {
+                    // Check if terminal is still in the terminal list
+                    const terminalStillExists = vscode.window.terminals.includes(terminal);
+                    this.logger.debug(`[Prerequisites] Terminal exists before dispose: ${terminalStillExists}`);
+                    
+                    if (terminalStillExists) {
+                        terminal.dispose();
+                        this.logger.info('[Prerequisites] ✅ Terminal disposed successfully');
+                        
+                        // Give VS Code time to close the terminal
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        
+                        const terminalStillExistsAfter = vscode.window.terminals.includes(terminal);
+                        this.logger.debug(`[Prerequisites] Terminal exists after dispose: ${terminalStillExistsAfter}`);
+                    } else {
+                        this.logger.warn('[Prerequisites] Terminal was already closed/disposed');
+                    }
+                } catch (disposeError) {
+                    this.logger.error('[Prerequisites] Error disposing terminal:', disposeError as Error);
+                }
             } else {
                 // User dismissed notification (Esc) - leave terminal open for reference
                 this.logger.debug('[Prerequisites] Terminal left open (notification dismissed)');

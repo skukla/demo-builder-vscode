@@ -60,7 +60,6 @@
       "name": "Adobe Commerce PaaS",
       "description": "Adobe Commerce DSN instance",
       "configuration": {
-        "nodeVersion": "20",
         "requiredServices": ["catalog-service", "live-search"]
       }
     },

@@ -461,19 +461,31 @@ export class AdobeAuthManager {
             const token = tokenResult.stdout?.trim().split('\n')
                 .filter(line => !line.startsWith('Using Node') && !line.includes('fnm'))
                 .join('').trim();
-            const expiry = parseInt(expiryResult.stdout?.trim() || '0');
+            const expiryStr = expiryResult.stdout?.trim() || '0';
+            const expiry = parseInt(expiryStr);
             const now = Date.now();
             
+            // Debug logging for token inspection
+            this.debugLogger.debug(`[Auth Token] Expiry string from CLI: ${expiryStr}`);
+            this.debugLogger.debug(`[Auth Token] Expiry timestamp: ${expiry}`);
+            this.debugLogger.debug(`[Auth Token] Current timestamp: ${now}`);
+            this.debugLogger.debug(`[Auth Token] Difference (ms): ${expiry - now}`);
+            this.debugLogger.debug(`[Auth Token] Difference (min): ${Math.floor((expiry - now) / 1000 / 60)}`);
+            this.debugLogger.debug(`[Auth Token] Token length: ${token?.length || 0}`);
+            
             if (!token || token.length < 100) {
+                this.debugLogger.warn(`[Auth Token] Invalid token: length=${token?.length || 0}`);
                 return { valid: false, expiresIn: 0 };
             }
             
             if (!expiry || expiry <= now) {
                 const expiresIn = expiry > 0 ? Math.floor((expiry - now) / 1000 / 60) : 0;
+                this.debugLogger.warn(`[Auth Token] Token expired or invalid: expiry=${expiry}, now=${now}, expiresIn=${expiresIn} min`);
                 return { valid: false, expiresIn, token };
             }
             
             const expiresIn = Math.floor((expiry - now) / 1000 / 60);
+            this.debugLogger.debug(`[Auth Token] Token valid, expires in ${expiresIn} minutes`);
             return { valid: true, expiresIn, token };
         } catch (error) {
             return { valid: false, expiresIn: 0 };
