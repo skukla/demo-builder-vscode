@@ -277,8 +277,11 @@ export class ProjectDashboardWebviewCommand extends BaseCommand {
                 }
                 
                 // Check org access (degraded mode detection)
-                // Ensure SDK is initialized for faster org operations
-                await authManager.ensureSDKInitialized();
+                // Try to initialize SDK for faster org operations (don't await)
+                // We now fetch token directly from CLI config, avoiding Adobe's getToken() which opens browsers
+                await authManager.ensureSDKInitialized().catch(() => {
+                    // Ignore - will use CLI fallback
+                });
                 
                 if (project.adobe?.organization) {
                     const currentOrg = await authManager.getCurrentOrganization();

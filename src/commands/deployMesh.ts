@@ -42,16 +42,17 @@ export class DeployMeshCommand extends BaseCommand {
 
             // PRE-FLIGHT: Check authentication
             const { AdobeAuthManager } = await import('../utils/adobeAuthManager');
+            const { AuthState } = await import('../utils/adobeAuthTypes');
             const authManager = new AdobeAuthManager(
                 this.context.extensionPath,
                 this.logger,
                 getExternalCommandManager()
             );
             
-            const isAuthenticated = await authManager.isAuthenticated();
+            const context = await authManager.getAuthContext();
             
-            if (!isAuthenticated) {
-                // Direct user to dashboard for authentication (dashboard handles browser auth gracefully)
+            if (context.state === AuthState.UNAUTHENTICATED || 
+                context.state === AuthState.TOKEN_EXPIRED) {
                 const selection = await vscode.window.showWarningMessage(
                     'Adobe authentication required to deploy mesh. Please sign in via the Project Dashboard.',
                     'Open Dashboard'
@@ -65,10 +66,23 @@ export class DeployMeshCommand extends BaseCommand {
                 return;
             }
             
+            if (!context.org) {
+                const selection = await vscode.window.showWarningMessage(
+                    'No organization selected. Please select an organization via the Project Dashboard.',
+                    'Open Dashboard'
+                );
+                
+                if (selection === 'Open Dashboard') {
+                    await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+                }
+                
+                this.logger.info('[Deploy Mesh] Organization required - directed user to dashboard');
+                return;
+            }
+            
             // Check org access (degraded mode detection)
             if (project.adobe?.organization) {
-                const currentOrg = await authManager.getCurrentOrganization();
-                if (!currentOrg || currentOrg.id !== project.adobe.organization) {
+                if (context.org.id !== project.adobe.organization) {
                     vscode.window.showWarningMessage(
                         `You no longer have access to the organization for "${project.name}". ` +
                         `Local demo will continue working, but mesh deployment is unavailable.\n\n` +
