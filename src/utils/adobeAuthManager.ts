@@ -873,6 +873,19 @@ export class AdobeAuthManager {
             this.stepLogger.logTemplate('adobe-setup', 'operations.opening-browser', {});
             this.debugLogger.debug(`[Auth] Initiating Adobe login${force ? ' (forced)' : ''}`);
 
+            // CRITICAL: Check for corrupted token (exists but expiry = 0)
+            // This happens when Adobe CLI has a token but no expiry timestamp
+            // aio auth login will see the token and return immediately without opening browser
+            const tokenCheck = await this.inspectToken();
+            if (tokenCheck.token && tokenCheck.expiresIn === 0) {
+                this.debugLogger.warn('[Auth] Detected corrupted token (expiry = 0), forcing logout to clear it');
+                try {
+                    await this.logout();
+                } catch (logoutError) {
+                    this.debugLogger.debug('[Auth] Logout failed (non-critical):', logoutError);
+                }
+            }
+
             // If forced login, clear console context BEFORE login to ensure clean state
             if (force) {
                 this.debugLogger.debug('[Auth] Clearing console context before forced login');
@@ -931,6 +944,17 @@ export class AdobeAuthManager {
                 // Wait for CLI config files to be fully written
                 // The browser login writes org context + token asynchronously
                 await new Promise(resolve => setTimeout(resolve, TIMEOUTS.POST_LOGIN_DELAY));
+                
+                // CRITICAL: Verify token has valid expiry after login
+                this.debugLogger.debug('[Auth] Checking if token has valid expiry...');
+                const postLoginToken = await this.inspectToken();
+                if (postLoginToken.token && postLoginToken.expiresIn === 0) {
+                    this.logger.error('[Auth] Login completed but token still has expiry = 0 (corrupted)');
+                    this.logger.error('[Auth] This indicates Adobe CLI is not storing the token correctly');
+                    this.logger.error('[Auth] Try running: aio auth logout && aio auth login in a terminal');
+                    return false;
+                }
+                this.debugLogger.debug(`[Auth] Token expiry verified: ${postLoginToken.expiresIn} minutes remaining`);
                 
                 // Verify that we can actually fetch organizations before declaring success
                 this.debugLogger.debug('[Auth] Verifying org access after login...');
