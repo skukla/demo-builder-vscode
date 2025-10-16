@@ -120,13 +120,21 @@ export class CreateProjectCommand extends BaseCommand {
         const name = await this.showInputBox({
             prompt: 'Project name',
             placeHolder: 'my-commerce-demo',
-            validateInput: (value) => {
+            validateInput: async (value) => {
                 if (!value) return 'Project name is required';
                 if (!/^[a-z0-9-]+$/.test(value)) {
                     return 'Use lowercase letters, numbers, and hyphens only';
                 }
                 if (value.length < 3) return 'Name must be at least 3 characters';
                 if (value.length > 30) return 'Name must be less than 30 characters';
+                
+                // Check if project with this name already exists
+                const existingProjects = await this.stateManager.getAllProjects();
+                const projectExists = existingProjects.some(p => p.name.toLowerCase() === value.toLowerCase());
+                if (projectExists) {
+                    return 'A project with this name already exists';
+                }
+                
                 return undefined;
             }
         });

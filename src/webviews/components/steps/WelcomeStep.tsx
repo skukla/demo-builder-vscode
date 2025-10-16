@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
     View,
     Flex,
@@ -9,6 +9,7 @@ import {
 } from '@adobe/react-spectrum';
 import { WizardState } from '../../types';
 import { useSelectableDefault } from '../../hooks/useSelectableDefault';
+import { vscode } from '../../app/vscodeApi';
 
 interface WelcomeStepProps {
     state: WizardState;
@@ -21,8 +22,11 @@ interface WelcomeStepProps {
 export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
+    const [validationError, setValidationError] = useState<string | undefined>();
+    const [isValidating, setIsValidating] = useState(false);
     
-    const validateProjectName = (value: string): string | undefined => {
+    // Client-side validation (quick checks)
+    const validateProjectNameClientSide = (value: string): string | undefined => {
         if (!value) return 'Project name is required';
         if (!/^[a-z0-9-]+$/.test(value)) {
             return 'Use lowercase letters, numbers, and hyphens only';
@@ -31,6 +35,39 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
         if (value.length > 30) return 'Name must be less than 30 characters';
         return undefined;
     };
+
+    // Backend validation (for duplicate check)
+    const validateProjectNameBackend = useCallback(async (value: string) => {
+        setIsValidating(true);
+        try {
+            vscode.requestValidation('projectName', value);
+            // Response will come via message handler below
+        } catch (error) {
+            console.error('Validation error:', error);
+            setIsValidating(false);
+        }
+    }, []);
+
+    // Listen for validation results from backend
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            const message = event.data;
+            if (message.type === 'validationResult' && message.payload?.field === 'projectName') {
+                setIsValidating(false);
+                if (!message.payload.isValid) {
+                    setValidationError(message.payload.message);
+                    setCanProceed(false);
+                } else {
+                    // Backend validation passed
+                    setValidationError(undefined);
+                    setCanProceed(true); // Client-side already passed (we only call backend if client passes)
+                }
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        return () => window.removeEventListener('message', handleMessage);
+    }, [setCanProceed]);
 
     // Set default project name and manually focus + select on mount
     useEffect(() => {
@@ -49,12 +86,37 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount
 
+    // Trigger validation when project name changes
     useEffect(() => {
-        const isValid = 
-            state.projectName.length >= 3 && 
-            validateProjectName(state.projectName) === undefined;
-        setCanProceed(isValid);
-    }, [state.projectName, setCanProceed]);
+        const clientError = validateProjectNameClientSide(state.projectName);
+        
+        if (clientError) {
+            // Client-side validation failed - don't call backend
+            setValidationError(clientError);
+            setCanProceed(false);
+            setIsValidating(false);
+            return; // No cleanup needed
+        }
+        
+        // Client-side validation passed - start backend validation
+        setValidationError(undefined);
+        setCanProceed(false); // Disable until backend responds
+        
+        // Debounce backend validation
+        const timeoutId = setTimeout(() => {
+            validateProjectNameBackend(state.projectName);
+        }, 500);
+        
+        return () => clearTimeout(timeoutId);
+    }, [state.projectName, setCanProceed, validateProjectNameBackend]);
+
+    // Determine validation state
+    const getValidationState = (): 'valid' | 'invalid' | undefined => {
+        if (!state.projectName) return undefined;
+        if (isValidating) return undefined; // Show no state while validating
+        if (validationError) return 'invalid';
+        return 'valid';
+    };
 
     return (
         <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
@@ -90,18 +152,8 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                             value={state.projectName}
                             onChange={(value) => updateState({ projectName: value })}
                             description="Lowercase letters, numbers, and hyphens only"
-                            validationState={
-                                state.projectName && validateProjectName(state.projectName) 
-                                    ? 'invalid' 
-                                    : state.projectName && !validateProjectName(state.projectName)
-                                    ? 'valid'
-                                    : undefined
-                            }
-                            errorMessage={
-                                state.projectName 
-                                    ? validateProjectName(state.projectName) 
-                                    : undefined
-                            }
+                            validationState={getValidationState()}
+                            errorMessage={validationError}
                             isRequired
                             width="size-3600"
                             {...selectableDefaultProps}
