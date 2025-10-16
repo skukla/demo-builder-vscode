@@ -1651,18 +1651,26 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 command: command.substring(0, 100) + '...' // truncate for security
             });
             
-            // Import terminalManager
-            const { TerminalManager } = await import('../utils/terminalManager');
-            const terminalManager = new TerminalManager();
+            // Create a dedicated, disposable terminal for this prerequisite installation
+            // This ensures clean output and makes it clear what's happening
+            const terminalName = prereq.id === 'homebrew' 
+                ? 'Homebrew Installation' 
+                : `${prereq.name} Installation`;
             
-            // Get or create terminal
-            const terminal = terminalManager.getOrCreateTerminal();
+            const terminal = vscode.window.createTerminal({
+                name: terminalName,
+                cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+            });
+            
             terminal.show(true); // Show and focus terminal
             
             // Send command to terminal
-            terminalManager.sendCommand(command);
+            terminal.sendText(command);
             
-            this.debugLogger.debug(`[Prerequisites] Terminal opened and command sent`, { prereq: prereq.id });
+            this.debugLogger.debug(`[Prerequisites] Terminal opened and command sent`, { 
+                prereq: prereq.id,
+                terminalName 
+            });
             
             // Update status with instructions from step
             await this.sendMessage('prerequisite-status', {
@@ -1786,13 +1794,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         try {
             this.stepLogger.log('prerequisites', '✓ Homebrew installation completed', 'info');
             
-            // Import terminalManager for injecting messages
-            const { TerminalManager } = await import('../utils/terminalManager');
-            const terminalManager = new TerminalManager();
-            
-            // Inject status message into terminal
-            terminalManager.sendCommand('echo ""');  // Blank line for spacing
-            terminalManager.sendCommand('echo "✓ Installation complete! Configuring PATH..."');
+            // Check if terminal still exists before sending messages
+            if (vscode.window.terminals.includes(terminal)) {
+                // Inject status message into terminal
+                terminal.sendText('echo ""');  // Blank line for spacing
+                terminal.sendText('echo "✓ Installation complete! Configuring PATH..."');
+            }
             
             // Verify Homebrew is actually available
             const commandManager = getExternalCommandManager();
@@ -1808,10 +1815,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             await this.configureHomebrewPath();
             
             // Inject completion message into terminal
-            terminalManager.sendCommand('echo "✓ PATH configured successfully!"');
-            terminalManager.sendCommand('echo ""');  // Blank line
-            terminalManager.sendCommand('echo "✅ All done! The wizard will continue automatically."');
-            terminalManager.sendCommand('echo "   You can close this terminal (Cmd+W) or leave it open for reference."');
+            if (vscode.window.terminals.includes(terminal)) {
+                terminal.sendText('echo "✓ PATH configured successfully!"');
+                terminal.sendText('echo ""');  // Blank line
+                terminal.sendText('echo "✅ All done! The wizard will continue automatically."');
+                terminal.sendText('echo "   You can close this terminal (Cmd+W) or leave it open for reference."');
+            }
             
             // Clean up both marker files
             try {
