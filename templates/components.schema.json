@@ -10,6 +10,13 @@
       "pattern": "^\\d+\\.\\d+\\.\\d+$",
       "description": "Schema version (e.g., '2.0.0')"
     },
+    "infrastructure": {
+      "type": "object",
+      "description": "Infrastructure items (Adobe CLI, SDK, etc.) with Node.js version requirements",
+      "additionalProperties": {
+        "$ref": "#/definitions/infrastructureItem"
+      }
+    },
     "selectionGroups": {
       "type": "object",
       "description": "Groups that populate primary UI sections (dropdowns and selection areas)",
@@ -324,6 +331,24 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Required environment variable keys (references envVars registry)"
+        }
+      }
+    },
+    "infrastructureItem": {
+      "type": "object",
+      "required": ["name", "nodeVersion"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Infrastructure item name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Infrastructure item description"
+        },
+        "nodeVersion": {
+          "type": "string",
+          "description": "Tested Node.js version for this infrastructure item"
         }
       }
     }

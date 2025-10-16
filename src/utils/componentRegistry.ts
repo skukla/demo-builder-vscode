@@ -3,7 +3,8 @@ import * as path from 'path';
 import { 
     ComponentDefinition, 
     ComponentRegistry, 
-    PresetDefinition 
+    PresetDefinition,
+    InfrastructureItem
 } from '../types';
 
 export class ComponentRegistryManager {
@@ -174,6 +175,16 @@ export class ComponentRegistryManager {
         return registry.components.appBuilder || [];
     }
 
+    async getInfrastructure(): Promise<InfrastructureItem[]> {
+        const registry = await this.loadRegistry();
+        const infrastructure = registry.infrastructure || {};
+        // Convert Record<string, InfrastructureItem> to array with IDs
+        return Object.entries(infrastructure).map(([id, item]) => ({
+            ...item,
+            id
+        }));
+    }
+
     async getServices(): Promise<Record<string, any>> {
         const registry = await this.loadRegistry();
         return registry.services || {};
@@ -265,11 +276,27 @@ export class ComponentRegistryManager {
     ): Promise<{ [version: string]: string }> {
         const mapping: { [version: string]: string } = {};
 
+        // Check infrastructure items (Adobe CLI, SDK, etc.)
+        const infrastructure = await this.getInfrastructure();
+        for (const item of infrastructure) {
+            const existing = mapping[item.nodeVersion];
+            if (existing) {
+                mapping[item.nodeVersion] = `${existing}, ${item.name}`;
+            } else {
+                mapping[item.nodeVersion] = item.name;
+            }
+        }
+
         // Check frontend node version
         if (frontendId) {
             const frontend = await this.getComponentById(frontendId);
             if (frontend?.configuration?.nodeVersion) {
-                mapping[frontend.configuration.nodeVersion] = frontend.name;
+                const existing = mapping[frontend.configuration.nodeVersion];
+                if (existing) {
+                    mapping[frontend.configuration.nodeVersion] = `${existing}, ${frontend.name}`;
+                } else {
+                    mapping[frontend.configuration.nodeVersion] = frontend.name;
+                }
             }
         }
 
@@ -277,7 +304,12 @@ export class ComponentRegistryManager {
         if (backendId) {
             const backend = await this.getComponentById(backendId);
             if (backend?.configuration?.nodeVersion) {
-                mapping[backend.configuration.nodeVersion] = backend.name;
+                const existing = mapping[backend.configuration.nodeVersion];
+                if (existing) {
+                    mapping[backend.configuration.nodeVersion] = `${existing}, ${backend.name}`;
+                } else {
+                    mapping[backend.configuration.nodeVersion] = backend.name;
+                }
             }
         }
 
@@ -286,7 +318,12 @@ export class ComponentRegistryManager {
             for (const depId of dependencies) {
                 const dep = await this.getComponentById(depId);
                 if (dep?.configuration?.nodeVersion) {
-                    mapping[dep.configuration.nodeVersion] = dep.name;
+                    const existing = mapping[dep.configuration.nodeVersion];
+                    if (existing) {
+                        mapping[dep.configuration.nodeVersion] = `${existing}, ${dep.name}`;
+                    } else {
+                        mapping[dep.configuration.nodeVersion] = dep.name;
+                    }
                 }
             }
         }
@@ -296,7 +333,12 @@ export class ComponentRegistryManager {
             for (const appId of appBuilder) {
                 const app = await this.getComponentById(appId);
                 if (app?.configuration?.nodeVersion) {
-                    mapping[app.configuration.nodeVersion] = app.name;
+                    const existing = mapping[app.configuration.nodeVersion];
+                    if (existing) {
+                        mapping[app.configuration.nodeVersion] = `${existing}, ${app.name}`;
+                    } else {
+                        mapping[app.configuration.nodeVersion] = app.name;
+                    }
                 }
             }
         }

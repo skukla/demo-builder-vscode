@@ -191,27 +191,36 @@ export class ComponentManager {
             componentInstance.version = commitResult.stdout.trim().substring(0, 8); // Short hash
         }
 
-        // Store Node version in metadata for runtime use
-        if (componentDef.configuration?.nodeVersion) {
-            componentInstance.metadata = {
-                ...componentInstance.metadata,
-                nodeVersion: componentDef.configuration.nodeVersion
-            };
+        // Get Node version for this component from project config
+        let componentNodeVersion: string;
+        const configuredVersion = project.nodeVersions?.components?.[componentDef.id];
+        
+        if (configuredVersion) {
+            // Use configured version from project
+            componentNodeVersion = configuredVersion.toString();
+            this.logger.debug(`[ComponentManager] Using Node v${componentNodeVersion} for ${componentDef.id} (from project config)`);
+        } else {
+            // Fallback to component's configured version or default
+            componentNodeVersion = componentDef.configuration?.nodeVersion || '20';
+            this.logger.debug(`[ComponentManager] Using fallback Node v${componentNodeVersion} for ${componentDef.id}`);
         }
+        
+        // Store Node version in metadata for runtime use
+        componentInstance.metadata = {
+            ...componentInstance.metadata,
+            nodeVersion: componentNodeVersion
+        };
 
-        // Create .node-version file if configured (enables fnm auto-switching)
-        const configuredNodeVersion = componentDef.configuration?.nodeVersion;
-        if (configuredNodeVersion) {
-            const nodeVersionFile = path.join(componentPath, '.node-version');
-            try {
-                // Check if file already exists
-                await fs.access(nodeVersionFile);
-                this.logger.debug(`[ComponentManager] .node-version file already exists for ${componentDef.name}`);
-            } catch {
-                // File doesn't exist, create it
-                await fs.writeFile(nodeVersionFile, `${configuredNodeVersion}\n`, 'utf-8');
-                this.logger.debug(`[ComponentManager] Created .node-version file with Node ${configuredNodeVersion} for ${componentDef.name}`);
-            }
+        // Create .node-version file (enables fnm auto-switching)
+        const nodeVersionFile = path.join(componentPath, '.node-version');
+        try {
+            // Check if file already exists
+            await fs.access(nodeVersionFile);
+            this.logger.debug(`[ComponentManager] .node-version file already exists for ${componentDef.name}`);
+        } catch {
+            // File doesn't exist, create it
+            await fs.writeFile(nodeVersionFile, `${componentNodeVersion}\n`, 'utf-8');
+            this.logger.debug(`[ComponentManager] Created .node-version file with Node ${componentNodeVersion} for ${componentDef.name}`);
         }
 
         // Install dependencies if package.json exists
@@ -223,13 +232,13 @@ export class ComponentManager {
                 this.logger.debug(`[ComponentManager] Installing dependencies for ${componentDef.name}`);
                 componentInstance.status = 'installing';
 
-                // Use the configured Node version
-                const nodeVersion = componentDef.configuration?.nodeVersion;
+                // Use the component's Node version (determined by strategy)
+                const nodeVersion = componentNodeVersion;
                 
                 // Don't include fnm use in command - CommandManager handles it via useNodeVersion option
                 const installCommand = 'npm install';
 
-                this.logger.debug(`[ComponentManager] Running: ${installCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
+                this.logger.debug(`[ComponentManager] Running: ${installCommand} with Node ${nodeVersion} in ${componentPath}`);
 
                 // Use configurable timeout or default
                 const installTimeout = componentDef.source.timeouts?.install || 300000; // Default 5 minutes
@@ -238,7 +247,7 @@ export class ComponentManager {
                     cwd: componentPath,  // Run from component directory
                     timeout: installTimeout,
                     enhancePath: true,
-                    useNodeVersion: nodeVersion || null  // CommandManager handles fnm use
+                    useNodeVersion: nodeVersion  // CommandManager handles fnm use
                 });
                 
                 if (installResult.code !== 0) {

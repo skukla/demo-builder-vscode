@@ -424,19 +424,6 @@ export class PrerequisitesManager {
         return null;
     }
 
-    async getRequiredNodeVersions(
-        _selectedComponents?: {
-            frontend?: string;
-            backend?: string;
-            dependencies?: string[];
-            appBuilderApps?: string[];
-        }
-    ): Promise<string[]> {
-        // Node versions should come from components.json, not prerequisites.json
-        // This method is deprecated - use ComponentRegistryManager.getRequiredNodeVersions() instead
-        return ['20']; // Return LTS as default
-    }
-
     async checkMultipleNodeVersions(
         versionToComponentMapping: { [version: string]: string }
     ): Promise<{ version: string; component: string; installed: boolean }[]> {

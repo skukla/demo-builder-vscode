@@ -44,6 +44,11 @@ export interface Project {
             lastUpdated: string; // ISO date string
         };
     };
+    // Node.js versions for project (infrastructure + components)
+    nodeVersions?: {
+        infrastructure?: Record<string, number>; // e.g., { "adobe-cli": 18, "adobe-cli-sdk": 18 }
+        components?: Record<string, number>;     // e.g., { "commerce-mesh": 18, "citisignal-nextjs": 24 }
+    };
     // Aliases for compatibility
     createdAt?: Date;
     updatedAt?: Date;
@@ -221,8 +226,16 @@ export interface ServiceDefinition {
     requiresApiKey?: boolean;
 }
 
+export interface InfrastructureItem {
+    id: string;
+    name: string;
+    description?: string;
+    nodeVersion: string;
+}
+
 export interface ComponentRegistry {
     version: string;
+    infrastructure?: Record<string, InfrastructureItem>;
     components: {
         frontends: ComponentDefinition[];
         backends: ComponentDefinition[];

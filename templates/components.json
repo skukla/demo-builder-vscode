@@ -1,6 +1,18 @@
 {
   "$schema": "./components.schema.json",
   "version": "2.0.0",
+  "infrastructure": {
+    "adobe-cli": {
+      "name": "Adobe I/O CLI",
+      "description": "Command-line interface for Adobe I/O services",
+      "nodeVersion": "18"
+    },
+    "adobe-cli-sdk": {
+      "name": "Adobe CLI SDK",
+      "description": "Node.js SDK for Adobe I/O services",
+      "nodeVersion": "18"
+    }
+  },
   "selectionGroups": {
     "frontends": ["citisignal-nextjs"],
     "backends": ["adobe-commerce-paas"],
@@ -68,7 +80,7 @@
         }
       },
       "configuration": {
-        "nodeVersion": "20",
+        "nodeVersion": "18",
         "buildScript": "build",
         "requiresDeployment": true,
         "deploymentTarget": "adobe-io",
