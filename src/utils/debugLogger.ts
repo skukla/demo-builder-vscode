@@ -44,14 +44,14 @@ export class DebugLogger {
 
     public warn(message: string): void {
         const timestamp = new Date().toLocaleTimeString();
-        const logLine = `[${timestamp}] ⚠️ ${message}`;
+        const logLine = `[${timestamp}] ⚠ ${message}`;
         this.outputChannel.appendLine(logLine);
         this.logBuffer.push(logLine);
     }
 
     public error(message: string, error?: Error): void {
         const timestamp = new Date().toLocaleTimeString();
-        const logLine = `[${timestamp}] ❌ ${message}`;
+        const logLine = `[${timestamp}] ✗ ${message}`;
         this.outputChannel.appendLine(logLine);
         this.logBuffer.push(logLine);
         if (error?.message) {
