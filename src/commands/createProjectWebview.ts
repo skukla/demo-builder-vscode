@@ -1553,24 +1553,41 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     } else {
                     finalPerNodeVersionStatus = [];
                     for (const major of requiredMajors) {
-                        try {
-                            const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
-                            // Parse CLI version if regex provided
-                            let cliVersion = '';
-                            if (prereq.check.parseVersion) {
-                                try {
-                                    const match = stdout.match(new RegExp(prereq.check.parseVersion));
-                                    if (match) cliVersion = match[1] || '';
-                                } catch {
-                                    // Ignore regex parse errors
-                                }
+                        const result = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
+                        let cliVersion = '';
+                        const isInstalled = result.code === 0;
+                        
+                        // Parse CLI version if regex provided and command succeeded
+                        if (isInstalled && prereq.check.parseVersion) {
+                            try {
+                                const match = result.stdout.match(new RegExp(prereq.check.parseVersion));
+                                if (match) cliVersion = match[1] || '';
+                            } catch {
+                                // Ignore regex parse errors
                             }
-                            finalPerNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: true });
-                        } catch {
-                            finalPerNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
                         }
+                        
+                        finalPerNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: isInstalled });
                     }
                     } // end else (fnm installed)
+                }
+            }
+
+            // For perNodeVersion prerequisites, update overall status based on per-node results
+            if (prereq.perNodeVersion && finalPerNodeVersionStatus && finalPerNodeVersionStatus.length > 0) {
+                const allInstalled = finalPerNodeVersionStatus.every(s => s.installed);
+                const anyInstalled = finalPerNodeVersionStatus.some(s => s.installed);
+                
+                if (allInstalled) {
+                    // All Node versions have the CLI installed
+                    installResult.installed = true;
+                    installResult.version = finalPerNodeVersionStatus[0]?.component || undefined;
+                } else if (anyInstalled) {
+                    // Some Node versions have the CLI (partial install)
+                    installResult.installed = false;
+                } else {
+                    // No Node versions have the CLI
+                    installResult.installed = false;
                 }
             }
 
@@ -1580,9 +1597,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 ? finalNodeVersionStatus.every(s => s.installed)
                     ? `${prereq.name} is installed: ${finalNodeVersionStatus.map(s => s.version).join(', ')}`
                     : `${prereq.name} is missing in ${finalNodeVersionStatus.filter(s => !s.installed).map(s => s.version.replace('Node ', 'Node ')).join(', ')}`
-                : (installResult.installed
-                    ? `${prereq.name} is installed${installResult.version ? ': ' + installResult.version : ''}`
-                    : `${prereq.name} is not installed`);
+                : (prereq.perNodeVersion && finalPerNodeVersionStatus && finalPerNodeVersionStatus.length > 0)
+                    ? finalPerNodeVersionStatus.every(s => s.installed)
+                        ? `${prereq.name} is installed${installResult.version ? ` (${installResult.version})` : ''} for all required Node versions`
+                        : finalPerNodeVersionStatus.some(s => s.installed)
+                            ? `${prereq.name} is partially installed (missing in ${finalPerNodeVersionStatus.filter(s => !s.installed).map(s => s.version).join(', ')})`
+                            : `${prereq.name} is not installed in any required Node version`
+                    : (installResult.installed
+                        ? `${prereq.name} is installed${installResult.version ? ': ' + installResult.version : ''}`
+                        : `${prereq.name} is not installed`);
 
             // Log result to debug channel
             this.debugLogger.debug(`[Prerequisites] ${prereq.name} installation ${installResult.installed ? 'succeeded' : 'incomplete'}`, { nodeVersionStatus: finalNodeVersionStatus });
