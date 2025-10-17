@@ -272,24 +272,41 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             {!state.adobeAuth.isChecking && state.adobeAuth.error && !authTimeout && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
-                        <Alert UNSAFE_className="text-red-500" size="L" />
+                        {state.adobeAuth.error === 'no_app_builder_access' ? (
+                            <AlertCircle UNSAFE_className="text-orange-500" size="L" />
+                        ) : (
+                            <Alert UNSAFE_className="text-red-500" size="L" />
+                        )}
                         <Flex direction="column" gap="size-100" alignItems="center">
                             <Text UNSAFE_className="text-xl font-medium">
-                                Connection Issue
+                                {state.adobeAuth.error === 'no_app_builder_access' ? 'Insufficient Privileges' : 'Connection Issue'}
                             </Text>
                             <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
-                                {authSubMessage || "We couldn't connect to Adobe services. Please check your internet connection and try again."}
+                                {authSubMessage || (state.adobeAuth.error === 'no_app_builder_access' 
+                                    ? "You need Developer or System Admin role in an Adobe organization with App Builder access. Please contact your administrator to request the appropriate permissions."
+                                    : "We couldn't connect to Adobe services. Please check your internet connection and try again.")}
                             </Text>
                         </Flex>
                         <Flex direction="row" gap="size-200" marginTop="size-300">
-                            <Button variant="secondary" onPress={() => checkAuthentication()}>
-                                <Refresh size="S" marginEnd="size-100" />
-                                Try Again
-                            </Button>
-                            <Button variant="accent" onPress={() => handleLogin(false)}>
-                                <Login size="S" marginEnd="size-100" />
-                                Sign In Again
-                            </Button>
+                            {state.adobeAuth.error === 'no_app_builder_access' ? (
+                                // For permission errors, only show "Sign In Again" to select different org
+                                <Button variant="accent" onPress={() => handleLogin(false)}>
+                                    <Login size="S" marginEnd="size-100" />
+                                    Sign In Again
+                                </Button>
+                            ) : (
+                                // For connection errors, show both retry and sign in options
+                                <>
+                                    <Button variant="secondary" onPress={() => checkAuthentication()}>
+                                        <Refresh size="S" marginEnd="size-100" />
+                                        Try Again
+                                    </Button>
+                                    <Button variant="accent" onPress={() => handleLogin(false)}>
+                                        <Login size="S" marginEnd="size-100" />
+                                        Sign In Again
+                                    </Button>
+                                </>
+                            )}
                         </Flex>
                     </Flex>
                 </Flex>
