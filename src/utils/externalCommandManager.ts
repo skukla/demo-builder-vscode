@@ -264,7 +264,7 @@ export class ExternalCommandManager {
                 // Don't retry on timeout errors - they already took the full timeout duration
                 const isTimeout = error.message?.toLowerCase().includes('timed out');
                 if (isTimeout) {
-                    this.logger.warn('[CommandManager] Command timed out - not retrying');
+                    // Already logged when timeout occurred, just throw
                     throw error;
                 }
                 
