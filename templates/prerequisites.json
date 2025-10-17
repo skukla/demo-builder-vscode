@@ -142,7 +142,7 @@
       "install": {
         "steps": [
           {
-            "name": "Install Adobe I/O CLI",
+            "name": "Install Adobe I/O CLI (Node {version})",
             "message": "Installing Adobe I/O CLI globally",
             "commands": ["npm install -g @adobe/aio-cli"],
             "estimatedDuration": 60000,
