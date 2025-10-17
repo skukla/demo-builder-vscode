@@ -2217,13 +2217,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     isAuthenticated: false,
                     isChecking: false,
                     error: 'cli_corruption',
-                    message: 'Adobe CLI Token Error',
-                    subMessage: 'Please run this command in your terminal: aio auth logout && aio auth login'
+                    message: 'Adobe CLI Installation Issue',
+                    subMessage: 'Automatic fixes failed. Manual terminal intervention required - see notification for details.'
                 });
                 
                 // Also show a VS Code notification with action button
                 const action = await vscode.window.showErrorMessage(
-                    'Adobe CLI failed to store authentication token. This is a known issue with some Adobe CLI installations.',
+                    'Adobe CLI failed to store authentication correctly even after automatic repair attempts. This suggests your Adobe CLI installation is corrupted.\n\n' +
+                    'Try these fixes:\n' +
+                    '1. Run: aio auth logout && aio auth login\n' +
+                    '2. If that fails, reinstall: npm install -g @adobe/aio-cli',
                     'Open Terminal',
                     'Dismiss'
                 );
@@ -2232,8 +2235,17 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     // Open integrated terminal and suggest command
                     const terminal = vscode.window.createTerminal('Adobe CLI Fix');
                     terminal.show();
-                    terminal.sendText('# Run this command to fix Adobe CLI authentication:');
-                    terminal.sendText('# aio auth logout && aio auth login');
+                    terminal.sendText('# The extension already tried:');
+                    terminal.sendText('#   1. aio auth logout');
+                    terminal.sendText('#   2. Deleting cached tokens');
+                    terminal.sendText('#   3. aio auth login (fresh browser auth)');
+                    terminal.sendText('# But token is still corrupted. Try these manual fixes:');
+                    terminal.sendText('');
+                    terminal.sendText('# Option 1: Force fresh login');
+                    terminal.sendText('aio auth logout && aio auth login');
+                    terminal.sendText('');
+                    terminal.sendText('# Option 2: If that fails, reinstall Adobe CLI');
+                    terminal.sendText('# npm install -g @adobe/aio-cli');
                 }
             } else {
                 // Generic error handling

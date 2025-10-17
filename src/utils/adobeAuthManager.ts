@@ -878,11 +878,39 @@ export class AdobeAuthManager {
             // aio auth login will see the token and return immediately without opening browser
             const tokenCheck = await this.inspectToken();
             if (tokenCheck.token && tokenCheck.expiresIn === 0) {
-                this.debugLogger.warn('[Auth] Detected corrupted token (expiry = 0), forcing logout to clear it');
+                this.logger.warn('[Auth] Detected corrupted token (expiry = 0), attempting automatic fix...');
+                
+                // Attempt 1: Standard logout
+                this.debugLogger.debug('[Auth] Attempt 1: Running aio auth logout');
                 try {
                     await this.logout();
+                    
+                    // Verify logout worked
+                    const afterLogout = await this.inspectToken();
+                    if (!afterLogout.token) {
+                        this.debugLogger.debug('[Auth] Logout successful - token cleared');
+                    } else {
+                        this.debugLogger.warn('[Auth] Logout did not clear token, trying manual config deletion');
+                        
+                        // Attempt 2: Manually delete token from config
+                        try {
+                            await this.commandManager.executeAdobeCLI(
+                                'aio config delete ims.contexts.cli.access_token',
+                                { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_WRITE }
+                            );
+                            
+                            const afterDelete = await this.inspectToken();
+                            if (!afterDelete.token) {
+                                this.debugLogger.debug('[Auth] Manual config deletion successful');
+                            } else {
+                                this.debugLogger.error('[Auth] Could not clear corrupted token even with manual deletion');
+                            }
+                        } catch (deleteError) {
+                            this.debugLogger.error('[Auth] Failed to manually delete token config:', deleteError as Error);
+                        }
+                    }
                 } catch (logoutError) {
-                    this.debugLogger.debug('[Auth] Logout failed (non-critical):', logoutError);
+                    this.debugLogger.error('[Auth] Logout command failed:', logoutError as Error);
                 }
             }
 
@@ -960,11 +988,16 @@ export class AdobeAuthManager {
                 if (postLoginToken.token && postLoginToken.expiresIn === 0) {
                     this.debugLogger.debug('[Auth] CORRUPTION DETECTED - entering error path');
                     this.logger.error('[Auth] Login completed but token still has expiry = 0 (corrupted)');
-                    this.logger.error('[Auth] This indicates Adobe CLI is not storing the token correctly');
-                    this.logger.error('[Auth] Try running: aio auth logout && aio auth login in a terminal');
+                    this.logger.error('[Auth] Automatic fix attempts failed:');
+                    this.logger.error('[Auth]   1. Ran aio auth logout (before login)');
+                    this.logger.error('[Auth]   2. Attempted manual config deletion');
+                    this.logger.error('[Auth]   3. Ran aio auth login (fresh browser auth)');
+                    this.logger.error('[Auth]   4. Token STILL has expiry = 0 after all attempts');
+                    this.logger.error('[Auth] This indicates a fundamental Adobe CLI installation issue');
+                    this.logger.error('[Auth] Manual intervention required - see error message for instructions');
                     
                     // Throw specific error so UI can show proper message
-                    throw new Error('ADOBE_CLI_TOKEN_CORRUPTION: Adobe CLI failed to store authentication token correctly. Please run "aio auth logout && aio auth login" in your terminal to fix this issue.');
+                    throw new Error('ADOBE_CLI_TOKEN_CORRUPTION: Adobe CLI failed to store authentication token correctly even after automatic repair attempts. Your Adobe CLI installation may be corrupted. Please try running "aio auth logout && aio auth login" in your terminal, or reinstall Adobe CLI with: npm install -g @adobe/aio-cli');
                 }
                 this.debugLogger.debug(`[Auth] Token expiry verified: ${postLoginToken.expiresIn} minutes remaining`);
                 
