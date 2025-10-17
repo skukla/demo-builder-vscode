@@ -452,7 +452,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                                     {check.unifiedProgress.command?.type === 'determinate' && check.unifiedProgress.command?.percent != null ? (
                                                         // Show command-level progress when we have exact percentages
                                                         <ProgressBar 
-                                                            label={`Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.command.detail || check.unifiedProgress.overall.stepName}`}
+                                                            label={`Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}${check.unifiedProgress.command.detail ? ` - ${check.unifiedProgress.command.detail}` : ''}`}
                                                             value={check.unifiedProgress.command.percent}
                                                             maxValue={100}
                                                             showValueLabel
