@@ -1566,7 +1566,37 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 } catch {
                     // Use empty mapping if component registry fails
                 }
-                const requiredMajors = Object.keys(mapping);
+                
+                // For Adobe CLI, check ALL Node versions used by the project, not just the mapping
+                let requiredMajors: string[] = [];
+                if (prereq.id === 'aio-cli') {
+                    // Get all unique Node versions from both infrastructure and components
+                    const allVersions = new Set<string>();
+                    
+                    // Add infrastructure versions
+                    Object.keys(mapping).forEach(version => allVersions.add(version));
+                    
+                    // Add component versions (even if not in mapping)
+                    try {
+                        const { ComponentRegistryManager } = await import('../utils/componentRegistry');
+                        const registryManager = new ComponentRegistryManager(this.context.extensionPath);
+                        const requiredVersions = await registryManager.getRequiredNodeVersions(
+                            this.currentComponentSelection?.frontend,
+                            this.currentComponentSelection?.backend,
+                            this.currentComponentSelection?.dependencies,
+                            this.currentComponentSelection?.externalSystems,
+                            this.currentComponentSelection?.appBuilder
+                        );
+                        requiredVersions.forEach(version => allVersions.add(version));
+                    } catch {
+                        // Fall back to mapping if registry fails
+                    }
+                    
+                    requiredMajors = Array.from(allVersions);
+                } else {
+                    // For other per-node prerequisites, use the mapping as before
+                    requiredMajors = Object.keys(mapping);
+                }
                 if (requiredMajors.length > 0) {
                     const commandManager = getExternalCommandManager();
                     
