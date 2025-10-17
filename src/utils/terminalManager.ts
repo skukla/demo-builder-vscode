@@ -1,13 +1,22 @@
 import * as vscode from 'vscode';
+import { StateManager } from './stateManager';
+import { Logger } from './logger';
 
 export class TerminalManager {
     private terminal: vscode.Terminal | undefined;
     private readonly terminalName = 'Demo Builder';
+    private stateManager: StateManager;
+    private logger: Logger;
+
+    constructor(stateManager: StateManager) {
+        this.stateManager = stateManager;
+        this.logger = new Logger('TerminalManager');
+    }
 
     /**
      * Creates or reuses the terminal
      */
-    public getOrCreateTerminal(): vscode.Terminal {
+    public async getOrCreateTerminal(): Promise<vscode.Terminal> {
         // Check if terminal already exists and is still open
         if (this.terminal) {
             const existingTerminal = vscode.window.terminals.find(t => t === this.terminal);
@@ -17,11 +26,29 @@ export class TerminalManager {
         }
 
         // Create new terminal with safe working directory
-        // Use workspace folder if available, otherwise fall back to home directory
-        const safeCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || 
-                       process.env.HOME || 
-                       process.env.USERPROFILE || 
-                       undefined;
+        // Prefer project directory if it exists, otherwise use workspace folder or home directory
+        let safeCwd = process.env.HOME || process.env.USERPROFILE || undefined;
+        
+        try {
+            // Check if we have a current project with an existing directory
+            const currentProject = await this.stateManager.getCurrentProject();
+            if (currentProject?.path && require('fs').existsSync(currentProject.path)) {
+                // Project directory exists, use it for terminal operations
+                safeCwd = currentProject.path;
+                this.logger.debug(`[Terminal] Using project directory: ${currentProject.path}`);
+            } else {
+                // Fall back to workspace folder or home directory
+                const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                if (workspaceFolder) {
+                    safeCwd = workspaceFolder;
+                    this.logger.debug(`[Terminal] Using workspace folder: ${workspaceFolder}`);
+                } else {
+                    this.logger.debug(`[Terminal] Using home directory: ${safeCwd}`);
+                }
+            }
+        } catch (error) {
+            this.logger.debug(`[Terminal] Could not determine project directory, using fallback: ${error}`);
+        }
         
         this.terminal = vscode.window.createTerminal({
             name: this.terminalName,
@@ -47,7 +74,7 @@ export class TerminalManager {
             }
         } catch {
             // Fallback to regular terminal panel
-            const terminal = this.getOrCreateTerminal();
+            const terminal = await this.getOrCreateTerminal();
             terminal.show(false); // false = don't steal focus from webview
         }
         

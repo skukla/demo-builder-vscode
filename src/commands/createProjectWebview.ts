@@ -1716,12 +1716,29 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 ? 'Homebrew Installation' 
                 : `${prereq.name} Installation`;
             
-            // Use a safe directory for terminal - workspace folder or home directory
-            // Since we don't add project directories to workspace, this is safe
-            const safeCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || 
-                           process.env.HOME || 
-                           process.env.USERPROFILE || 
-                           undefined;
+            // Use a safe directory for terminal - prefer project directory if it exists
+            // Check if we have a current project with an existing directory
+            let safeCwd = process.env.HOME || process.env.USERPROFILE || undefined;
+            
+            try {
+                const currentProject = await this.stateManager.getCurrentProject();
+                if (currentProject?.path && await fs.promises.access(currentProject.path).then(() => true).catch(() => false)) {
+                    // Project directory exists, use it for terminal operations
+                    safeCwd = currentProject.path;
+                    this.logger.debug(`[Terminal] Using project directory: ${currentProject.path}`);
+                } else {
+                    // Fall back to workspace folder or home directory
+                    const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+                    if (workspaceFolder) {
+                        safeCwd = workspaceFolder;
+                        this.logger.debug(`[Terminal] Using workspace folder: ${workspaceFolder}`);
+                    } else {
+                        this.logger.debug(`[Terminal] Using home directory: ${safeCwd}`);
+                    }
+                }
+            } catch (error) {
+                this.logger.debug(`[Terminal] Could not determine project directory, using fallback: ${error}`);
+            }
             
             const terminal = vscode.window.createTerminal({
                 name: terminalName,
