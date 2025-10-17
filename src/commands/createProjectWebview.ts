@@ -567,7 +567,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
         // Open project in workspace (after project creation completes)
         comm.on('openProject', async () => {
-            this.logger.info('[Project Creation] ✅ openProject message received');
+            this.logger.info('[Project Creation] ✓ openProject message received');
             this.logger.debug(`[Project Creation] Current panel: ${this.panel ? 'exists' : 'undefined'}`);
             
             // Set transitioning flag to prevent auto-welcome during transition
@@ -627,7 +627,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 );
                 
                 if (added) {
-                    this.logger.info('[Project Creation] ✅ Workspace folder added (Extension Host will restart)');
+                    this.logger.info('[Project Creation] ✓ Workspace folder added (Extension Host will restart)');
                     // Flag will auto-clear on Extension Host restart
                 } else {
                     this.logger.warn('[Project Creation] Workspace folder may already exist, opening dashboard directly');
@@ -1138,7 +1138,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     // Log to all appropriate channels
                     if (isTimeout) {
                         this.logger.warn(`[Prerequisites] ${prereq.name} re-check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
-                        this.stepLogger.log('prerequisites', `⏱️ ${prereq.name} re-check timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`, 'warn');
+                        this.stepLogger.log('prerequisites', `⏱ ${prereq.name} re-check timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`, 'warn');
                         this.debugLogger.debug('[Prerequisites] Re-check timeout details:', { prereq: prereq.id, timeout: TIMEOUTS.PREREQUISITE_CHECK, error: errorMessage });
                     } else {
                         this.logger.error(`[Prerequisites] Failed to re-check ${prereq.name}:`, error as Error);
@@ -1456,7 +1456,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 // Log to all appropriate channels
                 if (isTimeout) {
                     this.logger.warn(`[Prerequisites] ${prereq.name} verification timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
-                    this.stepLogger.log('prerequisites', `⏱️ ${prereq.name} verification timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s) - installation may have succeeded`, 'warn');
+                    this.stepLogger.log('prerequisites', `⏱ ${prereq.name} verification timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s) - installation may have succeeded`, 'warn');
                     this.debugLogger.debug('[Prerequisites] Verification timeout details:', { prereq: prereq.id, timeout: TIMEOUTS.PREREQUISITE_CHECK, error: errorMessage });
                 } else {
                     this.logger.error(`[Prerequisites] Failed to verify ${prereq.name} after installation:`, error as Error);
@@ -1637,7 +1637,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             // Log to all channels
             this.logger.info(`[Prerequisites] Starting interactive installation for: ${prereq.name}`);
-            this.stepLogger.log('prerequisites', `🔧 Installing ${prereq.name} (interactive - requires user input)`, 'info');
+            this.stepLogger.log('prerequisites', `Installing ${prereq.name} (interactive - requires user input)`, 'info');
             this.debugLogger.debug(`[Prerequisites] Opening terminal for interactive install`, { 
                 prereq: prereq.id, 
                 name: prereq.name,
@@ -1676,7 +1676,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             });
             
             this.logger.info(`[Prerequisites] Interactive installation initiated. Monitoring for completion...`);
-            this.stepLogger.log('prerequisites', `⏸️ ${prereq.name}: Waiting for user to complete installation in terminal`, 'info');
+            this.stepLogger.log('prerequisites', `⏸ ${prereq.name}: Waiting for user to complete installation in terminal`, 'info');
             
             // Start monitoring for installation completion (Homebrew-specific)
             if (prereq.id === 'homebrew' && completionMarkerPath && failureMarkerPath) {
@@ -1707,7 +1707,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const timeoutDuration = 2 * 60 * 1000;
         const timeoutHandle = setTimeout(() => {
             this.logger.warn('[Prerequisites] Homebrew installation monitoring timed out (no completion signal received).');
-            this.stepLogger.log('prerequisites', '⏸️ Homebrew: Installation appears incomplete. If you cancelled or closed the terminal, click Install to try again.', 'info');
+            this.stepLogger.log('prerequisites', '⏸ Homebrew: Installation appears incomplete. If you cancelled or closed the terminal, click Install to try again.', 'info');
         }, timeoutDuration);
         
         // Watch the tmp directory for completion or failure markers
@@ -1745,7 +1745,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 if ((eventType === 'rename' || eventType === 'change')) {
                     if (filename === successFilename) {
                         // Success marker detected!
-                        this.logger.info('[Prerequisites] ✅ Homebrew installation completion detected!');
+                        this.logger.info('[Prerequisites] ✓ Homebrew installation completion detected!');
                         
                         // Clean up
                         clearTimeout(timeoutHandle);
@@ -1758,7 +1758,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         await this.handleHomebrewInstallationComplete(prereq, terminal, completionMarkerPath, failureMarkerPath);
                     } else if (filename === failureFilename) {
                         // Failure marker detected!
-                        this.logger.warn('[Prerequisites] ❌ Homebrew installation failure detected');
+                        this.logger.warn('[Prerequisites] ✗ Homebrew installation failure detected');
                         
                         // Clean up
                         clearTimeout(timeoutHandle);
@@ -1778,7 +1778,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
         } catch (error) {
             this.logger.error('[Prerequisites] Failed to set up installation monitoring', error as Error);
-            this.stepLogger.log('prerequisites', '⚠️ Could not monitor installation. Please click Recheck when done.', 'warn');
+            this.stepLogger.log('prerequisites', '⚠ Could not monitor installation. Please click Recheck when done.', 'warn');
             clearTimeout(timeoutHandle);
         }
     }
@@ -1866,7 +1866,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     // This is what the user wants - hide the whole panel UI
                     this.logger.debug('[Prerequisites] Closing bottom panel...');
                     await vscode.commands.executeCommand('workbench.action.closePanel');
-                    this.logger.info('[Prerequisites] ✅ Bottom panel closed successfully');
+                    this.logger.info('[Prerequisites] ✓ Bottom panel closed successfully');
                     
                 } catch (disposeError) {
                     this.logger.error('[Prerequisites] Error closing terminal/panel:', disposeError as Error);
@@ -1973,7 +1973,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             await fsPromises.appendFile(profileFile, configLines + '\n');
             
-            this.logger.info('[Prerequisites] ✅ Homebrew PATH configured successfully');
+            this.logger.info('[Prerequisites] ✓ Homebrew PATH configured successfully');
             this.stepLogger.log('prerequisites', '✓ Homebrew PATH added to shell profile automatically', 'info');
             
             // Also evaluate in current process environment
@@ -1984,7 +1984,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
         } catch (error) {
             this.logger.error('[Prerequisites] Failed to configure Homebrew PATH', error as Error);
-            this.stepLogger.log('prerequisites', `⚠️ Could not auto-configure Homebrew PATH: ${error instanceof Error ? error.message : String(error)}`, 'warn');
+            this.stepLogger.log('prerequisites', `⚠ Could not auto-configure Homebrew PATH: ${error instanceof Error ? error.message : String(error)}`, 'warn');
         }
     }
 
@@ -2149,21 +2149,51 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 // Clear cache after login
                 this.authManager.clearCache();
                 
-                // Get current context
-                const context = await this.authManager.getAuthContext();
-                let currentOrg = context.org;
+                // When force=true (org switch), Adobe CLI's browser login doesn't update `aio console where`
+                // So we can't trust syncContextFromCLI(). Instead, get orgs directly with the new token.
+                let currentOrg: AdobeOrg | undefined;
+                let currentProject: AdobeProject | undefined;
                 
-                // Auto-select single org if none selected
-                if (!currentOrg) {
+                if (force) {
+                    // Org switch: Don't trust CLI config, use token-based org lookup
+                    this.debugLogger.debug('[Auth] Force login - fetching orgs with new token (bypassing stale CLI config)');
                     try {
                         const availableOrgs = await this.authManager.getOrganizations();
+                        this.debugLogger.debug(`[Auth] Found ${availableOrgs.length} orgs with new token`);
+                        
                         if (availableOrgs.length === 1) {
-                            this.logger.info('[Auth] Auto-selecting single available organization');
-                            await this.authManager.selectOrganization(availableOrgs[0].id);
-                            currentOrg = availableOrgs[0];
+                            // User selected this org in browser, select it (uses org code, not ID)
+                            this.logger.info(`[Auth] Auto-selecting single available organization: ${availableOrgs[0].name}`);
+                            const selectSuccess = await this.authManager.selectOrganization(availableOrgs[0].id);
+                            if (selectSuccess) {
+                                currentOrg = availableOrgs[0];
+                            } else {
+                                this.logger.warn('[Auth] Failed to select organization');
+                            }
+                        } else if (availableOrgs.length > 1) {
+                            this.debugLogger.debug('[Auth] Multiple orgs available, user must select');
                         }
                     } catch (error) {
-                        this.logger.debug('[Auth] Failed to auto-select org:', error);
+                        this.logger.warn('[Auth] Failed to fetch orgs after login:', error);
+                    }
+                } else {
+                    // Normal login (not switching): Safe to check CLI config
+                    const context = await this.authManager.getAuthContext();
+                    currentOrg = context.org;
+                    currentProject = context.project;
+                    
+                    // Auto-select single org if none selected
+                    if (!currentOrg) {
+                        try {
+                            const availableOrgs = await this.authManager.getOrganizations();
+                            if (availableOrgs.length === 1) {
+                                this.logger.info('[Auth] Auto-selecting single available organization');
+                                await this.authManager.selectOrganization(availableOrgs[0].id);
+                                currentOrg = availableOrgs[0];
+                            }
+                        } catch (error) {
+                            this.logger.debug('[Auth] Failed to auto-select org:', error);
+                        }
                     }
                 }
                 
@@ -2174,7 +2204,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         isAuthenticated: true,
                         isChecking: false,
                         organization: currentOrg,
-                        project: context.project,
+                        project: currentProject,
                         message: 'Ready to continue',
                         subMessage: `Connected to ${currentOrg.name}`
                     });
@@ -3721,10 +3751,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 
                 if (buildResult.code !== 0) {
                     this.logger.warn(`[Project Creation] Build script failed for ${componentDef.name}`);
-                    this.stepLogger.log('component-install', `⚠️ Build script warning for ${componentDef.name} (continuing anyway)`, 'warn');
+                    this.stepLogger.log('component-install', `⚠ Build script warning for ${componentDef.name} (continuing anyway)`, 'warn');
                     this.debugLogger.debug(`[Project Creation] Build stderr: ${buildResult.stderr?.substring(0, 500)}`);
                 } else {
-                    this.logger.info(`[Project Creation] ✅ Build completed successfully for ${componentDef.name}`);
+                    this.logger.info(`[Project Creation] ✓ Build completed successfully for ${componentDef.name}`);
                     this.stepLogger.log('component-install', `✓ Built ${componentDef.name}`, 'info');
                 }
             }
@@ -3732,7 +3762,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
         // Step 5: Deploy Components (75-85%)
         // Deploy any components that were downloaded and need deployment (e.g., API Mesh)
-        this.logger.info('[Project Creation] ✅ All components downloaded and configured');
+        this.logger.info('[Project Creation] ✓ All components downloaded and configured');
             
         const meshComponent = project.componentInstances?.['commerce-mesh'];
         if (meshComponent && meshComponent.path) {
@@ -3791,7 +3821,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         await updateMeshState(project);
                         this.logger.info('[Project Creation] Updated mesh state after successful deployment');
                         
-                        this.logger.info(`[Project Creation] ✅ Mesh configuration updated successfully${endpoint ? ': ' + endpoint : ''}`);
+                        this.logger.info(`[Project Creation] ✓ Mesh configuration updated successfully${endpoint ? ': ' + endpoint : ''}`);
                 } else {
                     throw new Error(meshDeployResult.error || 'Mesh deployment failed');
                 }
@@ -3897,9 +3927,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
             
             await this.stateManager.saveProject(project);
-            this.logger.info('[Project Creation] ✅ Project state saved successfully');
+            this.logger.info('[Project Creation] ✓ Project state saved successfully');
         } catch (saveError) {
-            this.logger.error('[Project Creation] ❌ Failed to save project', saveError instanceof Error ? saveError : undefined);
+            this.logger.error('[Project Creation] ✗ Failed to save project', saveError instanceof Error ? saveError : undefined);
             throw saveError; // Re-throw to trigger error handling
         }
             
@@ -3922,9 +3952,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 success: true,
                 message: 'Your demo is ready to start'
             });
-            this.logger.info('[Project Creation] ✅ Completion message sent');
+            this.logger.info('[Project Creation] ✓ Completion message sent');
         } catch (messageError) {
-            this.logger.error('[Project Creation] ❌ Failed to send completion message', messageError instanceof Error ? messageError : undefined);
+            this.logger.error('[Project Creation] ✗ Failed to send completion message', messageError instanceof Error ? messageError : undefined);
         }
             
         // Auto-close the webview panel after 2 minutes as a fallback
@@ -4130,7 +4160,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 throw new Error(verificationResult.error || 'Mesh deployment verification failed');
             }
             
-            this.logger.info('[Deploy Mesh] ✅ Mesh verified and deployed successfully');
+            this.logger.info('[Deploy Mesh] ✓ Mesh verified and deployed successfully');
             onProgress?.('✓ Deployment Complete', verificationResult.endpoint || 'Mesh deployed successfully');
             
             return {

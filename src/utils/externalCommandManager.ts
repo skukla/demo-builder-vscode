@@ -318,7 +318,7 @@ export class ExternalCommandManager {
                 
                 // Auto-handle Adobe CLI telemetry prompt
                 if (output.includes('Would you like to allow @adobe/aio-cli to collect anonymous usage data?')) {
-                    this.logger.info('[CommandManager] 🔧 Auto-answered aio-cli telemetry prompt');
+                    this.logger.info('[CommandManager] Auto-answered aio-cli telemetry prompt');
                     child.stdin?.write('n\n');
                     child.stdin?.end();
                 }
@@ -354,7 +354,7 @@ export class ExternalCommandManager {
             // Handle timeout
             if (options.timeout) {
                 const timeoutId = setTimeout(() => {
-                    this.logger.warn(`[CommandManager] ⏱️ Command timed out after ${options.timeout}ms (PID: ${child.pid})`);
+                    this.logger.warn(`[CommandManager] ⏱ Command timed out after ${options.timeout}ms (PID: ${child.pid})`);
                     
                     if (!child.killed) {
                         child.kill('SIGTERM');
@@ -956,7 +956,7 @@ export class ExternalCommandManager {
             }
             
             if (this.cachedNodeBinaryPath && this.cachedAioBinaryPath) {
-                this.logger.info('[Adobe CLI] ✅ Binary paths cached - future commands will be 5x faster');
+                this.logger.info('[Adobe CLI] ✓ Binary paths cached - future commands will be 5x faster');
             }
         } catch (error) {
             this.logger.debug(`[Adobe CLI] Could not cache binary paths: ${error}`);

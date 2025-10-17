@@ -320,6 +320,18 @@ export class AdobeAuthManager {
     }
 
     /**
+     * Directly caches an organization without calling Adobe CLI commands.
+     * Used after browser login when Adobe CLI config is stale.
+     */
+    public cacheOrganization(org: AdobeOrg): void {
+        this.cachedOrganization = org;
+        this.cachedProject = undefined; // Clear project/workspace on org change
+        this.cachedWorkspace = undefined;
+        this.orgClearedDueToValidation = false;
+        this.debugLogger.debug(`[Auth] Directly cached organization: ${org.name} (ID: ${org.id})`);
+    }
+
+    /**
      * Ensure SDK is initialized and ready for use
      * Waits for SDK initialization if in progress
      * Returns true if SDK is available, false if fallback to CLI needed
@@ -429,7 +441,7 @@ export class AdobeAuthManager {
         
         const expected = expectedTimes[operation];
         if (expected && duration > expected) {
-            this.debugLogger.debug(`⚠️ Performance warning: ${operation} took ${duration}ms (expected <${expected}ms)`);
+            this.debugLogger.debug(`⚠ Performance warning: ${operation} took ${duration}ms (expected <${expected}ms)`);
         }
         
         return duration;
@@ -1239,9 +1251,21 @@ export class AdobeAuthManager {
             this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'organization' });
             this.debugLogger.debug(`[Auth] Selecting organization ${orgId} with explicit timeout`);
 
-            // Use the org ID directly
+            // First, get the org to find its code (CLI expects code, not numeric ID)
+            const orgs = await this.getOrganizations();
+            const selectedOrg = orgs.find(o => o.id === orgId);
+            
+            if (!selectedOrg) {
+                this.debugLogger.warn(`[Auth] Organization ${orgId} not found in available orgs`);
+                this.endTiming('selectOrganization');
+                return false;
+            }
+
+            this.debugLogger.debug(`[Auth] Using org code '${selectedOrg.code}' for org '${selectedOrg.name}' (ID: ${orgId})`);
+
+            // Use the org CODE (not ID) for the CLI command
             const result = await this.commandManager.executeAdobeCLI(
-                `aio console org select ${orgId}`,
+                `aio console org select ${selectedOrg.code}`,
                 {
                     encoding: 'utf8',
                     timeout: TIMEOUTS.CONFIG_WRITE // Use shorter timeout for config operations
@@ -1251,28 +1275,15 @@ export class AdobeAuthManager {
             this.debugLogger.debug(`[Auth] Organization select command completed with code: ${result.code}`);
 
             if (result.code === 0) {
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.organization-selected', { name: orgId });
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.organization-selected', { name: selectedOrg.name });
 
                 // Clear validation failure flag since new org was successfully selected
                 this.orgClearedDueToValidation = false;
 
-                // Smart caching: populate org cache directly instead of clearing
-                // This prevents the next getCurrentOrganization() from querying CLI
-                try {
-                    const orgs = await this.getOrganizations();
-                    const selectedOrg = orgs.find(o => o.id === orgId);
-                    
-                    if (selectedOrg) {
-                        this.cachedOrganization = selectedOrg;
-                        this.debugLogger.debug(`[Auth] Cached selected organization: ${selectedOrg.name}`);
-                    } else {
-                        this.cachedOrganization = undefined;
-                        this.debugLogger.warn(`[Auth] Could not find org ${orgId} in list, cleared cache`);
-                    }
-                } catch (error) {
-                    this.debugLogger.debug('[Auth] Failed to cache org after selection:', error);
-                    this.cachedOrganization = undefined;
-                }
+                // Cache the selected org
+                this.cachedOrganization = selectedOrg;
+                this.debugLogger.debug(`[Auth] Cached selected organization: ${selectedOrg.name}`);
+
 
                 // Clear downstream caches since org changed
                 this.cachedProject = undefined;

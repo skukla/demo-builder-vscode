@@ -335,7 +335,7 @@ export async function detectMeshChanges(
         
         if (oldValue !== newValue) {
             changedEnvVars.push(key);
-            logger.debug(`[MeshStaleness]   ❌ ${key} changed: "${oldValue}" → "${newValue}"`);
+            logger.debug(`[MeshStaleness]   ✗ ${key} changed: "${oldValue}" → "${newValue}"`);
         }
     });
     

@@ -36,7 +36,7 @@ export class DeleteProjectCommand extends BaseCommand {
                     this.logger.info(`[Delete Project] Deleting project directory: ${projectPath}`);
                     try {
                         await fs.rm(projectPath, { recursive: true, force: true });
-                        this.logger.info('[Delete Project] ✅ Project directory deleted successfully');
+                        this.logger.info('[Delete Project] ✓ Project directory deleted successfully');
                         
                         // Verify deletion
                         try {
@@ -51,7 +51,7 @@ export class DeleteProjectCommand extends BaseCommand {
                             // ENOENT is good - it means the directory is gone
                         }
                     } catch (error) {
-                        this.logger.error('[Delete Project] ❌ Failed to delete project files', error as Error);
+                        this.logger.error('[Delete Project] ✗ Failed to delete project files', error as Error);
                         throw new Error(`Failed to delete project directory: ${error instanceof Error ? error.message : String(error)}`);
                     }
                 }
