@@ -107,7 +107,7 @@ export class StopDemoCommand extends BaseCommand {
                 // Update status bar
                 this.statusBar.updateProject(project);
                 
-                this.logger.info('Demo stopped successfully');
+                this.logger.debug('Demo stopped successfully');
             });
             
             // Show auto-dismissing progress notification

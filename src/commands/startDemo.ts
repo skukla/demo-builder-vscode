@@ -72,12 +72,12 @@ export class StartDemoCommand extends BaseCommand {
                 );
                 
                 if (action !== 'Stop & Start') {
-                    this.logger.info('[Start Demo] User cancelled demo start due to port conflict');
+                    this.logger.debug('[Start Demo] User cancelled demo start due to port conflict');
                     return;
                 }
                 
                 // Kill the process
-                this.logger.info(`[Start Demo] Stopping process on port ${port}...`);
+                this.logger.debug(`[Start Demo] Stopping process on port ${port}...`);
                 try {
                     await commandManager.execute(`lsof -ti:${port} | xargs kill`, {
                         timeout: TIMEOUTS.DEMO_START_CHECK,
@@ -89,7 +89,7 @@ export class StartDemoCommand extends BaseCommand {
                     // Wait a moment for port to be freed
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     
-                    this.logger.info('[Start Demo] Process stopped successfully');
+                    this.logger.debug('[Start Demo] Process stopped successfully');
                 } catch (error) {
                     this.logger.error('[Start Demo] Failed to stop process:', error as Error);
                     await this.showError(`Failed to stop process on port ${port}. Try stopping it manually.`);
@@ -115,8 +115,8 @@ export class StartDemoCommand extends BaseCommand {
                 const frontendPath = frontendComponent.path;
                 const nodeVersion = frontendComponent.metadata?.nodeVersion || '20';
                 
-                this.logger.info(`[Start Demo] Starting demo in: ${frontendPath}`);
-                this.logger.info(`[Start Demo] Using Node ${nodeVersion}`);
+                this.logger.debug(`[Start Demo] Starting demo in: ${frontendPath}`);
+                this.logger.debug(`[Start Demo] Using Node ${nodeVersion}`);
                 
                 // Set status to 'starting' immediately
                 project.status = 'starting';
@@ -181,7 +181,7 @@ export class StartDemoCommand extends BaseCommand {
                 // Update status bar
                 this.statusBar.updateProject(project);
                 
-                this.logger.info(`Demo started at http://localhost:${port}`);
+                this.logger.debug(`Demo started at http://localhost:${port}`);
             });
             
             // Show auto-dismissing progress notification
