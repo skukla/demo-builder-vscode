@@ -340,7 +340,7 @@ export class ExternalCommandManager {
             child.on('close', (code) => {
                 // Only log non-zero exit codes
                 if (code && code !== 0) {
-                    this.logger.warn(`[CommandManager] Process exited with code ${code} after ${Date.now() - startTime}ms`);
+                    this.logger.debug(`[CommandManager] Process exited with code ${code} after ${Date.now() - startTime}ms`);
                 }
                 const duration = Date.now() - startTime;
                 resolve({
@@ -1172,7 +1172,7 @@ export class ExternalCommandManager {
             
             // Mark as configured
             ExternalCommandManager.telemetryConfigured = true;
-            this.logger.info('[Telemetry] ✓ Configured aio-cli to opt out of telemetry');
+            this.logger.debug('[Telemetry] Configured aio-cli to opt out of telemetry');
             
         } catch {
             // Still mark as configured to avoid repeated attempts

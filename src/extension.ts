@@ -232,7 +232,7 @@ export async function activate(context: vscode.ExtensionContext) {
             
             if (!isWelcomeVisible) {
                 vscode.commands.executeCommand('demoBuilder.showWelcome').then(
-                    () => logger.info('[Extension] Welcome screen shown successfully'),
+                    () => logger.debug('[Extension] Welcome screen shown successfully'),
                     (err) => {
                         logger.error('[Extension] Failed to show welcome screen:', err);
                         vscode.window.showErrorMessage(`Failed to show welcome screen: ${err?.message || err}`);

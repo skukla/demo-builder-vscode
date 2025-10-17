@@ -686,7 +686,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     public async execute(): Promise<void> {
         try {
-            this.logger.info('[Project Creation] Initializing wizard interface...');
+            this.debugLogger.debug('[Project Creation] Initializing wizard interface...');
             this.logger.debug(`[Project Creation] execute() called. Current panel: ${this.panel ? 'exists' : 'undefined'}, comm: ${this.communicationManager ? 'exists' : 'undefined'}`);
             
             // Create or reveal panel
@@ -750,7 +750,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     // Prerequisites handling methods
     private async handleCheckPrerequisites(componentSelection?: any): Promise<void> {
         try {
-            this.stepLogger.log('prerequisites', 'Starting prerequisites check', 'info');
+            this.debugLogger.debug('[Prerequisites] Starting prerequisites check');
 
             // Store the component selection for later use
             if (componentSelection) {
@@ -993,11 +993,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     nodeVersionStatus: prereq.id === 'node' ? nodeVersionStatus : perNodeVersionStatus
                 });
 
-                // Log the result
+                // Log the result (debug only - UI already shows this)
                 if (checkResult.installed) {
-                    this.stepLogger.log('prerequisites', `✓ ${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`, 'info');
+                    this.debugLogger.debug(`[Prerequisites] ✓ ${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`);
                 } else {
-                    this.stepLogger.log('prerequisites', `✗ ${prereq.name} is not installed`, 'warn');
+                    this.debugLogger.debug(`[Prerequisites] ✗ ${prereq.name} is not installed`);
                 }
 
                 // Compute dependency gating (disable install until deps are installed)
@@ -1078,7 +1078,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 }))
             });
             
-            this.stepLogger.log('prerequisites', `Prerequisites check complete. All required installed: ${allRequiredInstalled}`, 'info');
+            // Prerequisites check complete (UI already shows status)
+            this.debugLogger.debug(`[Prerequisites] Check complete. All required installed: ${allRequiredInstalled}`);
             
         } catch (error) {
             this.logger.error('Prerequisites check failed:', error as Error);

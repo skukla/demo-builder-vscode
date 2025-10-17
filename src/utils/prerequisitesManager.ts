@@ -199,7 +199,15 @@ export class PrerequisitesManager {
                 }
                 
                 // fnm is installed, find the highest Node version with aio-cli
-                const targetNodeVersion = await commandManager.findAdobeCLINodeVersion() || '20';
+                const targetNodeVersion = await commandManager.findAdobeCLINodeVersion();
+                
+                if (!targetNodeVersion) {
+                    // No Node version has aio-cli installed
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: Not found in any project-required Node versions`);
+                    status.installed = false;
+                    return status;
+                }
+                
                 this.logger.debug(`[Prereq Check] ${prereq.id}: Checking under fnm's Node v${targetNodeVersion} (perNodeVersion=true)`);
                 
                 try {

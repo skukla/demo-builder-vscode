@@ -277,7 +277,7 @@ export class WelcomeWebviewCommand extends BaseCommand {
 
         case 'create-new':
             // Close welcome panel first, then open wizard (makes it appear like tab replacement)
-            this.logger.info('[Project Creation] Starting wizard from welcome screen');
+            this.logger.debug('[Project Creation] Starting wizard from welcome screen');
             
             // Dispose welcome panel BEFORE opening wizard for seamless transition
             // Welcome will auto-reopen via extension.ts logic if wizard closes without completion

@@ -2,7 +2,7 @@
   "name": "adobe-demo-builder",
   "displayName": "Adobe Demo Builder",
   "description": "Create and manage Adobe Commerce demos with ease",
-  "version": "1.0.0-beta.43",
+  "version": "1.0.0-beta.44",
   "publisher": "adobe-demo-team",
   "author": "Steve Kukla",
   "engines": {
@@ -186,7 +186,6 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "semver": "^7.5.4",
-    "tree-sitter": "0.21.1",
     "uuid": "^13.0.0",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",

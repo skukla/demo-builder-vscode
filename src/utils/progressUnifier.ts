@@ -160,11 +160,16 @@ export class ProgressUnifier {
                     }
                 }
                 
-                this.logger.info(`[${step.name}] ${output.trim()}`);
+                // Only log to debug - UI already shows progress
+                this.logger.debug(`[${step.name}] ${output.trim()}`);
             });
             
             child.stderr.on('data', (data) => {
-                this.logger.warn(`[${step.name}] ${data.toString().trim()}`);
+                const output = data.toString().trim();
+                // Only log non-empty stderr to debug
+                if (output) {
+                    this.logger.debug(`[${step.name}] ${output}`);
+                }
             });
             
             child.on('close', (code) => {
@@ -225,13 +230,17 @@ export class ProgressUnifier {
             child.stdout.on('data', async (data) => {
                 const output = data.toString();
                 await checkMilestones(output);
-                this.logger.info(`[${step.name}] ${output.trim()}`);
+                // Only log to debug - UI already shows progress
+                this.logger.debug(`[${step.name}] ${output.trim()}`);
             });
             
             child.stderr.on('data', async (data) => {
-                const output = data.toString();
-                await checkMilestones(output);
-                this.logger.warn(`[${step.name}] ${output.trim()}`);
+                const output = data.toString().trim();
+                await checkMilestones(output.toString());
+                // Only log non-empty stderr to debug
+                if (output) {
+                    this.logger.debug(`[${step.name}] ${output}`);
+                }
             });
             
             child.on('close', (code) => {
