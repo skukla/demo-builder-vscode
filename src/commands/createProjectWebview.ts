@@ -1405,11 +1405,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 const missingNodeVersions: string[] = [];
                 
                 for (const nodeVer of nodeVersions) {
-                    try {
-                        await commandManager.execute(prereq.check.command, { useNodeVersion: nodeVer });
+                    const result = await commandManager.execute(prereq.check.command, { useNodeVersion: nodeVer });
+                    if (result.code === 0) {
                         // Already installed for this Node version
                         this.debugLogger.debug(`[Prerequisites] ${prereq.name} already installed for Node ${nodeVer}, skipping`);
-                    } catch {
+                    } else {
                         // Missing for this Node version
                         this.debugLogger.debug(`[Prerequisites] ${prereq.name} not found for Node ${nodeVer}, will install`);
                         missingNodeVersions.push(nodeVer);
