@@ -93,6 +93,9 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         const unsubscribeInstallComplete = vscode.onMessage('prerequisite-install-complete', (data) => {
             const { index, continueChecking } = data;
             
+            // CRITICAL: Always reset installing state
+            setInstallingIndex(null);
+            
             if (continueChecking) {
                 // Continue checking from the next prerequisite, not from the beginning
                 setTimeout(() => {
@@ -189,11 +192,11 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 
                 return newChecks;
             });
-
-            // If installation complete, clear installing index
-            if (status === 'success' && installingIndex === index) {
+            
+            // If installation failed or succeeded, clear installing index
+            // (success is also cleared here for immediate UI feedback before install-complete message)
+            if ((status === 'error' || status === 'success') && installingIndex === index) {
                 setInstallingIndex(null);
-                // The backend will automatically continue checking
             }
         });
 

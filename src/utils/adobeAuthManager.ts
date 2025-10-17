@@ -196,7 +196,6 @@ export class AdobeAuthManager {
                     }
 
                     // Log user-friendly message only if actually validating
-                    this.logger.info(`Verifying access to ${context.org}...`);
                     this.debugLogger.debug(`[Auth] Found organization context: ${context.org}, validating access...`);
 
                     // We have an org context, validate it's accessible
@@ -205,7 +204,6 @@ export class AdobeAuthManager {
 
                     // If validation failed, retry once (network might be slow)
                     if (!isValid) {
-                        this.logger.info('Retrying organization access validation...');
                         this.debugLogger.debug('[Auth] First validation failed, retrying once...');
                         isValid = await this.validateOrganizationAccess();
                         this.debugLogger.debug(`[Auth] Second validation result for ${context.org}: ${isValid}`);
@@ -220,7 +218,7 @@ export class AdobeAuthManager {
 
                     if (!isValid) {
                         // Failed twice - now we clear
-                        this.logger.info('Previous organization no longer accessible. Clearing selection...');
+                        this.logger.warn('Organization no longer accessible, clearing selection');
                         this.debugLogger.warn('[Auth] Organization context is invalid for current user - clearing');
 
                         await this.clearConsoleContext();
@@ -231,10 +229,7 @@ export class AdobeAuthManager {
                         // This helps distinguish "org lacks App Builder" from "no org selected yet"
                         this.orgClearedDueToValidation = true;
                         this.debugLogger.debug(`[Auth] Set orgClearedDueToValidation flag to true for ${context.org}`);
-
-                        this.logger.info('Organization cleared. You will need to select a new organization.');
                     } else {
-                        this.logger.info(`Successfully verified access to ${context.org}`);
                         this.debugLogger.debug('[Auth] Organization context is valid');
                     }
                 } else {
@@ -293,11 +288,11 @@ export class AdobeAuthManager {
                 // Auto-select single organization
                 // DON'T call aio console org select (it times out / requires browser)
                 // Just cache the org - Adobe CLI works fine without explicit select when authenticated
-                this.logger.info(`Auto-selecting organization: ${orgs[0].name}`);
+                this.debugLogger.debug(`[Auth] Auto-selecting single organization: ${orgs[0].name}`);
                 this.cachedOrganization = orgs[0];
                 return orgs[0];
             } else if (orgs.length > 1) {
-                this.logger.info(`Found ${orgs.length} organizations - manual selection required`);
+                this.debugLogger.debug('[Auth] Multiple organizations available, user must select');
             } else {
                 this.logger.warn('No organizations available for this user');
             }
@@ -381,7 +376,6 @@ export class AdobeAuthManager {
             
             const totalDuration = Date.now() - sdkStartTime;
             this.debugLogger.debug(`[Auth SDK] Initialized successfully in ${totalDuration}ms`);
-            this.logger.info('[Auth] Enabled high-performance mode for Adobe operations');
             
         } catch (error) {
             const totalDuration = Date.now() - sdkStartTime;
@@ -897,7 +891,7 @@ export class AdobeAuthManager {
             if (tokenCheck.token && tokenCheck.expiresIn === 0) {
                 this.logger.warn('[Auth] Detected corrupted token (expiry = 0), attempting automatic fix...');
                 
-                // Attempt 1: Standard logout
+                // Attempt automatic repair
                 this.debugLogger.debug('[Auth] Attempt 1: Running aio auth logout');
                 try {
                     await this.logout();
@@ -1007,20 +1001,7 @@ export class AdobeAuthManager {
                     // the entire access_token object atomically. If we hit this, it means Adobe CLI
                     // stored a token without an expiry field in the config, which indicates corruption.
                     this.debugLogger.debug('[Auth] CORRUPTION DETECTED - entering error path');
-                    this.logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    this.logger.error('[Auth] CRITICAL: Adobe CLI Token Corruption Detected');
-                    this.logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                    this.logger.error('[Auth] Login completed but token has no expiry (corrupted)');
-                    this.logger.error('[Auth] ');
-                    this.logger.error('[Auth] Automatic fix attempts that were tried:');
-                    this.logger.error('[Auth]   1. ✗ aio auth logout (before login)');
-                    this.logger.error('[Auth]   2. ✗ Manual config deletion (aio config delete)');
-                    this.logger.error('[Auth]   3. ✗ aio auth login -f (fresh browser auth)');
-                    this.logger.error('[Auth]   4. ✗ Token STILL corrupted after all attempts');
-                    this.logger.error('[Auth] ');
-                    this.logger.error('[Auth] This indicates a fundamental Adobe CLI installation issue.');
-                    this.logger.error('[Auth] Manual intervention required - see notification for instructions.');
-                    this.logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    this.logger.error('[Auth] Adobe CLI token corruption detected - manual fix required');
                     
                     // Throw specific error so UI can show proper message
                     throw new Error('ADOBE_CLI_TOKEN_CORRUPTION: Adobe CLI failed to store authentication token correctly even after automatic repair attempts. Your Adobe CLI installation may be corrupted. Please try running "aio auth logout && aio auth login" in your terminal, or reinstall Adobe CLI with: npm install -g @adobe/aio-cli');
@@ -1071,8 +1052,7 @@ export class AdobeAuthManager {
                     
                 } catch (orgError) {
                     this.debugLogger.error('[Auth] Failed to verify org access after login', orgError as Error);
-                    this.logger.error('[Auth] Login succeeded but could not access organizations. Please try again.');
-                    this.logger.error('[Auth] If this persists, try: aio auth logout && aio auth login');
+                    this.logger.warn('[Auth] Login succeeded but could not verify org access. Try: aio auth logout && aio auth login');
                     return false;
                 }
             } else {

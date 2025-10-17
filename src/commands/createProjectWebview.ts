@@ -830,18 +830,18 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     }
                     
                     const uniqueVersions = NodeVersionResolver.getUniqueVersions(nodeVersions);
-                    this.logger.info(`[Prerequisites] Node versions needed: ${uniqueVersions.join(', ')}`);
+                    this.debugLogger.debug(`[Prerequisites] Node versions needed: ${uniqueVersions.join(', ')}`);
                     
                     // Set allowed Node versions in command manager for Adobe CLI detection
                     // This ensures we only scan/use project-required versions
                     const commandManager = getExternalCommandManager();
                     commandManager.setAllowedNodeVersions(uniqueVersions);
                 } catch (error) {
-                    this.logger.warn('Failed to collect Node versions:', error as Error);
+                    this.debugLogger.debug('Failed to collect Node versions:', error);
                 }
             }
 
-            this.stepLogger.log('prerequisites', `Found ${prerequisites.length} prerequisites to check`, 'info');
+            this.debugLogger.debug(`[Prerequisites] Found ${prerequisites.length} prerequisites to check`);
 
             // Send prerequisites list to UI so it can display them
             await this.sendMessage('prerequisites-loaded', {
@@ -863,7 +863,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Check each prerequisite
             for (let i = 0; i < prerequisites.length; i++) {
                 const prereq = prerequisites[i];
-                this.stepLogger.log('prerequisites', `Checking ${prereq.name}...`, 'info');
+                this.debugLogger.debug(`[Prerequisites] Checking ${prereq.name}...`);
 
                 // Send status update
                 await this.sendMessage('prerequisite-status', {
@@ -884,14 +884,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     const isTimeout = errorMessage.toLowerCase().includes('timed out') || 
                                      errorMessage.toLowerCase().includes('timeout');
                     
-                    // Log to all appropriate channels
+                    // Log to debug channel
                     if (isTimeout) {
-                        this.logger.warn(`[Prerequisites] ${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
-                        this.stepLogger.log('prerequisites', `⏱️ ${prereq.name} check timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`, 'warn');
                         this.debugLogger.debug('[Prerequisites] Timeout details:', { prereq: prereq.id, timeout: TIMEOUTS.PREREQUISITE_CHECK, error: errorMessage });
                     } else {
-                        this.logger.error(`[Prerequisites] Failed to check ${prereq.name}:`, error as Error);
-                        this.stepLogger.log('prerequisites', `✗ ${prereq.name} check failed: ${errorMessage}`, 'error');
+                        this.logger.warn(`[Prerequisites] ${prereq.name} check failed`);
                         this.debugLogger.debug('[Prerequisites] Check failure details:', { prereq: prereq.id, error });
                     }
                     
@@ -1284,9 +1281,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             }
             
             const { prereq } = state;
-            // High-level log (user-facing Logs channel)
-            this.logger.info(`[Prerequisites] User initiated install for: ${prereq.name}`);
-            // Debug channel detail
+            // Log to debug channel
             this.debugLogger.debug('[Prerequisites] install-prerequisite payload', { id: prereqId, name: prereq.name, version });
             
             // Resolve install steps from config
@@ -1574,14 +1569,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     ? `${prereq.name} is installed${installResult.version ? ': ' + installResult.version : ''}`
                     : `${prereq.name} is not installed`);
 
-            // Summarize result in both channels
-            if (installResult.installed) {
-                this.logger.info(`[Prerequisites] ${prereq.name} installation succeeded`);
-                this.debugLogger.debug(`[Prerequisites] ${prereq.name} installation succeeded`, { nodeVersionStatus: finalNodeVersionStatus });
-            } else {
-                this.logger.warn(`[Prerequisites] ${prereq.name} installation did not complete`);
-                this.debugLogger.debug(`[Prerequisites] ${prereq.name} installation incomplete`, { nodeVersionStatus: finalNodeVersionStatus });
-            }
+            // Log result to debug channel
+            this.debugLogger.debug(`[Prerequisites] ${prereq.name} installation ${installResult.installed ? 'succeeded' : 'incomplete'}`, { nodeVersionStatus: finalNodeVersionStatus });
 
             await this.sendMessage('prerequisite-status', {
                 index: prereqId,
@@ -1612,8 +1601,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             await this.sendMessage('prerequisite-status', {
                 index: prereqId,
                 status: 'error',
-                message: error instanceof Error ? error.message : String(error)
+                message: error instanceof Error ? error.message : String(error),
+                canInstall: true  // Allow retry
             });
+            // CRITICAL: Always send install-complete to reset UI state
+            await this.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: false });
         }
     }
     
