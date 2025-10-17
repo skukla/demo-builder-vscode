@@ -1047,6 +1047,15 @@ export class AdobeAuthManager {
                         this.debugLogger.debug(`[Auth] Successfully verified access to ${orgs.length} organizations`);
                     }
                     
+                    // Test Developer permissions by trying to access App Builder functionality
+                    const hasDeveloperPermissions = await this.testDeveloperPermissions();
+                    if (!hasDeveloperPermissions) {
+                        this.logger.error('[Auth] User does not have Developer permissions for App Builder');
+                        this.logger.error('[Auth]   - You need Developer or System Admin role in your organization');
+                        this.logger.error('[Auth]   - Contact your administrator to request App Builder access');
+                        return false;
+                    }
+                    
                     this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
                     
                     // Clear auth cache to force fresh check next time
@@ -1150,6 +1159,46 @@ export class AdobeAuthManager {
         } catch (error) {
             this.debugLogger.debug('[Auth] Failed to resolve org numeric ID:', error);
             return false;
+        }
+    }
+
+    /**
+     * Test if user has Developer permissions by trying to access App Builder functionality
+     * This is more definitive than just checking if organizations are accessible
+     */
+    private async testDeveloperPermissions(): Promise<boolean> {
+        try {
+            this.debugLogger.debug('[Auth] Testing Developer permissions via App Builder access');
+            
+            // Try to list App Builder projects - this requires Developer permissions
+            const result = await this.commandManager.executeAdobeCLI(
+                'aio app list --json',
+                { encoding: 'utf8', timeout: 10000 }
+            );
+            
+            if (result.code === 0) {
+                this.debugLogger.debug('[Auth] Developer permissions confirmed - App Builder access successful');
+                return true;
+            } else {
+                // Check for specific permission-related error messages
+                const errorMsg = result.stderr.toLowerCase();
+                if (errorMsg.includes('permission') || 
+                    errorMsg.includes('unauthorized') || 
+                    errorMsg.includes('forbidden') ||
+                    errorMsg.includes('access denied') ||
+                    errorMsg.includes('insufficient privileges')) {
+                    this.debugLogger.debug('[Auth] Developer permissions denied - App Builder access failed with permission error');
+                    return false;
+                } else {
+                    // Other errors (network, etc.) - assume permissions are OK but service unavailable
+                    this.debugLogger.debug('[Auth] App Builder access failed with non-permission error, assuming permissions OK');
+                    return true;
+                }
+            }
+        } catch (error) {
+            this.debugLogger.debug('[Auth] Developer permissions test failed:', error);
+            // If we can't test, assume permissions are OK to avoid false negatives
+            return true;
         }
     }
 

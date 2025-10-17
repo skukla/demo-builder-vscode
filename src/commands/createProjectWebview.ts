@@ -2287,8 +2287,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     });
                 }
             } else {
-                // Login returned false - this means no organizations accessible
-                this.logger.warn(`[Auth] Authentication completed but no organizations accessible after ${loginDuration}ms`);
+                // Login returned false - this means no organizations accessible or no Developer permissions
+                this.logger.warn(`[Auth] Authentication completed but access denied after ${loginDuration}ms`);
                 
                 await this.sendMessage('auth-status', {
                     authenticated: false,
@@ -2296,7 +2296,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     isChecking: false,
                     error: 'no_app_builder_access',
                     message: 'No App Builder Access',
-                    subMessage: 'Your Adobe account does not have access to any organizations with App Builder permissions. Please contact your administrator or try a different account.'
+                    subMessage: 'You need Developer or System Admin role in an Adobe organization with App Builder access. Please contact your administrator to request the appropriate permissions.'
                 });
             }
             
