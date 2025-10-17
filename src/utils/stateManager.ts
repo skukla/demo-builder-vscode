@@ -129,7 +129,7 @@ export class StateManager {
             const manifest = {
                 name: project.name,
                 version: '1.0.0',
-                created: project.created.toISOString(),
+                created: (project.created instanceof Date ? project.created : new Date(project.created)).toISOString(),
                 lastModified: new Date().toISOString(),
                 adobe: project.adobe,
                 commerce: project.commerce,

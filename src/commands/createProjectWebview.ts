@@ -1582,7 +1582,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     } else {
                     finalPerNodeVersionStatus = [];
                     for (const major of requiredMajors) {
-                        const result = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
+                        // Use executeAdobeCLI for Adobe CLI commands to ensure proper Node version handling
+                        const result = prereq.id === 'aio-cli' 
+                            ? await commandManager.executeAdobeCLI(prereq.check.command, { useNodeVersion: major })
+                            : await commandManager.execute(prereq.check.command, { useNodeVersion: major });
                         let cliVersion = '';
                         const isInstalled = result.code === 0;
                         
