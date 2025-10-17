@@ -2287,15 +2287,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     });
                 }
             } else {
-                this.logger.warn(`[Auth] Authentication timed out after ${loginDuration}ms`);
+                // Login returned false - this means no organizations accessible
+                this.logger.warn(`[Auth] Authentication completed but no organizations accessible after ${loginDuration}ms`);
                 
                 await this.sendMessage('auth-status', {
                     authenticated: false,
                     isAuthenticated: false,
                     isChecking: false,
-                    error: 'timeout',
-                    message: 'Authentication timed out',
-                    subMessage: 'The browser window may have been closed or the session expired'
+                    error: 'no_app_builder_access',
+                    message: 'No App Builder Access',
+                    subMessage: 'Your Adobe account does not have access to any organizations with App Builder permissions. Please contact your administrator or try a different account.'
                 });
             }
             
