@@ -64,6 +64,25 @@ export abstract class BaseCommand {
     }
 
     /**
+     * Show an auto-dismissing progress notification
+     * Use for informational messages that should disappear automatically
+     * @param message Message to display
+     * @param duration Duration in milliseconds (default 2000)
+     */
+    protected async showProgressNotification(message: string, duration: number = 2000): Promise<void> {
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: message,
+                cancellable: false
+            },
+            async () => {
+                await new Promise(resolve => setTimeout(resolve, duration));
+            }
+        );
+    }
+
+    /**
      * Show a temporary info message in status bar (auto-dismissing)
      * Use for non-critical informational messages
      * @param message Info message to display  

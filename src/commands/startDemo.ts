@@ -97,7 +97,7 @@ export class StartDemoCommand extends BaseCommand {
                 }
             }
 
-            await this.withProgress('Starting demo', async (progress) => {
+            await this.withProgress('', async (progress) => {
                 progress.report({ message: 'Starting frontend application' });
                 
                 // Validate frontend component
@@ -182,11 +182,10 @@ export class StartDemoCommand extends BaseCommand {
                 this.statusBar.updateProject(project);
                 
                 this.logger.info(`Demo started at http://localhost:${port}`);
-                progress.report({ message: 'Demo started successfully!' });
             });
             
-            // Show auto-dismissing success notification
-            this.showSuccessMessage(`Demo started at http://localhost:${port}`);
+            // Show auto-dismissing progress notification
+            await this.showProgressNotification(`Demo started at http://localhost:${port}`);
             
             // Reset restart notification flag (user has restarted)
             await vscode.commands.executeCommand('demoBuilder._internal.restartActionTaken');

@@ -144,7 +144,7 @@
           {
             "name": "Install Adobe I/O CLI",
             "message": "Installing Adobe I/O CLI globally",
-            "commands": ["npm install -g @adobe/aio-cli --verbose"],
+            "commands": ["npm install -g @adobe/aio-cli"],
             "estimatedDuration": 60000,
             "progressStrategy": "milestones",
             "milestones": [

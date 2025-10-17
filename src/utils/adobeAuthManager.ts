@@ -555,49 +555,40 @@ export class AdobeAuthManager {
             return;
         }
         
-        // Sync org - fetch full details including numeric ID
-        if (!this.cachedOrganization || this.cachedOrganization.name !== context.org) {
-            try {
-                // SAFE: getOrganizations() uses withAuthCheck({ needsOrg: false })
-                // so it won't recursively call getCurrentOrganization()
-                const orgs = await this.getOrganizations();
-                this.cachedOrganization = orgs.find(o => o.name === context.org);
-                if (this.cachedOrganization) {
-                    this.debugLogger.debug(`[Auth] Synced org from CLI: ${this.cachedOrganization.name} (ID: ${this.cachedOrganization.id})`);
+                // Sync org - fetch full details including numeric ID
+                if (!this.cachedOrganization || this.cachedOrganization.name !== context.org) {
+                    try {
+                        // SAFE: getOrganizations() uses withAuthCheck({ needsOrg: false })
+                        // so it won't recursively call getCurrentOrganization()
+                        const orgs = await this.getOrganizations();
+                        this.cachedOrganization = orgs.find(o => o.name === context.org);
+                    } catch (error) {
+                        this.debugLogger.debug('[Auth] Failed to sync org:', error);
+                    }
                 }
-            } catch (error) {
-                this.debugLogger.debug('[Auth] Failed to sync org:', error);
-            }
-        }
         
-        // Sync project - only if org is available
-        if (this.cachedOrganization && context.project && (!this.cachedProject || this.cachedProject.name !== context.project)) {
-            try {
-                // SAFE: getProjects() needs org but we just set it above
-                const projects = await this.getProjects();
-                this.cachedProject = projects.find(p => p.name === context.project);
-                if (this.cachedProject) {
-                    this.debugLogger.debug(`[Auth] Synced project from CLI: ${this.cachedProject.name}`);
+                // Sync project - only if org is available
+                if (this.cachedOrganization && context.project && (!this.cachedProject || this.cachedProject.name !== context.project)) {
+                    try {
+                        // SAFE: getProjects() needs org but we just set it above
+                        const projects = await this.getProjects();
+                        this.cachedProject = projects.find(p => p.name === context.project);
+                    } catch (error) {
+                        this.debugLogger.debug('[Auth] Failed to sync project:', error);
+                    }
                 }
-            } catch (error) {
-                this.debugLogger.debug('[Auth] Failed to sync project:', error);
-            }
-        }
         
-        // Sync workspace - only if org and project are available
-        if (this.cachedOrganization && this.cachedProject && context.workspace && 
-            (!this.cachedWorkspace || this.cachedWorkspace.name !== context.workspace)) {
-            try {
-                // SAFE: getWorkspaces() needs org+project but we have both above
-                const workspaces = await this.getWorkspaces();
-                this.cachedWorkspace = workspaces.find(w => w.name === context.workspace);
-                if (this.cachedWorkspace) {
-                    this.debugLogger.debug(`[Auth] Synced workspace from CLI: ${this.cachedWorkspace.name}`);
+                // Sync workspace - only if org and project are available
+                if (this.cachedOrganization && this.cachedProject && context.workspace && 
+                    (!this.cachedWorkspace || this.cachedWorkspace.name !== context.workspace)) {
+                    try {
+                        // SAFE: getWorkspaces() needs org+project but we have both above
+                        const workspaces = await this.getWorkspaces();
+                        this.cachedWorkspace = workspaces.find(w => w.name === context.workspace);
+                    } catch (error) {
+                        this.debugLogger.debug('[Auth] Failed to sync workspace:', error);
+                    }
                 }
-            } catch (error) {
-                this.debugLogger.debug('[Auth] Failed to sync workspace:', error);
-            }
-        }
     }
 
     /**
@@ -723,8 +714,6 @@ export class AdobeAuthManager {
                 // SDK failure is not critical - will use CLI fallback
                 this.debugLogger.debug('[Auth] SDK initialization promise rejected:', error);
             });
-        } else {
-            this.debugLogger.debug('[Auth] SDK already initialized');
         }
         
         // Sync from CLI if cache is empty (e.g., after browser login)
@@ -1000,19 +989,14 @@ export class AdobeAuthManager {
                 this.debugLogger.debug('[Auth] Checking if token has valid expiry...');
                 const postLoginToken = await this.inspectToken();
                 
-                // DEBUG: Log what we got back from inspectToken
-                this.debugLogger.debug(`[Auth] Post-login token inspection result:`);
-                this.debugLogger.debug(`[Auth]   - valid: ${postLoginToken.valid}`);
-                this.debugLogger.debug(`[Auth]   - expiresIn: ${postLoginToken.expiresIn}`);
-                this.debugLogger.debug(`[Auth]   - token exists: ${!!postLoginToken.token}`);
-                this.debugLogger.debug(`[Auth]   - token length: ${postLoginToken.token?.length || 0}`);
-                this.debugLogger.debug(`[Auth] Checking corruption condition: token=${!!postLoginToken.token}, expiresIn=${postLoginToken.expiresIn}, condition=${postLoginToken.token && postLoginToken.expiresIn === 0}`);
+                // Verify token status (consolidated logging)
+                this.debugLogger.debug(`[Auth] Post-login token: valid=${postLoginToken.valid}, expiresIn=${postLoginToken.expiresIn}min, length=${postLoginToken.token?.length || 0}`);
                 
                 if (postLoginToken.token && postLoginToken.expiresIn === 0) {
                     // Token exists but has no expiry - this should be EXTREMELY rare now that we fetch
                     // the entire access_token object atomically. If we hit this, it means Adobe CLI
                     // stored a token without an expiry field in the config, which indicates corruption.
-                    this.debugLogger.debug('[Auth] CORRUPTION DETECTED - entering error path');
+                    this.debugLogger.debug('[Auth] ⚠ Token corruption detected: has token but expiry=0');
                     this.logger.error('[Auth] Adobe CLI token corruption detected - manual fix required');
                     
                     // Throw specific error so UI can show proper message
@@ -1025,6 +1009,17 @@ export class AdobeAuthManager {
                 this.cachedAuthStatus = true;
                 this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
                 this.debugLogger.debug('[Auth] Updated auth cache after successful login');
+                
+                // CRITICAL: Re-initialize SDK with new token after org switch
+                // After logout, sdkClient is undefined. We need to re-initialize with the fresh token.
+                // This ensures SDK is available for fast operations (30x speedup)
+                this.debugLogger.debug('[Auth] Re-initializing SDK with fresh token...');
+                await this.initializeSDK();
+                if (this.sdkClient) {
+                    this.debugLogger.debug('[Auth] SDK re-initialized successfully after login');
+                } else {
+                    this.debugLogger.warn('[Auth] SDK re-initialization failed, will use CLI fallback');
+                }
                 
                 // Verify that we can actually fetch organizations before declaring success
                 this.debugLogger.debug('[Auth] Verifying org access after login...');
@@ -1106,6 +1101,10 @@ export class AdobeAuthManager {
                 { encoding: 'utf8' }
             );
             
+            // Clear SDK client since token is now invalid
+            this.sdkClient = undefined;
+            this.debugLogger.debug('[Auth] Cleared SDK client after logout');
+            
             this.stepLogger.logTemplate('adobe-setup', 'success', { item: 'Logout' });
         } catch (error) {
             this.debugLogger.error('[Auth] Logout failed', error as Error);
@@ -1166,7 +1165,6 @@ export class AdobeAuthManager {
                 // Check cache first
                 const now = Date.now();
                 if (this.orgListCache && now < this.orgListCache.expiry) {
-                    this.debugLogger.debug('[Auth] Using cached organization list');
                     return this.orgListCache.data;
                 }
 
@@ -1277,8 +1275,6 @@ export class AdobeAuthManager {
                     timeout: TIMEOUTS.CONFIG_WRITE // Use shorter timeout for config operations
                 }
             );
-
-            this.debugLogger.debug(`[Auth] Organization select command completed with code: ${result.code}`);
 
             if (result.code === 0) {
                 this.stepLogger.logTemplate('adobe-setup', 'statuses.organization-selected', { name: selectedOrg.name });
@@ -1445,8 +1441,6 @@ export class AdobeAuthManager {
                     timeout: TIMEOUTS.CONFIG_WRITE // Use shorter timeout for config operations
                 }
             );
-
-            this.debugLogger.debug(`[Auth] Project select command completed with code: ${result.code}`);
 
             if (result.code === 0) {
                 this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectId });
@@ -1634,8 +1628,6 @@ export class AdobeAuthManager {
                     timeout: TIMEOUTS.CONFIG_WRITE // Use shorter timeout for config operations
                 }
             );
-
-            this.debugLogger.debug(`[Auth] Workspace select command completed with code: ${result.code}`);
 
             if (result.code === 0) {
                 this.stepLogger.logTemplate('adobe-setup', 'statuses.workspace-selected', { name: workspaceId });

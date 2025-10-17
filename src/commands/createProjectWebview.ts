@@ -928,7 +928,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     if (!fnmInstalled) {
                         this.debugLogger.debug(`[Prerequisites] Skipping per-node-version checks for ${prereq.id} - fnm not installed`);
                         // Mark all required versions as NOT installed (so UI shows red X)
+                        perNodeVariantMissing = true;
                         for (const major of requiredMajors) {
+                            missingVariantMajors.push(major);
                             perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
                         }
                     } else {
@@ -955,7 +957,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                                     }
                                 );
                                 stdout = result.stdout;
-                                isInstalled = true;
+                                isInstalled = result.code === 0;
                             } else {
                                 // Other prerequisites use standard Node version switching
                                 const result = await commandManager.execute(prereq.check.command, { 
@@ -963,7 +965,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                                     timeout: TIMEOUTS.PREREQUISITE_CHECK
                                 });
                                 stdout = result.stdout;
-                                isInstalled = true;
+                                isInstalled = result.code === 0;
                             }
                             
                             // Parse CLI version if regex provided
@@ -1027,8 +1029,18 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         overallStatus = 'error';
                     }
                 }
-                if (prereq.perNodeVersion && perNodeVariantMissing) {
-                    overallStatus = 'error';
+                // For per-node-version prerequisites (like aio-cli), determine overall status based on per-node results
+                if (prereq.perNodeVersion && perNodeVersionStatus.length > 0) {
+                    const allInstalled = perNodeVersionStatus.every(v => v.installed);
+                    const anyInstalled = perNodeVersionStatus.some(v => v.installed);
+                    
+                    if (allInstalled) {
+                        overallStatus = 'success';
+                    } else if (anyInstalled) {
+                        overallStatus = 'warning'; // Partial install
+                    } else {
+                        overallStatus = 'error'; // Nothing installed
+                    }
                 }
 
                 // Send result with proper status values
@@ -1040,7 +1052,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     required: !prereq.optional,
                     installed: checkResult.installed,
                     version: checkResult.version,
-                    message: (prereq.perNodeVersion && perNodeVersionStatus && perNodeVersionStatus.length > 0)
+                    message: (prereq.perNodeVersion && perNodeVersionStatus && perNodeVersionStatus.some(v => v.installed))
                         ? 'Installed for versions:'
                         : (prereq.perNodeVersion && perNodeVariantMissing)
                             ? `${prereq.name} is missing in Node ${missingVariantMajors.join(', ')}. Plugin status will be checked after CLI is installed.`
@@ -1183,7 +1195,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     if (!fnmInstalled) {
                         this.debugLogger.debug(`[Prerequisites] Skipping per-node-version checks for ${prereq.id} - fnm not installed`);
                         // Mark all required versions as NOT installed (so UI shows red X)
+                        perNodeVariantMissing = true;
                         for (const major of requiredMajors) {
+                            missingVariantMajors.push(major);
                             perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
                         }
                     } else {
@@ -1307,7 +1321,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
             const installPlan = this.prereqManager.getInstallSteps(prereq, {
                 nodeVersions: prereq.perNodeVersion
-                    ? (nodeVersions.length ? nodeVersions : [version || '20'])
+                    ? nodeVersions
                     : (prereq.id === 'node' ? (version ? [version] : undefined) : undefined)
             });
 
@@ -2093,6 +2107,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         try {
             this.isAuthenticating = true;
             
+            // IMMEDIATELY clear any error/timeout state and show authenticating message
+            // This prevents UI from showing stale "Signed In..." or "Authorization Timed Out" messages
+            await this.sendMessage('auth-status', {
+                isChecking: true,
+                message: 'Authenticating...',
+                subMessage: 'Checking your Adobe credentials',
+                isAuthenticated: false
+            });
+            
             // Check if already authenticated with valid token (skip if force)
             if (!force) {
                 const context = await this.authManager.getAuthContext();
@@ -2119,7 +2142,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 await this.authManager.logout();
             }
             
-            // Show "opening browser" message
+            // Update to "opening browser" message
             await this.sendMessage('auth-status', {
                 isChecking: true,
                 message: 'Opening browser for authentication...',

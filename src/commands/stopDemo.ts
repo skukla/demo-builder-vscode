@@ -62,7 +62,7 @@ export class StopDemoCommand extends BaseCommand {
                 return;
             }
 
-            await this.withProgress('Stopping demo', async (progress) => {
+            await this.withProgress('', async (progress) => {
                 progress.report({ message: 'Stopping frontend application...' });
                 
                 // Set status to 'stopping' immediately
@@ -107,12 +107,11 @@ export class StopDemoCommand extends BaseCommand {
                 // Update status bar
                 this.statusBar.updateProject(project);
                 
-                progress.report({ message: 'Demo stopped successfully!' });
-                this.logger.info('Demo stopped');
+                this.logger.info('Demo stopped successfully');
             });
             
-            // Show auto-dismissing success notification
-            this.showSuccessMessage('Demo stopped successfully');
+            // Show auto-dismissing progress notification
+            await this.showProgressNotification('Demo stopped successfully');
             
         } catch (error) {
             await this.showError('Failed to stop demo', error as Error);

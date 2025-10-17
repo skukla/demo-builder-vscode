@@ -155,21 +155,6 @@ export async function activate(context: vscode.ExtensionContext) {
             })
         );
 
-        // Initialize auto-updater if enabled
-        const autoUpdateEnabled = vscode.workspace
-            .getConfiguration('demoBuilder')
-            .get<boolean>('autoUpdate', true);
-        
-        if (autoUpdateEnabled) {
-            autoUpdater = new AutoUpdater(context, logger);
-            autoUpdater.checkForUpdates().catch(err => {
-                // Only log non-404 errors
-                if (!err.response || err.response.status !== 404) {
-                    logger.debug(`Update check failed: ${err.message}`);
-                }
-            });
-        }
-
         // Check for dashboard reopen flag (after workspace folder addition restart)
         let openingDashboardAfterRestart = false;
         try {
@@ -213,6 +198,23 @@ export async function activate(context: vscode.ExtensionContext) {
         } catch (error) {
             // Silently ignore errors
             logger.debug('[Extension] No dashboard reopen flag found or error reading it');
+        }
+
+        // Initialize auto-updater if enabled (only on fresh VS Code start, not on Extension Host restart)
+        if (!openingDashboardAfterRestart) {
+            const autoUpdateEnabled = vscode.workspace
+                .getConfiguration('demoBuilder')
+                .get<boolean>('autoUpdate', true);
+            
+            if (autoUpdateEnabled) {
+                autoUpdater = new AutoUpdater(context, logger);
+                autoUpdater.checkForUpdates().catch(err => {
+                    // Only log non-404 errors
+                    if (!err.response || err.response.status !== 404) {
+                        logger.debug(`Update check failed: ${err.message}`);
+                    }
+                });
+            }
         }
 
         // Normal startup - show Welcome screen if not opening dashboard
