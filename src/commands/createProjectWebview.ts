@@ -831,11 +831,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     
                     const uniqueVersions = NodeVersionResolver.getUniqueVersions(nodeVersions);
                     this.debugLogger.debug(`[Prerequisites] Node versions needed: ${uniqueVersions.join(', ')}`);
-                    
-                    // Set allowed Node versions in command manager for Adobe CLI detection
-                    // This ensures we only scan/use project-required versions
-                    const commandManager = getExternalCommandManager();
-                    commandManager.setAllowedNodeVersions(uniqueVersions);
                 } catch (error) {
                     this.debugLogger.debug('Failed to collect Node versions:', error);
                 }

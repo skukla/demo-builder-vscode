@@ -97,9 +97,6 @@ export class ExternalCommandManager {
     private cachedNodeBinaryPath?: string;
     private cachedAioBinaryPath?: string;
     
-    // Allowed Node versions for project (used during prerequisite checks before project is created)
-    private allowedNodeVersions?: number[];
-
     constructor() {
         // Set up default retry strategies
         this.setupDefaultStrategies();
@@ -113,22 +110,30 @@ export class ExternalCommandManager {
     }
     
     /**
-     * Set allowed Node versions for prerequisite checks (before project exists)
-     * This ensures we only scan/use Node versions required by the selected components
+     * Get the Node version defined for Adobe CLI infrastructure
+     * This reads from components.json infrastructure section
      */
-    setAllowedNodeVersions(versions: number[]): void {
-        this.allowedNodeVersions = versions;
-        this.logger.debug(`[Adobe CLI] Set allowed Node versions: ${versions.join(', ')}`);
-        // Clear cache so next findAdobeCLINodeVersion() uses new allowed versions
-        this.cachedAdobeCLINodeVersion = undefined;
-    }
-    
-    /**
-     * Clear allowed Node versions (typically after project is created)
-     */
-    clearAllowedNodeVersions(): void {
-        this.allowedNodeVersions = undefined;
-        this.logger.debug('[Adobe CLI] Cleared allowed Node versions');
+    private async getInfrastructureNodeVersion(): Promise<number> {
+        try {
+            const extension = vscode.extensions.getExtension('adobe-demo-team.adobe-demo-builder');
+            if (extension) {
+                const componentsPath = path.join(extension.extensionPath, 'templates', 'components.json');
+                const componentsData = JSON.parse(fsSync.readFileSync(componentsPath, 'utf8'));
+                const adobeCliVersion = componentsData?.infrastructure?.['adobe-cli']?.nodeVersion;
+                
+                if (adobeCliVersion) {
+                    const version = parseInt(adobeCliVersion, 10);
+                    this.logger.debug(`[Adobe CLI] Using infrastructure-defined Node v${version}`);
+                    return version;
+                }
+            }
+        } catch (error) {
+            this.logger.debug(`[Adobe CLI] Could not read infrastructure config: ${error}`);
+        }
+        
+        // Fallback to 18 (minimum supported version for modern Adobe CLI)
+        this.logger.debug('[Adobe CLI] Falling back to Node v18 (default)');
+        return 18;
     }
 
     /**
@@ -1002,10 +1007,10 @@ export class ExternalCommandManager {
         }
         
         // Determine which versions to scan
-        const SUPPORTED_NODE_VERSIONS = [18, 20, 22];
-        const effectiveAllowedVersions = allowedVersions || this.allowedNodeVersions;
-        const versionsToScan = effectiveAllowedVersions 
-            ? effectiveAllowedVersions.filter(v => SUPPORTED_NODE_VERSIONS.includes(v))
+        // Use provided allowedVersions (from project) or scan all supported versions
+        const SUPPORTED_NODE_VERSIONS = [18, 20, 22, 24];
+        const versionsToScan = allowedVersions && allowedVersions.length > 0
+            ? allowedVersions.filter(v => SUPPORTED_NODE_VERSIONS.includes(v))
             : SUPPORTED_NODE_VERSIONS;
         
         if (versionsToScan.length === 0) {
@@ -1201,12 +1206,22 @@ export class ExternalCommandManager {
         // Ensure we know which Node version has Adobe CLI installed (once per session)
         await this.ensureAdobeCLINodeVersion();
         
-        // Use the detected Node version (or 'auto' if not found, which will use fnm exec with detected version)
-        // This ensures all Adobe CLI commands use the same Node version consistently
+        // Determine which Node version to use
+        // Priority:
+        // 1. Detected version (aio-cli found in project's configured versions)
+        // 2. Infrastructure-defined version from components.json
+        // This ensures we NEVER fall back to fnm default which might be too old (e.g., Node 14)
+        let nodeVersionToUse = this.cachedAdobeCLINodeVersion;
+        if (!nodeVersionToUse) {
+            const infrastructureVersion = await this.getInfrastructureNodeVersion();
+            nodeVersionToUse = String(infrastructureVersion);
+            this.logger.debug(`[Adobe CLI] No aio-cli detected, using infrastructure-defined Node v${nodeVersionToUse}`);
+        }
+        
         const result = await this.execute(command, {
             ...options,
             configureTelemetry: false, // Explicitly false to prevent redundant check
-            useNodeVersion: this.cachedAdobeCLINodeVersion || 'auto', // Use detected version or auto-detect
+            useNodeVersion: nodeVersionToUse,
             enhancePath: true,
             retryStrategy: this.getStrategy('adobe-cli')
             // Let Adobe CLI work normally - browsers may open for auth but that's acceptable
