@@ -975,7 +975,18 @@ export class ExternalCommandManager {
             return this.cachedAdobeCLINodeVersion ?? null;
         }
         
-        // Check if we have a project with configured Node versions
+        // PRIORITY 1: Always try infrastructure-defined version first (even without project context)
+        try {
+            const infrastructureVersion = await this.getInfrastructureNodeVersion();
+            this.logger.debug(`[Adobe CLI] Using infrastructure-defined Node v${infrastructureVersion}`);
+            this.cachedAdobeCLINodeVersion = String(infrastructureVersion);
+            await this.cacheBinaryPaths(String(infrastructureVersion));
+            return String(infrastructureVersion);
+        } catch (error) {
+            this.logger.debug(`[Adobe CLI] Could not get infrastructure version: ${error}`);
+        }
+        
+        // PRIORITY 2: Check if we have a project with configured Node versions
         if (this.stateManager) {
             try {
                 const project = await this.stateManager.getCurrentProject();
@@ -1006,8 +1017,7 @@ export class ExternalCommandManager {
             }
         }
         
-        // Determine which versions to scan
-        // Use provided allowedVersions (from project) or scan all supported versions
+        // PRIORITY 3: Use provided allowedVersions (from project) or scan all supported versions
         const SUPPORTED_NODE_VERSIONS = [18, 20, 22, 24];
         const versionsToScan = allowedVersions && allowedVersions.length > 0
             ? allowedVersions.filter(v => SUPPORTED_NODE_VERSIONS.includes(v))
