@@ -1312,7 +1312,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                             this.currentComponentSelection.externalSystems,
                             this.currentComponentSelection.appBuilder
                         );
-                        return Array.from(mapping);
+                        // Sort versions in ascending order (18, 20, 22, 24, etc.)
+                        return Array.from(mapping).sort((a, b) => parseInt(a) - parseInt(b));
                     } catch {
                         return [] as string[];
                     }
