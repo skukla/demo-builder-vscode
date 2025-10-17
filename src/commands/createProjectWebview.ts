@@ -993,11 +993,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     nodeVersionStatus: prereq.id === 'node' ? nodeVersionStatus : perNodeVersionStatus
                 });
 
-                // Log the result (debug only - UI already shows this)
+                // Log the result (user-facing - shows progress)
                 if (checkResult.installed) {
-                    this.debugLogger.debug(`[Prerequisites] ✓ ${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`);
+                    this.logger.info(`[Prerequisites] ✓ ${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`);
                 } else {
-                    this.debugLogger.debug(`[Prerequisites] ✗ ${prereq.name} is not installed`);
+                    this.logger.warn(`[Prerequisites] ✗ ${prereq.name} is not installed`);
                 }
 
                 // Compute dependency gating (disable install until deps are installed)
