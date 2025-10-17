@@ -289,8 +289,8 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                         </Flex>
                         <Flex direction="row" gap="size-200" marginTop="size-300">
                             {state.adobeAuth.error === 'no_app_builder_access' ? (
-                                // For permission errors, only show "Sign In Again" to select different org
-                                <Button variant="accent" onPress={() => handleLogin(false)}>
+                                // For permission errors, force fresh login to select different org
+                                <Button variant="accent" onPress={() => handleLogin(true)}>
                                     <Login size="S" marginEnd="size-100" />
                                     Sign In Again
                                 </Button>
