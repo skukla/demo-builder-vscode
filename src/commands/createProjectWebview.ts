@@ -2205,10 +2205,43 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             const failDuration = Date.now() - authStartTime;
             this.isAuthenticating = false;
             
-            this.logger.error(`[Auth] Failed to start authentication after ${failDuration}ms:`, error as Error);
-            await this.sendMessage('authError', {
-                error: error instanceof Error ? error.message : String(error)
-            });
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            
+            // Check for specific Adobe CLI token corruption error
+            if (errorMsg.includes('ADOBE_CLI_TOKEN_CORRUPTION')) {
+                this.logger.error(`[Auth] Adobe CLI token corruption detected after ${failDuration}ms`);
+                
+                // Show helpful error message with manual fix instructions
+                await this.sendMessage('auth-status', {
+                    authenticated: false,
+                    isAuthenticated: false,
+                    isChecking: false,
+                    error: 'cli_corruption',
+                    message: 'Adobe CLI Token Error',
+                    subMessage: 'Please run this command in your terminal: aio auth logout && aio auth login'
+                });
+                
+                // Also show a VS Code notification with action button
+                const action = await vscode.window.showErrorMessage(
+                    'Adobe CLI failed to store authentication token. This is a known issue with some Adobe CLI installations.',
+                    'Open Terminal',
+                    'Dismiss'
+                );
+                
+                if (action === 'Open Terminal') {
+                    // Open integrated terminal and suggest command
+                    const terminal = vscode.window.createTerminal('Adobe CLI Fix');
+                    terminal.show();
+                    terminal.sendText('# Run this command to fix Adobe CLI authentication:');
+                    terminal.sendText('# aio auth logout && aio auth login');
+                }
+            } else {
+                // Generic error handling
+                this.logger.error(`[Auth] Failed to start authentication after ${failDuration}ms:`, error as Error);
+                await this.sendMessage('authError', {
+                    error: errorMsg
+                });
+            }
         }
     }
 

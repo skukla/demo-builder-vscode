@@ -962,7 +962,9 @@ export class AdobeAuthManager {
                     this.logger.error('[Auth] Login completed but token still has expiry = 0 (corrupted)');
                     this.logger.error('[Auth] This indicates Adobe CLI is not storing the token correctly');
                     this.logger.error('[Auth] Try running: aio auth logout && aio auth login in a terminal');
-                    return false;
+                    
+                    // Throw specific error so UI can show proper message
+                    throw new Error('ADOBE_CLI_TOKEN_CORRUPTION: Adobe CLI failed to store authentication token correctly. Please run "aio auth logout && aio auth login" in your terminal to fix this issue.');
                 }
                 this.debugLogger.debug(`[Auth] Token expiry verified: ${postLoginToken.expiresIn} minutes remaining`);
                 
