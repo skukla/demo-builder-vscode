@@ -98,7 +98,6 @@ export class StartDemoCommand extends BaseCommand {
             }
 
             await this.withProgress('', async (progress) => {
-                progress.report({ message: 'Starting frontend application' });
                 
                 // Validate frontend component
                 if (!frontendComponent || !frontendComponent.path) {
