@@ -63,8 +63,6 @@ export class StopDemoCommand extends BaseCommand {
             }
 
             await this.withProgress('', async (progress) => {
-                progress.report({ message: 'Stopping frontend application...' });
-                
                 // Set status to 'stopping' immediately
                 project.status = 'stopping';
                 frontendComponent.status = 'stopping';
