@@ -1,4 +1,6 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
+import { promises as fsPromises } from 'fs';
+import * as path from 'path';
 import { InstallStep } from './prerequisitesManager';
 import { Logger } from './logger';
 
@@ -339,7 +341,7 @@ export class ProgressUnifier {
     ): Promise<void> {
         // Special handling for internal commands
         if (command === 'configureFnmShell') {
-            // This would be handled by the main process
+            await this.configureFnmShell();
             await onProgress({
                 overall: {
                     percent: Math.round(((stepIndex + 1) / totalSteps) * 100),
@@ -435,6 +437,70 @@ export class ProgressUnifier {
         });
     }
     
+    /**
+     * Configure fnm in the user's shell profile
+     */
+    private async configureFnmShell(): Promise<void> {
+        try {
+            this.logger.info('[fnm] Configuring shell environment...');
+            
+            const homeDir = process.env.HOME || process.env.USERPROFILE;
+            if (!homeDir) {
+                this.logger.warn('[fnm] Cannot determine home directory for shell configuration');
+                return;
+            }
+            
+            // Determine shell profile file
+            const shell = process.env.SHELL || '/bin/zsh';
+            let profileFile = '';
+            
+            if (shell.includes('zsh')) {
+                profileFile = path.join(homeDir, '.zshrc');
+            } else if (shell.includes('bash')) {
+                profileFile = path.join(homeDir, '.bash_profile');
+            } else {
+                this.logger.warn(`[fnm] Unknown shell: ${shell}, defaulting to .zshrc`);
+                profileFile = path.join(homeDir, '.zshrc');
+            }
+            
+            this.logger.debug('[fnm] Detected shell profile', { shell, profileFile });
+            
+            // Check if fnm is already configured
+            let profileContent = '';
+            try {
+                profileContent = await fsPromises.readFile(profileFile, 'utf-8');
+            } catch (error) {
+                // File doesn't exist yet, will be created
+                this.logger.debug('[fnm] Profile file does not exist, will create');
+            }
+            
+            // Check if fnm configuration already exists
+            if (profileContent.includes('fnm env') || profileContent.includes('FNM_DIR')) {
+                this.logger.info('[fnm] Shell already configured for fnm');
+                return;
+            }
+            
+            // Add fnm configuration
+            const fnmConfig = [
+                '',
+                '# fnm',
+                'export PATH="/opt/homebrew/bin:$PATH"',
+                'eval "$(fnm env --use-on-cd)"'
+            ].join('\n');
+            
+            // Append fnm configuration to profile
+            const updatedContent = profileContent + fnmConfig;
+            
+            await fsPromises.writeFile(profileFile, updatedContent, 'utf-8');
+            this.logger.info(`[fnm] Shell configuration added to ${profileFile}`);
+            this.logger.info('[fnm] Please restart your terminal or run: source ~/.zshrc');
+            
+        } catch (error) {
+            this.logger.error('[fnm] Failed to configure shell:', error instanceof Error ? error : new Error(String(error)));
+            throw error;
+        }
+    }
+
     /**
      * Spawn a command with proper shell configuration
      */
