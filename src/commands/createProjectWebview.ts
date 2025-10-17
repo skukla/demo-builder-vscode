@@ -1419,7 +1419,17 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 targetVersions = missingNodeVersions.length > 0 ? missingNodeVersions : (version ? [version] : []);
             }
 
-            const total = steps.length * (targetVersions && targetVersions.length ? targetVersions.length : 1);
+            // Calculate total steps:
+            // - For multi-version installs: (install steps × versions) + default steps
+            // - For single/no version: all steps
+            let total: number;
+            if (targetVersions && targetVersions.length > 1) {
+                const installSteps = steps.filter(s => !s.name.toLowerCase().includes('default'));
+                const defaultSteps = steps.filter(s => s.name.toLowerCase().includes('default'));
+                total = (installSteps.length * targetVersions.length) + defaultSteps.length;
+            } else {
+                total = steps.length * (targetVersions && targetVersions.length ? targetVersions.length : 1);
+            }
             let counter = 0;
             const run = async (step: InstallStep, ver?: string) => {
                 // Debug before step
@@ -1446,9 +1456,23 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             };
 
             if (targetVersions && targetVersions.length) {
+                // For multi-version installs (like Node.js), run installation steps for all versions,
+                // but only run "set default" step for the last version
+                const installSteps = steps.filter(s => !s.name.toLowerCase().includes('default'));
+                const defaultSteps = steps.filter(s => s.name.toLowerCase().includes('default'));
+                
+                // Install all versions
                 for (const ver of targetVersions) {
-                    for (const step of steps) {
+                    for (const step of installSteps) {
                         await run(step, ver);
+                    }
+                }
+                
+                // Set only the last version as default
+                if (defaultSteps.length > 0) {
+                    const lastVersion = targetVersions[targetVersions.length - 1];
+                    for (const step of defaultSteps) {
+                        await run(step, lastVersion);
                     }
                 }
             } else {
