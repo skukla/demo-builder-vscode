@@ -82,7 +82,7 @@ export class StopDemoCommand extends BaseCommand {
                 // Wait for port to be freed (Node process shutdown takes time)
                 const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
                 const port = frontendComponent.port || defaultPort;
-                progress.report({ message: `Waiting for port ${port} to be released...` });
+                progress.report({ message: `Releasing port ${port}...` });
                 
                 const portFreed = await this.waitForPortToFree(port, 10000);
                 if (!portFreed) {
