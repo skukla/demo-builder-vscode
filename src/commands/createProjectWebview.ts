@@ -1429,6 +1429,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     counter,
                     total,
                     async (progress) => {
+                        this.debugLogger.debug(`[Progress] Step ${counter + 1}/${total}: ${step.name}${ver ? ` (Node ${ver})` : ''}`, {
+                            currentStep: progress.overall.currentStep,
+                            totalSteps: progress.overall.totalSteps,
+                            percent: progress.overall.percent
+                        });
                         await this.sendMessage('prerequisite-status', {
                             index: prereqId,
                             name: prereq.name,
