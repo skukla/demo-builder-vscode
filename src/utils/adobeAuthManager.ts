@@ -1020,6 +1020,12 @@ export class AdobeAuthManager {
                 }
                 this.debugLogger.debug(`[Auth] Token expiry verified: ${postLoginToken.expiresIn} minutes remaining`);
                 
+                // CRITICAL: Clear auth cache so getOrganizations() doesn't use stale "unauthenticated" status
+                // The cache may still have cachedAuthStatus=false from before login
+                this.cachedAuthStatus = true;
+                this.authCacheExpiry = Date.now() + CACHE_TTL.AUTH_STATUS;
+                this.debugLogger.debug('[Auth] Updated auth cache after successful login');
+                
                 // Verify that we can actually fetch organizations before declaring success
                 this.debugLogger.debug('[Auth] Verifying org access after login...');
                 try {
