@@ -1,187 +1,81 @@
 # Release Notes - v1.0.0-beta.42
 
-**Release Date:** October 16, 2025
+**Release Date:** October 17, 2025
 
-## 🔧 Enhanced Automatic Token Corruption Fixes
+## Critical Fix: Adobe CLI Token Inspection
 
-### What's New
+### Fixed Token Expiry Detection (CRITICAL)
 
-**Multi-Step Automatic Repair Before Manual Intervention**
+**Problem:** The extension was experiencing Adobe CLI token corruption issues where tokens would appear to have `expiry = 0`, leading to authentication failures even after successful browser login. This affected multiple users and prevented project creation.
 
-The extension now tries multiple automatic fixes BEFORE asking the user to manually run commands.
-
-**Previous Behavior (v1.0.0-beta.41):**
-- Detected corrupted token
-- Ran `aio auth logout` (but didn't verify it worked)
-- Ran `aio auth login`
-- If still corrupted, asked user to do it manually
-
-**New Behavior (v1.0.0-beta.42):**
-1. ✅ **Detect** corrupted token (expiry = 0)
-2. ✅ **Attempt 1:** Run `aio auth logout`
-3. ✅ **Verify:** Check if logout actually cleared the token
-4. ✅ **Attempt 2:** If logout failed, manually delete token from config: `aio config delete ims.contexts.cli.access_token`
-5. ✅ **Verify:** Check if manual deletion worked
-6. ✅ **Login:** Run `aio auth login` (fresh browser auth)
-7. ✅ **Final Check:** Verify token now has valid expiry
-8. ❌ **If STILL corrupted:** Show error explaining what we tried + manual fix options
-
----
-
-## Why This Matters
-
-**User Question:** _"Why aren't we handling the login and logout automatically? The extension installs Node and Adobe CLI, we can run aio commands!"_
-
-**Answer:** We ARE! But sometimes even our automatic fixes don't work because:
-- Adobe CLI installation is fundamentally corrupted
-- Token config files have wrong permissions
-- Adobe CLI version is incompatible
-- System-level configuration issues
-
-This update makes it crystal clear to users that we **DID** try automatic fixes, and manual intervention is only needed when those fail.
-
----
-
-## Error Message Improvements
-
-### Before (v1.0.0-beta.41):
-```
-"Adobe CLI Token Error"
-"Please run this command in your terminal: aio auth logout && aio auth login"
-```
-❌ **Problem:** User thinks we didn't try anything automatically
-
-### After (v1.0.0-beta.42):
-```
-"Adobe CLI Installation Issue"
-"Automatic fixes failed. Manual terminal intervention required."
-
-Terminal shows:
-# The extension already tried:
-#   1. aio auth logout
-#   2. Deleting cached tokens  
-#   3. aio auth login (fresh browser auth)
-# But token is still corrupted. Try these manual fixes:
-
-# Option 1: Force fresh login
-aio auth logout && aio auth login
-
-# Option 2: If that fails, reinstall Adobe CLI
-# npm install -g @adobe/aio-cli
-```
-✅ **Better:** User understands we tried automatic fixes first
-
----
-
-## Debug Logging
-
-Enhanced logs now show each automatic fix attempt:
-
-```
-[Auth] Detected corrupted token (expiry = 0), attempting automatic fix...
-[Auth] Attempt 1: Running aio auth logout
-[Auth] Logout successful - token cleared
-                    OR
-[Auth] Logout did not clear token, trying manual config deletion
-[Auth] Manual config deletion successful
-                    OR
-[Auth] Could not clear corrupted token even with manual deletion
+**Root Cause:** The extension was querying token and expiry separately:
+```typescript
+// OLD (Broken - could return stale/inconsistent data)
+aio config get ims.contexts.cli.access_token.token
+aio config get ims.contexts.cli.access_token.expiry  // Could return 0 or empty
 ```
 
----
+**Solution:** Now fetches the entire `access_token` object atomically:
+```typescript
+// NEW (Fixed - atomic read ensures consistency)
+aio config get ims.contexts.cli.access_token --json
+// Returns: {"token": "eyJ...", "expiry": 1760750786843}
+```
 
-## Files Changed
+This ensures:
+- Token and expiry are always read together (no race conditions)
+- Expiry timestamp is correctly retrieved from Adobe CLI's internal storage
+- Eliminates false positives for token corruption detection
 
-### Modified
-- `src/utils/adobeAuthManager.ts` 
-  - Added `aio auth logout` verification step
-  - Added manual `aio config delete` fallback
-  - Enhanced error messages to explain what was tried
-  
-- `src/commands/createProjectWebview.ts`
-  - Updated error notification to show "Adobe CLI Installation Issue"
-  - Terminal now explains automatic fix attempts before showing manual commands
-  - Added Adobe CLI reinstall option
+### Improved Error Handling & Debugging
 
----
+- **Enhanced corruption detection logging**: Clear visual indicators (━━━━━) and structured error messages when corruption is detected
+- **Better debug logging**: Added comprehensive logging throughout token inspection and authentication flow to track error paths
+- **Improved terminal guidance**: Updated manual fix instructions to use `aio logout -f && aio login -f` and added additional recovery steps
+- **Flow tracking**: Added debug logging to track when errors are thrown and how they propagate to the UI
 
-## When Manual Fixes Are Needed
+### Authentication Flow Improvements
 
-Manual intervention is only required when:
-1. **Automatic logout fails** (Adobe CLI can't clear its own token)
-2. **Manual config deletion fails** (File permissions or corruption)
-3. **Fresh login still creates corrupted token** (Adobe CLI installation broken)
-
-In these cases, the user needs to:
-- Option 1: Run `aio auth logout && aio auth login` in a regular terminal (different shell environment might work)
-- Option 2: Reinstall Adobe CLI: `npm install -g @adobe/aio-cli`
-- Option 3: Check Node version (must be 18, 20, or 22)
-- Option 4: Check Adobe CLI version (must be 11.x+)
-
----
+- **Try/catch for login()**: Wrapped `authManager.login()` in explicit try/catch to ensure errors (especially token corruption) are properly caught and handled
+- **Debug breadcrumbs**: Added "About to call authManager.login()", "login() returned", "login() threw an error" logs to track exact execution path
+- **Error propagation**: Ensured token corruption errors are properly re-thrown and caught by the outer error handler
 
 ## Technical Details
 
-### Verification Steps
+### Files Changed
+- `src/utils/adobeAuthManager.ts`:
+  - Modified `inspectToken()` to use single JSON query
+  - Enhanced corruption detection with visual separators and detailed logging
+  - Added parse error handling for malformed JSON responses
 
-**After logout:**
-```typescript
-const afterLogout = await this.inspectToken();
-if (!afterLogout.token) {
-    // Success - token cleared
-} else {
-    // Failed - try manual deletion
-}
-```
+- `src/commands/createProjectWebview.ts`:
+  - Added explicit try/catch around `authManager.login()` call
+  - Enhanced debug logging for authentication error flow
+  - Updated terminal instructions with better recovery commands
 
-**After manual config deletion:**
-```typescript
-await this.commandManager.executeAdobeCLI(
-    'aio config delete ims.contexts.cli.access_token',
-    { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_WRITE }
-);
+### Documentation References
+- Adobe CLI `aio login` documentation confirms it returns the access token
+- Adobe CLI stores tokens in config as JSON objects with both `token` and `expiry` fields
+- The `--json` flag ensures proper structured output parsing
 
-const afterDelete = await this.inspectToken();
-if (!afterDelete.token) {
-    // Success - token cleared
-} else {
-    // Failed - CLI installation corrupted
-}
-```
+## Testing Recommendations
 
----
+1. **Test fresh authentication**: Start with no cached tokens, go through browser login
+2. **Monitor debug logs**: Look for "Fetched token config (single JSON call)" message
+3. **Verify expiry**: Check that expiry timestamp is non-zero after login
+4. **Test corruption detection**: If corruption still occurs, verify error messages appear in both logs and UI notification
 
-## Testing
+## Migration Notes
 
-To test the automatic fixes:
-1. Create a project (triggers authentication)
-2. If you have a corrupted token, you'll see:
-   - Debug logs showing each automatic fix attempt
-   - Final error (if all automatic fixes fail)
-   - Terminal with explanation of what was tried
-
----
+- **No user action required**: This is a transparent fix to internal token reading logic
+- **Existing tokens**: Will work correctly with new atomic read approach
+- **Corrupted tokens**: If encountered, follow enhanced terminal instructions for manual fix
 
 ## Known Issues
 
-**Adobe CLI Token Corruption (upstream issue)**
-- Some Adobe CLI installations cannot store token expiry correctly
-- Root cause is in Adobe CLI itself, not this extension
-- Even fresh `aio auth login` creates tokens with `expiry = 0`
-- Only fix is manual terminal intervention or Adobe CLI reinstall
+- Adobe CLI version 10.3.3 has an update available (11.0.0) - consider updating if authentication issues persist
+- Token corruption at the Adobe CLI level (not extension-caused) will still require manual intervention
 
 ---
 
-## Next Steps
-
-If users continue to experience this even after manual fixes:
-- Report issue to Adobe CLI team
-- Consider alternative authentication approaches
-- Investigate if specific Node/OS versions are affected
-
----
-
-## Feedback
-
-Please report any issues through the Demo Builder repository or team channels.
-
+**Full Changelog:** https://github.com/your-org/demo-builder-vscode/compare/v1.0.0-beta.41...v1.0.0-beta.42

@@ -2135,8 +2135,17 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             });
             
             // Perform login
-            this.logger.debug('[Auth] Starting login process...');
-            const loginSuccess = await this.authManager.login(force);
+            this.debugLogger.debug('[Auth] About to call authManager.login()...');
+            let loginSuccess: boolean;
+            try {
+                loginSuccess = await this.authManager.login(force);
+                this.debugLogger.debug(`[Auth] login() returned: ${loginSuccess}`);
+            } catch (loginError) {
+                // login() throws errors for specific issues (e.g., token corruption)
+                this.debugLogger.debug('[Auth] login() threw an error:', loginError);
+                // Re-throw to be handled by outer catch block
+                throw loginError;
+            }
             
             const loginDuration = Date.now() - authStartTime;
             this.isAuthenticating = false;
@@ -2209,9 +2218,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             
             // Check for specific Adobe CLI token corruption error
             if (errorMsg.includes('ADOBE_CLI_TOKEN_CORRUPTION')) {
+                this.debugLogger.debug('[Auth] Detected ADOBE_CLI_TOKEN_CORRUPTION error, showing UI messages');
                 this.logger.error(`[Auth] Adobe CLI token corruption detected after ${failDuration}ms`);
                 
                 // Show helpful error message with manual fix instructions
+                this.debugLogger.debug('[Auth] Sending auth-status message to webview');
                 await this.sendMessage('auth-status', {
                     authenticated: false,
                     isAuthenticated: false,
@@ -2220,32 +2231,43 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     message: 'Adobe CLI Installation Issue',
                     subMessage: 'Automatic fixes failed. Manual terminal intervention required - see notification for details.'
                 });
+                this.debugLogger.debug('[Auth] auth-status message sent');
                 
                 // Also show a VS Code notification with action button
+                this.debugLogger.debug('[Auth] Showing VS Code error notification');
                 const action = await vscode.window.showErrorMessage(
                     'Adobe CLI failed to store authentication correctly even after automatic repair attempts. This suggests your Adobe CLI installation is corrupted.\n\n' +
                     'Try these fixes:\n' +
-                    '1. Run: aio auth logout && aio auth login\n' +
+                    '1. Run: aio logout -f && aio login -f\n' +
                     '2. If that fails, reinstall: npm install -g @adobe/aio-cli',
                     'Open Terminal',
                     'Dismiss'
                 );
+                this.debugLogger.debug(`[Auth] User clicked: ${action || 'Dismiss'}`);
                 
                 if (action === 'Open Terminal') {
                     // Open integrated terminal and suggest command
+                    this.debugLogger.debug('[Auth] Opening terminal for manual fix');
                     const terminal = vscode.window.createTerminal('Adobe CLI Fix');
                     terminal.show();
                     terminal.sendText('# The extension already tried:');
                     terminal.sendText('#   1. aio auth logout');
-                    terminal.sendText('#   2. Deleting cached tokens');
-                    terminal.sendText('#   3. aio auth login (fresh browser auth)');
+                    terminal.sendText('#   2. Deleting cached tokens (aio config delete)');
+                    terminal.sendText('#   3. aio auth login -f (fresh browser auth)');
                     terminal.sendText('# But token is still corrupted. Try these manual fixes:');
                     terminal.sendText('');
-                    terminal.sendText('# Option 1: Force fresh login');
-                    terminal.sendText('aio auth logout && aio auth login');
+                    terminal.sendText('# Option 1: Force fresh login (recommended)');
+                    terminal.sendText('aio logout -f && aio login -f');
                     terminal.sendText('');
-                    terminal.sendText('# Option 2: If that fails, reinstall Adobe CLI');
+                    terminal.sendText('# Option 2: If that fails, delete config and retry');
+                    terminal.sendText('# rm -rf ~/.config/@adobe/aio-cli');
+                    terminal.sendText('# aio login -f');
+                    terminal.sendText('');
+                    terminal.sendText('# Option 3: If still failing, reinstall Adobe CLI');
+                    terminal.sendText('# npm uninstall -g @adobe/aio-cli');
                     terminal.sendText('# npm install -g @adobe/aio-cli');
+                    terminal.sendText('# aio login -f');
+                    this.debugLogger.debug('[Auth] Terminal commands sent');
                 }
             } else {
                 // Generic error handling

@@ -444,29 +444,45 @@ export class AdobeAuthManager {
     /**
      * Inspect Adobe CLI token without making API calls
      * Returns token validity, expiration time, and optionally the token itself
+     * 
+     * CRITICAL: Fetches the ENTIRE access_token object with --json flag
+     * This ensures we get both token AND expiry in a single atomic operation
+     * Fixes issue where separate queries could return stale/inconsistent data
      */
     private async inspectToken(): Promise<{ valid: boolean; expiresIn: number; token?: string }> {
         try {
-            const [tokenResult, expiryResult] = await Promise.all([
-                this.commandManager.executeAdobeCLI(
-                    'aio config get ims.contexts.cli.access_token.token',
-                    { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ }
-                ),
-                this.commandManager.executeAdobeCLI(
-                    'aio config get ims.contexts.cli.access_token.expiry',
-                    { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ }
-                )
-            ]);
+            // Get the ENTIRE access_token object (includes both token and expiry)
+            // This is more reliable than two separate queries
+            const result = await this.commandManager.executeAdobeCLI(
+                'aio config get ims.contexts.cli.access_token --json',
+                { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ }
+            );
             
-            const token = tokenResult.stdout?.trim().split('\n')
-                .filter(line => !line.startsWith('Using Node') && !line.includes('fnm'))
-                .join('').trim();
-            const expiryStr = expiryResult.stdout?.trim() || '0';
-            const expiry = parseInt(expiryStr);
+            if (result.code !== 0 || !result.stdout) {
+                this.debugLogger.debug('[Auth Token] No access token found in CLI config');
+                return { valid: false, expiresIn: 0 };
+            }
+            
+            // Clean output (remove fnm/node version warnings)
+            const cleanOutput = result.stdout.trim().split('\n')
+                .filter(line => !line.startsWith('Using Node') && !line.includes('fnm') && !line.includes('Warning:'))
+                .join('\n').trim();
+            
+            // Parse the JSON object {token: "...", expiry: 123456789}
+            let tokenData;
+            try {
+                tokenData = JSON.parse(cleanOutput);
+            } catch (parseError) {
+                this.debugLogger.warn(`[Auth Token] Failed to parse token config as JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`);
+                return { valid: false, expiresIn: 0 };
+            }
+            
+            const token = tokenData.token;
+            const expiry = tokenData.expiry || 0;
             const now = Date.now();
             
             // Debug logging for token inspection
-            this.debugLogger.debug(`[Auth Token] Expiry string from CLI: ${expiryStr}`);
+            this.debugLogger.debug(`[Auth Token] Fetched token config (single JSON call)`);
             this.debugLogger.debug(`[Auth Token] Expiry timestamp: ${expiry}`);
             this.debugLogger.debug(`[Auth Token] Current timestamp: ${now}`);
             this.debugLogger.debug(`[Auth Token] Difference (ms): ${expiry - now}`);
@@ -488,6 +504,7 @@ export class AdobeAuthManager {
             this.debugLogger.debug(`[Auth Token] Token valid, expires in ${expiresIn} minutes`);
             return { valid: true, expiresIn, token };
         } catch (error) {
+            this.debugLogger.warn(`[Auth Token] Exception during token inspection: ${error instanceof Error ? error.message : String(error)}`);
             return { valid: false, expiresIn: 0 };
         }
     }
@@ -986,15 +1003,24 @@ export class AdobeAuthManager {
                 this.debugLogger.debug(`[Auth] Checking corruption condition: token=${!!postLoginToken.token}, expiresIn=${postLoginToken.expiresIn}, condition=${postLoginToken.token && postLoginToken.expiresIn === 0}`);
                 
                 if (postLoginToken.token && postLoginToken.expiresIn === 0) {
+                    // Token exists but has no expiry - this should be EXTREMELY rare now that we fetch
+                    // the entire access_token object atomically. If we hit this, it means Adobe CLI
+                    // stored a token without an expiry field in the config, which indicates corruption.
                     this.debugLogger.debug('[Auth] CORRUPTION DETECTED - entering error path');
-                    this.logger.error('[Auth] Login completed but token still has expiry = 0 (corrupted)');
-                    this.logger.error('[Auth] Automatic fix attempts failed:');
-                    this.logger.error('[Auth]   1. Ran aio auth logout (before login)');
-                    this.logger.error('[Auth]   2. Attempted manual config deletion');
-                    this.logger.error('[Auth]   3. Ran aio auth login (fresh browser auth)');
-                    this.logger.error('[Auth]   4. Token STILL has expiry = 0 after all attempts');
-                    this.logger.error('[Auth] This indicates a fundamental Adobe CLI installation issue');
-                    this.logger.error('[Auth] Manual intervention required - see error message for instructions');
+                    this.logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    this.logger.error('[Auth] CRITICAL: Adobe CLI Token Corruption Detected');
+                    this.logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    this.logger.error('[Auth] Login completed but token has no expiry (corrupted)');
+                    this.logger.error('[Auth] ');
+                    this.logger.error('[Auth] Automatic fix attempts that were tried:');
+                    this.logger.error('[Auth]   1. ✗ aio auth logout (before login)');
+                    this.logger.error('[Auth]   2. ✗ Manual config deletion (aio config delete)');
+                    this.logger.error('[Auth]   3. ✗ aio auth login -f (fresh browser auth)');
+                    this.logger.error('[Auth]   4. ✗ Token STILL corrupted after all attempts');
+                    this.logger.error('[Auth] ');
+                    this.logger.error('[Auth] This indicates a fundamental Adobe CLI installation issue.');
+                    this.logger.error('[Auth] Manual intervention required - see notification for instructions.');
+                    this.logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
                     
                     // Throw specific error so UI can show proper message
                     throw new Error('ADOBE_CLI_TOKEN_CORRUPTION: Adobe CLI failed to store authentication token correctly even after automatic repair attempts. Your Adobe CLI installation may be corrupted. Please try running "aio auth logout && aio auth login" in your terminal, or reinstall Adobe CLI with: npm install -g @adobe/aio-cli');
