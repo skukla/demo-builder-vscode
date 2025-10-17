@@ -613,30 +613,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 this.panel?.dispose();
                 this.logger.info('[Project Creation] Wizard closed');
                 
-                // Add workspace folder (triggers Extension Host restart)
-                this.logger.info('[Project Creation] Adding project to workspace...');
-                const workspaceFolder = {
-                    uri: vscode.Uri.file(project.path),
-                    name: project.name
-                };
-                
-                const added = vscode.workspace.updateWorkspaceFolders(
-                    0, // Insert at beginning
-                    0, // Don't delete any
-                    workspaceFolder
-                );
-                
-                if (added) {
-                    this.logger.info('[Project Creation] ✓ Workspace folder added (Extension Host will restart)');
-                    // Flag will auto-clear on Extension Host restart
-                } else {
-                    this.logger.warn('[Project Creation] Workspace folder may already exist, opening dashboard directly');
-                    // If folder already exists, open dashboard directly (no restart will occur)
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
-                    // Clear transition flag after dashboard opens
-                    setWebviewTransitioning(false);
-                }
+                // Open project dashboard directly (no workspace folder addition needed)
+                // The ComponentTreeProvider will show project files in the sidebar
+                this.logger.info('[Project Creation] Opening project dashboard...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+                // Clear transition flag after dashboard opens
+                setWebviewTransitioning(false);
                 
             } catch (error) {
                 // Clear transition flag on error
@@ -1707,15 +1690,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 ? 'Homebrew Installation' 
                 : `${prereq.name} Installation`;
             
-            // Use a safe directory for terminal - avoid project directories during prerequisites
-            // Check if workspace folder is a project directory and use home instead
-            let safeCwd = process.env.HOME || process.env.USERPROFILE || undefined;
-            
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            if (workspaceFolder && !workspaceFolder.includes('.demo-builder/projects')) {
-                // Only use workspace folder if it's not a project directory
-                safeCwd = workspaceFolder;
-            }
+            // Use a safe directory for terminal - workspace folder or home directory
+            // Since we don't add project directories to workspace, this is safe
+            const safeCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || 
+                           process.env.HOME || 
+                           process.env.USERPROFILE || 
+                           undefined;
             
             const terminal = vscode.window.createTerminal({
                 name: terminalName,
