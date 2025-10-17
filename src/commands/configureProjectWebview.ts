@@ -154,7 +154,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 
                 // Show success notification after returning (non-blocking)
                 setImmediate(async () => {
-                    this.showSuccessMessage('Configuration saved successfully');
+                    await this.showSuccessMessage('Configuration saved successfully');
                     
                     // Refresh Dashboard status (if open) to show amber indicators
                     await ProjectDashboardWebviewCommand.refreshStatus();

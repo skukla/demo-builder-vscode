@@ -55,10 +55,10 @@ export abstract class BaseCommand {
      * @param message Success message to display
      * @param timeout Milliseconds to show in status bar (default 5000)
      */
-    protected showSuccessMessage(message: string, timeout: number = 5000): void {
+    protected async showSuccessMessage(message: string, timeout: number = 5000): Promise<void> {
         this.logger.info(message);
-        // Show prominent notification popup (auto-dismisses)
-        vscode.window.showInformationMessage(message);
+        // Show auto-dismissing notification popup
+        await this.showProgressNotification(message, 2000);
         // Also show in status bar as secondary indicator
         vscode.window.setStatusBarMessage(message, timeout);
     }
