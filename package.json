@@ -8,9 +8,6 @@
   "engines": {
     "vscode": "^1.74.0"
   },
-  "overrides": {
-    "tree-sitter": "0.21.1"
-  },
   "categories": [
     "Other"
   ],
@@ -149,7 +146,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src/**/*.ts",
     "test": "node ./out/test/runTest.js",
-    "package": "npx --yes @vscode/vsce package --no-dependencies",
+    "package": "npm prune --omit=dev && npx --yes @vscode/vsce package && npm install",
     "publish": "vsce publish",
     "encrypt-keys": "node scripts/encrypt-keys.js",
     "manage-keys": "node scripts/manage-keys.js",
@@ -189,6 +186,7 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "semver": "^7.5.4",
+    "tree-sitter": "0.21.1",
     "uuid": "^13.0.0",
     "xterm": "^5.3.0",
     "xterm-addon-fit": "^0.8.0",
