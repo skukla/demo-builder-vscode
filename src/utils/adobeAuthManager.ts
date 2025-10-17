@@ -1180,7 +1180,10 @@ export class AdobeAuthManager {
                         const sdkResult = await this.sdkClient.getOrganizations();
                         const sdkDuration = Date.now() - startTime;
                         
+                        this.debugLogger.debug(`[Auth SDK] Raw SDK response: ${JSON.stringify(sdkResult)}`);
+                        
                         if (sdkResult.body && Array.isArray(sdkResult.body)) {
+                            this.debugLogger.debug(`[Auth SDK] SDK returned ${sdkResult.body.length} organizations`);
                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             mappedOrgs = sdkResult.body.map((org: any) => ({
                                 id: org.id,
@@ -1190,6 +1193,7 @@ export class AdobeAuthManager {
                             
                             this.debugLogger.debug(`[Auth SDK] Retrieved ${mappedOrgs.length} organizations via SDK in ${sdkDuration}ms`);
                         } else {
+                            this.debugLogger.debug(`[Auth SDK] Invalid SDK response format - body: ${typeof sdkResult.body}, isArray: ${Array.isArray(sdkResult.body)}`);
                             throw new Error('Invalid SDK response format');
                         }
                     } catch (sdkError) {
@@ -1214,12 +1218,17 @@ export class AdobeAuthManager {
                         throw new Error(`Failed to get organizations: ${result.stderr}`);
                     }
 
+                    this.debugLogger.debug(`[Auth CLI] Raw CLI response: ${result.stdout}`);
+                    
                     const orgs = JSON.parse(result.stdout);
 
                     if (!Array.isArray(orgs)) {
+                        this.debugLogger.debug(`[Auth CLI] Invalid response format - not an array: ${typeof orgs}`);
                         throw new Error('Invalid organizations response format');
                     }
 
+                    this.debugLogger.debug(`[Auth CLI] Parsed ${orgs.length} organizations from CLI response`);
+                    
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     mappedOrgs = orgs.map((org: any) => ({
                         id: org.id,
