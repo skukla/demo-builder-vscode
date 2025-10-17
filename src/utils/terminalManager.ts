@@ -16,10 +16,16 @@ export class TerminalManager {
             }
         }
 
-        // Create new terminal
+        // Create new terminal with safe working directory
+        // Use workspace folder if available, otherwise fall back to home directory
+        const safeCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || 
+                       process.env.HOME || 
+                       process.env.USERPROFILE || 
+                       undefined;
+        
         this.terminal = vscode.window.createTerminal({
             name: this.terminalName,
-            cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+            cwd: safeCwd
         });
 
         return this.terminal;

@@ -1707,9 +1707,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 ? 'Homebrew Installation' 
                 : `${prereq.name} Installation`;
             
+            // Use a safe directory for terminal - either workspace folder or home directory
+            // Don't use project directory as it may not exist yet during prerequisites
+            const safeCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || 
+                           process.env.HOME || 
+                           process.env.USERPROFILE || 
+                           undefined;
+            
             const terminal = vscode.window.createTerminal({
                 name: terminalName,
-                cwd: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath
+                cwd: safeCwd
             });
             
             terminal.show(true); // Show and focus terminal
