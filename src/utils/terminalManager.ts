@@ -17,11 +17,14 @@ export class TerminalManager {
         }
 
         // Create new terminal with safe working directory
-        // Use workspace folder if available, otherwise fall back to home directory
-        const safeCwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || 
-                       process.env.HOME || 
-                       process.env.USERPROFILE || 
-                       undefined;
+        // Avoid project directories and use home directory as fallback
+        let safeCwd = process.env.HOME || process.env.USERPROFILE || undefined;
+        
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (workspaceFolder && !workspaceFolder.includes('.demo-builder/projects')) {
+            // Only use workspace folder if it's not a project directory
+            safeCwd = workspaceFolder;
+        }
         
         this.terminal = vscode.window.createTerminal({
             name: this.terminalName,
