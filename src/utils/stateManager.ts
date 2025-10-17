@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import { Project, StateData, ProcessInfo } from '../types';
+import { Logger } from './logger';
 
 interface RecentProject {
     path: string;
@@ -19,9 +20,11 @@ export class StateManager {
     private recentProjects: RecentProject[] = [];
     private _onProjectChanged = new vscode.EventEmitter<Project | undefined>();
     readonly onProjectChanged = this._onProjectChanged.event;
+    private logger: Logger;
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
+        this.logger = new Logger('StateManager');
         this.stateFile = path.join(os.homedir(), '.demo-builder', 'state.json');
         this.recentProjectsFile = path.join(os.homedir(), '.demo-builder', 'recent-projects.json');
         this.state = {
@@ -114,8 +117,10 @@ export class StateManager {
         // Ensure directory exists
         try {
             await fs.mkdir(project.path, { recursive: true });
+            this.logger.info(`[Project Creation] Created project directory: ${project.path}`);
         } catch (error) {
-            console.error('Failed to create project directory:', error);
+            this.logger.error('Failed to create project directory:', error as Error);
+            throw error;
         }
 
         // Update .demo-builder.json manifest with latest state
@@ -137,7 +142,7 @@ export class StateManager {
             
             await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
         } catch (error) {
-            console.error('Failed to update project manifest:', error);
+            this.logger.error('Failed to update project manifest:', error as Error);
         }
 
         // Create .env file

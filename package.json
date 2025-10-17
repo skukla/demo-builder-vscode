@@ -104,6 +104,11 @@
           "default": true,
           "description": "Show Demo Builder status in the status bar"
         },
+        "demoBuilder.addProjectToWorkspace": {
+          "type": "boolean",
+          "default": false,
+          "description": "Add project directory to VS Code workspace after creation (may cause terminal issues during prerequisites)"
+        },
         "demoBuilder.logLevel": {
           "type": "string",
           "enum": [

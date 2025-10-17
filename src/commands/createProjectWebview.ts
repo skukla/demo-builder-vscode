@@ -616,6 +616,32 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 // Open project dashboard directly (no workspace folder addition needed)
                 // The ComponentTreeProvider will show project files in the sidebar
                 this.logger.info('[Project Creation] Opening project dashboard...');
+                
+                // Optionally add project to workspace if user wants it
+                // This can be controlled by a setting or user preference
+                const addToWorkspace = vscode.workspace.getConfiguration('demoBuilder').get('addProjectToWorkspace', false);
+                if (addToWorkspace) {
+                    this.logger.info('[Project Creation] Adding project to workspace (user preference enabled)');
+                    const workspaceFolder = {
+                        uri: vscode.Uri.file(project.path),
+                        name: project.name
+                    };
+                    
+                    const added = vscode.workspace.updateWorkspaceFolders(
+                        0, // Insert at beginning
+                        0, // Don't delete any
+                        workspaceFolder
+                    );
+                    
+                    if (added) {
+                        this.logger.info('[Project Creation] ✓ Project added to workspace');
+                    } else {
+                        this.logger.warn('[Project Creation] Project may already be in workspace');
+                    }
+                } else {
+                    this.logger.info('[Project Creation] Project not added to workspace (use ComponentTreeProvider for file access)');
+                }
+                
                 await new Promise(resolve => setTimeout(resolve, 500));
                 await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
                 // Clear transition flag after dashboard opens
