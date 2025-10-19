@@ -142,27 +142,16 @@ export async function handleOpenProject(context: HandlerContext): Promise<{ succ
         context.panel?.dispose();
         context.logger.info('[Project Creation] Wizard closed');
 
-        // Add workspace folder (triggers Extension Host restart)
-        context.logger.info('[Project Creation] Adding project to workspace...');
-        const workspaceFolder = {
-            uri: vscode.Uri.file(project.path),
-            name: project.name,
-        };
+        // REMOVED (Package 4 - beta.64): No longer add workspace folder
+        // Previously added workspace folder, which caused terminal directory issues.
+        // Now users access projects via Dashboard or status bar.
+        // context.logger.info('[Project Creation] Adding project to workspace...');
+        // const added = vscode.workspace.updateWorkspaceFolders(0, 0, workspaceFolder);
 
-        const added = vscode.workspace.updateWorkspaceFolders(
-            0, // Insert at beginning
-            0, // Don't delete any
-            workspaceFolder,
-        );
-
-        if (added) {
-            context.logger.info('[Project Creation] ✅ Workspace folder added (Extension Host will restart)');
-        } else {
-            context.logger.warn('[Project Creation] Workspace folder may already exist, opening dashboard directly');
-            // If folder already exists, open dashboard directly (no restart will occur)
-            await new Promise(resolve => setTimeout(resolve, 500));
-            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
-        }
+        // Open dashboard directly (no workspace manipulation)
+        context.logger.info('[Project Creation] Opening project dashboard...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
 
     } catch (error) {
         context.logger.error('[Project Creation] Error opening project', error as Error);

@@ -149,6 +149,68 @@ export class OrganizationValidator {
     }
 
     /**
+     * Test if the current user has Developer or System Admin permissions
+     * These permissions are required to create and manage App Builder projects
+     *
+     * @returns {Promise<{ hasPermissions: boolean; error?: string }>}
+     */
+    async testDeveloperPermissions(): Promise<{ hasPermissions: boolean; error?: string }> {
+        try {
+            this.debugLogger.debug('[Org Validator] Testing Developer permissions via App Builder access');
+
+            // Try to list App Builder projects - this requires Developer or System Admin role
+            const result = await this.commandManager.executeAdobeCLI(
+                'aio app list --json',
+                { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
+            );
+
+            if (result.code === 0) {
+                this.debugLogger.debug('[Org Validator] Developer permissions confirmed - App Builder access successful');
+                return { hasPermissions: true };
+            }
+
+            // Check for specific permission-related error messages
+            const errorMsg = result.stderr?.toLowerCase() || '';
+            if (
+                errorMsg.includes('permission') ||
+                errorMsg.includes('unauthorized') ||
+                errorMsg.includes('forbidden') ||
+                errorMsg.includes('access denied') ||
+                errorMsg.includes('insufficient privileges')
+            ) {
+                const userMessage =
+                    'Your account lacks Developer or System Admin role for this organization. ' +
+                    'Please select a different organization or contact your administrator to request App Builder access.';
+                this.debugLogger.debug('[Org Validator] Developer permissions denied - App Builder access failed with permission error');
+                return { hasPermissions: false, error: userMessage };
+            }
+
+            // Other errors (network, etc.) - assume permissions are OK but service unavailable
+            this.debugLogger.debug('[Org Validator] App Builder access failed with non-permission error, assuming permissions OK');
+            return { hasPermissions: true };
+        } catch (error) {
+            const errorString = error instanceof Error ? error.message : String(error);
+            this.debugLogger.debug('[Org Validator] Developer permissions test failed:', error);
+
+            // Check if it's a permission-related error in the exception
+            if (
+                errorString.toLowerCase().includes('permission') ||
+                errorString.toLowerCase().includes('unauthorized') ||
+                errorString.toLowerCase().includes('forbidden') ||
+                errorString.toLowerCase().includes('insufficient privileges')
+            ) {
+                const userMessage =
+                    'Your account lacks Developer or System Admin role for this organization. ' +
+                    'Please select a different organization or contact your administrator to request App Builder access.';
+                return { hasPermissions: false, error: userMessage };
+            }
+
+            // If we can't test due to other errors, assume permissions are OK to avoid false negatives
+            return { hasPermissions: true };
+        }
+    }
+
+    /**
      * Clear Adobe CLI console context (org/project/workspace selections)
      */
     private async clearConsoleContext(): Promise<void> {

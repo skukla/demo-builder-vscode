@@ -51,17 +51,19 @@ export class ResetAllCommand extends BaseCommand {
                 this.logger.warn('Error closing webview panels:', err as Error);
             }
 
-            // 3. Remove all Demo Builder workspace folders from VSCode
+            // 3. Remove any Demo Builder workspace folders (if user manually added them)
+            // NOTE: Normal operation no longer adds workspace folders (Package 4 - beta.64),
+            // but this cleanup handles legacy projects or manual additions.
             const workspaceFolders = vscode.workspace.workspaceFolders || [];
             const demoBuilderPath = path.join(os.homedir(), '.demo-builder');
             const foldersToRemove: number[] = [];
-            
+
             workspaceFolders.forEach((folder, index) => {
                 if (folder.uri.fsPath.startsWith(demoBuilderPath)) {
                     foldersToRemove.push(index);
                 }
             });
-            
+
             if (foldersToRemove.length > 0) {
                 // Remove in reverse order to avoid index shifting
                 for (let i = foldersToRemove.length - 1; i >= 0; i--) {

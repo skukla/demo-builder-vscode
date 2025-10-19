@@ -5,6 +5,7 @@ import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/shared/
 import { TIMEOUTS } from '@/utils/timeoutConfig';
 import type { AdobeSDKClient } from './adobeSDKClient';
 import type { AuthCacheManager } from './authCacheManager';
+import type { OrganizationValidator } from './organizationValidator';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -29,6 +30,7 @@ export class AdobeEntityService {
         private commandManager: CommandExecutor,
         private sdkClient: AdobeSDKClient,
         private cacheManager: AuthCacheManager,
+        private organizationValidator: OrganizationValidator,
         private logger: Logger,
         private stepLogger: StepLogger,
     ) {}
@@ -634,6 +636,21 @@ export class AdobeEntityService {
                 this.cacheManager.setCachedProject(undefined);
                 this.cacheManager.setCachedWorkspace(undefined);
                 this.cacheManager.clearConsoleWhereCache();
+
+                // Test Developer permissions after org selection
+                this.debugLogger.debug('[Entity Service] Testing Developer permissions after org selection');
+                const permissionCheck = await this.organizationValidator.testDeveloperPermissions();
+
+                if (!permissionCheck.hasPermissions) {
+                    this.debugLogger.error('[Entity Service] User lacks Developer permissions for this organization');
+                    const errorMessage = permissionCheck.error || 'Insufficient permissions for App Builder access';
+                    this.logger.error(`[Auth] Developer permissions check failed: ${errorMessage}`);
+
+                    // Throw error with specific message to signal permission failure to UI
+                    throw new Error(errorMessage);
+                }
+
+                this.debugLogger.debug('[Entity Service] Developer permissions confirmed');
 
                 return true;
             }

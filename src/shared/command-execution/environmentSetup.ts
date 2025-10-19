@@ -1,6 +1,7 @@
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { getLogger } from '@/shared/logging';
 import { TIMEOUTS } from '@/utils/timeoutConfig';
 import type { CommandResult, ExecuteOptions } from './types';
@@ -152,13 +153,76 @@ export class EnvironmentSetup {
     }
 
     /**
+     * Get infrastructure-defined Node version for a component
+     * Reads from components.json infrastructure section
+     *
+     * @param component - Component identifier (e.g., 'adobe-cli')
+     * @returns Node version string if defined, null otherwise
+     */
+    async getInfrastructureNodeVersion(component: string): Promise<string | null> {
+        try {
+            const extension = vscode.extensions.getExtension('adobe-demo-team.adobe-demo-builder');
+            if (!extension) {
+                this.logger.debug('[Env Setup] Extension not found, cannot read infrastructure config');
+                return null;
+            }
+
+            const componentsPath = path.join(extension.extensionPath, 'templates', 'components.json');
+
+            if (!fsSync.existsSync(componentsPath)) {
+                this.logger.debug('[Env Setup] components.json not found');
+                return null;
+            }
+
+            const componentsData = JSON.parse(fsSync.readFileSync(componentsPath, 'utf8'));
+            const nodeVersion = componentsData?.infrastructure?.[component]?.nodeVersion;
+
+            if (nodeVersion) {
+                this.logger.debug(`[Env Setup] Infrastructure Node version for ${component}: ${nodeVersion}`);
+                return String(nodeVersion);
+            }
+
+            this.logger.debug(`[Env Setup] No infrastructure Node version defined for ${component}`);
+            return null;
+        } catch (error) {
+            this.logger.debug(`[Env Setup] Failed to read infrastructure Node version: ${error instanceof Error ? error.message : String(error)}`);
+            return null;
+        }
+    }
+
+    /**
      * Find which Node version has Adobe CLI installed
+     *
+     * PRIORITY ORDER (Infrastructure-First):
+     * 1. Infrastructure-defined version (from components.json)
+     * 2. Project-configured version (from .nvmrc or project manifest)
+     * 3. Scan for installed aio-cli (fallback)
      */
     async findAdobeCLINodeVersion(): Promise<string | null> {
         // Return cached value if already looked up
         if (this.cachedAdobeCLINodeVersion !== undefined) {
             return this.cachedAdobeCLINodeVersion;
         }
+
+        // PRIORITY 1: Infrastructure-defined version (even without project context)
+        const infraVersion = await this.getInfrastructureNodeVersion('adobe-cli');
+        if (infraVersion) {
+            this.logger.debug(`[Env Setup] Using infrastructure-defined Node ${infraVersion} for Adobe CLI`);
+            this.cachedAdobeCLINodeVersion = infraVersion;
+            return infraVersion;
+        }
+
+        // PRIORITY 2: Project-configured version
+        // TODO: Add project-configured version support when StateManager integration is available
+        // const projectVersion = this.stateManager?.getCurrentProject()?.configuration?.nodeVersion;
+        // if (projectVersion) {
+        //     this.logger.debug(`[Env Setup] Using project-configured Node ${projectVersion}`);
+        //     this.cachedAdobeCLINodeVersion = projectVersion;
+        //     return projectVersion;
+        // }
+
+        // PRIORITY 3: Scan for installed aio-cli (fallback)
+        this.logger.debug('[Env Setup] No infrastructure/project version, scanning for aio-cli installation');
 
         const homeDir = os.homedir();
         // Fix #7 (01b94d6): Support FNM_DIR environment variable
@@ -212,6 +276,7 @@ export class EnvironmentSetup {
         }
 
         // Cache null result
+        this.logger.debug('[Env Setup] No Adobe CLI installation found');
         this.cachedAdobeCLINodeVersion = null;
         return null;
     }

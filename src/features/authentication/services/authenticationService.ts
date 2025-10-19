@@ -50,6 +50,7 @@ export class AuthenticationService {
             commandManager,
             this.sdkClient,
             this.cacheManager,
+            this.organizationValidator,
             logger,
             this.stepLogger,
         );
@@ -369,6 +370,14 @@ export class AuthenticationService {
      */
     async validateAndClearInvalidOrgContext(forceValidation = false): Promise<void> {
         return this.organizationValidator.validateAndClearInvalidOrgContext(forceValidation);
+    }
+
+    /**
+     * Test if the current user has Developer or System Admin permissions
+     * These permissions are required to create and manage App Builder projects
+     */
+    async testDeveloperPermissions(): Promise<{ hasPermissions: boolean; error?: string }> {
+        return this.organizationValidator.testDeveloperPermissions();
     }
 
     // Entity Service Methods - Delegating to EntityService

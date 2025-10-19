@@ -50,14 +50,38 @@ export abstract class BaseCommand {
     }
 
     /**
-     * Show a temporary success message in status bar (auto-dismissing)
+     * Show a temporary success message (auto-dismissing)
      * Use for simple confirmations that don't require user interaction
+     * Shows a notification popup that auto-dismisses after 2 seconds
+     * and a status bar message that persists for 5 seconds
      * @param message Success message to display
-     * @param timeout Milliseconds to show (default 5000)
+     * @param timeout Milliseconds to show in status bar (default 5000)
      */
-    protected showSuccessMessage(message: string, timeout = 5000): void {
+    protected async showSuccessMessage(message: string, timeout = 5000): Promise<void> {
         this.logger.info(message);
+        // Show auto-dismissing notification popup (2 seconds)
+        await this.showProgressNotification(message, 2000);
+        // Also show in status bar as secondary indicator
         vscode.window.setStatusBarMessage(`✅ ${message}`, timeout);
+    }
+
+    /**
+     * Show an auto-dismissing progress notification
+     * Use for informational messages that should disappear automatically
+     * @param message Message to display
+     * @param duration Duration in milliseconds (default 2000)
+     */
+    protected async showProgressNotification(message: string, duration = 2000): Promise<void> {
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: message,
+                cancellable: false,
+            },
+            async () => {
+                await new Promise(resolve => setTimeout(resolve, duration));
+            },
+        );
     }
 
     /**
@@ -99,5 +123,47 @@ export abstract class BaseCommand {
             'No',
         );
         return result === 'Yes';
+    }
+
+    /**
+     * Get the current project directory path
+     *
+     * Smart directory detection that returns the project path directly
+     * without relying on workspace folders.
+     *
+     * NOTE: In refactor branch, getCurrentProject() is async. Callers should
+     * await getCurrentProject() directly and access .path property.
+     * This helper is kept for compatibility but marked deprecated.
+     *
+     * @returns Project directory path
+     * @throws Error if no project is loaded
+     * @deprecated Use `await this.stateManager.getCurrentProject()` directly
+     */
+    protected async getProjectDirectory(): Promise<string> {
+        const project = await this.stateManager.getCurrentProject();
+        if (!project?.path) {
+            throw new Error('No project loaded');
+        }
+        return project.path;
+    }
+
+    /**
+     * Get terminal working directory for commands
+     *
+     * Returns the parent directory of the project for operations like
+     * Homebrew installation that need to run outside the project directory.
+     *
+     * @returns Parent directory of project, or workspace folder, or cwd
+     */
+    protected async getTerminalCwd(): Promise<string> {
+        try {
+            const projectDir = await this.getProjectDirectory();
+            // Return parent directory for operations outside project
+            const path = require('path');
+            return path.dirname(projectDir);
+        } catch {
+            // No project loaded, fall back to workspace or cwd
+            return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || process.cwd();
+        }
     }
 }

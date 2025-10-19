@@ -110,8 +110,9 @@ export class StartDemoCommand extends BaseCommand {
             }
 
             await this.withProgress('Starting demo', async (progress) => {
-                progress.report({ message: 'Starting frontend application' });
-                
+                // REMOVED (Package 4 - beta.67): Verbose progress message
+                // Dashboard indicators provide sufficient visual feedback
+
                 // Validate frontend component
                 if (!frontendComponent?.path) {
                     const debugInfo = JSON.stringify({

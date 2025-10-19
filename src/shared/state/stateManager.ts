@@ -129,7 +129,11 @@ export class StateManager {
             const manifest = {
                 name: project.name,
                 version: '1.0.0',
-                created: project.created.toISOString(),
+                // Type-safe Date handling: Handle both Date objects and ISO strings from persistence
+                created: (project.created instanceof Date
+                    ? project.created
+                    : new Date(project.created)
+                ).toISOString(),
                 lastModified: new Date().toISOString(),
                 adobe: project.adobe,
                 commerce: project.commerce,
@@ -139,7 +143,7 @@ export class StateManager {
                 meshState: project.meshState,
                 components: Object.keys(project.componentInstances || {}),
             };
-            
+
             await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
         } catch (error) {
             console.error('Failed to update project manifest:', error);

@@ -63,8 +63,9 @@ export class StopDemoCommand extends BaseCommand {
             }
 
             await this.withProgress('Stopping demo', async (progress) => {
-                progress.report({ message: 'Stopping frontend application...' });
-                
+                // REMOVED (Package 4 - beta.67): Verbose progress message
+                // Dashboard indicators provide sufficient visual feedback
+
                 // Set status to 'stopping' immediately
                 project.status = 'stopping';
                 frontendComponent.status = 'stopping';
@@ -82,8 +83,8 @@ export class StopDemoCommand extends BaseCommand {
                 // Wait for port to be freed (Node process shutdown takes time)
                 const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
                 const port = frontendComponent.port || defaultPort;
-                progress.report({ message: `Waiting for port ${port} to be released...` });
-                
+                // REMOVED (Package 4 - beta.68): Verbose port release message
+
                 const portFreed = await this.waitForPortToFree(port, 10000);
                 if (!portFreed) {
                     this.logger.warn(`Port ${port} still in use after 10 seconds, but marking as stopped`);

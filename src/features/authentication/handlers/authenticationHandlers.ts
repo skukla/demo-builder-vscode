@@ -280,6 +280,39 @@ export async function handleAuthenticate(
                     currentOrg = undefined; // Update our local variable
                 } else {
                     context.logger.debug(`[Auth] Organization "${currentOrg.name}" validation passed (took ${Date.now() - validationStart}ms)`);
+
+                    // Test Developer permissions for the validated organization
+                    const permCheckStart = Date.now();
+                    context.logger.debug(`[Auth] Testing Developer permissions for "${currentOrg.name}"...`);
+                    const permissionCheck = await context.authManager.testDeveloperPermissions();
+
+                    if (!permissionCheck.hasPermissions) {
+                        context.logger.error(`[Auth] User lacks Developer permissions for "${currentOrg.name}" (took ${Date.now() - permCheckStart}ms)`);
+                        context.logger.error('[Auth] Permission check error:', permissionCheck.error || 'Unknown error');
+
+                        // Clear the organization since permissions are insufficient
+                        context.authManager.clearCache();
+                        currentOrg = undefined;
+                        context.authManager.setOrgRejectedFlag();
+
+                        // Send permission error to UI
+                        await context.sendMessage('auth-status', {
+                            authenticated: true,
+                            isAuthenticated: true,
+                            isChecking: false,
+                            organization: undefined,
+                            project: undefined,
+                            error: 'no_app_builder_access',
+                            message: 'Insufficient Privileges',
+                            subMessage: permissionCheck.error || 'You need Developer or System Admin role for this organization',
+                            requiresOrgSelection: true,
+                            orgLacksAccess: true,
+                        });
+
+                        return { success: false };
+                    } else {
+                        context.logger.debug(`[Auth] Developer permissions confirmed for "${currentOrg.name}" (took ${Date.now() - permCheckStart}ms)`);
+                    }
                 }
             }
 
