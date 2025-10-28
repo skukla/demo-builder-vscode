@@ -6,17 +6,27 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import { ServiceLocator } from '../../../services/serviceLocator';
-import { parseJSON } from '@/types/typeGuards';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import { HandlerContext } from '../../../commands/handlers/HandlerContext';
-import { getEndpoint } from './shared';
+import * as vscode from 'vscode';
+import { ServiceLocator } from '@/core/di';
+import { parseJSON, toError } from '@/types/typeGuards';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { getEndpoint } from '@/features/mesh/handlers/shared';
+import { validateWorkspaceId } from '@/core/validation/securityValidation';
 
 /**
  * Handler: create-api-mesh
  *
  * Create new API Mesh instance
  * Handles mesh creation, deployment, and polling for completion
+ *
+ * SECURITY: Validates workspaceId parameter to prevent command injection attacks.
+ * workspaceId is passed to Adobe CLI commands via shell, so validation blocks
+ * malicious patterns like pipes, semicolons, command substitution, etc.
+ *
+ * @param context - Handler context with logger and extension context
+ * @param payload - Request payload containing workspaceId (validated) and optional progress callback
+ * @returns Result object with mesh creation status, meshId, and endpoint
  */
 export async function handleCreateApiMesh(
     context: HandlerContext,
@@ -35,7 +45,41 @@ export async function handleCreateApiMesh(
 }> {
     const { workspaceId, onProgress } = payload;
 
+    // SECURITY: Validate workspaceId to prevent command injection
+    try {
+        validateWorkspaceId(workspaceId);
+    } catch (validationError) {
+        context.logger.error('[API Mesh] Invalid workspace ID provided', validationError as Error);
+        return {
+            success: false,
+            error: `Invalid workspace ID: ${(validationError as Error).message}`,
+        };
+    }
+
     context.logger.info('[API Mesh] Creating new mesh for workspace', { workspaceId });
+
+    // PRE-FLIGHT: Check authentication before any Adobe CLI operations
+    const authManager = ServiceLocator.getAuthenticationService();
+    const isAuthenticated = await authManager.isAuthenticated();
+
+    if (!isAuthenticated) {
+        context.logger.warn('[API Mesh] Authentication required to create mesh');
+
+        // Direct user to dashboard for authentication
+        const selection = await vscode.window.showWarningMessage(
+            'Adobe authentication required to create API Mesh. Please sign in via the Project Dashboard.',
+            'Open Dashboard',
+        );
+
+        if (selection === 'Open Dashboard') {
+            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+        }
+
+        return {
+            success: false,
+            error: 'Adobe authentication required. Please sign in via the Project Dashboard.',
+        };
+    }
 
     const commandManager = ServiceLocator.getCommandExecutor();
     const storagePath = context.context.globalStorageUri.fsPath;
@@ -316,7 +360,7 @@ export async function handleCreateApiMesh(
         context.logger.error('[API Mesh] Creation failed', error as Error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: toError(error).message,
         };
     } finally {
         // Clean up temporary mesh config file

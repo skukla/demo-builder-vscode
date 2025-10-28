@@ -9,10 +9,12 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import { ServiceLocator } from '../../../services/serviceLocator';
-import { parseJSON } from '@/types/typeGuards';
-import { HandlerContext } from '../../../commands/handlers/HandlerContext';
-import { getSetupInstructions, getEndpoint } from './shared';
+import * as vscode from 'vscode';
+import { ServiceLocator } from '@/core/di';
+import { parseJSON, toError } from '@/types/typeGuards';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { getSetupInstructions, getEndpoint } from '@/features/mesh/handlers/shared';
+import { validateWorkspaceId } from '@/core/validation/securityValidation';
 
 /**
  * Handler: check-api-mesh
@@ -21,6 +23,14 @@ import { getSetupInstructions, getEndpoint } from './shared';
  * Uses multi-layer approach:
  * - Layer 1: Download workspace config (most reliable)
  * - Layer 2: Check mesh status via CLI
+ *
+ * SECURITY: Validates workspaceId parameter to prevent command injection attacks.
+ * workspaceId is used in Adobe CLI commands, so validation is critical to prevent
+ * malicious input like $(rm -rf /) from being executed in the shell.
+ *
+ * @param context - Handler context with logger and extension context
+ * @param payload - Request payload containing workspaceId (validated) and optional selectedComponents
+ * @returns Result object with mesh availability status and details
  */
 export async function handleCheckApiMesh(
     context: HandlerContext,
@@ -37,8 +47,46 @@ export async function handleCheckApiMesh(
 }> {
     const { workspaceId, selectedComponents = [] } = payload;
 
+    // SECURITY: Validate workspaceId to prevent command injection
+    try {
+        validateWorkspaceId(workspaceId);
+    } catch (validationError) {
+        context.logger.error('[API Mesh] Invalid workspace ID provided', validationError as Error);
+        return {
+            success: false,
+            apiEnabled: false,
+            meshExists: false,
+            error: `Invalid workspace ID: ${(validationError as Error).message}`,
+        };
+    }
+
     context.logger.info('[API Mesh] Checking API Mesh availability for workspace', { workspaceId });
     context.debugLogger.debug('[API Mesh] Starting multi-layer check');
+
+    // PRE-FLIGHT: Check authentication before any Adobe CLI operations
+    const authManager = ServiceLocator.getAuthenticationService();
+    const isAuthenticated = await authManager.isAuthenticated();
+
+    if (!isAuthenticated) {
+        context.logger.warn('[API Mesh] Authentication required to check mesh status');
+
+        // Direct user to dashboard for authentication
+        const selection = await vscode.window.showWarningMessage(
+            'Adobe authentication required to check API Mesh status. Please sign in via the Project Dashboard.',
+            'Open Dashboard',
+        );
+
+        if (selection === 'Open Dashboard') {
+            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+        }
+
+        return {
+            success: false,
+            apiEnabled: false,
+            meshExists: false,
+            error: 'Adobe authentication required. Please sign in via the Project Dashboard.',
+        };
+    }
 
     const commandManager = ServiceLocator.getCommandExecutor();
 
@@ -331,7 +379,7 @@ export async function handleCheckApiMesh(
             success: false,
             apiEnabled: false,
             meshExists: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: toError(error).message,
         };
     }
 }

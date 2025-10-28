@@ -3,8 +3,9 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
-import { Logger } from '@/shared/logging';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { Logger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 export class ComponentUpdater {
     private logger: Logger;
@@ -223,18 +224,27 @@ export class ComponentUpdater {
         targetPath: string,
         componentId: string,
     ): Promise<void> {
-        const { ServiceLocator } = await import('@/services/serviceLocator');
+        // SECURITY: Validate GitHub URL before downloading
+        const { validateGitHubDownloadURL } = await import('@/core/validation/securityValidation');
+        try {
+            validateGitHubDownloadURL(downloadUrl);
+        } catch (error) {
+            this.logger.error('[Update] Download URL validation failed', error as Error);
+            throw new Error(`Security check failed: ${(error as Error).message}`);
+        }
+
+        const { ServiceLocator } = await import('@/core/di');
         const commandManager = ServiceLocator.getCommandExecutor();
-    
+
         const tempZip = path.join(path.dirname(targetPath), `${componentId}-temp.zip`);
-    
+
         try {
             // Download zip with timeout
             this.logger.debug(`[Update] Downloading from ${downloadUrl}`);
-      
+
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), TIMEOUTS.UPDATE_DOWNLOAD);
-      
+
             try {
                 const response = await fetch(downloadUrl, { signal: controller.signal });
                 if (!response.ok) {
@@ -249,16 +259,21 @@ export class ComponentUpdater {
       
             // Extract zip (GitHub archives have root folder, need to strip it)
             await fs.mkdir(targetPath, { recursive: true });
-      
-            // Reuse existing command execution pattern with timeout and path enhancement
+
+            // Reuse existing command execution pattern with timeout, shell, and path enhancement
+            // SECURITY: shell is SAFE here because:
+            // - tempZip and targetPath are internal paths (not user input)
+            // - downloadUrl is validated by validateGitHubDownloadURL() before this point
+            // - All paths are controlled by the extension (no user-supplied paths)
             await commandManager.execute(
                 `unzip -q "${tempZip}" -d "${targetPath}" && mv "${targetPath}"/*/* "${targetPath}"/`,
-                { 
+                {
+                    shell: DEFAULT_SHELL,    // CRITICAL FIX: Required for command chaining (&&) and glob expansion (*/*)
                     timeout: TIMEOUTS.UPDATE_EXTRACT,
                     enhancePath: true,
                 },
             );
-      
+
             this.logger.debug(`[Update] Extracted to ${targetPath}`);
         } finally {
             // Cleanup temp zip

@@ -4,12 +4,12 @@
  * Common helpers used across mesh handler modules.
  */
 
-import { ServiceLocator } from '../../../services/serviceLocator';
+import { ServiceLocator } from '@/core/di';
 import {
     getSetupInstructions as getSetupInstructionsHelper,
     getEndpoint as getEndpointHelper,
-} from '../../../commands/helpers';
-import { HandlerContext } from '../../../commands/handlers/HandlerContext';
+} from '@/features/project-creation/helpers';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 
 /**
  * Get setup instructions for API Mesh

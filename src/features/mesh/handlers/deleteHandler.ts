@@ -4,9 +4,11 @@
  * Handles deleting API Mesh instances.
  */
 
-import { ServiceLocator } from '../../../services/serviceLocator';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import { HandlerContext } from '../../../commands/handlers/HandlerContext';
+import * as vscode from 'vscode';
+import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { toError } from '@/types/typeGuards';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 
 /**
  * Handler: delete-api-mesh
@@ -24,6 +26,29 @@ export async function handleDeleteApiMesh(
 
     try {
         context.logger.info('[API Mesh] Deleting mesh for workspace', { workspaceId });
+
+        // PRE-FLIGHT: Check authentication before any Adobe CLI operations
+        const authManager = ServiceLocator.getAuthenticationService();
+        const isAuthenticated = await authManager.isAuthenticated();
+
+        if (!isAuthenticated) {
+            context.logger.warn('[API Mesh] Authentication required to delete mesh');
+
+            // Direct user to dashboard for authentication
+            const selection = await vscode.window.showWarningMessage(
+                'Adobe authentication required to delete API Mesh. Please sign in via the Project Dashboard.',
+                'Open Dashboard',
+            );
+
+            if (selection === 'Open Dashboard') {
+                await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+            }
+
+            return {
+                success: false,
+                error: 'Adobe authentication required. Please sign in via the Project Dashboard.',
+            };
+        }
 
         const commandManager = ServiceLocator.getCommandExecutor();
         const result = await commandManager.execute(
@@ -52,7 +77,7 @@ export async function handleDeleteApiMesh(
         context.logger.error('[API Mesh Delete] Failed', error as Error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: toError(error).message,
         };
     }
 }

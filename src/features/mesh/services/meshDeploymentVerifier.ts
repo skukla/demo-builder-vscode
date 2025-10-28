@@ -3,13 +3,22 @@
  * Used by both project creation wizard and manual deploy command
  */
 
-import { ServiceLocator } from '../../../services/serviceLocator';
-import { Logger } from '@/types/logger';
+import { ServiceLocator } from '@/core/di';
+import { Logger } from '@/types/loggerTypes';
 import { parseJSON } from '@/types/typeGuards';
-import { validateMeshId } from '@/shared/validation';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { validateMeshId } from '@/core/validation';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
-export interface MeshDeploymentResult {
+/**
+ * MeshDeploymentVerificationResult - Result from deployment verification polling
+ *
+ * Used by waitForMeshDeployment to track verification progress.
+ * Uses 'deployed' boolean to indicate if the mesh is fully deployed.
+ * This is an internal type, different from:
+ * - MeshDeploymentResult (types.ts) - has 'success' field
+ * - MeshVerificationResult (types.ts) - has 'exists' field
+ */
+export interface MeshDeploymentVerificationResult {
     deployed: boolean;
     meshId?: string;
     endpoint?: string;
@@ -31,7 +40,7 @@ export interface VerificationOptions {
  */
 export async function waitForMeshDeployment(
     options: VerificationOptions = {},
-): Promise<MeshDeploymentResult> {
+): Promise<MeshDeploymentVerificationResult> {
     const pollInterval = options.pollInterval ?? 10000;     // 10 seconds between attempts
     const initialWait = options.initialWait ?? 20000;       // 20 seconds initial wait
     

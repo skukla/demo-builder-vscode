@@ -1,9 +1,10 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ServiceLocator } from '@/services/serviceLocator';
+import { ServiceLocator } from '@/core/di';
 import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '@/types';
-import { Logger } from '@/types/logger';
-import type { ComponentInstallOptions, ComponentInstallResult } from './types';
+import { Logger } from '@/types/loggerTypes';
+import { DEFAULT_SHELL } from '@/types/shell';
+import type { ComponentInstallOptions, ComponentInstallResult } from '@/features/components/services/types';
 
 export type { ComponentInstallOptions, ComponentInstallResult };
 
@@ -153,13 +154,19 @@ export class ComponentManager {
         const cloneCommand = `git clone ${cloneFlags.join(' ')} "${componentDef.source.url}" "${componentPath}"`.trim();
         
         this.logger.debug(`[ComponentManager] Executing: ${cloneCommand}`);
-        
+
         // Use configurable timeout or default
         const cloneTimeout = componentDef.source.timeouts?.clone || 120000; // Default 2 minutes
-        
+
+        // SECURITY: shell is safe here because:
+        // - URL comes from validated component registry (templates/components.json)
+        // - Path constructed internally via path.join() (no user input)
+        // - Command structure is hardcoded (no injection risk)
+        // Shell is REQUIRED to parse quoted arguments correctly
         const result = await commandManager.execute(cloneCommand, {
             timeout: cloneTimeout,
             enhancePath: true,
+            shell: DEFAULT_SHELL,
         });
 
         if (result.code !== 0) {
@@ -175,6 +182,7 @@ export class ComponentManager {
             {
                 cwd: componentPath,
                 enhancePath: true,
+                shell: DEFAULT_SHELL,
             },
         );
 
@@ -230,6 +238,7 @@ export class ComponentManager {
                     timeout: installTimeout,
                     enhancePath: true,
                     useNodeVersion: nodeVersion || null,  // CommandManager handles fnm use
+                    shell: DEFAULT_SHELL,
                 });
                 
                 if (installResult.code !== 0) {
@@ -255,6 +264,7 @@ export class ComponentManager {
                         timeout: buildTimeout,
                         enhancePath: true,
                         useNodeVersion: nodeVersion || null,  // CommandManager handles fnm use
+                        shell: DEFAULT_SHELL,
                     });
                     
                     if (buildResult.code !== 0) {

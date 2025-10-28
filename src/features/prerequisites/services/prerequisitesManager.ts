@@ -1,9 +1,10 @@
-import * as fs from 'fs';
 import * as path from 'path';
-import { ServiceLocator } from '../../../services/serviceLocator';
-import { parseJSON } from '@/types/typeGuards';
-import { Logger } from '@/shared/logging';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { ServiceLocator } from '@/core/di';
+import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
+import { toError, isTimeoutError } from '@/types/typeGuards';
+import { Logger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { DEFAULT_SHELL } from '@/types/shell';
 import type {
     PrerequisiteCheck,
     ProgressMilestone,
@@ -29,26 +30,20 @@ export type {
 };
 
 export class PrerequisitesManager {
-    private config: PrerequisitesConfig | null = null;
-    private configPath: string;
+    private configLoader: ConfigurationLoader<PrerequisitesConfig>;
     private logger: Logger;
     private resolvedVersionCache = new Map<string, string>();
 
     constructor(extensionPath: string, logger: Logger) {
-        this.configPath = path.join(extensionPath, 'templates', 'prerequisites.json');
+        const configPath = path.join(extensionPath, 'templates', 'prerequisites.json');
+        this.configLoader = new ConfigurationLoader<PrerequisitesConfig>(configPath);
         this.logger = logger;
     }
 
     async loadConfig(): Promise<PrerequisitesConfig> {
-        if (!this.config) {
-            const content = await fs.promises.readFile(this.configPath, 'utf8');
-            const config = parseJSON<PrerequisitesConfig>(content);
-            if (!config) {
-                throw new Error('Failed to parse prerequisites configuration');
-            }
-            this.config = config;
-        }
-        return this.config;
+        return await this.configLoader.load({
+            validationErrorMessage: 'Failed to parse prerequisites configuration'
+        });
     }
 
     async getPrerequisiteById(id: string): Promise<PrerequisiteDefinition | undefined> {
@@ -148,7 +143,7 @@ export class PrerequisitesManager {
                     this.logger.debug(`[Prereq Check] ${prereq.id}: Not found under Node v${targetNodeVersion}`);
                     checkResult = {
                         stdout: '',
-                        stderr: error instanceof Error ? error.message : String(error),
+                        stderr: toError(error).message,
                         code: 1,
                         duration: Date.now() - cmdStartTime,
                     };
@@ -161,9 +156,12 @@ export class PrerequisitesManager {
                     timeout: TIMEOUTS.PREREQUISITE_CHECK,
                 });
             } else {
-                this.logger.debug(`[Prereq Check] ${prereq.id}: Executing command normally`);
+                // Enable shell for system tool detection (homebrew, fnm, git, etc.)
+                // Commands from prerequisites.json are trusted sources
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Executing command with shell enabled`);
                 checkResult = await commandManager.execute(prereq.check.command, {
                     timeout: TIMEOUTS.PREREQUISITE_CHECK,
+                    shell: DEFAULT_SHELL,
                 });
             }
             
@@ -213,23 +211,31 @@ export class PrerequisitesManager {
         } catch (error) {
             const totalDuration = Date.now() - startTime;
             this.logger.debug(`[Prereq Check] ${prereq.id}: ✗ Failed after ${totalDuration}ms`);
-            
+
             // Check if this is a timeout error
-            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorMessage = toError(error).message;
             const errorObj = error as NodeJS.ErrnoException & { killed?: boolean; signal?: string };
-            const isTimeout = errorMessage.toLowerCase().includes('timed out') ||
-                            errorMessage.toLowerCase().includes('timeout') ||
-                            (errorObj.killed && errorObj.signal === 'SIGTERM');
-            
+            const isTimeout = isTimeoutError(error) || (errorObj.killed && errorObj.signal === 'SIGTERM');
+
             if (isTimeout) {
                 // Re-throw timeout errors so they can be handled at the command level
                 this.logger.warn(`${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK}ms`);
                 throw new Error(`${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds`);
             }
-            
-            // For other errors (command not found, etc), treat as not installed
+
+            // Check if this is an ENOENT error (command not found in PATH)
+            const isCommandNotFound = errorObj.code === 'ENOENT' ||
+                                     errorMessage.includes('ENOENT') ||
+                                     errorMessage.includes('command not found');
+
+            // For ENOENT or other errors, treat as not installed
             status.installed = false;
-            this.logger.info(`${prereq.name} not found: ${error}`);
+
+            if (isCommandNotFound) {
+                this.logger.info(`${prereq.name} not found in PATH: ${prereq.check.command}`);
+            } else {
+                this.logger.info(`${prereq.name} check failed: ${errorMessage}`);
+            }
         }
 
         return status;
@@ -309,18 +315,17 @@ export class PrerequisitesManager {
         return null;
     }
 
-    getPluginInstallCommands(
+    async getPluginInstallCommands(
         prereqId: string,
         pluginId: string,
-    ): { commands: string[]; message?: string } | undefined {
-        const config = this.config;
-        if (!config) return undefined;
-        
+    ): Promise<{ commands: string[]; message?: string } | undefined> {
+        const config = await this.loadConfig();
+
         const prereq = config.prerequisites.find(p => p.id === prereqId);
         const plugin = prereq?.plugins?.find(p => p.id === pluginId);
-        
+
         if (!plugin) return undefined;
-        
+
         return {
             commands: plugin.install.commands,
             message: plugin.install.message,
@@ -349,7 +354,7 @@ export class PrerequisitesManager {
             // SECURITY NOTE: This command uses pipes which requires shell
             // However, versionFamily is validated above to only contain digits
             const { stdout } = await commandManager.execute(`fnm list-remote | grep "^v${versionFamily}\\." | head -1`, {
-                shell: '/bin/sh',  // Required for pipes
+                shell: DEFAULT_SHELL,  // Required for pipes
             });
             if (stdout) {
                 return stdout.trim().replace('v', '');
@@ -379,23 +384,22 @@ export class PrerequisitesManager {
         const results: { version: string; component: string; installed: boolean }[] = [];
 
         try {
-            const commandManager = ServiceLocator.getCommandExecutor();
-            const { stdout } = await commandManager.execute('fnm list');
+            const nodeManager = ServiceLocator.getNodeVersionManager();
+            const versions = await nodeManager.list();
 
-            // Parse installed versions from fnm list output
-            // Create mapping of major version to full version
+            // Parse installed versions - create mapping of major version to full version
             const majorToFullVersion = new Map<string, string>();
-            const lines = stdout.split('\n');
-            for (const line of lines) {
-                // Match patterns like "* v20.19.5 default" or "v18.17.0"
-                const match = /\*?\s*v?(\d+)\.([\d.]+)/.exec(line);
+            for (const version of versions) {
+                // Match patterns like "v20.19.5" or "20.19.5"
+                const match = /v?(\d+)\.([\d.]+)/.exec(version);
                 if (match) {
                     const majorVersion = match[1];
                     const fullVersion = `${match[1]}.${match[2]}`;
 
                     // Store the full version for this major version
-                    // If there's already one, keep the default one (marked with *) or the first one
-                    if (!majorToFullVersion.has(majorVersion) || line.includes('*')) {
+                    // Note: NodeVersionManager.list() returns clean version strings,
+                    // so we just use the first one found for each major version
+                    if (!majorToFullVersion.has(majorVersion)) {
                         majorToFullVersion.set(majorVersion, fullVersion);
                     }
                 }

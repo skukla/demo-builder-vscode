@@ -11,9 +11,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
-import { Logger } from '@/shared/logging';
-import { getFrontendEnvVars, updateFrontendState } from '@/shared/state';
-import type { MeshState, MeshChanges } from './types';
+import { Logger } from '@/core/logging';
+import { getFrontendEnvVars, updateFrontendState } from '@/core/state';
+import { extractEnvVars } from '@/core/utils/envVarExtraction';
+import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
 
 export type { MeshState, MeshChanges };
 
@@ -38,16 +39,7 @@ const MESH_ENV_VARS = [
  * Get current mesh-related environment variables from component config
  */
 export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
-    const envVars: Record<string, string> = {};
-
-    MESH_ENV_VARS.forEach(key => {
-        // Include ALL keys, even if empty/falsy, for accurate comparison
-        // Normalize undefined to empty string for consistent comparison
-        const value = componentConfig[key];
-        envVars[key] = (typeof value === 'string' ? value : '') || '';
-    });
-
-    return envVars;
+    return extractEnvVars(componentConfig, MESH_ENV_VARS);
 }
 
 /**
@@ -56,7 +48,7 @@ export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record
  */
 export async function fetchDeployedMeshConfig(): Promise<Record<string, string> | null> {
     try {
-        const { ServiceLocator } = await import('../../../services/serviceLocator');
+        const { ServiceLocator } = await import('@/core/di');
         const commandManager = ServiceLocator.getCommandExecutor();
 
         logger.debug('[MeshStaleness] Fetching deployed mesh config from Adobe I/O...');
@@ -65,7 +57,7 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         // Use a fast command that doesn't trigger interactive login
         logger.debug('[MeshStaleness] Checking authentication status...');
         try {
-            const { TIMEOUTS } = await import('@/utils/timeoutConfig');
+            const { TIMEOUTS } = await import('@/core/utils/timeoutConfig');
             const authCheckResult = await commandManager.executeAdobeCLI('aio console where --json', {
                 timeout: TIMEOUTS.API_CALL, // Use existing timeout constant
             });

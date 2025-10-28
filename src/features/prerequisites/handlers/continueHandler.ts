@@ -7,10 +7,12 @@
  * - Updates UI with current status
  */
 
-import { ServiceLocator } from '../../../services/serviceLocator';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import { HandlerContext } from '../../../commands/handlers/HandlerContext';
-import { getNodeVersionMapping, areDependenciesInstalled } from './shared';
+import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { toError, isTimeoutError } from '@/types/typeGuards';
+import { SimpleResult } from '@/types/results';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { getNodeVersionMapping, areDependenciesInstalled } from '@/features/prerequisites/handlers/shared';
 
 /**
  * continue-prerequisites - Resume checking prerequisites after an install
@@ -21,7 +23,7 @@ import { getNodeVersionMapping, areDependenciesInstalled } from './shared';
 export async function handleContinuePrerequisites(
     context: HandlerContext,
     payload?: { fromIndex?: number },
-): Promise<{ success: boolean }> {
+): Promise<SimpleResult> {
     try {
         if (!context.sharedState.currentPrerequisites || !context.sharedState.currentPrerequisiteStates) {
             return { success: false };
@@ -48,9 +50,8 @@ export async function handleContinuePrerequisites(
                 checkResult = await context.prereqManager.checkPrerequisite(prereq);
             } catch (error) {
                 // Handle timeout or other check errors
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                const isTimeout = errorMessage.toLowerCase().includes('timed out') ||
-                                 errorMessage.toLowerCase().includes('timeout');
+                const errorMessage = toError(error).message;
+                const isTimeout = isTimeoutError(error);
 
                 // Log to all appropriate channels
                 if (isTimeout) {
@@ -91,27 +92,69 @@ export async function handleContinuePrerequisites(
             let perNodeVariantMissing = false;
             const missingVariantMajors: string[] = [];
             const perNodeVersionStatus: { version: string; component: string; installed: boolean }[] = [];
+            // Always show required Node versions from component selection
+            // If main tool not installed: show all as "not installed"
+            // If main tool installed: check each Node version properly
             if (prereq.perNodeVersion && Object.keys(nodeVersionMapping).length > 0) {
                 const requiredMajors = Object.keys(nodeVersionMapping);
-                const commandManager = ServiceLocator.getCommandExecutor();
-                for (const major of requiredMajors) {
-                    try {
-                        const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
-                        // Parse CLI version if regex provided
-                        let cliVersion = '';
-                        if (prereq.check.parseVersion) {
-                            try {
-                                const match = new RegExp(prereq.check.parseVersion).exec(stdout);
-                                if (match) cliVersion = match[1] || '';
-                            } catch {
-                                // Ignore regex parse errors
-                            }
+
+                if (!checkResult.installed) {
+                    // Main tool not installed: populate with all NOT installed
+                    // This shows users what Node versions they'll need for this tool
+                    for (const major of requiredMajors) {
+                        perNodeVersionStatus.push({
+                            version: `Node ${major}`,
+                            component: '',
+                            installed: false,
+                        });
+                    }
+                    perNodeVariantMissing = true;
+                    missingVariantMajors.push(...requiredMajors);
+                } else {
+                    // Main tool installed: check each Node version properly
+                    // CRITICAL: Get list of actually installed Node versions FIRST
+                    // This prevents false positives when fnm falls back to other versions
+                    const nodeManager = ServiceLocator.getNodeVersionManager();
+                    const installedVersions = await nodeManager.list();
+                    const installedMajors = new Set<string>();
+                    for (const version of installedVersions) {
+                        const match = /v?(\d+)/.exec(version);
+                        if (match) {
+                            installedMajors.add(match[1]);
                         }
-                        perNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: true });
-                    } catch {
-                        perNodeVariantMissing = true;
-                        missingVariantMajors.push(major);
-                        perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+                    }
+
+                    const commandManager = ServiceLocator.getCommandExecutor();
+                    for (const major of requiredMajors) {
+                        // Check if this Node version is actually installed
+                        if (!installedMajors.has(major)) {
+                            // Node version not installed - tool cannot be installed for this version
+                            context.logger.debug(`[Prerequisites] Node ${major} not installed, skipping ${prereq.name} check for this version`);
+                            perNodeVariantMissing = true;
+                            missingVariantMajors.push(major);
+                            perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+                            continue;
+                        }
+
+                        try {
+                            // Node version is installed - now check if the tool is installed for it
+                            const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
+                            // Parse CLI version if regex provided
+                            let cliVersion = '';
+                            if (prereq.check.parseVersion) {
+                                try {
+                                    const match = new RegExp(prereq.check.parseVersion).exec(stdout);
+                                    if (match) cliVersion = match[1] || '';
+                                } catch {
+                                    // Ignore regex parse errors
+                                }
+                            }
+                            perNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: true });
+                        } catch {
+                            perNodeVariantMissing = true;
+                            missingVariantMajors.push(major);
+                            perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+                        }
                     }
                 }
             }
@@ -137,7 +180,8 @@ export async function handleContinuePrerequisites(
                 status: overallStatus,
                 description: prereq.description,
                 required: !prereq.optional,
-                installed: checkResult.installed,
+                // For per-node-version prerequisites: installed is false if ANY required Node version is missing the tool
+                installed: (prereq.perNodeVersion && perNodeVariantMissing) ? false : checkResult.installed,
                 version: checkResult.version,
                 message: (prereq.perNodeVersion && perNodeVariantMissing)
                     ? `${prereq.name} is missing in Node ${missingVariantMajors.join(', ')}`

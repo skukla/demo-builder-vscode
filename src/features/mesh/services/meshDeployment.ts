@@ -4,11 +4,11 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import { Logger } from '@/types/logger';
-import { parseJSON } from '@/types/typeGuards';
-import { CommandExecutor } from '@/shared/command-execution';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import type { MeshDeploymentResult } from './types';
+import { Logger } from '@/types/loggerTypes';
+import { parseJSON, toError } from '@/types/typeGuards';
+import { CommandExecutor } from '@/core/shell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { MeshDeploymentResult } from '@/features/mesh/services/types';
 
 export type { MeshDeploymentResult };
 
@@ -80,7 +80,7 @@ export async function deployMeshComponent(
 
         if (deployResult.code !== 0) {
             const errorMsg = deployResult.stderr || deployResult.stdout || 'Mesh deployment failed';
-            const { formatAdobeCliError } = await import('@/utils/errorFormatter');
+            const { formatAdobeCliError } = await import('@/features/mesh/utils/errorFormatter');
             throw new Error(formatAdobeCliError(errorMsg));
         }
 
@@ -110,15 +110,17 @@ export async function deployMeshComponent(
 
         return {
             success: true,
-            meshId: verificationResult.meshId,
-            endpoint: verificationResult.endpoint,
+            data: {
+                meshId: verificationResult.meshId!,
+                endpoint: verificationResult.endpoint!,
+            },
         };
 
     } catch (error) {
         logger.error('[Deploy Mesh] Deployment failed', error as Error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: toError(error).message,
         };
     }
 }

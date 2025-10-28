@@ -1,6 +1,6 @@
 import * as net from 'net';
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/shared/base';
+import { BaseCommand } from '@/core/base';
 
 export class StopDemoCommand extends BaseCommand {
     /**

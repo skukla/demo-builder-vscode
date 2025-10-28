@@ -3,10 +3,10 @@
  * Checks if mesh actually exists, not just if we think it's deployed
  */
 
-import { ServiceLocator } from '../../../services/serviceLocator';
+import { ServiceLocator } from '@/core/di';
 import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
-import type { MeshVerificationResult } from './types';
+import type { MeshVerificationResult } from '@/features/mesh/services/types';
 
 export type { MeshVerificationResult };
 
@@ -19,15 +19,15 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
     
     // No mesh component = no mesh
     if (!meshComponent) {
-        return { exists: false };
+        return { success: true, data: { exists: false } };
     }
     
     // Get mesh ID from metadata
     const meshId = meshComponent.metadata?.meshId;
     if (!meshId) {
-        return { 
-            exists: false, 
-            error: 'No mesh ID found in project metadata', 
+        return {
+            success: false,
+            error: 'No mesh ID found in project metadata',
         };
     }
     
@@ -48,7 +48,7 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
         if (result.code !== 0) {
             // Mesh doesn't exist or command failed
             return {
-                exists: false,
+                success: false,
                 error: result.stderr || 'Failed to verify mesh deployment',
             };
         }
@@ -70,9 +70,12 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
                 const meshData = parseJSON<{ meshId?: string; endpoint?: string }>(output);
                 if (meshData) {
                     return {
-                        exists: true,
-                        meshId: (meshData.meshId || foundMeshId || meshId) as string,
-                        endpoint: meshData.endpoint || endpoint,
+                        success: true,
+                        data: {
+                            exists: true,
+                            meshId: (meshData.meshId || foundMeshId || meshId) as string,
+                            endpoint: meshData.endpoint || endpoint,
+                        },
                     };
                 }
             } catch {
@@ -83,20 +86,23 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
         // Verify the mesh ID matches what we expect
         if (foundMeshId && foundMeshId !== meshId) {
             return {
-                exists: false,
+                success: false,
                 error: `Mesh ID mismatch: expected ${meshId}, found ${foundMeshId}`,
             };
         }
 
         return {
-            exists: true,
-            meshId: foundMeshId ?? (meshId as string),
-            endpoint,
+            success: true,
+            data: {
+                exists: true,
+                meshId: foundMeshId ?? (meshId as string),
+                endpoint,
+            },
         };
         
     } catch (error) {
         return {
-            exists: false,
+            success: false,
             error: error instanceof Error ? error.message : 'Unknown error verifying mesh',
         };
     }
@@ -107,25 +113,30 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
  * Call this after verification to sync project state with Adobe I/O reality
  */
 export async function syncMeshStatus(
-    project: Project, 
+    project: Project,
     verificationResult: MeshVerificationResult,
 ): Promise<void> {
     const meshComponent = project.componentInstances?.['commerce-mesh'];
     if (!meshComponent) {
         return;
     }
-    
-    if (!verificationResult.exists) {
+
+    // Handle failure case
+    if (!verificationResult.success || !verificationResult.data) {
+        return;
+    }
+
+    if (!verificationResult.data.exists) {
         // Mesh doesn't exist in Adobe I/O - clear meshState
         project.meshState = undefined;
         meshComponent.status = 'ready'; // Mesh component exists but not deployed
         meshComponent.endpoint = undefined;
     } else {
         // Mesh exists - update endpoint if needed
-        if (verificationResult.endpoint && verificationResult.endpoint !== meshComponent.endpoint) {
-            meshComponent.endpoint = verificationResult.endpoint;
+        if (verificationResult.data.endpoint && verificationResult.data.endpoint !== meshComponent.endpoint) {
+            meshComponent.endpoint = verificationResult.data.endpoint;
         }
-        
+
         // Ensure status reflects reality
         if (meshComponent.status !== 'deployed' && project.meshState) {
             meshComponent.status = 'deployed';

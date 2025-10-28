@@ -7,10 +7,12 @@
  * - Sends status updates to UI with progress tracking
  */
 
-import { ServiceLocator } from '../../../services/serviceLocator';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import { HandlerContext } from '../../../commands/handlers/HandlerContext';
-import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled } from './shared';
+import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { toError, isTimeoutError } from '@/types/typeGuards';
+import { SimpleResult } from '@/types/results';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled } from '@/features/prerequisites/handlers/shared';
 
 /**
  * check-prerequisites - Check all prerequisites for selected components
@@ -21,7 +23,7 @@ import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstal
 export async function handleCheckPrerequisites(
     context: HandlerContext,
     payload?: { componentSelection?: import('../../../types/components').ComponentSelection },
-): Promise<{ success: boolean }> {
+): Promise<SimpleResult> {
     try {
         context.stepLogger.log('prerequisites', 'Starting prerequisites check', 'info');
 
@@ -79,12 +81,10 @@ export async function handleCheckPrerequisites(
                 checkResult = await context.prereqManager.checkPrerequisite(prereq);
             } catch (error) {
                 // Handle timeout or other check errors
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                const isTimeout = errorMessage.toLowerCase().includes('timed out') ||
-                                 errorMessage.toLowerCase().includes('timeout');
+                const errorMessage = toError(error).message;
 
                 // Log to all appropriate channels
-                if (isTimeout) {
+                if (isTimeoutError(error)) {
                     context.logger.warn(`[Prerequisites] ${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
                     context.stepLogger.log('prerequisites', `⏱️ ${prereq.name} check timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`, 'warn');
                     context.debugLogger.debug('[Prerequisites] Timeout details:', { prereq: prereq.id, timeout: TIMEOUTS.PREREQUISITE_CHECK, error: errorMessage });
@@ -101,7 +101,7 @@ export async function handleCheckPrerequisites(
                     description: prereq.description,
                     required: !prereq.optional,
                     installed: false,
-                    message: isTimeout
+                    message: isTimeoutError(error)
                         ? `Check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds. Click Recheck to try again.`
                         : `Failed to check: ${errorMessage}`,
                     canInstall: false,
@@ -118,15 +118,34 @@ export async function handleCheckPrerequisites(
             }
 
             // For per-node-version prerequisites (e.g., Adobe I/O CLI), detect partial installs across required Node majors
+            // Always show required Node versions from component selection
+            // If main tool not installed: show all as "not installed"
+            // If main tool installed: check each Node version properly
             let perNodeVariantMissing = false;
             const missingVariantMajors: string[] = [];
             const perNodeVersionStatus: { version: string; component: string; installed: boolean }[] = [];
             if (prereq.perNodeVersion && Object.keys(nodeVersionMapping).length > 0) {
                 const requiredMajors = Object.keys(nodeVersionMapping);
-                const result = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
-                perNodeVariantMissing = result.perNodeVariantMissing;
-                missingVariantMajors.push(...result.missingVariantMajors);
-                perNodeVersionStatus.push(...result.perNodeVersionStatus);
+
+                if (!checkResult.installed) {
+                    // Main tool not installed: populate with all NOT installed
+                    // This shows users what Node versions they'll need for this tool
+                    for (const major of requiredMajors) {
+                        perNodeVersionStatus.push({
+                            version: `Node ${major}`,
+                            component: '',
+                            installed: false,
+                        });
+                    }
+                    perNodeVariantMissing = true;
+                    missingVariantMajors.push(...requiredMajors);
+                } else {
+                    // Main tool installed: check each Node version properly
+                    const result = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
+                    perNodeVariantMissing = result.perNodeVariantMissing;
+                    missingVariantMajors.push(...result.missingVariantMajors);
+                    perNodeVersionStatus.push(...result.perNodeVersionStatus);
+                }
             }
 
             // Store state for this prerequisite (include nodeVersionStatus if available)
@@ -166,7 +185,8 @@ export async function handleCheckPrerequisites(
                 status: overallStatus,
                 description: prereq.description,
                 required: !prereq.optional,
-                installed: checkResult.installed,
+                // For per-node-version prerequisites: installed is false if ANY required Node version is missing the tool
+                installed: (prereq.perNodeVersion && perNodeVariantMissing) ? false : checkResult.installed,
                 version: checkResult.version,
                 message: (prereq.perNodeVersion && perNodeVersionStatus && perNodeVersionStatus.length > 0)
                     ? 'Installed for versions:'
@@ -213,7 +233,7 @@ export async function handleCheckPrerequisites(
         context.logger.error('Prerequisites check failed:', error as Error);
         await context.sendMessage('error', {
             message: 'Failed to check prerequisites',
-            details: error instanceof Error ? error.message : String(error),
+            details: toError(error).message,
         });
         return { success: false };
     }

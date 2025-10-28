@@ -1,11 +1,11 @@
 import { parseJSON } from '@/types/typeGuards';
-import type { CommandExecutor } from '@/shared/command-execution';
-import { getLogger, Logger, StepLogger } from '@/shared/logging';
-import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/shared/validation';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import type { AdobeSDKClient } from './adobeSDKClient';
-import type { AuthCacheManager } from './authCacheManager';
-import type { OrganizationValidator } from './organizationValidator';
+import type { CommandExecutor } from '@/core/shell';
+import { getLogger, Logger, StepLogger } from '@/core/logging';
+import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
+import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
+import type { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -17,7 +17,7 @@ import type {
     AdobeCLIError,
     AdobeConsoleWhereResponse,
     SDKResponse,
-} from './types';
+} from '@/features/authentication/services/types';
 
 /**
  * Service for managing Adobe entities (organizations, projects, workspaces)
@@ -164,13 +164,18 @@ export class AdobeEntityService {
             let mappedProjects: AdobeProject[] = [];
             const cachedOrg = this.cacheManager.getCachedOrganization();
 
-            // Try SDK first if available and we have an org ID
-            if (this.sdkClient.isInitialized() && cachedOrg?.id) {
+            // Try SDK first if available and we have a VALID org code
+            // PERFORMANCE FIX: SDK requires org code with @AdobeOrg suffix (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
+            // The 'code' field contains the full IMS org ID, while 'id' is just numeric (e.g., "3397333")
+            // Passing org name or numeric ID causes 400 Bad Request and forces slow CLI fallback
+            const hasValidOrgCode = cachedOrg?.code && cachedOrg.code.includes('@');
+
+            if (this.sdkClient.isInitialized() && hasValidOrgCode) {
                 try {
-                    this.debugLogger.debug(`[Entity Service] Fetching projects for org ${cachedOrg.id} via SDK (fast path)`);
+                    this.debugLogger.debug(`[Entity Service] Fetching projects for org ${cachedOrg.code} via SDK (fast path)`);
 
                     const client = this.sdkClient.getClient() as { getProjectsForOrg: (orgId: string) => Promise<SDKResponse<RawAdobeProject[]>> };
-                    const sdkResult = await client.getProjectsForOrg(cachedOrg.id);
+                    const sdkResult = await client.getProjectsForOrg(cachedOrg.code);
                     const sdkDuration = Date.now() - startTime;
 
                     if (sdkResult.body && Array.isArray(sdkResult.body)) {
@@ -184,8 +189,8 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] SDK failed, falling back to CLI:', sdkError);
                     this.debugLogger.warn('[Entity Service] SDK unavailable, using slower CLI fallback for projects');
                 }
-            } else if (this.sdkClient.isInitialized() && !cachedOrg?.id) {
-                this.debugLogger.debug('[Entity Service] SDK available but no cached org ID, using CLI');
+            } else if (this.sdkClient.isInitialized() && !hasValidOrgCode) {
+                this.debugLogger.debug('[Entity Service] SDK available but org code is invalid (expected IMS org code like "ABC@AdobeOrg"), using CLI');
             }
 
             // CLI fallback
@@ -245,14 +250,19 @@ export class AdobeEntityService {
             const cachedOrg = this.cacheManager.getCachedOrganization();
             const cachedProject = this.cacheManager.getCachedProject();
 
-            // Try SDK first if available and we have both org ID and project ID
-            if (this.sdkClient.isInitialized() && cachedOrg?.id && cachedProject?.id) {
+            // Try SDK first if available and we have VALID org code and project ID
+            // PERFORMANCE FIX: SDK requires org code with @AdobeOrg suffix (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
+            // The 'code' field contains the full IMS org ID, while 'id' is just numeric (e.g., "3397333")
+            const hasValidOrgCode = cachedOrg?.code && cachedOrg.code.includes('@');
+            const hasValidProjectId = cachedProject?.id && cachedProject.id.length > 0;
+
+            if (this.sdkClient.isInitialized() && hasValidOrgCode && hasValidProjectId) {
                 try {
                     this.debugLogger.debug(`[Entity Service] Fetching workspaces for project ${cachedProject.id} via SDK (fast path)`);
 
                     const client = this.sdkClient.getClient() as { getWorkspacesForProject: (orgId: string, projectId: string) => Promise<SDKResponse<RawAdobeWorkspace[]>> };
                     const sdkResult = await client.getWorkspacesForProject(
-                        cachedOrg.id,
+                        cachedOrg.code,
                         cachedProject.id,
                     );
                     const sdkDuration = Date.now() - startTime;
@@ -268,8 +278,8 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] SDK failed, falling back to CLI:', sdkError);
                     this.debugLogger.warn('[Entity Service] SDK unavailable, using slower CLI fallback for workspaces');
                 }
-            } else if (this.sdkClient.isInitialized() && (!cachedOrg?.id || !cachedProject?.id)) {
-                this.debugLogger.debug('[Entity Service] SDK available but missing org/project ID, using CLI');
+            } else if (this.sdkClient.isInitialized() && (!hasValidOrgCode || !hasValidProjectId)) {
+                this.debugLogger.debug('[Entity Service] SDK available but org code or project ID is invalid, using CLI');
             }
 
             // CLI fallback
@@ -354,34 +364,71 @@ export class AdobeEntityService {
                 let orgData;
                 if (typeof context.org === 'string') {
                     if (context.org.trim()) {
-                        this.debugLogger.debug(`[Entity Service] Current organization name: ${context.org}, fetching numeric ID...`);
+                        this.debugLogger.debug(`[Entity Service] Current organization name: ${context.org}`);
 
-                        try {
-                            // Ensure SDK is initialized
-                            await this.sdkClient.ensureInitialized();
+                        // PERFORMANCE FIX: Always resolve full org object for SDK compatibility
+                        // The SDK requires org code with @AdobeOrg suffix (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg"), not names
+                        // Passing name causes 400 Bad Request and forces slow CLI fallback
 
-                            // Get org list to resolve ID
-                            const orgs = await this.getOrganizations();
-                            const matchedOrg = orgs.find(o => o.name === context.org || o.code === context.org);
+                        // Check if we're in post-login phase (no cached org list)
+                        const cachedOrgList = this.cacheManager.getCachedOrgList();
 
-                            if (matchedOrg) {
-                                this.debugLogger.debug(`[Entity Service] Resolved org "${context.org}" to ID: ${matchedOrg.id}`);
-                                orgData = matchedOrg;
-                            } else {
-                                this.debugLogger.warn(`[Entity Service] Could not find numeric ID for org "${context.org}", using name as fallback`);
+                        if (!cachedOrgList || cachedOrgList.length === 0) {
+                            // No cached org list = likely post-login, fetch it now to resolve full org object
+                            this.debugLogger.debug('[Entity Service] Org list not cached, fetching to resolve org code');
+
+                            try {
+                                // Fetch org list to get full org object with code (required for SDK operations)
+                                const orgs = await this.getOrganizations();
+                                const matchedOrg = orgs.find(o => o.name === context.org || o.code === context.org);
+
+                                if (matchedOrg) {
+                                    this.debugLogger.debug(`[Entity Service] Resolved org "${context.org}" to ID: ${matchedOrg.id}`);
+                                    orgData = matchedOrg;
+                                } else {
+                                    this.debugLogger.warn('[Entity Service] Could not find org in list, using name as fallback');
+                                    orgData = {
+                                        id: context.org,
+                                        code: context.org,
+                                        name: context.org,
+                                    };
+                                }
+                            } catch (error) {
+                                this.debugLogger.debug('[Entity Service] Failed to fetch org list for ID resolution:', error);
+                                // Fallback to name-only (SDK operations will fail, CLI fallback will be used)
                                 orgData = {
                                     id: context.org,
                                     code: context.org,
                                     name: context.org,
                                 };
                             }
-                        } catch (error) {
-                            this.debugLogger.debug('[Entity Service] Failed to fetch org list for ID lookup:', error);
-                            orgData = {
-                                id: context.org,
-                                code: context.org,
-                                name: context.org,
-                            };
+                        } else {
+                            // We have cached org list, safe to resolve full org object without API calls
+                            this.debugLogger.debug('[Entity Service] Using cached org list to resolve org code');
+
+                            try {
+                                // Try to resolve ID from cache
+                                const matchedOrg = cachedOrgList.find(o => o.name === context.org || o.code === context.org);
+
+                                if (matchedOrg) {
+                                    this.debugLogger.debug(`[Entity Service] Resolved org "${context.org}" to ID: ${matchedOrg.id} (from cache)`);
+                                    orgData = matchedOrg;
+                                } else {
+                                    this.debugLogger.warn('[Entity Service] Could not find org in cached list, using name as fallback');
+                                    orgData = {
+                                        id: context.org,
+                                        code: context.org,
+                                        name: context.org,
+                                    };
+                                }
+                            } catch (error) {
+                                this.debugLogger.debug('[Entity Service] Failed to resolve from cache:', error);
+                                orgData = {
+                                    id: context.org,
+                                    code: context.org,
+                                    name: context.org,
+                                };
+                            }
                         }
                     } else {
                         this.debugLogger.debug('[Entity Service] Organization name is empty string');

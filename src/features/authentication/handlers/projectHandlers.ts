@@ -8,13 +8,14 @@
  * - check-project-apis: Verify API Mesh access
  */
 
-import { ServiceLocator } from '@/services/serviceLocator';
-import { parseJSON } from '@/types/typeGuards';
-import { withTimeout } from '@/utils/promiseUtils';
-import { validateProjectId } from '@/shared/validation';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { ServiceLocator } from '@/core/di';
+import { parseJSON, toError } from '@/types/typeGuards';
+import { withTimeout } from '@/core/utils/promiseUtils';
+import { validateProjectId } from '@/core/validation';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { HandlerContext } from '@/types/handlers';
-import type { AdobeProject } from '../services/types';
+import { DataResult, SimpleResult } from '@/types/results';
+import type { AdobeProject } from '@/features/authentication/services/types';
 
 /**
  * ensure-org-selected - Check if organization is selected
@@ -22,17 +23,17 @@ import type { AdobeProject } from '../services/types';
  * Verifies that an organization is currently selected in the
  * Adobe context.
  */
-export async function handleEnsureOrgSelected(context: HandlerContext): Promise<{ success: boolean; hasOrg?: boolean }> {
+export async function handleEnsureOrgSelected(context: HandlerContext): Promise<DataResult<{ hasOrg: boolean }>> {
     try {
         const currentOrg = await context.authManager.getCurrentOrganization();
         const hasOrg = !!currentOrg;
         await context.sendMessage('orgSelectionStatus', { hasOrg });
-        return { success: true, hasOrg };
+        return { success: true, data: { hasOrg } };
     } catch (error) {
         context.logger.error('Failed to ensure org selected:', error as Error);
         await context.sendMessage('error', {
             message: 'Failed to check organization selection',
-            details: error instanceof Error ? error.message : String(error),
+            details: toError(error).message,
         });
         return { success: false };
     }
@@ -47,7 +48,7 @@ export async function handleEnsureOrgSelected(context: HandlerContext): Promise<
 export async function handleGetProjects(
     context: HandlerContext,
     payload?: { orgId?: string },
-): Promise<{ success: boolean; projects?: AdobeProject[]; error?: string }> {
+): Promise<DataResult<AdobeProject[]>> {
     try {
         // Send loading status with sub-message
         const currentOrg = await context.authManager.getCurrentOrganization();
@@ -67,15 +68,15 @@ export async function handleGetProjects(
                 timeoutMessage: 'Request timed out. Please check your connection and try again.',
             },
         );
-        await context.sendMessage('projects', projects);
-        return { success: true, projects };
+        await context.sendMessage('get-projects', projects);
+        return { success: true, data: projects };
     } catch (error) {
         const errorMessage = error instanceof Error && error.message.includes('timed out')
             ? error.message
             : 'Failed to load projects. Please try again.';
 
         context.logger.error('Failed to get projects:', error as Error);
-        await context.sendMessage('projects', {
+        await context.sendMessage('get-projects', {
             error: errorMessage,
         });
         return { success: false, error: errorMessage };
@@ -91,7 +92,7 @@ export async function handleGetProjects(
 export async function handleSelectProject(
     context: HandlerContext,
     payload: { projectId: string },
-): Promise<{ success: boolean }> {
+): Promise<SimpleResult> {
     const { projectId } = payload;
 
     // SECURITY: Validate project ID to prevent command injection
@@ -99,7 +100,7 @@ export async function handleSelectProject(
         validateProjectId(projectId);
     } catch (validationError) {
         context.logger.error('[Project] Invalid project ID', validationError as Error);
-        throw new Error(`Invalid project ID: ${validationError instanceof Error ? validationError.message : String(validationError)}`);
+        throw new Error(`Invalid project ID: ${toError(validationError).message}`);
     }
 
     context.debugLogger.debug(`[Project] handleSelectProject called with projectId: ${projectId}`);
@@ -123,7 +124,7 @@ export async function handleSelectProject(
                 context.debugLogger.debug('[Project] projectSelected message sent successfully');
             } catch (sendError) {
                 context.debugLogger.debug('[Project] Failed to send projectSelected message:', sendError);
-                throw new Error(`Failed to send project selection response: ${sendError instanceof Error ? sendError.message : String(sendError)}`);
+                throw new Error(`Failed to send project selection response: ${toError(sendError).message}`);
             }
 
             return { success: true };
@@ -142,7 +143,7 @@ export async function handleSelectProject(
         context.logger.error('Failed to select project:', error as Error);
         await context.sendMessage('error', {
             message: 'Failed to select project',
-            details: error instanceof Error ? error.message : String(error),
+            details: toError(error).message,
         });
         // Re-throw so the handler can send proper response
         throw error;
@@ -155,7 +156,7 @@ export async function handleSelectProject(
  * Checks if the selected project has API Mesh enabled by probing
  * the Adobe CLI api-mesh commands.
  */
-export async function handleCheckProjectApis(context: HandlerContext): Promise<{ success: boolean; hasMesh: boolean }> {
+export async function handleCheckProjectApis(context: HandlerContext): Promise<DataResult<{ hasMesh: boolean }>> {
     context.logger.info('[Adobe Setup] Checking required APIs for selected project');
     context.debugLogger.debug('[Adobe Setup] handleCheckProjectApis invoked');
     try {
@@ -167,14 +168,14 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<{
             const plugins = parseJSON<{ name?: string; id?: string }[]>(stdout || '[]');
             if (!plugins) {
                 context.logger.warn('[Adobe Setup] Failed to parse plugins list');
-                return { success: true, hasMesh: false };
+                return { success: true, data: { hasMesh: false } };
             }
             const hasPlugin = Array.isArray(plugins)
                 ? plugins.some((p: { name?: string; id?: string }) => (p.name || p.id || '').includes('api-mesh'))
                 : JSON.stringify(plugins).includes('api-mesh');
             if (!hasPlugin) {
                 context.logger.warn('[Adobe Setup] API Mesh CLI plugin not installed');
-                return { success: true, hasMesh: false };
+                return { success: true, data: { hasMesh: false } };
             }
         } catch (e) {
             context.debugLogger.debug('[Adobe Setup] Failed to verify plugins; continuing', { error: String(e) });
@@ -194,7 +195,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<{
             const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:get --active --json');
             context.debugLogger.debug('[Adobe Setup] api-mesh:get --active output', { stdout });
             context.logger.info('[Adobe Setup] API Mesh access confirmed (active mesh or readable config)');
-            return { success: true, hasMesh: true };
+            return { success: true, data: { hasMesh: true } };
         } catch (cliError) {
             const err = cliError as { message?: string; stderr?: string; stdout?: string };
             const combined = `${err.message || ''}\n${err.stderr || ''}\n${err.stdout || ''}`;
@@ -202,13 +203,13 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<{
             const forbidden = /403|forbidden|not authorized|not enabled|no access/i.test(combined);
             if (forbidden) {
                 context.logger.warn('[Adobe Setup] API Mesh not enabled for selected project');
-                return { success: true, hasMesh: false };
+                return { success: true, data: { hasMesh: false } };
             }
             // If error indicates no active mesh or not found, treat as enabled but empty
             const noActive = /no active|not found|404/i.test(combined);
             if (noActive) {
                 context.logger.info('[Adobe Setup] API Mesh enabled; no active mesh found');
-                return { success: true, hasMesh: true };
+                return { success: true, data: { hasMesh: true } };
             }
         }
 
@@ -223,7 +224,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<{
                 context.debugLogger.debug('[Adobe Setup] Mesh probe success', { cmd, stdout });
                 // If any mesh command runs, assume access exists
                 context.logger.info('[Adobe Setup] API Mesh access confirmed');
-                return { success: true, hasMesh: true };
+                return { success: true, data: { hasMesh: true } };
             } catch (cliError) {
                 const err = cliError as { message?: string; stderr?: string; stdout?: string };
                 const combined = `${err.message || ''}\n${err.stderr || ''}\n${err.stdout || ''}`;
@@ -231,7 +232,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<{
                 const forbidden = /403|forbidden|not authorized|not enabled|no access|missing permission/i.test(combined);
                 if (forbidden) {
                     context.logger.warn('[Adobe Setup] API Mesh not enabled for selected project');
-                    return { success: true, hasMesh: false };
+                    return { success: true, data: { hasMesh: false } };
                 }
                 // If the error indicates unknown command, try next variant
                 const unknown = /is not a aio command|Unknown argument|Did you mean/i.test(combined);
@@ -241,7 +242,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<{
 
         // If all probes failed without a definitive permission error, return false to prompt user
         context.logger.warn('[Adobe Setup] Unable to confirm API Mesh access (CLI variant mismatch)');
-        return { success: true, hasMesh: false };
+        return { success: true, data: { hasMesh: false } };
     } catch (error) {
         context.logger.error('[Adobe Setup] Failed to check project APIs', error as Error);
         throw error;

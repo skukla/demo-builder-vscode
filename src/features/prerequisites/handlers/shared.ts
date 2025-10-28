@@ -5,9 +5,9 @@
  * prerequisite handler modules.
  */
 
-import { ServiceLocator } from '../../../services/serviceLocator';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import { HandlerContext } from '../../../commands/handlers/HandlerContext';
+import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 
 /**
  * Get Node version mapping from component selection
@@ -22,7 +22,7 @@ export async function getNodeVersionMapping(
     }
 
     try {
-        const { ComponentRegistryManager } = await import('@/features/components/services/componentRegistry');
+        const { ComponentRegistryManager } = await import('../../components/services/ComponentRegistryManager');
         const registryManager = new ComponentRegistryManager(context.context.extensionPath);
         return await registryManager.getNodeVersionToComponentMapping(
             context.sharedState.currentComponentSelection.frontend,
@@ -48,7 +48,7 @@ export async function getRequiredNodeVersions(context: HandlerContext): Promise<
     }
 
     try {
-        const { ComponentRegistryManager } = await import('@/features/components/services/componentRegistry');
+        const { ComponentRegistryManager } = await import('../../components/services/ComponentRegistryManager');
         const registryManager = new ComponentRegistryManager(context.context.extensionPath);
         const mapping = await registryManager.getRequiredNodeVersions(
             context.sharedState.currentComponentSelection.frontend,
@@ -57,7 +57,8 @@ export async function getRequiredNodeVersions(context: HandlerContext): Promise<
             context.sharedState.currentComponentSelection.externalSystems,
             context.sharedState.currentComponentSelection.appBuilder,
         );
-        return Array.from(mapping);
+        // Sort versions in ascending order (18, 20, 24) for predictable installation order
+        return Array.from(mapping).sort((a, b) => parseInt(a) - parseInt(b));
     } catch {
         return [];
     }
@@ -69,7 +70,7 @@ export async function getRequiredNodeVersions(context: HandlerContext): Promise<
  * Used to gate installation until dependencies are satisfied.
  */
 export function areDependenciesInstalled(
-    prereq: import('@/features/prerequisites/services/prerequisitesManager').PrerequisiteDefinition,
+    prereq: import('../services/PrerequisitesManager').PrerequisiteDefinition,
     context: HandlerContext,
 ): boolean {
     if (!prereq.depends || prereq.depends.length === 0) {
@@ -98,7 +99,7 @@ export function areDependenciesInstalled(
  * checks which Node versions have it installed.
  */
 export async function checkPerNodeVersionStatus(
-    prereq: import('@/features/prerequisites/services/prerequisitesManager').PrerequisiteDefinition,
+    prereq: import('@/features/prerequisites/services/PrerequisitesManager').PrerequisiteDefinition,
     nodeVersions: string[],
     context: HandlerContext,
 ): Promise<{
@@ -116,30 +117,42 @@ export async function checkPerNodeVersionStatus(
 
     const perNodeVersionStatus: { version: string; component: string; installed: boolean }[] = [];
     const missingVariantMajors: string[] = [];
-    const commandManager = ServiceLocator.getCommandExecutor();
+    const nodeManager = ServiceLocator.getNodeVersionManager();
+
+    // CRITICAL: Get list of actually installed Node versions FIRST
+    // This prevents false positives when fnm falls back to other versions
+    const installedVersions = await nodeManager.list();
+    const installedMajors = new Set<string>();
+    for (const version of installedVersions) {
+        const match = /v?(\d+)/.exec(version);
+        if (match) {
+            installedMajors.add(match[1]);
+        }
+    }
 
     for (const major of nodeVersions) {
-        try {
-            let stdout: string;
+        // Check if this Node version is actually installed
+        if (!installedMajors.has(major)) {
+            // Node version not installed - tool cannot be installed for this version
+            context.logger.debug(`[Prerequisites] Node ${major} not installed, skipping ${prereq.name} check for this version`);
+            missingVariantMajors.push(major);
+            perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+            continue;
+        }
 
-            if (prereq.id === 'aio-cli') {
-                // Use direct fnm exec to avoid eval "$(fnm env)" wrapper that can hang
-                const result = await commandManager.execute(
-                    `fnm exec --using=${major} ${prereq.check.command}`,
-                    {
-                        enhancePath: true,
-                        timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                    },
-                );
-                stdout = result.stdout;
-            } else {
-                // Other prerequisites use standard Node version switching
-                const result = await commandManager.execute(prereq.check.command, {
-                    useNodeVersion: major,
+        try {
+            // Node version is installed - now check if the tool is installed for it
+            // Use NodeVersionManager for bulletproof Node version isolation
+            // Executes command with specific Node version using fnm exec
+            const result = await nodeManager.execWithVersion(
+                major,
+                prereq.check.command,
+                {
                     timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                });
-                stdout = result.stdout;
-            }
+                    enhancePath: true, // For aio-cli and other npm-installed tools
+                },
+            );
+            const stdout = result.stdout;
 
             // Parse CLI version if regex provided
             let cliVersion = '';

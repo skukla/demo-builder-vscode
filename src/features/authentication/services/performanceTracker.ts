@@ -1,5 +1,5 @@
-import { getLogger } from '@/shared/logging';
-import type { PerformanceMetric } from './types';
+import { getLogger } from '@/core/logging';
+import type { PerformanceMetric } from '@/features/authentication/services/types';
 
 /**
  * Tracks performance timing for authentication operations
@@ -45,14 +45,10 @@ export class PerformanceTracker {
         const duration = Date.now() - start;
         this.timings.delete(operation);
 
-        // Log performance metrics to debug channel
-        this.logger.debug(`Performance: ${operation} took ${duration}ms`);
-
-        // Warn if operation exceeded expected time
+        // Log performance metrics to debug channel with warning if exceeded
         const expected = this.expectedTimes[operation];
-        if (expected && duration > expected) {
-            this.logger.debug(`[Performance Warning] ${operation} took ${duration}ms (expected <${expected}ms)`);
-        }
+        const warning = expected && duration > expected ? ` ⚠️ SLOW (expected <${expected}ms)` : '';
+        this.logger.debug(`[Performance] ${operation} took ${duration}ms${warning}`);
 
         return duration;
     }

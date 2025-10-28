@@ -1,8 +1,9 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '../../../services/serviceLocator';
-import { updateFrontendState } from '@/shared/state';
-import { BaseCommand } from '@/shared/base';
+import { ServiceLocator } from '@/core/di';
+import { updateFrontendState } from '@/core/state';
+import { BaseCommand } from '@/core/base';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 export class StartDemoCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -54,7 +55,7 @@ export class StartDemoCommand extends BaseCommand {
                         configureTelemetry: false,
                         useNodeVersion: null,
                         enhancePath: false,
-                        shell: '/bin/sh',  // Required for command syntax
+                        shell: DEFAULT_SHELL,  // Required for command syntax
                     });
                     
                     if (result.code === 0 && result.stdout) {
@@ -95,7 +96,7 @@ export class StartDemoCommand extends BaseCommand {
                         configureTelemetry: false,
                         useNodeVersion: null,
                         enhancePath: false,
-                        shell: '/bin/sh',  // Required for pipes
+                        shell: DEFAULT_SHELL,  // Required for pipes
                     });
                     
                     // Wait a moment for port to be freed

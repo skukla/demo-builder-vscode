@@ -1,14 +1,14 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { StatusBarManager } from '@/providers/statusBar';
-import { ServiceLocator } from '../../../services/serviceLocator';
+import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { ServiceLocator } from '@/core/di';
 import { Project } from '@/types/base';
 import { parseJSON } from '@/types/typeGuards';
-import { Logger } from '@/shared/logging';
-import { StateManager } from '@/shared/state';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import { BaseCommand } from '@/shared/base';
+import { Logger } from '@/core/logging';
+import { StateManager } from '@/core/state';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { BaseCommand } from '@/core/base';
 
 /**
  * Deploy (or redeploy) API Mesh using the mesh.json from the mesh component
@@ -33,13 +33,8 @@ export class DeployMeshCommand extends BaseCommand {
             }
 
             // PRE-FLIGHT: Check authentication
-            const { AuthenticationService } = await import('@/features/authentication');
-            const authManager = new AuthenticationService(
-                this.context.extensionPath,
-                this.logger,
-                ServiceLocator.getCommandExecutor(),
-            );
-            
+            const authManager = ServiceLocator.getAuthenticationService();
+
             const isAuthenticated = await authManager.isAuthenticated();
             
             if (!isAuthenticated) {
@@ -89,7 +84,7 @@ export class DeployMeshCommand extends BaseCommand {
             }
 
             // Import ProjectDashboardWebviewCommand for real-time updates
-            const { ProjectDashboardWebviewCommand } = await import('../../../commands/projectDashboardWebview');
+            const { ProjectDashboardWebviewCommand } = await import('@/features/dashboard/commands/showDashboard');
             
             // Log deployment start
             this.logger.info('='.repeat(60));
@@ -307,7 +302,7 @@ export class DeployMeshCommand extends BaseCommand {
                     await this.stateManager.saveProject(project);
                 }
                 
-                const { formatMeshDeploymentError } = await import('@/utils/errorFormatter');
+                const { formatMeshDeploymentError } = await import('@/features/mesh/utils/errorFormatter');
                 
                 // Show error message (logs are already in Demo Builder: Logs channel)
                 vscode.window.showErrorMessage(formatMeshDeploymentError(error as Error));

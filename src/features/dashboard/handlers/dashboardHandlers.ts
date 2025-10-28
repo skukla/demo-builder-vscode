@@ -6,12 +6,13 @@
  */
 
 import * as vscode from 'vscode';
-import { MessageHandler, HandlerResponse } from '@/types/handlers';
-import { validateURL } from '@/shared/validation';
+import { MessageHandler, HandlerResponse, HandlerContext } from '@/types/handlers';
+import { Project, ComponentInstance } from '@/types';
+import { validateURL } from '@/core/validation';
 import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { AuthenticationService } from '@/features/authentication';
-import { ServiceLocator } from '@/services/serviceLocator';
-import { Logger } from '@/shared/logging';
+import { ServiceLocator } from '@/core/di';
+import { Logger } from '@/core/logging';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -72,28 +73,31 @@ export const handleRequestStatus: MessageHandler = async (context) => {
 
     if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.status !== 'error') {
         // Send initial status with 'checking' for mesh
+        const initialStatusData = {
+            name: project.name,
+            path: project.path,
+            status: project.status || 'ready',
+            port: project.componentInstances?.['citisignal-nextjs']?.port,
+            adobeOrg: project.adobe?.organization,
+            adobeProject: project.adobe?.projectName,
+            frontendConfigChanged,
+            mesh: {
+                status: 'checking',
+                message: 'Verifying deployment status...',
+            },
+        };
+
         context.panel.webview.postMessage({
             type: 'statusUpdate',
-            payload: {
-                name: project.name,
-                path: project.path,
-                status: project.status || 'ready',
-                port: project.componentInstances?.['citisignal-nextjs']?.port,
-                adobeOrg: project.adobe?.organization,
-                adobeProject: project.adobe?.projectName,
-                frontendConfigChanged,
-                mesh: {
-                    status: 'checking',
-                    message: 'Verifying deployment status...',
-                },
-            },
+            payload: initialStatusData,
         });
 
         // Check mesh status asynchronously
         checkMeshStatusAsync(context, project, meshComponent, frontendConfigChanged).catch(err => {
             context.logger.error('[Dashboard] Failed to check mesh status', err as Error);
         });
-        return { success: true };
+
+        return { success: true, data: initialStatusData };
     }
 
     // For other cases (deploying, error, no mesh), continue with synchronous check
@@ -111,11 +115,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                 context.logger.debug('[Dashboard] Checking mesh deployment status...');
 
                 // Pre-check: Verify auth before fetching
-                const authManager = new AuthenticationService(
-                    context.context.extensionPath,
-                    context.logger as Logger,
-                    ServiceLocator.getCommandExecutor(),
-                );
+                const authManager = ServiceLocator.getAuthenticationService();
 
                 const isAuthenticated = await authManager.isAuthenticated();
 
@@ -187,7 +187,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         payload: statusData,
     });
 
-    return { success: true };
+    return { success: true, data: statusData };
 };
 
 /**
@@ -212,11 +212,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
 
         context.logger.info('[Dashboard] Starting re-authentication flow');
 
-        const authManager = new AuthenticationService(
-            context.context.extensionPath,
-            context.logger as Logger,
-            ServiceLocator.getCommandExecutor(),
-        );
+        const authManager = ServiceLocator.getAuthenticationService();
 
         // Trigger browser auth
         await authManager.login();
@@ -369,9 +365,9 @@ export const handleDeleteProject: MessageHandler = async (context) => {
  * Check mesh status asynchronously and update UI when complete
  */
 async function checkMeshStatusAsync(
-    context: any,
-    project: any,
-    meshComponent: any,
+    context: HandlerContext,
+    project: Project,
+    meshComponent: ComponentInstance,
     frontendConfigChanged: boolean
 ): Promise<void> {
     try {
@@ -382,11 +378,7 @@ async function checkMeshStatusAsync(
         if (project.componentConfigs) {
             context.logger.debug('[Dashboard] Checking mesh deployment status...');
 
-            const authManager = new AuthenticationService(
-                context.context.extensionPath,
-                context.logger as Logger,
-                ServiceLocator.getCommandExecutor(),
-            );
+            const authManager = ServiceLocator.getAuthenticationService();
 
             const isAuthenticated = await authManager.isAuthenticatedQuick();
 
@@ -527,7 +519,7 @@ async function checkMeshStatusAsync(
 /**
  * Send quick demo status update without re-checking mesh
  */
-async function sendDemoStatusUpdate(context: any): Promise<void> {
+async function sendDemoStatusUpdate(context: HandlerContext): Promise<void> {
     if (!context.panel) return;
 
     const project = await context.stateManager.getCurrentProject();
@@ -576,16 +568,16 @@ async function sendDemoStatusUpdate(context: any): Promise<void> {
 /**
  * Verify mesh deployment with Adobe I/O
  */
-async function verifyMeshDeployment(context: any, project: any): Promise<void> {
+async function verifyMeshDeployment(context: HandlerContext, project: Project): Promise<void> {
     const { verifyMeshDeployment: verify, syncMeshStatus } = await import('@/features/mesh/services/meshVerifier');
 
     context.logger.debug('[Project Dashboard] Verifying mesh deployment with Adobe I/O...');
 
     const verificationResult = await verify(project);
 
-    if (!verificationResult.exists) {
+    if (!verificationResult.success || !verificationResult.data?.exists) {
         context.logger.warn('[Project Dashboard] Mesh verification failed - mesh may not exist in Adobe I/O', {
-            error: verificationResult.error,
+            error: verificationResult.success ? undefined : verificationResult.error,
         });
 
         await syncMeshStatus(project, verificationResult);
@@ -604,8 +596,8 @@ async function verifyMeshDeployment(context: any, project: any): Promise<void> {
         }
     } else {
         context.logger.debug('[Project Dashboard] Mesh verified successfully', {
-            meshId: verificationResult.meshId,
-            endpoint: verificationResult.endpoint,
+            meshId: verificationResult.data.meshId,
+            endpoint: verificationResult.data.endpoint,
         });
 
         await syncMeshStatus(project, verificationResult);

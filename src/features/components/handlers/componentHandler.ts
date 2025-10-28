@@ -10,7 +10,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/componentRegistry';
+import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
 
 /**
  * ComponentHandler class

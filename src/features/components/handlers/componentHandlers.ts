@@ -17,7 +17,7 @@
 
 import { ComponentSelection } from '@/types/components';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
-import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/componentRegistry';
+import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
 
 /**
  * Get or create ComponentRegistryManager from context
@@ -58,7 +58,7 @@ export const handleUpdateComponentsData: MessageHandler = async (
     context: HandlerContext,
     payload?: unknown,
 ) => {
-    const componentsData = payload as import('@/types/components').ComponentConfigs;
+    const componentsData = payload as import('../../../types/components').ComponentConfigs;
     context.sharedState.componentsData = componentsData;
     context.logger.debug('Updated components data');
     return { success: true };

@@ -9,8 +9,10 @@
  * - cancel-auth-polling: User cancels authentication
  */
 
-import { validateProjectPath, validateURL } from '@/shared/validation';
-import { HandlerContext } from '../../../commands/handlers/HandlerContext';
+import { validateProjectPath, validateURL } from '@/core/validation';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { toError } from '@/types/typeGuards';
+import { SimpleResult, DataResult } from '@/types/results';
 
 /**
  * ready - Initial wizard ready event
@@ -18,7 +20,7 @@ import { HandlerContext } from '../../../commands/handlers/HandlerContext';
  * Called when the wizard webview is fully loaded and ready.
  * Loads component definitions for the component selection step.
  */
-export async function handleReady(context: HandlerContext): Promise<{ success: boolean }> {
+export async function handleReady(context: HandlerContext): Promise<SimpleResult> {
     context.logger.debug('Wizard webview ready');
 
     // Note: init message is already sent by BaseWebviewCommand with getInitialData()
@@ -33,7 +35,7 @@ export async function handleReady(context: HandlerContext): Promise<{ success: b
  *
  * Disposes the wizard panel and logs cancellation.
  */
-export async function handleCancel(context: HandlerContext): Promise<{ success: boolean }> {
+export async function handleCancel(context: HandlerContext): Promise<SimpleResult> {
     context.panel?.dispose();
     context.logger.info('Wizard cancelled by user');
     return { success: true };
@@ -46,13 +48,13 @@ export async function handleCancel(context: HandlerContext): Promise<{ success: 
  */
 export async function handleCancelProjectCreation(
     context: HandlerContext,
-): Promise<{ success: boolean; message: string }> {
+): Promise<DataResult<{ message: string }>> {
     if (context.sharedState.projectCreationAbortController) {
         context.logger.info('[Project Creation] Cancellation requested by user');
         context.sharedState.projectCreationAbortController.abort();
-        return { success: true, message: 'Project creation cancelled' };
+        return { success: true, data: { message: 'Project creation cancelled' } };
     }
-    return { success: false, message: 'No active project creation to cancel' };
+    return { success: false, data: { message: 'No active project creation to cancel' } };
 }
 
 /**
@@ -63,17 +65,17 @@ export async function handleCancelProjectCreation(
  */
 export async function handleCancelMeshCreation(
     context: HandlerContext,
-): Promise<{ success: boolean; cancelled?: boolean; error?: string }> {
+): Promise<DataResult<{ cancelled: boolean }>> {
     try {
         context.logger.info('[API Mesh] User cancelled mesh creation');
         // Set cancellation flag if needed (for future implementation)
         // For now, just acknowledge the cancellation
-        return { success: true, cancelled: true };
+        return { success: true, data: { cancelled: true } };
     } catch (error) {
         context.logger.error('[API Mesh Cancel] Failed', error as Error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : String(error),
+            error: toError(error).message,
         };
     }
 }
@@ -84,7 +86,7 @@ export async function handleCancelMeshCreation(
  * Cancels the Adobe authentication polling process.
  * (Polling is now handled internally by authManager.login())
  */
-export async function handleCancelAuthPolling(context: HandlerContext): Promise<{ success: boolean }> {
+export async function handleCancelAuthPolling(context: HandlerContext): Promise<SimpleResult> {
     // Polling is now handled internally by authManager.login()
     context.sharedState.isAuthenticating = false;
     context.logger.info('[Auth] Cancelled authentication request');
@@ -97,7 +99,7 @@ export async function handleCancelAuthPolling(context: HandlerContext): Promise<
  * Called after project creation completes.
  * Opens the project directory in VS Code, triggering an Extension Host restart.
  */
-export async function handleOpenProject(context: HandlerContext): Promise<{ success: boolean }> {
+export async function handleOpenProject(context: HandlerContext): Promise<SimpleResult> {
     const vscode = await import('vscode');
 
     context.logger.info('[Project Creation] ✅ openProject message received');
@@ -130,11 +132,11 @@ export async function handleOpenProject(context: HandlerContext): Promise<{ succ
 
             context.logger.debug('[Project Creation] Set dashboard reopen flag');
         } catch (flagError) {
-            context.logger.warn('[Project Creation] Could not set reopen flag', flagError instanceof Error ? flagError.message : String(flagError));
+            context.logger.warn('[Project Creation] Could not set reopen flag', toError(flagError).message);
         }
 
         // Close any existing Welcome webview before opening project
-        const { WelcomeWebviewCommand } = await import('../../../commands/welcomeWebview');
+        const { WelcomeWebviewCommand } = await import('../../welcome/commands/showWelcome');
         WelcomeWebviewCommand.disposeActivePanel();
         context.logger.debug('[Project Creation] Closed Welcome webview if it was open');
 
@@ -170,7 +172,7 @@ export async function handleOpenProject(context: HandlerContext): Promise<{ succ
 export async function handleBrowseFiles(
     context: HandlerContext,
     payload: { projectPath: string },
-): Promise<{ success: boolean; error?: string }> {
+): Promise<SimpleResult> {
     const vscode = await import('vscode');
 
     try {
@@ -183,7 +185,7 @@ export async function handleBrowseFiles(
                 context.logger.error('[Project Creation] Invalid project path', validationError as Error);
                 return {
                     success: false,
-                    error: `Access denied: ${validationError instanceof Error ? validationError.message : String(validationError)}`,
+                    error: `Access denied: ${toError(validationError).message}`,
                 };
             }
 
@@ -206,7 +208,7 @@ export async function handleBrowseFiles(
 export async function handleLog(
     context: HandlerContext,
     payload: { level: string; message: string },
-): Promise<{ success: boolean }> {
+): Promise<SimpleResult> {
     const { level, message } = payload;
     switch (level) {
         case 'error':
@@ -236,7 +238,7 @@ export async function handleLog(
 export async function handleOpenAdobeConsole(
     context: HandlerContext,
     payload?: { orgId?: string; projectId?: string; workspaceId?: string },
-): Promise<{ success: boolean }> {
+): Promise<SimpleResult> {
     const vscode = await import('vscode');
 
     try {
@@ -295,7 +297,7 @@ export async function handleOpenAdobeConsole(
 async function loadComponents(context: HandlerContext): Promise<void> {
     try {
         // Invoke the loadComponents handler directly
-        const { handleLoadComponents } = await import('@/features/components/handlers/componentHandlers');
+        const { handleLoadComponents } = await import('../../components/handlers/componentHandlers');
         const result = await handleLoadComponents(context);
 
         // Send result to webview if successful

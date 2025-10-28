@@ -5,7 +5,8 @@
  * Maps message types to handler functions for the Project Dashboard.
  */
 
-import { MessageHandler } from '@/types/handlers';
+import { BaseHandlerRegistry } from '@/core/base';
+import { MessageHandler, HandlerContext } from '@/types/handlers';
 import * as handlers from './dashboardHandlers';
 
 /**
@@ -13,18 +14,11 @@ import * as handlers from './dashboardHandlers';
  *
  * Provides centralized registration and dispatching of dashboard message handlers.
  */
-export class DashboardHandlerRegistry {
-    private handlers: Map<string, MessageHandler>;
-
-    constructor() {
-        this.handlers = new Map();
-        this.registerHandlers();
-    }
-
+export class DashboardHandlerRegistry extends BaseHandlerRegistry {
     /**
      * Register all dashboard message handlers
      */
-    private registerHandlers(): void {
+    protected registerHandlers(): void {
         // Initialization handlers
         this.handlers.set('ready', handlers.handleReady);
         this.handlers.set('requestStatus', handlers.handleRequestStatus);
@@ -47,50 +41,5 @@ export class DashboardHandlerRegistry {
 
         // Project management handlers
         this.handlers.set('deleteProject', handlers.handleDeleteProject);
-    }
-
-    /**
-     * Handle a message by dispatching to the appropriate handler
-     *
-     * @param context - Handler context with all dependencies
-     * @param messageType - Type of message to handle
-     * @param payload - Message payload
-     * @returns Handler result
-     */
-    public async handle(
-        context: any,
-        messageType: string,
-        payload?: unknown,
-    ): Promise<unknown> {
-        const handler = this.handlers.get(messageType);
-        if (!handler) {
-            return { success: false, handlerNotFound: true };
-        }
-
-        try {
-            return await handler(context, payload);
-        } catch (error) {
-            context.logger.error(`[DashboardHandlerRegistry] Handler '${messageType}' failed:`, error as Error);
-            throw error;
-        }
-    }
-
-    /**
-     * Check if a handler is registered for a message type
-     *
-     * @param messageType - Message type to check
-     * @returns True if handler is registered
-     */
-    public hasHandler(messageType: string): boolean {
-        return this.handlers.has(messageType);
-    }
-
-    /**
-     * Get list of all registered message types
-     *
-     * @returns Array of registered message types
-     */
-    public getRegisteredTypes(): string[] {
-        return Array.from(this.handlers.keys());
     }
 }

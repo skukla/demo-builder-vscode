@@ -2,8 +2,8 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Logger } from '@/shared/logging';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { Logger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 export class ExtensionUpdater {
     private logger: Logger;
@@ -63,21 +63,30 @@ export class ExtensionUpdater {
    * Download VSIX file with timeout
    */
     private async downloadVsix(url: string, version: string): Promise<string> {
+        // SECURITY: Validate GitHub URL before downloading
+        const { validateGitHubDownloadURL } = await import('@/core/validation/securityValidation');
+        try {
+            validateGitHubDownloadURL(url);
+        } catch (error) {
+            this.logger.error('[Update] Download URL validation failed', error as Error);
+            throw new Error(`Security check failed: ${(error as Error).message}`);
+        }
+
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), TIMEOUTS.UPDATE_DOWNLOAD);
-    
+
         try {
             const response = await fetch(url, { signal: controller.signal });
             if (!response.ok) {
                 throw new Error(`Download failed: HTTP ${response.status}`);
             }
             const buffer = await response.arrayBuffer();
-      
+
             const tempDir = os.tmpdir();
             const vsixPath = path.join(tempDir, `demo-builder-${version}.vsix`);
-      
+
             await fs.writeFile(vsixPath, Buffer.from(buffer));
-      
+
             this.logger.info(`[Update] Downloaded VSIX to ${vsixPath}`);
             return vsixPath;
         } finally {

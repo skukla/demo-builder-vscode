@@ -9,11 +9,13 @@
  */
 
 import * as vscode from 'vscode';
-import { ServiceLocator } from '../../../services/serviceLocator';
-import { InstallStep } from '@/features/prerequisites/services/prerequisitesManager';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import { HandlerContext } from '../../../commands/handlers/HandlerContext';
-import { getRequiredNodeVersions, getNodeVersionMapping } from './shared';
+import { ServiceLocator } from '@/core/di';
+import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { toError, isTimeoutError } from '@/types/typeGuards';
+import { SimpleResult } from '@/types/results';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { getRequiredNodeVersions, getNodeVersionMapping } from '@/features/prerequisites/handlers/shared';
 
 /**
  * install-prerequisite - Install a missing prerequisite
@@ -24,7 +26,7 @@ import { getRequiredNodeVersions, getNodeVersionMapping } from './shared';
 export async function handleInstallPrerequisite(
     context: HandlerContext,
     payload: { prereqId: number; version?: string },
-): Promise<{ success: boolean }> {
+): Promise<SimpleResult> {
     try {
         const { prereqId, version } = payload;
         const state = context.sharedState.currentPrerequisiteStates?.get(prereqId);
@@ -85,15 +87,45 @@ export async function handleInstallPrerequisite(
             const missingMajors = nodeStatus
                 ? Object.keys(mapping).filter(m => !nodeStatus.some(s => s.version.startsWith(`Node ${m}`) && s.installed))
                 : [];
-            targetVersions = missingMajors.length > 0 ? missingMajors : (version ? [version] : undefined);
+            // Sort versions in ascending order (18, 20, 24) for predictable installation order
+            const sortedMissingMajors = missingMajors.sort((a, b) => parseInt(a) - parseInt(b));
+            targetVersions = sortedMissingMajors.length > 0 ? sortedMissingMajors : (version ? [version] : undefined);
         } else if (prereq.perNodeVersion) {
             // For per-node-version prerequisites, check which Node versions are missing this prereq
-            const commandManager = ServiceLocator.getCommandExecutor();
+            // CRITICAL: Use the same version resolution logic as getInstallSteps to ensure consistency
+            const versionsToCheck = nodeVersions.length ? nodeVersions : [version || '20'];
+            // Sort versions in ascending order (18, 20, 24) for predictable installation order
+            versionsToCheck.sort((a, b) => parseInt(a) - parseInt(b));
+
+            // CRITICAL: First verify which Node versions are actually installed
+            const nodeManager = ServiceLocator.getNodeVersionManager();
+            const installedVersions = await nodeManager.list();
+            const installedMajors = new Set<string>();
+            for (const version of installedVersions) {
+                const match = /v?(\d+)/.exec(version);
+                if (match) {
+                    installedMajors.add(match[1]);
+                }
+            }
+
             const missingNodeVersions: string[] = [];
 
-            for (const nodeVer of nodeVersions) {
+            for (const nodeVer of versionsToCheck) {
+                // Check if this Node version is actually installed first
+                if (!installedMajors.has(nodeVer)) {
+                    // Node version not installed - tool cannot be installed for this version
+                    // Don't add to missingNodeVersions (can't install tool without Node)
+                    context.debugLogger.debug(`[Prerequisites] Node ${nodeVer} not installed, cannot install ${prereq.name} for this version yet`);
+                    continue;
+                }
+
                 try {
-                    await commandManager.execute(prereq.check.command, { useNodeVersion: nodeVer });
+                    // Use nodeManager.execWithVersion for reliable version isolation
+                    // This prevents fnm fallback behavior that causes false positives
+                    await nodeManager.execWithVersion(nodeVer, prereq.check.command, {
+                        timeout: TIMEOUTS.PREREQUISITE_CHECK,
+                        enhancePath: true,
+                    });
                     // Already installed for this Node version
                     context.debugLogger.debug(`[Prerequisites] ${prereq.name} already installed for Node ${nodeVer}, skipping`);
                 } catch {
@@ -103,14 +135,31 @@ export async function handleInstallPrerequisite(
                 }
             }
 
-            targetVersions = missingNodeVersions.length > 0 ? missingNodeVersions : (version ? [version] : []);
+            // Sort versions in ascending order (18, 20, 24) for predictable installation order
+            missingNodeVersions.sort((a, b) => parseInt(a) - parseInt(b));
+            targetVersions = missingNodeVersions.length > 0 ? missingNodeVersions : [];
+
+            // If no versions need installation, return early
+            if (targetVersions.length === 0) {
+                context.logger.info(`[Prerequisites] ${prereq.name} already installed for all required Node versions or no Node versions available`);
+                await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
+                return { success: true };
+            }
         }
 
-        const total = steps.length * (targetVersions?.length ? targetVersions.length : 1);
+        // OPTIMIZATION: For multi-version installs, separate install steps from default steps
+        // Only run default steps for the LAST version (67% faster for 3 versions)
+        const installSteps = steps.filter(s => !s.name.toLowerCase().includes('default'));
+        const defaultSteps = steps.filter(s => s.name.toLowerCase().includes('default'));
+
+        const total = (installSteps.length * (targetVersions?.length || 1)) + defaultSteps.length;
         let counter = 0;
         const run = async (step: InstallStep, ver?: string) => {
+            // Resolve step name for logging (replace {version} placeholder)
+            const resolvedStepName = ver ? step.name.replace(/{version}/g, ver) : step.name;
+
             // Debug before step
-            context.debugLogger.debug(`[Prerequisites] Executing step: ${step.name}${ver ? ` (Node ${ver})` : ''}`);
+            context.debugLogger.debug(`[Prerequisites] Executing step: ${resolvedStepName}`);
             await context.progressUnifier.executeStep(
                 step,
                 counter,
@@ -120,7 +169,7 @@ export async function handleInstallPrerequisite(
                         index: prereqId,
                         name: prereq.name,
                         status: 'checking',
-                        message: ver ? `${step.message} for Node ${ver}` : step.message,
+                        message: ver ? `${step.message.replace(/{version}/g, ver)} for Node ${ver}` : step.message,
                         required: !prereq.optional,
                         unifiedProgress: progress,
                     });
@@ -129,16 +178,27 @@ export async function handleInstallPrerequisite(
             );
             counter++;
             // Debug after step
-            context.debugLogger.debug(`[Prerequisites] Completed step: ${step.name}${ver ? ` (Node ${ver})` : ''}`);
+            context.debugLogger.debug(`[Prerequisites] Completed step: ${resolvedStepName}`);
         };
 
         if (targetVersions?.length) {
+            // Install all versions (without default steps)
             for (const ver of targetVersions) {
-                for (const step of steps) {
+                for (const step of installSteps) {
                     await run(step, ver);
                 }
             }
+
+            // Set only the LAST version as default
+            if (defaultSteps.length > 0) {
+                const lastVersion = targetVersions[targetVersions.length - 1];
+                context.debugLogger.debug(`[Prerequisites] Setting Node ${lastVersion} as default (optimization: only last version)`);
+                for (const step of defaultSteps) {
+                    await run(step, lastVersion);
+                }
+            }
         } else {
+            // Single version or no versions - execute all steps normally
             for (const step of steps) {
                 await run(step);
             }
@@ -150,9 +210,8 @@ export async function handleInstallPrerequisite(
             installResult = await context.prereqManager.checkPrerequisite(prereq);
         } catch (error) {
             // Handle timeout or other check errors during verification
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            const isTimeout = errorMessage.toLowerCase().includes('timed out') ||
-                             errorMessage.toLowerCase().includes('timeout');
+            const errorMessage = toError(error).message;
+            const isTimeout = isTimeoutError(error);
 
             // Log to all appropriate channels
             if (isTimeout) {
@@ -273,7 +332,7 @@ export async function handleInstallPrerequisite(
         await context.sendMessage('prerequisite-status', {
             index: prereqId,
             status: 'error',
-            message: error instanceof Error ? error.message : String(error),
+            message: toError(error).message,
         });
         return { success: false };
     }

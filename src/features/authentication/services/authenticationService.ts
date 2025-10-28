@@ -1,14 +1,15 @@
 import * as path from 'path';
-import type { CommandExecutor } from '@/shared/command-execution';
-import { getLogger, Logger, StepLogger } from '@/shared/logging';
-import { TIMEOUTS, CACHE_TTL } from '@/utils/timeoutConfig';
-import { AdobeEntityService } from './adobeEntityService';
-import { AdobeSDKClient } from './adobeSDKClient';
-import { AuthCacheManager } from './authCacheManager';
-import { OrganizationValidator } from './organizationValidator';
-import { PerformanceTracker } from './performanceTracker';
-import { TokenManager } from './tokenManager';
-import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext } from './types';
+import type { CommandExecutor } from '@/core/shell';
+import { getLogger, Logger, StepLogger } from '@/core/logging';
+import { TIMEOUTS, CACHE_TTL } from '@/core/utils/timeoutConfig';
+import { AuthenticationErrorFormatter } from '@/core/errors';
+import { AdobeEntityService } from '@/features/authentication/services/adobeEntityService';
+import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
+import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
+import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
+import { PerformanceTracker } from '@/features/authentication/services/performanceTracker';
+import { TokenManager } from '@/features/authentication/services/tokenManager';
+import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation } from '@/features/authentication/services/types';
 
 /**
  * Main authentication service - orchestrates all authentication operations
@@ -17,13 +18,15 @@ import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext } from './typ
 export class AuthenticationService {
     private logger: Logger;
     private debugLogger = getLogger();
-    private stepLogger: StepLogger;
+    private stepLogger: StepLogger | null = null;
+    private stepLoggerInitPromise: Promise<StepLogger> | null = null;
+    private templatesPath: string;
     private performanceTracker: PerformanceTracker;
     private cacheManager: AuthCacheManager;
     private tokenManager: TokenManager;
     private organizationValidator: OrganizationValidator;
     private sdkClient: AdobeSDKClient;
-    private entityService: AdobeEntityService;
+    private entityService: AdobeEntityService | null = null;
 
     constructor(
         extensionPath: string,
@@ -32,36 +35,83 @@ export class AuthenticationService {
     ) {
         this.logger = logger;
 
-        // Initialize StepLogger with templates
-        const templatesPath = path.join(extensionPath, 'templates', 'logging.json');
-        this.stepLogger = new StepLogger(logger, undefined, templatesPath);
+        // Store templates path for lazy initialization
+        this.templatesPath = path.join(extensionPath, 'templates', 'logging.json');
 
         // Initialize all submodules
         this.performanceTracker = new PerformanceTracker();
         this.cacheManager = new AuthCacheManager();
-        this.tokenManager = new TokenManager(commandManager);
+        this.tokenManager = new TokenManager(commandManager, this.cacheManager);
         this.sdkClient = new AdobeSDKClient(logger);
         this.organizationValidator = new OrganizationValidator(
             commandManager,
             this.cacheManager,
             logger,
         );
-        this.entityService = new AdobeEntityService(
-            commandManager,
-            this.sdkClient,
-            this.cacheManager,
-            this.organizationValidator,
-            logger,
-            this.stepLogger,
-        );
+        // Note: entityService will be initialized lazily when first needed
+        // because it depends on stepLogger which requires async initialization
+    }
+
+    /**
+     * Lazy initialization of StepLogger with ConfigurationLoader
+     * Uses promise caching to ensure only one initialization happens
+     */
+    private async ensureStepLogger(): Promise<StepLogger> {
+        if (this.stepLogger) {
+            return this.stepLogger;
+        }
+
+        // If already initializing, wait for that promise
+        if (this.stepLoggerInitPromise) {
+            return this.stepLoggerInitPromise;
+        }
+
+        // Start initialization
+        this.stepLoggerInitPromise = StepLogger.create(
+            this.logger,
+            undefined,
+            this.templatesPath
+        ).then(stepLogger => {
+            this.stepLogger = stepLogger;
+
+            // Initialize entityService now that stepLogger is ready
+            if (!this.entityService) {
+                this.entityService = new AdobeEntityService(
+                    this.commandManager,
+                    this.sdkClient,
+                    this.cacheManager,
+                    this.organizationValidator,
+                    this.logger,
+                    stepLogger,
+                );
+            }
+
+            return stepLogger;
+        });
+
+        return this.stepLoggerInitPromise;
+    }
+
+    /**
+     * Ensure entityService is initialized (depends on stepLogger)
+     */
+    private async ensureEntityService(): Promise<AdobeEntityService> {
+        await this.ensureStepLogger();
+        if (!this.entityService) {
+            throw new Error('EntityService failed to initialize');
+        }
+        return this.entityService;
     }
 
     /**
      * Quick authentication check - only verifies token existence and expiry
-     * Does NOT validate org access or initialize SDK
+     * Does NOT validate org access or call getCurrentOrganization()
+     * Does NOT initialize SDK - SDK will be initialized on-demand when needed
      * Use this for dashboard loads and other performance-critical paths
      *
      * Performance: < 1 second (vs 9+ seconds for full isAuthenticated)
+     *
+     * CRITICAL: This method MUST NOT call getCurrentOrganization() or any org-related APIs
      */
     async isAuthenticatedQuick(): Promise<boolean> {
         this.performanceTracker.startTiming('isAuthenticatedQuick');
@@ -97,7 +147,7 @@ export class AuthenticationService {
 
     /**
      * Check if authenticated - validates token and organization access
-     * ALSO initializes SDK for better performance
+     * Does NOT initialize SDK - SDK will be initialized on-demand when needed
      * Use this when you need full authentication context
      *
      * Performance: 3-10 seconds (includes org validation)
@@ -116,7 +166,8 @@ export class AuthenticationService {
 
         try {
             this.debugLogger.debug('[Auth] Checking authentication status');
-            this.stepLogger.logTemplate('adobe-setup', 'operations.checking', { item: 'authentication status' });
+            const stepLogger = await this.ensureStepLogger();
+            stepLogger.logTemplate('adobe-setup', 'operations.checking', { item: 'authentication status' });
 
             const isValid = await this.tokenManager.isTokenValid();
 
@@ -124,13 +175,7 @@ export class AuthenticationService {
                 // Check if we have an org context and validate it's accessible
                 await this.organizationValidator.validateAndClearInvalidOrgContext();
 
-                // Initialize SDK in background (non-blocking) for future high-performance operations
-                this.sdkClient.initialize().catch(error => {
-                    // SDK initialization failure is not critical - operations will fall back to CLI
-                    this.debugLogger.debug('[Auth SDK] Background SDK init failed, using CLI fallback:', error);
-                });
-
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
+                stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
 
                 // Cache the successful result
                 this.cacheManager.setCachedAuthStatus(true);
@@ -139,7 +184,7 @@ export class AuthenticationService {
                 return true;
             } else {
                 this.logger.info('[Auth] Not authenticated with Adobe. Please click "Log in to Adobe" to authenticate.');
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.not-authenticated', {});
+                stepLogger.logTemplate('adobe-setup', 'statuses.not-authenticated', {});
 
                 // Cache the failed result
                 this.cacheManager.setCachedAuthStatus(false);
@@ -148,19 +193,22 @@ export class AuthenticationService {
                 return false;
             }
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             this.debugLogger.error('[Auth] Authentication check failed', error as Error);
 
-            // Provide helpful error messages based on common issues
-            if (errorMessage.includes('ENOENT') || errorMessage.includes('not found')) {
-                this.logger.error('[Auth] Adobe CLI configuration not found. Please ensure Adobe CLI is properly installed.');
-            } else if (errorMessage.includes('timeout')) {
-                this.logger.error('[Auth] Authentication check timed out. Please check your network connection.');
-            } else {
-                this.logger.error(`[Auth] Failed to check authentication status: ${errorMessage}`);
-            }
+            // Format error with user-friendly message
+            const formatted = AuthenticationErrorFormatter.formatError(error, {
+                operation: 'authentication-check',
+                timeout: TIMEOUTS.CONFIG_READ,
+            });
 
-            this.stepLogger.logTemplate('adobe-setup', 'error', { item: 'Authentication check', error: errorMessage });
+            // Log formatted error to user
+            this.logger.error(`[Auth] ${formatted.message}`);
+
+            // Log technical details to debug
+            this.debugLogger.debug(formatted.technical);
+
+            const stepLogger = await this.ensureStepLogger();
+            stepLogger.logTemplate('adobe-setup', 'error', { item: 'Authentication check', error: formatted.title });
 
             // Cache the failed result (shorter TTL for errors to allow retry)
             this.cacheManager.setCachedAuthStatus(false, CACHE_TTL.AUTH_STATUS_ERROR);
@@ -177,22 +225,27 @@ export class AuthenticationService {
         this.performanceTracker.startTiming('login');
 
         try {
-            this.stepLogger.logTemplate('adobe-setup', 'operations.opening-browser', {});
+            const stepLogger = await this.ensureStepLogger();
+            stepLogger.logTemplate('adobe-setup', 'operations.opening-browser', {});
             this.debugLogger.debug(`[Auth] Initiating Adobe login${force ? ' (forced)' : ''}`);
 
-            // If forced login, clear console context and cache BEFORE login
+            // If forced login, clear caches BEFORE login
             if (force) {
-                this.debugLogger.debug('[Auth] Clearing console context before forced login');
-                await this.clearConsoleContext();
-                this.cacheManager.clearAll();
+                // PERFORMANCE FIX: Removed redundant clearConsoleContext() call (4.3s savings)
+                // Reason: 'aio auth login -f' already performs forced logout which clears console context
+                // Plus, post-login flow explicitly sets console.org via selectOrganization()
+                // See authenticationHandlers.ts:220-222 for confirmation
+                this.cacheManager.clearAll(); // Includes token inspection cache
+                this.sdkClient.clear();
+                this.debugLogger.debug('[Auth] Cleared caches before forced login (Adobe CLI will clear console context)');
             }
 
             // Execute login command
             const loginCommand = force ? 'aio auth login -f' : 'aio auth login';
 
             this.debugLogger.debug('[Auth] Executing login command, browser should open');
-            this.stepLogger.logTemplate('adobe-setup', 'statuses.browser-opened', {});
-            this.stepLogger.logTemplate('adobe-setup', 'operations.waiting-authentication', {});
+            stepLogger.logTemplate('adobe-setup', 'statuses.browser-opened', {});
+            stepLogger.logTemplate('adobe-setup', 'operations.waiting-authentication', {});
 
             // Add timeout to the command execution (2 minutes)
             const result = await this.commandManager.executeAdobeCLI(
@@ -202,28 +255,26 @@ export class AuthenticationService {
                     timeout: TIMEOUTS.BROWSER_AUTH,
                 },
             ).catch(error => {
-                // Check if it's a timeout
-                if (error.message?.includes('timeout')) {
-                    this.debugLogger.debug('[Auth] Login timed out - user may have closed browser');
-                    this.logger.warn('[Auth] Authentication timed out. The browser window may have been closed or the session expired.');
-                    this.stepLogger.logTemplate('adobe-setup', 'error', {
-                        item: 'Authentication',
-                        error: 'Timed out waiting for browser authentication',
-                    });
-                    return null;
-                }
-
-                // Provide specific error messages for common issues
-                const errorMsg = error.message || '';
-                if (errorMsg.includes('EACCES') || errorMsg.includes('permission')) {
-                    this.logger.error('[Auth] Permission denied. Please ensure you have proper access rights.');
-                } else if (errorMsg.includes('ENETUNREACH') || errorMsg.includes('ETIMEDOUT')) {
-                    this.logger.error('[Auth] Network error. Please check your internet connection and try again.');
-                } else {
-                    this.logger.error(`[Auth] Login failed: ${errorMsg}`);
-                }
-
                 this.debugLogger.error('[Auth] Login command failed', error);
+
+                // Format error with user-friendly message
+                const formatted = AuthenticationErrorFormatter.formatError(error, {
+                    operation: 'browser-auth',
+                    timeout: TIMEOUTS.BROWSER_AUTH,
+                });
+
+                // Log formatted error to user
+                this.logger.error(`[Auth] ${formatted.message}`);
+
+                // Log technical details to debug
+                this.debugLogger.debug(formatted.technical);
+
+                // Log to step logger
+                stepLogger.logTemplate('adobe-setup', 'error', {
+                    item: 'Authentication',
+                    error: formatted.title,
+                });
+
                 return null;
             });
 
@@ -238,37 +289,32 @@ export class AuthenticationService {
                 if (token && token.length > 50 && !token.includes('Error') && !token.includes('error')) {
                     this.debugLogger.debug('[Auth] Received access token from login command');
 
-                    // Store the token
-                    const stored = await this.tokenManager.storeAccessToken(token);
+                    // TRUST ADOBE CLI: If 'aio auth login' returns exit code 0 with valid token,
+                    // the CLI has already stored it. No verification needed.
+                    // This aligns with commit 29c0876 "Prevent second browser window during login"
+                    // which defers post-login validation to avoid Adobe IMS timing issues.
+                    this.debugLogger.debug('[Auth] Adobe CLI login successful (exit code 0)');
+                    stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
 
-                    if (stored) {
-                        this.stepLogger.logTemplate('adobe-setup', 'statuses.authentication-complete', {});
+                    // CRITICAL FIX: Clear SDK after login to force re-initialization with new token
+                    // Old token was cached in SDK instance, new token requires SDK reset
+                    this.sdkClient.clear();
+                    this.debugLogger.debug('[Auth] Cleared SDK client to force re-init with new token');
 
-                        // Clear auth cache to force fresh check next time
+                    // Clear auth cache to force fresh check next time
+                    // Note: Token inspection cache cleared via cacheManager.clearAll() in other branches
+                    // If forced login, clearAll() already cleared everything at line 233
+                    // Only clear specific caches for non-forced login
+                    if (!force) {
                         this.cacheManager.clearAuthStatusCache();
-
-                        // Clear validation cache after login
                         this.cacheManager.clearValidationCache();
-
-                        // If this was a forced login, clear session caches
-                        if (force) {
-                            this.cacheManager.clearSessionCaches();
-                            this.debugLogger.debug('[Auth] Cleared cache after forced login');
-                        }
-
-                        this.performanceTracker.endTiming('login');
-                        return true;
+                        this.debugLogger.debug('[Auth] Cleared auth and validation caches after login');
                     } else {
-                        this.debugLogger.warn('[Auth] Failed to store token');
-
-                        // Verify if we're still authenticated from previous session
-                        const isAuth = await this.isAuthenticated();
-                        if (isAuth) {
-                            this.debugLogger.info('[Auth] Token storage failed but existing authentication found');
-                            this.performanceTracker.endTiming('login');
-                            return true;
-                        }
+                        this.debugLogger.debug('[Auth] Skipping cache clear - already cleared before forced login');
                     }
+
+                    this.performanceTracker.endTiming('login');
+                    return true;
                 } else {
                     this.debugLogger.warn('[Auth] Command succeeded but no valid token in output');
                     this.debugLogger.debug(`[Auth] Output length: ${result.stdout?.length}, first 100 chars: ${result.stdout?.substring(0, 100)}`);
@@ -277,7 +323,7 @@ export class AuthenticationService {
                 // If we didn't get a valid token and force wasn't used, retry with force
                 if (!force) {
                     this.debugLogger.info('[Auth] Retrying with force flag to ensure fresh authentication');
-                    this.stepLogger.logTemplate('adobe-setup', 'operations.retrying', { item: 'authentication with fresh login' });
+                    stepLogger.logTemplate('adobe-setup', 'operations.retrying', { item: 'authentication with fresh login' });
                     this.performanceTracker.endTiming('login');
                     return await this.login(true);
                 }
@@ -309,10 +355,11 @@ export class AuthenticationService {
             );
 
             // Clear all caches after logout
-            this.cacheManager.clearAll();
+            this.cacheManager.clearAll(); // Includes token inspection cache
             this.sdkClient.clear();
 
-            this.stepLogger.logTemplate('adobe-setup', 'success', { item: 'Logout' });
+            const stepLogger = await this.ensureStepLogger();
+            stepLogger.logTemplate('adobe-setup', 'success', { item: 'Logout' });
         } catch (error) {
             this.debugLogger.error('[Auth] Logout failed', error as Error);
             throw error;
@@ -341,7 +388,15 @@ export class AuthenticationService {
      * Clear all caches
      */
     clearCache(): void {
-        this.cacheManager.clearAll();
+        this.cacheManager.clearAll(); // Includes token inspection cache
+    }
+
+    /**
+     * Get cache manager instance
+     * Used by TokenManager instances to access shared cache
+     */
+    getCacheManager(): AuthCacheManager {
+        return this.cacheManager;
     }
 
     /**
@@ -387,7 +442,8 @@ export class AuthenticationService {
      */
     async getOrganizations(): Promise<AdobeOrg[]> {
         this.performanceTracker.startTiming('getOrganizations');
-        const result = await this.entityService.getOrganizations();
+        const entityService = await this.ensureEntityService();
+        const result = await entityService.getOrganizations();
         this.performanceTracker.endTiming('getOrganizations');
         return result;
     }
@@ -397,7 +453,8 @@ export class AuthenticationService {
      */
     async getProjects(): Promise<AdobeProject[]> {
         this.performanceTracker.startTiming('getProjects');
-        const result = await this.entityService.getProjects();
+        const entityService = await this.ensureEntityService();
+        const result = await entityService.getProjects();
         this.performanceTracker.endTiming('getProjects');
         return result;
     }
@@ -407,9 +464,59 @@ export class AuthenticationService {
      */
     async getWorkspaces(): Promise<AdobeWorkspace[]> {
         this.performanceTracker.startTiming('getWorkspaces');
-        const result = await this.entityService.getWorkspaces();
+        const entityService = await this.ensureEntityService();
+        const result = await entityService.getWorkspaces();
         this.performanceTracker.endTiming('getWorkspaces');
         return result;
+    }
+
+    /**
+     * Get cached organization (fast - no fetch, no CLI calls)
+     * Returns cached org if available, undefined otherwise
+     *
+     * Use this for quick checks where you want to show cached data
+     * without triggering expensive operations.
+     *
+     * Performance: < 1ms (memory read only)
+     */
+    getCachedOrganization(): AdobeOrg | undefined {
+        return this.cacheManager.getCachedOrganization();
+    }
+
+    /**
+     * Set cached organization (explicit cache control)
+     * Use this to ensure organization is cached after selection
+     *
+     * Performance: < 1ms (memory write only)
+     */
+    setCachedOrganization(org: AdobeOrg | undefined): void {
+        this.cacheManager.setCachedOrganization(org);
+    }
+
+    /**
+     * Get cached project (fast - no fetch, no CLI calls)
+     * Returns cached project if available, undefined otherwise
+     *
+     * Use this for quick checks where you want to show cached data
+     * without triggering expensive operations.
+     *
+     * Performance: < 1ms (memory read only)
+     */
+    getCachedProject(): AdobeProject | undefined {
+        return this.cacheManager.getCachedProject();
+    }
+
+    /**
+     * Get cached validation result (fast - no fetch, no API calls)
+     * Returns validation cache if available, undefined otherwise
+     *
+     * Use this to check if a cached org is known to be invalid without
+     * triggering expensive validation operations.
+     *
+     * Performance: < 1ms (memory read only)
+     */
+    getValidationCache(): AuthTokenValidation | undefined {
+        return this.cacheManager.getValidationCache();
     }
 
     /**
@@ -417,7 +524,8 @@ export class AuthenticationService {
      */
     async getCurrentOrganization(): Promise<AdobeOrg | undefined> {
         this.performanceTracker.startTiming('getCurrentOrganization');
-        const result = await this.entityService.getCurrentOrganization();
+        const entityService = await this.ensureEntityService();
+        const result = await entityService.getCurrentOrganization();
         this.performanceTracker.endTiming('getCurrentOrganization');
         return result;
     }
@@ -427,7 +535,8 @@ export class AuthenticationService {
      */
     async getCurrentProject(): Promise<AdobeProject | undefined> {
         this.performanceTracker.startTiming('getCurrentProject');
-        const result = await this.entityService.getCurrentProject();
+        const entityService = await this.ensureEntityService();
+        const result = await entityService.getCurrentProject();
         this.performanceTracker.endTiming('getCurrentProject');
         return result;
     }
@@ -437,7 +546,8 @@ export class AuthenticationService {
      */
     async getCurrentWorkspace(): Promise<AdobeWorkspace | undefined> {
         this.performanceTracker.startTiming('getCurrentWorkspace');
-        const result = await this.entityService.getCurrentWorkspace();
+        const entityService = await this.ensureEntityService();
+        const result = await entityService.getCurrentWorkspace();
         this.performanceTracker.endTiming('getCurrentWorkspace');
         return result;
     }
@@ -446,7 +556,8 @@ export class AuthenticationService {
      * Get current context
      */
     async getCurrentContext(): Promise<AdobeContext> {
-        return this.entityService.getCurrentContext();
+        const entityService = await this.ensureEntityService();
+        return entityService.getCurrentContext();
     }
 
     /**
@@ -454,7 +565,8 @@ export class AuthenticationService {
      */
     async selectOrganization(orgId: string): Promise<boolean> {
         this.performanceTracker.startTiming('selectOrganization');
-        const result = await this.entityService.selectOrganization(orgId);
+        const entityService = await this.ensureEntityService();
+        const result = await entityService.selectOrganization(orgId);
         this.performanceTracker.endTiming('selectOrganization');
         return result;
     }
@@ -464,7 +576,8 @@ export class AuthenticationService {
      */
     async selectProject(projectId: string): Promise<boolean> {
         this.performanceTracker.startTiming('selectProject');
-        const result = await this.entityService.selectProject(projectId);
+        const entityService = await this.ensureEntityService();
+        const result = await entityService.selectProject(projectId);
         this.performanceTracker.endTiming('selectProject');
         return result;
     }
@@ -474,7 +587,8 @@ export class AuthenticationService {
      */
     async selectWorkspace(workspaceId: string): Promise<boolean> {
         this.performanceTracker.startTiming('selectWorkspace');
-        const result = await this.entityService.selectWorkspace(workspaceId);
+        const entityService = await this.ensureEntityService();
+        const result = await entityService.selectWorkspace(workspaceId);
         this.performanceTracker.endTiming('selectWorkspace');
         return result;
     }
@@ -483,6 +597,7 @@ export class AuthenticationService {
      * Auto-select organization if only one available
      */
     async autoSelectOrganizationIfNeeded(skipCurrentCheck = false): Promise<AdobeOrg | undefined> {
-        return this.entityService.autoSelectOrganizationIfNeeded(skipCurrentCheck);
+        const entityService = await this.ensureEntityService();
+        return entityService.autoSelectOrganizationIfNeeded(skipCurrentCheck);
     }
 }

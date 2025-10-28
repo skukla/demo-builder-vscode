@@ -1,8 +1,8 @@
-import { parseJSON } from '@/types/typeGuards';
-import type { CommandExecutor } from '@/shared/command-execution';
-import { getLogger, Logger } from '@/shared/logging';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import type { AuthCacheManager } from './authCacheManager';
+import { parseJSON, toError, isTimeoutError } from '@/types/typeGuards';
+import type { CommandExecutor } from '@/core/shell';
+import { getLogger, Logger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 
 /**
  * Validates organization access and manages invalid organization contexts
@@ -48,7 +48,7 @@ export class OrganizationValidator {
             return false;
         } catch (error) {
             // Better timeout detection
-            const errorString = error instanceof Error ? error.message : String(error);
+            const errorString = toError(error).message;
             const errorObj = error as NodeJS.ErrnoException;
 
             const isTimeout =
@@ -189,7 +189,7 @@ export class OrganizationValidator {
             this.debugLogger.debug('[Org Validator] App Builder access failed with non-permission error, assuming permissions OK');
             return { hasPermissions: true };
         } catch (error) {
-            const errorString = error instanceof Error ? error.message : String(error);
+            const errorString = toError(error).message;
             this.debugLogger.debug('[Org Validator] Developer permissions test failed:', error);
 
             // Check if it's a permission-related error in the exception

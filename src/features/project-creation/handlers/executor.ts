@@ -6,14 +6,14 @@
  */
 
 import * as vscode from 'vscode';
-import { ServiceLocator } from '../../../services/serviceLocator';
+import { ServiceLocator } from '@/core/di';
 import { AdobeConfig } from '@/types/base';
 import { parseJSON } from '@/types/typeGuards';
 import {
     generateComponentEnvFile as generateEnvFile,
     deployMeshComponent as deployMeshHelper,
-} from '../../../commands/helpers';
-import { HandlerContext } from '../../../commands/handlers/HandlerContext';
+} from '@/features/project-creation/helpers';
+import { HandlerContext } from './HandlerContext';
 import { ProgressTracker } from './shared';
 
 /**
@@ -83,9 +83,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     // Import ComponentManager and other dependencies
     context.logger.debug('[Project Creation] Starting dynamic imports...');
-    const { ComponentManager } = await import('@/features/components/services/componentManager');
+    const { ComponentManager } = await import('@/features/components/services/ComponentManager');
     context.logger.debug('[Project Creation] ComponentManager imported');
-    const { ComponentRegistryManager } = await import('@/features/components/services/componentRegistry');
+    const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
     context.logger.debug('[Project Creation] ComponentRegistryManager imported');
     const fs = await import('fs/promises');
     const path = await import('path');
@@ -288,7 +288,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         } catch (meshError) {
             context.logger.error('[Project Creation] Failed to deploy mesh', meshError as Error);
 
-            const { formatMeshDeploymentError } = await import('@/utils/errorFormatter');
+            const { formatMeshDeploymentError } = await import('@/features/mesh/utils/errorFormatter');
             throw new Error(formatMeshDeploymentError(meshError as Error));
         }
     }

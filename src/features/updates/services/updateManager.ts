@@ -1,9 +1,9 @@
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { Project } from '@/types';
-import { Logger } from '@/shared/logging';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import type { ReleaseInfo, UpdateCheckResult } from './types';
+import { Logger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
 
 export type { UpdateCheckResult };
 
@@ -107,17 +107,33 @@ export class UpdateManager {
       
             try {
                 const response = await fetch(url, { signal: controller.signal });
-                const data = await response.json();
+
+                // HTTP status validation (Step 4)
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        this.logger.debug(`[Update] Release not found for ${repo}`);
+                        return null;
+                    }
+                    if (response.status === 403) {
+                        throw new Error('GitHub rate limit exceeded. Try again later.');
+                    }
+                    if (response.status >= 500) {
+                        throw new Error(`GitHub server error: HTTP ${response.status}`);
+                    }
+                    throw new Error(`GitHub API error: HTTP ${response.status}`);
+                }
+
+                const data: GitHubRelease | GitHubRelease[] = await response.json();
 
                 // Beta channel returns array, stable returns object
-                let release;
+                let release: GitHubRelease;
                 if (Array.isArray(data)) {
                     // For beta: find the latest version by semver, not by GitHub's order
-                    const nonDraftReleases = data.filter((r: any) => !r.draft);
+                    const nonDraftReleases = data.filter((r: GitHubRelease) => !r.draft);
                     if (nonDraftReleases.length === 0) return null;
 
                     // Sort by version using semver
-                    release = nonDraftReleases.sort((a: any, b: any) => {
+                    release = nonDraftReleases.sort((a: GitHubRelease, b: GitHubRelease) => {
                         const versionA = a.tag_name.replace(/^v/, '');
                         const versionB = b.tag_name.replace(/^v/, '');
                         return semver.gt(versionA, versionB) ? -1 : 1;
@@ -125,26 +141,40 @@ export class UpdateManager {
                 } else {
                     release = data;
                 }
-        
+
                 if (!release || release.message === 'Not Found') {
                     this.logger.debug(`[Update] No releases found for ${repo}`);
                     return null;
                 }
-        
+
                 // Find VSIX asset for extension, or source archive for components
                 const isExtension = repo === this.EXTENSION_REPO;
-                const asset = isExtension
-                    ? release.assets.find((a: { name: string }) => a.name.endsWith('.vsix'))
+                const asset: GitHubReleaseAsset | string | undefined = isExtension
+                    ? release.assets.find((a: GitHubReleaseAsset) => a.name.endsWith('.vsix'))
                     : release.zipball_url;
-        
+
                 if (!asset) {
                     this.logger.debug(`[Update] No valid asset found in release for ${repo}`);
                     return null;
                 }
-        
+
+                // Safely extract download URL based on asset type
+                const downloadUrl = isExtension && typeof asset !== 'string'
+                    ? asset.browser_download_url
+                    : release.zipball_url;
+
+                // SECURITY: Validate GitHub download URL before returning
+                const { validateGitHubDownloadURL } = await import('@/core/validation/securityValidation');
+                try {
+                    validateGitHubDownloadURL(downloadUrl);
+                } catch (error) {
+                    this.logger.warn(`[Update] Security check failed for download URL from ${repo}: ${(error as Error).message}`);
+                    return null; // Treat as no update available if URL is invalid
+                }
+
                 return {
                     version: release.tag_name.replace(/^v/, ''),
-                    downloadUrl: isExtension ? asset.browser_download_url : release.zipball_url,
+                    downloadUrl,
                     releaseNotes: release.body || 'No release notes available',
                     publishedAt: release.published_at,
                     isPrerelease: release.prerelease,

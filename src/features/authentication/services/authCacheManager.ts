@@ -1,5 +1,5 @@
-import { getLogger } from '@/shared/logging';
-import { CACHE_TTL } from '@/utils/timeoutConfig';
+import { getLogger } from '@/core/logging';
+import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -7,7 +7,7 @@ import type {
     AuthTokenValidation,
     CacheEntry,
     AdobeConsoleWhereResponse,
-} from './types';
+} from '@/features/authentication/services/types';
 
 /**
  * Manages caching strategies for authentication-related data
@@ -52,6 +52,9 @@ export class AuthCacheManager {
     // API result caching for performance
     private orgListCache: CacheEntry<AdobeOrg[]> | undefined;
     private consoleWhereCache: CacheEntry<AdobeConsoleWhereResponse> | undefined;
+
+    // Token inspection caching (prevents redundant 4s CLI calls)
+    private tokenInspectionCache: CacheEntry<{ valid: boolean; expiresIn: number; token?: string }> | undefined;
 
     // Organization validation failure tracking
     private orgClearedDueToValidation = false;
@@ -262,6 +265,48 @@ export class AuthCacheManager {
     }
 
     /**
+     * Get cached token inspection result
+     * PERFORMANCE FIX: Prevents redundant 4-second Adobe CLI calls
+     */
+    getCachedTokenInspection(): { valid: boolean; expiresIn: number; token?: string } | undefined {
+        if (!this.tokenInspectionCache) {
+            return undefined;
+        }
+
+        const now = Date.now();
+        if (now >= this.tokenInspectionCache.expiry) {
+            this.logger.debug('[Auth Cache] Token inspection cache expired');
+            this.tokenInspectionCache = undefined;
+            return undefined;
+        }
+
+        this.logger.debug('[Auth Cache] Using cached token inspection result');
+        return this.tokenInspectionCache.data;
+    }
+
+    /**
+     * Set cached token inspection result
+     * PERFORMANCE FIX: Cache valid token inspections to prevent redundant CLI calls
+     */
+    setCachedTokenInspection(result: { valid: boolean; expiresIn: number; token?: string }): void {
+        const now = Date.now();
+        const jitteredTTL = this.getCacheTTLWithJitter(CACHE_TTL.TOKEN_INSPECTION);
+        this.tokenInspectionCache = {
+            data: result,
+            expiry: now + jitteredTTL,
+        };
+        this.logger.debug(`[Auth Cache] Cached token inspection (valid: ${result.valid}, TTL: ${jitteredTTL}ms)`);
+    }
+
+    /**
+     * Clear token inspection cache
+     */
+    clearTokenInspectionCache(): void {
+        this.tokenInspectionCache = undefined;
+        this.logger.debug('[Auth Cache] Cleared token inspection cache');
+    }
+
+    /**
      * Check if org was cleared due to validation failure
      */
     wasOrgClearedDueToValidation(): boolean {
@@ -296,6 +341,7 @@ export class AuthCacheManager {
     clearPerformanceCaches(): void {
         this.orgListCache = undefined;
         this.consoleWhereCache = undefined;
+        this.tokenInspectionCache = undefined;
         this.logger.debug('[Auth Cache] Cleared performance caches');
     }
 
@@ -307,6 +353,7 @@ export class AuthCacheManager {
         this.clearPerformanceCaches();
         this.clearAuthStatusCache();
         this.clearValidationCache();
+        this.clearTokenInspectionCache();
         this.orgClearedDueToValidation = false;
         this.logger.debug('[Auth Cache] Cleared all caches');
     }

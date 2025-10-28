@@ -1,9 +1,10 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ServiceLocator } from '../../../services/serviceLocator';
+import { ServiceLocator } from '@/core/di';
 import { Project } from '@/types';
-import { Logger } from '@/shared/logging';
-import { validateMeshId } from '@/shared/validation';
+import { Logger } from '@/core/logging';
+import { validateMeshId } from '@/core/validation';
+import { DataResult, SimpleResult } from '@/types/results';
 
 export class MeshDeployer {
     private logger: Logger;
@@ -12,12 +13,12 @@ export class MeshDeployer {
         this.logger = logger;
     }
 
-    public async deploy(project: Project): Promise<{ success: boolean; endpoint?: string }> {
+    public async deploy(project: Project): Promise<DataResult<{ endpoint: string }>> {
         try {
             // Generate mesh configuration
             const meshConfig = this.generateMeshConfig(project);
             const meshPath = path.join(project.path, 'mesh.json');
-            
+
             // Write mesh configuration
             await fs.writeFile(meshPath, JSON.stringify(meshConfig, null, 2));
             this.logger.info('Generated mesh configuration');
@@ -35,13 +36,13 @@ export class MeshDeployer {
 
             if (endpoint) {
                 this.logger.info(`Mesh deployed successfully: ${endpoint}`);
-                return { success: true, endpoint };
+                return { success: true, data: { endpoint } };
             }
 
-            return { success: false };
+            return { success: false, error: 'No endpoint found in deployment output' };
         } catch (error) {
             this.logger.error('Mesh deployment failed', error as Error);
-            return { success: false };
+            return { success: false, error: (error as Error).message };
         }
     }
 
@@ -97,13 +98,13 @@ export class MeshDeployer {
         };
     }
 
-    public async update(project: Project): Promise<{ success: boolean; endpoint?: string }> {
+    public async update(project: Project): Promise<DataResult<{ endpoint: string }>> {
         try {
             const meshConfig = this.generateMeshConfig(project);
             const meshPath = path.join(project.path, 'mesh.json');
-            
+
             await fs.writeFile(meshPath, JSON.stringify(meshConfig, null, 2));
-            
+
             const commandManager = ServiceLocator.getCommandExecutor();
             const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:update mesh.json', {
                 cwd: project.path,
@@ -114,13 +115,13 @@ export class MeshDeployer {
 
             if (endpoint) {
                 this.logger.info(`Mesh updated successfully: ${endpoint}`);
-                return { success: true, endpoint };
+                return { success: true, data: { endpoint } };
             }
 
-            return { success: false };
+            return { success: false, error: 'No endpoint found in update output' };
         } catch (error) {
             this.logger.error('Mesh update failed', error as Error);
-            return { success: false };
+            return { success: false, error: (error as Error).message };
         }
     }
 

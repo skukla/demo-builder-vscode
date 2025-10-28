@@ -9,11 +9,12 @@ import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '../../../services/serviceLocator';
-import { withTimeout } from '@/utils/promiseUtils';
-import { validateProjectNameSecurity as validateProjectName } from '@/shared/validation';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
-import { HandlerContext } from '../../../commands/handlers/HandlerContext';
+import { ServiceLocator } from '@/core/di';
+import { withTimeout } from '@/core/utils/promiseUtils';
+import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { toError } from '@/types/typeGuards';
+import { HandlerContext } from './HandlerContext';
 import { executeProjectCreation } from './executor';
 import { OVERALL_TIMEOUT_MS } from './shared';
 
@@ -39,7 +40,7 @@ export async function handleCreateProject(
         validateProjectName(config.projectName);
     } catch (validationError) {
         context.logger.error('[Project Creation] Invalid project name', validationError as Error);
-        const errorMessage = validationError instanceof Error ? validationError.message : String(validationError);
+        const errorMessage = toError(validationError).message;
 
         await context.sendMessage('creationProgress', {
             currentOperation: 'Failed',
@@ -161,7 +162,7 @@ export async function handleCreateProject(
         }
 
         // Determine error type
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage = toError(error).message;
         const isCancelled = errorMessage.includes('cancelled by user');
         const isTimeout = errorMessage.includes('timed out');
 
