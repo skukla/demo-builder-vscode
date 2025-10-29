@@ -30,9 +30,3 @@ export { Tip } from './Tip';
 
 // Debug Components
 export * from './debug';
-
-// Spectrum Extended Components
-export * from './spectrum-extended';
-
-// Legacy Terminal Output (keep for now)
-export * from './feedback';
