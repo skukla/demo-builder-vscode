@@ -4,7 +4,7 @@ import {
     areDependenciesInstalled,
     checkPerNodeVersionStatus,
 } from '@/features/prerequisites/handlers/shared';
-import { ServiceLocator } from '@/core/di';
+import { ServiceLocator } from '@/services/serviceLocator';
 import type { HandlerContext } from '@/types/handlers';
 import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prerequisites/services/PrerequisitesManager';
 
@@ -21,8 +21,9 @@ import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prer
  */
 
 // Mock ServiceLocator
-jest.mock('@/core/di', () => ({
+jest.mock('@/services/serviceLocator', () => ({
     ServiceLocator: {
+        getCommandExecutor: jest.fn(),
         getNodeVersionManager: jest.fn(),
         reset: jest.fn(),
     },
@@ -458,14 +459,13 @@ describe('Prerequisites Handlers - Shared Utilities', () => {
     });
 
     describe('checkPerNodeVersionStatus', () => {
-        let mockNodeManager: any;
+        let mockCommandExecutor: any;
 
         beforeEach(() => {
-            mockNodeManager = {
-                list: jest.fn(),
-                execWithVersion: jest.fn(),
+            mockCommandExecutor = {
+                execute: jest.fn(),
             };
-            (ServiceLocator.getNodeVersionManager as jest.Mock).mockReturnValue(mockNodeManager);
+            (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockCommandExecutor);
         });
 
         it('should check all Node versions for per-node prerequisite', async () => {
@@ -479,9 +479,11 @@ describe('Prerequisites Handlers - Shared Utilities', () => {
                 },
             } as any;
 
-            mockNodeManager.list.mockResolvedValue(['v18.0.0', 'v20.0.0']);
-            mockNodeManager.execWithVersion.mockResolvedValue({
-                stdout: '@adobe/aio-cli/10.0.0',
+            mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+                if (cmd === 'fnm list') {
+                    return Promise.resolve({ stdout: 'v18.0.0\nv20.0.0', stderr: '', exitCode: 0 });
+                }
+                return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
             });
 
             const context = createMockContext();
@@ -503,8 +505,12 @@ describe('Prerequisites Handlers - Shared Utilities', () => {
                 check: { command: 'aio --version' },
             } as any;
 
-            mockNodeManager.list.mockResolvedValue(['v18.0.0']);
-            mockNodeManager.execWithVersion.mockResolvedValue({ stdout: '@adobe/aio-cli/10.0.0' });
+            mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+                if (cmd === 'fnm list') {
+                    return Promise.resolve({ stdout: 'v18.0.0', stderr: '', exitCode: 0 });
+                }
+                return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
+            });
 
             const context = createMockContext();
             const result = await checkPerNodeVersionStatus(prereq, ['18'], context);
@@ -520,8 +526,12 @@ describe('Prerequisites Handlers - Shared Utilities', () => {
                 check: { command: 'aio --version' },
             } as any;
 
-            mockNodeManager.list.mockResolvedValue(['v18.0.0']);
-            mockNodeManager.execWithVersion.mockRejectedValue(new Error('Command failed'));
+            mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+                if (cmd === 'fnm list') {
+                    return Promise.resolve({ stdout: 'v18.0.0', stderr: '', exitCode: 0 });
+                }
+                return Promise.reject(new Error('Command failed'));
+            });
 
             const context = createMockContext();
             const result = await checkPerNodeVersionStatus(prereq, ['18'], context);
@@ -539,7 +549,12 @@ describe('Prerequisites Handlers - Shared Utilities', () => {
                 check: { command: 'aio --version' },
             } as any;
 
-            mockNodeManager.list.mockResolvedValue(['v18.0.0']); // Only 18 installed
+            mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+                if (cmd === 'fnm list') {
+                    return Promise.resolve({ stdout: 'v18.0.0', stderr: '', exitCode: 0 }); // Only 18 installed
+                }
+                return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
+            });
 
             const context = createMockContext();
             const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
@@ -564,9 +579,11 @@ describe('Prerequisites Handlers - Shared Utilities', () => {
                 },
             } as any;
 
-            mockNodeManager.list.mockResolvedValue(['v18.0.0']);
-            mockNodeManager.execWithVersion.mockResolvedValue({
-                stdout: '@adobe/aio-cli/11.2.3\nNode: v18.0.0',
+            mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+                if (cmd === 'fnm list') {
+                    return Promise.resolve({ stdout: 'v18.0.0', stderr: '', exitCode: 0 });
+                }
+                return Promise.resolve({ stdout: '@adobe/aio-cli/11.2.3\nNode: v18.0.0', stderr: '', exitCode: 0 });
             });
 
             const context = createMockContext();
@@ -575,7 +592,7 @@ describe('Prerequisites Handlers - Shared Utilities', () => {
             expect(result.perNodeVersionStatus[0].component).toBe('11.2.3');
         });
 
-        it('should use NodeVersionManager.execWithVersion()', async () => {
+        it('should use commandManager.execute() with useNodeVersion', async () => {
             const prereq: PrerequisiteDefinition = {
                 id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
@@ -583,17 +600,20 @@ describe('Prerequisites Handlers - Shared Utilities', () => {
                 check: { command: 'aio --version' },
             } as any;
 
-            mockNodeManager.list.mockResolvedValue(['v18.0.0']);
-            mockNodeManager.execWithVersion.mockResolvedValue({ stdout: 'version 10.0.0' });
+            mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+                if (cmd === 'fnm list') {
+                    return Promise.resolve({ stdout: 'v18.0.0', stderr: '', exitCode: 0 });
+                }
+                return Promise.resolve({ stdout: 'version 10.0.0', stderr: '', exitCode: 0 });
+            });
 
             const context = createMockContext();
             await checkPerNodeVersionStatus(prereq, ['18'], context);
 
-            expect(mockNodeManager.execWithVersion).toHaveBeenCalledWith(
-                '18',
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio --version',
                 expect.objectContaining({
-                    enhancePath: true,
+                    useNodeVersion: '18',
                 })
             );
         });
@@ -606,10 +626,17 @@ describe('Prerequisites Handlers - Shared Utilities', () => {
                 check: { command: 'aio --version' },
             } as any;
 
-            mockNodeManager.list.mockResolvedValue(['v18.0.0', 'v20.0.0']);
-            mockNodeManager.execWithVersion
-                .mockResolvedValueOnce({ stdout: 'version 10.0.0' }) // 18 installed
-                .mockRejectedValueOnce(new Error('Not found')); // 20 not installed
+            let callCount = 0;
+            mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+                if (cmd === 'fnm list') {
+                    return Promise.resolve({ stdout: 'v18.0.0\nv20.0.0', stderr: '', exitCode: 0 });
+                }
+                callCount++;
+                if (callCount === 1) {
+                    return Promise.resolve({ stdout: 'version 10.0.0', stderr: '', exitCode: 0 }); // 18 installed
+                }
+                return Promise.reject(new Error('Not found')); // 20 not installed
+            });
 
             const context = createMockContext();
             const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
@@ -626,8 +653,12 @@ describe('Prerequisites Handlers - Shared Utilities', () => {
                 check: { command: 'aio --version' },
             } as any;
 
-            mockNodeManager.list.mockResolvedValue(['v18.0.0']);
-            mockNodeManager.execWithVersion.mockRejectedValue(new Error('Not found'));
+            mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+                if (cmd === 'fnm list') {
+                    return Promise.resolve({ stdout: 'v18.0.0', stderr: '', exitCode: 0 });
+                }
+                return Promise.reject(new Error('Not found'));
+            });
 
             const context = createMockContext();
             const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
@@ -676,7 +707,12 @@ describe('Prerequisites Handlers - Shared Utilities', () => {
                 check: { command: 'aio --version' },
             } as any;
 
-            mockNodeManager.list.mockResolvedValue([]);
+            mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+                if (cmd === 'fnm list') {
+                    return Promise.resolve({ stdout: '', stderr: '', exitCode: 0 });
+                }
+                return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
+            });
 
             const context = createMockContext();
             await checkPerNodeVersionStatus(prereq, ['20'], context);

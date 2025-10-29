@@ -9,7 +9,7 @@
  */
 
 // Export services
-export * from './services/prerequisitesManager';
+export * from './services/PrerequisitesManager';
 
 // Export handlers
 export * from './handlers';

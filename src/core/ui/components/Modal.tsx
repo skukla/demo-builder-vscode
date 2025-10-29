@@ -15,15 +15,19 @@ interface ModalProps {
     children: ReactNode;
 }
 
-export function Modal({ 
-    title, 
+export function Modal({
+    title,
     size = 'M',
     actionButtons = [],
     onClose,
-    children 
+    children
 }: ModalProps) {
+    // Map custom sizes to Dialog-compatible sizes
+    const dialogSize: 'S' | 'M' | 'L' =
+        size === 'fullscreen' || size === 'fullscreenTakeover' ? 'L' : size;
+
     return (
-        <Dialog size={size}>
+        <Dialog size={dialogSize}>
             <Heading>{title}</Heading>
             <Divider />
             <Content>

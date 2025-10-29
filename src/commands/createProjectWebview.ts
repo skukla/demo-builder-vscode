@@ -1,14 +1,14 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/services/serviceLocator';
+import { ServiceLocator } from '@/core/di';
 import { parseJSON } from '@/types/typeGuards';
 import { AuthenticationService } from '@/features/authentication';
-import { getLogger, ErrorLogger, StepLogger } from '@/shared/logging';
-import { PrerequisitesManager } from '@/features/prerequisites/services/prerequisitesManager';
-import { ProgressUnifier } from '@/utils/progressUnifier';
-import { WebviewCommunicationManager } from '@/shared/communication';
-import { BaseWebviewCommand } from '@/shared/base';
+import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import { ProgressUnifier } from '@/core/utils/progressUnifier';
+import { WebviewCommunicationManager } from '@/core/communication';
+import { BaseWebviewCommand } from '@/core/base';
 // Prerequisites checking is handled by PrerequisitesManager
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
 // Extracted helper functions
@@ -65,9 +65,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     constructor(
         context: vscode.ExtensionContext,
-        stateManager: import('@/shared/state').StateManager,
-        statusBar: import('@/providers/statusBar').StatusBarManager,
-        logger: import('@/shared/logging').Logger,
+        stateManager: import('@/core/state').StateManager,
+        statusBar: import('@/core/vscode/StatusBarManager').StatusBarManager,
+        logger: import('@/core/logging').Logger,
     ) {
         super(context, stateManager, statusBar, logger);
         // PrerequisitesManager is initialized with proper path

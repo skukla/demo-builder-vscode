@@ -1,4 +1,4 @@
-import { getLogger } from '@/shared/logging';
+import { getLogger } from '@/core/logging';
 import type { CommandResult, CommandConfig } from './types';
 
 /**

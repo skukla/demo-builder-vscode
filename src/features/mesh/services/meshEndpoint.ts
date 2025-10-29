@@ -2,9 +2,9 @@
  * Mesh endpoint resolution utilities
  */
 
-import { Logger } from '@/types/loggerTypes';
+import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
-import { CommandExecutor } from '@/core/shell';
+import type { CommandExecutor } from '@/core/shell';
 import { validateMeshId } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
@@ -18,7 +18,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
  * @param cachedEndpoint - Optional cached endpoint for instant return
  * @param commandManager - ExternalCommandManager instance for executing commands
  * @param logger - Logger instance for debug messages
- * @param debugLogger - Debug logger for detailed logging
+ * @param debugLogger - Debug logger for detailed logging (accepts any logger type)
  * @returns The mesh endpoint URL
  */
 export async function getEndpoint(

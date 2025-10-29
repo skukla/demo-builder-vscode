@@ -71,7 +71,7 @@ export class HandlerRegistry extends BaseHandlerRegistry {
         this.handlers.set('delete-api-mesh', mesh.handleDeleteApiMesh as MessageHandler);
 
         // Project creation handlers
-        this.handlers.set('validate', creation.handleValidate as MessageHandler);
+        // this.handlers.set('validate', creation.handleValidate as MessageHandler); // Webview-only, excluded from backend
         this.handlers.set('create-project', creation.handleCreateProject as MessageHandler);
     }
 

@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/shared/base';
-import { WebviewCommunicationManager } from '@/shared/communication';
+import { BaseWebviewCommand } from '@/core/base';
+import { WebviewCommunicationManager } from '@/core/communication';
 import { DashboardHandlerRegistry } from '@/features/dashboard/handlers';
 import { HandlerContext } from '@/types/handlers';
 
@@ -16,9 +16,9 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
     constructor(
         context: vscode.ExtensionContext,
-        stateManager: import('@/shared/state').StateManager,
-        statusBar: import('@/providers/statusBar').StatusBarManager,
-        logger: import('@/shared/logging').Logger,
+        stateManager: import('@/core/state').StateManager,
+        statusBar: import('@/core/vscode/StatusBarManager').StatusBarManager,
+        logger: import('@/core/logging').Logger,
     ) {
         super(context, stateManager, statusBar, logger);
         this.handlerRegistry = new DashboardHandlerRegistry();

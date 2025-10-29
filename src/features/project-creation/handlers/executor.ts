@@ -83,7 +83,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     // Import ComponentManager and other dependencies
     context.logger.debug('[Project Creation] Starting dynamic imports...');
-    const { ComponentManager } = await import('@/features/components/services/ComponentManager');
+    const { ComponentManager } = await import('@/features/components/services/componentManager');
     context.logger.debug('[Project Creation] ComponentManager imported');
     const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
     context.logger.debug('[Project Creation] ComponentRegistryManager imported');

@@ -1,6 +1,6 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
-import { Logger } from '../shared/logging';
-import { InstallStep } from '@/features/prerequisites/services/prerequisitesManager';
+import { Logger } from '@/core/logging';
+import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 
 export interface UnifiedProgress {
     overall: {
@@ -21,13 +21,74 @@ export interface UnifiedProgress {
 
 type ProgressHandler = (progress: UnifiedProgress) => Promise<void>;
 
+/**
+ * Threshold in milliseconds for showing elapsed time in progress messages
+ * Only operations exceeding this duration will display elapsed time
+ */
+const ELAPSED_TIME_THRESHOLD_MS = 30000; // 30 seconds
+
+/**
+ * Format elapsed time in human-readable format
+ * @param ms Milliseconds elapsed
+ * @returns Formatted string like "35s" or "1m 15s"
+ */
+function formatElapsedTime(ms: number): string {
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) {
+        return `${seconds}s`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}m ${remainingSeconds}s`;
+}
+
 export class ProgressUnifier {
     private logger: Logger;
-    
+    private startTime: number | undefined;
+    private timer: NodeJS.Timeout | undefined;
+
     constructor(logger: Logger) {
         this.logger = logger;
     }
-    
+
+    /**
+     * Enhance progress detail with elapsed time if operation exceeds threshold
+     */
+    private enhanceDetailWithElapsedTime(detail: string): string {
+        if (!this.startTime) {
+            return detail;
+        }
+
+        const elapsed = Date.now() - this.startTime;
+
+        // Only show elapsed time for operations exceeding threshold (30s)
+        if (elapsed > ELAPSED_TIME_THRESHOLD_MS) {
+            const elapsedStr = formatElapsedTime(elapsed);
+            return `${detail} (${elapsedStr})`;
+        }
+
+        return detail;
+    }
+
+    /**
+     * Start elapsed time timer
+     */
+    private startElapsedTimer() {
+        this.startTime = Date.now();
+        this.timer = undefined; // Will be set by individual progress strategies
+    }
+
+    /**
+     * Stop elapsed time timer and cleanup
+     */
+    private stopElapsedTimer() {
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = undefined;
+        }
+        this.startTime = undefined;
+    }
+
     /**
      * Execute a step with unified progress reporting
      */
@@ -38,55 +99,63 @@ export class ProgressUnifier {
         onProgress: ProgressHandler,
         options?: { nodeVersion?: string },
     ): Promise<void> {
-        const commands = this.resolveCommands(step, options);
-        const totalCommands = commands.length;
-        
-        for (let cmdIndex = 0; cmdIndex < commands.length; cmdIndex++) {
-            const command = commands[cmdIndex];
-            
-            // Calculate overall progress
-            const stepProgress = ((stepIndex + (cmdIndex / totalCommands)) / totalSteps) * 100;
-            
-            // Initial progress update
+        // Start elapsed time tracking
+        this.startElapsedTimer();
+
+        try {
+            const commands = this.resolveCommands(step, options);
+            const totalCommands = commands.length;
+
+            for (let cmdIndex = 0; cmdIndex < commands.length; cmdIndex++) {
+                const command = commands[cmdIndex];
+
+                // Calculate overall progress
+                const stepProgress = ((stepIndex + (cmdIndex / totalCommands)) / totalSteps) * 100;
+
+                // Initial progress update
+                await onProgress({
+                    overall: {
+                        percent: Math.round(stepProgress),
+                        currentStep: stepIndex + 1,
+                        totalSteps,
+                        stepName: this.resolveStepName(step, options),
+                    },
+                    command: {
+                        type: 'indeterminate',
+                        detail: this.enhanceDetailWithElapsedTime('Starting...'),
+                        confidence: 'synthetic',
+                    },
+                });
+
+                // Execute based on strategy
+                switch (step.progressStrategy) {
+                    case 'exact':
+                        await this.executeWithExactProgress(command, step, stepIndex, totalSteps, onProgress, options);
+                        break;
+                    case 'milestones':
+                        await this.executeWithMilestones(command, step, stepIndex, totalSteps, onProgress, options);
+                        break;
+                    case 'immediate':
+                        await this.executeImmediate(command, step, stepIndex, totalSteps, onProgress, options);
+                        break;
+                    default:
+                        await this.executeWithSyntheticProgress(command, step, stepIndex, totalSteps, onProgress, options);
+                }
+            }
+
+            // Final progress update
             await onProgress({
                 overall: {
-                    percent: Math.round(stepProgress),
+                    percent: Math.round(((stepIndex + 1) / totalSteps) * 100),
                     currentStep: stepIndex + 1,
                     totalSteps,
                     stepName: this.resolveStepName(step, options),
                 },
-                command: {
-                    type: 'indeterminate',
-                    detail: 'Starting...',
-                    confidence: 'synthetic',
-                },
             });
-            
-            // Execute based on strategy
-            switch (step.progressStrategy) {
-                case 'exact':
-                    await this.executeWithExactProgress(command, step, stepIndex, totalSteps, onProgress, options);
-                    break;
-                case 'milestones':
-                    await this.executeWithMilestones(command, step, stepIndex, totalSteps, onProgress, options);
-                    break;
-                case 'immediate':
-                    await this.executeImmediate(command, step, stepIndex, totalSteps, onProgress, options);
-                    break;
-                default:
-                    await this.executeWithSyntheticProgress(command, step, stepIndex, totalSteps, onProgress, options);
-            }
+        } finally {
+            // Always stop the timer when execution completes (success or failure)
+            this.stopElapsedTimer();
         }
-        
-        // Final progress update
-        await onProgress({
-            overall: {
-                percent: Math.round(((stepIndex + 1) / totalSteps) * 100),
-                currentStep: stepIndex + 1,
-                totalSteps,
-                stepName: this.resolveStepName(step, options),
-            },
-        });
     }
     
     private resolveCommands(step: InstallStep, options?: { nodeVersion?: string }): string[] {
@@ -251,61 +320,63 @@ export class ProgressUnifier {
         stepIndex: number,
         totalSteps: number,
         onProgress: ProgressHandler,
-        _options?: { nodeVersion?: string },
+        options?: { nodeVersion?: string },
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
             const startTime = Date.now();
             const estimatedDuration = step.estimatedDuration || 10000;
-            
+
             // Update progress every second
             const progressInterval = setInterval(async () => {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(95, (elapsed / estimatedDuration) * 100);
-                
+
+                const baseDetail = `Processing... (${Math.round(progress)}% estimated)`;
+
                 await onProgress({
                     overall: {
                         percent: Math.round(((stepIndex + (progress / 100)) / totalSteps) * 100),
                         currentStep: stepIndex + 1,
                         totalSteps,
-                        stepName: step.name,
+                        stepName: this.resolveStepName(step, options),
                     },
                     command: {
                         type: 'indeterminate',
                         percent: Math.round(progress),
-                        detail: `Processing... (${Math.round(progress)}% estimated)`,
+                        detail: this.enhanceDetailWithElapsedTime(baseDetail),
                         confidence: 'synthetic',
                     },
                 });
             }, 1000);
-            
+
             child.stdout.on('data', (data) => {
                 this.logger.info(`[${step.name}] ${data.toString().trim()}`);
             });
-            
+
             child.stderr.on('data', (data) => {
                 this.logger.warn(`[${step.name}] ${data.toString().trim()}`);
             });
-            
+
             child.on('close', async (code) => {
                 clearInterval(progressInterval);
-                
+
                 // Final update
                 await onProgress({
                     overall: {
                         percent: Math.round(((stepIndex + 1) / totalSteps) * 100),
                         currentStep: stepIndex + 1,
                         totalSteps,
-                        stepName: step.name,
+                        stepName: this.resolveStepName(step, options),
                     },
                     command: {
                         type: 'determinate',
                         percent: 100,
-                        detail: 'Complete',
+                        detail: this.enhanceDetailWithElapsedTime('Complete'),
                         confidence: 'synthetic',
                     },
                 });
-                
+
                 if (code === 0 || step.continueOnError) {
                     resolve();
                 } else {

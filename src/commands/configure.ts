@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Project } from '@/types';
-import { BaseCommand } from '@/shared/base';
+import { BaseCommand } from '@/core/base';
 
 export class ConfigureCommand extends BaseCommand {
     public async execute(): Promise<void> {

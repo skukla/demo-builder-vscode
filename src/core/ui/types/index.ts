@@ -7,7 +7,7 @@ import type {
     CommerceConfig,
     Project,
     ProjectTemplate
-} from '@/core/ui/types';
+} from '@/types';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -77,8 +77,26 @@ export interface AdobeAuthState {
     orgLacksAccess?: boolean;  // Selected organization doesn't have App Builder access
 }
 
-// Re-export Adobe entity types from centralized location
-export type { Organization, AdobeProject, Workspace } from '@/core/ui/types';
+// Define Adobe entity types
+export interface Organization {
+    id: string;
+    code: string;
+    name: string;
+}
+
+export interface AdobeProject {
+    id: string;
+    name: string;
+    title?: string;
+    description?: string;
+    org_id?: string;  // Organization ID from Adobe Console (string in API responses)
+}
+
+export interface Workspace {
+    id: string;
+    name: string;
+    title?: string;
+}
 
 // Re-export shared types for convenience
 export type { ComponentInstance, AdobeConfig, CommerceConfig, Project, ProjectTemplate };

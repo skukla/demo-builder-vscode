@@ -14,7 +14,7 @@ import { ServiceLocator } from '@/core/di';
 import { parseJSON, toError } from '@/types/typeGuards';
 import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 import { getSetupInstructions, getEndpoint } from '@/features/mesh/handlers/shared';
-import { validateWorkspaceId } from '@/core/validation/securityValidation';
+import { validateWorkspaceId } from '@/core/validation';
 
 /**
  * Handler: check-api-mesh

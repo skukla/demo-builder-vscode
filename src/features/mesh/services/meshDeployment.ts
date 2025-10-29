@@ -4,7 +4,7 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import { Logger } from '@/types/loggerTypes';
+import type { Logger } from '@/types/logger';
 import { parseJSON, toError } from '@/types/typeGuards';
 import { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

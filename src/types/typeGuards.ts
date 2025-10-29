@@ -259,3 +259,17 @@ export function toError(error: unknown): Error {
     }
     return new Error('Unknown error occurred');
 }
+
+/**
+ * isTimeoutError - Check if error is a timeout error
+ */
+export function isTimeoutError(error: unknown): boolean {
+    const err = toError(error);
+    const message = err.message.toLowerCase();
+    return (
+        message.includes('timeout') ||
+        message.includes('timed out') ||
+        message.includes('etimedout') ||
+        (isRecord(error) && (error as any).code === 'ETIMEDOUT')
+    );
+}

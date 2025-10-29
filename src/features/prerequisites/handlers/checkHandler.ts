@@ -22,10 +22,16 @@ import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstal
  */
 export async function handleCheckPrerequisites(
     context: HandlerContext,
-    payload?: { componentSelection?: import('../../../types/components').ComponentSelection },
+    payload?: { componentSelection?: import('../../../types/components').ComponentSelection; isRecheck?: boolean },
 ): Promise<SimpleResult> {
     try {
         context.stepLogger.log('prerequisites', 'Starting prerequisites check', 'info');
+
+        // Clear cache on Recheck button click (Step 2: Prerequisite Caching)
+        if (payload?.isRecheck) {
+            context.prereqManager.getCacheManager().clearAll();
+            context.logger.debug('[Prerequisites] Cache cleared for recheck');
+        }
 
         // Store the component selection for later use
         if (payload?.componentSelection) {

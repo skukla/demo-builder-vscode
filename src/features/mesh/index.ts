@@ -19,7 +19,7 @@ export { deployMeshComponent, type MeshDeploymentResult as MeshDeploymentResult_
 export { getEndpoint as getServiceEndpoint } from './services/meshEndpoint';
 export { MeshDeployer } from './services/meshDeployer';
 export { verifyMeshDeployment, syncMeshStatus, type MeshVerificationResult } from './services/meshVerifier';
-export { waitForMeshDeployment, type MeshDeploymentResult as MeshDeploymentVerificationResult } from './services/meshDeploymentVerifier';
+export { waitForMeshDeployment, type MeshDeploymentVerificationResult } from './services/meshDeploymentVerifier';
 export {
     getMeshEnvVars,
     fetchDeployedMeshConfig,

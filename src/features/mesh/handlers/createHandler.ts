@@ -12,7 +12,7 @@ import { parseJSON, toError } from '@/types/typeGuards';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 import { getEndpoint } from '@/features/mesh/handlers/shared';
-import { validateWorkspaceId } from '@/core/validation/securityValidation';
+import { validateWorkspaceId } from '@/core/validation';
 
 /**
  * Handler: create-api-mesh

@@ -4,6 +4,6 @@
  * Exports all project creation handler functions for clean imports.
  */
 
-export * from './validateHandler';
+// export * from './validateHandler'; // Webview-only, excluded from backend compilation
 export * from './createHandler';
 export * from './executor';

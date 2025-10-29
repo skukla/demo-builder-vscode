@@ -4,7 +4,7 @@
  */
 
 import { ServiceLocator } from '@/core/di';
-import { Logger } from '@/types/loggerTypes';
+import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 import { validateMeshId } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

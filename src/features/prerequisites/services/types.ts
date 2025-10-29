@@ -129,3 +129,11 @@ export interface PrerequisiteStatus {
         installed: boolean;
     }[];
 }
+
+/**
+ * Cached prerequisite result with expiry
+ */
+export interface CachedPrerequisiteResult {
+    data: PrerequisiteStatus;
+    expiry: number; // Unix timestamp in milliseconds
+}

@@ -2,9 +2,10 @@ import * as path from 'path';
 import { ServiceLocator } from '@/core/di';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { toError, isTimeoutError } from '@/types/typeGuards';
-import { Logger } from '@/core/logging';
+import { Logger } from '@/types/logger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DEFAULT_SHELL } from '@/types/shell';
+import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
 import type {
     PrerequisiteCheck,
     ProgressMilestone,
@@ -33,11 +34,20 @@ export class PrerequisitesManager {
     private configLoader: ConfigurationLoader<PrerequisitesConfig>;
     private logger: Logger;
     private resolvedVersionCache = new Map<string, string>();
+    private cacheManager = new PrerequisitesCacheManager();
 
     constructor(extensionPath: string, logger: Logger) {
         const configPath = path.join(extensionPath, 'templates', 'prerequisites.json');
         this.configLoader = new ConfigurationLoader<PrerequisitesConfig>(configPath);
         this.logger = logger;
+    }
+
+    /**
+     * Get the cache manager instance
+     * Used by handlers for cache invalidation
+     */
+    getCacheManager(): PrerequisitesCacheManager {
+        return this.cacheManager;
     }
 
     async loadConfig(): Promise<PrerequisitesConfig> {
@@ -88,10 +98,18 @@ export class PrerequisitesManager {
         });
     }
 
-    async checkPrerequisite(prereq: PrerequisiteDefinition): Promise<PrerequisiteStatus> {
+    async checkPrerequisite(prereq: PrerequisiteDefinition, nodeVersion?: string): Promise<PrerequisiteStatus> {
         const startTime = Date.now();
         this.logger.debug(`[Prereq Check] Starting check for ${prereq.id}`);
-        
+
+        // Check cache first (Step 2: Prerequisite Caching)
+        const cached = this.cacheManager.getCachedResult(prereq.id, nodeVersion);
+        if (cached) {
+            const duration = Date.now() - startTime;
+            this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Cache hit in ${duration}ms`);
+            return cached.data;
+        }
+
         const status: PrerequisiteStatus = {
             id: prereq.id,
             name: prereq.name,
@@ -207,7 +225,10 @@ export class PrerequisitesManager {
             
             const totalDuration = Date.now() - startTime;
             this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Complete in ${totalDuration}ms, installed=${status.installed}`);
-            
+
+            // Cache successful result (Step 2: Prerequisite Caching)
+            this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
+
         } catch (error) {
             const totalDuration = Date.now() - startTime;
             this.logger.debug(`[Prereq Check] ${prereq.id}: ✗ Failed after ${totalDuration}ms`);
@@ -219,6 +240,7 @@ export class PrerequisitesManager {
 
             if (isTimeout) {
                 // Re-throw timeout errors so they can be handled at the command level
+                // Step 1: Reduced timeout from 60s to 10s for faster failure feedback
                 this.logger.warn(`${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK}ms`);
                 throw new Error(`${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds`);
             }
@@ -236,6 +258,10 @@ export class PrerequisitesManager {
             } else {
                 this.logger.info(`${prereq.name} check failed: ${errorMessage}`);
             }
+
+            // Cache error result (Step 2: Prerequisite Caching)
+            // Cache "not installed" results to avoid repeated failed checks
+            this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
         }
 
         return status;
@@ -351,13 +377,22 @@ export class PrerequisitesManager {
 
         try {
             const commandManager = ServiceLocator.getCommandExecutor();
-            // SECURITY NOTE: This command uses pipes which requires shell
-            // However, versionFamily is validated above to only contain digits
-            const { stdout } = await commandManager.execute(`fnm list-remote | grep "^v${versionFamily}\\." | head -1`, {
-                shell: DEFAULT_SHELL,  // Required for pipes
+            // SECURITY: Use Node.js string processing instead of shell pipes
+            // Eliminates shell injection risk entirely (defense-in-depth)
+            const { stdout } = await commandManager.execute('fnm list-remote', {
+                timeout: TIMEOUTS.PREREQUISITE_CHECK,
             });
+
             if (stdout) {
-                return stdout.trim().replace('v', '');
+                // Filter versions using Node.js (no shell involved)
+                const versions = stdout
+                    .split('\n')
+                    .filter(line => line.trim().startsWith(`v${versionFamily}.`));
+
+                if (versions.length > 0) {
+                    // Return first match (latest)
+                    return versions[0].trim().replace('v', '');
+                }
             }
         } catch (error) {
             this.logger.warn(`Could not get latest version for Node ${versionFamily}: ${error}`);
@@ -384,8 +419,9 @@ export class PrerequisitesManager {
         const results: { version: string; component: string; installed: boolean }[] = [];
 
         try {
-            const nodeManager = ServiceLocator.getNodeVersionManager();
-            const versions = await nodeManager.list();
+            const commandManager = ServiceLocator.getCommandExecutor();
+            const fnmListResult = await commandManager.execute('fnm list', { timeout: TIMEOUTS.PREREQUISITE_CHECK });
+            const versions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
 
             // Parse installed versions - create mapping of major version to full version
             const majorToFullVersion = new Map<string, string>();

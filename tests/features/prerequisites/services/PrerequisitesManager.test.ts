@@ -272,7 +272,8 @@ describe('PrerequisitesManager', () => {
             const prereq = mockConfig.prerequisites[0]; // node
 
             // Error message includes prereq name and timeout duration
-            await expect(manager.checkPrerequisite(prereq)).rejects.toThrow('Node.js check timed out after 60 seconds');
+            // Step 1: Reduced timeout from 60s to 10s for faster failure feedback
+            await expect(manager.checkPrerequisite(prereq)).rejects.toThrow('Node.js check timed out after 10 seconds');
         });
 
         it('should extract version from stdout', async () => {

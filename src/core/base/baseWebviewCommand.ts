@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { setLoadingState } from '@/utils/loadingHTML';
-import { WebviewCommunicationManager, createWebviewCommunication } from '@/shared/communication';
+import { setLoadingState } from '@/core/utils/loadingHTML';
+import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication';
 import { BaseCommand } from './baseCommand';
 
 /**

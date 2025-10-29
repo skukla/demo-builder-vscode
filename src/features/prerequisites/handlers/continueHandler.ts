@@ -114,8 +114,9 @@ export async function handleContinuePrerequisites(
                     // Main tool installed: check each Node version properly
                     // CRITICAL: Get list of actually installed Node versions FIRST
                     // This prevents false positives when fnm falls back to other versions
-                    const nodeManager = ServiceLocator.getNodeVersionManager();
-                    const installedVersions = await nodeManager.list();
+                    const commandManager = ServiceLocator.getCommandExecutor();
+                    const fnmListResult = await commandManager.execute('fnm list', { timeout: TIMEOUTS.PREREQUISITE_CHECK });
+                    const installedVersions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
                     const installedMajors = new Set<string>();
                     for (const version of installedVersions) {
                         const match = /v?(\d+)/.exec(version);
@@ -124,7 +125,6 @@ export async function handleContinuePrerequisites(
                         }
                     }
 
-                    const commandManager = ServiceLocator.getCommandExecutor();
                     for (const major of requiredMajors) {
                         // Check if this Node version is actually installed
                         if (!installedMajors.has(major)) {
@@ -138,7 +138,7 @@ export async function handleContinuePrerequisites(
 
                         try {
                             // Node version is installed - now check if the tool is installed for it
-                            const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
+                            const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major, timeout: TIMEOUTS.PREREQUISITE_CHECK });
                             // Parse CLI version if regex provided
                             let cliVersion = '';
                             if (prereq.check.parseVersion) {

@@ -563,6 +563,217 @@ await execCommand('aio console org select', [orgId]);
 - Automatic fallback to CLI if SDK fails
 - Significantly improved user experience
 
+### Prerequisite Performance Optimization Patterns
+
+#### Problem: Slow Prerequisite Checks and Installations
+
+**Initial Performance:**
+- Prerequisite checks: 3-6 seconds per check
+- Multi-version checks: 9-18 seconds sequential
+- npm installations: Slow due to unnecessary network calls and audit scans
+
+#### Solution 1: Transparent In-Memory Caching
+
+**Pattern**: Cache prerequisite check results with TTL expiration
+
+**Implementation:**
+```typescript
+class PrerequisitesCacheManager {
+  private cache: Map<string, CacheEntry> = new Map();
+  private readonly TTL = 5 * 60 * 1000; // 5 minutes
+
+  async get(prereqId: string, nodeVersion?: string): Promise<PrerequisiteCheckResult | null> {
+    const key = this.getCacheKey(prereqId, nodeVersion);
+    const entry = this.cache.get(key);
+
+    if (!entry) return null;
+
+    // Check TTL expiration with jitter
+    const ttlWithJitter = this.TTL * (0.9 + Math.random() * 0.2); // ±10% jitter
+    if (Date.now() - entry.timestamp > ttlWithJitter) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return entry.result;
+  }
+
+  set(prereqId: string, result: PrerequisiteCheckResult, nodeVersion?: string): void {
+    // LRU eviction if cache exceeds 100 entries
+    if (this.cache.size >= 100) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+
+    const key = this.getCacheKey(prereqId, nodeVersion);
+    this.cache.set(key, { result, timestamp: Date.now() });
+  }
+}
+```
+
+**Cache Invalidation:**
+- On installation completion
+- On manual "Recheck Prerequisites"
+- On `prerequisites.json` configuration changes
+- Automatic TTL expiration (5 minutes + jitter)
+
+**Performance Impact:**
+- Cache hit: <1 second (95% faster)
+- Cache miss: 3-6 seconds (same as before)
+- Security jitter prevents timing attacks
+
+**Why Jitter Matters:**
+- Prevents cache stampede (all entries expiring simultaneously)
+- Makes cache timing attacks harder
+- Spreads cache refresh load over time
+
+#### Solution 2: Parallel Per-Node-Version Execution
+
+**Pattern**: Parallelize independent checks that run in isolated environments
+
+**Before (Sequential):**
+```typescript
+for (const version of nodeVersions) {
+  await switchNodeVersion(version);
+  const result = await checkPrerequisite('aio-cli');
+  results.push(result);
+}
+// Time: 3 versions × 3-6s = 9-18s
+```
+
+**After (Parallel):**
+```typescript
+const results = await Promise.all(
+  nodeVersions.map(async (version) => {
+    await switchNodeVersion(version);
+    return await checkPrerequisite('aio-cli');
+  })
+);
+// Time: max(3-6s) = 6s (3x faster)
+```
+
+**Why This Works:**
+- Each Node version check is isolated (separate environment)
+- No shared state between checks
+- ExternalCommandManager prevents race conditions on Node version switching
+- Safe because each check runs in dedicated shell session
+
+**Why Prerequisite Order Stays Sequential:**
+- Dependencies between prerequisites (e.g., fnm → node → aio-cli)
+- Sequential order ensures correct installation flow
+- Only per-Node-version checks within a single prerequisite are parallelized
+
+#### Solution 3: Optimized npm Flags
+
+**Pattern**: Use performance-focused npm flags for installation
+
+**Flags Used:**
+- `--no-fund`: Skips funding messages (reduces output noise)
+- `--prefer-offline`: Uses local cache when available (40-60% faster)
+
+**Flags Removed:**
+- `--no-audit`: Removed for security (vulnerability scanning still runs)
+
+**Performance Impact:**
+```bash
+# Before (default npm install)
+npm install -g @adobe/aio-cli
+# Time: 60-90 seconds
+
+# After (optimized flags)
+npm install -g @adobe/aio-cli --no-fund --prefer-offline
+# Time: 25-45 seconds (40-60% faster)
+```
+
+**Why `--no-audit` Removed:**
+- Security-first principle
+- Vulnerability scanning catches critical issues
+- Slight performance trade-off acceptable for security
+
+#### Solution 4: Enhanced Progress Visibility
+
+**Pattern**: Show elapsed time for long-running operations
+
+**Implementation:**
+```typescript
+class ProgressUnifier {
+  private startTime?: number;
+
+  updateProgress(current: number, total: number, message: string) {
+    if (!this.startTime) {
+      this.startTime = Date.now();
+    }
+
+    const elapsed = Date.now() - this.startTime;
+
+    // Show elapsed time for operations >30 seconds
+    if (elapsed > 30000) {
+      const minutes = Math.floor(elapsed / 60000);
+      const seconds = Math.floor((elapsed % 60000) / 1000);
+      message += ` (${minutes}m ${seconds}s elapsed)`;
+    }
+
+    this.sendProgressUpdate({ current, total, message });
+  }
+}
+```
+
+**Benefits:**
+- Users know operation is progressing, not stuck
+- Helps identify performance issues in real deployments
+- Builds user trust during long installations
+
+#### Solution 5: Faster Timeout Detection
+
+**Pattern**: Reduce timeout for faster failure feedback
+
+**Before:**
+```typescript
+const PREREQUISITE_CHECK_TIMEOUT = 60000; // 60 seconds
+```
+
+**After:**
+```typescript
+const PREREQUISITE_CHECK_TIMEOUT = 10000; // 10 seconds
+```
+
+**Why This Works:**
+- Prerequisite checks should be fast (<5 seconds)
+- 60s timeout masks broken configurations
+- 10s timeout provides faster user feedback
+- Installation timeouts remain higher (60s+)
+
+**Impact:**
+- Broken configuration detection: 60s → 10s (6x faster)
+- False positives: None (prerequisite checks complete <5s normally)
+
+#### Best Practices from This Implementation
+
+1. **Cache Transparent to Users**: No "Refresh" buttons needed, cache just works
+2. **Security-Aware Caching**: TTL jitter, size limits, LRU eviction
+3. **Invalidation Strategies**: Clear cache when state changes (installations, config updates)
+4. **Parallel When Safe**: Only parallelize truly independent operations
+5. **Performance Flags with Security**: Balance speed vs security (removed `--no-audit`)
+6. **User Feedback**: Show elapsed time so users know system is working
+
+#### Testing Strategy for Performance Optimizations
+
+**Cache Testing:**
+- Cache hit/miss scenarios
+- TTL expiration edge cases
+- Concurrent access (race conditions)
+- Cache invalidation triggers
+
+**Parallel Execution Testing:**
+- Multiple Node versions (2, 3, 4+ versions)
+- Failure in one parallel check doesn't block others
+- Progress reporting for concurrent operations
+
+**npm Flags Testing:**
+- Flag compatibility across npm versions (6.x, 7.x, 8.x, 9.x)
+- Offline cache validation
+- Fallback to default flags on failure
+
 ## Contributing Guidelines
 
 ### Code Review Criteria

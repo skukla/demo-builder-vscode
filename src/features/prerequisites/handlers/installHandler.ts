@@ -98,8 +98,9 @@ export async function handleInstallPrerequisite(
             versionsToCheck.sort((a, b) => parseInt(a) - parseInt(b));
 
             // CRITICAL: First verify which Node versions are actually installed
-            const nodeManager = ServiceLocator.getNodeVersionManager();
-            const installedVersions = await nodeManager.list();
+            const commandManager = ServiceLocator.getCommandExecutor();
+            const fnmListResult = await commandManager.execute('fnm list', { timeout: TIMEOUTS.PREREQUISITE_CHECK });
+            const installedVersions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
             const installedMajors = new Set<string>();
             for (const version of installedVersions) {
                 const match = /v?(\d+)/.exec(version);
@@ -120,11 +121,11 @@ export async function handleInstallPrerequisite(
                 }
 
                 try {
-                    // Use nodeManager.execWithVersion for reliable version isolation
+                    // Use fnm exec for reliable version isolation
                     // This prevents fnm fallback behavior that causes false positives
-                    await nodeManager.execWithVersion(nodeVer, prereq.check.command, {
+                    await commandManager.execute(prereq.check.command, {
+                        useNodeVersion: nodeVer,
                         timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                        enhancePath: true,
                     });
                     // Already installed for this Node version
                     context.debugLogger.debug(`[Prerequisites] ${prereq.name} already installed for Node ${nodeVer}, skipping`);
@@ -203,6 +204,10 @@ export async function handleInstallPrerequisite(
                 await run(step);
             }
         }
+
+        // Invalidate cache after installation (Step 2: Prerequisite Caching)
+        context.prereqManager.getCacheManager().invalidate(prereq.id);
+        context.logger.debug(`[Prerequisites] Cache invalidated for ${prereq.id} after installation`);
 
         // Re-check after installation and include variant details/messages
         let installResult;

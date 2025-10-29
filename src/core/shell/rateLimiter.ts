@@ -1,4 +1,4 @@
-import { getLogger } from '@/shared/logging';
+import { getLogger } from '@/core/logging';
 
 /**
  * Rate limiter for controlling operation frequency

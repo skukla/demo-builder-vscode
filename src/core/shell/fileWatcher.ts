@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getLogger } from '@/shared/logging';
+import { getLogger } from '@/core/logging';
 import { PollingService } from './pollingService';
 
 /**

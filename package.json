@@ -137,7 +137,7 @@
   },
   "scripts": {
     "compile": "npm run compile:typescript && npm run compile:webview && npm run copy:media",
-    "compile:typescript": "tsc -p ./",
+    "compile:typescript": "tsc -p tsconfig.build.json",
     "compile:webview": "webpack --mode production",
     "copy:media": "mkdir -p dist/media && cp -r media/* dist/media/",
     "watch": "tsc -watch -p ./",

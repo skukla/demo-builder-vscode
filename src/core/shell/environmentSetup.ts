@@ -2,8 +2,8 @@ import * as fsSync from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { getLogger } from '@/shared/logging';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { CommandResult, ExecuteOptions } from './types';
 
 /**

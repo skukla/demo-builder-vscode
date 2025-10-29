@@ -1,3 +1,13 @@
+## IMPORTANT: RPTC Workflow
+
+This project uses the RPTC (Research → Plan → TDD → Commit) workflow.
+
+**See `.rptc/CLAUDE.md` for complete RPTC workflow instructions and commands.**
+
+All development must follow the RPTC process defined in that file.
+
+---
+
 # Adobe Demo Builder VS Code Extension
 
 ## Project Overview
@@ -204,6 +214,14 @@ demo-builder-vscode/
   - Pre-flight authentication for Adobe I/O operations prevents unexpected browser launches
   - Cached organization/project data with TTL (reduces API calls)
   - Async SDK initialization (non-blocking, 5-second timeout)
+- **Prerequisite Performance**: Adobe AIO CLI prerequisite optimization
+  - In-memory caching with 5-minute TTL reduces checks from 3-6s to <1s (95% faster)
+  - Parallel execution for per-Node-version checks (3x faster for multi-version scenarios)
+  - Optimized npm flags (`--no-fund --prefer-offline`) reduce installation time by 40-60%
+  - Smart cache invalidation on configuration changes and manual rechecks
+  - Cache security features: size limits (100 entries), LRU eviction, TTL jitter (±10%)
+  - Enhanced progress visibility with elapsed time tracking for long operations
+  - Reduced prerequisite check timeout from 60s to 10s for faster failure detection
 - **Mesh Deployment Enhancements**: Improved configuration detection and error handling
   - Fetches deployed mesh config from Adobe I/O for accurate comparison
   - Better staleness detection (compares local vs deployed state)

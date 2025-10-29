@@ -6,8 +6,8 @@ import {
     MessagePayload,
     PendingRequest,
 } from '@/types/messages';
-import { getLogger } from '@/shared/logging';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Message Handler Function Type

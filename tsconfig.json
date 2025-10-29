@@ -2,7 +2,8 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "ES2020",
-    "lib": ["ES2020"],
+    "lib": ["ES2020", "DOM"],
+    "jsx": "react",
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
@@ -21,15 +22,29 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": "./",
     "paths": {
+      "@/core/*": ["src/core/*"],
       "@/features/*": ["src/features/*"],
       "@/shared/*": ["src/shared/*"],
       "@/services/*": ["src/services/*"],
       "@/types": ["src/types"],
       "@/types/*": ["src/types/*"],
       "@/providers/*": ["src/providers/*"],
-      "@/utils/*": ["src/utils/*"]
+      "@/utils/*": ["src/utils/*"],
+      "@/design-system/*": ["src/webviews/components/*"]
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/webviews/**/*"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts",
+    "src/webviews/**/*",
+    "src/features/*/ui/**/*",
+    "src/features/*/commands/*Webview*.ts",
+    "src/features/welcome/**/*",
+    "src/features/dashboard/commands/configure.ts",
+    "src/features/dashboard/commands/showDashboard.ts",
+    "src/features/project-creation/commands/createProject.ts",
+    "src/features/project-creation/handlers/validateHandler.ts"
+  ]
 }

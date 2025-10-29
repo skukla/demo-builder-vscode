@@ -30,13 +30,18 @@ export const TIMEOUTS = {
     WORKSPACE_DETAILS: 30000,       // 30 seconds - workspace details
 
     // Prerequisites timeouts
-    PREREQUISITE_CHECK: 60000,      // 1 minute - checking if prerequisite exists (fast)
+    PREREQUISITE_CHECK: 10000,      // 10 seconds - checking if prerequisite exists (fail fast, Step 1 optimization)
     PREREQUISITE_INSTALL: 180000,   // 3 minutes - installing prerequisites (downloads, npm installs)
 
     // Update system timeouts
     UPDATE_CHECK: 10000,            // GitHub API calls to check releases
     UPDATE_DOWNLOAD: 60000,         // Downloading VSIX or component archives (1 minute)
     UPDATE_EXTRACT: 30000,          // Extracting downloaded archives
+    UPDATE_MESSAGE_DELAY: 2000,     // Delay before showing update notification (2 seconds)
+    UPDATE_RESULT_DISPLAY: 3000,    // Display time for update result notification (3 seconds)
+
+    // Demo lifecycle timeouts
+    DEMO_STOP_WAIT: 2000,           // Wait time after stopping demo before cleanup (2 seconds)
 
     // Default fallbacks
     COMMAND_DEFAULT: 30000,         // Default command timeout
@@ -51,9 +56,13 @@ export const CACHE_TTL = {
     AUTH_STATUS: 5 * 60 * 1000,     // 5 minutes - authentication status
     AUTH_STATUS_ERROR: 60 * 1000,   // 1 minute - authentication status on error (shorter to allow retry)
     VALIDATION: 5 * 60 * 1000,      // 5 minutes - organization access validation
+    TOKEN_INSPECTION: 5 * 60 * 1000,  // 5 minutes - token inspection results
 
     // API response caches (shorter TTLs for fresher data)
     ORG_LIST: 60 * 1000,            // 1 minute - organization list
     CONSOLE_WHERE: 3 * 60 * 1000,   // 3 minutes - current console context (expensive 2s+ calls)
     PLUGIN_LIST: 5 * 60 * 1000,     // 5 minutes - installed plugins
+
+    // Prerequisite check caches (Step 2: Prerequisite Caching)
+    PREREQUISITE_CHECK: 5 * 60 * 1000,  // 5 minutes - prerequisite check results
 } as const;

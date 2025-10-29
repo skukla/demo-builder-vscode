@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/shared/base';
+import { BaseCommand } from '@/core/base';
 
 export class DeleteProjectCommand extends BaseCommand {
     public async execute(): Promise<void> {

@@ -120,3 +120,37 @@ export async function validatePathSafety(
         };
     }
 }
+
+/**
+ * Validate that a URL is a valid GitHub download URL
+ *
+ * @param url - URL to validate
+ * @returns True if the URL is a valid GitHub download URL, false otherwise
+ */
+export function validateGitHubDownloadURL(url: string): boolean {
+    try {
+        const parsedUrl = new URL(url);
+
+        // Must be HTTPS
+        if (parsedUrl.protocol !== 'https:') {
+            return false;
+        }
+
+        // Must be from github.com domain
+        if (!parsedUrl.hostname.endsWith('github.com') &&
+            !parsedUrl.hostname.endsWith('githubusercontent.com')) {
+            return false;
+        }
+
+        // Must be a releases download URL pattern
+        const validPatterns = [
+            /^\/[^\/]+\/[^\/]+\/releases\/download\//,  // Standard releases
+            /^\/repos\/[^\/]+\/[^\/]+\/releases\/assets\// // API endpoint
+        ];
+
+        return validPatterns.some(pattern => pattern.test(parsedUrl.pathname));
+    } catch {
+        // Invalid URL
+        return false;
+    }
+}

@@ -72,22 +72,22 @@ export class ComponentRegistryManager {
         };
 
         // Map selectionGroups to internal buckets
-        (groups.frontends || []).forEach((id: string) => {
+        (groups.frontend || []).forEach((id: string) => {
             const enhanced = enhanceComponent(id);
             if (enhanced) components.frontends.push(enhanced);
         });
 
-        (groups.backends || []).forEach((id: string) => {
+        (groups.backend || []).forEach((id: string) => {
             const enhanced = enhanceComponent(id);
             if (enhanced) components.backends.push(enhanced);
         });
 
-        (groups.appBuilderApps || []).forEach((id: string) => {
+        (groups.appBuilder || []).forEach((id: string) => {
             const enhanced = enhanceComponent(id);
             if (enhanced) components.appBuilder.push(enhanced);
         });
 
-        (groups.integrations || []).forEach((id: string) => {
+        (groups.externalSystems || []).forEach((id: string) => {
             const enhanced = enhanceComponent(id);
             if (enhanced) components.externalSystems.push(enhanced);
         });

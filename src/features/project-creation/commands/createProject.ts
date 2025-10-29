@@ -6,7 +6,7 @@ import { parseJSON } from '@/types/typeGuards';
 import { AuthenticationService } from '@/features/authentication';
 import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
-import { ProgressUnifier } from '@/core/utils/ProgressUnifier';
+import { ProgressUnifier } from '@/core/utils/progressUnifier';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { BaseWebviewCommand } from '@/core/base';
 import { generateWebviewHTML } from '@/core/utils/webviewHTMLBuilder';

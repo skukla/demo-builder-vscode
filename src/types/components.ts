@@ -125,6 +125,7 @@ export interface RawComponentRegistry {
         externalSystems?: string[];
         appBuilder?: string[];
     };
+    infrastructure?: Record<string, RawComponentDefinition>;
     services?: Record<string, ServiceDefinition>;
     envVars?: Record<string, Omit<EnvVarDefinition, 'key'>>;
     presets?: PresetDefinition[];
@@ -184,6 +185,7 @@ export interface TransformedComponentDefinition extends Omit<RawComponentDefinit
  */
 export interface ComponentRegistry {
     version: string;
+    infrastructure?: TransformedComponentDefinition[];
     components: {
         frontends: TransformedComponentDefinition[];
         backends: TransformedComponentDefinition[];

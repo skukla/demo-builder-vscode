@@ -17,13 +17,15 @@
  * @module services/serviceLocator
  */
 
-import { CommandExecutor } from '@/shared/command-execution';
+import { CommandExecutor } from '@/core/shell';
+import type { AuthenticationService } from '@/features/authentication';
 
 /**
  * Centralized service registry for dependency injection
  */
 export class ServiceLocator {
     private static commandExecutor: CommandExecutor | null = null;
+    private static authenticationService: AuthenticationService | null = null;
 
     /**
      * Register CommandExecutor instance
@@ -73,5 +75,36 @@ export class ServiceLocator {
      */
     static isInitialized(): boolean {
         return this.commandExecutor !== null;
+    }
+
+    /**
+     * Register AuthenticationService instance
+     *
+     * **Called by**: extension.ts during activation
+     *
+     * @param service - AuthenticationService singleton
+     */
+    static setAuthenticationService(service: AuthenticationService): void {
+        if (this.authenticationService) {
+            throw new Error('AuthenticationService already registered. Cannot register twice.');
+        }
+        this.authenticationService = service;
+    }
+
+    /**
+     * Get AuthenticationService instance
+     *
+     * **Called by**: Commands and handlers that need authentication
+     *
+     * @returns AuthenticationService singleton
+     * @throws Error if AuthenticationService not initialized
+     */
+    static getAuthenticationService(): AuthenticationService {
+        if (!this.authenticationService) {
+            throw new Error(
+                'AuthenticationService not initialized. Ensure extension.ts has activated.',
+            );
+        }
+        return this.authenticationService;
     }
 }

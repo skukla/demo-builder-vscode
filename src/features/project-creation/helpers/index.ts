@@ -8,4 +8,4 @@ export { generateComponentEnvFile } from './envFileGenerator';
 export { getSetupInstructions, SetupInstruction } from './setupInstructions';
 export { getEndpoint } from '../../mesh/services/meshEndpoint';
 export { deployMeshComponent, MeshDeploymentResult } from '../../mesh/services/meshDeployment';
-export { validateFieldUI as validateField, validateProjectNameUI as validateProjectName, validateCommerceUrlUI as validateCommerceUrl, FieldValidation } from '@/core/validation';
+// UI validation functions removed - only used by webview code (excluded from backend compilation)

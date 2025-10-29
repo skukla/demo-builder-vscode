@@ -18,8 +18,8 @@ export {
     HandlerRegistryMap as HandlerRegistry,
 } from '../../types/handlers';
 
-// Re-export prerequisite types from prerequisitesManager
+// Re-export prerequisite types from PrerequisitesManager
 export {
     PrerequisiteDefinition,
     PrerequisiteStatus,
-} from '@/features/prerequisites/services/prerequisitesManager';
+} from '@/features/prerequisites/services/PrerequisitesManager';

@@ -117,11 +117,12 @@ export async function checkPerNodeVersionStatus(
 
     const perNodeVersionStatus: { version: string; component: string; installed: boolean }[] = [];
     const missingVariantMajors: string[] = [];
-    const nodeManager = ServiceLocator.getNodeVersionManager();
+    const commandManager = ServiceLocator.getCommandExecutor();
 
     // CRITICAL: Get list of actually installed Node versions FIRST
     // This prevents false positives when fnm falls back to other versions
-    const installedVersions = await nodeManager.list();
+    const fnmListResult = await commandManager.execute('fnm list', { timeout: TIMEOUTS.PREREQUISITE_CHECK });
+    const installedVersions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
     const installedMajors = new Set<string>();
     for (const version of installedVersions) {
         const match = /v?(\d+)/.exec(version);
@@ -130,44 +131,78 @@ export async function checkPerNodeVersionStatus(
         }
     }
 
-    for (const major of nodeVersions) {
+    // Check all Node versions in parallel using Promise.all
+    // Performance: ~50-66% faster than sequential (3 sequential @ 1-2s each = 3-6s → 1 parallel batch @ 1-2s)
+    // Each check maintains isolation via fnm exec with specific Node version
+    const startTime = Date.now();
+    const checkPromises = nodeVersions.map(async (major) => {
         // Check if this Node version is actually installed
         if (!installedMajors.has(major)) {
             // Node version not installed - tool cannot be installed for this version
             context.logger.debug(`[Prerequisites] Node ${major} not installed, skipping ${prereq.name} check for this version`);
-            missingVariantMajors.push(major);
-            perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
-            continue;
+            return {
+                major,
+                version: `Node ${major}`,
+                component: '',
+                installed: false,
+                isMissing: true,
+            };
         }
 
         try {
             // Node version is installed - now check if the tool is installed for it
-            // Use NodeVersionManager for bulletproof Node version isolation
-            // Executes command with specific Node version using fnm exec
-            const result = await nodeManager.execWithVersion(
-                major,
+            // Use fnm exec for bulletproof Node version isolation
+            const result = await commandManager.execute(
                 prereq.check.command,
                 {
+                    useNodeVersion: major,
                     timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                    enhancePath: true, // For aio-cli and other npm-installed tools
                 },
             );
-            const stdout = result.stdout;
 
             // Parse CLI version if regex provided
             let cliVersion = '';
             if (prereq.check.parseVersion) {
                 try {
-                    const match = new RegExp(prereq.check.parseVersion).exec(stdout);
+                    const match = new RegExp(prereq.check.parseVersion).exec(result.stdout);
                     if (match) cliVersion = match[1] || '';
                 } catch {
                     // Ignore regex parse errors
                 }
             }
-            perNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: true });
+
+            return {
+                major,
+                version: `Node ${major}`,
+                component: cliVersion,
+                installed: true,
+                isMissing: false,
+            };
         } catch {
-            missingVariantMajors.push(major);
-            perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+            return {
+                major,
+                version: `Node ${major}`,
+                component: '',
+                installed: false,
+                isMissing: true,
+            };
+        }
+    });
+
+    // Wait for all checks to complete in parallel
+    const results = await Promise.all(checkPromises);
+    const duration = Date.now() - startTime;
+    context.logger.debug(`[Prerequisites] Parallel check for ${prereq.name} across ${nodeVersions.length} Node versions completed in ${duration}ms`);
+
+    // Process results to build status arrays
+    for (const result of results) {
+        perNodeVersionStatus.push({
+            version: result.version,
+            component: result.component,
+            installed: result.installed,
+        });
+        if (result.isMissing) {
+            missingVariantMajors.push(result.major);
         }
     }
 

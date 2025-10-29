@@ -7,14 +7,14 @@
 
 import * as vscode from 'vscode';
 import { AuthenticationService } from '@/features/authentication';
-import { ErrorLogger, StepLogger } from '@/shared/logging';
+import { ErrorLogger, StepLogger } from '@/core/logging';
 import {
     PrerequisitesManager,
     PrerequisiteDefinition,
     PrerequisiteStatus,
-} from '@/features/prerequisites/services/prerequisitesManager';
-import { ProgressUnifier } from '@/utils/progressUnifier';
-import { WebviewCommunicationManager } from '@/shared/communication';
+} from '@/features/prerequisites/services/PrerequisitesManager';
+import { ProgressUnifier } from '@/core/utils/progressUnifier';
+import { WebviewCommunicationManager } from '@/core/communication';
 import { ComponentSelection, ComponentConfigs } from './components';
 import { Logger } from './logger';
 import { StateManager } from './state';

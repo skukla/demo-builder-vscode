@@ -5,7 +5,7 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import { TransformedComponentDefinition, EnvVarDefinition } from '@/types/components';
-import { Logger } from '@/types/loggerTypes';
+import type { Logger } from '@/types/logger';
 import { formatGroupName } from './formatters';
 
 /**

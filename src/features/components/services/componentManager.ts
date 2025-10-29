@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ServiceLocator } from '@/core/di';
 import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '@/types';
-import { Logger } from '@/types/loggerTypes';
+import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
 import type { ComponentInstallOptions, ComponentInstallResult } from '@/features/components/services/types';
 

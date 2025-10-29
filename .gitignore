@@ -48,3 +48,6 @@ yarn-error.log*
 # Analysis artifacts
 report/
 jscpd-output/
+# Claude settings
+.claude/settings.local.json  # Local overrides
+.claude/.env*           # Secrets

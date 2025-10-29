@@ -14,6 +14,7 @@ export { TokenManager } from './services/tokenManager';
 export { OrganizationValidator } from './services/organizationValidator';
 export { AdobeSDKClient } from './services/adobeSDKClient';
 export { AuthCacheManager } from './services/authCacheManager';
+export { AuthenticationErrorFormatter } from './services/authenticationErrorFormatter';
 export { PerformanceTracker } from './services/performanceTracker';
 
 // Handlers
@@ -27,6 +28,12 @@ export type {
     AdobeProject,
     AdobeWorkspace,
     AdobeContext,
+    RawAdobeOrg,
+    RawAdobeProject,
+    RawAdobeWorkspace,
+    AdobeConsoleWhereResponse,
+    SDKResponse,
+    AdobeCLIError,
     AuthToken,
     AuthTokenValidation,
     CacheEntry,

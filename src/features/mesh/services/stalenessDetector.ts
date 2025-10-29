@@ -13,7 +13,6 @@ import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
 import { Logger } from '@/core/logging';
 import { getFrontendEnvVars, updateFrontendState } from '@/core/state';
-import { extractEnvVars } from '@/core/utils/envVarExtraction';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
 
 export type { MeshState, MeshChanges };
@@ -39,7 +38,20 @@ const MESH_ENV_VARS = [
  * Get current mesh-related environment variables from component config
  */
 export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
-    return extractEnvVars(componentConfig, MESH_ENV_VARS);
+    const result: Record<string, string> = {};
+
+    // Extract only mesh-related env vars from component config
+    for (const key of MESH_ENV_VARS) {
+        if (key in componentConfig) {
+            const value = componentConfig[key];
+            // Convert to string, filtering out undefined/null
+            if (value !== undefined && value !== null) {
+                result[key] = String(value);
+            }
+        }
+    }
+
+    return result;
 }
 
 /**

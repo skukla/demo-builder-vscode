@@ -7,3 +7,4 @@
 
 export { BaseCommand } from './baseCommand';
 export { BaseWebviewCommand } from './baseWebviewCommand';
+export { BaseHandlerRegistry } from './BaseHandlerRegistry';

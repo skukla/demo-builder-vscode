@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
 import type { ExecOptions } from 'child_process';
-import { getLogger } from '@/shared/logging';
-import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';

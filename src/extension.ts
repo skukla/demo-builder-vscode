@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/shared/base';
+import { BaseWebviewCommand } from '@/core/base';
 import { CommandManager } from './commands/commandManager';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
-import { StatusBarManager } from './providers/statusBar';
-import { ServiceLocator } from './services/serviceLocator';
+import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { ServiceLocator } from '@/core/di';
 import { parseJSON } from './types/typeGuards';
 import { AutoUpdater } from './utils/autoUpdater';
-import { CommandExecutor } from '@/shared/command-execution';
-import { initializeLogger, Logger } from './shared/logging';
-import { StateManager } from './shared/state';
+import { CommandExecutor } from '@/core/shell';
+import { initializeLogger, Logger } from '@/core/logging';
+import { StateManager } from '@/core/state';
 
 let logger: Logger;
 let statusBar: StatusBarManager;

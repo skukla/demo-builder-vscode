@@ -2,9 +2,9 @@ import type { CommandExecutor } from '@/core/shell';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { toError } from '@/types/typeGuards';
-import { AuthenticationErrorFormatter } from '@/core/errors';
 import type { AuthToken } from '@/features/authentication/services/types';
 import type { AuthCacheManager } from './authCacheManager';
+import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 
 /**
  * Manages Adobe access tokens

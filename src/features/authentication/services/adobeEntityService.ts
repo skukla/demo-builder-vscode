@@ -55,7 +55,6 @@ export class AdobeEntityService {
             name: proj.name,
             title: proj.title || proj.name,
             description: proj.description,
-            type: proj.type,
             org_id: proj.org_id,
         }));
     }
@@ -534,7 +533,6 @@ export class AdobeEntityService {
                         name: context.project.name,
                         title: context.project.title || context.project.name,
                         description: context.project.description,
-                        type: context.project.type,
                         org_id: context.project.org_id,
                     };
                 } else {
@@ -623,14 +621,14 @@ export class AdobeEntityService {
     async getCurrentContext(): Promise<AdobeContext> {
         // Use individual cached methods which will fetch only missing data
         this.debugLogger.debug('[Entity Service] Fetching context using cached methods');
-        const [organization, project, workspace] = await Promise.all([
+        const [org, project, workspace] = await Promise.all([
             this.getCurrentOrganization(),
             this.getCurrentProject(),
             this.getCurrentWorkspace(),
         ]);
 
         return {
-            organization,
+            org,
             project,
             workspace,
         };

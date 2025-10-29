@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
-import { StatusBarManager } from '@/providers/statusBar';
+import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Project } from '@/types';
-import { Logger } from '@/shared/logging';
-import { StateManager } from '@/shared/state';
+import { Logger } from '@/core/logging';
+import { StateManager } from '@/core/state';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { ConfigureCommand } from './configure';
 import { ConfigureProjectWebviewCommand } from './configureProjectWebview';

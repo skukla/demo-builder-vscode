@@ -2,13 +2,14 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
-import { BaseWebviewCommand } from '@/core/base';
+import { BaseCommand } from '@/core/base/baseCommand';
+import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { LAST_UPDATE_CHECK_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { sanitizeErrorForLogging, validatePathSafety } from '@/core/validation/securityValidation';
-import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
-import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
+// TEMPORARILY COMMENTED OUT FOR BACKEND COMPILATION
+// import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
+// import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 
 export class ResetAllCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -44,8 +45,9 @@ export class ResetAllCommand extends BaseCommand {
 
             // 2. Close all open webview panels (Welcome, Project Dashboard, Create Project wizard)
             try {
-                WelcomeWebviewCommand.disposeActivePanel();
-                ProjectDashboardWebviewCommand.disposeActivePanel();
+                // TEMPORARILY COMMENTED OUT FOR BACKEND COMPILATION
+                // WelcomeWebviewCommand.disposeActivePanel();
+                // ProjectDashboardWebviewCommand.disposeActivePanel();
                 BaseWebviewCommand.disposeAllActivePanels();
 
                 this.logger.info('Closed all webview panels');
@@ -86,20 +88,23 @@ export class ResetAllCommand extends BaseCommand {
             /**
              * 6. Adobe CLI logout - clears ~/.aio/config.json token
              * Non-fatal: Logs warning and continues if logout fails to prevent blocking reset
+             *
+             * TODO: Re-enable when AuthenticationService is added to ServiceLocator
              */
-            try {
-                const authService = ServiceLocator.getAuthenticationService();
-                await authService.logout();
-                this.logger.info('Adobe CLI logout successful');
-            } catch (error) {
-                // Non-fatal: Log warning and continue reset
-                // SECURITY: Sanitize error message to prevent token leakage in logs
-                const sanitizedError = sanitizeErrorForLogging(error as Error);
-                this.logger.warn(
-                    `Adobe CLI logout failed: ${sanitizedError}. You may need to manually clear authentication.`
-                );
-                this.logger.warn('To manually logout, run: aio auth logout');
-            }
+            // try {
+            //     const authService = ServiceLocator.getAuthenticationService();
+            //     await authService.logout();
+            //     this.logger.info('Adobe CLI logout successful');
+            // } catch (error) {
+            //     // Non-fatal: Log warning and continue reset
+            //     // SECURITY: Sanitize error message to prevent token leakage in logs
+            //     const sanitizedError = sanitizeErrorForLogging(error as Error);
+            //     this.logger.warn(
+            //         `Adobe CLI logout failed: ${sanitizedError}. You may need to manually clear authentication.`
+            //     );
+            //     this.logger.warn('To manually logout, run: aio auth logout');
+            // }
+            this.logger.info('Skipping Adobe CLI logout (not yet implemented in ServiceLocator)');
 
             // 7. Reset status bar
             this.statusBar.reset();

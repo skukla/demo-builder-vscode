@@ -5,7 +5,7 @@ import axios from 'axios';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { UpdateInfo } from '../types';
-import { Logger } from '../shared/logging';
+import { Logger } from '@/core/logging';
 
 export class AutoUpdater {
     private context: vscode.ExtensionContext;

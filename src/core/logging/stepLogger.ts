@@ -36,6 +36,23 @@ export class StepLogger {
         this.templates = this.loadTemplates(templatesPath);
         this.loadStepNames(wizardSteps);
     }
+
+    /**
+     * Static factory method to create StepLogger asynchronously
+     * @param logger The logger instance to use
+     * @param wizardSteps Optional wizard steps configuration
+     * @param templatesPath Optional path to logging templates
+     * @returns Promise resolving to StepLogger instance
+     */
+    static async create(
+        logger: Logger,
+        wizardSteps?: WizardStepConfig[],
+        templatesPath?: string
+    ): Promise<StepLogger> {
+        // For now, construction is synchronous, but this factory method allows
+        // for future async initialization if needed (e.g., loading config from files)
+        return new StepLogger(logger, wizardSteps, templatesPath);
+    }
     
     /**
      * Load step names from configuration or use defaults

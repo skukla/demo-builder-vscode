@@ -1,0 +1,95 @@
+src/commands/commandManager.ts(183,13): error TS2554: Expected 0 arguments, but got 4.
+src/commands/commandManager.ts(192,13): error TS2554: Expected 0 arguments, but got 4.
+src/commands/commandManager.ts(250,13): error TS2554: Expected 0 arguments, but got 4.
+src/commands/projectDashboardWebview.ts(90,51): error TS2339: Property 'getRegisteredTypes' does not exist on type 'DashboardHandlerRegistry'.
+src/commands/projectDashboardWebview.ts(95,51): error TS2339: Property 'handle' does not exist on type 'DashboardHandlerRegistry'.
+src/features/authentication/handlers/projectHandlers.ts(11,32): error TS2307: Cannot find module '@/core/di' or its corresponding type declarations.
+src/features/authentication/handlers/projectHandlers.ts(13,29): error TS2307: Cannot find module '@/core/utils/promiseUtils' or its corresponding type declarations.
+src/features/authentication/handlers/projectHandlers.ts(14,35): error TS2307: Cannot find module '@/core/validation' or its corresponding type declarations.
+src/features/authentication/handlers/projectHandlers.ts(17,10): error TS2305: Module '"@/types/results"' has no exported member 'DataResult'.
+src/features/authentication/handlers/workspaceHandlers.ts(9,29): error TS2307: Cannot find module '@/core/utils/promiseUtils' or its corresponding type declarations.
+src/features/authentication/handlers/workspaceHandlers.ts(10,37): error TS2307: Cannot find module '@/core/validation' or its corresponding type declarations.
+src/features/authentication/handlers/workspaceHandlers.ts(14,10): error TS2305: Module '"@/types/results"' has no exported member 'DataResult'.
+src/features/authentication/services/adobeEntityService.ts(2,38): error TS2307: Cannot find module '@/core/shell' or its corresponding type declarations.
+src/features/authentication/services/adobeEntityService.ts(3,47): error TS2307: Cannot find module '@/core/logging' or its corresponding type declarations.
+src/features/authentication/services/adobeEntityService.ts(4,71): error TS2307: Cannot find module '@/core/validation' or its corresponding type declarations.
+src/features/authentication/services/adobeSDKClient.ts(3,35): error TS2307: Cannot find module '@/core/logging' or its corresponding type declarations.
+src/features/authentication/services/adobeSDKClient.ts(4,37): error TS2307: Cannot find module '@/core/validation' or its corresponding type declarations.
+src/features/authentication/services/adobeSDKClient.ts(111,53): error TS2307: Cannot find module '@/core/di' or its corresponding type declarations.
+src/features/authentication/services/authCacheManager.ts(1,27): error TS2307: Cannot find module '@/core/logging' or its corresponding type declarations.
+src/features/authentication/services/authCacheManager.ts(293,66): error TS2339: Property 'TOKEN_INSPECTION' does not exist on type '{ readonly AUTH_STATUS: number; readonly AUTH_STATUS_ERROR: number; readonly VALIDATION: number; readonly ORG_LIST: number; readonly CONSOLE_WHERE: number; readonly PLUGIN_LIST: number; readonly PREREQUISITE_CHECK: number; }'.
+src/features/authentication/services/authenticationService.ts(2,38): error TS2307: Cannot find module '@/core/shell' or its corresponding type declarations.
+src/features/authentication/services/authenticationService.ts(3,47): error TS2307: Cannot find module '@/core/logging' or its corresponding type declarations.
+src/features/authentication/services/authenticationService.ts(5,46): error TS2307: Cannot find module '@/core/errors' or its corresponding type declarations.
+src/features/authentication/services/authenticationService.ts(74,16): error TS7006: Parameter 'stepLogger' implicitly has an 'any' type.
+src/features/authentication/services/authenticationService.ts(257,21): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/features/authentication/services/organizationValidator.ts(2,38): error TS2307: Cannot find module '@/core/shell' or its corresponding type declarations.
+src/features/authentication/services/organizationValidator.ts(3,35): error TS2307: Cannot find module '@/core/logging' or its corresponding type declarations.
+src/features/authentication/services/performanceTracker.ts(1,27): error TS2307: Cannot find module '@/core/logging' or its corresponding type declarations.
+src/features/authentication/services/tokenManager.ts(1,38): error TS2307: Cannot find module '@/core/shell' or its corresponding type declarations.
+src/features/authentication/services/tokenManager.ts(2,27): error TS2307: Cannot find module '@/core/logging' or its corresponding type declarations.
+src/features/authentication/services/tokenManager.ts(5,46): error TS2307: Cannot find module '@/core/errors' or its corresponding type declarations.
+src/features/authentication/services/types.ts(20,8): error TS2307: Cannot find module '@/types/adobe' or its corresponding type declarations.
+src/features/authentication/ui/hooks/useMinimumLoadingTime.ts(59,17): error TS2322: Type 'Timeout' is not assignable to type 'number'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(50,37): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(51,40): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(60,17): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(69,31): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(70,35): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(75,17): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(80,17): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(80,41): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(86,38): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(87,33): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(87,65): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(88,28): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(89,28): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(90,43): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(91,37): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(94,27): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(95,25): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(96,27): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(97,27): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(100,27): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeAuthStep.tsx(101,31): error TS18046: 'data' is of type 'unknown'.
+src/features/authentication/ui/steps/AdobeProjectStep.tsx(161,74): error TS2322: Type '"flex-end"' is not assignable to type 'Responsive<"start" | "center" | "end" | "stretch" | "self-start" | "self-end" | "baseline" | "first baseline" | "last baseline" | "safe center" | "unsafe center"> | undefined'.
+src/features/authentication/ui/steps/AdobeWorkspaceStep.tsx(160,74): error TS2322: Type '"flex-end"' is not assignable to type 'Responsive<"start" | "center" | "end" | "stretch" | "self-start" | "self-end" | "baseline" | "first baseline" | "last baseline" | "safe center" | "unsafe center"> | undefined'.
+src/features/components/index.ts(8,15): error TS1149: File name '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/components/services/componentManager.ts' differs from already included file name '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/components/services/ComponentManager.ts' only in casing.
+  The file is in the program because:
+    Imported via '@/features/components/services/ComponentManager' from file '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/project-creation/handlers/executor.ts'
+    Imported via './services/componentManager' from file '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/features/components/index.ts'
+    Matched by include pattern 'src/**/*' in '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tsconfig.json'
+src/features/components/providers/componentTreeProvider.ts(5,30): error TS2307: Cannot find module '@/core/state' or its corresponding type declarations.
+src/features/components/providers/componentTreeProvider.ts(67,36): error TS2339: Property 'path' does not exist on type '{}'.
+src/features/components/providers/componentTreeProvider.ts(69,48): error TS2339: Property 'icon' does not exist on type '{}'.
+src/features/components/providers/componentTreeProvider.ts(70,51): error TS2339: Property 'subType' does not exist on type '{}'.
+src/features/components/providers/componentTreeProvider.ts(71,66): error TS2339: Property 'name' does not exist on type '{}'.
+src/features/components/providers/componentTreeProvider.ts(71,82): error TS2339: Property 'path' does not exist on type '{}'.
+src/features/components/services/ComponentManager.ts(3,32): error TS2307: Cannot find module '@/core/di' or its corresponding type declarations.
+src/features/components/services/ComponentManager.ts(5,24): error TS2307: Cannot find module '@/types/loggerTypes' or its corresponding type declarations.
+src/features/components/services/ComponentRegistryManager.ts(75,17): error TS2551: Property 'frontends' does not exist on type '{ frontend?: string[] | undefined; backend?: string[] | undefined; dependencies?: string[] | undefined; externalSystems?: string[] | undefined; appBuilder?: string[] | undefined; }'. Did you mean 'frontend'?
+src/features/components/services/ComponentRegistryManager.ts(80,17): error TS2551: Property 'backends' does not exist on type '{ frontend?: string[] | undefined; backend?: string[] | undefined; dependencies?: string[] | undefined; externalSystems?: string[] | undefined; appBuilder?: string[] | undefined; }'. Did you mean 'backend'?
+src/features/components/services/ComponentRegistryManager.ts(85,17): error TS2551: Property 'appBuilderApps' does not exist on type '{ frontend?: string[] | undefined; backend?: string[] | undefined; dependencies?: string[] | undefined; externalSystems?: string[] | undefined; appBuilder?: string[] | undefined; }'. Did you mean 'appBuilder'?
+src/features/components/services/ComponentRegistryManager.ts(90,17): error TS2339: Property 'integrations' does not exist on type '{ frontend?: string[] | undefined; backend?: string[] | undefined; dependencies?: string[] | undefined; externalSystems?: string[] | undefined; appBuilder?: string[] | undefined; }'.
+src/features/components/services/ComponentRegistryManager.ts(103,17): error TS2339: Property 'infrastructure' does not exist on type 'RawComponentRegistry'.
+src/features/components/services/ComponentRegistryManager.ts(104,57): error TS2339: Property 'infrastructure' does not exist on type 'RawComponentRegistry'.
+src/features/components/services/ComponentRegistryManager.ts(106,21): error TS2698: Spread types may only be created from object types.
+src/features/components/services/ComponentRegistryManager.ts(108,36): error TS18046: 'comp' is of type 'unknown'.
+src/features/components/services/ComponentRegistryManager.ts(109,28): error TS18046: 'comp' is of type 'unknown'.
+src/features/components/services/ComponentRegistryManager.ts(110,68): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'RawComponentDefinition'.
+src/features/components/services/ComponentRegistryManager.ts(111,35): error TS18046: 'comp' is of type 'unknown'.
+src/features/components/services/ComponentRegistryManager.ts(112,62): error TS18046: 'comp' is of type 'unknown'.
+src/features/components/services/ComponentRegistryManager.ts(122,13): error TS2353: Object literal may only specify known properties, and 'infrastructure' does not exist in type 'ComponentRegistry'.
+src/features/components/services/ComponentRegistryManager.ts(313,22): error TS2339: Property 'infrastructure' does not exist on type 'ComponentRegistry'.
+src/features/components/services/ComponentRegistryManager.ts(314,42): error TS2339: Property 'infrastructure' does not exist on type 'ComponentRegistry'.
+src/features/components/ui/steps/ComponentSelectionStep.tsx(35,88): error TS2339: Property 'frontend' does not exist on type '{}'.
+src/features/components/ui/steps/ComponentSelectionStep.tsx(36,86): error TS2339: Property 'backend' does not exist on type '{}'.
+src/features/components/ui/steps/ComponentSelectionStep.tsx(38,35): error TS2339: Property 'dependencies' does not exist on type '{}'.
+src/features/components/ui/steps/ComponentSelectionStep.tsx(41,35): error TS2339: Property 'services' does not exist on type '{}'.
+src/features/components/ui/steps/ComponentSelectionStep.tsx(44,35): error TS2339: Property 'externalSystems' does not exist on type '{}'.
+src/features/components/ui/steps/ComponentSelectionStep.tsx(47,35): error TS2339: Property 'appBuilderApps' does not exist on type '{}'.
+src/features/components/ui/steps/ComponentSelectionStep.tsx(221,46): error TS2339: Property 'map' does not exist on type '{}'.
+src/features/components/ui/steps/ComponentSelectionStep.tsx(221,50): error TS7006: Parameter 'option' implicitly has an 'any' type.
+src/features/components/ui/steps/ComponentSelectionStep.tsx(274,45): error TS2339: Property 'map' does not exist on type '{}'.
+src/features/components/ui/steps/ComponentSelectionStep.tsx(274,49): error TS7006: Parameter 'option' implicitly has an 'any' type.
+src/features/components/ui/steps/ComponentSelectionStep.tsx(320,49): error TS2339: Property 'map' does not exist on type '{}'.
