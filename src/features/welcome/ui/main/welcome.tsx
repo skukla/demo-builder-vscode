@@ -21,7 +21,7 @@ import { createRoot } from 'react-dom/client';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { WelcomeScreen } from '@/features/welcome/ui/WelcomeScreen';
 import { vscode } from '@/core/ui/vscode-api';
-import { ThemeMode } from '@/core/ui/types';
+import { ThemeMode } from '@/webview-ui/shared/types';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/custom-spectrum.css';

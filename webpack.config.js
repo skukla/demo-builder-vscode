@@ -1,14 +1,13 @@
 const path = require('path');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
 
 module.exports = {
   mode: process.env.NODE_ENV || 'development',
   entry: {
-    main: './src/webviews/index.tsx',
-    welcome: './src/webviews/welcome.tsx',
-    projectDashboard: './src/webviews/project-dashboard.tsx',
-    configure: './src/webviews/configure.tsx'
+    wizard: './webview-ui/src/wizard/index.tsx',
+    welcome: './webview-ui/src/welcome/index.tsx',
+    dashboard: './webview-ui/src/dashboard/index.tsx',
+    configure: './webview-ui/src/configure/index.tsx'
   },
   output: {
     path: path.resolve(__dirname, 'dist', 'webview'),
@@ -22,7 +21,7 @@ module.exports = {
         use: {
           loader: 'ts-loader',
           options: {
-            configFile: 'tsconfig.webview.json',
+            configFile: 'webview-ui/tsconfig.json',
             transpileOnly: true
           }
         },
@@ -41,21 +40,21 @@ module.exports = {
   resolve: {
     extensions: ['.tsx', '.ts', '.js', '.jsx'],
     alias: {
+      // Extension host aliases (for feature UI code that imports from extension)
       '@/features': path.resolve(__dirname, 'src/features'),
       '@/shared': path.resolve(__dirname, 'src/shared'),
-      '@/components': path.resolve(__dirname, 'src/webviews/components'),
-      '@/hooks': path.resolve(__dirname, 'src/webviews/hooks'),
-      '@/contexts': path.resolve(__dirname, 'src/webviews/contexts'),
-      '@/screens': path.resolve(__dirname, 'src/webviews/screens'),
-      '@/types': path.resolve(__dirname, 'src/webviews/types'),
-      '@/utils': path.resolve(__dirname, 'src/webviews/utils')
+      '@/types': path.resolve(__dirname, 'src/types'),
+      // Webview UI aliases (new structure)
+      '@/webview-ui': path.resolve(__dirname, 'webview-ui/src'),
+      '@/design-system': path.resolve(__dirname, 'webview-ui/src/shared/components'),
+      // Legacy aliases for backward compatibility (remove after full migration)
+      '@/components': path.resolve(__dirname, 'webview-ui/src/shared/components'),
+      '@/hooks': path.resolve(__dirname, 'webview-ui/src/shared/hooks'),
+      '@/contexts': path.resolve(__dirname, 'webview-ui/src/shared/contexts'),
+      '@/utils': path.resolve(__dirname, 'webview-ui/src/shared/utils')
     }
   },
   plugins: [
-    new HtmlWebpackPlugin({
-      template: './src/webviews/index.html',
-      filename: 'index.html'
-    }),
     // Define process.env for browser environment
     new webpack.DefinePlugin({
       'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),

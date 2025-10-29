@@ -7,12 +7,12 @@ import {
     Button,
     View
 } from '@adobe/react-spectrum';
-import { ComponentEnvVar, ComponentConfigs, DemoProject } from '@/core/ui/types';
+import { ComponentEnvVar, ComponentConfigs, DemoProject } from '@/webview-ui/shared/types';
 import { vscode } from '@/core/ui/vscode-api';
-import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
-import { useDebouncedValue } from '@/core/ui/hooks';
-import { cn } from '@/core/ui/utils/classNames';
-import { FormField, ConfigSection } from '@/design-system/molecules';
+import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
+import { useDebouncedValue } from '@/webview-ui/shared/hooks';
+import { cn } from '@/webview-ui/shared/utils/classNames';
+import { FormField, ConfigSection } from '@/webview-ui/shared/components/molecules';
 import { NavigationPanel, NavigationSection, NavigationField } from './components/NavigationPanel';
 
 interface ComponentsData {

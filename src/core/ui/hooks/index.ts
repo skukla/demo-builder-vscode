@@ -8,18 +8,18 @@
  */
 
 // VS Code Communication Hooks
-export { useVSCodeMessage } from '@/core/ui/hooks/useVSCodeMessage';
-export { useVSCodeRequest } from '@/core/ui/hooks/useVSCodeRequest';
+export { useVSCodeMessage } from '@/webview-ui/shared/hooks/useVSCodeMessage';
+export { useVSCodeRequest } from '@/webview-ui/shared/hooks/useVSCodeRequest';
 
 // State Management Hooks
-export { useLoadingState } from '@/core/ui/hooks/useLoadingState';
-export { useSelection } from '@/core/ui/hooks/useSelection';
-export { useAsyncData } from '@/core/ui/hooks/useAsyncData';
+export { useLoadingState } from '@/webview-ui/shared/hooks/useLoadingState';
+export { useSelection } from '@/webview-ui/shared/hooks/useSelection';
+export { useAsyncData } from '@/webview-ui/shared/hooks/useAsyncData';
 
 // UI Interaction Hooks
-export { useAutoScroll } from '@/core/ui/hooks/useAutoScroll';
-export { useSearchFilter } from '@/core/ui/hooks/useSearchFilter';
-export { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
+export { useAutoScroll } from '@/webview-ui/shared/hooks/useAutoScroll';
+export { useSearchFilter } from '@/webview-ui/shared/hooks/useSearchFilter';
+export { useFocusTrap } from '@/webview-ui/shared/hooks/useFocusTrap';
 
 // General Purpose Hooks
-export { useSelectableDefault, useSelectableDefaultWhen } from '@/core/ui/hooks/useSelectableDefault';
+export { useSelectableDefault, useSelectableDefaultWhen } from '@/webview-ui/shared/hooks/useSelectableDefault';

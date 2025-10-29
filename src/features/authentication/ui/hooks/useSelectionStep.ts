@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { vscode } from '@/core/ui/vscode-api';
 import { useDebouncedLoading } from './useDebouncedLoading';
-import { WizardState } from '@/core/ui/types';
+import { WizardState } from '@/webview-ui/shared/types';
 
 /**
  * Configuration options for the selection step hook

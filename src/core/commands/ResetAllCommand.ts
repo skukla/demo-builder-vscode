@@ -7,9 +7,8 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { LAST_UPDATE_CHECK_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { sanitizeErrorForLogging, validatePathSafety } from '@/core/validation/securityValidation';
-// TEMPORARILY COMMENTED OUT FOR BACKEND COMPILATION
-// import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
-// import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
+import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
+import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 
 export class ResetAllCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -45,9 +44,8 @@ export class ResetAllCommand extends BaseCommand {
 
             // 2. Close all open webview panels (Welcome, Project Dashboard, Create Project wizard)
             try {
-                // TEMPORARILY COMMENTED OUT FOR BACKEND COMPILATION
-                // WelcomeWebviewCommand.disposeActivePanel();
-                // ProjectDashboardWebviewCommand.disposeActivePanel();
+                WelcomeWebviewCommand.disposeActivePanel();
+                ProjectDashboardWebviewCommand.disposeActivePanel();
                 BaseWebviewCommand.disposeAllActivePanels();
 
                 this.logger.info('Closed all webview panels');

@@ -7,7 +7,7 @@ import {
     Badge,
     Well
 } from '@adobe/react-spectrum';
-import { cn } from '@/core/ui/utils/classNames';
+import { cn } from '@/webview-ui/shared/utils/classNames';
 import Folder from '@spectrum-icons/workflow/Folder';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Clock from '@spectrum-icons/workflow/Clock';

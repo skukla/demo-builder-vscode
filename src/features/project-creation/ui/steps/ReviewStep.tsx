@@ -7,7 +7,7 @@ import {
     Well
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import { WizardState } from '@/core/ui/types';
+import { WizardState } from '@/webview-ui/shared/types';
 
 interface ComponentData {
     id: string;

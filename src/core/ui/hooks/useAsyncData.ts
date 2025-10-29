@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useLoadingState } from '@/core/ui/hooks/useLoadingState';
-import { useVSCodeMessage } from '@/core/ui/hooks/useVSCodeMessage';
+import { useLoadingState } from '@/webview-ui/shared/hooks/useLoadingState';
+import { useVSCodeMessage } from '@/webview-ui/shared/hooks/useVSCodeMessage';
 
 interface UseAsyncDataOptions<T> {
   /** Initial data */

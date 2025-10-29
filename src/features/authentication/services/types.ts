@@ -10,7 +10,7 @@ export type {
     Organization as AdobeOrg,
     AdobeProject,
     Workspace as AdobeWorkspace,
-} from '@/core/ui/types';
+} from '@/webview-ui/shared/types';
 
 // Raw Adobe CLI response types (not in core/ui/types)
 export interface RawAdobeOrg {

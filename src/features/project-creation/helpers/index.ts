@@ -8,4 +8,12 @@ export { generateComponentEnvFile } from './envFileGenerator';
 export { getSetupInstructions, SetupInstruction } from './setupInstructions';
 export { getEndpoint } from '../../mesh/services/meshEndpoint';
 export { deployMeshComponent, MeshDeploymentResult } from '../../mesh/services/meshDeployment';
-// UI validation functions removed - only used by webview code (excluded from backend compilation)
+
+// UI validation function - simple validator for form fields
+export function validateField(field: string, value: string): { isValid: boolean; message?: string } {
+    // Basic validation - can be expanded as needed
+    if (!value || value.trim().length === 0) {
+        return { isValid: false, message: `${field} is required` };
+    }
+    return { isValid: true };
+}

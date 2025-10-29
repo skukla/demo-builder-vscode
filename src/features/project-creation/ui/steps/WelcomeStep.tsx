@@ -7,8 +7,8 @@ import {
     Heading,
     Text
 } from '@adobe/react-spectrum';
-import { WizardState } from '@/core/ui/types';
-import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
+import { WizardState } from '@/webview-ui/shared/types';
+import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
 
 interface WelcomeStepProps {
     state: WizardState;

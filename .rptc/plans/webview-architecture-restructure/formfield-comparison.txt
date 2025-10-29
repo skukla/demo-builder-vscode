@@ -1,0 +1,49 @@
+=== FormField.tsx Comparison ===
+
+Location 1: src/core/ui/components/FormField.tsx
+-rw-r--r--  1 kukla  staff   4.8K Oct 28 18:53 /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/FormField.tsx
+
+Location 2: src/webviews/components/molecules/FormField.tsx
+-rw-r--r--  1 kukla  staff   4.7K Oct 28 18:53 /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/components/molecules/FormField.tsx
+
+--- Diff ---
+--- /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/FormField.tsx	2025-10-28 18:53:53
++++ /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/components/molecules/FormField.tsx	2025-10-28 18:53:55
+@@ -17,11 +17,11 @@
+     /** Field label */
+     label: string;
+     /** Field type */
+-    type: 'text' | 'url' | 'password' | 'select' | 'boolean' | 'number';
++    type: 'text' | 'url' | 'password' | 'select' | 'boolean';
+     /** Current value */
+-    value: string | boolean | number;
++    value: string | boolean;
+     /** Change handler */
+-    onChange: (value: string | boolean | number) => void;
++    onChange: (value: string | boolean) => void;
+     /** Placeholder text */
+     placeholder?: string;
+     /** Description text */
+@@ -35,7 +35,7 @@
+     /** Options for select type */
+     options?: FormFieldOption[];
+     /** Props for default value auto-selection */
+-    selectableDefaultProps?: Record<string, unknown>;
++    selectableDefaultProps?: Record<string, any>;
+ }
+ 
+ /**
+@@ -84,12 +84,11 @@
+     switch (type) {
+         case 'text':
+         case 'url':
+-        case 'number':
+             return (
+                 <div key={fieldKey} id={`field-${fieldKey}`} style={wrapperStyle}>
+                     <TextField
+                         label={label}
+-                        value={String(value)}
++                        value={value as string}
+                         onChange={handleChange}
+                         placeholder={placeholder}
+                         description={description}

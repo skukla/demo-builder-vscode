@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import { WizardState } from '@/core/ui/types';
-import { LoadingDisplay } from '@/core/ui/components/LoadingDisplay';
+import { WizardState } from '@/webview-ui/shared/types';
+import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 import { vscode } from '@/core/ui/vscode-api';
 
 interface ProjectCreationStepProps {

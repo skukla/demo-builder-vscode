@@ -155,7 +155,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         
         // Get URI for bundle
         const bundleUri = this.panel!.webview.asWebviewUri(
-            vscode.Uri.file(path.join(webviewPath, 'main-bundle.js')),
+            vscode.Uri.file(path.join(webviewPath, 'wizard-bundle.js')),
         );
         
         const nonce = this.getNonce();

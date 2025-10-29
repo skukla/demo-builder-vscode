@@ -1,0 +1,43 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "declaration": false,
+    "sourceMap": true,
+    "outDir": "../dist/webview",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "noEmit": false,
+    "types": ["react", "react-dom"],
+    "baseUrl": ".",
+    "paths": {
+      "@/webview-ui/*": ["src/*"],
+      "@/design-system/*": ["src/shared/components/*"],
+      "@/components": ["src/shared/components"],
+      "@/components/*": ["src/shared/components/*"],
+      "@/hooks": ["src/shared/hooks"],
+      "@/hooks/*": ["src/shared/hooks/*"],
+      "@/contexts": ["src/shared/contexts"],
+      "@/contexts/*": ["src/shared/contexts/*"],
+      "@/utils": ["src/shared/utils"],
+      "@/utils/*": ["src/shared/utils/*"],
+      "@/types": ["src/shared/types"],
+      "@/types/*": ["src/shared/types/*"]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "../dist"
+  ],
+  "references": []
+}

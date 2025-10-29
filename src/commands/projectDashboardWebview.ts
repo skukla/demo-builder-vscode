@@ -44,7 +44,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             this.context.extensionUri,
             'dist',
             'webview',
-            'projectDashboard-bundle.js',
+            'dashboard-bundle.js',
         );
         const bundleUri = this.panel!.webview.asWebviewUri(bundlePath);
 

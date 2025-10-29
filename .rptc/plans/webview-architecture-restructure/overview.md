@@ -3,13 +3,28 @@
 ## Status Tracking
 
 - [x] Planned
-- [ ] In Progress (TDD Phase)
+- [x] In Progress (TDD Phase)
+  - [x] Step 1: Pre-Migration Audit and Inventory
+  - [ ] Step 2: Duplicate Analysis and Comparison
+  - [ ] Step 3: Directory Creation and Consolidation
+  - [ ] Step 4: Feature Migration
+  - [ ] Step 5: Import Path Updates and Code Restoration
+  - [ ] Step 6: Configuration Updates and Verification
 - [ ] Efficiency Review
 - [ ] Security Review
 - [ ] Complete
 
 **Created:** 2025-10-29
-**Last Updated:** 2025-10-29
+**Last Updated:** 2025-10-29 (Step 1 completed)
+
+---
+
+## Configuration
+
+**Efficiency Review**: enabled
+**Security Review**: enabled
+
+**Rationale:** Refactoring work requires quality gates to catch unused imports, over-complexity, and potential security issues introduced during file restructuring.
 
 ---
 
@@ -89,9 +104,22 @@
 
 ### Testing Approach
 
-- **Framework:** Manual testing (no automated UI tests currently)
-- **Coverage Goal:** 100% manual verification of all webview functionality
-- **Test Distribution:** Manual verification (100%)
+- **Framework:** Jest + React Testing Library (94 existing automated tests)
+- **Coverage Goal:** 85% automated test coverage + manual UI verification
+- **Test Distribution:**
+  - Automated tests: 94 existing tests (unit + integration)
+  - Manual verification: Webview loading and UI/UX validation
+  - Tests blocked by 5 compilation errors (to be fixed during restructure)
+
+### Current Test Inventory
+
+- **Total test files:** 94
+- **Webview component tests:** `tests/core/ui/components/*.test.tsx`
+- **Hook tests:** `tests/core/ui/hooks/*.test.ts` (9 files)
+- **Integration tests:** `tests/integration/`
+- **Unit tests:** `tests/unit/`
+
+**Critical Note:** Tests currently cannot run due to 5 TypeScript compilation errors in webview command files. These errors will be fixed as part of the webview restructure (restoring commented code).
 
 ### Happy Path Scenarios
 
@@ -198,6 +226,8 @@
 
 **Definition of Done for this feature:**
 
+- [ ] **Compilation Errors Fixed:** All 5 TypeScript compilation errors resolved (WebviewCommunicationManager.onStreaming, BaseWebviewCommand.getActivePanel)
+- [ ] **Tests Passing:** All 94 automated tests pass with no failures
 - [ ] **Functionality:** All 3 webviews (wizard, dashboard, configure) work identically to before migration
 - [ ] **Structure:** Webview code moved to top-level `webview-ui/` directory
 - [ ] **Organization:** Feature-based organization (no atomic design artifacts)
@@ -209,6 +239,7 @@
 - [ ] **Documentation:** CLAUDE.md files updated with new structure
 - [ ] **Cleanup:** Old directories (`src/webviews/`, `src/core/ui/`) removed
 - [ ] **Git History:** File moves preserved with `git mv`
+- [ ] **Commented Code Restored:** All temporarily commented code uncommented and working
 
 **Feature-Specific Criteria:**
 

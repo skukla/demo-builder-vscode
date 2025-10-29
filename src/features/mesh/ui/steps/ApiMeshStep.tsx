@@ -5,12 +5,12 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Info from '@spectrum-icons/workflow/Info';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import { vscode } from '@/core/ui/vscode-api';
-import { WizardState, WizardStep } from '@/core/ui/types';
+import { WizardState, WizardStep } from '@/webview-ui/shared/types';
 import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
-import { LoadingDisplay } from '@/core/ui/components/LoadingDisplay';
-import { FadeTransition } from '@/core/ui/components/FadeTransition';
-import { Modal } from '@/core/ui/components/Modal';
-import { NumberedInstructions } from '@/core/ui/components/NumberedInstructions';
+import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
+import { FadeTransition } from '@/webview-ui/shared/components/FadeTransition';
+import { Modal } from '@/webview-ui/shared/components/Modal';
+import { NumberedInstructions } from '@/webview-ui/shared/components/NumberedInstructions';
 
 interface ApiMeshStepProps {
     state: WizardState;

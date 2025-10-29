@@ -227,12 +227,12 @@ export class WelcomeWebviewCommand extends BaseCommand {
                 </div>
             </div>
             <script nonce="${nonce}">
-                // For development - use main bundle if welcome bundle doesn't exist
+                // For development - use wizard bundle if welcome bundle doesn't exist
                 window.addEventListener('error', (e) => {
                     if (e.filename && e.filename.includes('welcome-bundle.js')) {
-                        console.warn('Welcome bundle not found, falling back to main bundle');
+                        console.warn('Welcome bundle not found, falling back to wizard bundle');
                         const script = document.createElement('script');
-                        script.src = '${this.panel.webview.asWebviewUri(vscode.Uri.file(path.join(webviewPath, 'main-bundle.js')))}';
+                        script.src = '${this.panel.webview.asWebviewUri(vscode.Uri.file(path.join(webviewPath, 'wizard-bundle.js')))}';
                         script.nonce = '${nonce}';
                         document.body.appendChild(script);
                     }

@@ -1,0 +1,43 @@
+
+> adobe-demo-builder@1.0.0 compile:webview
+> webpack --mode production
+
+assets by status 5.59 MiB [cached] 5 assets
+orphan modules 8.19 MiB [orphan] 2556 modules
+runtime modules 2.73 KiB 16 modules
+cacheable modules 5.9 MiB
+  modules by path ./node_modules/ 1.96 MiB 83 modules
+  modules by path ./src/webviews/ 3.94 MiB
+    modules by path ./src/webviews/*.tsx 3.82 MiB
+      ./src/webviews/index.tsx + 742 modules 1.57 MiB [built] [code generated]
+      + 3 modules
+    modules by path ./src/webviews/styles/*.css 119 KiB
+      ./node_modules/css-loader/dist/cjs.js!./src/webviews/styles/index.css 8.19 KiB [built] [code generated]
+      ./node_modules/css-loader/dist/cjs.js!./src/webviews/styles/vscode-theme.css 16.6 KiB [built] [code generated]
+      + 2 modules
+
+ERROR in ./src/webviews/welcome.tsx 4:0-43
+Module not found: Error: Can't resolve './welcome-app' in '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews'
+resolve './welcome-app' in '/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews'
+  using description file: /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/package.json (relative path: ./src/webviews)
+    Field 'browser' doesn't contain a valid alias configuration
+    using description file: /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/package.json (relative path: ./src/webviews/welcome-app)
+      no extension
+        Field 'browser' doesn't contain a valid alias configuration
+        /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/welcome-app doesn't exist
+      .tsx
+        Field 'browser' doesn't contain a valid alias configuration
+        /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/welcome-app.tsx doesn't exist
+      .ts
+        Field 'browser' doesn't contain a valid alias configuration
+        /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/welcome-app.ts doesn't exist
+      .js
+        Field 'browser' doesn't contain a valid alias configuration
+        /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/welcome-app.js doesn't exist
+      .jsx
+        Field 'browser' doesn't contain a valid alias configuration
+        /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/welcome-app.jsx doesn't exist
+      as directory
+        /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/welcome-app doesn't exist
+
+webpack 5.101.3 compiled with 1 error in 4560 ms

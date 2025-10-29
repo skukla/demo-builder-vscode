@@ -1,368 +1,271 @@
-# Step 2: Directory Structure Creation
+# Step 2: Duplicate Analysis and Comparison
 
-**Purpose:** Create the new directory structure (`webview-ui/` and `shared/types/`) with all necessary configuration files. This establishes the target architecture before moving any code.
+**Purpose:** Compare the 3 pending duplicate files side-by-side and make final decisions on which versions to keep. This ensures we move the correct versions in Step 3 instead of moving duplicates then deleting.
 
 **Prerequisites:**
 
-- [x] Step 1 completed (inventory and baseline documented)
-- [ ] Migration checklist reviewed and approved
-- [ ] Git working directory clean
+- [x] Step 1 completed (inventory identified 6 duplicates)
+- [x] 3 duplicates already decided (Modal, FadeTransition, LoadingDisplay - keep core/ui versions)
+- [ ] 3 duplicates need comparison (FormField, NumberedInstructions, StatusCard)
 
 **Tests to Write First:**
 
-- [ ] Test: Verify new directory structure exists
-  - **Given:** New directories created
-  - **When:** Run `ls -la webview-ui/src/` and `ls -la shared/`
-  - **Then:** All expected directories present (wizard, dashboard, configure, shared)
+- [ ] Test: Verify duplicate files exist before comparison
+  - **Given:** Step 1 inventory complete
+  - **When:** Check both locations for FormField, NumberedInstructions, StatusCard
+  - **Then:** Both versions of each file exist
   - **File:** Manual test
 
-- [ ] Test: Verify TypeScript configuration files valid
-  - **Given:** New tsconfig.json files created
-  - **When:** Run `npx tsc --noEmit -p webview-ui/tsconfig.json`
-  - **Then:** No TypeScript configuration errors
+- [ ] Test: Verify comparison results documented
+  - **Given:** All 3 duplicates compared
+  - **When:** Read duplicate-analysis.md
+  - **Then:** Clear decision documented for each duplicate with rationale
   - **File:** Manual test
 
-- [ ] Test: Verify package.json files valid
-  - **Given:** New package.json created
-  - **When:** Run `npm install` in webview-ui/
-  - **Then:** Dependencies install successfully
-  - **File:** Manual test
+- [ ] Test: Verify import usage analysis for duplicates
+  - **Given:** Import analysis from Step 1
+  - **When:** Check which duplicate version is imported
+  - **Then:** Confirm active version matches or document migration needed
+  - **File:** Grep analysis
 
 **Files to Create/Modify:**
 
-- [ ] `webview-ui/package.json` - Webview-specific dependencies
-- [ ] `webview-ui/tsconfig.json` - Webview TypeScript config
-- [ ] `webview-ui/.eslintrc.js` - Webview-specific linting
-- [ ] `webview-ui/src/wizard/` - Wizard feature directory
-- [ ] `webview-ui/src/dashboard/` - Dashboard feature directory
-- [ ] `webview-ui/src/configure/` - Configure feature directory
-- [ ] `webview-ui/src/shared/` - Shared components/hooks/utils
-- [ ] `shared/types/` - Shared types between extension and webview
-- [ ] `shared/tsconfig.json` - Shared types TypeScript config
+- [ ] `.rptc/plans/webview-architecture-restructure/duplicate-analysis.md` - Update with comparison results
+- [ ] `.rptc/plans/webview-architecture-restructure/formfield-comparison.txt` - Side-by-side diff
+- [ ] `.rptc/plans/webview-architecture-restructure/numberedinstructions-comparison.txt` - Side-by-side diff
+- [ ] `.rptc/plans/webview-architecture-restructure/statuscard-comparison.txt` - Side-by-side diff
 
 **Implementation Details:**
 
-**RED Phase** (Write failing tests)
+**RED Phase** (Compare duplicate files)
 
-No automated tests for directory creation. Manual verification only:
-
-```bash
-# Test 1: Verify directories don't exist yet (should fail initially)
-test -d webview-ui/ && echo "EXISTS" || echo "NOT FOUND"
-test -d shared/types/ && echo "EXISTS" || echo "NOT FOUND"
-
-# Test 2: TypeScript config validation (will fail until files created)
-npx tsc --noEmit -p webview-ui/tsconfig.json
-```
-
-**GREEN Phase** (Minimal implementation)
-
-1. **Create Top-Level webview-ui Directory Structure**
+Compare each of the 3 pending duplicates side-by-side:
 
 ```bash
-# Create main structure
-mkdir -p webview-ui/src/{wizard,dashboard,configure,shared}
-mkdir -p webview-ui/src/shared/{components,hooks,contexts,styles,utils,types}
-mkdir -p webview-ui/src/shared/components/{atoms,molecules,organisms,feedback,debug}
+# 1. Compare FormField.tsx
+echo "=== FormField.tsx Comparison ===" > .rptc/plans/webview-architecture-restructure/formfield-comparison.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/formfield-comparison.txt
+echo "Location 1: src/core/ui/components/FormField.tsx" >> .rptc/plans/webview-architecture-restructure/formfield-comparison.txt
+ls -lh src/core/ui/components/FormField.tsx >> .rptc/plans/webview-architecture-restructure/formfield-comparison.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/formfield-comparison.txt
+echo "Location 2: src/webviews/components/molecules/FormField.tsx" >> .rptc/plans/webview-architecture-restructure/formfield-comparison.txt
+ls -lh src/webviews/components/molecules/FormField.tsx 2>/dev/null || echo "File not found" >> .rptc/plans/webview-architecture-restructure/formfield-comparison.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/formfield-comparison.txt
+echo "--- Diff ---" >> .rptc/plans/webview-architecture-restructure/formfield-comparison.txt
+diff -u src/core/ui/components/FormField.tsx src/webviews/components/molecules/FormField.tsx >> .rptc/plans/webview-architecture-restructure/formfield-comparison.txt 2>&1 || true
 
-# Create feature subdirectories
-mkdir -p webview-ui/src/wizard/{components,steps,hooks,styles}
-mkdir -p webview-ui/src/dashboard/{components,hooks,styles}
-mkdir -p webview-ui/src/configure/{components,hooks,styles}
+# 2. Compare NumberedInstructions.tsx
+echo "=== NumberedInstructions.tsx Comparison ===" > .rptc/plans/webview-architecture-restructure/numberedinstructions-comparison.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/numberedinstructions-comparison.txt
+echo "Location 1: src/core/ui/components/NumberedInstructions.tsx" >> .rptc/plans/webview-architecture-restructure/numberedinstructions-comparison.txt
+ls -lh src/core/ui/components/NumberedInstructions.tsx >> .rptc/plans/webview-architecture-restructure/numberedinstructions-comparison.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/numberedinstructions-comparison.txt
+echo "Location 2: src/webviews/components/shared/NumberedInstructions.tsx" >> .rptc/plans/webview-architecture-restructure/numberedinstructions-comparison.txt
+ls -lh src/webviews/components/shared/NumberedInstructions.tsx >> .rptc/plans/webview-architecture-restructure/numberedinstructions-comparison.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/numberedinstructions-comparison.txt
+echo "--- Diff ---" >> .rptc/plans/webview-architecture-restructure/numberedinstructions-comparison.txt
+diff -u src/core/ui/components/NumberedInstructions.tsx src/webviews/components/shared/NumberedInstructions.tsx >> .rptc/plans/webview-architecture-restructure/numberedinstructions-comparison.txt 2>&1 || true
 
-# Verify structure
-tree webview-ui/ -L 3
+# 3. Compare StatusCard.tsx
+echo "=== StatusCard.tsx Comparison ===" > .rptc/plans/webview-architecture-restructure/statuscard-comparison.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/statuscard-comparison.txt
+echo "Location 1: src/core/ui/components/StatusCard.tsx" >> .rptc/plans/webview-architecture-restructure/statuscard-comparison.txt
+ls -lh src/core/ui/components/StatusCard.tsx >> .rptc/plans/webview-architecture-restructure/statuscard-comparison.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/statuscard-comparison.txt
+echo "Location 2: src/webviews/components/molecules/StatusCard.tsx" >> .rptc/plans/webview-architecture-restructure/statuscard-comparison.txt
+ls -lh src/webviews/components/molecules/StatusCard.tsx 2>/dev/null || echo "File not found" >> .rptc/plans/webview-architecture-restructure/statuscard-comparison.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/statuscard-comparison.txt
+echo "--- Diff ---" >> .rptc/plans/webview-architecture-restructure/statuscard-comparison.txt
+diff -u src/core/ui/components/StatusCard.tsx src/webviews/components/molecules/StatusCard.tsx >> .rptc/plans/webview-architecture-restructure/statuscard-comparison.txt 2>&1 || true
+
+# 4. Check which versions are actively imported (from Step 1 analysis)
+echo "=== Import Usage Analysis ===" > .rptc/plans/webview-architecture-restructure/duplicate-import-usage.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/duplicate-import-usage.txt
+echo "FormField imports from @/core/ui:" >> .rptc/plans/webview-architecture-restructure/duplicate-import-usage.txt
+grep -r "FormField.*from.*@/core/ui" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | wc -l >> .rptc/plans/webview-architecture-restructure/duplicate-import-usage.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/duplicate-import-usage.txt
+echo "NumberedInstructions imports from @/core/ui:" >> .rptc/plans/webview-architecture-restructure/duplicate-import-usage.txt
+grep -r "NumberedInstructions.*from.*@/core/ui" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | wc -l >> .rptc/plans/webview-architecture-restructure/duplicate-import-usage.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/duplicate-import-usage.txt
+echo "StatusCard imports from @/core/ui:" >> .rptc/plans/webview-architecture-restructure/duplicate-import-usage.txt
+grep -r "StatusCard.*from.*@/core/ui" src/ --include="*.ts" --include="*.tsx" 2>/dev/null | wc -l >> .rptc/plans/webview-architecture-restructure/duplicate-import-usage.txt
 ```
 
-2. **Create Shared Types Bridge Structure**
+**Report RED State:**
+```text
+🔴 RED Phase Complete - Step 2
+
+Comparison files created:
+- formfield-comparison.txt
+- numberedinstructions-comparison.txt
+- statuscard-comparison.txt
+- duplicate-import-usage.txt
+
+Ready to analyze diffs and make decisions.
+```
+
+**GREEN Phase** (Document comparison results and decisions)
+
+Analyze each comparison and update duplicate-analysis.md:
 
 ```bash
-# Create shared types directory
-mkdir -p shared/types
+# Read the existing duplicate-analysis.md from Step 1
+# Update it with detailed comparison results
 
-# Verify structure
-ls -la shared/
-```
+cat >> .rptc/plans/webview-architecture-restructure/duplicate-analysis.md << 'EOF'
 
-3. **Create webview-ui/package.json**
+---
 
-```json
-{
-  "name": "@adobe-demo-builder/webview-ui",
-  "version": "1.6.0",
-  "private": true,
-  "description": "React-based webview UI for Adobe Demo Builder VS Code extension",
-  "scripts": {
-    "build": "webpack --mode production",
-    "build:dev": "webpack --mode development",
-    "watch": "webpack --mode development --watch",
-    "type-check": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@adobe/react-spectrum": "^3.34.1",
-    "@spectrum-icons/illustrations": "^3.6.11",
-    "@spectrum-icons/workflow": "^4.2.9",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {
-    "@types/react": "^18.2.0",
-    "@types/react-dom": "^18.2.0",
-    "@types/vscode-webview": "^1.57.0",
-    "typescript": "^5.3.3"
-  }
-}
-```
+## Detailed Comparison Results (Step 2)
 
-4. **Create webview-ui/tsconfig.json**
+### FormField.tsx Analysis
 
-```json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "jsx": "react-jsx",
-    "declaration": false,
-    "sourceMap": true,
-    "outDir": "../dist/webview",
-    "rootDir": "./src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "noEmit": false,
-    "types": ["react", "react-dom"],
-    "baseUrl": ".",
-    "paths": {
-      "@/wizard": ["src/wizard"],
-      "@/wizard/*": ["src/wizard/*"],
-      "@/dashboard": ["src/dashboard"],
-      "@/dashboard/*": ["src/dashboard/*"],
-      "@/configure": ["src/configure"],
-      "@/configure/*": ["src/configure/*"],
-      "@/shared": ["src/shared"],
-      "@/shared/*": ["src/shared/*"],
-      "@/shared-types": ["../shared/types"],
-      "@/shared-types/*": ["../shared/types/*"]
-    }
-  },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "../dist"
-  ],
-  "references": [
-    { "path": "../shared/tsconfig.json" }
-  ]
-}
-```
+**Location 1:** `src/core/ui/components/FormField.tsx` (4904 bytes)
+**Location 2:** `src/webviews/components/molecules/FormField.tsx`
 
-5. **Create webview-ui/.eslintrc.js**
+**Comparison Summary:**
+[Review formfield-comparison.txt and document key differences]
 
-```javascript
-module.exports = {
-  root: true,
-  extends: [
-    '../.eslintrc.js' // Inherit from root config
-  ],
-  parserOptions: {
-    project: './tsconfig.json',
-    tsconfigRootDir: __dirname
-  },
-  env: {
-    browser: true,
-    es2020: true
-  },
-  rules: {
-    // Webview-specific rules
-    'no-console': 'warn', // Allow console in development
-    'react-hooks/rules-of-hooks': 'error',
-    'react-hooks/exhaustive-deps': 'warn'
-  }
-};
-```
+**Import Usage:**
+- Imports from @/core/ui: [COUNT from duplicate-import-usage.txt]
+- Active version: [Determine from grep analysis]
 
-6. **Create shared/types/tsconfig.json**
+**Decision:**
+- [ ] Keep `src/core/ui/components/FormField.tsx` (rationale: [explain])
+- [ ] Keep `src/webviews/components/molecules/FormField.tsx` (rationale: [explain])
+- [ ] Merge both (rationale: [explain])
 
-```json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "lib": ["ES2020"],
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "../../dist/shared",
-    "rootDir": ".",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "composite": true
-  },
-  "include": [
-    "**/*"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
-}
-```
+---
 
-7. **Create Placeholder README Files**
+### NumberedInstructions.tsx Analysis
 
-```bash
-# Webview UI README
-cat > webview-ui/README.md << 'EOF'
-# Webview UI
+**Location 1:** `src/core/ui/components/NumberedInstructions.tsx` (3180 bytes)
+**Location 2:** `src/webviews/components/shared/NumberedInstructions.tsx` (3180 bytes)
 
-React-based webview UI for Adobe Demo Builder VS Code extension.
+**Comparison Summary:**
+[Review numberedinstructions-comparison.txt]
+Note: Identical file sizes suggest potential identical content.
 
-## Structure
+**Import Usage:**
+- Imports from @/core/ui: [COUNT from duplicate-import-usage.txt]
+- Active version: [Determine from grep analysis]
 
-- `src/wizard/` - Project creation wizard
-- `src/dashboard/` - Project dashboard
-- `src/configure/` - Configuration screen
-- `src/shared/` - Shared components, hooks, and utilities
+**Decision:**
+- [ ] Keep `src/core/ui/components/NumberedInstructions.tsx` (rationale: [explain])
+- [ ] Keep `src/webviews/components/shared/NumberedInstructions.tsx` (rationale: [explain])
+- [ ] Files are identical - keep either (rationale: [explain])
 
-## Development
+---
 
-```bash
-# Type check
-npm run type-check
+### StatusCard.tsx Analysis
 
-# Build
-npm run build
+**Location 1:** `src/core/ui/components/StatusCard.tsx` (2699 bytes)
+**Location 2:** `src/webviews/components/molecules/StatusCard.tsx`
 
-# Watch mode
-npm run watch
-```
+**Comparison Summary:**
+[Review statuscard-comparison.txt and document key differences]
 
-## Architecture
+**Import Usage:**
+- Imports from @/core/ui: [COUNT from duplicate-import-usage.txt]
+- Active version: [Determine from grep analysis]
 
-Feature-based organization:
-- Each feature (wizard, dashboard, configure) is self-contained
-- Shared components in `src/shared/` for true reusability
-- No atomic design (atoms/molecules/organisms deprecated)
-EOF
+**Decision:**
+- [ ] Keep `src/core/ui/components/StatusCard.tsx` (rationale: [explain])
+- [ ] Keep `src/webviews/components/molecules/StatusCard.tsx` (rationale: [explain])
+- [ ] Merge both (rationale: [explain])
 
-# Shared Types README
-cat > shared/README.md << 'EOF'
-# Shared Types
+---
 
-TypeScript types shared between extension host and webview UI.
+## Final Merge Strategy (All 6 Duplicates)
 
-## Structure
+### Confirmed to Keep from src/core/ui/ (3 duplicates)
+1. ✅ Modal.tsx → DELETE src/webviews/components/shared/Modal.tsx
+2. ✅ FadeTransition.tsx → DELETE src/webviews/components/shared/FadeTransition.tsx
+3. ✅ LoadingDisplay.tsx → DELETE src/webviews/components/shared/LoadingDisplay.tsx
 
-- `types/messages.ts` - Message protocol types
-- `types/state.ts` - State shape types
-- `types/index.ts` - Re-exports
+### Pending Decision (3 duplicates - to be determined in GREEN phase)
+4. [ ] FormField.tsx → Decision: [TBD]
+5. [ ] NumberedInstructions.tsx → Decision: [TBD]
+6. [ ] StatusCard.tsx → Decision: [TBD]
 
-## Usage
+### Import Migration Required
+If any @/webviews versions are chosen, need to update imports from @/core/ui → @/webview-ui/shared
 
-Extension host:
-```typescript
-import { Message, WizardState } from '@/shared-types';
-```
-
-Webview UI:
-```typescript
-import { Message, WizardState } from '@/shared-types';
-```
 EOF
 ```
 
-8. **Update Root tsconfig.json to Add Project References**
+**Report GREEN State:**
+```text
+🟢 GREEN Phase Complete - Step 2
 
-Modify `/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/tsconfig.json`:
+✅ All 3 duplicates compared side-by-side
+✅ Import usage analyzed
+✅ Decisions documented in duplicate-analysis.md
+✅ Final merge strategy updated
 
-```json
-{
-  "compilerOptions": {
-    // ... existing options ...
-    "composite": true
-  },
-  // ... existing config ...
-  "references": [
-    { "path": "./shared/tsconfig.json" }
-  ]
-}
+Decisions made:
+- FormField.tsx: [DECISION]
+- NumberedInstructions.tsx: [DECISION]
+- StatusCard.tsx: [DECISION]
 ```
 
-**REFACTOR Phase** (Improve while keeping tests green)
+**REFACTOR Phase** (Validate decisions)
 
-1. **Validate Directory Structure**
+Validate that decisions are sound:
 
 ```bash
-# Verify all expected directories exist
-test -d webview-ui/src/wizard && echo "✓ wizard" || echo "✗ wizard"
-test -d webview-ui/src/dashboard && echo "✓ dashboard" || echo "✗ dashboard"
-test -d webview-ui/src/configure && echo "✓ configure" || echo "✗ configure"
-test -d webview-ui/src/shared && echo "✓ shared" || echo "✗ shared"
-test -d shared/types && echo "✓ shared/types" || echo "✗ shared/types"
+# 1. Cross-check import counts with decisions
+echo "=== Decision Validation ===" > .rptc/plans/webview-architecture-restructure/decision-validation.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/decision-validation.txt
+echo "Validating that chosen versions are actively imported..." >> .rptc/plans/webview-architecture-restructure/decision-validation.txt
+echo "" >> .rptc/plans/webview-architecture-restructure/decision-validation.txt
 
-# Count directories created
-find webview-ui/ -type d | wc -l
+# For each duplicate, verify the chosen version matches import usage
+# If not, document migration plan
+
+# 2. Verify no circular dependencies
+echo "Checking for circular dependencies in duplicate components..." >> .rptc/plans/webview-architecture-restructure/decision-validation.txt
+
+# 3. Check if any deleted versions have unique features
+echo "" >> .rptc/plans/webview-architecture-restructure/decision-validation.txt
+echo "Checking if discarded versions have unique features..." >> .rptc/plans/webview-architecture-restructure/decision-validation.txt
+
+# Compare props, methods, hooks usage
+# Document if any features need to be merged before deletion
 ```
 
-2. **Validate TypeScript Configuration**
+**Report REFACTOR Complete:**
+```text
+🔧 REFACTOR Phase Complete - Step 2
 
-```bash
-# Test webview-ui TypeScript config
-npx tsc --noEmit -p webview-ui/tsconfig.json
+✅ Decisions validated against import usage
+✅ No circular dependencies detected
+✅ No unique features lost in discarded versions
 
-# Test shared types TypeScript config
-npx tsc --noEmit -p shared/tsconfig.json
+All 6 duplicates resolved:
+- 3 core/ui versions confirmed (Modal, FadeTransition, LoadingDisplay)
+- 3 comparison decisions finalized (FormField, NumberedInstructions, StatusCard)
 
-# Test root TypeScript config with references
-npx tsc --noEmit -p tsconfig.json --build
-```
-
-3. **Validate Package.json**
-
-```bash
-# Install webview-ui dependencies
-cd webview-ui
-npm install
-cd ..
-
-# Verify no dependency conflicts
-npm ls
-```
-
-4. **Create .gitkeep Files for Empty Directories**
-
-```bash
-# Ensure empty directories are tracked by git
-find webview-ui/src -type d -empty -exec touch {}/.gitkeep \;
+Ready for Step 3: Directory creation with correct versions.
 ```
 
 **Expected Outcome:**
 
-- Complete directory structure exists (20+ directories)
-- All configuration files created and valid
-- TypeScript project references configured
-- Package.json dependencies installable
-- No code moved yet (structure only)
+- All 6 duplicates have final decisions documented
+- Comparison diffs saved for reference
+- Import usage analyzed to validate decisions
+- Decision rationale documented for each duplicate
+- No code changes yet (analysis only)
 
 **Acceptance Criteria:**
 
-- [ ] webview-ui/ directory exists with wizard, dashboard, configure, shared subdirectories
-- [ ] shared/types/ directory exists
-- [ ] webview-ui/package.json created with correct dependencies
-- [ ] webview-ui/tsconfig.json created with correct path aliases
-- [ ] shared/types/tsconfig.json created with composite: true
-- [ ] Root tsconfig.json updated with project references
-- [ ] TypeScript compilation passes for all new configs
-- [ ] npm install succeeds in webview-ui/
-- [ ] No actual code files moved yet (structure only)
+- [ ] FormField.tsx comparison completed with decision documented
+- [ ] NumberedInstructions.tsx comparison completed with decision documented
+- [ ] StatusCard.tsx comparison completed with decision documented
+- [ ] All 6 duplicates have final merge decisions in duplicate-analysis.md
+- [ ] Import usage validates decisions (active versions are chosen)
+- [ ] Decision validation report created
+- [ ] No unique features lost from discarded versions
+- [ ] No code changes made (analysis only)
 
 **Estimated Time:** 1-2 hours

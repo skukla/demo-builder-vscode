@@ -1,0 +1,9 @@
+=== NumberedInstructions.tsx Comparison ===
+
+Location 1: src/core/ui/components/NumberedInstructions.tsx
+-rw-r--r--  1 kukla  staff   3.1K Oct 28 18:53 /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/core/ui/components/NumberedInstructions.tsx
+
+Location 2: src/webviews/components/shared/NumberedInstructions.tsx
+-rw-r--r--  1 kukla  staff   3.1K Oct 28 18:53 /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/src/webviews/components/shared/NumberedInstructions.tsx
+
+--- Diff ---

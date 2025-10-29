@@ -13,8 +13,8 @@ import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Book from '@spectrum-icons/workflow/Book';
 import Settings from '@spectrum-icons/workflow/Settings';
 import { vscode } from '@/core/ui/vscode-api';
-import { useFocusTrap } from '@/core/ui/hooks';
-import { cn } from '@/core/ui/utils/classNames';
+import { useFocusTrap } from '@/webview-ui/shared/hooks';
+import { cn } from '@/webview-ui/shared/utils/classNames';
 
 interface WelcomeScreenProps {
     theme?: 'light' | 'dark';

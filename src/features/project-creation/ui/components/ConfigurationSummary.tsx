@@ -3,8 +3,8 @@ import { View, Heading, Text, Flex, Divider } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import { WizardState, WizardStep } from '@/core/ui/types';
-import { cn } from '@/core/ui/utils/classNames';
+import { WizardState, WizardStep } from '@/webview-ui/shared/types';
+import { cn } from '@/webview-ui/shared/utils/classNames';
 
 interface ConfigurationSummaryProps {
     state: WizardState;

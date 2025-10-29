@@ -13,10 +13,10 @@ import {
 } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import { LoadingDisplay } from '@/core/ui/components/LoadingDisplay';
+import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
-import { FadeTransition } from '@/core/ui/components/FadeTransition';
-import { WizardState, AdobeProject, WizardStep } from '@/core/ui/types';
+import { FadeTransition } from '@/webview-ui/shared/components/FadeTransition';
+import { WizardState, AdobeProject, WizardStep } from '@/webview-ui/shared/types';
 import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
 
 interface AdobeProjectStepProps {

@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import { WizardStep } from '@/core/ui/types';
-import { cn, getTimelineStepDotClasses, getTimelineStepLabelClasses } from '@/core/ui/utils/classNames';
+import { WizardStep } from '@/webview-ui/shared/types';
+import { cn, getTimelineStepDotClasses, getTimelineStepLabelClasses } from '@/webview-ui/shared/utils/classNames';
 
 interface TimelineNavProps {
     steps: { id: WizardStep; name: string }[];

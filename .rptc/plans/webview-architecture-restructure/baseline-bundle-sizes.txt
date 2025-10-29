@@ -1,0 +1,42 @@
+total 96
+drwxr-xr-x  44 kukla  staff   1.4K Oct 29 00:56 commands
+drwxr-xr-x  18 kukla  staff   576B Oct 29 00:56 core
+-rw-r--r--   1 kukla  staff   200B Oct 29 01:18 extension.d.ts
+-rw-r--r--   1 kukla  staff   228B Oct 29 01:18 extension.d.ts.map
+-rw-r--r--   1 kukla  staff    22K Oct 29 01:18 extension.js
+-rw-r--r--   1 kukla  staff    14K Oct 29 01:18 extension.js.map
+drwxr-xr-x  11 kukla  staff   352B Oct 29 00:56 features
+drwxr-xr-x   3 kukla  staff    96B Oct 29 00:56 shared
+drwxr-xr-x  42 kukla  staff   1.3K Oct 29 00:56 types
+drwxr-xr-x   6 kukla  staff   192B Oct 29 00:56 utils
+drwxr-xr-x   4 kukla  staff   128B Oct 29 00:56 webviews
+total 0
+drwxr-xr-x  6 kukla  staff   192B Oct 29 00:56 app
+drwxr-xr-x  3 kukla  staff    96B Oct 29 00:56 components
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/types/shell.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/types/logger.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/types/handlers.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/types/results.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/types/index.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/types/components.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/types/state.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/types/base.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/types/typeGuards.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/types/messages.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/core/constants.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/core/ui/vscode-api.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/core/ui/types/index.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/core/ui/utils/classNames.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/core/ui/components/GridLayout.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/core/ui/components/index.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/core/ui/components/FormField.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/core/ui/components/StatusCard.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/core/ui/components/LoadingDisplay.js
+/Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/core/ui/components/TwoColumnLayout.js
+ls: /Users/kukla/Documents/Repositories/app-builder/adobe-demo-system/demo-builder-vscode/dist/webview/: No such file or directory
+
+
+=== BASELINE BUNDLE STATUS ===
+No webpack bundles found. Build failed due to missing welcome-app module.
+Expected output location: dist/webview/
+Expected files: main-bundle.js, welcome-bundle.js, projectDashboard-bundle.js, configure-bundle.js

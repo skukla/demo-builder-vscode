@@ -20,7 +20,7 @@ import { createRoot } from 'react-dom/client';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigureScreen } from '@/features/dashboard/ui/ConfigureScreen';
 import { vscode } from '@/core/ui/vscode-api';
-import { ThemeMode, Project } from '@/core/ui/types';
+import { ThemeMode, Project } from '@/webview-ui/shared/types';
 import type { ComponentRegistry } from '@/types/components';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';

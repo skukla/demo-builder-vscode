@@ -10,23 +10,34 @@
 
 **Tests to Write First:**
 
-- [ ] Test: Verify current webview functionality baseline
-  - **Given:** Extension running with current structure
-  - **When:** Open wizard, dashboard, and configure webviews
-  - **Then:** All webviews load successfully, no console errors
-  - **File:** Manual test (document results in `.rptc/plans/webview-architecture-restructure/baseline-test-results.md`)
+**Note:** This step captures baseline state, not traditional RED-GREEN tests. We document the CURRENT state before making changes.
 
-- [ ] Test: Verify TypeScript compilation baseline
-  - **Given:** Current codebase with all files
-  - **When:** Run `npm run compile`
-  - **Then:** TypeScript compiles with 0 errors
-  - **File:** Manual test (save output to `.rptc/plans/webview-architecture-restructure/baseline-compile-output.txt`)
+- [ ] Test: Document current compilation errors (expected: 5 errors)
+  - **Given:** Current codebase with commented code
+  - **When:** Run `npm run compile:typescript`
+  - **Then:** 5 TypeScript errors documented (WebviewCommunicationManager.onStreaming, BaseWebviewCommand.getActivePanel)
+  - **File:** Save to `.rptc/plans/webview-architecture-restructure/baseline-compile-output.txt`
+  - **Purpose:** Baseline for tracking error resolution
 
-- [ ] Test: Verify webpack build baseline
-  - **Given:** Current webpack configuration
+- [ ] Test: Verify webpack build baseline (should succeed despite TS errors in excluded files)
+  - **Given:** Current webpack configuration with build exclusions
   - **When:** Run `npm run build:webview`
   - **Then:** Webpack builds successfully, all bundles generated
-  - **File:** Manual test (save bundle sizes to `.rptc/plans/webview-architecture-restructure/baseline-bundle-sizes.txt`)
+  - **File:** Save bundle sizes to `.rptc/plans/webview-architecture-restructure/baseline-bundle-sizes.txt`
+
+- [ ] Test: Document test status (expected: tests blocked by compilation errors)
+  - **Given:** 94 existing test files
+  - **When:** Attempt `npm test`
+  - **Then:** Tests blocked by 5 compilation errors (expected state)
+  - **File:** Document in `.rptc/plans/webview-architecture-restructure/baseline-test-status.md`
+  - **Purpose:** Track when tests become runnable during restructure
+
+- [ ] Test: Verify manual webview functionality baseline
+  - **Given:** Extension running with current structure
+  - **When:** Open wizard, dashboard, and configure webviews manually
+  - **Then:** All webviews load successfully, no runtime errors (despite compilation errors)
+  - **File:** Manual test (document results in `.rptc/plans/webview-architecture-restructure/baseline-manual-test-results.md`)
+  - **Purpose:** Confirm functionality preserved despite TypeScript errors
 
 **Files to Create/Modify:**
 
@@ -39,26 +50,69 @@
 
 **Implementation Details:**
 
-**RED Phase** (Write failing tests)
+**RED Phase** (Document baseline state)
 
-No automated tests for this step - manual verification only. Document baseline state:
+**IMPORTANT:** This is a pre-migration audit step. We're not writing new failing tests, but documenting the CURRENT state (including known failures) as baseline for comparison.
 
 ```bash
-# 1. Test all webviews manually
-# - Open Demo Builder: Create Project
-# - Open Demo Builder: Project Dashboard
-# - Open Demo Builder: Configure
-# - Verify no console errors
-# - Document results in baseline-test-results.md
+# 1. Document current compilation errors (expected: 5 errors)
+npm run compile:typescript 2>&1 | tee .rptc/plans/webview-architecture-restructure/baseline-compile-output.txt
+echo "Expected: 5 errors related to WebviewCommunicationManager.onStreaming and BaseWebviewCommand.getActivePanel"
 
-# 2. Capture TypeScript compilation baseline
-npm run compile 2>&1 | tee .rptc/plans/webview-architecture-restructure/baseline-compile-output.txt
-
-# 3. Capture webpack build baseline
+# 2. Capture webpack build baseline (should succeed)
 npm run build:webview 2>&1 | tee .rptc/plans/webview-architecture-restructure/baseline-build-output.txt
 
-# 4. Capture bundle sizes
+# 3. Capture bundle sizes
 ls -lh dist/webview/*.js > .rptc/plans/webview-architecture-restructure/baseline-bundle-sizes.txt
+
+# 4. Document test status (expected: blocked by compilation errors)
+cat > .rptc/plans/webview-architecture-restructure/baseline-test-status.md <<'EOF'
+# Baseline Test Status
+
+**Date:** $(date)
+**Total Test Files:** 94
+
+## Current Status
+Tests CANNOT run due to 5 TypeScript compilation errors:
+- src/features/dashboard/commands/showDashboard.ts(91,18): Property 'onStreaming' does not exist
+- src/features/welcome/commands/showWelcome.ts(15,42): Property 'getActivePanel' does not exist
+- src/features/welcome/commands/showWelcome.ts(49,14): Property 'onStreaming' does not exist
+- src/features/welcome/commands/showWelcome.ts(56,14): Property 'onStreaming' does not exist
+- src/features/welcome/commands/showWelcome.ts(61,14): Property 'onStreaming' does not exist
+
+## Test Inventory
+- Webview component tests: tests/core/ui/components/*.test.tsx
+- Hook tests: tests/core/ui/hooks/*.test.ts (9 files)
+- Integration tests: tests/integration/
+- Unit tests: tests/unit/
+
+## Expected Outcome After Restructure
+All 94 tests should pass with 0 failures once compilation errors are fixed.
+EOF
+
+# 5. Manual webview verification (document results)
+cat > .rptc/plans/webview-architecture-restructure/baseline-manual-test-results.md <<'EOF'
+# Manual Webview Baseline Test Results
+
+**Date:** $(date)
+
+## Test 1: Wizard Webview
+- Command: Demo Builder: Create Project
+- Result: [TO BE TESTED - Press F5 and verify]
+- Console Errors: [TO BE DOCUMENTED]
+
+## Test 2: Dashboard Webview
+- Command: Demo Builder: Project Dashboard
+- Result: [TO BE TESTED]
+- Console Errors: [TO BE DOCUMENTED]
+
+## Test 3: Configure Webview
+- Command: Demo Builder: Configure
+- Result: [TO BE TESTED]
+- Console Errors: [TO BE DOCUMENTED]
+
+**Note:** Webviews may work at runtime despite TypeScript compilation errors because problematic code is excluded from webview bundles.
+EOF
 ```
 
 **GREEN Phase** (Minimal implementation)
@@ -336,7 +390,10 @@ Create `.rptc/plans/webview-architecture-restructure/migration-checklist.md`:
 - [ ] All webview files inventoried in `.rptc/plans/webview-architecture-restructure/file-inventory.md`
 - [ ] Duplicate files identified with merge decisions in `duplicate-analysis.md`
 - [ ] Dependency map created showing all import relationships
-- [ ] Baseline test results documented (all webviews working)
+- [ ] **Baseline compilation errors documented:** 5 errors in `baseline-compile-output.txt`
+- [ ] **Baseline test status documented:** 94 test files blocked by compilation errors in `baseline-test-status.md`
+- [ ] **Baseline webpack build documented:** Bundle sizes in `baseline-bundle-sizes.txt`
+- [ ] **Baseline manual tests documented:** Webview functionality verified in `baseline-manual-test-results.md`
 - [ ] Migration checklist created for subsequent phases
 - [ ] No changes to actual codebase (inventory only)
 

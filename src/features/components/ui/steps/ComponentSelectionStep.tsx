@@ -10,7 +10,7 @@ import {
 } from '@adobe/react-spectrum';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
 import { vscode } from '@/core/ui/vscode-api';
-import { cn } from '@/core/ui/utils/classNames';
+import { cn } from '@/webview-ui/shared/utils/classNames';
 
 interface ComponentSelectionStepProps {
     state: Record<string, unknown>;

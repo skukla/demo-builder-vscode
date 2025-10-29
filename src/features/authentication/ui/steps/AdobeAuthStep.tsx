@@ -11,9 +11,9 @@ import Alert from '@spectrum-icons/workflow/Alert';
 import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import { WizardState } from '@/core/ui/types';
+import { WizardState } from '@/webview-ui/shared/types';
 import { vscode } from '@/core/ui/vscode-api';
-import { LoadingDisplay } from '@/core/ui/components/LoadingDisplay';
+import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 
 interface AdobeAuthStepProps {
     state: WizardState;

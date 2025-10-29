@@ -6,7 +6,7 @@ import {
     Button,
     Text
 } from '@adobe/react-spectrum';
-import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/core/ui/types';
+import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/webview-ui/shared/types';
 import { TimelineNav } from './TimelineNav';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
@@ -19,7 +19,7 @@ import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentCon
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { vscode } from '@/core/ui/vscode-api';
-import { cn } from '@/core/ui/utils/classNames';
+import { cn } from '@/webview-ui/shared/utils/classNames';
 
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;

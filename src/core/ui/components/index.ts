@@ -1,21 +1,21 @@
-export { LoadingDisplay, LoadingDisplayPresets } from '@/core/ui/components/LoadingDisplay';
-export type { LoadingDisplayProps } from '@/core/ui/components/LoadingDisplay';
+export { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
+export type { LoadingDisplayProps } from '@/webview-ui/shared/components/LoadingDisplay';
 
-export { FadeTransition } from '@/core/ui/components/FadeTransition';
-export type { FadeTransitionProps } from '@/core/ui/components/FadeTransition';
+export { FadeTransition } from '@/webview-ui/shared/components/FadeTransition';
+export type { FadeTransitionProps } from '@/webview-ui/shared/components/FadeTransition';
 
-export { Modal } from '@/core/ui/components/Modal';
+export { Modal } from '@/webview-ui/shared/components/Modal';
 
-export { NumberedInstructions } from '@/core/ui/components/NumberedInstructions';
+export { NumberedInstructions } from '@/webview-ui/shared/components/NumberedInstructions';
 
-export { GridLayout } from '@/core/ui/components/GridLayout';
-export type { GridLayoutProps } from '@/core/ui/components/GridLayout';
+export { GridLayout } from '@/webview-ui/shared/components/GridLayout';
+export type { GridLayoutProps } from '@/webview-ui/shared/components/GridLayout';
 
-export { TwoColumnLayout } from '@/core/ui/components/TwoColumnLayout';
-export type { TwoColumnLayoutProps } from '@/core/ui/components/TwoColumnLayout';
+export { TwoColumnLayout } from '@/webview-ui/shared/components/TwoColumnLayout';
+export type { TwoColumnLayoutProps } from '@/webview-ui/shared/components/TwoColumnLayout';
 
-export { StatusCard } from '@/core/ui/components/StatusCard';
-export type { StatusCardProps } from '@/core/ui/components/StatusCard';
+export { StatusCard } from '@/webview-ui/shared/components/StatusCard';
+export type { StatusCardProps } from '@/webview-ui/shared/components/StatusCard';
 
-export { FormField } from '@/core/ui/components/FormField';
-export type { FormFieldProps, FormFieldOption } from '@/core/ui/components/FormField';
+export { FormField } from '@/webview-ui/shared/components/FormField';
+export type { FormFieldProps, FormFieldOption } from '@/webview-ui/shared/components/FormField';
