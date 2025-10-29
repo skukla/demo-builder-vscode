@@ -1,0 +1,463 @@
+Component Usage Report
+=====================
+
+Generated: Wed Oct 29 14:59:11 EDT 2025
+
+Component: ErrorDisplay
+File: webview-ui/src/shared/components/molecules/ErrorDisplay.tsx
+Usage Count: 5
+Used In:
+  - webview-ui/src/shared/components/molecules/index.ts
+  - webview-ui/src/shared/components/molecules/index.ts
+  - src/core/ui/hooks/useAsyncData.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useAsyncData.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useAsyncData.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: ConfigSection
+File: webview-ui/src/shared/components/molecules/ConfigSection.tsx
+Usage Count: 4
+Used In:
+  - webview-ui/src/shared/components/molecules/index.ts
+  - webview-ui/src/shared/components/molecules/index.ts
+  - src/features/dashboard/ui/ConfigureScreen.tsx (via barrel export)
+  - webview-ui/src/configure/ConfigureScreen.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: LoadingOverlay
+File: webview-ui/src/shared/components/molecules/LoadingOverlay.tsx
+Usage Count: 2
+Used In:
+  - webview-ui/src/shared/components/molecules/index.ts
+  - webview-ui/src/shared/components/molecules/index.ts
+
+Decision: REVIEW ⚠️
+
+---
+
+Component: EmptyState
+File: webview-ui/src/shared/components/molecules/EmptyState.tsx
+Usage Count: 6
+Used In:
+  - src/features/welcome/ui/index.ts
+  - webview-ui/src/shared/components/molecules/index.ts
+  - webview-ui/src/shared/components/molecules/index.ts
+  - src/features/welcome/ui/main/welcome.tsx (via barrel export)
+  - src/features/welcome/ui/EmptyState.tsx (via barrel export)
+  - webview-ui/src/welcome/EmptyState.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: NumberedInstructions
+File: webview-ui/src/shared/components/NumberedInstructions.tsx
+Usage Count: 6
+Used In:
+  - src/core/ui/components/index.ts
+  - src/features/mesh/ui/steps/ApiMeshStep.tsx
+  - webview-ui/src/wizard/steps/ApiMeshStep.tsx
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/NumberedInstructions.tsx (via barrel export)
+  - webview-ui/src/shared/components/NumberedInstructions.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: SelectionSummary
+File: webview-ui/src/shared/components/SelectionSummary.tsx
+Usage Count: 1
+Used In:
+  - webview-ui/src/shared/components/index.ts
+
+Decision: REVIEW ⚠️
+
+---
+
+Component: Icon
+File: webview-ui/src/shared/components/atoms/Icon.tsx
+Usage Count: 8
+Used In:
+  - webview-ui/src/shared/components/atoms/index.ts
+  - webview-ui/src/shared/components/atoms/index.ts
+  - src/core/ui/utils/classNames.ts (via barrel export)
+  - src/features/project-creation/ui/steps/ReviewStep.tsx (via barrel export)
+  - webview-ui/src/wizard/steps/ReviewStep.tsx (via barrel export)
+  - webview-ui/src/shared/utils/classNames.ts (via barrel export)
+  - webview-ui/src/shared/components/molecules/ErrorDisplay.tsx (via barrel export)
+  - webview-ui/src/shared/components/molecules/EmptyState.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: StatusDot
+File: webview-ui/src/shared/components/atoms/StatusDot.tsx
+Usage Count: 5
+Used In:
+  - src/core/ui/components/StatusCard.tsx
+  - webview-ui/src/shared/components/atoms/index.ts
+  - webview-ui/src/shared/components/atoms/index.ts
+  - webview-ui/src/shared/components/StatusCard.tsx
+  - webview-ui/src/shared/components/atoms/StatusDot.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: Tag
+File: webview-ui/src/shared/components/atoms/Tag.tsx
+Usage Count: 2
+Used In:
+  - webview-ui/src/shared/components/atoms/index.ts
+  - webview-ui/src/shared/components/atoms/index.ts
+
+Decision: REVIEW ⚠️
+
+---
+
+Component: Badge
+File: webview-ui/src/shared/components/atoms/Badge.tsx
+Usage Count: 7
+Used In:
+  - webview-ui/src/shared/components/atoms/index.ts
+  - webview-ui/src/shared/components/atoms/index.ts
+  - src/features/welcome/ui/ProjectCard.tsx (via barrel export)
+  - webview-ui/src/shared/components/ComponentCard.tsx (via barrel export)
+  - webview-ui/src/shared/components/DependencyItem.tsx (via barrel export)
+  - webview-ui/src/shared/components/CompactOption.tsx (via barrel export)
+  - webview-ui/src/welcome/ProjectCard.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: Spinner
+File: webview-ui/src/shared/components/atoms/Spinner.tsx
+Usage Count: 5
+Used In:
+  - webview-ui/src/shared/components/molecules/LoadingOverlay.tsx
+  - webview-ui/src/shared/components/atoms/index.ts
+  - webview-ui/src/shared/components/atoms/index.ts
+  - src/features/authentication/ui/hooks/useMinimumLoadingTime.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useMinimumLoadingTime.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: Transition
+File: webview-ui/src/shared/components/atoms/Transition.tsx
+Usage Count: 14
+Used In:
+  - src/core/ui/components/index.ts
+  - src/core/ui/components/index.ts
+  - src/features/mesh/ui/steps/ApiMeshStep.tsx
+  - src/features/authentication/ui/steps/AdobeWorkspaceStep.tsx
+  - src/features/authentication/ui/steps/AdobeProjectStep.tsx
+  - webview-ui/src/wizard/steps/AdobeWorkspaceStep.tsx
+  - webview-ui/src/wizard/steps/ApiMeshStep.tsx
+  - webview-ui/src/wizard/steps/AdobeProjectStep.tsx
+  - webview-ui/src/shared/components/atoms/index.ts
+  - webview-ui/src/shared/components/atoms/index.ts
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/FadeTransition.tsx (via barrel export)
+  - webview-ui/src/shared/components/FadeTransition.d.ts (via barrel export)
+  - webview-ui/src/shared/components/FadeTransition.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: TwoColumnLayout
+File: webview-ui/src/shared/components/TwoColumnLayout.tsx
+Usage Count: 8
+Used In:
+  - src/core/ui/components/index.ts
+  - src/core/ui/components/index.ts
+  - webview-ui/src/shared/components/templates/index.ts
+  - webview-ui/src/shared/components/templates/index.ts
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/TwoColumnLayout.tsx (via barrel export)
+  - webview-ui/src/shared/components/TwoColumnLayout.d.ts (via barrel export)
+  - webview-ui/src/shared/components/templates/TwoColumnLayout.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: GridLayout
+File: webview-ui/src/shared/components/GridLayout.tsx
+Usage Count: 11
+Used In:
+  - src/core/ui/components/index.ts
+  - src/core/ui/components/index.ts
+  - webview-ui/src/shared/components/templates/index.ts
+  - webview-ui/src/shared/components/templates/index.ts
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/GridLayout.tsx (via barrel export)
+  - src/features/dashboard/ui/ProjectDashboardScreen.tsx (via barrel export)
+  - webview-ui/src/shared/components/GridLayout.d.ts (via barrel export)
+  - webview-ui/src/shared/components/templates/GridLayout.tsx (via barrel export)
+  - webview-ui/src/welcome/WelcomeScreen.tsx (via barrel export)
+  - webview-ui/src/dashboard/ProjectDashboardScreen.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: FormField
+File: webview-ui/src/shared/components/FormField.tsx
+Usage Count: 10
+Used In:
+  - src/core/ui/components/index.ts
+  - src/core/ui/components/index.ts
+  - webview-ui/src/shared/components/molecules/index.ts
+  - webview-ui/src/shared/components/molecules/index.ts
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/FormField.tsx (via barrel export)
+  - src/features/dashboard/ui/ConfigureScreen.tsx (via barrel export)
+  - webview-ui/src/configure/ConfigureScreen.tsx (via barrel export)
+  - webview-ui/src/shared/components/molecules/ConfigSection.tsx (via barrel export)
+  - webview-ui/src/shared/components/FormField.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: ComponentCard
+File: webview-ui/src/shared/components/ComponentCard.tsx
+Usage Count: 1
+Used In:
+  - webview-ui/src/shared/components/index.ts
+
+Decision: REVIEW ⚠️
+
+---
+
+Component: TerminalOutput
+File: webview-ui/src/shared/components/feedback/TerminalOutput.tsx
+Usage Count: 0
+Used In: (none)
+Decision: DELETE ✗
+
+---
+
+Component: ConfigurationSummary
+File: webview-ui/src/shared/components/ConfigurationSummary.tsx
+Usage Count: 13
+Used In:
+  - src/features/mesh/ui/steps/ApiMeshStep.tsx
+  - src/features/project-creation/ui/components/index.ts
+  - src/features/authentication/ui/steps/AdobeWorkspaceStep.tsx
+  - src/features/authentication/ui/steps/AdobeProjectStep.tsx
+  - webview-ui/src/wizard/steps/AdobeWorkspaceStep.tsx
+  - webview-ui/src/wizard/steps/ApiMeshStep.tsx
+  - webview-ui/src/wizard/steps/AdobeProjectStep.tsx
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/TwoColumnLayout.tsx (via barrel export)
+  - src/features/project-creation/ui/components/ConfigurationSummary.tsx (via barrel export)
+  - webview-ui/src/shared/components/TwoColumnLayout.tsx (via barrel export)
+  - webview-ui/src/shared/components/TwoColumnLayout.d.ts (via barrel export)
+  - webview-ui/src/shared/components/templates/TwoColumnLayout.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: TwoColumnLayout
+File: webview-ui/src/shared/components/templates/TwoColumnLayout.tsx
+Usage Count: 8
+Used In:
+  - src/core/ui/components/index.ts
+  - src/core/ui/components/index.ts
+  - webview-ui/src/shared/components/templates/index.ts
+  - webview-ui/src/shared/components/templates/index.ts
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/TwoColumnLayout.tsx (via barrel export)
+  - webview-ui/src/shared/components/TwoColumnLayout.tsx (via barrel export)
+  - webview-ui/src/shared/components/TwoColumnLayout.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: GridLayout
+File: webview-ui/src/shared/components/templates/GridLayout.tsx
+Usage Count: 11
+Used In:
+  - src/core/ui/components/index.ts
+  - src/core/ui/components/index.ts
+  - webview-ui/src/shared/components/templates/index.ts
+  - webview-ui/src/shared/components/templates/index.ts
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/GridLayout.tsx (via barrel export)
+  - src/features/dashboard/ui/ProjectDashboardScreen.tsx (via barrel export)
+  - webview-ui/src/shared/components/GridLayout.d.ts (via barrel export)
+  - webview-ui/src/shared/components/GridLayout.tsx (via barrel export)
+  - webview-ui/src/welcome/WelcomeScreen.tsx (via barrel export)
+  - webview-ui/src/dashboard/ProjectDashboardScreen.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: DependencyItem
+File: webview-ui/src/shared/components/DependencyItem.tsx
+Usage Count: 1
+Used In:
+  - webview-ui/src/shared/components/index.ts
+
+Decision: REVIEW ⚠️
+
+---
+
+Component: FadeTransition
+File: webview-ui/src/shared/components/FadeTransition.tsx
+Usage Count: 11
+Used In:
+  - src/core/ui/components/index.ts
+  - src/core/ui/components/index.ts
+  - src/features/mesh/ui/steps/ApiMeshStep.tsx
+  - src/features/authentication/ui/steps/AdobeWorkspaceStep.tsx
+  - src/features/authentication/ui/steps/AdobeProjectStep.tsx
+  - webview-ui/src/wizard/steps/AdobeWorkspaceStep.tsx
+  - webview-ui/src/wizard/steps/ApiMeshStep.tsx
+  - webview-ui/src/wizard/steps/AdobeProjectStep.tsx
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/FadeTransition.tsx (via barrel export)
+  - webview-ui/src/shared/components/FadeTransition.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: LoadingDisplay
+File: webview-ui/src/shared/components/LoadingDisplay.tsx
+Usage Count: 23
+Used In:
+  - src/core/ui/components/index.ts
+  - src/core/ui/components/index.ts
+  - src/features/mesh/ui/steps/ApiMeshStep.tsx
+  - src/features/components/ui/steps/ComponentConfigStep.tsx
+  - src/features/project-creation/ui/steps/ProjectCreationStep.tsx
+  - src/features/authentication/ui/steps/AdobeWorkspaceStep.tsx
+  - src/features/authentication/ui/steps/AdobeAuthStep.tsx
+  - src/features/authentication/ui/steps/AdobeProjectStep.tsx
+  - webview-ui/src/wizard/steps/AdobeWorkspaceStep.tsx
+  - webview-ui/src/wizard/steps/ApiMeshStep.tsx
+  - webview-ui/src/wizard/steps/ProjectCreationStep.tsx
+  - webview-ui/src/wizard/steps/AdobeAuthStep.tsx
+  - webview-ui/src/wizard/steps/ComponentConfigStep.tsx
+  - webview-ui/src/wizard/steps/AdobeProjectStep.tsx
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/LoadingDisplay.tsx (via barrel export)
+  - src/core/ui/hooks/useAsyncData.ts (via barrel export)
+  - src/features/authentication/ui/hooks/useDebouncedLoading.ts (via barrel export)
+  - src/features/authentication/handlers/authenticationHandlers.ts (via barrel export)
+  - webview-ui/src/shared/components/LoadingDisplay.d.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useAsyncData.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useDebouncedLoading.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useAsyncData.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: StatusCard
+File: webview-ui/src/shared/components/StatusCard.tsx
+Usage Count: 9
+Used In:
+  - src/core/ui/components/index.ts
+  - src/core/ui/components/index.ts
+  - webview-ui/src/shared/components/molecules/index.ts
+  - webview-ui/src/shared/components/molecules/index.ts
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/StatusCard.tsx (via barrel export)
+  - src/features/dashboard/ui/ProjectDashboardScreen.tsx (via barrel export)
+  - webview-ui/src/shared/components/StatusCard.d.ts (via barrel export)
+  - webview-ui/src/dashboard/ProjectDashboardScreen.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: Modal
+File: webview-ui/src/shared/components/Modal.tsx
+Usage Count: 6
+Used In:
+  - src/core/ui/components/index.ts
+  - src/features/mesh/ui/steps/ApiMeshStep.tsx
+  - webview-ui/src/wizard/steps/ApiMeshStep.tsx
+  - webview-ui/src/shared/components/index.ts
+  - src/core/ui/components/Modal.tsx (via barrel export)
+  - webview-ui/src/shared/components/Modal.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: NavigationPanel
+File: webview-ui/src/shared/components/organisms/NavigationPanel.tsx
+Usage Count: 6
+Used In:
+  - src/features/dashboard/ui/ConfigureScreen.tsx
+  - src/features/dashboard/ui/components/index.ts
+  - webview-ui/src/shared/components/organisms/index.ts
+  - webview-ui/src/shared/components/organisms/index.ts
+  - src/features/dashboard/ui/components/NavigationPanel.tsx (via barrel export)
+  - webview-ui/src/configure/ConfigureScreen.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: SearchableList
+File: webview-ui/src/shared/components/organisms/SearchableList.tsx
+Usage Count: 2
+Used In:
+  - webview-ui/src/shared/components/organisms/index.ts
+  - webview-ui/src/shared/components/organisms/index.ts
+
+Decision: REVIEW ⚠️
+
+---
+
+Component: Tip
+File: webview-ui/src/shared/components/Tip.tsx
+Usage Count: 4
+Used In:
+  - webview-ui/src/shared/components/index.ts
+  - src/features/welcome/ui/EmptyState.tsx (via barrel export)
+  - src/features/project-creation/handlers/createHandler.ts (via barrel export)
+  - webview-ui/src/welcome/EmptyState.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Component: CompactOption
+File: webview-ui/src/shared/components/CompactOption.tsx
+Usage Count: 1
+Used In:
+  - webview-ui/src/shared/components/index.ts
+
+Decision: REVIEW ⚠️
+
+---
+
+Component: WidthDebugger
+File: webview-ui/src/shared/components/debug/WidthDebugger.tsx
+Usage Count: 0
+Used In: (none)
+Decision: DELETE ✗
+
+---
+

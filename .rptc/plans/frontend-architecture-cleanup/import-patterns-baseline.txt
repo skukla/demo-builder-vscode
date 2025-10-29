@@ -1,0 +1,76 @@
+=== IMPORT PATTERNS BASELINE ===
+
+Date: 2025-10-29
+Branch: refactor/eliminate-frontend-duplicates
+
+## Imports from @/core/ui (33 total)
+
+src/core/ui/hooks/index.ts: * import { useVSCodeMessage, useSelection } from '@/core/ui/hooks';
+src/core/ui/hooks/useVSCodeMessage.ts:import { vscode } from '@/core/ui/vscode-api';
+src/core/ui/hooks/useVSCodeRequest.ts:import { vscode } from '@/core/ui/vscode-api';
+src/features/authentication/ui/hooks/useSelectionStep.ts:import { vscode } from '@/core/ui/vscode-api';
+src/features/authentication/ui/steps/AdobeAuthStep.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/components/ui/steps/ComponentConfigStep.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/components/ui/steps/ComponentSelectionStep.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/dashboard/ui/ConfigureScreen.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/dashboard/ui/main/configure.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/dashboard/ui/main/project-dashboard.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/dashboard/ui/ProjectDashboardScreen.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/mesh/ui/steps/ApiMeshStep.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/prerequisites/ui/steps/PrerequisitesStep.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/project-creation/ui/App.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/project-creation/ui/steps/ProjectCreationStep.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/project-creation/ui/wizard/WizardContainer.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/welcome/ui/main/welcome.tsx:import { vscode } from '@/core/ui/vscode-api';
+src/features/welcome/ui/WelcomeScreen.tsx:import { vscode } from '@/core/ui/vscode-api';
+tests/core/ui/components/LoadingDisplay.test.tsx:import { LoadingDisplay, LoadingDisplayPresets } from '@/core/ui/components/LoadingDisplay';
+tests/core/ui/hooks/useAsyncData.test.ts:import { useAsyncData } from '@/core/ui/hooks/useAsyncData';
+tests/core/ui/hooks/useAsyncData.test.ts:import { vscode } from '@/core/ui/vscode-api';
+tests/core/ui/hooks/useAutoScroll.test.ts:import { useAutoScroll } from '@/core/ui/hooks/useAutoScroll';
+tests/core/ui/hooks/useFocusTrap.test.ts:import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
+tests/core/ui/hooks/useLoadingState.test.ts:import { useLoadingState } from '@/core/ui/hooks/useLoadingState';
+tests/core/ui/hooks/useSearchFilter.test.ts:import { useSearchFilter } from '@/core/ui/hooks/useSearchFilter';
+tests/core/ui/hooks/useSelectableDefault.test.ts:import { useSelectableDefault, useSelectableDefaultWhen } from '@/core/ui/hooks/useSelectableDefault';
+tests/core/ui/hooks/useSelection.test.ts:import { useSelection } from '@/core/ui/hooks/useSelection';
+tests/core/ui/hooks/useVSCodeMessage.test.ts:import { useVSCodeMessage } from '@/core/ui/hooks/useVSCodeMessage';
+tests/core/ui/hooks/useVSCodeMessage.test.ts:import { vscode } from '@/core/ui/vscode-api';
+tests/core/ui/hooks/useVSCodeRequest.test.ts:import { useVSCodeRequest } from '@/core/ui/hooks/useVSCodeRequest';
+tests/core/ui/hooks/useVSCodeRequest.test.ts:import { vscode } from '@/core/ui/vscode-api';
+tests/features/components/ui/steps/ComponentConfigStep.test.tsx:import { vscode } from '@/core/ui/vscode-api';
+tests/features/components/ui/steps/ComponentSelectionStep.test.tsx:import { vscode } from '@/core/ui/vscode-api';
+
+## Files importing from @/core/ui
+
+src/core/ui/hooks/index.ts
+src/core/ui/hooks/useVSCodeMessage.ts
+src/core/ui/hooks/useVSCodeRequest.ts
+src/features/authentication/ui/hooks/useSelectionStep.ts
+src/features/authentication/ui/steps/AdobeAuthStep.tsx
+src/features/components/ui/steps/ComponentConfigStep.tsx
+src/features/components/ui/steps/ComponentSelectionStep.tsx
+src/features/dashboard/ui/ConfigureScreen.tsx
+src/features/dashboard/ui/main/configure.tsx
+src/features/dashboard/ui/main/project-dashboard.tsx
+src/features/dashboard/ui/ProjectDashboardScreen.tsx
+src/features/mesh/ui/steps/ApiMeshStep.tsx
+src/features/prerequisites/ui/steps/PrerequisitesStep.tsx
+src/features/project-creation/ui/App.tsx
+src/features/project-creation/ui/steps/ProjectCreationStep.tsx
+src/features/project-creation/ui/wizard/WizardContainer.tsx
+src/features/welcome/ui/main/welcome.tsx
+src/features/welcome/ui/WelcomeScreen.tsx
+tests/core/ui/components/LoadingDisplay.test.tsx
+tests/core/ui/hooks/useAsyncData.test.ts
+tests/core/ui/hooks/useAutoScroll.test.ts
+tests/core/ui/hooks/useFocusTrap.test.ts
+tests/core/ui/hooks/useLoadingState.test.ts
+tests/core/ui/hooks/useSearchFilter.test.ts
+tests/core/ui/hooks/useSelectableDefault.test.ts
+tests/core/ui/hooks/useSelection.test.ts
+tests/core/ui/hooks/useVSCodeMessage.test.ts
+tests/core/ui/hooks/useVSCodeRequest.test.ts
+tests/features/components/ui/steps/ComponentConfigStep.test.tsx
+tests/features/components/ui/steps/ComponentSelectionStep.test.tsx
+
+## Unique file count:
+      30

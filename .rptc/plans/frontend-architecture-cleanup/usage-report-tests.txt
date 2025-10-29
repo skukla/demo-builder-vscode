@@ -1,0 +1,851 @@
+Test Alignment Report
+=====================
+
+Generated: Wed Oct 29 14:59:11 EDT 2025
+
+Test: cacheManager
+Test File: tests/unit/prerequisites/cacheManager.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: parallelExecution
+Test File: tests/unit/prerequisites/parallelExecution.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: progressUnifier
+Test File: tests/unit/utils/progressUnifier.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: progressUnifierHelpers
+Test File: tests/unit/utils/progressUnifierHelpers.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: typeGuards
+Test File: tests/types/typeGuards.test.ts
+Source File: src/types/typeGuards.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: LoadingDisplay
+Test File: tests/core/ui/components/LoadingDisplay.test.tsx
+Source File: src/core/ui/components/LoadingDisplay.tsx
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: useFocusTrap
+Test File: tests/core/ui/hooks/useFocusTrap.test.ts
+Source File: src/core/ui/hooks/useFocusTrap.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: useSearchFilter
+Test File: tests/core/ui/hooks/useSearchFilter.test.ts
+Source File: src/core/ui/hooks/useSearchFilter.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: useSelection
+Test File: tests/core/ui/hooks/useSelection.test.ts
+Source File: src/core/ui/hooks/useSelection.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: useVSCodeRequest
+Test File: tests/core/ui/hooks/useVSCodeRequest.test.ts
+Source File: src/core/ui/hooks/useVSCodeRequest.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: useVSCodeMessage
+Test File: tests/core/ui/hooks/useVSCodeMessage.test.ts
+Source File: src/core/ui/hooks/useVSCodeMessage.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: useAutoScroll
+Test File: tests/core/ui/hooks/useAutoScroll.test.ts
+Source File: src/core/ui/hooks/useAutoScroll.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: useSelectableDefault
+Test File: tests/core/ui/hooks/useSelectableDefault.test.ts
+Source File: src/core/ui/hooks/useSelectableDefault.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: useLoadingState
+Test File: tests/core/ui/hooks/useLoadingState.test.ts
+Source File: src/core/ui/hooks/useLoadingState.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: useAsyncData
+Test File: tests/core/ui/hooks/useAsyncData.test.ts
+Source File: src/core/ui/hooks/useAsyncData.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: ResetAllCommand.security
+Test File: tests/core/commands/ResetAllCommand.security.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: ResetAllCommand
+Test File: tests/core/commands/ResetAllCommand.test.ts
+Source File: src/core/commands/ResetAllCommand.ts
+Source Exists: YES
+Source Used: NO
+Decision: DELETE (orphaned)
+
+---
+
+Test: ResetAllCommand.integration
+Test File: tests/core/commands/ResetAllCommand.integration.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: securityValidation
+Test File: tests/core/validation/securityValidation.test.ts
+Source File: src/core/validation/securityValidation.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: installationPerformance
+Test File: tests/integration/prerequisites/installationPerformance.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: parallelWithCache
+Test File: tests/integration/prerequisites/parallelWithCache.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: progressFlow
+Test File: tests/integration/prerequisites/progressFlow.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: endToEnd
+Test File: tests/integration/prerequisites/endToEnd.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: installationFallback
+Test File: tests/integration/prerequisites/installationFallback.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: checkHandler
+Test File: tests/features/mesh/handlers/checkHandler.test.ts
+Source File: src/features/mesh/handlers/checkHandler.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: createHandler
+Test File: tests/features/mesh/handlers/createHandler.test.ts
+Source File: src/features/mesh/handlers/createHandler.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: npmFallback
+Test File: tests/features/prerequisites/npmFallback.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: npmFlags
+Test File: tests/features/prerequisites/npmFlags.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: checkHandler
+Test File: tests/features/prerequisites/handlers/checkHandler.test.ts
+Source File: src/features/prerequisites/handlers/checkHandler.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: shared
+Test File: tests/features/prerequisites/handlers/shared.test.ts
+Source File: src/features/prerequisites/handlers/shared.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: continueHandler
+Test File: tests/features/prerequisites/handlers/continueHandler.test.ts
+Source File: src/features/prerequisites/handlers/continueHandler.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: installHandler
+Test File: tests/features/prerequisites/handlers/installHandler.test.ts
+Source File: src/features/prerequisites/handlers/installHandler.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: PrerequisitesManager
+Test File: tests/features/prerequisites/services/PrerequisitesManager.test.ts
+Source File: src/features/prerequisites/services/PrerequisitesManager.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: checkUpdates.security
+Test File: tests/features/updates/commands/checkUpdates.security.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: checkUpdates
+Test File: tests/features/updates/commands/checkUpdates.test.ts
+Source File: src/features/updates/commands/checkUpdates.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: componentUpdater
+Test File: tests/features/updates/services/componentUpdater.test.ts
+Source File: src/features/updates/services/componentUpdater.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: dashboardHandlers
+Test File: tests/features/dashboard/handlers/dashboardHandlers.test.ts
+Source File: src/features/dashboard/handlers/dashboardHandlers.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: ComponentSelectionStep
+Test File: tests/features/components/ui/steps/ComponentSelectionStep.test.tsx
+Source File: src/features/components/ui/steps/ComponentSelectionStep.tsx
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: ComponentConfigStep
+Test File: tests/features/components/ui/steps/ComponentConfigStep.test.tsx
+Source File: src/features/components/ui/steps/ComponentConfigStep.tsx
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: componentHandlers
+Test File: tests/features/components/handlers/componentHandlers.test.ts
+Source File: src/features/components/handlers/componentHandlers.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: validateHandler
+Test File: tests/features/project-creation/handlers/validateHandler.test.ts
+Source File: src/features/project-creation/handlers/validateHandler.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: createHandler
+Test File: tests/features/project-creation/handlers/createHandler.test.ts
+Source File: src/features/project-creation/handlers/createHandler.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: authenticationHandlers
+Test File: tests/features/authentication/handlers/authenticationHandlers.test.ts
+Source File: src/features/authentication/handlers/authenticationHandlers.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: authCacheManager
+Test File: tests/features/authentication/services/authCacheManager.test.ts
+Source File: src/features/authentication/services/authCacheManager.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: adobeEntityService
+Test File: tests/features/authentication/services/adobeEntityService.test.ts
+Source File: src/features/authentication/services/adobeEntityService.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: organizationValidator
+Test File: tests/features/authentication/services/organizationValidator.test.ts
+Source File: src/features/authentication/services/organizationValidator.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: tokenManager
+Test File: tests/features/authentication/services/tokenManager.test.ts
+Source File: src/features/authentication/services/tokenManager.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: authenticationService
+Test File: tests/features/authentication/services/authenticationService.test.ts
+Source File: src/features/authentication/services/authenticationService.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: componentManager
+Test File: tests/utils/componentManager.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: fieldValidation
+Test File: tests/utils/fieldValidation.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: timeoutConfig
+Test File: tests/utils/timeoutConfig.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: meshDeployer
+Test File: tests/utils/meshDeployer.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: authCacheManager
+Test File: tests/utils/auth/authCacheManager.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: organizationValidator
+Test File: tests/utils/auth/organizationValidator.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: tokenManager
+Test File: tests/utils/auth/tokenManager.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: securityValidation
+Test File: tests/utils/securityValidation.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: webviewCommunicationManager
+Test File: tests/utils/webviewCommunicationManager.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: errorFormatter
+Test File: tests/utils/errorFormatter.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: retryStrategyManager
+Test File: tests/utils/commands/retryStrategyManager.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: pollingService
+Test File: tests/utils/commands/pollingService.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: resourceLocker
+Test File: tests/utils/commands/resourceLocker.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: stateManager
+Test File: tests/utils/stateManager.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: ErrorDisplay
+Test File: tests/webviews/components/molecules/ErrorDisplay.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: StatusCard
+Test File: tests/webviews/components/molecules/StatusCard.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: FormField
+Test File: tests/webviews/components/molecules/FormField.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: LoadingOverlay
+Test File: tests/webviews/components/molecules/LoadingOverlay.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: ConfigSection
+Test File: tests/webviews/components/molecules/ConfigSection.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: EmptyState
+Test File: tests/webviews/components/molecules/EmptyState.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: Spinner
+Test File: tests/webviews/components/atoms/Spinner.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: Transition
+Test File: tests/webviews/components/atoms/Transition.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: Badge
+Test File: tests/webviews/components/atoms/Badge.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: StatusDot
+Test File: tests/webviews/components/atoms/StatusDot.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: Icon
+Test File: tests/webviews/components/atoms/Icon.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: Tag
+Test File: tests/webviews/components/atoms/Tag.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: SearchableList
+Test File: tests/webviews/components/organisms/SearchableList.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: NavigationPanel
+Test File: tests/webviews/components/organisms/NavigationPanel.test.tsx
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useDebouncedLoading
+Test File: tests/webviews/hooks/useDebouncedLoading.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useMinimumLoadingTime
+Test File: tests/webviews/hooks/useMinimumLoadingTime.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useFocusTrap
+Test File: tests/webviews/hooks/useFocusTrap.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useDebouncedValue
+Test File: tests/webviews/hooks/useDebouncedValue.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useSearchFilter
+Test File: tests/webviews/hooks/useSearchFilter.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useSelection
+Test File: tests/webviews/hooks/useSelection.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useVSCodeRequest
+Test File: tests/webviews/hooks/useVSCodeRequest.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useVSCodeMessage
+Test File: tests/webviews/hooks/useVSCodeMessage.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useAutoScroll
+Test File: tests/webviews/hooks/useAutoScroll.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useSelectableDefault
+Test File: tests/webviews/hooks/useSelectableDefault.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useLoadingState
+Test File: tests/webviews/hooks/useLoadingState.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: useAsyncData
+Test File: tests/webviews/hooks/useAsyncData.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: projectHandlers
+Test File: tests/commands/handlers/projectHandlers.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: lifecycleHandlers
+Test File: tests/commands/handlers/lifecycleHandlers.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: workspaceHandlers
+Test File: tests/commands/handlers/workspaceHandlers.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: HandlerRegistry
+Test File: tests/commands/handlers/HandlerRegistry.test.ts
+Source File: src/commands/handlers/HandlerRegistry.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+
+Test: authenticationHandlers
+Test File: tests/commands/handlers/authenticationHandlers.test.ts
+Source File: NOT FOUND
+Source Exists: NO
+Source Used: N/A
+Decision: DELETE (no source)
+
+---
+
+Test: HandlerContext
+Test File: tests/commands/handlers/HandlerContext.test.ts
+Source File: src/commands/handlers/HandlerContext.ts
+Source Exists: YES
+Source Used: YES
+Decision: KEEP
+
+---
+

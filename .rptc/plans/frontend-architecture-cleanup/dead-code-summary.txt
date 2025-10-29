@@ -1,0 +1,58 @@
+Dead Code Summary
+=================
+
+Generated: Wed Oct 29, 2025
+
+Components Analysis:
+  Total Components: 30
+  Unused Components (DELETE): 2
+  Flagged for Review (REVIEW): 7
+  To Migrate (MIGRATE): 21
+
+Hooks Analysis:
+  Total Hooks: 21
+  Unused Hooks (DELETE): 9 (all .d.ts TypeScript declaration files)
+  To Migrate (MIGRATE): 12
+
+Tests Analysis:
+  Total Tests: Many analyzed
+  Orphaned Tests: Many (detailed in usage-report-tests.txt)
+  Note: Test deletion deferred to Step 3 (after source migration)
+
+Total Dead Code (Immediate Deletion):
+  Components: 2 files (TerminalOutput, WidthDebugger)
+  Hooks: 9 files (all .d.ts declaration files)
+  Tests: Deferred to Step 3
+  TOTAL FILES TO DELETE: 11 files
+
+Conservative Decisions:
+  Components flagged REVIEW (1-2 usages): 7 files
+  Decision: MIGRATE all (conservative approach - script may undercount)
+  Rationale: Better to migrate and discover unused later than delete and break something
+
+Recommended Action:
+  1. DELETE 2 unused components before migration
+  2. DELETE 9 unused .d.ts hook files before migration
+  3. MIGRATE 7 flagged components (conservative - likely undercount)
+  4. MIGRATE 21 confirmed-used components
+  5. MIGRATE 12 confirmed-used hooks
+  6. DEFER test deletion to Step 3 (after source migration complete)
+
+Confidence Level: HIGH
+  - DELETE decisions verified with manual spot-checks
+  - Script is conservative (undercounts usage, biased toward MIGRATE)
+  - No dynamic imports or template literals hiding usage
+  - TypeScript .d.ts files safe to delete (auto-generated)
+
+Next Steps:
+  1. Proceed to Step 2: Create Function-Based Directory Structure
+  2. In Step 3: Integrate conditional git rm vs git mv based on reports
+  3. Delete components marked DELETE
+  4. Migrate components marked MIGRATE or REVIEW
+  5. Clean up orphaned tests after source migration
+
+For detailed analysis, see:
+  - usage-report-components.txt (component-by-component analysis)
+  - usage-report-hooks.txt (hook-by-hook analysis)
+  - usage-report-tests.txt (test alignment analysis)
+  - deletion-checklist.md (manual review decisions with rationale)

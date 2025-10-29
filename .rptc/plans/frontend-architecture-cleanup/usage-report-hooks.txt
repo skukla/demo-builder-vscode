@@ -1,0 +1,252 @@
+Hook Usage Report
+=================
+
+Generated: Wed Oct 29 14:59:11 EDT 2025
+
+Hook: useSelection.d
+File: webview-ui/src/shared/hooks/useSelection.d.ts
+Usage Count: 0
+Used In: (none)
+Decision: DELETE ✗
+
+---
+
+Hook: useLoadingState.d
+File: webview-ui/src/shared/hooks/useLoadingState.d.ts
+Usage Count: 0
+Used In: (none)
+Decision: DELETE ✗
+
+---
+
+Hook: useAsyncData
+File: webview-ui/src/shared/hooks/useAsyncData.ts
+Usage Count: 4
+Used In:
+  - src/core/ui/hooks/index.ts
+  - webview-ui/src/shared/hooks/index.ts
+  - src/core/ui/hooks/useAsyncData.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useAsyncData.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Hook: useMinimumLoadingTime
+File: webview-ui/src/shared/hooks/useMinimumLoadingTime.ts
+Usage Count: 4
+Used In:
+  - src/features/authentication/ui/index.ts
+  - webview-ui/src/shared/hooks/index.ts
+  - src/features/authentication/ui/hooks/useMinimumLoadingTime.ts (via barrel export)
+  - webview-ui/src/wizard/steps/AdobeAuthStep.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Hook: useVSCodeMessage.d
+File: webview-ui/src/shared/hooks/useVSCodeMessage.d.ts
+Usage Count: 0
+Used In: (none)
+Decision: DELETE ✗
+
+---
+
+Hook: useVSCodeMessage
+File: webview-ui/src/shared/hooks/useVSCodeMessage.ts
+Usage Count: 7
+Used In:
+  - src/core/ui/hooks/useAsyncData.ts
+  - src/core/ui/hooks/index.ts
+  - webview-ui/src/shared/hooks/useAsyncData.ts
+  - webview-ui/src/shared/hooks/index.ts
+  - src/core/ui/hooks/useVSCodeMessage.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useVSCodeMessage.d.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useAsyncData.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Hook: useSelectableDefault.d
+File: webview-ui/src/shared/hooks/useSelectableDefault.d.ts
+Usage Count: 0
+Used In: (none)
+Decision: DELETE ✗
+
+---
+
+Hook: useVSCodeRequest
+File: webview-ui/src/shared/hooks/useVSCodeRequest.ts
+Usage Count: 4
+Used In:
+  - src/core/ui/hooks/index.ts
+  - webview-ui/src/shared/hooks/index.ts
+  - src/core/ui/hooks/useVSCodeRequest.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useVSCodeRequest.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Hook: useFocusTrap.d
+File: webview-ui/src/shared/hooks/useFocusTrap.d.ts
+Usage Count: 0
+Used In: (none)
+Decision: DELETE ✗
+
+---
+
+Hook: useSearchFilter.d
+File: webview-ui/src/shared/hooks/useSearchFilter.d.ts
+Usage Count: 0
+Used In: (none)
+Decision: DELETE ✗
+
+---
+
+Hook: useSelectableDefault
+File: webview-ui/src/shared/hooks/useSelectableDefault.ts
+Usage Count: 10
+Used In:
+  - src/core/ui/hooks/index.ts
+  - src/features/dashboard/ui/ConfigureScreen.tsx
+  - src/features/components/ui/steps/ComponentConfigStep.tsx
+  - src/features/project-creation/ui/steps/WelcomeStep.tsx
+  - webview-ui/src/configure/ConfigureScreen.tsx
+  - webview-ui/src/wizard/steps/WelcomeStep.tsx
+  - webview-ui/src/wizard/steps/ComponentConfigStep.tsx
+  - webview-ui/src/shared/hooks/index.ts
+  - src/core/ui/hooks/useSelectableDefault.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useSelectableDefault.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Hook: useVSCodeRequest.d
+File: webview-ui/src/shared/hooks/useVSCodeRequest.d.ts
+Usage Count: 0
+Used In: (none)
+Decision: DELETE ✗
+
+---
+
+Hook: useDebouncedValue
+File: webview-ui/src/shared/hooks/useDebouncedValue.ts
+Usage Count: 5
+Used In:
+  - src/features/dashboard/ui/hooks/index.ts
+  - webview-ui/src/shared/hooks/index.ts
+  - src/features/dashboard/ui/ConfigureScreen.tsx (via barrel export)
+  - src/features/dashboard/ui/hooks/useDebouncedValue.ts (via barrel export)
+  - webview-ui/src/configure/ConfigureScreen.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Hook: useAutoScroll
+File: webview-ui/src/shared/hooks/useAutoScroll.ts
+Usage Count: 4
+Used In:
+  - src/core/ui/hooks/index.ts
+  - webview-ui/src/shared/hooks/index.ts
+  - src/core/ui/hooks/useAutoScroll.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useAutoScroll.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Hook: useDebouncedLoading
+File: webview-ui/src/shared/hooks/useDebouncedLoading.ts
+Usage Count: 6
+Used In:
+  - src/features/authentication/ui/hooks/useSelectionStep.ts
+  - src/features/authentication/ui/index.ts
+  - webview-ui/src/shared/hooks/index.ts
+  - src/features/authentication/ui/hooks/useDebouncedLoading.ts (via barrel export)
+  - webview-ui/src/wizard/steps/AdobeWorkspaceStep.tsx (via barrel export)
+  - webview-ui/src/wizard/steps/AdobeProjectStep.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Hook: useLoadingState
+File: webview-ui/src/shared/hooks/useLoadingState.ts
+Usage Count: 7
+Used In:
+  - src/core/ui/hooks/useAsyncData.ts
+  - src/core/ui/hooks/index.ts
+  - webview-ui/src/shared/hooks/useAsyncData.ts
+  - webview-ui/src/shared/hooks/index.ts
+  - src/core/ui/hooks/useLoadingState.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useLoadingState.d.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useAsyncData.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Hook: useFocusTrap
+File: webview-ui/src/shared/hooks/useFocusTrap.ts
+Usage Count: 8
+Used In:
+  - src/core/ui/hooks/index.ts
+  - webview-ui/src/shared/hooks/index.ts
+  - src/core/ui/hooks/useFocusTrap.ts (via barrel export)
+  - src/features/welcome/ui/WelcomeScreen.tsx (via barrel export)
+  - src/features/dashboard/ui/ProjectDashboardScreen.tsx (via barrel export)
+  - webview-ui/src/shared/hooks/useFocusTrap.d.ts (via barrel export)
+  - webview-ui/src/welcome/WelcomeScreen.tsx (via barrel export)
+  - webview-ui/src/dashboard/ProjectDashboardScreen.tsx (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Hook: useAutoScroll.d
+File: webview-ui/src/shared/hooks/useAutoScroll.d.ts
+Usage Count: 0
+Used In: (none)
+Decision: DELETE ✗
+
+---
+
+Hook: useAsyncData.d
+File: webview-ui/src/shared/hooks/useAsyncData.d.ts
+Usage Count: 0
+Used In: (none)
+Decision: DELETE ✗
+
+---
+
+Hook: useSelection
+File: webview-ui/src/shared/hooks/useSelection.ts
+Usage Count: 4
+Used In:
+  - src/core/ui/hooks/index.ts
+  - webview-ui/src/shared/hooks/index.ts
+  - src/core/ui/hooks/useSelection.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useSelection.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
+Hook: useSearchFilter
+File: webview-ui/src/shared/hooks/useSearchFilter.ts
+Usage Count: 4
+Used In:
+  - src/core/ui/hooks/index.ts
+  - webview-ui/src/shared/hooks/index.ts
+  - src/core/ui/hooks/useSearchFilter.ts (via barrel export)
+  - webview-ui/src/shared/hooks/useSearchFilter.d.ts (via barrel export)
+
+Decision: MIGRATE ✓
+
+---
+
