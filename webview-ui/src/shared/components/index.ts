@@ -2,19 +2,25 @@
  * Shared Webview Components
  *
  * This file exports all shared UI components used throughout the webview application.
+ * Organized by function (ui, forms, feedback, navigation, layout) rather than size.
  */
 
-// Core Components (from src/core/ui/components)
-export { Modal } from './Modal';
-export { FadeTransition } from './FadeTransition';
-export { LoadingDisplay } from './LoadingDisplay';
-export { FormField } from './FormField';
-export { NumberedInstructions } from './NumberedInstructions';
-export { StatusCard } from './StatusCard';
-export { TwoColumnLayout } from './TwoColumnLayout';
-export { GridLayout } from './GridLayout';
+// UI Components (basic elements)
+export * from './ui';
 
-// Shared Components (from src/webviews/components/shared)
+// Form Components
+export * from './forms';
+
+// Feedback Components
+export * from './feedback';
+
+// Navigation Components
+export * from './navigation';
+
+// Layout Components
+export * from './layout';
+
+// Feature-Specific Components
 export { CompactOption } from './CompactOption';
 export { ComponentCard } from './ComponentCard';
 export { ConfigurationSummary } from './ConfigurationSummary';
@@ -22,23 +28,11 @@ export { DependencyItem } from './DependencyItem';
 export { SelectionSummary } from './SelectionSummary';
 export { Tip } from './Tip';
 
-// Atoms
-export * from './atoms';
-
-// Molecules
-export * from './molecules';
-
-// Organisms
-export * from './organisms';
-
-// Feedback
-export * from './feedback';
-
-// Debug
+// Debug Components
 export * from './debug';
 
-// Templates
-export * from './templates';
-
-// Spectrum Extended
+// Spectrum Extended Components
 export * from './spectrum-extended';
+
+// Legacy Terminal Output (keep for now)
+export * from './feedback';
