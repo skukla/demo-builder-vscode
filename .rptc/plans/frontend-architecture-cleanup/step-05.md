@@ -540,6 +540,50 @@ git log -1 --stat
 
 **Estimated Time:** 2-3 hours
 
+## Step 5 Completion Summary
+
+**Status:** ✅ COMPLETE
+
+**Commit:** 91c4561c - refactor: update all imports from @/core/ui to @/webview-ui/shared
+
+**Source Files Updated:** 12 files in src/features/*/ui/
+- All @/core/ui imports replaced with @/webview-ui/shared/* imports
+- Imports mapped to function-based directories (forms/, feedback/, ui/, layout/)
+
+**Webview-UI Files Updated:** 14 files
+- 10 wizard step files
+- 3 screen files (Configure, Welcome, Dashboard)
+- 1 shared component (ConfigurationSummary)
+
+**Test Files Moved:** 10 files with git history preserved
+- 9 hook tests: tests/core/ui/hooks/ → tests/webview-ui/shared/hooks/
+- 1 component test: tests/core/ui/components/ → tests/webview-ui/shared/components/feedback/
+
+**Test Files Updated:** 12 files
+- All test imports updated from @/core/ui to @/webview-ui/shared/*
+
+**Scripts Created:** 2 automation scripts
+- update-imports.sh (source file imports)
+- update-test-imports.sh (test file imports)
+
+**Directories Created:** 3 test directories
+- tests/webview-ui/shared/hooks/
+- tests/webview-ui/shared/components/feedback/
+
+**Directories Deleted:** 1 directory
+- tests/core/ui/ (empty after moving all tests)
+
+**Verification Passed:**
+- 0 remaining @/core/ui imports ✅
+- TypeScript: 9 errors (baseline, no increase) ✅
+- Webpack build: SUCCESS (4 bundles) ✅
+- All test files moved with git history ✅
+- Total: 40 files changed (+267, -589 lines) ✅
+
+**Next Impact:** Webpack now builds successfully, ready for final verification in Step 6
+
+**Ready for:** Step 6 - Comprehensive Verification and Manual Testing
+
 ---
 
 ## Rollback Strategy

@@ -1,0 +1,38 @@
+
+> adobe-demo-builder@1.0.0 pretest
+> npm run compile && npm run lint
+
+
+> adobe-demo-builder@1.0.0 compile
+> npm run compile:typescript && npm run compile:webview && npm run copy:media
+
+
+> adobe-demo-builder@1.0.0 compile:typescript
+> tsc -p tsconfig.build.json
+
+src/features/authentication/services/adobeEntityService.ts(53,9): error TS2322: Type '{ id: string; name: string; title: string; description: string | undefined; org_id: string | undefined; }[]' is not assignable to type 'AdobeProject[]'.
+  Type '{ id: string; name: string; title: string; description: string | undefined; org_id: string | undefined; }' is not assignable to type 'AdobeProject'.
+    Types of property 'org_id' are incompatible.
+      Type 'string | undefined' is not assignable to type 'number | undefined'.
+        Type 'string' is not assignable to type 'number'.
+src/features/authentication/services/adobeEntityService.ts(544,52): error TS2345: Argument of type 'AdobeProject | { id: string; name: string; title: string; description: string | undefined; org_id: string | undefined; }' is not assignable to parameter of type 'AdobeProject | undefined'.
+  Type '{ id: string; name: string; title: string; description: string | undefined; org_id: string | undefined; }' is not assignable to type 'AdobeProject'.
+    Types of property 'org_id' are incompatible.
+      Type 'string | undefined' is not assignable to type 'number | undefined'.
+        Type 'string' is not assignable to type 'number'.
+src/features/authentication/services/adobeEntityService.ts(545,17): error TS2322: Type 'AdobeProject | { id: string; name: string; title: string; description: string | undefined; org_id: string | undefined; }' is not assignable to type 'AdobeProject | undefined'.
+  Type '{ id: string; name: string; title: string; description: string | undefined; org_id: string | undefined; }' is not assignable to type 'AdobeProject'.
+    Types of property 'org_id' are incompatible.
+      Type 'string | undefined' is not assignable to type 'number | undefined'.
+        Type 'string' is not assignable to type 'number'.
+src/features/authentication/services/adobeEntityService.ts(632,13): error TS2322: Type 'AdobeProject | undefined' is not assignable to type 'string | { id: string; name: string; title?: string | undefined; description?: string | undefined; type?: string | undefined; org_id?: string | undefined; } | undefined'.
+  Type 'AdobeProject' is not assignable to type 'string | { id: string; name: string; title?: string | undefined; description?: string | undefined; type?: string | undefined; org_id?: string | undefined; } | undefined'.
+    Type 'AdobeProject' is not assignable to type '{ id: string; name: string; title?: string | undefined; description?: string | undefined; type?: string | undefined; org_id?: string | undefined; }'.
+      Types of property 'org_id' are incompatible.
+        Type 'number | undefined' is not assignable to type 'string | undefined'.
+          Type 'number' is not assignable to type 'string'.
+src/features/dashboard/commands/showDashboard.ts(91,18): error TS2339: Property 'onStreaming' does not exist on type 'WebviewCommunicationManager'.
+src/features/welcome/commands/showWelcome.ts(15,42): error TS2339: Property 'getActivePanel' does not exist on type 'typeof BaseWebviewCommand'.
+src/features/welcome/commands/showWelcome.ts(49,14): error TS2339: Property 'onStreaming' does not exist on type 'WebviewCommunicationManager'.
+src/features/welcome/commands/showWelcome.ts(56,14): error TS2339: Property 'onStreaming' does not exist on type 'WebviewCommunicationManager'.
+src/features/welcome/commands/showWelcome.ts(61,14): error TS2339: Property 'onStreaming' does not exist on type 'WebviewCommunicationManager'.

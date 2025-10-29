@@ -1,0 +1,13 @@
+total 35720
+-rw-r--r--  1 kukla  staff   1.5M Oct 29 16:10 configure-bundle.js
+-rw-r--r--  1 kukla  staff   1.2K Oct 29 16:10 configure-bundle.js.LICENSE.txt
+-rw-r--r--  1 kukla  staff   3.5M Oct 29 16:10 configure-bundle.js.map
+-rw-r--r--  1 kukla  staff   1.1M Oct 29 16:10 dashboard-bundle.js
+-rw-r--r--  1 kukla  staff   1.2K Oct 29 16:10 dashboard-bundle.js.LICENSE.txt
+-rw-r--r--  1 kukla  staff   2.3M Oct 29 16:10 dashboard-bundle.js.map
+-rw-r--r--  1 kukla  staff   610K Oct 29 16:10 welcome-bundle.js
+-rw-r--r--  1 kukla  staff   1.2K Oct 29 16:10 welcome-bundle.js.LICENSE.txt
+-rw-r--r--  1 kukla  staff   1.6M Oct 29 16:10 welcome-bundle.js.map
+-rw-r--r--  1 kukla  staff   2.1M Oct 29 16:10 wizard-bundle.js
+-rw-r--r--  1 kukla  staff   1.2K Oct 29 16:10 wizard-bundle.js.LICENSE.txt
+-rw-r--r--  1 kukla  staff   4.6M Oct 29 16:10 wizard-bundle.js.map
