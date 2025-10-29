@@ -6,11 +6,11 @@ import Info from '@spectrum-icons/workflow/Info';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import { vscode } from '../app/vscodeApi';
 import { WizardState, WizardStep } from '../../types';
-import { ConfigurationSummary } from '../../shared/components/ConfigurationSummary';
-import { LoadingDisplay } from '../../shared/components/LoadingDisplay';
-import { FadeTransition } from '../../shared/components/FadeTransition';
-import { Modal } from '../../shared/components/Modal';
-import { NumberedInstructions } from '../../shared/components/NumberedInstructions';
+import { ConfigurationSummary } from '../../shared/components/ui/ConfigurationSummary';
+import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
+import { FadeTransition } from '../../shared/components/ui/FadeTransition';
+import { Modal } from '../../shared/components/ui/Modal';
+import { NumberedInstructions } from '../../shared/components/ui/NumberedInstructions';
 
 interface ApiMeshStepProps {
     state: WizardState;

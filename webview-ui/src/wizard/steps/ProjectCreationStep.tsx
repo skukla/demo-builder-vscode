@@ -3,7 +3,7 @@ import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import { WizardState } from '../../types';
-import { LoadingDisplay } from '../../shared/components/LoadingDisplay';
+import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
 import { vscode } from '../app/vscodeApi';
 
 interface ProjectCreationStepProps {

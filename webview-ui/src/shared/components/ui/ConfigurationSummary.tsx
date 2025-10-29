@@ -4,7 +4,7 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import { WizardState, WizardStep } from '../../types';
-import { cn } from '../../shared/utils/classNames';
+import { cn } from '../../utils/classNames';
 
 interface ConfigurationSummaryProps {
     state: WizardState;

@@ -14,7 +14,7 @@ import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '../../types';
 import { vscode } from '../app/vscodeApi';
-import { LoadingDisplay } from '../../shared/components/LoadingDisplay';
+import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
 import { useSelectableDefault } from '../../shared/hooks/useSelectableDefault';
 
 interface ComponentConfigStepProps {

@@ -20,8 +20,8 @@ import Data from '@spectrum-icons/workflow/Data';
 import Login from '@spectrum-icons/workflow/Login';
 import { vscode } from '../wizard/app/vscodeApi';
 import { useFocusTrap } from '@/hooks';
-import { StatusCard } from '@/components/molecules';
-import { GridLayout } from '@/components/templates';
+import { StatusCard } from '../shared/components/feedback';
+import { GridLayout } from '../shared/components/layout';
 
 interface ProjectStatus {
     name: string;

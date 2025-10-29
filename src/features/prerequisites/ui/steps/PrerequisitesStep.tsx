@@ -12,7 +12,7 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import { WizardState, PrerequisiteCheck } from '@/webview-ui/shared/types';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '@/webview-ui/shared/utils/classNames';
 
 interface PrerequisitesStepProps {

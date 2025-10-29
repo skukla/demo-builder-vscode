@@ -13,7 +13,7 @@ import {
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '@/webview-ui/shared/types';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
 

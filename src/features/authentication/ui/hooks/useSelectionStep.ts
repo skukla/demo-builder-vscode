@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 import { useDebouncedLoading } from './useDebouncedLoading';
 import { WizardState } from '@/webview-ui/shared/types';
 

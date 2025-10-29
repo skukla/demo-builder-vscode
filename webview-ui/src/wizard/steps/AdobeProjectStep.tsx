@@ -14,9 +14,9 @@ import {
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import { vscode } from '../app/vscodeApi';
-import { LoadingDisplay } from '../../shared/components/LoadingDisplay';
-import { ConfigurationSummary } from '../../shared/components/ConfigurationSummary';
-import { FadeTransition } from '../../shared/components/FadeTransition';
+import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
+import { ConfigurationSummary } from '../../shared/components/ui/ConfigurationSummary';
+import { FadeTransition } from '../../shared/components/ui/FadeTransition';
 import { WizardState, AdobeProject, WizardStep } from '../../types';
 import { useDebouncedLoading } from '@/hooks';
 

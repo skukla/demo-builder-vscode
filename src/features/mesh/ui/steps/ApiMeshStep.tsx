@@ -4,7 +4,7 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Info from '@spectrum-icons/workflow/Info';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 import { WizardState, WizardStep } from '@/webview-ui/shared/types';
 import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
 import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';

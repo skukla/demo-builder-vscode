@@ -13,7 +13,7 @@ import Book from '@spectrum-icons/workflow/Book';
 import Settings from '@spectrum-icons/workflow/Settings';
 import { vscode } from '../wizard/app/vscodeApi';
 import { useFocusTrap } from '@/hooks';
-import { GridLayout } from '@/components/templates';
+import { GridLayout } from '../shared/components/layout';
 import { cn } from '../shared/utils/classNames';
 
 interface WelcomeScreenProps {

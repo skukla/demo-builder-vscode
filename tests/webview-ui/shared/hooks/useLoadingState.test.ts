@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useLoadingState } from '@/core/ui/hooks/useLoadingState';
+import { useLoadingState } from '@/webview-ui/shared/hooks/useLoadingState';
 
 describe('useLoadingState', () => {
   describe('initial state', () => {

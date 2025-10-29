@@ -18,7 +18,7 @@ import { ApiMeshStep } from '@/features/mesh/ui/steps/ApiMeshStep';
 import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 import { cn } from '@/webview-ui/shared/utils/classNames';
 
 interface WizardContainerProps {

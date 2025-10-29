@@ -12,7 +12,7 @@ import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import { WizardState } from '@/webview-ui/shared/types';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 
 interface AdobeAuthStepProps {

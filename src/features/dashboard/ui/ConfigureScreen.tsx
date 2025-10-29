@@ -8,7 +8,7 @@ import {
     View
 } from '@adobe/react-spectrum';
 import { ComponentEnvVar, ComponentConfigs, DemoProject } from '@/webview-ui/shared/types';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
 import { useDebouncedValue } from '@/webview-ui/shared/hooks';
 import { cn } from '@/webview-ui/shared/utils/classNames';

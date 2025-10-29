@@ -1,5 +1,5 @@
 import React from 'react';
-import { Spinner } from '../atoms/Spinner';
+import { Spinner } from '../ui/Spinner';
 
 export interface LoadingOverlayProps {
     /** Whether the overlay is visible */

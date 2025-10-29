@@ -4,7 +4,7 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import { WizardState } from '@/webview-ui/shared/types';
 import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 
 interface ProjectCreationStepProps {
     state: WizardState;

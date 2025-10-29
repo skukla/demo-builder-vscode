@@ -18,7 +18,7 @@ import ViewList from '@spectrum-icons/workflow/ViewList';
 import DataMapping from '@spectrum-icons/workflow/DataMapping';
 import Data from '@spectrum-icons/workflow/Data';
 import Login from '@spectrum-icons/workflow/Login';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 import { useFocusTrap } from '@/webview-ui/shared/hooks';
 import { StatusCard } from '@/webview-ui/shared/components/molecules';
 import { GridLayout } from '@/webview-ui/shared/components/templates';

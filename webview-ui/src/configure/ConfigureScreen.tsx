@@ -12,8 +12,8 @@ import { vscode } from '../wizard/app/vscodeApi';
 import { useSelectableDefault } from '../shared/hooks/useSelectableDefault';
 import { useDebouncedValue } from '@/hooks';
 import { cn } from '../shared/utils/classNames';
-import { FormField, ConfigSection } from '@/components/molecules';
-import { NavigationPanel, NavigationSection, NavigationField } from '@/components/organisms';
+import { FormField, ConfigSection } from '../shared/components/forms';
+import { NavigationPanel, NavigationSection, NavigationField } from '../shared/components/navigation';
 
 interface ComponentsData {
     frontends?: ComponentData[];

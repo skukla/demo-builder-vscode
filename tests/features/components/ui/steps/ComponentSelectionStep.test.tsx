@@ -10,7 +10,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 import { createMockVSCode, mockSuccessfulRequest, mockFailedRequest } from '../../../../utils/webviewMocks';
 
 // Mock vscode API (use factory function to avoid hoisting issues)

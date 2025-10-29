@@ -1,5 +1,5 @@
 import React from 'react';
-import { StatusDot } from '@/design-system/atoms/StatusDot';
+import { StatusDot } from '../ui/StatusDot';
 
 export interface StatusCardProps {
     /** Status text */

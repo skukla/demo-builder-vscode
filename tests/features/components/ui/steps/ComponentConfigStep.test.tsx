@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderWithProviders, screen, waitFor } from '../../../../utils/react-test-utils';
 import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 import { createMockVSCode, mockSuccessfulRequest, mockFailedRequest } from '../../../../utils/webviewMocks';
 
 // Mock vscode API

@@ -12,7 +12,7 @@ import Add from '@spectrum-icons/workflow/Add';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Book from '@spectrum-icons/workflow/Book';
 import Settings from '@spectrum-icons/workflow/Settings';
-import { vscode } from '@/core/ui/vscode-api';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 import { useFocusTrap } from '@/webview-ui/shared/hooks';
 import { cn } from '@/webview-ui/shared/utils/classNames';
 

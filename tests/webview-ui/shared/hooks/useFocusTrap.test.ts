@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
+import { useFocusTrap } from '@/webview-ui/shared/hooks/useFocusTrap';
 
 describe('useFocusTrap', () => {
   let container: HTMLDivElement;

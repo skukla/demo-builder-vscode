@@ -14,7 +14,7 @@ import Refresh from '@spectrum-icons/workflow/Refresh';
 import { WizardState } from '../../types';
 import { vscode } from '../app/vscodeApi';
 import { useMinimumLoadingTime } from '@/hooks';
-import { LoadingDisplay } from '../../shared/components/LoadingDisplay';
+import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
 
 interface AdobeAuthStepProps {
     state: WizardState;
