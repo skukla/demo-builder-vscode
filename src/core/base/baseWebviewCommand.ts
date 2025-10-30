@@ -42,7 +42,16 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     public static getActivePanelCount(): number {
         return BaseWebviewCommand.activePanels.size;
     }
-    
+
+    /**
+     * Get a specific active webview panel by ID
+     * @param webviewId The webview ID to retrieve
+     * @returns The active panel or undefined if not found
+     */
+    public static getActivePanel(webviewId: string): vscode.WebviewPanel | undefined {
+        return BaseWebviewCommand.activePanels.get(webviewId);
+    }
+
     /**
      * Override in subclasses to indicate if Welcome should reopen on disposal
      * @returns true if this webview should trigger Welcome reopen when closed

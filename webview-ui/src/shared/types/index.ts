@@ -82,7 +82,7 @@ export interface AdobeProject {
     name: string;
     title?: string;
     description?: string;
-    org_id?: number;  // Numeric organization ID from Adobe Console
+    org_id?: string;  // Organization ID from Adobe Console API
 }
 
 // Note: Import shared types from @/types directly where needed (removed circular re-export)

@@ -229,6 +229,19 @@ export class WebviewCommunicationManager {
     }
 
     /**
+     * Register a streaming message handler (alias for on)
+     *
+     * Explicit naming to indicate handlers that return streaming responses.
+     * Functionally identical to on() but semantically clearer for response handlers.
+     */
+    onStreaming<P = MessagePayload, R = unknown>(
+        type: MessageType,
+        handler: MessageHandlerFunction<P, R>,
+    ): void {
+        this.on(type, handler);
+    }
+
+    /**
      * Update state version (for consistency tracking)
      */
     incrementStateVersion(): number {
