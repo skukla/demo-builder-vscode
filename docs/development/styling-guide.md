@@ -347,9 +347,152 @@ For scrollable containers within the wizard, use these patterns:
 4. **Use transform/opacity** for animations instead of position/size changes
 5. **Use container queries** for responsive design within confined spaces
 
+## Spectrum Design Token Integration
+
+### Overview
+
+As of v1.7.0, layout components support Adobe Spectrum design tokens for type-safe dimension values. This bridges the gap between React Spectrum components and custom layouts.
+
+### Using Tokens in Custom Components
+
+The `translateSpectrumToken()` utility (from `webview-ui/src/shared/utils/spectrumTokens.ts`) converts Spectrum tokens to CSS pixel values:
+
+```typescript
+import { translateSpectrumToken, DimensionValue } from '@/webview-ui/shared/utils/spectrumTokens';
+
+interface CustomLayoutProps {
+  gap?: DimensionValue;  // Accepts tokens, pixel strings, or numbers
+  padding?: DimensionValue;
+}
+
+export const CustomLayout: React.FC<CustomLayoutProps> = ({ gap, padding }) => {
+  return (
+    <div style={{
+      display: 'flex',
+      gap: translateSpectrumToken(gap),         // "size-300" → "24px"
+      padding: translateSpectrumToken(padding)  // 16 → "16px"
+    }}>
+      {children}
+    </div>
+  );
+};
+```
+
+### Type-Safe Token Usage
+
+The `DimensionValue` type provides compile-time validation:
+
+```typescript
+// ✅ Valid: Spectrum token
+<CustomLayout gap="size-300" />
+
+// ✅ Valid: Pixel string (backward compatible)
+<CustomLayout gap="24px" />
+
+// ✅ Valid: Number (backward compatible)
+<CustomLayout gap={24} />
+
+// ❌ Compile error: Invalid token
+<CustomLayout gap="size-999" />
+// Error: Type '"size-999"' is not assignable to type 'DimensionValue'
+```
+
+### Supported Tokens
+
+13 Spectrum size tokens are currently supported (YAGNI principle - only tokens actually used in the codebase):
+
+- **Common**: `size-300` (24px), `size-400` (32px), `size-200` (16px)
+- **Small**: `size-50` (4px), `size-100` (8px), `size-150` (12px)
+- **Large**: `size-500` (40px), `size-600` (48px), `size-1000` (80px)
+- **Constraints**: `size-6000` (480px)
+- **Rare**: `size-115`, `size-130`, `size-160` (specific component needs)
+
+See `webview-ui/src/shared/utils/spectrumTokens.ts` for complete mapping.
+
+### When to Use Tokens vs CSS Classes
+
+**Use Spectrum Tokens When:**
+- Building layout components (gap, padding, width constraints)
+- Values need to align with Adobe Spectrum design system
+- You want compile-time type safety
+- Component props need flexible dimension values
+
+**Use CSS Classes When:**
+- Styling presentational aspects (colors, borders, typography)
+- Complex responsive layouts requiring media queries
+- State-based styling (hover, active, error states)
+- Reusable utility classes across many components
+
+**Example: Combining Both Approaches**
+
+```tsx
+// Token for layout dimension (type-safe, design-aligned)
+<View
+  UNSAFE_className={cn('flex', 'flex-column', 'border')}
+  style={{
+    gap: translateSpectrumToken('size-300'),
+    padding: translateSpectrumToken('size-400')
+  }}
+>
+  {/* CSS classes for visual styling */}
+  <Text UNSAFE_className={cn('text-medium', 'text-muted')}>
+    Label
+  </Text>
+</View>
+```
+
+### Migration Pattern
+
+When refactoring existing components to use tokens:
+
+1. **Identify dimension properties**: gap, padding, margin, width, height
+2. **Check token table**: Does a token match the pixel value?
+3. **Replace hardcoded values**: Use token if available, keep pixel value if not
+4. **Add type annotation**: Use `DimensionValue` for prop types
+
+```typescript
+// Before
+interface OldLayoutProps {
+  gap?: number | string;  // Loose typing
+}
+
+const OldLayout = ({ gap = 24 }) => (
+  <div style={{ gap: typeof gap === 'number' ? `${gap}px` : gap }}>
+    {children}
+  </div>
+);
+
+// After
+import { DimensionValue, translateSpectrumToken } from '@/webview-ui/shared/utils/spectrumTokens';
+
+interface NewLayoutProps {
+  gap?: DimensionValue;  // Type-safe
+}
+
+const NewLayout = ({ gap = 'size-300' }) => (
+  <div style={{ gap: translateSpectrumToken(gap) }}>
+    {children}
+  </div>
+);
+```
+
+### Token Utility Implementation
+
+The translation function handles three input types:
+
+```typescript
+translateSpectrumToken('size-300')  // → "24px" (token lookup)
+translateSpectrumToken('24px')      // → "24px" (pass-through)
+translateSpectrumToken(24)          // → "24px" (add unit)
+translateSpectrumToken(undefined)   // → undefined (preserve optional)
+```
+
+This ensures backward compatibility while enabling modern token-based design.
+
 ## Future Improvements
 
 - Consider CSS Modules for better scoping
 - Evaluate CSS-in-JS solutions that work with React Spectrum
 - Create a visual style guide component
 - Add CSS linting rules for consistency
+- Expand token support as new Spectrum sizes are needed (follow YAGNI principle)

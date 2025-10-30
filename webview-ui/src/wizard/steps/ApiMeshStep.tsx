@@ -11,6 +11,7 @@ import { LoadingDisplay } from '@/webview-ui/shared/components/feedback/LoadingD
 import { FadeTransition } from '@/webview-ui/shared/components/ui/FadeTransition';
 import { Modal } from '@/webview-ui/shared/components/ui/Modal';
 import { NumberedInstructions } from '@/webview-ui/shared/components/ui/NumberedInstructions';
+import { TwoColumnLayout } from '@/webview-ui/shared/components/layout/TwoColumnLayout';
 
 interface ApiMeshStepProps {
     state: WizardState;
@@ -159,19 +160,16 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
     }, []); // Only run on mount
 
     return (
-        <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0' }}>
-            {/* Left: Verification content area (max 800px) */}
-            <div style={{
-                maxWidth: '800px',
-                width: '100%',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                minWidth: 0
-            }}>
-                <Heading level={2} marginBottom="size-300">API Mesh</Heading>
-                <Text marginBottom="size-400">
-                    Verifying API Mesh API availability for your selected workspace.
+        <TwoColumnLayout
+            leftMaxWidth="800px"
+            leftPadding="size-300"
+            rightPadding="size-300"
+            gap="0"
+            leftContent={
+                <>
+                    <Heading level={2} marginBottom="size-300">API Mesh</Heading>
+                    <Text marginBottom="size-400">
+                        Verifying API Mesh API availability for your selected workspace.
                 </Text>
 
                 {isChecking ? (
@@ -466,18 +464,12 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                         </Flex>
                     </Flex>
                 )}
-            </div>
-
-            {/* Right: Summary Panel - positioned after main content */}
-            <div style={{
-                flex: '1',
-                padding: '24px',
-                backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
-            }}>
+                </>
+            }
+            rightContent={
                 <ConfigurationSummary state={state} completedSteps={completedSteps} currentStep={state.currentStep} />
-            </div>
-        </div>
+            }
+        />
     );
 }
 

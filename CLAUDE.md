@@ -133,6 +133,13 @@ demo-builder-vscode/
 - **Solution**: Use standard HTML div with flex styles for critical layouts
 - **Details**: See `src/webviews/CLAUDE.md`
 
+### Spectrum Design Token Support (v1.7.0)
+- **Feature**: Layout components support type-safe Spectrum design tokens
+- **Components**: `GridLayout`, `TwoColumnLayout` accept `DimensionValue` props
+- **Example**: `gap="size-300"` compiles to `"24px"` with TypeScript validation
+- **Backward Compatible**: Pixel strings and numbers still work
+- **Details**: See `docs/development/ui-patterns.md` and `docs/development/styling-guide.md`
+
 ### Adobe Setup Redesign (Two-Column Layout)
 - **Unified Experience**: Single step replaces separate auth/org/project steps
 - **Two-Column Design**: Active content (60%) + persistent summary (40%)

@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-    Heading, 
-    ListView, 
-    Item, 
-    Text, 
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+    Heading,
+    ListView,
+    Item,
+    Text,
     SearchField,
     Button,
     Well,
@@ -17,6 +17,7 @@ import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
 import { LoadingDisplay } from '@/webview-ui/shared/components/feedback/LoadingDisplay';
 import { ConfigurationSummary } from '@/webview-ui/shared/components/ui/ConfigurationSummary';
 import { FadeTransition } from '@/webview-ui/shared/components/ui/FadeTransition';
+import { TwoColumnLayout } from '@/webview-ui/shared/components/layout/TwoColumnLayout';
 import { WizardState, AdobeProject, WizardStep } from '@/webview-ui/shared/types';
 import { useDebouncedLoading } from '@/hooks';
 
@@ -141,21 +142,18 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
     }, [projects, searchQuery]);
     
     return (
-        <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0' }}>
-            {/* Left: Project Selection - constrained to 800px like other steps */}
-            <div style={{
-                maxWidth: '800px',
-                width: '100%',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                minWidth: 0  // Prevent flex shrinking issues
-            }}>
-                <Heading level={2} marginBottom="size-300">
-                    {state.adobeOrg?.name ? `Projects in ${state.adobeOrg.name}` : 'Select Adobe Project'}
-                </Heading>
+        <TwoColumnLayout
+            leftMaxWidth="800px"
+            leftPadding="size-300"
+            rightPadding="size-300"
+            gap="0"
+            leftContent={
+                <>
+                    <Heading level={2} marginBottom="size-300">
+                        {state.adobeOrg?.name ? `Projects in ${state.adobeOrg.name}` : 'Select Adobe Project'}
+                    </Heading>
 
-                {showLoading || (isLoadingProjects && !hasLoadedOnce) ? (
+                    {showLoading || (isLoadingProjects && !hasLoadedOnce) ? (
                     <Flex justifyContent="center" alignItems="center" height="350px">
                         <LoadingDisplay
                             size="L"
@@ -307,18 +305,11 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                         </div>
                     </>
                 )}
-
-            </div>
-            
-            {/* Right: Summary Panel - positioned after main content */}
-            <div style={{
-                flex: '1',
-                padding: '24px',
-                backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
-            }}>
+                </>
+            }
+            rightContent={
                 <ConfigurationSummary state={state} completedSteps={completedSteps} currentStep={state.currentStep} />
-            </div>
-        </div>
+            }
+        />
     );
 }

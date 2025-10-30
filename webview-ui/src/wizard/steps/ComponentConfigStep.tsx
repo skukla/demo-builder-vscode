@@ -16,6 +16,7 @@ import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '@/we
 import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
 import { LoadingDisplay } from '@/webview-ui/shared/components/feedback/LoadingDisplay';
 import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
+import { TwoColumnLayout } from '@/webview-ui/shared/components/layout/TwoColumnLayout';
 
 interface ComponentConfigStepProps {
     state: WizardState;
@@ -804,23 +805,19 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     };
 
     return (
-        <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0', overflow: 'hidden' }}>
-            {/* Left: Settings Configuration */}
-            <div style={{
-                maxWidth: '800px',
-                width: '100%',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                minWidth: 0,
-                overflow: 'hidden'
-            }}>
-                <Heading level={2} marginBottom="size-300">Settings Collection</Heading>
-                <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
-                    Configure the settings for your selected components. Required fields are marked with an asterisk.
-                </Text>
+        <TwoColumnLayout
+            leftMaxWidth="800px"
+            leftPadding="size-300"
+            rightPadding="size-300"
+            gap="0"
+            leftContent={
+                <>
+                    <Heading level={2} marginBottom="size-300">Settings Collection</Heading>
+                    <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
+                        Configure the settings for your selected components. Required fields are marked with an asterisk.
+                    </Text>
 
-                {isLoading ? (
+                    {isLoading ? (
                     <Flex justifyContent="center" alignItems="center" height="350px">
                         <LoadingDisplay 
                             size="L"
@@ -868,18 +865,10 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         })}
                     </Form>
                 )}
-            </div>
-            
-                {/* Right: Navigation Panel */}
-                <div style={{
-                    flex: '1',
-                    padding: '24px',
-                    backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                    borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden'
-                }}>
+                </>
+            }
+            rightContent={
+                <>
                     <Heading level={3} marginBottom="size-200">Configuration</Heading>
                     
                     <Flex direction="column" gap="size-150" UNSAFE_style={{ overflowY: 'auto', flex: 1 }}>
@@ -989,7 +978,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         );
                     })}
                 </Flex>
-            </div>
-        </div>
+                </>
+            }
+        />
     );
 }

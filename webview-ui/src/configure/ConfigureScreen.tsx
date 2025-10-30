@@ -11,8 +11,8 @@ import { ComponentEnvVar, ComponentConfigs } from '@/webview-ui/shared/types';
 import type { Project } from '@/backend-types/base';
 import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
 import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
-import { useDebouncedValue } from '@/hooks';
 import { cn } from '@/webview-ui/shared/utils/classNames';
+import { TwoColumnLayout } from '@/webview-ui/shared/components/layout/TwoColumnLayout';
 import { FormField, ConfigSection } from '@/webview-ui/shared/components/forms';
 import { NavigationPanel, NavigationSection, NavigationField } from '@/webview-ui/shared/components/navigation';
 
@@ -585,18 +585,14 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 </View>
 
                 {/* Content */}
-                <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0', overflow: 'hidden' }}>
-                    {/* Left: Settings Configuration */}
-                    <div style={{
-                        maxWidth: '800px',
-                        width: '100%',
-                        padding: '24px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        minWidth: 0,
-                        overflow: 'hidden'
-                    }}>
-                        <Heading level={2} marginBottom="size-300">Configuration Settings</Heading>
+                <TwoColumnLayout
+                    leftMaxWidth="800px"
+                    leftPadding="size-300"
+                    rightPadding="size-300"
+                    gap="0"
+                    leftContent={
+                        <>
+                            <Heading level={2} marginBottom="size-300">Configuration Settings</Heading>
                         <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
                             Update the settings for your project components. Required fields are marked with an asterisk.
                         </Text>
@@ -642,18 +638,19 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                 ))}
                             </Form>
                         )}
-                    </div>
-
-                    {/* Right: Navigation Panel */}
-                    <NavigationPanel
-                        sections={navigationSections}
-                        activeSection={activeSection}
-                        activeField={activeField}
-                        expandedSections={expandedNavSections}
-                        onToggleSection={toggleNavSection}
-                        onNavigateToField={navigateToField}
-                    />
-                </div>
+                        </>
+                    }
+                    rightContent={
+                        <NavigationPanel
+                            sections={navigationSections}
+                            activeSection={activeSection}
+                            activeField={activeField}
+                            expandedSections={expandedNavSections}
+                            onToggleSection={toggleNavSection}
+                            onNavigateToField={navigateToField}
+                        />
+                    }
+                />
 
                 {/* Footer */}
                 <View

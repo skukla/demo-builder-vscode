@@ -1,22 +1,23 @@
 import React from 'react';
+import { translateSpectrumToken, DimensionValue } from '@/webview-ui/shared/utils/spectrumTokens';
 
 export interface TwoColumnLayoutProps {
     /** Content for the left column (main content area) */
     leftContent: React.ReactNode;
     /** Content for the right column (sidebar/summary) */
     rightContent: React.ReactNode;
-    /** Maximum width of left column (default: '800px') */
-    leftMaxWidth?: string;
-    /** Left column padding (default: '24px') */
-    leftPadding?: string;
-    /** Right column padding (default: '24px') */
-    rightPadding?: string;
+    /** Maximum width of left column (default: '800px') - supports Spectrum tokens */
+    leftMaxWidth?: DimensionValue;
+    /** Left column padding (default: '24px') - supports Spectrum tokens */
+    leftPadding?: DimensionValue;
+    /** Right column padding (default: '24px') - supports Spectrum tokens */
+    rightPadding?: DimensionValue;
     /** Right column background color (default: spectrum gray-75) */
     rightBackgroundColor?: string;
     /** Whether to show border between columns (default: true) */
     showBorder?: boolean;
-    /** Gap between columns (default: '0') */
-    gap?: string;
+    /** Gap between columns (default: '0') - supports Spectrum tokens */
+    gap?: DimensionValue;
     /** Additional className for container */
     className?: string;
 }
@@ -24,9 +25,9 @@ export interface TwoColumnLayoutProps {
 /**
  * Template Component: TwoColumnLayout
  *
- * Provides a consistent two-column layout pattern used across wizard steps
- * and configuration screens. Left column is constrained to 800px for
- * readability, right column is flexible.
+ * Provides a consistent two-column layout pattern with Spectrum design token support.
+ * Left column is constrained to configurable max width for readability,
+ * right column is flexible.
  *
  * Used in:
  * - AdobeProjectStep (selection + summary)
@@ -35,7 +36,18 @@ export interface TwoColumnLayoutProps {
  *
  * @example
  * ```tsx
+ * // Using Spectrum tokens (recommended)
  * <TwoColumnLayout
+ *   gap="size-300"
+ *   leftPadding="size-400"
+ *   leftMaxWidth="size-6000"
+ *   leftContent={<ProjectList />}
+ *   rightContent={<ConfigurationSummary />}
+ * />
+ *
+ * // Backward compatible with pixel values
+ * <TwoColumnLayout
+ *   gap="24px"
  *   leftContent={<ProjectList />}
  *   rightContent={<ConfigurationSummary />}
  * />
@@ -44,12 +56,12 @@ export interface TwoColumnLayoutProps {
 export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     leftContent,
     rightContent,
-    leftMaxWidth = '800px',
-    leftPadding = '24px',
-    rightPadding = '24px',
+    leftMaxWidth = '800px' as DimensionValue,
+    leftPadding = '24px' as DimensionValue,
+    rightPadding = '24px' as DimensionValue,
     rightBackgroundColor = 'var(--spectrum-global-color-gray-75)',
     showBorder = true,
-    gap = '0',
+    gap = '0' as DimensionValue,
     className
 }) => {
     return (
@@ -58,16 +70,16 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
                 display: 'flex',
                 height: '100%',
                 width: '100%',
-                gap
+                gap: translateSpectrumToken(gap)
             }}
             className={className}
         >
             {/* Left Column: Main Content (constrained width) */}
             <div
                 style={{
-                    maxWidth: leftMaxWidth,
+                    maxWidth: translateSpectrumToken(leftMaxWidth),
                     width: '100%',
-                    padding: leftPadding,
+                    padding: translateSpectrumToken(leftPadding),
                     display: 'flex',
                     flexDirection: 'column',
                     minWidth: 0 // Prevent flex shrinking issues
@@ -80,7 +92,7 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
             <div
                 style={{
                     flex: '1',
-                    padding: rightPadding,
+                    padding: translateSpectrumToken(rightPadding),
                     backgroundColor: rightBackgroundColor,
                     borderLeft: showBorder
                         ? '1px solid var(--spectrum-global-color-gray-200)'

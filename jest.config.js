@@ -10,7 +10,9 @@ module.exports = {
       testMatch: [
         '**/tests/**/*.test.ts',
         '!**/tests/webviews/**/*.test.ts',
-        '!**/tests/webviews/**/*.test.tsx'
+        '!**/tests/webviews/**/*.test.tsx',
+        '!**/tests/webview-ui/**/*.test.ts',
+        '!**/tests/webview-ui/**/*.test.tsx'
       ],
       transform: {
         '^.+\\.ts$': 'ts-jest',
@@ -39,7 +41,12 @@ module.exports = {
     {
       displayName: 'react',
       testEnvironment: 'jsdom',
-      testMatch: ['**/tests/webviews/**/*.test.ts', '**/tests/webviews/**/*.test.tsx'],
+      testMatch: [
+        '**/tests/webviews/**/*.test.ts',
+        '**/tests/webviews/**/*.test.tsx',
+        '**/tests/webview-ui/**/*.test.ts',
+        '**/tests/webview-ui/**/*.test.tsx'
+      ],
       transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', {
           tsconfig: {
@@ -59,6 +66,7 @@ module.exports = {
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
         '^@/utils/(.*)$': '<rootDir>/src/utils/$1',
+        '^@/webview-ui/(.*)$': '<rootDir>/webview-ui/src/$1',
         '^@/(.*)$': '<rootDir>/src/webviews/$1',
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
