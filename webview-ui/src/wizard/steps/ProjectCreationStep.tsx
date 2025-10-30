@@ -4,7 +4,7 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import { WizardState } from '../../types';
 import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
-import { vscode } from '../app/vscodeApi';
+import { webviewClient } from '../../shared/utils/WebviewClient';
 
 interface ProjectCreationStepProps {
     state: WizardState;
@@ -18,7 +18,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
 
     const handleCancel = () => {
         setIsCancelling(true);
-        vscode.postMessage('cancel-project-creation');
+        webviewClient.postMessage('cancel-project-creation');
     };
 
     const handleOpenProject = () => {
@@ -26,7 +26,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
         
         // Wait 1.5 seconds to show transition message, then trigger reload
         setTimeout(() => {
-            vscode.postMessage('openProject');
+            webviewClient.postMessage('openProject');
         }, 1500);
     };
 

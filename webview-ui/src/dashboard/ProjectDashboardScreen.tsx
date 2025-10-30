@@ -18,7 +18,7 @@ import ViewList from '@spectrum-icons/workflow/ViewList';
 import DataMapping from '@spectrum-icons/workflow/DataMapping';
 import Data from '@spectrum-icons/workflow/Data';
 import Login from '@spectrum-icons/workflow/Login';
-import { vscode } from '../wizard/app/vscodeApi';
+import { webviewClient } from '../shared/utils/WebviewClient';
 import { useFocusTrap } from '@/hooks';
 import { StatusCard } from '../shared/components/feedback';
 import { GridLayout } from '../shared/components/layout';
@@ -55,14 +55,14 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
     });
 
     useEffect(() => {
-        vscode.postMessage('requestStatus');
+        webviewClient.postMessage('requestStatus');
 
-        const unsubscribeStatus = vscode.onMessage('statusUpdate', (data: ProjectStatus) => {
+        const unsubscribeStatus = webviewClient.onMessage('statusUpdate', (data: ProjectStatus) => {
             setProjectStatus(data);
             setIsRunning(data.status === 'running');
         });
 
-        const unsubscribeMesh = vscode.onMessage('meshStatusUpdate', (data: { status: string; message?: string; endpoint?: string }) => {
+        const unsubscribeMesh = webviewClient.onMessage('meshStatusUpdate', (data: { status: string; message?: string; endpoint?: string }) => {
             setProjectStatus(prev => prev ? {
                 ...prev,
                 mesh: {
@@ -93,12 +93,12 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
     }, []); // Only on mount
 
     // Action handlers with useCallback for performance
-    const handleStartDemo = useCallback(() => vscode.postMessage('startDemo'), []);
-    const handleStopDemo = useCallback(() => vscode.postMessage('stopDemo'), []);
-    const handleReAuthenticate = useCallback(() => vscode.postMessage('re-authenticate'), []);
+    const handleStartDemo = useCallback(() => webviewClient.postMessage('startDemo'), []);
+    const handleStopDemo = useCallback(() => webviewClient.postMessage('stopDemo'), []);
+    const handleReAuthenticate = useCallback(() => webviewClient.postMessage('re-authenticate'), []);
 
     const handleViewLogs = useCallback(() => {
-        vscode.postMessage('viewLogs');
+        webviewClient.postMessage('viewLogs');
         setTimeout(() => {
             const logsButton = document.querySelector('[data-action="logs"]') as HTMLElement;
             if (logsButton) {
@@ -108,7 +108,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
     }, []);
 
     const handleDeployMesh = useCallback(() => {
-        vscode.postMessage('deployMesh');
+        webviewClient.postMessage('deployMesh');
         setTimeout(() => {
             const deployButton = document.querySelector('[data-action="deploy-mesh"]') as HTMLElement;
             if (deployButton) {
@@ -117,10 +117,10 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
         }, 50);
     }, []);
 
-    const handleOpenBrowser = useCallback(() => vscode.postMessage('openBrowser'), []);
-    const handleConfigure = useCallback(() => vscode.postMessage('configure'), []);
-    const handleOpenDevConsole = useCallback(() => vscode.postMessage('openDevConsole'), []);
-    const handleDeleteProject = useCallback(() => vscode.postMessage('deleteProject'), []);
+    const handleOpenBrowser = useCallback(() => webviewClient.postMessage('openBrowser'), []);
+    const handleConfigure = useCallback(() => webviewClient.postMessage('configure'), []);
+    const handleOpenDevConsole = useCallback(() => webviewClient.postMessage('openDevConsole'), []);
+    const handleDeleteProject = useCallback(() => webviewClient.postMessage('deleteProject'), []);
 
     const displayName = projectStatus?.name || project?.name || 'Demo Project';
     const status = projectStatus?.status || 'ready';

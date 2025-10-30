@@ -13,7 +13,7 @@ import {
 } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import { vscode } from '../app/vscodeApi';
+import { webviewClient } from '../../shared/utils/WebviewClient';
 import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
 import { ConfigurationSummary } from '../../shared/components/ui/ConfigurationSummary';
 import { FadeTransition } from '../../shared/components/ui/FadeTransition';
@@ -59,7 +59,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
     
     // Listen for projects from extension
     useEffect(() => {
-        const unsubscribeProjects = vscode.onMessage('projects', (data) => {
+        const unsubscribeProjects = webviewClient.onMessage('projects', (data) => {
             if (Array.isArray(data)) {
                 // Store projects in wizard state cache for persistence
                 updateState({ projectsCache: data });
@@ -80,7 +80,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
             }
         });
 
-        const unsubscribeError = vscode.onMessage('project-error', (data) => {
+        const unsubscribeError = webviewClient.onMessage('project-error', (data) => {
             setError(data.error || 'Failed to load projects');
             setIsLoadingProjects(false);
             setIsRefreshing(false);
@@ -103,7 +103,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
         }
         
         // Backend handles timeout detection and will send error via 'projects' message
-        vscode.postMessage('get-projects', { orgId: state.adobeOrg.id });
+        webviewClient.postMessage('get-projects', { orgId: state.adobeOrg.id });
     };
     
     const selectProject = (project: AdobeProject) => {

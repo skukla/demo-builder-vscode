@@ -30,3 +30,6 @@ export { Tip } from './Tip';
 
 // Debug Components
 export * from './debug';
+
+// Webview root component
+export { WebviewApp, type WebviewAppProps } from './WebviewApp';

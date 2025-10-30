@@ -12,7 +12,7 @@ import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import { WizardState } from '../../types';
-import { vscode } from '../app/vscodeApi';
+import { webviewClient } from '../../shared/utils/WebviewClient';
 import { useMinimumLoadingTime } from '@/hooks';
 import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
 
@@ -45,7 +45,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
         }
 
         // Listen for auth status updates
-        const unsubscribe = vscode.onMessage('auth-status', (data) => {
+        const unsubscribe = webviewClient.onMessage('auth-status', (data) => {
             // Debug logging to see what we're receiving
             console.log('Auth status received:', data);
             console.log('Message:', data.message);
@@ -121,7 +121,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
         updateState({
             adobeAuth: { ...state.adobeAuth, isChecking: true }
         });
-        vscode.postMessage('check-auth');
+        webviewClient.postMessage('check-auth');
     };
 
     const handleLogin = (force: boolean = false) => {
@@ -161,7 +161,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
         // Backend will send auth-status with error='timeout' if authentication times out
         // This prevents race conditions where frontend timeout fires before backend completes post-login work
         
-        vscode.requestAuth(force);
+        webviewClient.requestAuth(force);
     };
 
     return (

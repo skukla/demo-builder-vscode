@@ -19,14 +19,20 @@ src/
 │   ├── prerequisites/   # Prerequisites checking & installation
 │   ├── project-creation/# Project creation workflow
 │   └── updates/         # Auto-update system (extension & components)
-├── shared/              # Shared infrastructure (→ shared/CLAUDE.md)
-│   ├── base/            # Base types & utilities
-│   ├── command-execution/ # Command execution infrastructure
+├── core/                # Core infrastructure (→ core/CLAUDE.md)
+│   ├── base/            # Base classes & types
+│   ├── commands/        # Command infrastructure
 │   ├── communication/   # Webview communication protocol
+│   ├── config/          # Configuration management
+│   ├── di/              # Dependency injection
 │   ├── logging/         # Logging system (StepLogger, ErrorLogger)
+│   ├── shell/           # Command execution (ExternalCommandManager)
 │   ├── state/           # State management (StateManager, StateCoordinator)
-│   ├── utils/           # Common utilities
-│   └── validation/      # Validation utilities
+│   ├── ui/              # Shared UI components
+│   ├── utils/           # Core utilities
+│   ├── validation/      # Validation utilities (security & UI)
+│   ├── vscode/          # VS Code API wrappers
+│   └── constants.ts     # Shared constants
 ├── webviews/            # React-based UI layer (→ CLAUDE.md)
 ├── utils/               # Legacy utilities - being phased out (→ CLAUDE.md)
 ├── providers/           # VS Code providers (tree views, etc.)
@@ -56,14 +62,14 @@ features/authentication/
 ```
 
 **Import Rules:**
-- Features can import from `@/shared/*` (shared infrastructure)
+- Features can import from `@/core/*` (core infrastructure)
 - Features can import from `@/types` (global types)
 - Features **should not** import from other features (keep loosely coupled)
 - Commands can import from any feature (orchestration layer)
 
 **Path Aliases:**
 - `@/features/*` - Feature modules
-- `@/shared/*` - Shared infrastructure
+- `@/core/*` - Core infrastructure
 - `@/types` - Global type definitions
 - `@/utils` - Legacy utilities (being phased out)
 
@@ -145,16 +151,21 @@ Commands orchestrate features and coordinate workflows. See `commands/CLAUDE.md`
 
 Features are self-contained modules that own specific business domains. See `features/CLAUDE.md` for architecture.
 
-### Shared (`shared/`)
-- **base**: Base types, interfaces, and utilities used across features
-- **command-execution**: ExternalCommandManager for shell command execution with race protection
+### Core (`core/`)
+- **base**: Base command classes (BaseCommand, BaseWebviewCommand)
+- **commands**: Command infrastructure and handler registry
 - **communication**: WebviewCommunicationManager for robust extension-webview messaging
+- **config**: Configuration management
+- **di**: Dependency injection and service location
 - **logging**: StepLogger, ErrorLogger, DebugLogger for consistent logging across features
+- **shell**: CommandExecutor for shell command execution with race protection
 - **state**: StateManager and StateCoordinator for state persistence and synchronization
-- **utils**: Common utilities like ProgressUnifier, file system helpers, loading HTML
-- **validation**: Field validation utilities for user input (UI and CLI)
+- **ui**: Shared UI components (FormField, LoadingDisplay)
+- **utils**: Core utilities like ProgressUnifier, file system helpers, loading HTML
+- **validation**: Security validation (backend) and field validation (UI)
+- **vscode**: VS Code API wrappers and utilities
 
-Shared infrastructure is available to all features. See `shared/CLAUDE.md` for details.
+Core infrastructure is available to all features. See `core/CLAUDE.md` for details.
 
 ### Webviews (`webviews/`)
 - React components for UI
@@ -167,8 +178,8 @@ See `webviews/CLAUDE.md` for UI architecture.
 ### Utils (`utils/`) - LEGACY
 **Status**: Being phased out in favor of feature-based organization.
 
-Remaining utilities are being migrated to `features/` or `shared/`:
-- Most utilities moved to appropriate features or shared modules
+Remaining utilities are being migrated to `features/` or `core/`:
+- Most utilities moved to appropriate features or core modules
 - See `utils/CLAUDE.md` for migration status and guidance
 
 ### Providers (`providers/`)
@@ -284,3 +295,65 @@ interface Message {
 ---
 
 For specific module details, see the CLAUDE.md file in each subdirectory.
+## Webview Organization Pattern
+
+The `webview-ui/src/` directory organizes webview applications using a **complexity-based structure**:
+
+### Pattern: Flat vs Nested by Complexity
+
+**Simple UIs (≤5 files)** → Flat structure:
+```
+webview-ui/src/configure/
+├── index.tsx                # Entry point
+└── ConfigureScreen.tsx      # Main screen component
+```
+
+**Complex UIs (>5 files)** → Nested with subdirectories:
+```
+webview-ui/src/wizard/
+├── index.tsx                # Entry point with inline App component
+├── components/              # Wizard-specific components
+│   ├── TimelineNav.tsx
+│   └── WizardContainer.tsx
+└── steps/                   # Step components (10 files)
+    ├── WelcomeStep.tsx
+    ├── AdobeAuthStep.tsx
+    └── ...
+```
+
+**Note**: After the Frontend Architecture Cleanup (v1.x), all webviews use inline App components in `index.tsx` rather than separate `app/` directories. Shared utilities like `WebviewClient` live in `webview-ui/src/shared/`.
+
+### Complexity Threshold
+
+- **≤5 files**: Keep flat (configure, dashboard, welcome)
+- **>5 files**: Add subdirectories (wizard with 15 files)
+
+### Directory Naming Conventions
+
+- `components/` - Feature-specific reusable components
+- `steps/` - Wizard/workflow step components
+- `screens/` - Screen-level components
+
+### When to Add Subdirectories
+
+When a webview grows beyond 5 files, organize by:
+1. **components/**: Reusable UI components specific to this webview
+2. **screens/** or **steps/**: Main view components
+3. **utils/**: Webview-specific utilities (if needed)
+
+The main App component should be inline in `index.tsx`. Shared utilities (like `WebviewClient`) belong in `webview-ui/src/shared/`.
+
+### All Webview Entry Points
+
+All webview apps (flat or nested) must have consistent entry points for webpack:
+```javascript
+// webpack.config.js
+entry: {
+    wizard: './webview-ui/src/wizard/index.tsx',
+    welcome: './webview-ui/src/welcome/index.tsx',
+    dashboard: './webview-ui/src/dashboard/index.tsx',
+    configure: './webview-ui/src/configure/index.tsx'
+}
+```
+
+Each `index.tsx` renders the root component to `#root` div.

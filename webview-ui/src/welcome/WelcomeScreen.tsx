@@ -11,7 +11,7 @@ import Add from '@spectrum-icons/workflow/Add';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Book from '@spectrum-icons/workflow/Book';
 import Settings from '@spectrum-icons/workflow/Settings';
-import { vscode } from '../wizard/app/vscodeApi';
+import { webviewClient } from '../shared/utils/WebviewClient';
 import { useFocusTrap } from '@/hooks';
 import { GridLayout } from '../shared/components/layout';
 import { cn } from '../shared/utils/classNames';
@@ -27,24 +27,24 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
     });
 
     useEffect(() => {
-        vscode.postMessage('ready');
+        webviewClient.postMessage('ready');
     }, []);
 
     // Action handlers with useCallback
     const handleCreateNew = useCallback(() => {
-        vscode.postMessage('create-new');
+        webviewClient.postMessage('create-new');
     }, []);
 
     const handleOpenExisting = useCallback(() => {
-        vscode.postMessage('open-project');
+        webviewClient.postMessage('open-project');
     }, []);
 
     const handleOpenDocs = useCallback(() => {
-        vscode.postMessage('open-docs');
+        webviewClient.postMessage('open-docs');
     }, []);
 
     const handleOpenSettings = useCallback(() => {
-        vscode.postMessage('open-settings');
+        webviewClient.postMessage('open-settings');
     }, []);
 
     return (

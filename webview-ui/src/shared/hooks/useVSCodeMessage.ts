@@ -1,5 +1,5 @@
 import { useEffect, useRef, DependencyList } from 'react';
-import { vscode } from '../../wizard/app/vscodeApi';
+import { webviewClient } from '../utils/WebviewClient';
 
 /**
  * Subscribe to messages from the VS Code extension
@@ -38,7 +38,7 @@ export function useVSCodeMessage<T = any>(
     };
 
     // Subscribe to messages
-    const unsubscribe = vscode.onMessage(type, handler);
+    const unsubscribe = webviewClient.onMessage(type, handler);
 
     // Cleanup on unmount
     return unsubscribe;

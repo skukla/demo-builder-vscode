@@ -18,7 +18,7 @@ import { ApiMeshStep } from '../steps/ApiMeshStep';
 import { ComponentConfigStep } from '../steps/ComponentConfigStep';
 import { ReviewStep } from '../steps/ReviewStep';
 import { ProjectCreationStep } from '../steps/ProjectCreationStep';
-import { vscode } from '../app/vscodeApi';
+import { webviewClient } from '../../shared/utils/WebviewClient';
 import { cn } from '../../shared/utils/classNames';
 
 interface WizardContainerProps {
@@ -65,7 +65,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
     // Listen for feedback messages from extension
     useEffect(() => {
-        const unsubscribe = vscode.onMessage('feedback', (message: FeedbackMessage) => {
+        const unsubscribe = webviewClient.onMessage('feedback', (message: FeedbackMessage) => {
             setFeedback(message);
             
             // Update creation progress if in project-creation step
@@ -91,7 +91,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
     // Listen for creationProgress messages from extension
     useEffect(() => {
-        const unsubscribe = vscode.onMessage('creationProgress', (progressData: any) => {
+        const unsubscribe = webviewClient.onMessage('creationProgress', (progressData: any) => {
             console.log('Received creationProgress:', progressData);
             setState(prev => ({
                 ...prev,
@@ -113,13 +113,13 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
     // Listen for components data from extension
     useEffect(() => {
-        const unsubscribe = vscode.onMessage('componentsLoaded', (data: any) => {
+        const unsubscribe = webviewClient.onMessage('componentsLoaded', (data: any) => {
             console.log('Received components data:', data);
             setComponentsData(data);
         });
 
         // Request components when component mounts
-        vscode.postMessage('loadComponents');
+        webviewClient.postMessage('loadComponents');
 
         return unsubscribe;
     }, []);
@@ -228,7 +228,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 // Project selection: Commit the UI selection to backend
                 if (state.currentStep === 'adobe-project' && state.adobeProject?.id) {
                     console.log('Making backend call to select project:', state.adobeProject.id);
-                    const result = await vscode.request('select-project', { projectId: state.adobeProject.id });
+                    const result = await webviewClient.request('select-project', { projectId: state.adobeProject.id });
                     if (!result.success) {
                         throw new Error(result.error || 'Failed to select project');
                     }
@@ -237,7 +237,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 // Workspace selection: Commit the UI selection to backend
                 if (state.currentStep === 'adobe-workspace' && state.adobeWorkspace?.id) {
                     console.log('Making backend call to select workspace:', state.adobeWorkspace.id);
-                    const result = await vscode.request('select-workspace', { workspaceId: state.adobeWorkspace.id });
+                    const result = await webviewClient.request('select-workspace', { workspaceId: state.adobeWorkspace.id });
                     if (!result.success) {
                         throw new Error(result.error || 'Failed to select workspace');
                     }
@@ -270,7 +270,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                     };
                     
                     // Send to backend - don't await, let it run asynchronously
-                    vscode.createProject(projectConfig);
+                    webviewClient.createProject(projectConfig);
                 }
 
                 // Mark current step as completed only after successful backend operation
@@ -301,7 +301,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     }, [state.currentStep, state.adobeProject, state.adobeWorkspace, completedSteps, canProceed, getCurrentStepIndex, navigateToStep]);
 
     const handleCancel = useCallback(() => {
-        vscode.postMessage('cancel');
+        webviewClient.postMessage('cancel');
     }, []);
 
     const goBack = useCallback(() => {

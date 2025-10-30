@@ -9,7 +9,7 @@ import {
     Divider
 } from '@adobe/react-spectrum';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
-import { vscode } from '../app/vscodeApi';
+import { webviewClient } from '../../shared/utils/WebviewClient';
 import { cn } from '../../shared/utils/classNames';
 
 interface ComponentSelectionStepProps {
@@ -167,7 +167,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         const selectionKey = JSON.stringify(components);
         if (selectionKey !== lastSentSelectionRef.current) {
             lastSentSelectionRef.current = selectionKey;
-            vscode.postMessage('update-component-selection', components);
+            webviewClient.postMessage('update-component-selection', components);
         }
     }, [selectedFrontend, selectedBackend, selectedDependencies, selectedServices, selectedExternalSystems, selectedAppBuilder, setCanProceed, updateState]);
 

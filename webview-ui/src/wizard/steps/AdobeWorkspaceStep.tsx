@@ -13,7 +13,7 @@ import {
 } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import { vscode } from '../app/vscodeApi';
+import { webviewClient } from '../../shared/utils/WebviewClient';
 import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
 import { ConfigurationSummary } from '../../shared/components/ui/ConfigurationSummary';
 import { FadeTransition } from '../../shared/components/ui/FadeTransition';
@@ -71,7 +71,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
     
     // Listen for workspaces from extension
     useEffect(() => {
-        const unsubscribe = vscode.onMessage('workspaces', (data) => {
+        const unsubscribe = webviewClient.onMessage('workspaces', (data) => {
             if (Array.isArray(data)) {
                 // Store workspaces in wizard state cache for persistence
                 updateState({ workspacesCache: data });
@@ -105,7 +105,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
             }
         });
         
-        const unsubscribeError = vscode.onMessage('workspace-error', (data) => {
+        const unsubscribeError = webviewClient.onMessage('workspace-error', (data) => {
             setError(data.error || 'Failed to load workspaces');
             setIsLoading(false);
             setIsRefreshing(false);
@@ -121,7 +121,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
         setIsLoading(true);
         setError(null);
         // Backend handles timeout detection and will send error via 'workspaces' message
-        vscode.postMessage('get-workspaces', { projectId: state.adobeProject!.id });
+        webviewClient.postMessage('get-workspaces', { projectId: state.adobeProject!.id });
     };
     
     const selectWorkspace = (workspace: Workspace) => {

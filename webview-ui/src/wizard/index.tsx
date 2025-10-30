@@ -1,6 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { App } from './app/App';
+import { View } from '@adobe/react-spectrum';
+import { WebviewApp } from '../shared/components/WebviewApp';
+import { WizardContainer } from './components/WizardContainer';
 import '../shared/styles/index.css';
 import '../shared/styles/vscode-theme.css';
 import '../shared/styles/wizard.css';
@@ -16,6 +18,25 @@ if (!container) {
 const root = createRoot(container);
 root.render(
     <React.StrictMode>
-        <App />
+        <WebviewApp
+            onInit={(data) => {
+                console.log('Received init message:', data);
+                if (data.wizardSteps) {
+                    console.log('Loaded wizard steps from configuration:', data.wizardSteps);
+                }
+            }}
+            loadingContent={
+                <View padding="size-400">
+                    <div>Initializing...</div>
+                </View>
+            }
+        >
+            {(data) => (
+                <WizardContainer
+                    componentDefaults={data?.componentDefaults}
+                    wizardSteps={data?.wizardSteps}
+                />
+            )}
+        </WebviewApp>
     </React.StrictMode>
 );

@@ -16,6 +16,12 @@ src/license/keys.enc.local
 *.js.map
 *.d.ts.map
 
+# Compiled artifacts in source directories (should not be committed)
+webview-ui/src/**/*.js
+webview-ui/src/**/*.d.ts
+!webview-ui/src/**/*.test.js
+!webview-ui/src/**/*.spec.js
+
 # Test coverage
 coverage/
 .nyc_output/

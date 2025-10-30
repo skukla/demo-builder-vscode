@@ -8,7 +8,7 @@ import {
     View
 } from '@adobe/react-spectrum';
 import { ComponentEnvVar, ComponentConfigs, DemoProject } from '../types';
-import { vscode } from '../wizard/app/vscodeApi';
+import { webviewClient } from '../shared/utils/WebviewClient';
 import { useSelectableDefault } from '../shared/hooks/useSelectableDefault';
 import { useDebouncedValue } from '@/hooks';
 import { cn } from '../shared/utils/classNames';
@@ -542,7 +542,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     const handleSave = useCallback(async () => {
         setIsSaving(true);
         try {
-            const result = await vscode.request('save-configuration', { componentConfigs });
+            const result = await webviewClient.request('save-configuration', { componentConfigs });
             if (result.success) {
                 // Configuration saved successfully
             } else {
@@ -556,7 +556,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     }, [componentConfigs]);
 
     const handleCancel = useCallback(() => {
-        vscode.postMessage('cancel');
+        webviewClient.postMessage('cancel');
     }, []);
 
     const canSave = Object.keys(validationErrors).length === 0;

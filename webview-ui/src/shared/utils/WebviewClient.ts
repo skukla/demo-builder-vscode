@@ -1,4 +1,10 @@
-// VSCode API wrapper for webview communication with handshake protocol
+/**
+ * Webview Client
+ *
+ * Client-side communication manager for VS Code webviews.
+ * Provides handshake protocol, message queuing, and request-response patterns
+ * for bidirectional communication with the extension backend.
+ */
 
 declare global {
     interface Window {
@@ -29,7 +35,7 @@ interface PendingRequest<T = unknown> {
     timeout: number; // Browser setTimeout returns number
 }
 
-class VSCodeAPIWrapper {
+class WebviewClient {
     private vscodeApi: VSCodeApi | null = null;
     private listeners: Map<string, Set<(data: unknown) => void>>;
     private initialized = false;
@@ -290,4 +296,4 @@ class VSCodeAPIWrapper {
 }
 
 // Create singleton instance
-export const vscode = new VSCodeAPIWrapper();
+export const webviewClient = new WebviewClient();

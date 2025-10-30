@@ -13,7 +13,7 @@ import {
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '../../types';
-import { vscode } from '../app/vscodeApi';
+import { webviewClient } from '../../shared/utils/WebviewClient';
 import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
 import { useSelectableDefault } from '../../shared/hooks/useSelectableDefault';
 
@@ -74,9 +74,9 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
 
     // Load components data
     useEffect(() => {
-        vscode.postMessage('get-components-data');
+        webviewClient.postMessage('get-components-data');
         
-        const unsubscribeData = vscode.onMessage('components-data', (data) => {
+        const unsubscribeData = webviewClient.onMessage('components-data', (data) => {
             console.log('[ComponentConfigStep] Received components-data:', {
                 frontends: data.frontends?.map((f: any) => ({ 
                     id: f.id, 
@@ -91,7 +91,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             setIsLoading(false);
         });
         
-        const unsubscribeLoaded = vscode.onMessage('componentsLoaded', (data) => {
+        const unsubscribeLoaded = webviewClient.onMessage('componentsLoaded', (data) => {
             setComponentsData(data);
             setIsLoading(false);
         });

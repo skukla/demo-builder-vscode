@@ -12,7 +12,7 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import { WizardState, PrerequisiteCheck } from '../../types';
-import { vscode } from '../app/vscodeApi';
+import { webviewClient } from '../../shared/utils/WebviewClient';
 import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '../../shared/utils/classNames';
 
 interface PrerequisitesStepProps {
@@ -25,23 +25,16 @@ interface PrerequisitesStepProps {
     currentStep?: string;
 }
 
-// This function is now deprecated - prerequisites come from the backend
-const getDefaultPrerequisites = (): PrerequisiteCheck[] => {
-    return [
-        {
-            id: 'loading',
-            name: 'Loading prerequisites...',
-            description: 'Fetching prerequisite configuration',
-            status: 'checking',
-            canInstall: false,
-            isOptional: false,
-            message: 'Initializing...'
-        }
-    ];
-};
-
 export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesStepProps) {
-    const [checks, setChecks] = useState<PrerequisiteCheck[]>(getDefaultPrerequisites());
+    const [checks, setChecks] = useState<PrerequisiteCheck[]>([{
+        id: 'loading',
+        name: 'Loading prerequisites...',
+        description: 'Fetching prerequisite configuration',
+        status: 'checking',
+        canInstall: false,
+        isOptional: false,
+        message: 'Initializing...'
+    }]);
     const [isChecking, setIsChecking] = useState(false);
     const [installingIndex, setInstallingIndex] = useState<number | null>(null);
     const [versionComponentMapping, setVersionComponentMapping] = useState<{ [key: string]: string }>({});
@@ -52,7 +45,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
 
     useEffect(() => {
         // Listen for prerequisites loaded from backend
-        const unsubscribeLoaded = vscode.onMessage('prerequisites-loaded', (data) => {
+        const unsubscribeLoaded = webviewClient.onMessage('prerequisites-loaded', (data) => {
             const prerequisites = data.prerequisites.map((p: Record<string, unknown>) => {
                 return {
                     id: p.id,
@@ -87,19 +80,19 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
 
     useEffect(() => {
         // Listen for installation complete events
-        const unsubscribeInstallComplete = vscode.onMessage('prerequisite-install-complete', (data) => {
+        const unsubscribeInstallComplete = webviewClient.onMessage('prerequisite-install-complete', (data) => {
             const { index, continueChecking } = data;
             
             if (continueChecking) {
                 // Continue checking from the next prerequisite, not from the beginning
                 setTimeout(() => {
-                    vscode.postMessage('continue-prerequisites', { fromIndex: index + 1 });
+                    webviewClient.postMessage('continue-prerequisites', { fromIndex: index + 1 });
                 }, 500);
             }
         });
         
         // Listen for check stopped events
-        const unsubscribeCheckStopped = vscode.onMessage('prerequisite-check-stopped', (data) => {
+        const unsubscribeCheckStopped = webviewClient.onMessage('prerequisite-check-stopped', (data) => {
             const { stoppedAt, reason } = data;
             setIsChecking(false);
             
@@ -108,7 +101,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         });
 
         // Listen for feedback from extension
-        const unsubscribe = vscode.onMessage('prerequisite-status', (data) => {
+        const unsubscribe = webviewClient.onMessage('prerequisite-status', (data) => {
             const { index, status, message, version, plugins, unifiedProgress, nodeVersionStatus, canInstall } = data;
 
             // Auto-scroll within the container to the item being checked (skip first item as it's already visible)
@@ -194,7 +187,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         });
 
         // Listen for prerequisites complete message
-        const unsubscribeComplete = vscode.onMessage('prerequisites-complete', (data) => {
+        const unsubscribeComplete = webviewClient.onMessage('prerequisites-complete', (data) => {
             const { allInstalled } = data;
             setIsChecking(false);
             
@@ -275,7 +268,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         
         checkInProgressRef.current = true;
         setIsChecking(true);
-        vscode.postMessage('check-prerequisites');
+        webviewClient.postMessage('check-prerequisites');
         
         // Don't set all to checking - let the backend control status individually
         // Just scroll container to top to show first item being checked
@@ -290,7 +283,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
     const installPrerequisite = (index: number) => {
         setInstallingIndex(index);
         
-        vscode.postMessage('install-prerequisite', { 
+        webviewClient.postMessage('install-prerequisite', { 
             index, 
             id: checks[index].id,
             name: checks[index].name 

@@ -1,10 +1,10 @@
 /**
- * Core Validation Barrel Export
+ * Core Validation Infrastructure
  *
- * Re-exports validation functions from shared validation layer.
- * This allows imports from @/core/validation to resolve correctly.
+ * Provides input sanitization, field validation, and security validation.
  */
 
+// Security validation for backend handlers
 export {
     validateOrgId,
     validateProjectId,
@@ -14,5 +14,17 @@ export {
     validateAdobeResourceId,
     validateProjectNameSecurity,
     validateProjectPath,
-    validateURL
-} from '@/shared/validation';
+    validateURL,
+    sanitizeErrorForLogging,
+    sanitizeError,
+    validatePathSafety,
+    validateGitHubDownloadURL
+} from './securityValidation';
+
+// UI field validation
+export {
+    validateProjectNameUI,
+    validateCommerceUrlUI,
+    validateFieldUI,
+    FieldValidation
+} from './fieldValidation';

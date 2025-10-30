@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { sanitizeErrorForLogging } from '@/shared/validation';
+import { sanitizeErrorForLogging } from '@/core/validation';
 import type { CommandResult } from '@/core/shell/types';
 
 /**

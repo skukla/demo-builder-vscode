@@ -1,5 +1,5 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
-import { vscode } from '../../wizard/app/vscodeApi';
+import { webviewClient } from '../utils/WebviewClient';
 
 interface UseVSCodeRequestReturn<T> {
   /** Execute the request */
@@ -64,7 +64,7 @@ export function useVSCodeRequest<T = unknown>(
       setError(null);
 
       try {
-        const result = await vscode.request<T>(
+        const result = await webviewClient.request<T>(
           type,
           payload,
           optionsRef.current.timeout

@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { WebviewApp } from '../shared/components/WebviewApp';
 import { WelcomeScreen } from './WelcomeScreen';
 import '../shared/styles/index.css';
 import '../shared/styles/vscode-theme.css';
@@ -15,6 +16,8 @@ if (!container) {
 const root = createRoot(container);
 root.render(
     <React.StrictMode>
-        <WelcomeScreen />
+        <WebviewApp>
+            <WelcomeScreen />
+        </WebviewApp>
     </React.StrictMode>
 );
