@@ -1,5 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { vscode as vscodeSingleton } from '../app/vscodeApi';
+import { webviewClient as vscodeSingleton } from '../utils/WebviewClient';
 
 interface VSCodeContextValue {
     /** Post a message to the extension (fire-and-forget) */

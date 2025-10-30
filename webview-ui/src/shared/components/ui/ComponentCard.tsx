@@ -8,7 +8,7 @@ import {
     ActionButton
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import { cn } from '../../shared/utils/classNames';
+import { cn } from '../../utils/classNames';
 
 interface ComponentCardProps {
     id: string;

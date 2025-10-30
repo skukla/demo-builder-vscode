@@ -13,11 +13,11 @@ import {
 } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import { webviewClient } from '../../shared/utils/WebviewClient';
-import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
-import { ConfigurationSummary } from '../../shared/components/ui/ConfigurationSummary';
-import { FadeTransition } from '../../shared/components/ui/FadeTransition';
-import { WizardState, Workspace, WizardStep } from '../../types';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
+import { LoadingDisplay } from '@/webview-ui/shared/components/feedback/LoadingDisplay';
+import { ConfigurationSummary } from '@/webview-ui/shared/components/ui/ConfigurationSummary';
+import { FadeTransition } from '@/webview-ui/shared/components/ui/FadeTransition';
+import { WizardState, Workspace, WizardStep } from '@/webview-ui/shared/types';
 import { useDebouncedLoading } from '@/hooks';
 
 interface AdobeWorkspaceStepProps {

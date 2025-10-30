@@ -10,7 +10,7 @@ import {
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import Settings from '@spectrum-icons/workflow/Settings';
-import { cn } from '../../shared/utils/classNames';
+import { cn } from '../../utils/classNames';
 
 interface SelectionSummaryProps {
     frontend?: {

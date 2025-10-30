@@ -4,8 +4,8 @@ import * as path from 'path';
 import axios from 'axios';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { UpdateInfo } from '../types';
 import { Logger } from '@/core/logging';
+import { UpdateInfo } from '@/types';
 
 export class AutoUpdater {
     private context: vscode.ExtensionContext;

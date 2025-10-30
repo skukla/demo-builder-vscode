@@ -18,10 +18,10 @@ import ViewList from '@spectrum-icons/workflow/ViewList';
 import DataMapping from '@spectrum-icons/workflow/DataMapping';
 import Data from '@spectrum-icons/workflow/Data';
 import Login from '@spectrum-icons/workflow/Login';
-import { webviewClient } from '../shared/utils/WebviewClient';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
 import { useFocusTrap } from '@/hooks';
-import { StatusCard } from '../shared/components/feedback';
-import { GridLayout } from '../shared/components/layout';
+import { StatusCard } from '@/webview-ui/shared/components/feedback';
+import { GridLayout } from '@/webview-ui/shared/components/layout';
 
 interface ProjectStatus {
     name: string;

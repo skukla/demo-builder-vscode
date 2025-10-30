@@ -6,8 +6,8 @@
 export { formatGroupName } from './formatters';
 export { generateComponentEnvFile } from './envFileGenerator';
 export { getSetupInstructions, SetupInstruction } from './setupInstructions';
-export { getEndpoint } from '../../mesh/services/meshEndpoint';
-export { deployMeshComponent, MeshDeploymentResult } from '../../mesh/services/meshDeployment';
+export { getEndpoint } from '@/features/mesh/services/meshEndpoint';
+export { deployMeshComponent, MeshDeploymentResult } from '@/features/mesh/services/meshDeployment';
 
 // UI validation function - simple validator for form fields
 export function validateField(field: string, value: string): { isValid: boolean; message?: string } {

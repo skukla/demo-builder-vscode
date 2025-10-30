@@ -11,7 +11,7 @@
 import React, { useEffect, useState, ReactNode } from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { webviewClient } from '../utils/WebviewClient';
-import { ThemeMode } from '../types';
+import { ThemeMode } from '@/webview-ui/shared/types';
 
 export interface WebviewAppProps {
     /** Child components to render, or render function that receives initialization data */

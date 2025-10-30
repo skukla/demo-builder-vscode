@@ -4,9 +4,9 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import { TransformedComponentDefinition, EnvVarDefinition } from '../../types/components';
-import { Logger } from '../../types/logger';
 import { formatGroupName } from './formatters';
+import { TransformedComponentDefinition, EnvVarDefinition } from '@/types/components';
+import { Logger } from '@/types/logger';
 
 /**
  * ProjectConfig interface for .env generation

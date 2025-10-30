@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { View } from '@adobe/react-spectrum';
-import { WebviewApp } from '../shared/components/WebviewApp';
+import { WebviewApp } from '@/webview-ui/shared/components/WebviewApp';
 import { WizardContainer } from './components/WizardContainer';
 import '../shared/styles/index.css';
 import '../shared/styles/vscode-theme.css';

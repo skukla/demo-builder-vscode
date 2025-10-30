@@ -9,8 +9,8 @@ import {
     Divider
 } from '@adobe/react-spectrum';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
-import { webviewClient } from '../../shared/utils/WebviewClient';
-import { cn } from '../../shared/utils/classNames';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
+import { cn } from '@/webview-ui/shared/utils/classNames';
 
 interface ComponentSelectionStepProps {
     state: Record<string, unknown>;

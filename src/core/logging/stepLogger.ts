@@ -1,6 +1,6 @@
 import * as fs from 'fs';
-import { parseJSON } from '../../types/typeGuards';
 import { Logger } from './logger';
+import { parseJSON } from '@/types/typeGuards';
 
 /**
  * Wizard step configuration from wizard-steps.json

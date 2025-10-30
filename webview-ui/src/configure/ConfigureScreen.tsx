@@ -7,13 +7,13 @@ import {
     Button,
     View
 } from '@adobe/react-spectrum';
-import { ComponentEnvVar, ComponentConfigs, DemoProject } from '../types';
-import { webviewClient } from '../shared/utils/WebviewClient';
-import { useSelectableDefault } from '../shared/hooks/useSelectableDefault';
+import { ComponentEnvVar, ComponentConfigs, DemoProject } from '@/webview-ui/shared/types';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
+import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
 import { useDebouncedValue } from '@/hooks';
-import { cn } from '../shared/utils/classNames';
-import { FormField, ConfigSection } from '../shared/components/forms';
-import { NavigationPanel, NavigationSection, NavigationField } from '../shared/components/navigation';
+import { cn } from '@/webview-ui/shared/utils/classNames';
+import { FormField, ConfigSection } from '@/webview-ui/shared/components/forms';
+import { NavigationPanel, NavigationSection, NavigationField } from '@/webview-ui/shared/components/navigation';
 
 interface ComponentsData {
     frontends?: ComponentData[];

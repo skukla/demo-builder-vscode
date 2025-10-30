@@ -101,6 +101,65 @@ export default tseslint.config(
             }],
             'import/no-duplicates': 'error',
             'import/newline-after-import': 'warn',
+
+            // Path alias enforcement (hybrid pattern)
+            // Block cross-boundary relative imports, allow within-directory imports
+            'no-restricted-imports': ['error', {
+                'patterns': [
+                    {
+                        'group': [
+                            '../core/*',
+                            '../features/*',
+                            '../commands/*',
+                            '../types/*',
+                            '../utils/*',
+                            '../webviews/*',
+                            '../../core/*',
+                            '../../features/*',
+                            '../../commands/*',
+                            '../../types/*',
+                            '../../utils/*',
+                            '../../webviews/*',
+                            '../../../core/*',
+                            '../../../features/*',
+                            '../../../commands/*',
+                            '../../../types/*',
+                        ],
+                        'message': 'Use path aliases (@/core/*, @/features/*, etc.) for cross-boundary imports. Within-directory imports (./) are allowed.',
+                    },
+                ],
+            }],
+        },
+    },
+    {
+        files: ['webview-ui/**/*.ts', 'webview-ui/**/*.tsx'],
+        plugins: {
+            react,
+            'react-hooks': reactHooks,
+            'import': importPlugin,
+        },
+        rules: {
+            // Path alias enforcement for webview-ui (hybrid pattern)
+            'no-restricted-imports': ['error', {
+                'patterns': [
+                    {
+                        'group': [
+                            '../shared/*',
+                            '../configure/*',
+                            '../dashboard/*',
+                            '../welcome/*',
+                            '../wizard/*',
+                            '../../shared/*',
+                            '../../configure/*',
+                            '../../dashboard/*',
+                            '../../welcome/*',
+                            '../../wizard/*',
+                            '../../../shared/*',
+                        ],
+                        'message': 'Use path aliases (@/shared/*, @/configure/*, etc.) for cross-boundary imports in webview-ui. Within-directory imports (./) are allowed.',
+                    },
+                ],
+            }],
         },
     },
     {

@@ -11,9 +11,9 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
-import { WizardState, PrerequisiteCheck } from '../../types';
-import { webviewClient } from '../../shared/utils/WebviewClient';
-import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '../../shared/utils/classNames';
+import { WizardState, PrerequisiteCheck } from '@/webview-ui/shared/types';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
+import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '@/webview-ui/shared/utils/classNames';
 
 interface PrerequisitesStepProps {
     state: WizardState;

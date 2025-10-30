@@ -12,10 +12,10 @@ import {
 } from '@adobe/react-spectrum';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
-import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '../../types';
-import { webviewClient } from '../../shared/utils/WebviewClient';
-import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
-import { useSelectableDefault } from '../../shared/hooks/useSelectableDefault';
+import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '@/webview-ui/shared/types';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
+import { LoadingDisplay } from '@/webview-ui/shared/components/feedback/LoadingDisplay';
+import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
 
 interface ComponentConfigStepProps {
     state: WizardState;

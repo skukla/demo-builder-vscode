@@ -292,6 +292,52 @@ interface Message {
 }
 ```
 
+### Import Patterns (Hybrid Approach)
+
+The codebase uses a **hybrid import pattern** that balances clarity with cohesion:
+
+**Cross-boundary imports** use path aliases:
+```typescript
+// ✅ Good: Cross-boundary with path alias
+import { StateManager } from '@/core/state';
+import { AuthService } from '@/features/authentication/services/authenticationService';
+import { HandlerContext } from '@/types/handlers';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+
+// ❌ Bad: Cross-boundary with relative path
+import { StateManager } from '../../../core/state';
+import { PrerequisitesManager } from '../../features/prerequisites/services/PrerequisitesManager';
+```
+
+**Within-feature imports** use relative paths:
+```typescript
+// ✅ Good: Within-feature relative import
+import { AuthCache } from './authCacheManager';
+import { TokenManager } from '../services/tokenManager';
+import { helper } from './helpers/setupHelper';
+
+// ❌ Avoid: Within-feature using alias (unnecessary)
+import { AuthCache } from '@/features/authentication/services/authCacheManager';
+```
+
+**Available Path Aliases:**
+- `@/core/*` - Core infrastructure (logging, state, communication, etc.)
+- `@/features/*` - Feature modules (authentication, prerequisites, mesh, etc.)
+- `@/commands/*` - VS Code commands
+- `@/types/*` - Type definitions
+- `@/utils/*` - Legacy utilities (being phased out)
+- `@/webview-ui/*` - Webview UI components (from backend)
+
+**Why This Pattern?**
+1. **Reduced cognitive load:** No mental path calculation needed (`@/core/state` vs `../../../../core/state`)
+2. **Easier refactoring:** Cross-boundary imports don't break when files move
+3. **Clear architecture:** Path aliases indicate module boundaries
+4. **Industry standard:** Used by Google, Airbnb, Next.js, and major VS Code extensions
+5. **Automated enforcement:** ESLint rules prevent regression to relative imports
+
+**ESLint Enforcement:**
+The codebase has ESLint rules (`no-restricted-imports`) that automatically block cross-boundary relative imports and guide developers to use path aliases. Within-directory imports (`./`) are allowed and encouraged.
+
 ---
 
 For specific module details, see the CLAUDE.md file in each subdirectory.

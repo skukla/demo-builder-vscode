@@ -21,6 +21,7 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": "./",
     "paths": {
+      "@/commands/*": ["src/commands/*"],
       "@/core/*": ["src/core/*"],
       "@/features/*": ["src/features/*"],
       "@/services/*": ["src/services/*"],

@@ -7,7 +7,7 @@ import {
     Badge
 } from '@adobe/react-spectrum';
 import Info from '@spectrum-icons/workflow/Info';
-import { cn } from '../../shared/utils/classNames';
+import { cn } from '../../utils/classNames';
 
 interface DependencyItemProps {
     id: string;

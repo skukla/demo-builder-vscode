@@ -6,7 +6,7 @@ import {
     Button,
     Text
 } from '@adobe/react-spectrum';
-import { WizardState, WizardStep, FeedbackMessage } from '../../types';
+import { WizardState, WizardStep, FeedbackMessage } from '@/webview-ui/shared/types';
 import { TimelineNav } from './TimelineNav';
 import { WelcomeStep } from '../steps/WelcomeStep';
 import { ComponentSelectionStep } from '../steps/ComponentSelectionStep';
@@ -18,8 +18,8 @@ import { ApiMeshStep } from '../steps/ApiMeshStep';
 import { ComponentConfigStep } from '../steps/ComponentConfigStep';
 import { ReviewStep } from '../steps/ReviewStep';
 import { ProjectCreationStep } from '../steps/ProjectCreationStep';
-import { webviewClient } from '../../shared/utils/WebviewClient';
-import { cn } from '../../shared/utils/classNames';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
+import { cn } from '@/webview-ui/shared/utils/classNames';
 
 interface WizardContainerProps {
     componentDefaults?: any;

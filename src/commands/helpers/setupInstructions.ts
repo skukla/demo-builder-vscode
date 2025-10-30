@@ -2,8 +2,8 @@
  * Setup instructions processing for API services
  */
 
-import { ComponentRegistry, TransformedComponentDefinition, RawComponentDefinition } from '../../types/components';
-import { ApiServicesConfig } from '../../types/handlers';
+import { ComponentRegistry, TransformedComponentDefinition, RawComponentDefinition } from '@/types/components';
+import { ApiServicesConfig } from '@/types/handlers';
 
 export interface SetupInstruction {
     step: string;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { WebviewApp } from '../shared/components/WebviewApp';
+import { WebviewApp } from '@/webview-ui/shared/components/WebviewApp';
 import { ProjectDashboardScreen } from './ProjectDashboardScreen';
 import '../shared/styles/index.css';
 import '../shared/styles/vscode-theme.css';

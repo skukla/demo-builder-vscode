@@ -16,7 +16,7 @@ export {
     MessageHandler,
     HandlerResponse,
     HandlerRegistryMap as HandlerRegistry,
-} from '../../types/handlers';
+} from '@/types/handlers';
 
 // Re-export prerequisite types from PrerequisitesManager
 export {

@@ -11,10 +11,10 @@ import Add from '@spectrum-icons/workflow/Add';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Book from '@spectrum-icons/workflow/Book';
 import Settings from '@spectrum-icons/workflow/Settings';
-import { webviewClient } from '../shared/utils/WebviewClient';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
 import { useFocusTrap } from '@/hooks';
-import { GridLayout } from '../shared/components/layout';
-import { cn } from '../shared/utils/classNames';
+import { GridLayout } from '@/webview-ui/shared/components/layout';
+import { cn } from '@/webview-ui/shared/utils/classNames';
 
 interface WelcomeScreenProps {
     theme?: 'light' | 'dark';

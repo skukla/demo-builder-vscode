@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import { WizardState } from '../../types';
-import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
-import { webviewClient } from '../../shared/utils/WebviewClient';
+import { WizardState } from '@/webview-ui/shared/types';
+import { LoadingDisplay } from '@/webview-ui/shared/components/feedback/LoadingDisplay';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
 
 interface ProjectCreationStepProps {
     state: WizardState;

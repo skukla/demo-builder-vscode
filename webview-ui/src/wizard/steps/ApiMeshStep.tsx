@@ -4,13 +4,13 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Info from '@spectrum-icons/workflow/Info';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
-import { webviewClient } from '../../shared/utils/WebviewClient';
-import { WizardState, WizardStep } from '../../types';
-import { ConfigurationSummary } from '../../shared/components/ui/ConfigurationSummary';
-import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
-import { FadeTransition } from '../../shared/components/ui/FadeTransition';
-import { Modal } from '../../shared/components/ui/Modal';
-import { NumberedInstructions } from '../../shared/components/ui/NumberedInstructions';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
+import { WizardState, WizardStep } from '@/webview-ui/shared/types';
+import { ConfigurationSummary } from '@/webview-ui/shared/components/ui/ConfigurationSummary';
+import { LoadingDisplay } from '@/webview-ui/shared/components/feedback/LoadingDisplay';
+import { FadeTransition } from '@/webview-ui/shared/components/ui/FadeTransition';
+import { Modal } from '@/webview-ui/shared/components/ui/Modal';
+import { NumberedInstructions } from '@/webview-ui/shared/components/ui/NumberedInstructions';
 
 interface ApiMeshStepProps {
     state: WizardState;

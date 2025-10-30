@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
-import { CommandManager } from './commands/commandManager';
+import { CommandManager } from '@/commands/commandManager';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { ServiceLocator } from '@/core/di';
-import { parseJSON } from './types/typeGuards';
-import { AutoUpdater } from './utils/autoUpdater';
+import { parseJSON } from '@/types/typeGuards';
+import { AutoUpdater } from '@/utils/autoUpdater';
 import { CommandExecutor } from '@/core/shell';
 import { initializeLogger, Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';

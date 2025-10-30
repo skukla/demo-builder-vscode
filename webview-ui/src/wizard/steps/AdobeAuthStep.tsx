@@ -11,10 +11,10 @@ import Alert from '@spectrum-icons/workflow/Alert';
 import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import { WizardState } from '../../types';
-import { webviewClient } from '../../shared/utils/WebviewClient';
+import { WizardState } from '@/webview-ui/shared/types';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
 import { useMinimumLoadingTime } from '@/hooks';
-import { LoadingDisplay } from '../../shared/components/feedback/LoadingDisplay';
+import { LoadingDisplay } from '@/webview-ui/shared/components/feedback/LoadingDisplay';
 
 interface AdobeAuthStepProps {
     state: WizardState;

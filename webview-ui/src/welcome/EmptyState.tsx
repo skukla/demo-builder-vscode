@@ -10,7 +10,7 @@ import {
 } from '@adobe/react-spectrum';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Import from '@spectrum-icons/workflow/Import';
-import { cn } from '../shared/utils/classNames';
+import { cn } from '@/webview-ui/shared/utils/classNames';
 
 interface EmptyStateProps {
     onImport: () => void;
