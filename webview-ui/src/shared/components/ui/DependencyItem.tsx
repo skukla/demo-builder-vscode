@@ -9,7 +9,7 @@ import {
 import Info from '@spectrum-icons/workflow/Info';
 import { cn } from '../../utils/classNames';
 
-interface DependencyItemProps {
+export interface DependencyItemProps {
     id: string;
     name: string;
     description: string;

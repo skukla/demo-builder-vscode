@@ -10,7 +10,7 @@ import {
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import { cn } from '../../utils/classNames';
 
-interface ComponentCardProps {
+export interface ComponentCardProps {
     id: string;
     name: string;
     description: string;
@@ -41,7 +41,9 @@ export const ComponentCard: React.FC<ComponentCardProps> = ({
             UNSAFE_className={cn('text-left', 'p-0', 'min-h-120')}
         >
             <View
-                backgroundColor={selected ? 'blue-100' : 'gray-75'}
+                UNSAFE_style={{
+                    backgroundColor: selected ? 'var(--spectrum-global-color-blue-100)' : 'var(--spectrum-global-color-gray-75)'
+                }}
                 borderRadius="medium"
                 padding="size-300"
                 width="100%"

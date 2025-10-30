@@ -36,7 +36,7 @@ import { useEffect, useState, useRef } from 'react';
 export function useMinimumLoadingTime(isLoading: boolean, minDuration: number = 500): boolean {
     const [showLoading, setShowLoading] = useState(false);
     const loadingStartTime = useRef<number | null>(null);
-    const hideTimeout = useRef<NodeJS.Timeout | null>(null);
+    const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
         if (isLoading) {

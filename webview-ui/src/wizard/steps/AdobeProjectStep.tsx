@@ -72,16 +72,20 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                 if (data.length === 1 && !state.adobeProject?.id) {
                     selectProject(data[0]);
                 }
-            } else if (data && data.error) {
-                // Backend sends structured error (including timeout)
-                setError(data.error);
-                setIsLoadingProjects(false);
-                setIsRefreshing(false);
+            } else {
+                const errorData = data as any;
+                if (errorData && errorData.error) {
+                    // Backend sends structured error (including timeout)
+                    setError(errorData.error);
+                    setIsLoadingProjects(false);
+                    setIsRefreshing(false);
+                }
             }
         });
 
         const unsubscribeError = webviewClient.onMessage('project-error', (data) => {
-            setError(data.error || 'Failed to load projects');
+            const errorData = data as any;
+            setError(errorData.error || 'Failed to load projects');
             setIsLoadingProjects(false);
             setIsRefreshing(false);
         });
@@ -200,7 +204,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                 ) : (
                     <>
                         {projects.length > 5 && (
-                            <Flex gap="size-100" marginBottom="size-200" alignItems="flex-end">
+                            <Flex gap="size-100" marginBottom="size-200" alignItems="end">
                                 <SearchField
                                     placeholder="Type to filter projects..."
                                     value={searchQuery}

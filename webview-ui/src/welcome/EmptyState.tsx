@@ -41,7 +41,7 @@ export function EmptyState({ onImport }: EmptyStateProps) {
             </Flex>
 
             <View marginTop="size-400">
-                <Text elementType="small" color="gray-600">
+                <Text UNSAFE_style={{ fontSize: '0.875rem', color: 'var(--spectrum-global-color-gray-600)' }}>
                     Tip: You can also drag and drop a console.json file onto this window to import it.
                 </Text>
             </View>

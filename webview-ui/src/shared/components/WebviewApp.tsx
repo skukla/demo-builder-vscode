@@ -79,18 +79,19 @@ export function WebviewApp({
 
         // Listen for initialization from extension
         const unsubscribeInit = webviewClient.onMessage('init', (data) => {
-            if (data.theme) {
-                setTheme(data.theme);
+            const initData = data as any;
+            if (initData.theme) {
+                setTheme(initData.theme);
                 document.body.classList.remove('vscode-light', 'vscode-dark');
-                document.body.classList.add(data.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
+                document.body.classList.add(initData.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
             }
 
             // Store initialization data for render props
-            setInitData(data);
+            setInitData(initData);
 
             // Call onInit callback if provided
             if (onInit) {
-                onInit(data);
+                onInit(initData);
             }
 
             setIsReady(true);
@@ -98,9 +99,10 @@ export function WebviewApp({
 
         // Listen for theme changes
         const unsubscribeTheme = webviewClient.onMessage('theme-changed', (data) => {
-            setTheme(data.theme);
+            const themeData = data as any;
+            setTheme(themeData.theme);
             document.body.classList.remove('vscode-light', 'vscode-dark');
-            document.body.classList.add(data.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
+            document.body.classList.add(themeData.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
         });
 
         // Request initialization

@@ -17,5 +17,4 @@ export * from './contexts';
 // Types
 export * from './types';
 
-// Utils
-export * from './utils';
+// Note: Utils barrel export removed (module doesn't exist)

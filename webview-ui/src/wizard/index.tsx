@@ -20,10 +20,7 @@ root.render(
     <React.StrictMode>
         <WebviewApp
             onInit={(data) => {
-                console.log('Received init message:', data);
-                if (data.wizardSteps) {
-                    console.log('Loaded wizard steps from configuration:', data.wizardSteps);
-                }
+                // Initialization complete
             }}
             loadingContent={
                 <View padding="size-400">

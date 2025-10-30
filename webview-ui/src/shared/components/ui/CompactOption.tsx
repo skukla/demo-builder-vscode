@@ -8,7 +8,7 @@ import {
     Badge
 } from '@adobe/react-spectrum';
 
-interface CompactOptionProps {
+export interface CompactOptionProps {
     id: string;
     name: string;
     description: string;

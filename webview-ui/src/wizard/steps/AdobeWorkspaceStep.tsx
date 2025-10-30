@@ -79,7 +79,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                 setIsRefreshing(false);
                 setHasLoadedOnce(true); // Mark that we've loaded data at least once
                 setError(null);
-                
+
                 // Auto-select if only one workspace
                 if (data.length === 1 && !state.adobeWorkspace?.id) {
                     selectWorkspace(data[0]);
@@ -97,16 +97,20 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                         selectWorkspace(stageWorkspace);
                     }
                 }
-            } else if (data && data.error) {
-                // Backend sends structured error (including timeout)
-                setError(data.error);
-                setIsLoading(false);
-                setIsRefreshing(false);
+            } else {
+                const errorData = data as any;
+                if (errorData && errorData.error) {
+                    // Backend sends structured error (including timeout)
+                    setError(errorData.error);
+                    setIsLoading(false);
+                    setIsRefreshing(false);
+                }
             }
         });
         
         const unsubscribeError = webviewClient.onMessage('workspace-error', (data) => {
-            setError(data.error || 'Failed to load workspaces');
+            const errorData = data as any;
+            setError(errorData.error || 'Failed to load workspaces');
             setIsLoading(false);
             setIsRefreshing(false);
         });
@@ -199,7 +203,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                     <>
                         {/* Search field - only show when > 5 workspaces */}
                         {workspaces.length > 5 && (
-                            <Flex gap="size-100" marginBottom="size-200" alignItems="flex-end">
+                            <Flex gap="size-100" marginBottom="size-200" alignItems="end">
                                 <SearchField
                                     placeholder="Type to filter workspaces..."
                                     value={searchQuery}

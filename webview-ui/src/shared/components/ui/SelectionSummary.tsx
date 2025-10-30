@@ -12,15 +12,14 @@ import Clock from '@spectrum-icons/workflow/Clock';
 import Settings from '@spectrum-icons/workflow/Settings';
 import { cn } from '../../utils/classNames';
 
-interface SelectionSummaryProps {
-    frontend?: {
-        id: string;
-        name: string;
-    };
-    backend?: {
-        id: string;
-        name: string;
-    };
+export interface SelectionItem {
+    id: string;
+    name: string;
+}
+
+export interface SelectionSummaryProps {
+    frontend?: SelectionItem;
+    backend?: SelectionItem;
     dependencyCount?: number;
 }
 

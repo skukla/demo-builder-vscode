@@ -7,7 +7,8 @@ import {
     Button,
     View
 } from '@adobe/react-spectrum';
-import { ComponentEnvVar, ComponentConfigs, DemoProject } from '@/webview-ui/shared/types';
+import { ComponentEnvVar, ComponentConfigs } from '@/webview-ui/shared/types';
+import type { Project } from '@/backend-types/base';
 import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
 import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
 import { useDebouncedValue } from '@/hooks';
@@ -25,7 +26,7 @@ interface ComponentsData {
 }
 
 interface ConfigureScreenProps {
-    project: DemoProject;
+    project: Project;
     componentsData: ComponentsData;
     existingEnvValues?: Record<string, Record<string, string>>;
 }
@@ -127,7 +128,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             if (backend) addComponentWithDeps(backend, 'Backend');
         }
 
-        project.componentSelections?.dependencies?.forEach(depId => {
+        project.componentSelections?.dependencies?.forEach((depId: string) => {
             if (!components.some(c => c.id === depId)) {
                 const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId);
                 if (dep) {
@@ -140,12 +141,12 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             }
         });
 
-        project.componentSelections?.externalSystems?.forEach(sysId => {
+        project.componentSelections?.externalSystems?.forEach((sysId: string) => {
             const sys = componentsData.externalSystems?.find((s: ComponentData) => s.id === sysId);
             if (sys) components.push({ id: sys.id, data: sys, type: 'External System' });
         });
 
-        project.componentSelections?.appBuilder?.forEach(appId => {
+        project.componentSelections?.appBuilder?.forEach((appId: string) => {
             const app = componentsData.appBuilder?.find((a: ComponentData) => a.id === appId);
             if (app) addComponentWithDeps(app, 'App Builder');
         });
@@ -168,7 +169,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         components.push({
                             id: componentDef.id,
                             data: componentDef,
-                            type: instance.type.charAt(0).toUpperCase() + instance.type.slice(1)
+                            type: instance.type ? instance.type.charAt(0).toUpperCase() + instance.type.slice(1) : 'Component'
                         });
                     }
                 }
@@ -542,14 +543,15 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     const handleSave = useCallback(async () => {
         setIsSaving(true);
         try {
-            const result = await webviewClient.request('save-configuration', { componentConfigs });
+            const result = await webviewClient.request('save-configuration', { componentConfigs }) as any;
             if (result.success) {
                 // Configuration saved successfully
             } else {
                 throw new Error(result.error || 'Failed to save configuration');
             }
-        } catch {
-            // Error handled by extension
+        } catch (err) {
+            // Error handled by extension - no action needed
+            // Extension shows user-facing error message via webview communication
         } finally {
             setIsSaving(false);
         }
@@ -624,13 +626,13 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                                     fieldKey={field.key}
                                                     label={field.label}
                                                     type={field.type as any}
-                                                    value={value || ''}
+                                                    value={value !== undefined && value !== null ? String(value) : ''}
                                                     onChange={(val) => updateField(field, val)}
                                                     placeholder={field.placeholder}
                                                     description={field.description}
                                                     required={field.required}
                                                     error={error}
-                                                    showError={showError}
+                                                    showError={!!showError}
                                                     options={field.options}
                                                     selectableDefaultProps={hasDefault ? selectableDefaultProps : undefined}
                                                 />

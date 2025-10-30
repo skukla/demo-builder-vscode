@@ -11,10 +11,11 @@ import {
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
 import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
 import { cn } from '@/webview-ui/shared/utils/classNames';
+import { WizardState } from '@/webview-ui/shared/types';
 
 interface ComponentSelectionStepProps {
-    state: Record<string, unknown>;
-    updateState: (updates: Record<string, unknown>) => void;
+    state: WizardState;
+    updateState: (updates: Partial<WizardState>) => void;
     setCanProceed: (canProceed: boolean) => void;
     componentsData?: Record<string, unknown>;
 }
@@ -32,26 +33,28 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     componentsData
 }) => {
     // Use defaults from state.components (which includes componentDefaults from init)
-    const [selectedFrontend, setSelectedFrontend] = useState<string>(state.components?.frontend || '');
-    const [selectedBackend, setSelectedBackend] = useState<string>(state.components?.backend || '');
+    const components = (state.components || {}) as any;
+    const [selectedFrontend, setSelectedFrontend] = useState<string>(components.frontend || '');
+    const [selectedBackend, setSelectedBackend] = useState<string>(components.backend || '');
     const [selectedDependencies, setSelectedDependencies] = useState<Set<string>>(
-        new Set(state.components?.dependencies || [])
+        new Set(components.dependencies || [])
     );
     const [selectedServices, setSelectedServices] = useState<Set<string>>(
-        new Set(state.components?.services || [])
+        new Set(components.services || [])
     );
     const [selectedExternalSystems, setSelectedExternalSystems] = useState<Set<string>>(
-        new Set(state.components?.externalSystems || [])
+        new Set(components.externalSystems || [])
     );
     const [selectedAppBuilder, setSelectedAppBuilder] = useState<Set<string>>(
-        new Set(state.components?.appBuilderApps || [])
+        new Set(components.appBuilderApps || [])
     );
     
     // Track last sent selection to prevent duplicate messages
     const lastSentSelectionRef = useRef<string>('');
     
     // Use componentsData if available, otherwise fall back to hardcoded
-    const frontendOptions = componentsData?.frontends || [
+    const dataTyped = (componentsData || {}) as any;
+    const frontendOptions = dataTyped.frontends || [
         {
             id: 'citisignal-nextjs',
             name: 'Headless CitiSignal',
@@ -59,7 +62,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         }
     ];
     
-    const backendOptions = componentsData?.backends || [
+    const backendOptions = dataTyped.backends || [
         {
             id: 'adobe-commerce-paas',
             name: 'Adobe Commerce PaaS',
@@ -96,7 +99,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     ];
     
     // External Systems options from componentsData
-    const externalSystemsOptions = componentsData?.externalSystems || [
+    const externalSystemsOptions = dataTyped.externalSystems || [
         {
             id: 'target',
             name: 'Target',
@@ -110,7 +113,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     ];
     
     // App Builder Apps options from componentsData
-    const appBuilderOptions = componentsData?.appBuilder || [
+    const appBuilderOptions = dataTyped.appBuilder || [
         {
             id: 'integration-service',
             name: 'Integration Service',
@@ -218,7 +221,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         menuWidth="size-4600"
                         UNSAFE_className={cn('cursor-pointer')}
                     >
-                            {frontendOptions.map(option => (
+                            {frontendOptions.map((option: any) => (
                                 <Item key={option.id} textValue={option.name}>
                                     <Text>{option.name}</Text>
                                     <Text slot="description">{option.description}</Text>
@@ -271,7 +274,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         menuWidth="size-4600"
                         UNSAFE_className={cn('cursor-pointer')}
                     >
-                            {backendOptions.map(option => (
+                            {backendOptions.map((option: any) => (
                                 <Item key={option.id} textValue={option.name}>
                                     <Text>{option.name}</Text>
                                     <Text slot="description">{option.description}</Text>
@@ -315,9 +318,9 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         External Systems
                     </Text>
-                    
+
                     <View UNSAFE_className={cn('border', 'rounded', 'bg-gray-50', 'p-3')}>
-                        {externalSystemsOptions.map(system => (
+                        {externalSystemsOptions.map((system: any) => (
                             <Checkbox
                                 key={system.id}
                                 isSelected={selectedExternalSystems.has(system.id)}
@@ -353,9 +356,9 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         App Builder Apps
                     </Text>
-                    
+
                     <View UNSAFE_className={cn('border', 'rounded', 'bg-gray-50', 'p-3')}>
-                        {appBuilderOptions.map(app => (
+                        {appBuilderOptions.map((app: any) => (
                             <Checkbox
                                 key={app.id}
                                 isSelected={selectedAppBuilder.has(app.id)}

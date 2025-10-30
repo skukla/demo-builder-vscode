@@ -27,7 +27,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     const [authSubMessage, setAuthSubMessage] = useState<string>('');
     const [authTimeout, setAuthTimeout] = useState(false);
     const isSwitchingRef = useRef(false);
-    const authTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const authTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     
     // Ensure loading spinner shows for minimum 500ms to avoid looking like a bug
     const showLoadingSpinner = useMinimumLoadingTime(state.adobeAuth.isChecking, 500);
@@ -46,10 +46,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
 
         // Listen for auth status updates
         const unsubscribe = webviewClient.onMessage('auth-status', (data) => {
-            // Debug logging to see what we're receiving
-            console.log('Auth status received:', data);
-            console.log('Message:', data.message);
-            console.log('SubMessage:', data.subMessage);
+            const authData = data as any;
 
             // Clear timeout on any auth status update
             if (authTimeoutRef.current) {
@@ -58,7 +55,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             }
 
             // Check if this is a timeout error
-            if (data.error === 'timeout') {
+            if (authData.error === 'timeout') {
                 setAuthTimeout(true);
                 updateState({
                     adobeAuth: {
@@ -67,39 +64,39 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                         error: 'timeout'
                     }
                 });
-                setAuthStatus(data.message || '');
-                setAuthSubMessage(data.subMessage || '');
+                setAuthStatus(authData.message || '');
+                setAuthSubMessage(authData.subMessage || '');
                 return;
             }
 
             // Reset the switching flag when authentication completes
-            if (data.isAuthenticated && isSwitchingRef.current) {
+            if (authData.isAuthenticated && isSwitchingRef.current) {
                 isSwitchingRef.current = false;
             }
 
             // Clear timeout state on successful auth OR when starting a new check
-            if (data.isAuthenticated || data.isChecking) {
+            if (authData.isAuthenticated || authData.isChecking) {
                 setAuthTimeout(false);
             }
 
             updateState({
                 adobeAuth: {
-                    isAuthenticated: data.isAuthenticated,
-                    isChecking: data.isChecking !== undefined ? data.isChecking : false,
-                    email: data.email,
-                    error: data.error,
-                    requiresOrgSelection: data.requiresOrgSelection,
-                    orgLacksAccess: data.orgLacksAccess
+                    isAuthenticated: authData.isAuthenticated,
+                    isChecking: authData.isChecking !== undefined ? authData.isChecking : false,
+                    email: authData.email,
+                    error: authData.error,
+                    requiresOrgSelection: authData.requiresOrgSelection,
+                    orgLacksAccess: authData.orgLacksAccess
                 },
                 // Always update org - set to undefined when null/undefined
-                adobeOrg: data.organization ? {
-                    id: data.organization.id,
-                    code: data.organization.code,
-                    name: data.organization.name
+                adobeOrg: authData.organization ? {
+                    id: authData.organization.id,
+                    code: authData.organization.code,
+                    name: authData.organization.name
                 } : undefined
             });
-            setAuthStatus(data.message || '');
-            setAuthSubMessage(data.subMessage || '');
+            setAuthStatus(authData.message || '');
+            setAuthSubMessage(authData.subMessage || '');
         });
 
         return unsubscribe;
@@ -114,7 +111,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
         // Don't check if we're already in the process of switching organizations
         // Use ref for immediate check, not waiting for state updates
         if (isSwitchingRef.current || state.adobeAuth.isChecking) {
-            console.log('Skipping auth check - switching org or already checking');
             return;
         }
         setAuthStatus('Checking Adobe authentication...');

@@ -23,6 +23,15 @@ interface PrerequisitesStepProps {
     setCanProceed: (canProceed: boolean) => void;
     componentsData?: Record<string, unknown>;
     currentStep?: string;
+    requiredNodeVersions?: string[];
+}
+
+function formatProgressLabel(progress: any): string {
+    const cmd = progress.command as any;
+    if (cmd.currentMilestoneIndex && cmd.totalMilestones) {
+        return `${cmd.currentMilestoneIndex}/${cmd.totalMilestones}: ${progress.command.detail}`;
+    }
+    return `Step ${progress.overall.currentStep}/${progress.overall.totalSteps}: ${progress.command.detail || progress.overall.stepName}`;
 }
 
 export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesStepProps) {
@@ -46,7 +55,8 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
     useEffect(() => {
         // Listen for prerequisites loaded from backend
         const unsubscribeLoaded = webviewClient.onMessage('prerequisites-loaded', (data) => {
-            const prerequisites = data.prerequisites.map((p: Record<string, unknown>) => {
+            const prereqData = data as any;
+            const prerequisites = prereqData.prerequisites.map((p: Record<string, unknown>) => {
                 return {
                     id: p.id,
                     name: p.name,
@@ -60,12 +70,12 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 };
             });
             setChecks(prerequisites);
-            
+
             // Store the version to component mapping
-            if (data.nodeVersionMapping) {
-                setVersionComponentMapping(data.nodeVersionMapping);
-            } else if (data.versionComponentMapping) {
-                setVersionComponentMapping(data.versionComponentMapping);
+            if (prereqData.nodeVersionMapping) {
+                setVersionComponentMapping(prereqData.nodeVersionMapping);
+            } else if (prereqData.versionComponentMapping) {
+                setVersionComponentMapping(prereqData.versionComponentMapping);
             }
             
         });
@@ -81,8 +91,9 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
     useEffect(() => {
         // Listen for installation complete events
         const unsubscribeInstallComplete = webviewClient.onMessage('prerequisite-install-complete', (data) => {
-            const { index, continueChecking } = data;
-            
+            const typedData = data as { index: number; continueChecking: boolean };
+            const { index, continueChecking } = typedData;
+
             if (continueChecking) {
                 // Continue checking from the next prerequisite, not from the beginning
                 setTimeout(() => {
@@ -90,19 +101,17 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 }, 500);
             }
         });
-        
+
         // Listen for check stopped events
         const unsubscribeCheckStopped = webviewClient.onMessage('prerequisite-check-stopped', (data) => {
-            const { stoppedAt, reason } = data;
+            const typedData = data as { stoppedAt: number; reason: string };
             setIsChecking(false);
-            
-            // Show a message about why checking stopped
-            console.log(`Prerequisites check stopped at index ${stoppedAt}: ${reason}`);
         });
 
         // Listen for feedback from extension
         const unsubscribe = webviewClient.onMessage('prerequisite-status', (data) => {
-            const { index, status, message, version, plugins, unifiedProgress, nodeVersionStatus, canInstall } = data;
+            const typedData = data as any;
+            const { index, status, message, version, plugins, unifiedProgress, nodeVersionStatus, canInstall } = typedData;
 
             // Auto-scroll within the container to the item being checked (skip first item as it's already visible)
             if (status === 'checking' && itemRefs.current[index] && scrollContainerRef.current && index > 0) {
@@ -188,12 +197,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
 
         // Listen for prerequisites complete message
         const unsubscribeComplete = webviewClient.onMessage('prerequisites-complete', (data) => {
-            const { allInstalled } = data;
             setIsChecking(false);
-            
-            // Don't update individual statuses here - they should already be set by prerequisite-status messages
-            // Just log the completion
-            console.log(`Prerequisites check complete. All installed: ${allInstalled}`);
         });
 
         return () => {
@@ -323,13 +327,13 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
             </Text>
 
             <div
-                ref={scrollContainerRef}
+                ref={scrollContainerRef as React.RefObject<HTMLDivElement>}
                 className="prerequisites-container">
                 <Flex direction="column" gap="size-150">
                     {checks.map((check, index) => (
-                        <div 
-                            key={check.name} 
-                            ref={el => itemRefs.current[index] = el}
+                        <div
+                            key={check.name}
+                            ref={el => { itemRefs.current[index] = el; }}
                         >
                             <Flex justifyContent="space-between" alignItems="center" 
                                 UNSAFE_className={getPrerequisiteItemClasses('pending', index === checks.length - 1)}
@@ -418,12 +422,8 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                                 <View marginTop="size-100" UNSAFE_className="animate-fade-in">
                                                     {check.unifiedProgress.command?.type === 'determinate' && check.unifiedProgress.command?.percent != null ? (
                                                         // Show command-level progress when we have exact percentages
-                                                        <ProgressBar 
-                                                            label={
-                                                                check.unifiedProgress.command.currentMilestoneIndex && check.unifiedProgress.command.totalMilestones
-                                                                    ? `${check.unifiedProgress.command.currentMilestoneIndex}/${check.unifiedProgress.command.totalMilestones}: ${check.unifiedProgress.command.detail}`
-                                                                    : `Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.command.detail || check.unifiedProgress.overall.stepName}`
-                                                            }
+                                                        <ProgressBar
+                                                            label={formatProgressLabel(check.unifiedProgress)}
                                                             value={check.unifiedProgress.command.percent}
                                                             maxValue={100}
                                                             showValueLabel

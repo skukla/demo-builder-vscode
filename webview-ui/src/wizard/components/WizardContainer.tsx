@@ -45,11 +45,11 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     const [state, setState] = useState<WizardState>({
         currentStep: 'welcome',
         projectName: '',
-        projectTemplate: 'commerce-paas',
+        projectTemplate: 'citisignal' as const,
         componentConfigs: {},
         adobeAuth: {
-            isAuthenticated: undefined,  // Start as undefined to indicate not yet checked
-            isChecking: false  // Allow the check to proceed
+            isAuthenticated: false,  // Start as false (will be checked in auth step)
+            isChecking: false
         },
         components: componentDefaults || undefined
     });
@@ -65,7 +65,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
     // Listen for feedback messages from extension
     useEffect(() => {
-        const unsubscribe = webviewClient.onMessage('feedback', (message: FeedbackMessage) => {
+        const unsubscribe = webviewClient.onMessage('feedback', (data) => {
+            const message = data as FeedbackMessage;
             setFeedback(message);
             
             // Update creation progress if in project-creation step
@@ -92,7 +93,6 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     // Listen for creationProgress messages from extension
     useEffect(() => {
         const unsubscribe = webviewClient.onMessage('creationProgress', (progressData: any) => {
-            console.log('Received creationProgress:', progressData);
             setState(prev => ({
                 ...prev,
                 creationProgress: {
@@ -114,7 +114,6 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     // Listen for components data from extension
     useEffect(() => {
         const unsubscribe = webviewClient.onMessage('componentsLoaded', (data: any) => {
-            console.log('Received components data:', data);
             setComponentsData(data);
         });
 
@@ -197,13 +196,11 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
     // Timeline navigation (backward only)
     const goToStepViaTimeline = useCallback((step: WizardStep) => {
-        console.log('Timeline navigation to:', step);
         const currentIndex = getCurrentStepIndex();
         const targetIndex = WIZARD_STEPS.findIndex(s => s.id === step);
 
         // Only allow backward navigation via timeline
         if (targetIndex > currentIndex) {
-            console.log('Forward navigation must use Continue button');
             return;
         }
 
@@ -227,8 +224,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
                 // Project selection: Commit the UI selection to backend
                 if (state.currentStep === 'adobe-project' && state.adobeProject?.id) {
-                    console.log('Making backend call to select project:', state.adobeProject.id);
-                    const result = await webviewClient.request('select-project', { projectId: state.adobeProject.id });
+                    const result = await webviewClient.request('select-project', { projectId: state.adobeProject.id }) as any;
                     if (!result.success) {
                         throw new Error(result.error || 'Failed to select project');
                     }
@@ -236,8 +232,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
                 // Workspace selection: Commit the UI selection to backend
                 if (state.currentStep === 'adobe-workspace' && state.adobeWorkspace?.id) {
-                    console.log('Making backend call to select workspace:', state.adobeWorkspace.id);
-                    const result = await webviewClient.request('select-workspace', { workspaceId: state.adobeWorkspace.id });
+                    const result = await webviewClient.request('select-workspace', { workspaceId: state.adobeWorkspace.id }) as any;
                     if (!result.success) {
                         throw new Error(result.error || 'Failed to select workspace');
                     }
@@ -245,8 +240,6 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
                 // Project creation: Trigger project creation when moving from review to project-creation step
                 if (state.currentStep === 'review' && nextStep.id === 'project-creation') {
-                    console.log('Triggering project creation with state:', state);
-                    
                     // Build project configuration from wizard state
                     const projectConfig = {
                         projectName: state.projectName,
@@ -289,14 +282,13 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             } catch (error) {
                 console.error('Failed to proceed to next step:', error);
                 setFeedback({
-                    type: 'error',
-                    message: error instanceof Error ? error.message : 'Failed to proceed. Please try again.'
+                    step: state.currentStep,
+                    status: 'error',
+                    primary: error instanceof Error ? error.message : 'Failed to proceed. Please try again.'
                 });
                 // Clear loading state on error
                 setIsConfirmingSelection(false);
             }
-        } else {
-            console.log('Already at last step');
         }
     }, [state.currentStep, state.adobeProject, state.adobeWorkspace, completedSteps, canProceed, getCurrentStepIndex, navigateToStep]);
 
@@ -394,9 +386,9 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             case 'welcome':
                 return <WelcomeStep {...props} />;
             case 'component-selection':
-                return <ComponentSelectionStep {...props} componentsData={componentsData} />;
+                return <ComponentSelectionStep {...props} />;
             case 'prerequisites':
-                return <PrerequisitesStep {...props} requiredNodeVersions={getRequiredNodeVersions()} componentsData={componentsData} currentStep={state.currentStep} />;
+                return <PrerequisitesStep {...props} requiredNodeVersions={getRequiredNodeVersions()} currentStep={state.currentStep} />;
             case 'adobe-auth':
                 return <AdobeAuthStep {...props} />;
             case 'adobe-project':
@@ -410,7 +402,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             case 'review':
                 return <ReviewStep {...props} />;
             case 'project-creation':
-                return <ProjectCreationStep state={state} />;
+                return <ProjectCreationStep state={state} onBack={goBack} />;
             default:
                 return null;
         }
@@ -540,10 +532,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                                         </Button>
                                         <Button
                                             variant="accent"
-                                            onPress={() => {
-                                                console.log('Continue button clicked!');
-                                                goNext();
-                                            }}
+                                            onPress={goNext}
                                             isDisabled={!canProceed || isConfirmingSelection}
                                         >
                                             {isConfirmingSelection

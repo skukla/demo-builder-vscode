@@ -79,10 +79,10 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
         }, 2000);
 
         try {
-            const result = await webviewClient.request('check-api-mesh', { 
+            const result = await webviewClient.request('check-api-mesh', {
                 workspaceId: state.adobeWorkspace?.id,
                 selectedComponents: []
-            });
+            }) as any;
 
             if (result?.success && result.apiEnabled) {
                 // API is enabled
@@ -292,7 +292,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                 
                                                 const result = await webviewClient.request('create-api-mesh', {
                                                     workspaceId: state.adobeWorkspace?.id
-                                                });
+                                                }) as any;
 
                                                 if (result?.success) {
                                                     // Success! Mesh was created and deployed
@@ -385,7 +385,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                         // Backend automatically specifies required timeout via __timeout_hint__
                                         const result = await webviewClient.request('create-api-mesh', {
                                             workspaceId: state.adobeWorkspace?.id
-                                        });
+                                        }) as any;
 
                                         if (result?.success) {
                                             // Success! Mesh was created (and possibly deployed)

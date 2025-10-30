@@ -14,4 +14,5 @@ export { ThemeProvider, useTheme } from './ThemeContext';
 export type { ThemeProviderProps, Theme } from './ThemeContext';
 
 export { WizardProvider, useWizard } from './WizardContext';
-export type { WizardProviderProps, WizardStep } from './WizardContext';
+export type { WizardProviderProps } from './WizardContext';
+// Note: WizardStep type is exported from ./types to avoid duplicate exports

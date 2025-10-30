@@ -77,22 +77,13 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         webviewClient.postMessage('get-components-data');
         
         const unsubscribeData = webviewClient.onMessage('components-data', (data) => {
-            console.log('[ComponentConfigStep] Received components-data:', {
-                frontends: data.frontends?.map((f: any) => ({ 
-                    id: f.id, 
-                    hasDeps: !!f.dependencies,
-                    depsDetail: f.dependencies 
-                })),
-                dependencies: data.dependencies?.map((d: any) => d.id),
-                hasEnvVars: !!data.envVars,
-                envVarsCount: Object.keys(data.envVars || {}).length
-            });
-            setComponentsData(data);
+            const componentsData = data as any;
+            setComponentsData(componentsData);
             setIsLoading(false);
         });
         
         const unsubscribeLoaded = webviewClient.onMessage('componentsLoaded', (data) => {
-            setComponentsData(data);
+            setComponentsData(data as ComponentsData);
             setIsLoading(false);
         });
 
@@ -180,9 +171,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             const app = componentsData.appBuilder?.find(a => a.id === appId);
             if (app) addComponentWithDeps(app, 'App Builder');
         });
-        
-        console.log('[ComponentConfigStep] Selected components with dependencies:', components.map(c => ({ id: c.id, type: c.type })));
-        
+
         return components;
     }, [state.components, componentsData]);
 
@@ -482,20 +471,23 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     // Initialize configs for selected components with intelligent pre-population
     useEffect(() => {
         const newConfigs = { ...componentConfigs };
-        
+
         selectedComponents.forEach(({ id, data }) => {
             if (!newConfigs[id]) {
                 newConfigs[id] = {};
-                
-                // Set defaults
-                data.configuration?.envVars?.forEach(envVar => {
-                    if (envVar.default !== undefined) {
-                        newConfigs[id][envVar.key] = envVar.default;
-                    }
-                });
+
+                // Set defaults from envVars (if they exist - legacy support)
+                const envVars = (data.configuration as any)?.envVars;
+                if (envVars && Array.isArray(envVars)) {
+                    envVars.forEach((envVar: any) => {
+                        if (envVar.default !== undefined) {
+                            newConfigs[id][envVar.key] = envVar.default;
+                        }
+                    });
+                }
             }
         });
-        
+
         setComponentConfigs(newConfigs);
     }, [selectedComponents]);
 

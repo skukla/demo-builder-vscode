@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Flex } from '@adobe/react-spectrum';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 
-interface TipProps {
+export interface TipProps {
     /** The tip content - can be a string or React node */
     children: React.ReactNode;
     /** Optional icon to show (defaults to 💡) */
@@ -47,7 +47,7 @@ export function Tip({ children, icon = '💡', variant = 'default' }: TipProps) 
                 border: `1px solid ${getBorderColor()}`
             }}
         >
-            <Flex gap="size-100" alignItems="flex-start">
+            <Flex gap="size-100" alignItems="start">
                 {typeof icon === 'string' ? (
                     <Text UNSAFE_style={{ fontSize: '16px', lineHeight: '20px', flexShrink: 0 }}>
                         {icon}

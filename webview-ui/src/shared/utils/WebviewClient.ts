@@ -29,8 +29,8 @@ interface Message<T = unknown> {
     expectsResponse?: boolean;
 }
 
-interface PendingRequest<T = unknown> {
-    resolve: (value: T) => void;
+interface PendingRequest {
+    resolve: (value: unknown) => void;
     reject: (error: Error) => void;
     timeout: number; // Browser setTimeout returns number
 }
@@ -43,7 +43,7 @@ class WebviewClient {
     private readyPromise: Promise<void>;
     private readyResolve?: () => void;
     private messageQueue: Message[] = [];
-    private pendingRequests = new Map<string, PendingRequest<unknown>>();
+    private pendingRequests = new Map<string, PendingRequest>();
     private messageIdCounter = 0;
 
     constructor() {
@@ -93,7 +93,8 @@ class WebviewClient {
             
             // Handle timeout hints from backend (backend specifies required timeout)
             if (message.type === '__timeout_hint__' && message.payload) {
-                const { requestId, timeout: newTimeout } = message.payload;
+                const payloadData = message.payload as any;
+                const { requestId, timeout: newTimeout } = payloadData;
                 const pending = this.pendingRequests.get(requestId);
                 if (pending) {
                     // Clear old timeout and set new one with backend-specified duration
@@ -202,20 +203,20 @@ class WebviewClient {
             await this.ready();
         }
         
-        return new Promise((resolve, reject) => {
+        return new Promise<T>((resolve, reject) => {
             // Set up initial timeout (may be extended by backend timeout hint)
             let timeout = setTimeout(() => {
                 this.pendingRequests.delete(message.id);
                 reject(new Error(`Request timeout: ${type}`));
             }, timeoutMs);
-            
+
             // Track pending request
             this.pendingRequests.set(message.id, {
-                resolve,
+                resolve: resolve as (value: unknown) => void,
                 reject,
                 timeout
             });
-            
+
             // Send the request
             this.sendRawMessage(message);
         });

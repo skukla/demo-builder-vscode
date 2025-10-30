@@ -20,16 +20,6 @@ export * from './navigation';
 // Layout Components
 export * from './layout';
 
-// Feature-Specific Components
-export { CompactOption } from './CompactOption';
-export { ComponentCard } from './ComponentCard';
-export { ConfigurationSummary } from './ConfigurationSummary';
-export { DependencyItem } from './DependencyItem';
-export { SelectionSummary } from './SelectionSummary';
-export { Tip } from './Tip';
-
-// Debug Components
-export * from './debug';
-
+// Note: Feature-specific UI components are already exported via 'export * from ./ui' above
 // Webview root component
 export { WebviewApp, type WebviewAppProps } from './WebviewApp';

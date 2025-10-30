@@ -1,15 +1,9 @@
 // Shared types for the webview application
 
-// Import shared types from extension
-import type {
-    ComponentInstance,
-    AdobeConfig,
-    CommerceConfig,
-    Project,
-    ProjectTemplate
-} from '@/types';
-
 export type ThemeMode = 'light' | 'dark';
+
+// Re-export types needed from extension (avoiding circular dependency)
+export type ProjectTemplate = 'citisignal' | 'blank' | 'custom';
 
 export type WizardStep =
     | 'welcome'
@@ -91,8 +85,7 @@ export interface AdobeProject {
     org_id?: number;  // Numeric organization ID from Adobe Console
 }
 
-// Re-export shared types for convenience
-export type { ComponentInstance, AdobeConfig, CommerceConfig, Project, ProjectTemplate };
+// Note: Import shared types from @/types directly where needed (removed circular re-export)
 
 export interface Workspace {
     id: string;

@@ -1,13 +1,13 @@
 import React from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
 
-interface Instruction {
+export interface Instruction {
     step: string;
     details: string;
     important?: boolean;
 }
 
-interface NumberedInstructionsProps {
+export interface NumberedInstructionsProps {
     description?: string;
     instructions: Instruction[];
 }

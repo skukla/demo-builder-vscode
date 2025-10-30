@@ -1,13 +1,13 @@
 import React, { ReactNode } from 'react';
 import { Dialog, Heading, Content, Divider, ButtonGroup, Button } from '@adobe/react-spectrum';
 
-interface ActionButton {
+export interface ActionButton {
     label: string;
     variant: 'primary' | 'secondary' | 'accent' | 'negative';
     onPress: () => void;
 }
 
-interface ModalProps {
+export interface ModalProps {
     title: string;
     size?: 'S' | 'M' | 'L' | 'fullscreen' | 'fullscreenTakeover';
     actionButtons?: ActionButton[];

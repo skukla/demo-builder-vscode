@@ -57,18 +57,20 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
     useEffect(() => {
         webviewClient.postMessage('requestStatus');
 
-        const unsubscribeStatus = webviewClient.onMessage('statusUpdate', (data: ProjectStatus) => {
-            setProjectStatus(data);
-            setIsRunning(data.status === 'running');
+        const unsubscribeStatus = webviewClient.onMessage('statusUpdate', (data: unknown) => {
+            const projectData = data as ProjectStatus;
+            setProjectStatus(projectData);
+            setIsRunning(projectData.status === 'running');
         });
 
-        const unsubscribeMesh = webviewClient.onMessage('meshStatusUpdate', (data: { status: string; message?: string; endpoint?: string }) => {
+        const unsubscribeMesh = webviewClient.onMessage('meshStatusUpdate', (data: unknown) => {
+            const meshData = data as { status: string; message?: string; endpoint?: string };
             setProjectStatus(prev => prev ? {
                 ...prev,
                 mesh: {
-                    status: data.status as any,
-                    message: data.message,
-                    endpoint: data.endpoint
+                    status: meshData.status as any,
+                    message: meshData.message,
+                    endpoint: meshData.endpoint
                 }
             } : prev);
         });
@@ -181,7 +183,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
 
     return (
         <View
-            ref={containerRef}
+            ref={containerRef as any}
             padding="size-400"
             height="100vh"
             UNSAFE_style={{

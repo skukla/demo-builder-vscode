@@ -122,7 +122,7 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
                 })}
             </View>
 
-            <style jsx>{`
+            <style>{`
                 @keyframes pulse {
                     0% {
                         transform: scale(1);
