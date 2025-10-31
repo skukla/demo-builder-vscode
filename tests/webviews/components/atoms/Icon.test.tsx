@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderWithProviders, screen, createMockIcon } from '../../../utils/react-test-utils';
-import { Icon } from '../../../../src/webviews/components/atoms/Icon';
+import { Icon } from '@/webview-ui/shared/components/ui/Icon';
 
 // Create a mock Spectrum icon
 const MockAlertIcon = createMockIcon('Alert');

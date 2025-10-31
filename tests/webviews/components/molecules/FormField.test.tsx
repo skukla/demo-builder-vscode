@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderWithProviders, screen } from '../../../utils/react-test-utils';
 import userEvent from '@testing-library/user-event';
-import { FormField } from '../../../../src/webviews/components/molecules/FormField';
+import { FormField } from '@/webview-ui/shared/components/forms/FormField';
 
 describe('FormField', () => {
     describe('Text Field', () => {

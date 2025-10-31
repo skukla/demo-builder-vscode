@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderWithProviders, screen } from '../../../utils/react-test-utils';
 import userEvent from '@testing-library/user-event';
-import { Tag } from '../../../../src/webviews/components/atoms/Tag';
+import { Tag } from '@/webview-ui/shared/components/ui/Tag';
 
 describe('Tag', () => {
     describe('Rendering', () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderWithProviders, screen } from '../../../utils/react-test-utils';
-import { StatusCard } from '../../../../src/webviews/components/molecules/StatusCard';
+import { StatusCard } from '@/webview-ui/shared/components/feedback/StatusCard';
 
 describe('StatusCard', () => {
     describe('Rendering', () => {

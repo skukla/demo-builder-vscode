@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderWithProviders, screen, waitFor } from '../../../utils/react-test-utils';
 import userEvent from '@testing-library/user-event';
-import { SearchableList, SearchableListItem } from '../../../../src/webviews/components/organisms/SearchableList';
+import { SearchableList, SearchableListItem } from '@/webview-ui/shared/components/navigation/SearchableList';
 
 interface TestItem extends SearchableListItem {
     id: string;

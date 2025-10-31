@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderWithProviders, screen } from '../../../utils/react-test-utils';
-import { Spinner } from '../../../../src/webviews/components/atoms/Spinner';
+import { Spinner } from '@/webview-ui/shared/components/ui/Spinner';
 
 describe('Spinner', () => {
     describe('Rendering', () => {

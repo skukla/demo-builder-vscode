@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderWithProviders, screen } from '../../../utils/react-test-utils';
-import { StatusDot } from '../../../../src/webviews/components/atoms/StatusDot';
+import { StatusDot } from '@/webview-ui/shared/components/ui/StatusDot';
 
 describe('StatusDot', () => {
     describe('Rendering', () => {

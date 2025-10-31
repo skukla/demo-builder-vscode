@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderWithProviders, screen, waitFor } from '../../../utils/react-test-utils';
-import { Transition } from '../../../../src/webviews/components/atoms/Transition';
+import { Transition } from '@/webview-ui/shared/components/ui/Transition';
 
 describe('Transition', () => {
     describe('Rendering', () => {

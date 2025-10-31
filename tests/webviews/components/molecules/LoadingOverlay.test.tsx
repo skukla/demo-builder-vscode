@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderWithProviders, screen } from '../../../utils/react-test-utils';
-import { LoadingOverlay } from '../../../../src/webviews/components/molecules/LoadingOverlay';
+import { LoadingOverlay } from '@/webview-ui/shared/components/feedback/LoadingOverlay';
 
 describe('LoadingOverlay', () => {
     describe('Rendering', () => {
