@@ -6,7 +6,7 @@
  * for faster failure feedback.
  */
 
-import { TIMEOUTS } from '@/utils/timeoutConfig';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 describe('Timeout Configuration', () => {
     describe('PREREQUISITE_CHECK timeout', () => {

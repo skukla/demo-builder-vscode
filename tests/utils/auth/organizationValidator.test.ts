@@ -1,6 +1,6 @@
 import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import { Logger } from '../../../src/shared/logging';
+import { Logger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { CommandResult } from '@/core/shell/types';
 

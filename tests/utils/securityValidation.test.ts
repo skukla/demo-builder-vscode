@@ -20,7 +20,7 @@ import {
     validateAccessToken,
     validateURL,
     sanitizeErrorForLogging
-} from '../../src/utils/securityValidation';
+} from '@/core/validation/securityValidation';
 
 describe('securityValidation', () => {
 

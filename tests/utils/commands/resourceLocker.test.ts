@@ -1,4 +1,4 @@
-import { ResourceLocker } from '../../../src/utils/commands/resourceLocker';
+import { ResourceLocker } from '@/core/shell/resourceLocker';
 
 jest.mock('../../../src/utils/debugLogger', () => ({
     getLogger: () => ({

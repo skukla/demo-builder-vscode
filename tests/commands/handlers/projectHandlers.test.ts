@@ -13,10 +13,10 @@ import {
     handleGetProjects,
     handleSelectProject,
     handleCheckProjectApis
-} from '../../../src/commands/handlers/projectHandlers';
+} from '@/features/authentication/handlers/projectHandlers';
 import { HandlerContext } from '../../../src/commands/handlers/HandlerContext';
-import { ServiceLocator } from '../../../src/services/serviceLocator';
-import * as securityValidation from '../../../src/utils/securityValidation';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import * as securityValidation from '@/core/validation/securityValidation';
 
 // Mock dependencies
 jest.mock('../../../src/services/serviceLocator');

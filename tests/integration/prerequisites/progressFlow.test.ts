@@ -6,9 +6,9 @@
  * including elapsed time and Node version context.
  */
 
-import { ProgressUnifier, UnifiedProgress } from '@/utils/progressUnifier';
+import { ProgressUnifier, UnifiedProgress } from '@/core/utils/progressUnifier';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
-import { Logger } from '@/shared/logging';
+import { Logger } from '@/core/logging';
 
 // Mock logger
 jest.mock('@/shared/logging/debugLogger', () => ({

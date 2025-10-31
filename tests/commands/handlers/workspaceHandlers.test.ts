@@ -9,9 +9,9 @@
 import {
     handleGetWorkspaces,
     handleSelectWorkspace
-} from '../../../src/commands/handlers/workspaceHandlers';
+} from '@/features/authentication/handlers/workspaceHandlers';
 import { HandlerContext } from '../../../src/commands/handlers/HandlerContext';
-import * as securityValidation from '../../../src/utils/securityValidation';
+import * as securityValidation from '@/core/validation/securityValidation';
 
 // Mock dependencies
 jest.mock('../../../src/utils/securityValidation');

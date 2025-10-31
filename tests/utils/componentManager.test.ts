@@ -7,12 +7,12 @@
  * Target Coverage: 75%+
  */
 
-import { ComponentManager, ComponentInstallOptions, ComponentInstallResult } from '../../src/utils/componentManager';
+import { ComponentManager, ComponentInstallOptions, ComponentInstallResult } from '@/features/components/services/componentManager';
 import { Project, ComponentInstance, ComponentStatus } from '../../src/types';
 import { TransformedComponentDefinition } from '../../src/types/components';
 import { Logger } from '../../src/types/logger';
-import { ServiceLocator } from '../../src/services/serviceLocator';
-import { CommandExecutor } from '../../src/utils/commands';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { CommandExecutor } from '@/core/shell';
 
 // Mock ServiceLocator
 jest.mock('../../src/services/serviceLocator');

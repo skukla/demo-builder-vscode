@@ -2,7 +2,7 @@ import {
     formatAdobeCliError,
     formatMeshDeploymentError,
     formatAdobeError
-} from '../../src/utils/errorFormatter';
+} from '@/features/mesh/utils/errorFormatter';
 
 describe('ErrorFormatter', () => {
     describe('formatAdobeCliError', () => {

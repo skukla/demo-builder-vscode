@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { useAsyncData } from '@/webview-ui/shared/hooks/useAsyncData';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { vscode } from '@/webview-ui/shared/utils/WebviewClient';
 
 // Mock vscode API
 jest.mock('@/core/ui/vscode-api', () => ({

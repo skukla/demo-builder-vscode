@@ -7,11 +7,11 @@
  * Target Coverage: 75%+
  */
 
-import { MeshDeployer } from '../../src/utils/meshDeployer';
+import { MeshDeployer } from '@/features/mesh/services/meshDeployer';
 import { Project } from '../../src/types';
-import { ServiceLocator } from '../../src/services/serviceLocator';
-import { CommandExecutor } from '../../src/utils/commands';
-import { Logger } from '../../src/shared/logging';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { CommandExecutor } from '@/core/shell';
+import { Logger } from '@/core/logging';
 import * as fs from 'fs/promises';
 
 // Mock ServiceLocator

@@ -9,7 +9,7 @@
 import {
     handleCheckAuth,
     handleAuthenticate
-} from '../../../src/commands/handlers/authenticationHandlers';
+} from '@/features/authentication/handlers/authenticationHandlers';
 import { HandlerContext } from '../../../src/commands/handlers/HandlerContext';
 
 describe('authenticationHandlers', () => {

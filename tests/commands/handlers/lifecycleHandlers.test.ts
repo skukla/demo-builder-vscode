@@ -23,9 +23,9 @@ import {
     handleCancelMeshCreation,
     handleCancelAuthPolling,
     handleOpenAdobeConsole
-} from '../../../src/commands/handlers/lifecycleHandlers';
+} from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { HandlerContext } from '../../../src/commands/handlers/HandlerContext';
-import * as securityValidation from '../../../src/utils/securityValidation';
+import * as securityValidation from '@/core/validation/securityValidation';
 
 // Mock VS Code
 const mockVSCode = {

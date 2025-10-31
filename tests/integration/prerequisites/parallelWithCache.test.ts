@@ -13,8 +13,8 @@
 
 import { checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
 import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
-import { ServiceLocator } from '@/services/serviceLocator';
-import { CACHE_TTL } from '@/utils/timeoutConfig';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 import type { HandlerContext } from '@/types/handlers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 

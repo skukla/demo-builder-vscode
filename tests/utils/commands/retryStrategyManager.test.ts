@@ -1,5 +1,5 @@
-import { RetryStrategyManager } from '../../../src/utils/commands/retryStrategyManager';
-import type { RetryStrategy, CommandResult } from '../../../src/utils/commands/types';
+import { RetryStrategyManager } from '@/core/shell/retryStrategyManager';
+import type { RetryStrategy, CommandResult } from '@/core/shell/types';
 
 jest.mock('../../../src/utils/debugLogger', () => ({
     getLogger: () => ({

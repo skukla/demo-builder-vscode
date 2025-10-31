@@ -7,7 +7,7 @@
 
 import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 import { PrerequisiteStatus } from '@/features/prerequisites/services/types';
-import { CACHE_TTL } from '@/utils/timeoutConfig';
+import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 
 // Mock logger
 jest.mock('@/shared/logging/debugLogger', () => ({

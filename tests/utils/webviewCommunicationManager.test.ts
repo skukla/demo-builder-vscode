@@ -7,7 +7,7 @@
  * Target Coverage: 75%+
  */
 
-import { WebviewCommunicationManager, createWebviewCommunication } from '../../src/utils/webviewCommunicationManager';
+import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication/webviewCommunicationManager';
 import * as vscode from 'vscode';
 import { Message, MessageType, MessagePayload } from '../../src/types/messages';
 

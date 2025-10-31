@@ -10,7 +10,7 @@
  */
 
 import { checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
-import { ServiceLocator } from '@/services/serviceLocator';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { HandlerContext } from '@/types/handlers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 

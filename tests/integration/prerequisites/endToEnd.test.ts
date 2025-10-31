@@ -8,8 +8,8 @@
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 import type { Logger } from '@/types/logger';
-import { ServiceLocator } from '@/services/serviceLocator';
-import type { CommandExecutor } from '@/shared/command-execution/commandExecutor';
+import { ServiceLocator } from '@/core/di/serviceLocator';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
 
 // Mock dependencies
 jest.mock('@/core/config/ConfigurationLoader');

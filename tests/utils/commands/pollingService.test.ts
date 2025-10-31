@@ -1,4 +1,4 @@
-import { PollingService } from '../../../src/utils/commands/pollingService';
+import { PollingService } from '@/core/shell/pollingService';
 
 jest.mock('../../../src/utils/debugLogger', () => ({
     getLogger: () => ({

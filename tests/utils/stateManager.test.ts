@@ -7,7 +7,7 @@
  * Target Coverage: 75%+
  */
 
-import { StateManager } from '../../src/utils/stateManager';
+import { StateManager } from '@/core/state/stateManager';
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import * as path from 'path';
