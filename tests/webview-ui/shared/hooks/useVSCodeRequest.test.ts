@@ -1,10 +1,10 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useVSCodeRequest } from '@/webview-ui/shared/hooks/useVSCodeRequest';
-import { vscode } from '@/webview-ui/shared/utils/WebviewClient';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
 
 // Mock the vscode API module at module level (before singleton is created)
-jest.mock('@/core/ui/vscode-api', () => ({
-  vscode: {
+jest.mock('@/webview-ui/shared/utils/WebviewClient', () => ({
+  webviewClient: {
     request: jest.fn(),
     postMessage: jest.fn(),
     onMessage: jest.fn(() => jest.fn()),
@@ -26,7 +26,7 @@ describe('useVSCodeRequest', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Get fresh reference to the mocked function
-    requestSpy = vscode.request as jest.Mock;
+    requestSpy = webviewClient.request as jest.Mock;
     requestSpy.mockReset();
   });
 
