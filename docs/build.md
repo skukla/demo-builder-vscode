@@ -72,6 +72,25 @@ If TypeScript complains about missing types:
 npm install
 ```
 
+### Path Alias Resolution Issues
+
+If the extension fails to load with module resolution errors after using TypeScript path aliases (e.g., `@/core/base`):
+
+**Problem**: TypeScript compiles successfully but doesn't transform path aliases in JavaScript output, causing Node.js to fail at runtime.
+
+**Solution**: The build process automatically handles this via `tsc-alias`:
+
+```bash
+npm run compile:typescript
+# Runs: tsc && tsc-alias && mv dist/src/* dist/
+```
+
+This ensures:
+1. TypeScript path aliases transform to relative imports in compiled JS
+2. Output directory flattened from `dist/src/` to `dist/` for VS Code
+
+**Note**: If manually compiling TypeScript without npm scripts, you must run `tsc-alias` afterward.
+
 ## Build Output
 
 After successful build, you should have:
