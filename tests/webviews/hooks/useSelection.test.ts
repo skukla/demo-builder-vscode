@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useSelection } from '../../../src/webviews/hooks/useSelection';
+import { useSelection } from '@/webview-ui/shared/hooks/useSelection';
 
 describe('useSelection', () => {
   interface TestItem {

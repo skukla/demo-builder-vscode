@@ -1,10 +1,10 @@
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useVSCodeRequest } from '../../../src/webviews/hooks/useVSCodeRequest';
-import { vscode } from '../../../src/webviews/app/vscodeApi';
+import { useVSCodeRequest } from '@/webview-ui/shared/hooks/useVSCodeRequest';
+import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
 
-// Mock the vscode API
-jest.mock('../../../src/webviews/app/vscodeApi', () => ({
-  vscode: {
+// Mock the webviewClient
+jest.mock('@/webview-ui/shared/utils/WebviewClient', () => ({
+  webviewClient: {
     request: jest.fn()
   }
 }));
@@ -29,7 +29,7 @@ describe('useVSCodeRequest', () => {
   describe('successful request', () => {
     it('executes request and updates state on success', async () => {
       const mockData = { id: '123', name: 'Test' };
-      (vscode.request as jest.Mock).mockResolvedValue(mockData);
+      (webviewClient.request as jest.Mock).mockResolvedValue(mockData);
 
       const { result } = renderHook(() => useVSCodeRequest('test-request'));
 
@@ -52,12 +52,12 @@ describe('useVSCodeRequest', () => {
       expect(result.current.error).toBeNull();
       expect(result.current.data).toEqual(mockData);
       expect(returnedData).toEqual(mockData);
-      expect(vscode.request).toHaveBeenCalledWith('test-request', { param: 'value' }, undefined);
+      expect(webviewClient.request).toHaveBeenCalledWith('test-request', { param: 'value' }, undefined);
     });
 
     it('executes request without payload', async () => {
       const mockData = { result: 'success' };
-      (vscode.request as jest.Mock).mockResolvedValue(mockData);
+      (webviewClient.request as jest.Mock).mockResolvedValue(mockData);
 
       const { result } = renderHook(() => useVSCodeRequest('test-request'));
 
@@ -69,13 +69,13 @@ describe('useVSCodeRequest', () => {
       const returnedData = await act(() => executePromise);
 
       expect(returnedData).toEqual(mockData);
-      expect(vscode.request).toHaveBeenCalledWith('test-request', undefined, undefined);
+      expect(webviewClient.request).toHaveBeenCalledWith('test-request', undefined, undefined);
     });
 
     it('calls onSuccess callback when request succeeds', async () => {
       const mockData = { result: 'success' };
       const onSuccess = jest.fn();
-      (vscode.request as jest.Mock).mockResolvedValue(mockData);
+      (webviewClient.request as jest.Mock).mockResolvedValue(mockData);
 
       const { result } = renderHook(() =>
         useVSCodeRequest('test-request', { onSuccess })
@@ -90,7 +90,7 @@ describe('useVSCodeRequest', () => {
     });
 
     it('handles multiple successful requests', async () => {
-      (vscode.request as jest.Mock)
+      (webviewClient.request as jest.Mock)
         .mockResolvedValueOnce({ result: 1 })
         .mockResolvedValueOnce({ result: 2 });
 
@@ -108,14 +108,14 @@ describe('useVSCodeRequest', () => {
       });
       expect(result.current.data).toEqual({ result: 2 });
 
-      expect(vscode.request).toHaveBeenCalledTimes(2);
+      expect(webviewClient.request).toHaveBeenCalledTimes(2);
     });
   });
 
   describe('failed request', () => {
     it('handles error and updates state', async () => {
       const mockError = new Error('Request failed');
-      (vscode.request as jest.Mock).mockRejectedValue(mockError);
+      (webviewClient.request as jest.Mock).mockRejectedValue(mockError);
 
       const { result } = renderHook(() => useVSCodeRequest('test-request'));
 
@@ -134,7 +134,7 @@ describe('useVSCodeRequest', () => {
     });
 
     it('converts non-Error objects to Error', async () => {
-      (vscode.request as jest.Mock).mockRejectedValue('String error');
+      (webviewClient.request as jest.Mock).mockRejectedValue('String error');
 
       const { result } = renderHook(() => useVSCodeRequest('test-request'));
 
@@ -151,7 +151,7 @@ describe('useVSCodeRequest', () => {
     it('calls onError callback when request fails', async () => {
       const mockError = new Error('Request failed');
       const onError = jest.fn();
-      (vscode.request as jest.Mock).mockRejectedValue(mockError);
+      (webviewClient.request as jest.Mock).mockRejectedValue(mockError);
 
       const { result } = renderHook(() =>
         useVSCodeRequest('test-request', { onError })
@@ -169,7 +169,7 @@ describe('useVSCodeRequest', () => {
 
     it('clears error on new request', async () => {
       const mockError = new Error('First error');
-      (vscode.request as jest.Mock)
+      (webviewClient.request as jest.Mock)
         .mockRejectedValueOnce(mockError)
         .mockResolvedValueOnce({ result: 'success' });
 
@@ -195,8 +195,8 @@ describe('useVSCodeRequest', () => {
   });
 
   describe('timeout', () => {
-    it('passes custom timeout to vscode.request', async () => {
-      (vscode.request as jest.Mock).mockResolvedValue({ result: 'success' });
+    it('passes custom timeout to webviewClient.request', async () => {
+      (webviewClient.request as jest.Mock).mockResolvedValue({ result: 'success' });
 
       const { result } = renderHook(() =>
         useVSCodeRequest('test-request', { timeout: 5000 })
@@ -206,11 +206,11 @@ describe('useVSCodeRequest', () => {
         await result.current.execute({ data: 'test' });
       });
 
-      expect(vscode.request).toHaveBeenCalledWith('test-request', { data: 'test' }, 5000);
+      expect(webviewClient.request).toHaveBeenCalledWith('test-request', { data: 'test' }, 5000);
     });
 
     it('uses default timeout when not specified', async () => {
-      (vscode.request as jest.Mock).mockResolvedValue({ result: 'success' });
+      (webviewClient.request as jest.Mock).mockResolvedValue({ result: 'success' });
 
       const { result } = renderHook(() => useVSCodeRequest('test-request'));
 
@@ -218,14 +218,14 @@ describe('useVSCodeRequest', () => {
         await result.current.execute();
       });
 
-      expect(vscode.request).toHaveBeenCalledWith('test-request', undefined, undefined);
+      expect(webviewClient.request).toHaveBeenCalledWith('test-request', undefined, undefined);
     });
   });
 
   describe('reset functionality', () => {
     it('resets state to initial values', async () => {
       const mockData = { result: 'success' };
-      (vscode.request as jest.Mock).mockResolvedValue(mockData);
+      (webviewClient.request as jest.Mock).mockResolvedValue(mockData);
 
       const { result } = renderHook(() => useVSCodeRequest('test-request'));
 
@@ -249,7 +249,7 @@ describe('useVSCodeRequest', () => {
 
     it('resets error state', async () => {
       const mockError = new Error('Request failed');
-      (vscode.request as jest.Mock).mockRejectedValue(mockError);
+      (webviewClient.request as jest.Mock).mockRejectedValue(mockError);
 
       const { result } = renderHook(() => useVSCodeRequest('test-request'));
 
@@ -273,7 +273,7 @@ describe('useVSCodeRequest', () => {
 
   describe('concurrent requests', () => {
     it('handles concurrent requests correctly', async () => {
-      (vscode.request as jest.Mock)
+      (webviewClient.request as jest.Mock)
         .mockImplementation((type, payload) => {
           return new Promise(resolve => {
             setTimeout(() => resolve({ id: payload.id }), 100);
@@ -308,7 +308,7 @@ describe('useVSCodeRequest', () => {
 
     it('handles typed response data', async () => {
       const mockData: TestResponse = { id: '123', name: 'Test', count: 5 };
-      (vscode.request as jest.Mock).mockResolvedValue(mockData);
+      (webviewClient.request as jest.Mock).mockResolvedValue(mockData);
 
       const { result } = renderHook(() => useVSCodeRequest<TestResponse>('test-request'));
 

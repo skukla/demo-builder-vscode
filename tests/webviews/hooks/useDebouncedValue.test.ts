@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useDebouncedValue } from '../../../src/webviews/hooks/useDebouncedValue';
+import { useDebouncedValue } from '@/webview-ui/shared/hooks/useDebouncedValue';
 
 describe('useDebouncedValue', () => {
   beforeEach(() => {

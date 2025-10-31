@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useAutoScroll } from '../../../src/webviews/hooks/useAutoScroll';
+import { useAutoScroll } from '@/webview-ui/shared/hooks/useAutoScroll';
 
 describe('useAutoScroll', () => {
   beforeEach(() => {

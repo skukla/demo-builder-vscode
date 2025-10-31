@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useMinimumLoadingTime } from '../../../src/webviews/hooks/useMinimumLoadingTime';
+import { useMinimumLoadingTime } from '@/webview-ui/shared/hooks/useMinimumLoadingTime';
 
 describe('useMinimumLoadingTime', () => {
   beforeEach(() => {

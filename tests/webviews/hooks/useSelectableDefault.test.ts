@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import { useSelectableDefault, useSelectableDefaultWhen } from '../../../src/webviews/hooks/useSelectableDefault';
+import { useSelectableDefault, useSelectableDefaultWhen } from '@/webview-ui/shared/hooks/useSelectableDefault';
 
 describe('useSelectableDefault', () => {
   describe('useSelectableDefault', () => {

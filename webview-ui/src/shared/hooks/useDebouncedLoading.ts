@@ -59,6 +59,8 @@ export function useDebouncedLoading(isLoading: boolean, delay: number = 300): bo
         } else {
             // Immediately hide loading UI when operation completes
             setShowLoading(false);
+            // Return undefined explicitly to satisfy TypeScript
+            return undefined;
         }
     }, [isLoading, delay]);
 
