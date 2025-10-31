@@ -1,10 +1,10 @@
-import { TokenManager } from '../../../src/utils/auth/tokenManager';
-import { CommandExecutor } from '../../../src/utils/commands/commandExecutor';
-import type { CommandResult } from '../../../src/utils/commands/types';
+import { TokenManager } from '@/features/authentication/services/tokenManager';
+import { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { CommandResult } from '@/core/shell/types';
 
 // Mock the command executor
 jest.mock('../../../src/utils/commands/commandExecutor');
-jest.mock('../../../src/utils/debugLogger', () => ({
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),
         debug: jest.fn(),

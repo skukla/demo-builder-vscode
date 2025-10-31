@@ -1,7 +1,7 @@
-import { AuthCacheManager } from '../../../src/utils/auth/authCacheManager';
-import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '../../../src/utils/auth/types';
+import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
+import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authentication/services/types';
 
-jest.mock('../../../src/utils/debugLogger', () => ({
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),
         debug: jest.fn(),

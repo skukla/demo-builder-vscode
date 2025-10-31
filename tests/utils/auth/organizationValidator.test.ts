@@ -1,10 +1,10 @@
-import { OrganizationValidator } from '../../../src/utils/auth/organizationValidator';
-import { AuthCacheManager } from '../../../src/utils/auth/authCacheManager';
+import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
+import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import { Logger } from '../../../src/shared/logging';
-import type { CommandExecutor } from '../../../src/utils/commands/commandExecutor';
-import type { CommandResult } from '../../../src/utils/commands/types';
+import type { CommandExecutor } from '@/core/shell/commandExecutor';
+import type { CommandResult } from '@/core/shell/types';
 
-jest.mock('../../../src/shared/logging/debugLogger', () => ({
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),
         debug: jest.fn(),
