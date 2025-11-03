@@ -86,23 +86,21 @@ export class ResetAllCommand extends BaseCommand {
             /**
              * 6. Adobe CLI logout - clears ~/.aio/config.json token
              * Non-fatal: Logs warning and continues if logout fails to prevent blocking reset
-             *
-             * TODO: Re-enable when AuthenticationService is added to ServiceLocator
              */
-            // try {
-            //     const authService = ServiceLocator.getAuthenticationService();
-            //     await authService.logout();
-            //     this.logger.info('Adobe CLI logout successful');
-            // } catch (error) {
-            //     // Non-fatal: Log warning and continue reset
-            //     // SECURITY: Sanitize error message to prevent token leakage in logs
-            //     const sanitizedError = sanitizeErrorForLogging(error as Error);
-            //     this.logger.warn(
-            //         `Adobe CLI logout failed: ${sanitizedError}. You may need to manually clear authentication.`
-            //     );
-            //     this.logger.warn('To manually logout, run: aio auth logout');
-            // }
-            this.logger.info('Skipping Adobe CLI logout (not yet implemented in ServiceLocator)');
+            try {
+                const authService = ServiceLocator.getAuthenticationService();
+                await authService.logout();
+                this.logger.info('Adobe CLI logout successful');
+            } catch (error) {
+                // Non-fatal: Log warning and continue reset
+                // SECURITY: Sanitize error message to prevent token leakage in logs
+                const sanitizedError = sanitizeErrorForLogging(error as Error);
+                this.logger.warn(
+                    `Adobe CLI logout failed: ${sanitizedError}. You may need to manually clear authentication.`,
+                    error as Error
+                );
+                this.logger.warn('To manually logout, run: aio auth logout');
+            }
 
             // 7. Reset status bar
             this.statusBar.reset();

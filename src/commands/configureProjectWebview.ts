@@ -3,11 +3,15 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
-import { ComponentRegistryManager } from '@/features/components/services/componentRegistry';
+import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { BaseWebviewCommand } from '@/core/base';
 import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
+import {
+    validateProjectPath,
+    sanitizeErrorForLogging,
+} from '@/core/validation/securityValidation';
 
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
@@ -264,7 +268,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
      */
     private async loadExistingEnvValues(project: Project): Promise<Record<string, Record<string, string>>> {
         const envValues: Record<string, Record<string, string>> = {};
-        
+
         if (!project.componentInstances) {
             return envValues;
         }
@@ -272,6 +276,14 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         // Read each component's .env file
         for (const [componentId, instance] of Object.entries(project.componentInstances)) {
             if (!instance.path) {
+                continue;
+            }
+
+            // SECURITY: Validate path to prevent arbitrary file read
+            try {
+                validateProjectPath(instance.path);
+            } catch (error) {
+                this.logger.error(`[Configure] Security: Rejecting invalid path for ${componentId}`, error as Error);
                 continue;
             }
 
@@ -289,8 +301,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                     this.logger.info(`  - Loaded ${Object.keys(envValues[componentId]).length} env vars from ${componentId} (${path.basename(envPath)})`);
                     loaded = true;
                     break;  // Found it, stop looking
-                } catch {
-                    // File doesn't exist, try next one
+                } catch (error) {
+                    // File doesn't exist or read error, try next one
+                    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+                        const sanitized = sanitizeErrorForLogging(error as Error);
+                        this.logger.debug(`[Configure] Error reading ${path.basename(envPath)}: ${sanitized}`);
+                    }
                 }
             }
 
@@ -310,7 +326,19 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         const values: Record<string, string> = {};
         const lines = content.split('\n');
 
-        for (const line of lines) {
+        // SECURITY: Limit number of lines to prevent DoS
+        const MAX_LINES = 1000;
+        const MAX_LINE_LENGTH = 10000;
+
+        for (let i = 0; i < Math.min(lines.length, MAX_LINES); i++) {
+            const line = lines[i];
+
+            // SECURITY: Skip excessively long lines to prevent DoS
+            if (line.length > MAX_LINE_LENGTH) {
+                this.logger.debug(`[Configure] Skipping excessively long line ${i + 1} (${line.length} chars)`);
+                continue;
+            }
+
             // Skip comments and empty lines
             const trimmed = line.trim();
             if (!trimmed || trimmed.startsWith('#')) {
@@ -322,18 +350,42 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             if (match) {
                 const key = match[1].trim();
                 let value = match[2].trim();
-                
+
+                // SECURITY: Validate key format (alphanumeric, underscore only)
+                if (!this.isValidEnvKey(key)) {
+                    this.logger.debug(`[Configure] Skipping invalid env key: ${key}`);
+                    continue;
+                }
+
                 // Remove quotes if present
-                if ((value.startsWith('"') && value.endsWith('"')) || 
+                if ((value.startsWith('"') && value.endsWith('"')) ||
                     (value.startsWith('\'') && value.endsWith('\''))) {
                     value = value.slice(1, -1);
                 }
-                
+
                 values[key] = value;
             }
         }
 
         return values;
+    }
+
+    /**
+     * Validate environment variable key format
+     * SECURITY: Only allow safe characters to prevent injection
+     */
+    private isValidEnvKey(key: string): boolean {
+        // Allow only uppercase letters, digits, and underscores (standard env var convention)
+        return /^[A-Z_][A-Z0-9_]*$/.test(key);
+    }
+
+    /**
+     * Sanitize environment variable value
+     * SECURITY: Remove potentially dangerous characters
+     */
+    private sanitizeEnvValue(value: string): string {
+        // Remove newlines and carriage returns to prevent .env format injection
+        return value.replace(/[\r\n]/g, '');
     }
 
     /**
@@ -392,8 +444,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
      * Generate project root .env file
      */
     private async generateProjectEnvFile(project: Project, componentConfigs: ComponentConfigs): Promise<void> {
+        // SECURITY: Validate path to prevent arbitrary file write
+        validateProjectPath(project.path);
+
         const envPath = path.join(project.path, '.env');
-        
+
         const lines: string[] = [
             '# Demo Builder Project Configuration',
             '# Generated: ' + new Date().toISOString(),
@@ -406,7 +461,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         // Collect all unique keys across all components
         const allKeys = new Set<string>();
         Object.values(componentConfigs).forEach((config) => {
-            Object.keys(config).forEach(key => allKeys.add(key));
+            Object.keys(config).forEach(key => {
+                // SECURITY: Only add valid env keys
+                if (this.isValidEnvKey(key)) {
+                    allKeys.add(key);
+                }
+            });
         });
 
         // Write each unique key (using first component's value)
@@ -416,14 +476,17 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             for (const config of Object.values(componentConfigs)) {
                 const value = config[key];
                 if (value !== undefined && value !== null && value !== '') {
-                    lines.push(`${key}=${value}`);
+                    // SECURITY: Sanitize value to prevent injection
+                    const sanitizedValue = this.sanitizeEnvValue(value);
+                    lines.push(`${key}=${sanitizedValue}`);
                     break;
                 }
             }
         });
 
         await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
-        this.logger.debug(`[Configure] Generated project .env at ${envPath}`);
+        const sanitizedPath = sanitizeErrorForLogging(envPath);
+        this.logger.debug(`[Configure] Generated project .env at ${sanitizedPath}`);
     }
 
     /**
@@ -434,10 +497,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         componentId: string,
         config: Record<string, string>,
     ): Promise<void> {
+        // SECURITY: Validate path to prevent arbitrary file write
+        validateProjectPath(componentPath);
+
         // Next.js uses .env.local, others use .env
         const envFileName = componentId.includes('nextjs') ? '.env.local' : '.env';
         const envPath = path.join(componentPath, envFileName);
-        
+
         const lines: string[] = [
             `# ${componentId} - Environment Configuration`,
             '# Generated by Demo Builder',
@@ -448,13 +514,16 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         // Add all configuration values for this component
         // Skip empty, null, or undefined values (don't write them to file)
         Object.entries(config).forEach(([key, value]) => {
-            if (value !== undefined && value !== null && value !== '') {
-                lines.push(`${key}=${value}`);
+            // SECURITY: Validate key and sanitize value
+            if (value !== undefined && value !== null && value !== '' && this.isValidEnvKey(key)) {
+                const sanitizedValue = this.sanitizeEnvValue(value);
+                lines.push(`${key}=${sanitizedValue}`);
             }
         });
 
         await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
-        this.logger.debug(`[Configure] Generated component ${envFileName} at ${envPath}`);
+        const sanitizedPath = sanitizeErrorForLogging(envPath);
+        this.logger.debug(`[Configure] Generated component ${envFileName} at ${sanitizedPath}`);
     }
 }
 

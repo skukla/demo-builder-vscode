@@ -31,10 +31,6 @@ export class ComponentRegistryManager {
         return this.transformedRegistry;
     }
 
-    /**
-     * Transform v2.0 flat structure to grouped structure for internal use
-     * Uses selectionGroups to organize components, builds envVars arrays from shared registry
-     */
     private transformToGroupedStructure(raw: RawComponentRegistry): ComponentRegistry {
         const components: {
             frontends: TransformedComponentDefinition[];
@@ -51,11 +47,10 @@ export class ComponentRegistryManager {
         };
 
         const groups = raw.selectionGroups || {};
-        const components_map = raw.components || {};
+        const componentsMap = raw.components || {};
 
-        // Helper to enhance a component with envVars and services
         const enhanceComponent = (id: string): TransformedComponentDefinition | null => {
-            const comp = components_map[id];
+            const comp = componentsMap[id];
             if (!comp) return null;
             
             return {
@@ -71,34 +66,19 @@ export class ComponentRegistryManager {
             };
         };
 
-        // Map selectionGroups to internal buckets
-        (groups.frontend || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.frontends.push(enhanced);
-        });
+        const addComponents = (groupIds: string[] | undefined, target: TransformedComponentDefinition[]) => {
+            (groupIds || []).forEach((id: string) => {
+                const enhanced = enhanceComponent(id);
+                if (enhanced) target.push(enhanced);
+            });
+        };
 
-        (groups.backend || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.backends.push(enhanced);
-        });
+        addComponents(groups.frontends, components.frontends);
+        addComponents(groups.backends, components.backends);
+        addComponents(groups.appBuilderApps, components.appBuilder);
+        addComponents(groups.integrations, components.externalSystems);
+        addComponents(groups.dependencies, components.dependencies);
 
-        (groups.appBuilder || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.appBuilder.push(enhanced);
-        });
-
-        (groups.externalSystems || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.externalSystems.push(enhanced);
-        });
-
-        // Map dependencies from selectionGroups (explicit list)
-        (groups.dependencies || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.dependencies.push(enhanced);
-        });
-
-        // Process infrastructure components (always required)
         const infrastructure: TransformedComponentDefinition[] = [];
         if (raw.infrastructure) {
             for (const [id, comp] of Object.entries(raw.infrastructure)) {
@@ -126,9 +106,6 @@ export class ComponentRegistryManager {
         };
     }
 
-    /**
-     * Build envVars array for a component from the shared envVars registry
-     */
     private buildEnvVarsForComponent(
         componentId: string,
         component: RawComponentDefinition,
@@ -154,10 +131,6 @@ export class ComponentRegistryManager {
         return envVars;
     }
 
-    /**
-     * Build services array for a component from service IDs
-     * Expands service references to full definitions with envVars
-     */
     private buildServicesForComponent(
         serviceIds: string[],
         services: Record<string, ServiceDefinition>,
@@ -168,7 +141,6 @@ export class ComponentRegistryManager {
         for (const serviceId of serviceIds) {
             const service = services[serviceId];
             if (service) {
-                // Build envVars for this service
                 const serviceEnvVars: EnvVarDefinition[] = [];
                 const requiredKeys = service.requiredEnvVars || [];
                 
@@ -543,12 +515,4 @@ export class DependencyResolver {
 
         return config as ProjectConfig;
     }
-}
-
-export function createComponentRegistryManager(extensionPath: string): ComponentRegistryManager {
-    return new ComponentRegistryManager(extensionPath);
-}
-
-export function createDependencyResolver(registryManager: ComponentRegistryManager): DependencyResolver {
-    return new DependencyResolver(registryManager);
 }

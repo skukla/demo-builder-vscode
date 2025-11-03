@@ -10,29 +10,64 @@ import * as path from 'path';
 
 /**
  * Patterns to detect and redact sensitive information
+ *
+ * Security Compliance:
+ * - OWASP A09:2021 - Security Logging and Monitoring Failures
+ * - CWE-532 - Insertion of Sensitive Information into Log File
+ * - CWE-209 - Generation of Error Message Containing Sensitive Information
+ *
+ * Pattern ordering is critical: More specific patterns must come before generic ones
+ * to prevent over-redaction (e.g., environment variables before paths).
  */
 const SENSITIVE_PATTERNS = [
-    // File paths (Unix and Windows)
-    { pattern: /\/(?:Users|home|root)\/[^\s]+/g, replacement: '<path>' },
-    { pattern: /[A-Z]:\\[^\s]+/g, replacement: '<path>' },
+    // === AUTHENTICATION TOKENS === (CWE-798: Use of Hard-coded Credentials)
 
-    // GitHub tokens
-    { pattern: /ghp_[a-zA-Z0-9]{36}/g, replacement: '<redacted>' },
-    { pattern: /gho_[a-zA-Z0-9]{36}/g, replacement: '<redacted>' },
-    { pattern: /ghu_[a-zA-Z0-9]{36}/g, replacement: '<redacted>' },
-    { pattern: /ghs_[a-zA-Z0-9]{36}/g, replacement: '<redacted>' },
-    { pattern: /ghr_[a-zA-Z0-9]{36}/g, replacement: '<redacted>' },
+    // GitHub tokens (all 5 types: ghp_=personal, gho_=OAuth, ghu_=user-to-server, ghs_=server-to-server, ghr_=refresh)
+    // Format: prefix (4 chars) + base62 (32 chars) = 36 chars total
+    { pattern: /ghp_[a-zA-Z0-9]{32}/g, replacement: '<redacted>' },
+    { pattern: /gho_[a-zA-Z0-9]{32}/g, replacement: '<redacted>' },
+    { pattern: /ghu_[a-zA-Z0-9]{32}/g, replacement: '<redacted>' },
+    { pattern: /ghs_[a-zA-Z0-9]{32}/g, replacement: '<redacted>' },
+    { pattern: /ghr_[a-zA-Z0-9]{32}/g, replacement: '<redacted>' },
 
-    // Adobe tokens (JWT format)
-    { pattern: /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g, replacement: '<token>' },
+    // JWT tokens (eyJ prefix = base64-encoded {"alg":...})
+    // Pattern 1: Full JWT format (header.payload.signature) - must match first for complete redaction
+    { pattern: /eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g, replacement: '<redacted>' },
+    // Pattern 2: Partial JWT-like strings (fallback, minimum 20 chars total to avoid false positives)
+    { pattern: /eyJ[a-zA-Z0-9_-]{16,}/g, replacement: '<redacted>' },
 
-    // Generic API keys and secrets
-    { pattern: /['"](api[_-]?key|token|secret|password)['"]\s*:\s*['"][^'"]+['"]/gi, replacement: '"$1": "<redacted>"' },
+    // Base64-encoded strings (30+ chars with optional padding)
+    // High threshold to reduce false positives
+    { pattern: /[A-Za-z0-9+/]{30,}={0,2}/g, replacement: '<redacted>' },
 
-    // Bearer tokens
+    // Generic API keys (24+ chars minimum to avoid false positives)
+    { pattern: /\b[a-z0-9]{24,}\b/g, replacement: '<redacted>' },  // Alphanumeric
+    { pattern: /\b[a-f0-9]{24,}\b/gi, replacement: '<redacted>' }, // Hex-only
+
+    // Bearer tokens (Authorization header format)
     { pattern: /Bearer\s+[a-zA-Z0-9_-]+/gi, replacement: 'Bearer <redacted>' },
 
-    // Access tokens in URLs
+    // === ENVIRONMENT VARIABLES === (CWE-526: Exposure of Sensitive Information Through Environmental Variables)
+
+    // KEY=value format (with optional quotes)
+    // CRITICAL: Must appear BEFORE path patterns to prevent false positives with URLs
+    { pattern: /([\w_]+)=(['"]?)([^'"&\s]+)\2/g, replacement: '$1=<redacted>' },
+
+    // === FILE PATHS === (CWE-200: Exposure of Sensitive Information to an Unauthorized Actor)
+
+    // Unix absolute paths (negative lookbehind prevents matching URLs like postgresql://)
+    // Only matches common sensitive directories to reduce false positives
+    { pattern: /(?<!:)\/(?:Users|home|root|var|etc|usr|opt|tmp)\/[^\s]*/g, replacement: '<path>/' },
+
+    // Windows absolute paths (C:\, D:\, etc.)
+    { pattern: /[A-Z]:\\[^\s]+/g, replacement: '<path>\\' },
+
+    // === API KEYS IN STRUCTURED DATA === (CWE-522: Insufficiently Protected Credentials)
+
+    // JSON format: {"api_key": "value", "token": "value", ...}
+    { pattern: /['"](api[_-]?key|token|secret|password)['"]\s*:\s*['"][^'"]+['"]/gi, replacement: '"$1": "<redacted>"' },
+
+    // Query parameters: ?access_token=value&api_key=value
     { pattern: /([?&])(access_token|token|api_key)=[^&\s]+/gi, replacement: '$1$2=<redacted>' },
 ];
 
@@ -44,6 +79,9 @@ const SENSITIVE_PATTERNS = [
  */
 export function sanitizeErrorForLogging(error: Error | string): string {
     let message = typeof error === 'string' ? error : error.message;
+
+    // Take only first line (multi-line truncation and stack trace removal)
+    message = message.split('\n')[0];
 
     // Apply all sensitive pattern replacements
     for (const { pattern, replacement } of SENSITIVE_PATTERNS) {

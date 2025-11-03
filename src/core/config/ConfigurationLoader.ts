@@ -6,6 +6,7 @@
  */
 
 import * as fs from 'fs';
+import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
 
 export interface LoadOptions {
     validationErrorMessage?: string;
@@ -22,8 +23,9 @@ export class ConfigurationLoader<T> {
             const content = fs.readFileSync(this.configPath, 'utf-8');
             return JSON.parse(content) as T;
         } catch (error) {
-            const message = options.validationErrorMessage || `Failed to load configuration from ${this.configPath}`;
-            throw new Error(`${message}: ${(error as Error).message}`);
+            const message = options.validationErrorMessage || 'Failed to load configuration';
+            const sanitizedError = sanitizeErrorForLogging((error as Error).message);
+            throw new Error(`${message}: ${sanitizedError}`);
         }
     }
 }

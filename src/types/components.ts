@@ -119,11 +119,11 @@ export interface RawComponentRegistry {
     version: string;
     components?: Record<string, RawComponentDefinition>;
     selectionGroups?: {
-        frontend?: string[];
-        backend?: string[];
+        frontends?: string[];
+        backends?: string[];
         dependencies?: string[];
-        externalSystems?: string[];
-        appBuilder?: string[];
+        integrations?: string[];
+        appBuilderApps?: string[];
     };
     infrastructure?: Record<string, RawComponentDefinition>;
     services?: Record<string, ServiceDefinition>;

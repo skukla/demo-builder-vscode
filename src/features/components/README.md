@@ -137,7 +137,7 @@ See `services/types.ts` and `@/types` for type definitions:
 features/components/
 ├── index.ts                     # Public API exports
 ├── services/
-│   ├── componentRegistry.ts    # Registry loading and querying
+│   ├── ComponentRegistryManager.ts  # Registry loading and querying
 │   ├── componentManager.ts     # Component lifecycle (extensible)
 │   └── types.ts                # Type definitions
 ├── handlers/
