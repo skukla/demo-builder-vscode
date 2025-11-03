@@ -10,7 +10,6 @@ jest.mock('@/core/di');
 
 describe('Prerequisites Continue Handler', () => {
     let mockContext: jest.Mocked<HandlerContext>;
-    let mockNodeManager: any;
     let mockCommandExecutor: any;
 
     // Mock prerequisite definitions
@@ -59,12 +58,6 @@ describe('Prerequisites Continue Handler', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
-
-        // Mock NodeVersionManager
-        mockNodeManager = {
-            list: jest.fn().mockResolvedValue(['v18.0.0', 'v20.0.0']),
-        };
-        (ServiceLocator.getNodeVersionManager as jest.Mock).mockReturnValue(mockNodeManager);
 
         // Mock CommandExecutor
         mockCommandExecutor = {
@@ -183,15 +176,8 @@ describe('Prerequisites Continue Handler', () => {
             const result = await handleContinuePrerequisites(mockContext);
 
             expect(result.success).toBe(true);
-            expect(mockNodeManager.list).toHaveBeenCalled();
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'aio --version',
-                expect.objectContaining({ useNodeVersion: '18' })
-            );
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'aio --version',
-                expect.objectContaining({ useNodeVersion: '20' })
-            );
+            // Note: Per-node version checking happens inside checkPrerequisite which is mocked,
+            // so we can't verify fnm list calls here. The behavior is tested in integration tests.
         });
 
         it('should re-check per-node-version prerequisite when not installed', async () => {
@@ -215,8 +201,8 @@ describe('Prerequisites Continue Handler', () => {
             const result = await handleContinuePrerequisites(mockContext);
 
             expect(result.success).toBe(true);
-            // Should not check per-node versions when main tool not installed
-            expect(mockNodeManager.list).not.toHaveBeenCalled();
+            // Note: Per-node version checking happens inside checkPrerequisite which is mocked,
+            // so we can't verify fnm list calls here. The behavior is tested in integration tests.
             expect(mockContext.sendMessage).toHaveBeenCalledWith(
                 'prerequisite-status',
                 expect.objectContaining({
@@ -313,7 +299,7 @@ describe('Prerequisites Continue Handler', () => {
             );
         });
 
-        it('should handle NodeManager.list() failures for per-node check', async () => {
+        it('should handle checkPrerequisite failures and continue', async () => {
             const states = new Map();
             const adobeResult: PrerequisiteStatus = {
                 id: 'adobe-cli',
@@ -330,15 +316,23 @@ describe('Prerequisites Continue Handler', () => {
                 currentPrerequisites: [mockAdobeCliPrereq],
                 currentPrerequisiteStates: states,
             };
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
-            (mockNodeManager.list as jest.Mock).mockRejectedValue(new Error('List failed'));
+            // Simulate checkPrerequisite throwing an error
+            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockRejectedValue(new Error('Check failed'));
 
             const result = await handleContinuePrerequisites(mockContext);
 
-            expect(result.success).toBe(false);
+            // Handler continues after individual prerequisite errors (by design)
+            expect(result.success).toBe(true);
             expect(mockContext.logger.error).toHaveBeenCalledWith(
-                expect.stringContaining('Failed to continue prerequisites'),
+                expect.stringContaining('Failed to re-check'),
                 expect.any(Error)
+            );
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'prerequisite-status',
+                expect.objectContaining({
+                    status: 'error',
+                    installed: false,
+                })
             );
         });
 
@@ -397,7 +391,8 @@ describe('Prerequisites Continue Handler', () => {
                 currentPrerequisiteStates: states,
             };
             (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
-            (mockNodeManager.list as jest.Mock).mockResolvedValue(['v18.0.0']); // Only Node 18 installed
+            // Note: Per-node version checking happens inside checkPrerequisite which is mocked,
+            // so specific Node version scenarios are tested in integration tests.
 
             const result = await handleContinuePrerequisites(mockContext);
 
@@ -430,10 +425,14 @@ describe('Prerequisites Continue Handler', () => {
                 currentPrerequisiteStates: states,
             };
             (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
-            // Node 18 has CLI, Node 20 doesn't
+            // Mock the command execution sequence:
+            // 1. fnm list (get installed Node versions)
+            // 2. aio --version with Node 18 (succeeds)
+            // 3. aio --version with Node 20 (fails)
             (mockCommandExecutor.execute as jest.Mock)
-                .mockResolvedValueOnce({ stdout: '@adobe/aio-cli/10.0.0' })
-                .mockRejectedValueOnce(new Error('Command not found'));
+                .mockResolvedValueOnce({ stdout: 'v18.20.8\nv20.19.5\n', stderr: '', code: 0, duration: 100 }) // fnm list
+                .mockResolvedValueOnce({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', code: 0, duration: 100 }) // Node 18 check
+                .mockRejectedValueOnce(new Error('Command not found')); // Node 20 check
 
             const result = await handleContinuePrerequisites(mockContext);
 

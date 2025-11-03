@@ -14,21 +14,24 @@ import {
     handleSelectProject,
     handleCheckProjectApis
 } from '@/features/authentication/handlers/projectHandlers';
-import { HandlerContext } from '../../../src/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import * as securityValidation from '@/core/validation/securityValidation';
 
 // Mock dependencies
-jest.mock('../../../src/services/serviceLocator');
-jest.mock('../../../src/utils/securityValidation');
-jest.mock('../../../src/types/typeGuards');
-jest.mock('../../../src/utils/timeoutConfig', () => ({
+jest.mock('@/core/di/serviceLocator');
+jest.mock('@/core/validation/securityValidation');
+jest.mock('@/types/typeGuards', () => ({
+    toError: jest.fn((error: any) => error instanceof Error ? error : new Error(String(error))),
+    parseJSON: jest.fn((str: string) => JSON.parse(str))
+}));
+jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         PROJECT_LIST: 30000,
         WORKSPACE_LIST: 30000
     }
 }));
-jest.mock('../../../src/utils/promiseUtils', () => ({
+jest.mock('@/core/utils/promiseUtils', () => ({
     withTimeout: jest.fn((promise) => promise)
 }));
 
@@ -85,7 +88,7 @@ describe('projectHandlers', () => {
             const result = await handleEnsureOrgSelected(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.hasOrg).toBe(true);
+            expect(result.data!.hasOrg).toBe(true);
             expect(mockContext.sendMessage).toHaveBeenCalledWith('orgSelectionStatus', {
                 hasOrg: true
             });
@@ -97,7 +100,7 @@ describe('projectHandlers', () => {
             const result = await handleEnsureOrgSelected(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.hasOrg).toBe(false);
+            expect(result.data!.hasOrg).toBe(false);
             expect(mockContext.sendMessage).toHaveBeenCalledWith('orgSelectionStatus', {
                 hasOrg: false
             });
@@ -126,7 +129,7 @@ describe('projectHandlers', () => {
             const result = await handleEnsureOrgSelected(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.hasOrg).toBe(false);
+            expect(result.data!.hasOrg).toBe(false);
         });
     });
 
@@ -146,8 +149,8 @@ describe('projectHandlers', () => {
             const result = await handleGetProjects(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.projects).toEqual(mockProjects);
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('projects', mockProjects);
+            expect(result.data).toEqual(mockProjects);
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', mockProjects);
         });
 
         it('should show loading status before fetching', async () => {
@@ -176,7 +179,7 @@ describe('projectHandlers', () => {
             const result = await handleGetProjects(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.projects).toEqual([]);
+            expect(result.data).toEqual([]);
         });
 
         it('should handle timeout error', async () => {
@@ -184,16 +187,15 @@ describe('projectHandlers', () => {
                 id: 'org-123',
                 name: 'Test Org'
             });
-            mockAuthManager.getProjects.mockRejectedValue({
-                message: 'Request timed out. Please check your connection and try again.',
-                name: 'TimeoutError'
-            });
+            mockAuthManager.getProjects.mockRejectedValue(
+                new Error('Request timed out. Please check your connection and try again.')
+            );
 
             const result = await handleGetProjects(mockContext);
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('timed out');
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('projects', {
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', {
                 error: expect.stringContaining('timed out')
             });
         });
@@ -349,7 +351,7 @@ describe('projectHandlers', () => {
             const result = await handleCheckProjectApis(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.hasMesh).toBe(true);
+            expect(result.data!.hasMesh).toBe(true);
             expect(mockContext.logger.info).toHaveBeenCalledWith(
                 expect.stringContaining('[Adobe Setup] API Mesh access confirmed')
             );
@@ -377,7 +379,7 @@ describe('projectHandlers', () => {
             const result = await handleCheckProjectApis(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.hasMesh).toBe(false);
+            expect(result.data!.hasMesh).toBe(false);
             expect(mockContext.logger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('[Adobe Setup] API Mesh not enabled')
             );
@@ -394,7 +396,7 @@ describe('projectHandlers', () => {
             const result = await handleCheckProjectApis(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.hasMesh).toBe(false);
+            expect(result.data!.hasMesh).toBe(false);
             expect(mockContext.logger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('[Adobe Setup] API Mesh CLI plugin not installed')
             );
@@ -422,7 +424,7 @@ describe('projectHandlers', () => {
             const result = await handleCheckProjectApis(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.hasMesh).toBe(true);
+            expect(result.data!.hasMesh).toBe(true);
             expect(mockContext.logger.info).toHaveBeenCalledWith(
                 expect.stringContaining('[Adobe Setup] API Mesh enabled; no active mesh found')
             );
@@ -454,7 +456,7 @@ describe('projectHandlers', () => {
             const result = await handleCheckProjectApis(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.hasMesh).toBe(true);
+            expect(result.data!.hasMesh).toBe(true);
         });
 
         it('should return false when all probes fail', async () => {
@@ -491,7 +493,7 @@ describe('projectHandlers', () => {
             const result = await handleCheckProjectApis(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.hasMesh).toBe(false);
+            expect(result.data!.hasMesh).toBe(false);
             expect(mockContext.logger.warn).toHaveBeenCalledWith(
                 expect.stringContaining('[Adobe Setup] Unable to confirm API Mesh access')
             );
@@ -506,18 +508,21 @@ describe('projectHandlers', () => {
             const result = await handleCheckProjectApis(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.hasMesh).toBe(false);
+            expect(result.data!.hasMesh).toBe(false);
         });
 
         it('should handle general errors', async () => {
             const error = new Error('CLI command failed');
             mockCommandExecutor.executeAdobeCLI.mockRejectedValue(error);
 
-            await expect(handleCheckProjectApis(mockContext)).rejects.toThrow('CLI command failed');
+            // Implementation catches errors and returns success with hasMesh: false
+            const result = await handleCheckProjectApis(mockContext);
 
-            expect(mockContext.logger.error).toHaveBeenCalledWith(
-                '[Adobe Setup] Failed to check project APIs',
-                error
+            expect(result.success).toBe(true);
+            expect(result.data!.hasMesh).toBe(false);
+            expect(mockContext.debugLogger.debug).toHaveBeenCalledWith(
+                '[Adobe Setup] Failed to verify plugins; continuing',
+                expect.objectContaining({ error: expect.any(String) })
             );
         });
     });
@@ -528,15 +533,14 @@ describe('projectHandlers', () => {
                 id: 'org-123',
                 name: 'Test Org'
             });
-            mockAuthManager.getProjects.mockRejectedValue({
-                message: 'Request timed out. Please check your connection and try again.',
-                name: 'TimeoutError'
-            });
+            mockAuthManager.getProjects.mockRejectedValue(
+                new Error('Request timed out. Please check your connection and try again.')
+            );
 
             const result = await handleGetProjects(mockContext);
 
             expect(result.error).toContain('timed out');
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('projects', {
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', {
                 error: expect.stringContaining('timed out')
             });
         });

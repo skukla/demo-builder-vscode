@@ -19,6 +19,7 @@ module.exports = {
       },
       moduleFileExtensions: ['ts', 'js', 'json'],
       moduleNameMapper: {
+        '^@/commands/(.*)$': '<rootDir>/src/commands/$1',
         '^@/core/(.*)$': '<rootDir>/src/core/$1',
         '^@/features/(.*)$': '<rootDir>/src/features/$1',
         '^@/shared/(.*)$': '<rootDir>/src/shared/$1',
@@ -53,6 +54,7 @@ module.exports = {
             jsx: 'react',
             esModuleInterop: true,
             allowSyntheticDefaultImports: true,
+            types: ['@testing-library/jest-dom', 'jest', 'node'],
           },
         }],
       },

@@ -49,12 +49,13 @@ describe('ResetAllCommand - Integration Tests', () => {
             clearAll: jest.fn().mockResolvedValue(undefined),
         };
 
-        // Mock Logger
+        // Mock Logger (must match Logger interface: info, warn, error, debug)
         mockLogger = {
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
-        };
+            debug: jest.fn(),
+        } as any;
 
         // Mock StatusBar
         mockStatusBar = {
@@ -75,7 +76,7 @@ describe('ResetAllCommand - Integration Tests', () => {
         (vscode.workspace.updateWorkspaceFolders as jest.Mock) = jest.fn();
 
         // Create command instance
-        command = new ResetAllCommand(mockContext, mockStateManager, mockLogger, mockStatusBar);
+        command = new ResetAllCommand(mockContext, mockStateManager, mockStatusBar, mockLogger);
     });
 
     afterEach(async () => {

@@ -10,17 +10,17 @@ import {
     handleGetWorkspaces,
     handleSelectWorkspace
 } from '@/features/authentication/handlers/workspaceHandlers';
-import { HandlerContext } from '../../../src/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import * as securityValidation from '@/core/validation/securityValidation';
 
 // Mock dependencies
-jest.mock('../../../src/utils/securityValidation');
-jest.mock('../../../src/utils/timeoutConfig', () => ({
+jest.mock('@/core/validation/securityValidation');
+jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         WORKSPACE_LIST: 30000
     }
 }));
-jest.mock('../../../src/utils/promiseUtils', () => ({
+jest.mock('@/core/utils/promiseUtils', () => ({
     withTimeout: jest.fn((promise) => promise)
 }));
 
@@ -74,8 +74,8 @@ describe('workspaceHandlers', () => {
             const result = await handleGetWorkspaces(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.workspaces).toEqual(mockWorkspaces);
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaces', mockWorkspaces);
+            expect(result.data).toEqual(mockWorkspaces);
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('get-workspaces', mockWorkspaces);
         });
 
         it('should show loading status before fetching', async () => {
@@ -122,7 +122,7 @@ describe('workspaceHandlers', () => {
             const result = await handleGetWorkspaces(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.workspaces).toEqual([]);
+            expect(result.data).toEqual([]);
         });
 
         it('should handle timeout error', async () => {
@@ -132,16 +132,15 @@ describe('workspaceHandlers', () => {
                 title: 'Test Project'
             });
 
-            mockAuthManager.getWorkspaces.mockRejectedValue({
-                message: 'Request timed out. Please check your connection and try again.',
-                name: 'TimeoutError'
-            });
+            mockAuthManager.getWorkspaces.mockRejectedValue(
+                new Error('Request timed out. Please check your connection and try again.')
+            );
 
             const result = await handleGetWorkspaces(mockContext);
 
             expect(result.success).toBe(false);
             expect(result.error).toContain('timed out');
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaces', {
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('get-workspaces', {
                 error: expect.stringContaining('timed out')
             });
         });
@@ -316,7 +315,7 @@ describe('workspaceHandlers', () => {
             // Get workspaces
             const getResult = await handleGetWorkspaces(mockContext);
             expect(getResult.success).toBe(true);
-            expect(getResult.workspaces).toEqual(mockWorkspaces);
+            expect(getResult.data).toEqual(mockWorkspaces);
 
             // Select workspace
             (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {});
@@ -351,7 +350,7 @@ describe('workspaceHandlers', () => {
 
             const result = await handleGetWorkspaces(mockContext);
 
-            expect(result.workspaces).toEqual([
+            expect(result.data).toEqual([
                 { id: 'ws-2', name: 'WS2', title: 'WS2' }
             ]);
         });
@@ -364,15 +363,14 @@ describe('workspaceHandlers', () => {
                 name: 'Test Project',
                 title: 'Test Project'
             });
-            mockAuthManager.getWorkspaces.mockRejectedValue({
-                message: 'Request timed out. Please check your connection and try again.',
-                name: 'TimeoutError'
-            });
+            mockAuthManager.getWorkspaces.mockRejectedValue(
+                new Error('Request timed out. Please check your connection and try again.')
+            );
 
             const result = await handleGetWorkspaces(mockContext);
 
             expect(result.error).toContain('timed out');
-            expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaces', {
+            expect(mockContext.sendMessage).toHaveBeenCalledWith('get-workspaces', {
                 error: expect.stringContaining('timed out')
             });
         });
@@ -404,7 +402,7 @@ describe('workspaceHandlers', () => {
 
             // Should handle gracefully
             expect(result.success).toBe(true);
-            expect(result.workspaces).toBeNull();
+            expect(result.data).toBeNull();
         });
 
         it('should handle undefined workspace list', async () => {
@@ -418,7 +416,7 @@ describe('workspaceHandlers', () => {
             const result = await handleGetWorkspaces(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.workspaces).toBeUndefined();
+            expect(result.data).toBeUndefined();
         });
 
         it('should handle workspace selection with empty string ID', async () => {

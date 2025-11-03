@@ -8,20 +8,20 @@
  */
 
 import { MeshDeployer } from '@/features/mesh/services/meshDeployer';
-import { Project } from '../../src/types';
+import { Project } from '@/types';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { CommandExecutor } from '@/core/shell';
 import { Logger } from '@/core/logging';
 import * as fs from 'fs/promises';
 
 // Mock ServiceLocator
-jest.mock('../../src/services/serviceLocator');
+jest.mock('@/core/di/serviceLocator');
 
 // Mock fs/promises
 jest.mock('fs/promises');
 
 // Mock securityValidation
-jest.mock('../../src/utils/securityValidation', () => ({
+jest.mock('@/core/validation/securityValidation', () => ({
     validateMeshId: jest.fn()
 }));
 
@@ -219,7 +219,7 @@ describe('MeshDeployer', () => {
             const result = await meshDeployer.deploy(mockProject);
 
             expect(result.success).toBe(true);
-            expect(result.endpoint).toBe('https://mesh-endpoint.adobe.io/graphql');
+            expect(result.data!.endpoint).toBe('https://mesh-endpoint.adobe.io/graphql');
         });
 
         it('should write mesh.json file', async () => {
@@ -256,7 +256,7 @@ describe('MeshDeployer', () => {
 
             const result = await meshDeployer.deploy(mockProject);
 
-            expect(result.endpoint).toBe('https://custom-mesh.adobe.io/graphql');
+            expect(result.data!.endpoint).toBe('https://custom-mesh.adobe.io/graphql');
         });
 
         it('should handle deployment without endpoint', async () => {
@@ -270,7 +270,7 @@ describe('MeshDeployer', () => {
             const result = await meshDeployer.deploy(mockProject);
 
             expect(result.success).toBe(false);
-            expect(result.endpoint).toBeUndefined();
+            expect(result.data?.endpoint).toBeUndefined();
         });
 
         it('should handle deployment failure', async () => {
@@ -323,7 +323,7 @@ Deployment complete
 
             const result = await meshDeployer.deploy(mockProject);
 
-            expect(result.endpoint).toBe('https://mesh-123.adobe.io/graphql');
+            expect(result.data!.endpoint).toBe('https://mesh-123.adobe.io/graphql');
         });
 
         it('should handle multiple URLs in output (use first)', async () => {
@@ -339,7 +339,7 @@ Secondary endpoint: https://secondary.adobe.io/graphql
 
             const result = await meshDeployer.deploy(mockProject);
 
-            expect(result.endpoint).toBe('https://primary.adobe.io/graphql');
+            expect(result.data!.endpoint).toBe('https://primary.adobe.io/graphql');
         });
     });
 
@@ -348,7 +348,7 @@ Secondary endpoint: https://secondary.adobe.io/graphql
             const result = await meshDeployer.update(mockProject);
 
             expect(result.success).toBe(true);
-            expect(result.endpoint).toBe('https://mesh-endpoint.adobe.io/graphql');
+            expect(result.data!.endpoint).toBe('https://mesh-endpoint.adobe.io/graphql');
         });
 
         it('should write updated mesh.json file', async () => {
@@ -381,7 +381,7 @@ Secondary endpoint: https://secondary.adobe.io/graphql
 
             const result = await meshDeployer.update(mockProject);
 
-            expect(result.endpoint).toBe('https://updated-mesh.adobe.io/graphql');
+            expect(result.data!.endpoint).toBe('https://updated-mesh.adobe.io/graphql');
         });
 
         it('should handle update without endpoint', async () => {
@@ -395,7 +395,7 @@ Secondary endpoint: https://secondary.adobe.io/graphql
             const result = await meshDeployer.update(mockProject);
 
             expect(result.success).toBe(false);
-            expect(result.endpoint).toBeUndefined();
+            expect(result.data?.endpoint).toBeUndefined();
         });
 
         it('should handle update failure', async () => {
@@ -422,7 +422,7 @@ Secondary endpoint: https://secondary.adobe.io/graphql
     });
 
     describe('delete', () => {
-        const { validateMeshId } = require('../../src/utils/securityValidation');
+        const { validateMeshId } = require('../../src/core/validation/securityValidation');
 
         it('should delete mesh successfully', async () => {
             (mockCommandExecutor.executeAdobeCLI as jest.Mock).mockResolvedValue({
@@ -473,10 +473,9 @@ Secondary endpoint: https://secondary.adobe.io/graphql
                 }
             });
 
-            await expect(
-                meshDeployer.delete('mesh-123; rm -rf /')
-            ).rejects.toThrow('Invalid mesh ID');
+            const result = await meshDeployer.delete('mesh-123; rm -rf /');
 
+            expect(result).toBe(false);
             expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalled();
         });
 
@@ -487,7 +486,9 @@ Secondary endpoint: https://secondary.adobe.io/graphql
                 }
             });
 
-            await expect(meshDeployer.delete('')).rejects.toThrow('Mesh ID is required');
+            const result = await meshDeployer.delete('');
+
+            expect(result).toBe(false);
         });
 
         it('should handle mesh ID with special characters', async () => {
@@ -497,9 +498,9 @@ Secondary endpoint: https://secondary.adobe.io/graphql
                 }
             });
 
-            await expect(
-                meshDeployer.delete('mesh@123')
-            ).rejects.toThrow('Invalid mesh ID format');
+            const result = await meshDeployer.delete('mesh@123');
+
+            expect(result).toBe(false);
         });
     });
 

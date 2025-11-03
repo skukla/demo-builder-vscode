@@ -11,7 +11,7 @@ import {
     HandlerResponse,
     PrerequisiteCheckState,
     ApiServicesConfig
-} from '../../../src/commands/handlers/HandlerContext';
+} from '@/commands/handlers/HandlerContext';
 
 describe('HandlerContext', () => {
     describe('Type Exports', () => {

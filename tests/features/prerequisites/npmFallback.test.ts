@@ -12,8 +12,8 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { CommandExecutor } from '@/core/shell';
 
 jest.mock('@/core/config/ConfigurationLoader');
-jest.mock('@/services/serviceLocator');
-jest.mock('@/shared/logging/debugLogger', () => ({
+jest.mock('@/core/di/serviceLocator');
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: jest.fn().mockReturnValue({
         info: jest.fn(),
         warn: jest.fn(),

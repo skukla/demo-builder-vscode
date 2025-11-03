@@ -3,7 +3,7 @@ import { CommandExecutor } from '@/core/shell/commandExecutor';
 import type { CommandResult } from '@/core/shell/types';
 
 // Mock the command executor
-jest.mock('../../../src/utils/commands/commandExecutor');
+jest.mock('../../../src/core/shell/commandExecutor');
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),
@@ -28,7 +28,7 @@ describe('TokenManager', () => {
             const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
             const mockResult: CommandResult = {
                 code: 0,
-                stdout: validToken,
+                stdout: JSON.stringify({ token: validToken, expiry: Date.now() + 3600000 }),
                 stderr: '',
                 duration: 100
             };
@@ -38,7 +38,7 @@ describe('TokenManager', () => {
 
             expect(token).toBe(validToken);
             expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
-                'aio config get ims.contexts.cli.access_token.token',
+                'aio config get ims.contexts.cli.access_token --json',
                 expect.objectContaining({ encoding: 'utf8' })
             );
         });
@@ -59,9 +59,10 @@ describe('TokenManager', () => {
 
         it('should filter out fnm messages from token output', async () => {
             const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+            const tokenData = JSON.stringify({ token: validToken, expiry: Date.now() + 3600000 });
             const mockResult: CommandResult = {
                 code: 0,
-                stdout: `Using Node v20.11.0\n${validToken}\n`,
+                stdout: `Using Node v20.11.0\n${tokenData}\n`,
                 stderr: '',
                 duration: 100
             };
@@ -161,8 +162,12 @@ describe('TokenManager', () => {
             const futureExpiry = Date.now() + 7200000;
 
             mockCommandExecutor.executeAdobeCLI = jest.fn()
-                .mockResolvedValueOnce({ code: 0, stdout: validToken, stderr: '', duration: 100 })
-                .mockResolvedValueOnce({ code: 0, stdout: futureExpiry.toString(), stderr: '', duration: 100 });
+                .mockResolvedValue({
+                    code: 0,
+                    stdout: JSON.stringify({ token: validToken, expiry: futureExpiry }),
+                    stderr: '',
+                    duration: 100
+                });
 
             const result = await tokenManager.isTokenValid();
 
@@ -195,91 +200,16 @@ describe('TokenManager', () => {
             const validToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
 
             mockCommandExecutor.executeAdobeCLI = jest.fn()
-                .mockResolvedValueOnce({ code: 0, stdout: validToken, stderr: '', duration: 100 })
-                .mockResolvedValueOnce({ code: 1, stdout: '', stderr: '', duration: 100 });
+                .mockResolvedValue({
+                    code: 0,
+                    stdout: JSON.stringify({ token: validToken, expiry: Date.now() + 3600000 }),
+                    stderr: '',
+                    duration: 100
+                });
 
             const result = await tokenManager.isTokenValid();
 
             expect(result).toBe(true);
-        });
-    });
-
-    describe('storeAccessToken', () => {
-        it('should successfully store token and expiry', async () => {
-            const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-            mockCommandExecutor.executeAdobeCLI = jest.fn()
-                .mockResolvedValue({ code: 0, stdout: '', stderr: '', duration: 100 });
-
-            const result = await tokenManager.storeAccessToken(token);
-
-            expect(result).toBe(true);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(2);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
-                `aio config set ims.contexts.cli.access_token.token "${token}"`,
-                expect.objectContaining({ encoding: 'utf8' })
-            );
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
-                expect.stringMatching(/aio config set ims\.contexts\.cli\.access_token\.expiry \d+/),
-                expect.objectContaining({ encoding: 'utf8' })
-            );
-        });
-
-        it('should return false when token storage fails', async () => {
-            const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-            mockCommandExecutor.executeAdobeCLI = jest.fn()
-                .mockResolvedValueOnce({ code: 1, stdout: '', stderr: 'Error', duration: 100 })
-                .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '', duration: 100 });
-
-            const result = await tokenManager.storeAccessToken(token);
-
-            expect(result).toBe(false);
-        });
-
-        it('should return false when expiry storage fails', async () => {
-            const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-            mockCommandExecutor.executeAdobeCLI = jest.fn()
-                .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '', duration: 100 })
-                .mockResolvedValueOnce({ code: 1, stdout: '', stderr: 'Error', duration: 100 });
-
-            const result = await tokenManager.storeAccessToken(token);
-
-            expect(result).toBe(false);
-        });
-
-        it('should handle exceptions gracefully', async () => {
-            const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-            mockCommandExecutor.executeAdobeCLI = jest.fn()
-                .mockRejectedValue(new Error('Command failed'));
-
-            const result = await tokenManager.storeAccessToken(token);
-
-            expect(result).toBe(false);
-        });
-    });
-
-    describe('clearToken', () => {
-        it('should clear both token and expiry', async () => {
-            mockCommandExecutor.executeAdobeCLI = jest.fn()
-                .mockResolvedValue({ code: 0, stdout: '', stderr: '', duration: 100 });
-
-            await tokenManager.clearToken();
-
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(2);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
-                'aio config delete ims.contexts.cli.access_token.token',
-                expect.objectContaining({ encoding: 'utf8' })
-            );
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
-                'aio config delete ims.contexts.cli.access_token.expiry',
-                expect.objectContaining({ encoding: 'utf8' })
-            );
-        });
-
-        it('should handle errors gracefully', async () => {
-            mockCommandExecutor.executeAdobeCLI = jest.fn()
-                .mockRejectedValue(new Error('Command failed'));
-
-            await expect(tokenManager.clearToken()).resolves.not.toThrow();
         });
     });
 });

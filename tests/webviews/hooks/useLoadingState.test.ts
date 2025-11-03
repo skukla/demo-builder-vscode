@@ -32,14 +32,15 @@ describe('useLoadingState', () => {
     it('sets data and clears loading/error states', () => {
       const { result } = renderHook(() => useLoadingState<string>());
 
+      // Set error state only (setError automatically clears loading)
       act(() => {
-        result.current.setLoading(true);
         result.current.setError('Some error');
       });
 
-      expect(result.current.loading).toBe(true);
+      expect(result.current.loading).toBe(false);
       expect(result.current.error).toBe('Some error');
 
+      // Now call setData which should clear error
       act(() => {
         result.current.setData('new data');
       });

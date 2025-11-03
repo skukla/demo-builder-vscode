@@ -1,6 +1,6 @@
 import { ResourceLocker } from '@/core/shell/resourceLocker';
 
-jest.mock('../../../src/utils/debugLogger', () => ({
+jest.mock('../../../src/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),
         debug: jest.fn(),

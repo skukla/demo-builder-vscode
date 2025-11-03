@@ -103,8 +103,10 @@ describe('ErrorDisplay', () => {
         });
 
         it('does not center when centered is false', () => {
-            renderWithProviders(<ErrorDisplay message="Error" centered={false} />);
-            expect(screen.getByText('Error')).toBeInTheDocument();
+            renderWithProviders(<ErrorDisplay message="Test error message" centered={false} />);
+            // Component should render without centering wrapper
+            expect(screen.getByText('Test error message')).toBeInTheDocument();
+            expect(screen.getByText('Error')).toBeInTheDocument(); // Default title
         });
 
         it('respects maxWidth prop', () => {

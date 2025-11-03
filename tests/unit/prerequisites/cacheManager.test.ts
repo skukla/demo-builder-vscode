@@ -10,7 +10,7 @@ import { PrerequisiteStatus } from '@/features/prerequisites/services/types';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 
 // Mock logger
-jest.mock('@/shared/logging/debugLogger', () => ({
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         debug: jest.fn(),
         info: jest.fn(),
@@ -426,9 +426,11 @@ describe('PrerequisitesCacheManager', () => {
                 };
 
                 // Fill cache to max size with different TTLs
+                // Use large TTL spread (1000ms per entry) to ensure jitter (±10%) doesn't affect ordering
                 for (let i = 0; i < 100; i++) {
                     // Earlier entries have shorter TTL (will expire first)
-                    const ttl = 1000 + (i * 100); // 1s, 1.1s, 1.2s, etc.
+                    // 10s, 11s, 12s, etc. - jitter of ±1s won't change ordering
+                    const ttl = 10000 + (i * 1000);
                     cacheManager.setCachedResult(`prereq-${i}`, mockResult, ttl);
                 }
 
@@ -513,6 +515,7 @@ describe('PrerequisitesCacheManager', () => {
             // At least some variance (not all identical)
             const uniqueExpiries = new Set(expiries);
             expect(uniqueExpiries.size).toBeGreaterThan(1);
+            });
         });
     });
 });

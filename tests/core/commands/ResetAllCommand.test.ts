@@ -41,12 +41,13 @@ describe('ResetAllCommand - Adobe CLI cleanup', () => {
             clearAll: jest.fn().mockResolvedValue(undefined),
         };
 
-        // Mock Logger
+        // Mock Logger (must match Logger interface: info, warn, error, debug)
         mockLogger = {
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
-        };
+            debug: jest.fn(),
+        } as any;
 
         // Mock StatusBar
         mockStatusBar = {
@@ -66,8 +67,17 @@ describe('ResetAllCommand - Adobe CLI cleanup', () => {
         (vscode.workspace.workspaceFolders as any) = [];
         (vscode.workspace.updateWorkspaceFolders as jest.Mock) = jest.fn();
 
+        // Mock fs/promises for path validation
+        const fs = require('fs/promises');
+        fs.lstat = jest.fn().mockResolvedValue({
+            isSymbolicLink: () => false,
+            isDirectory: () => true,
+            isFile: () => false,
+        });
+        fs.rm = jest.fn().mockResolvedValue(undefined);
+
         // Create command instance
-        command = new ResetAllCommand(mockContext, mockStateManager, mockLogger, mockStatusBar);
+        command = new ResetAllCommand(mockContext, mockStateManager, mockStatusBar, mockLogger);
     });
 
     describe('Adobe CLI logout integration', () => {

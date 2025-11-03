@@ -1,6 +1,6 @@
 import { PollingService } from '@/core/shell/pollingService';
 
-jest.mock('../../../src/utils/debugLogger', () => ({
+jest.mock('../../../src/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),
         debug: jest.fn(),

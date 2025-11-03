@@ -12,7 +12,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import { Project, ProcessInfo } from '../../src/types';
+import { Project, ProcessInfo } from '@/types';
 
 // Mock VS Code API
 jest.mock('vscode');
@@ -1076,8 +1076,8 @@ describe('StateManager', () => {
 
             await stateManager.initialize();
 
-            // Should not throw
-            expect(await stateManager.getCurrentProject()).toBeUndefined();
+            // Should not throw - returns null when state is null
+            expect(await stateManager.getCurrentProject()).toBeNull();
         });
 
         it('should handle malformed manifest gracefully', async () => {

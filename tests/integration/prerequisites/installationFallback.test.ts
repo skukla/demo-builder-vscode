@@ -11,7 +11,19 @@ import { ServiceLocator } from '@/core/di/serviceLocator';
 import type { CommandExecutor } from '@/core/shell';
 
 jest.mock('@/core/config/ConfigurationLoader');
-jest.mock('@/services/serviceLocator');
+jest.mock('@/core/di/serviceLocator');
+jest.mock('@/core/logging/debugLogger', () => ({
+    getLogger: jest.fn().mockReturnValue({
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        debug: jest.fn(),
+        logCommand: jest.fn(),
+        show: jest.fn(),
+        showDebug: jest.fn(),
+    }),
+    initializeLogger: jest.fn(),
+}));
 
 describe('npm --prefer-offline Fallback (Integration)', () => {
     let manager: PrerequisitesManager;

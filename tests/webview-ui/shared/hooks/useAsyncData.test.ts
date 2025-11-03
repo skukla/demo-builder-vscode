@@ -10,7 +10,7 @@ jest.mock('@/webview-ui/shared/utils/WebviewClient', () => ({
 }));
 
 // Mock useVSCodeMessage and useLoadingState since useAsyncData depends on them
-jest.mock('@/core/ui/hooks/useVSCodeMessage', () => ({
+jest.mock('@/webview-ui/shared/hooks/useVSCodeMessage', () => ({
   useVSCodeMessage: jest.fn()
 }));
 

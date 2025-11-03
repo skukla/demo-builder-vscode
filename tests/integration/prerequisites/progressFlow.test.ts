@@ -9,15 +9,53 @@
 import { ProgressUnifier, UnifiedProgress } from '@/core/utils/progressUnifier';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { Logger } from '@/core/logging';
+import { ServiceLocator } from '@/core/di';
+import { EventEmitter } from 'events';
+
+// Mock child_process to prevent real command execution
+jest.mock('child_process', () => ({
+    spawn: jest.fn().mockImplementation(() => {
+        const mockProcess = new EventEmitter();
+        // Add required properties
+        (mockProcess as any).stdout = new EventEmitter();
+        (mockProcess as any).stderr = new EventEmitter();
+        (mockProcess as any).stdin = { end: jest.fn() };
+
+        // Simulate successful command execution asynchronously
+        setTimeout(() => {
+            (mockProcess as any).emit('close', 0);
+        }, 10);
+
+        return mockProcess;
+    }),
+}));
 
 // Mock logger
-jest.mock('@/shared/logging/debugLogger', () => ({
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         debug: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),
         error: jest.fn(),
     }),
+}));
+
+// Mock ServiceLocator to prevent real command execution
+jest.mock('@/core/di', () => ({
+    ServiceLocator: {
+        getCommandExecutor: jest.fn().mockReturnValue({
+            execute: jest.fn().mockImplementation((command: string) => {
+                // Mock successful execution for all commands
+                return Promise.resolve({
+                    stdout: command.includes('--version') ? '1.0.0' : 'Success',
+                    stderr: '',
+                    code: 0,
+                    duration: 50,
+                });
+            }),
+        }),
+        getAuthenticationService: jest.fn(),
+    },
 }));
 
 describe('Enhanced Progress Visibility - Integration', () => {

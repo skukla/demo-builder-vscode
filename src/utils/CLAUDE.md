@@ -22,7 +22,6 @@ utils/
 ├── prerequisitesManager.ts    # Tool detection and installation
 ├── progressUnifier.ts         # Unified progress tracking
 ├── stateManager.ts            # Persistent state storage
-├── componentRegistry.ts       # Component definitions manager
 ├── debugLogger.ts             # Central debug logging system
 ├── logger.ts                  # Backward-compatible logger wrapper
 ├── errorLogger.ts             # Error tracking with UI integration
@@ -155,16 +154,16 @@ interface UnifiedProgress {
 ```typescript
 class StateManager {
     constructor(private context: vscode.ExtensionContext) {}
-    
+
     // Get state value
     async get<T>(key: string, defaultValue?: T): Promise<T>
-    
+
     // Set state value
     async set<T>(key: string, value: T): Promise<void>
-    
+
     // Clear specific key
     async clear(key: string): Promise<void>
-    
+
     // Migrate old state formats
     async migrate(): Promise<void>
 }
@@ -176,28 +175,7 @@ class StateManager {
 - `user.preferences` - User preferences
 - `projects.recent` - Recent projects
 
-### Component Registry
-
-**Purpose**: Manages available project components and their configurations
-
-**Data Source**: `templates/components.json`
-
-**Key Methods**:
-```typescript
-class ComponentRegistry {
-    // Get all components
-    getComponents(): ComponentDefinition[]
-    
-    // Get component dependencies
-    getDependencies(componentId: string): string[]
-    
-    // Get required prerequisites
-    getRequiredPrerequisites(components: string[]): string[]
-    
-    // Validate component selection
-    validateSelection(components: string[]): ValidationResult
-}
-```
+> **Note**: Component Registry functionality has been migrated to `@/features/components`. See `src/features/components/README.md` for ComponentRegistryManager documentation.
 
 ### Debug Logger
 

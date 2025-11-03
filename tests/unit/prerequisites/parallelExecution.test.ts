@@ -15,7 +15,7 @@ import type { HandlerContext } from '@/types/handlers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
 
 // Mock ServiceLocator
-jest.mock('@/services/serviceLocator', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(),
         reset: jest.fn(),

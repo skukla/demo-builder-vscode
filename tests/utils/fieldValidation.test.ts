@@ -10,8 +10,7 @@
 import {
     validateProjectNameUI,
     validateCommerceUrlUI,
-    validateFieldUI,
-    ValidationResult
+    validateFieldUI
 } from '@/core/validation/fieldValidation';
 
 describe('fieldValidation', () => {

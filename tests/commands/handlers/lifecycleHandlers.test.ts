@@ -24,7 +24,7 @@ import {
     handleCancelAuthPolling,
     handleOpenAdobeConsole
 } from '@/features/lifecycle/handlers/lifecycleHandlers';
-import { HandlerContext } from '../../../src/commands/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import * as securityValidation from '@/core/validation/securityValidation';
 
 // Mock VS Code
@@ -50,13 +50,22 @@ const mockVSCode = {
 };
 
 jest.mock('vscode', () => mockVSCode, { virtual: true });
-jest.mock('../../../src/utils/securityValidation');
+jest.mock('../../../src/core/validation/securityValidation');
+
+// Mock component handlers module
+jest.mock('@/features/components/handlers/componentHandlers', () => ({
+    handleLoadComponents: jest.fn().mockResolvedValue({
+        success: true,
+        data: { components: [] }
+    })
+}));
 
 describe('lifecycleHandlers', () => {
     let mockContext: jest.Mocked<HandlerContext>;
     let mockComponentHandler: any;
     let mockPanel: any;
     let mockStateManager: any;
+    let mockCommunicationManager: any;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -76,11 +85,18 @@ describe('lifecycleHandlers', () => {
             getCurrentProject: jest.fn()
         };
 
+        // Mock communication manager
+        mockCommunicationManager = {
+            sendMessage: jest.fn().mockResolvedValue(undefined)
+        };
+
         // Create mock context
         mockContext = {
             componentHandler: mockComponentHandler,
             panel: mockPanel,
             stateManager: mockStateManager,
+            communicationManager: mockCommunicationManager,
+            extensionPath: '/mock/extension/path',
             logger: {
                 info: jest.fn(),
                 error: jest.fn(),
@@ -107,17 +123,25 @@ describe('lifecycleHandlers', () => {
         });
 
         it('should load components on ready', async () => {
+            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
+            (handleLoadComponents as jest.Mock).mockResolvedValue({
+                success: true,
+                data: { components: ['component1', 'component2'] }
+            });
+
             await handleReady(mockContext);
 
-            expect(mockComponentHandler.handleMessage).toHaveBeenCalledWith(
-                { type: 'loadComponents' },
-                mockPanel
+            expect(handleLoadComponents).toHaveBeenCalledWith(mockContext);
+            expect(mockCommunicationManager.sendMessage).toHaveBeenCalledWith(
+                'componentsLoaded',
+                { components: ['component1', 'component2'] }
             );
         });
 
         it('should handle component loading error gracefully', async () => {
             const error = new Error('Failed to load components');
-            mockComponentHandler.handleMessage.mockRejectedValue(error);
+            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
+            (handleLoadComponents as jest.Mock).mockRejectedValue(error);
 
             const result = await handleReady(mockContext);
 
@@ -156,7 +180,7 @@ describe('lifecycleHandlers', () => {
             const result = await handleCancelProjectCreation(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.message).toBe('Project creation cancelled');
+            expect(result.data!.message).toBe('Project creation cancelled');
             expect(abortSpy).toHaveBeenCalled();
             expect(mockContext.logger.info).toHaveBeenCalledWith(
                 expect.stringContaining('[Project Creation] Cancellation requested by user')
@@ -169,7 +193,7 @@ describe('lifecycleHandlers', () => {
             const result = await handleCancelProjectCreation(mockContext);
 
             expect(result.success).toBe(false);
-            expect(result.message).toBe('No active project creation to cancel');
+            expect(result.data!.message).toBe('No active project creation to cancel');
         });
 
         it('should handle abort controller errors', async () => {
@@ -189,7 +213,7 @@ describe('lifecycleHandlers', () => {
             const result = await handleCancelMeshCreation(mockContext);
 
             expect(result.success).toBe(true);
-            expect(result.cancelled).toBe(true);
+            expect(result.data!.cancelled).toBe(true);
             expect(mockContext.logger.info).toHaveBeenCalledWith(
                 '[API Mesh] User cancelled mesh creation'
             );
@@ -293,26 +317,8 @@ describe('lifecycleHandlers', () => {
             expect(mockStateManager.getCurrentProject).toHaveBeenCalled();
         });
 
-        it('should handle workspace folder already exists', async () => {
-            mockStateManager.getCurrentProject.mockResolvedValue({
-                name: 'Test Project',
-                path: '/path/to/project'
-            });
-
-            mockVSCode.workspace.updateWorkspaceFolders.mockReturnValue(false);
-
-            await handleOpenProject(mockContext);
-
-            expect(mockContext.logger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('[Project Creation] Workspace folder may already exist')
-            );
-
-            // Should open dashboard directly
-            await new Promise(resolve => setTimeout(resolve, 100));
-            expect(mockVSCode.commands.executeCommand).toHaveBeenCalledWith(
-                'demoBuilder.showProjectDashboard'
-            );
-        });
+        // Test removed - workspace folder manipulation was removed in beta.64
+        // handleOpenProject now directly opens dashboard without workspace manipulation
 
         it('should handle general errors', async () => {
             mockStateManager.getCurrentProject.mockRejectedValue(new Error('State manager error'));
@@ -554,9 +560,11 @@ describe('lifecycleHandlers', () => {
 
     describe('Integration Scenarios', () => {
         it('should handle complete wizard lifecycle', async () => {
+            const { handleLoadComponents } = require('@/features/components/handlers/componentHandlers');
+
             // 1. Ready
             await handleReady(mockContext);
-            expect(mockComponentHandler.handleMessage).toHaveBeenCalled();
+            expect(handleLoadComponents).toHaveBeenCalledWith(mockContext);
 
             // 2. Create project (simulated)
             mockStateManager.getCurrentProject.mockResolvedValue({
@@ -564,8 +572,7 @@ describe('lifecycleHandlers', () => {
                 path: '/path/to/project'
             });
 
-            // 3. Open project
-            mockVSCode.workspace.updateWorkspaceFolders.mockReturnValue(true);
+            // 3. Open project (workspace folder manipulation removed in beta.64)
             await handleOpenProject(mockContext);
             expect(mockPanel.dispose).toHaveBeenCalled();
         });

@@ -76,10 +76,14 @@ describe('StatusCard', () => {
 
     describe('Layout', () => {
         it('has flexbox layout', () => {
-            const { container } = renderWithProviders(
+            renderWithProviders(
                 <StatusCard status="Running" color="green" />
             );
-            const wrapper = container.firstChild as HTMLElement;
+            // Find the status text and navigate up to the main wrapper
+            // Structure: wrapper div > text container div > status span
+            const statusText = screen.getByText('Running');
+            const textContainer = statusText.parentElement as HTMLElement;
+            const wrapper = textContainer.parentElement as HTMLElement;
             expect(wrapper).toHaveStyle({
                 display: 'flex',
                 alignItems: 'center',

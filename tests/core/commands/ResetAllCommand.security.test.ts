@@ -54,12 +54,13 @@ describe('ResetAllCommand - Security Tests', () => {
             clearAll: jest.fn().mockResolvedValue(undefined),
         };
 
-        // Mock Logger
+        // Mock Logger (must match Logger interface: info, warn, error, debug)
         mockLogger = {
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
-        };
+            debug: jest.fn(),
+        } as any;
 
         // Mock StatusBar
         mockStatusBar = {
@@ -79,14 +80,23 @@ describe('ResetAllCommand - Security Tests', () => {
         (vscode.workspace.workspaceFolders as any) = [];
         (vscode.workspace.updateWorkspaceFolders as jest.Mock) = jest.fn();
 
+        // Mock fs/promises for path validation (can be overridden per test)
+        const fs = require('fs/promises');
+        fs.lstat = jest.fn().mockResolvedValue({
+            isSymbolicLink: () => false,
+            isDirectory: () => true,
+            isFile: () => false,
+        });
+        fs.rm = jest.fn().mockResolvedValue(undefined);
+
         // Create command instance
-        command = new ResetAllCommand(mockContext, mockStateManager, mockLogger, mockStatusBar);
+        command = new ResetAllCommand(mockContext, mockStateManager, mockStatusBar, mockLogger);
     });
 
     describe('Symlink Attack Prevention', () => {
         it('should detect and refuse to delete symlink directories', async () => {
             // Mock lstat to return symlink
-            (fs.lstat as jest.Mock) = jest.fn().mockResolvedValue({
+            (require('fs/promises').lstat as jest.Mock).mockResolvedValue({
                 isSymbolicLink: () => true,
                 isDirectory: () => false,
             });
@@ -105,11 +115,12 @@ describe('ResetAllCommand - Security Tests', () => {
 
         it('should allow deletion of regular directories', async () => {
             // Mock lstat to return regular directory
-            (fs.lstat as jest.Mock) = jest.fn().mockResolvedValue({
+            (require('fs/promises').lstat as jest.Mock).mockResolvedValue({
                 isSymbolicLink: () => false,
                 isDirectory: () => true,
             });
-            (fs.rm as jest.Mock) = jest.fn().mockResolvedValue(undefined);
+            const fsModule = require('fs/promises');
+            (fsModule.rm as jest.Mock).mockResolvedValue(undefined);
 
             await command.execute();
 
@@ -124,7 +135,7 @@ describe('ResetAllCommand - Security Tests', () => {
 
             // This test verifies the security function behavior
             // The actual implementation checks if path starts with expectedParent
-            (fs.lstat as jest.Mock) = jest.fn().mockResolvedValue({
+            (require('fs/promises').lstat as jest.Mock).mockResolvedValue({
                 isSymbolicLink: () => false,
                 isDirectory: () => true,
             });
@@ -147,10 +158,12 @@ describe('ResetAllCommand - Security Tests', () => {
 
             // Verify token was redacted in logs
             expect(mockLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('<token>')
+                expect.stringContaining('<redacted>'),
+                expect.any(Error)
             );
             expect(mockLogger.warn).not.toHaveBeenCalledWith(
-                expect.stringContaining('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9')
+                expect.stringContaining('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'),
+                expect.any(Error)
             );
         });
 
@@ -158,11 +171,11 @@ describe('ResetAllCommand - Security Tests', () => {
             const errorWithPath = new Error(
                 'Failed to delete /Users/admin/.demo-builder/secret-project'
             );
-            (fs.lstat as jest.Mock) = jest.fn().mockResolvedValue({
+            (require('fs/promises').lstat as jest.Mock).mockResolvedValue({
                 isSymbolicLink: () => false,
                 isDirectory: () => true,
             });
-            (fs.rm as jest.Mock) = jest.fn().mockRejectedValue(errorWithPath);
+            (require('fs/promises').rm as jest.Mock).mockRejectedValue(errorWithPath);
 
             await command.execute();
 
@@ -185,10 +198,12 @@ describe('ResetAllCommand - Security Tests', () => {
 
             // Verify bearer token was redacted
             expect(mockLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('Bearer <redacted>')
+                expect.stringContaining('Bearer <redacted>'),
+                expect.any(Error)
             );
             expect(mockLogger.warn).not.toHaveBeenCalledWith(
-                expect.stringContaining('abc123def456ghi789')
+                expect.stringContaining('abc123def456ghi789'),
+                expect.any(Error)
             );
         });
     });
@@ -210,11 +225,12 @@ describe('ResetAllCommand - Security Tests', () => {
 
         it('should allow reset in development mode', async () => {
             mockContext.extensionMode = vscode.ExtensionMode.Development;
-            (fs.lstat as jest.Mock) = jest.fn().mockResolvedValue({
+            (require('fs/promises').lstat as jest.Mock).mockResolvedValue({
                 isSymbolicLink: () => false,
                 isDirectory: () => true,
             });
-            (fs.rm as jest.Mock) = jest.fn().mockResolvedValue(undefined);
+            const fsModule = require('fs/promises');
+            (fsModule.rm as jest.Mock).mockResolvedValue(undefined);
 
             await command.execute();
 

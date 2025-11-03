@@ -21,7 +21,7 @@ import type { PrerequisiteDefinition, PrerequisiteStatus } from '@/features/prer
  */
 
 // Mock ServiceLocator
-jest.mock('@/services/serviceLocator', () => ({
+jest.mock('@/core/di/serviceLocator', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(),
         getNodeVersionManager: jest.fn(),

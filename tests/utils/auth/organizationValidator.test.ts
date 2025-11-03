@@ -13,7 +13,7 @@ jest.mock('@/core/logging/debugLogger', () => ({
     })
 }));
 
-jest.mock('../../../src/utils/logger');
+jest.mock('../../../src/core/logging/logger');
 
 describe('OrganizationValidator', () => {
     let organizationValidator: OrganizationValidator;

@@ -23,18 +23,18 @@ import {
     hasProperty,
     assertNever,
     isError,
-    toError
-} from '../../src/types/typeGuards';
+    toError,
+    ValidationResult
+} from '@/types/typeGuards';
 import {
     Project,
     ComponentInstance,
     ProcessInfo,
     ComponentStatus,
-    ProjectStatus,
-    ValidationResult
-} from '../../src/types/base';
-import { MessageResponse } from '../../src/types/messages';
-import { Logger } from '../../src/types/logger';
+    ProjectStatus
+} from '@/types/base';
+import { MessageResponse } from '@/types/messages';
+import { Logger } from '@/types/logger';
 
 describe('typeGuards', () => {
 

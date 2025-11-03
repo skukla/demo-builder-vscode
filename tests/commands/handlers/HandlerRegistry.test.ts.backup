@@ -57,8 +57,8 @@ describe('HandlerRegistry', () => {
         const creation = require('@/features/project-creation/handlers');
 
         // Provide individual mock implementations for each handler
-        (lifecycle.handleReady as jest.Mock).mockResolvedValue({ success: true });
-        (lifecycle.handleCancel as jest.Mock).mockResolvedValue({ success: true });
+        lifecycle.handleReady = jest.fn().mockResolvedValue({ success: true });
+        lifecycle.handleCancel = jest.fn().mockResolvedValue({ success: true });
         lifecycle.handleOpenProject = jest.fn().mockResolvedValue({ success: true });
         lifecycle.handleBrowseFiles = jest.fn().mockResolvedValue({ success: true });
         lifecycle.handleLog = jest.fn().mockResolvedValue({ success: true });
@@ -67,9 +67,9 @@ describe('HandlerRegistry', () => {
         lifecycle.handleCancelAuthPolling = jest.fn().mockResolvedValue({ success: true });
         lifecycle.handleOpenAdobeConsole = jest.fn().mockResolvedValue({ success: true });
 
-        (prerequisites.handleCheckPrerequisites as jest.Mock).mockResolvedValue({ success: true });
-        (prerequisites.handleContinuePrerequisites as jest.Mock).mockResolvedValue({ success: true });
-        (prerequisites.handleInstallPrerequisite as jest.Mock).mockResolvedValue({ success: true });
+        prerequisites.handleCheckPrerequisites = jest.fn().mockResolvedValue({ success: true });
+        prerequisites.handleContinuePrerequisites = jest.fn().mockResolvedValue({ success: true });
+        prerequisites.handleInstallPrerequisite = jest.fn().mockResolvedValue({ success: true });
 
         components.handleUpdateComponentSelection = jest.fn().mockResolvedValue({ success: true });
         components.handleUpdateComponentsData = jest.fn().mockResolvedValue({ success: true });
@@ -80,16 +80,16 @@ describe('HandlerRegistry', () => {
         components.handleLoadPreset = jest.fn().mockResolvedValue({ success: true });
         components.handleValidateSelection = jest.fn().mockResolvedValue({ success: true });
 
-        (auth.handleCheckAuth as jest.Mock).mockResolvedValue({ success: true });
-        (auth.handleAuthenticate as jest.Mock).mockResolvedValue({ success: true });
+        auth.handleCheckAuth = jest.fn().mockResolvedValue({ success: true });
+        auth.handleAuthenticate = jest.fn().mockResolvedValue({ success: true });
 
-        (projects.handleEnsureOrgSelected as jest.Mock).mockResolvedValue({ success: true });
-        (projects.handleGetProjects as jest.Mock).mockResolvedValue({ success: true });
-        (projects.handleSelectProject as jest.Mock).mockResolvedValue({ success: true });
+        projects.handleEnsureOrgSelected = jest.fn().mockResolvedValue({ success: true });
+        projects.handleGetProjects = jest.fn().mockResolvedValue({ success: true });
+        projects.handleSelectProject = jest.fn().mockResolvedValue({ success: true });
         projects.handleCheckProjectApis = jest.fn().mockResolvedValue({ success: true });
 
-        (workspaces.handleGetWorkspaces as jest.Mock).mockResolvedValue({ success: true });
-        (workspaces.handleSelectWorkspace as jest.Mock).mockResolvedValue({ success: true });
+        workspaces.handleGetWorkspaces = jest.fn().mockResolvedValue({ success: true });
+        workspaces.handleSelectWorkspace = jest.fn().mockResolvedValue({ success: true });
 
         mesh.handleCheckApiMesh = jest.fn().mockResolvedValue({ success: true });
         mesh.handleCreateApiMesh = jest.fn().mockResolvedValue({ success: true });
@@ -281,7 +281,7 @@ describe('HandlerRegistry', () => {
 
             // Get mocked module and configure existing mock (don't replace!)
             const lifecycle = require('../../../src/features/lifecycle/handlers/lifecycleHandlers');
-            (lifecycle.handleReady as jest.Mock).mockResolvedValue(mockResult);
+            (lifecycle.handleReady as jest.Mock).mockResolvedValueOnce(mockResult);
 
             const result = await registry.handle(mockContext, 'ready');
 
@@ -294,7 +294,7 @@ describe('HandlerRegistry', () => {
             const mockResult = { success: true };
 
             const projects = require('../../../src/features/authentication/handlers/projectHandlers');
-            (projects.handleSelectProject as jest.Mock).mockResolvedValue(mockResult);
+            (projects.handleSelectProject as jest.Mock).mockResolvedValueOnce(mockResult);
 
             const result = await registry.handle(mockContext, 'select-project', payload);
 
@@ -306,7 +306,7 @@ describe('HandlerRegistry', () => {
             const mockResult = { success: true, projects: [] };
 
             const projects = require('../../../src/features/authentication/handlers/projectHandlers');
-            (projects.handleGetProjects as jest.Mock).mockImplementation(async () => {
+            (projects.handleGetProjects as jest.Mock).mockImplementationOnce(async () => {
                 await new Promise(resolve => setTimeout(resolve, 10));
                 return mockResult;
             });
@@ -332,7 +332,7 @@ describe('HandlerRegistry', () => {
             };
 
             const projects = require('../../../src/features/authentication/handlers/projectHandlers');
-            (projects.handleGetProjects as jest.Mock).mockResolvedValue(complexData);
+            (projects.handleGetProjects as jest.Mock).mockResolvedValueOnce(complexData);
 
             const result = await registry.handle(mockContext, 'get-projects');
 
@@ -357,7 +357,7 @@ describe('HandlerRegistry', () => {
             const error = new Error('Handler failed');
 
             const lifecycle = require('../../../src/features/lifecycle/handlers/lifecycleHandlers');
-            (lifecycle.handleReady as jest.Mock).mockRejectedValue(error);
+            lifecycle.handleReady = jest.fn().mockRejectedValue(error);
 
             await expect(registry.handle(mockContext, 'ready')).rejects.toThrow('Handler failed');
 
@@ -371,7 +371,7 @@ describe('HandlerRegistry', () => {
             const error = new Error('Authentication failed');
 
             const auth = require('../../../src/features/authentication/handlers/authenticationHandlers');
-            (auth.handleCheckAuth as jest.Mock).mockRejectedValue(error);
+            auth.handleCheckAuth = jest.fn().mockRejectedValue(error);
 
             await expect(registry.handle(mockContext, 'check-auth')).rejects.toThrow(
                 'Authentication failed'
@@ -382,7 +382,7 @@ describe('HandlerRegistry', () => {
             const errorString = 'Something went wrong';
 
             const lifecycle = require('../../../src/features/lifecycle/handlers/lifecycleHandlers');
-            (lifecycle.handleCancel as jest.Mock).mockRejectedValue(errorString);
+            lifecycle.handleCancel = jest.fn().mockRejectedValue(errorString);
 
             await expect(registry.handle(mockContext, 'cancel')).rejects.toBe(errorString);
         });
@@ -409,11 +409,11 @@ describe('HandlerRegistry', () => {
     describe('Integration Scenarios', () => {
         it('should handle sequence of authentication flow', async () => {
             const auth = require('../../../src/features/authentication/handlers/authenticationHandlers');
-            (auth.handleCheckAuth as jest.Mock).mockResolvedValue({
+            auth.handleCheckAuth = jest.fn().mockResolvedValue({
                 success: true,
                 authenticated: false
             });
-            (auth.handleAuthenticate as jest.Mock).mockResolvedValue({
+            auth.handleAuthenticate = jest.fn().mockResolvedValue({
                 success: true,
                 authenticated: true
             });
@@ -434,15 +434,15 @@ describe('HandlerRegistry', () => {
         it('should handle project selection flow', async () => {
             const projects = require('../../../src/features/authentication/handlers/projectHandlers');
 
-            (projects.handleEnsureOrgSelected as jest.Mock).mockResolvedValue({
+            projects.handleEnsureOrgSelected = jest.fn().mockResolvedValue({
                 success: true,
                 hasOrg: true
             });
-            (projects.handleGetProjects as jest.Mock).mockResolvedValue({
+            projects.handleGetProjects = jest.fn().mockResolvedValue({
                 success: true,
                 projects: [{ id: 'proj-1' }]
             });
-            (projects.handleSelectProject as jest.Mock).mockResolvedValue({
+            projects.handleSelectProject = jest.fn().mockResolvedValue({
                 success: true
             });
 
@@ -466,11 +466,11 @@ describe('HandlerRegistry', () => {
         it('should handle workspace selection flow', async () => {
             const workspaces = require('../../../src/features/authentication/handlers/workspaceHandlers');
 
-            (workspaces.handleGetWorkspaces as jest.Mock).mockResolvedValue({
+            workspaces.handleGetWorkspaces = jest.fn().mockResolvedValue({
                 success: true,
                 workspaces: [{ id: 'ws-1' }]
             });
-            (workspaces.handleSelectWorkspace as jest.Mock).mockResolvedValue({
+            workspaces.handleSelectWorkspace = jest.fn().mockResolvedValue({
                 success: true
             });
 
@@ -490,14 +490,14 @@ describe('HandlerRegistry', () => {
         it('should handle prerequisite checking flow', async () => {
             const prerequisites = require('../../../src/features/prerequisites/handlers');
 
-            (prerequisites.handleCheckPrerequisites as jest.Mock).mockResolvedValue({
+            prerequisites.handleCheckPrerequisites = jest.fn().mockResolvedValue({
                 success: true,
                 allMet: false
             });
-            (prerequisites.handleInstallPrerequisite as jest.Mock).mockResolvedValue({
+            prerequisites.handleInstallPrerequisite = jest.fn().mockResolvedValue({
                 success: true
             });
-            (prerequisites.handleContinuePrerequisites as jest.Mock).mockResolvedValue({
+            prerequisites.handleContinuePrerequisites = jest.fn().mockResolvedValue({
                 success: true
             });
 
@@ -519,8 +519,8 @@ describe('HandlerRegistry', () => {
     describe('Error Recovery', () => {
         it('should not affect registry state after handler error', async () => {
             const lifecycle = require('../../../src/features/lifecycle/handlers/lifecycleHandlers');
-            (lifecycle.handleReady as jest.Mock).mockRejectedValue(new Error('Failed'));
-            (lifecycle.handleCancel as jest.Mock).mockResolvedValue({ success: true });
+            lifecycle.handleReady = jest.fn().mockRejectedValue(new Error('Failed'));
+            lifecycle.handleCancel = jest.fn().mockResolvedValue({ success: true });
 
             // First handler fails
             await expect(registry.handle(mockContext, 'ready')).rejects.toThrow();
@@ -532,10 +532,10 @@ describe('HandlerRegistry', () => {
 
         it('should handle concurrent handler calls', async () => {
             const auth = require('../../../src/features/authentication/handlers/authenticationHandlers');
-            (auth.handleCheckAuth as jest.Mock).mockResolvedValue({ success: true });
+            auth.handleCheckAuth = jest.fn().mockResolvedValue({ success: true });
 
             const projects = require('../../../src/features/authentication/handlers/projectHandlers');
-            (projects.handleGetProjects as jest.Mock).mockResolvedValue({ success: true });
+            projects.handleGetProjects = jest.fn().mockResolvedValue({ success: true });
 
             // Execute handlers concurrently
             const [authResult, projectResult] = await Promise.all([
@@ -553,7 +553,7 @@ describe('HandlerRegistry', () => {
     describe('Edge Cases', () => {
         it('should handle null payload', async () => {
             const lifecycle = require('../../../src/features/lifecycle/handlers/lifecycleHandlers');
-            (lifecycle.handleReady as jest.Mock).mockResolvedValue({ success: true });
+            lifecycle.handleReady = jest.fn().mockResolvedValue({ success: true });
 
             await registry.handle(mockContext, 'ready', null);
 
@@ -562,7 +562,7 @@ describe('HandlerRegistry', () => {
 
         it('should handle undefined payload', async () => {
             const lifecycle = require('../../../src/features/lifecycle/handlers/lifecycleHandlers');
-            (lifecycle.handleReady as jest.Mock).mockResolvedValue({ success: true });
+            lifecycle.handleReady = jest.fn().mockResolvedValue({ success: true });
 
             await registry.handle(mockContext, 'ready', undefined);
 
@@ -582,7 +582,7 @@ describe('HandlerRegistry', () => {
             };
 
             const projects = require('../../../src/features/authentication/handlers/projectHandlers');
-            (projects.handleSelectProject as jest.Mock).mockResolvedValue({ success: true });
+            projects.handleSelectProject = jest.fn().mockResolvedValue({ success: true });
 
             await registry.handle(mockContext, 'select-project', complexPayload);
 

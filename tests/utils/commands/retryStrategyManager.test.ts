@@ -1,7 +1,7 @@
 import { RetryStrategyManager } from '@/core/shell/retryStrategyManager';
 import type { RetryStrategy, CommandResult } from '@/core/shell/types';
 
-jest.mock('../../../src/utils/debugLogger', () => ({
+jest.mock('../../../src/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),
         debug: jest.fn(),

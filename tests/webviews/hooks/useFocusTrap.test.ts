@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import { useFocusTrap } from '@/webview-ui/shared/hooks/useFocusTrap';
 
 describe('useFocusTrap', () => {
@@ -8,6 +8,9 @@ describe('useFocusTrap', () => {
   let button3: HTMLButtonElement;
 
   beforeEach(() => {
+    // Use fake timers to control the polling interval
+    jest.useFakeTimers();
+
     // Create test DOM structure
     container = document.createElement('div');
     button1 = document.createElement('button');
@@ -27,6 +30,8 @@ describe('useFocusTrap', () => {
 
   afterEach(() => {
     document.body.removeChild(container);
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
   });
 
   describe('initialization', () => {
@@ -101,6 +106,11 @@ describe('useFocusTrap', () => {
       // @ts-ignore - mocking ref
       result.current.current = container;
 
+      // Advance timers to trigger polling interval and set up event listeners
+      act(() => {
+        jest.advanceTimersByTime(20);
+      });
+
       // Focus last button
       button3.focus();
       expect(document.activeElement).toBe(button3);
@@ -129,6 +139,11 @@ describe('useFocusTrap', () => {
 
       // @ts-ignore - mocking ref
       result.current.current = container;
+
+      // Advance timers to trigger polling interval and set up event listeners
+      act(() => {
+        jest.advanceTimersByTime(20);
+      });
 
       // Focus first button
       button1.focus();
@@ -281,6 +296,11 @@ describe('useFocusTrap', () => {
       // Enable
       rerender({ enabled: true });
 
+      // Advance timers to trigger polling interval and set up event listeners
+      act(() => {
+        jest.advanceTimersByTime(20);
+      });
+
       // Now should trap
       button3.focus();
       tabEvent = new KeyboardEvent('keydown', {
@@ -352,6 +372,11 @@ describe('useFocusTrap', () => {
       // @ts-ignore - mocking ref
       result.current.current = container;
 
+      // Advance timers to trigger polling interval and set up event listeners
+      act(() => {
+        jest.advanceTimersByTime(20);
+      });
+
       singleButton.focus();
 
       const tabEvent = new KeyboardEvent('keydown', {
@@ -409,6 +434,11 @@ describe('useFocusTrap', () => {
 
       // @ts-ignore - mocking ref
       result.current.current = container;
+
+      // Advance timers to trigger polling interval and set up event listeners
+      act(() => {
+        jest.advanceTimersByTime(20);
+      });
 
       // Focus last button (Confirm)
       confirmButton.focus();

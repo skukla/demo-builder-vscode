@@ -7,18 +7,25 @@ import { PrerequisitesManager } from '@/features/prerequisites/services/Prerequi
 import { Logger } from '@/core/logging';
 import { ServiceLocator } from '@/core/di';
 import type { CommandExecutor } from '@/core/shell';
-import type { NodeVersionManager } from '@/core/shell/NodeVersionManager';
 
 // Mock the ConfigurationLoader
 jest.mock('@/core/config/ConfigurationLoader');
 jest.mock('@/core/di');
-jest.mock('@/core/shell/NodeVersionManager');
+
+// Mock debugLogger to prevent "Logger not initialized" errors
+jest.mock('@/core/logging/debugLogger', () => ({
+    getLogger: () => ({
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+    }),
+}));
 
 describe('PrerequisitesManager', () => {
     let manager: PrerequisitesManager;
     let mockLogger: jest.Mocked<Logger>;
     let mockExecutor: jest.Mocked<CommandExecutor>;
-    let mockNodeVersionManager: jest.Mocked<NodeVersionManager>;
 
     const mockConfig = {
         prerequisites: [
@@ -78,16 +85,8 @@ describe('PrerequisitesManager', () => {
             execute: jest.fn(),
         } as any;
 
-        mockNodeVersionManager = {
-            list: jest.fn(),
-            current: jest.fn(),
-            use: jest.fn(),
-            execWithVersion: jest.fn(),
-        } as any;
-
         // Mock ServiceLocator
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockExecutor);
-        (ServiceLocator.getNodeVersionManager as jest.Mock).mockReturnValue(mockNodeVersionManager);
 
         // Mock ConfigurationLoader
         const { ConfigurationLoader } = require('@/core/config/ConfigurationLoader');
@@ -302,11 +301,13 @@ describe('PrerequisitesManager', () => {
 
     describe('checkMultipleNodeVersions', () => {
         it('should check multiple Node versions', async () => {
-            // Mock NodeVersionManager.list() to return installed versions
-            mockNodeVersionManager.list.mockResolvedValue([
-                'v18.20.8',
-                'v20.19.5',
-            ]);
+            // Mock fnm list command to return installed versions
+            mockExecutor.execute.mockResolvedValue({
+                stdout: 'v18.20.8\nv20.19.5\n',
+                stderr: '',
+                code: 0,
+                duration: 100,
+            });
 
             const mapping = {
                 '18': 'react-app',
@@ -329,10 +330,13 @@ describe('PrerequisitesManager', () => {
         });
 
         it('should detect missing Node versions', async () => {
-            // Mock NodeVersionManager.list() to return only Node 18
-            mockNodeVersionManager.list.mockResolvedValue([
-                'v18.20.8',
-            ]);
+            // Mock fnm list command to return only Node 18
+            mockExecutor.execute.mockResolvedValue({
+                stdout: 'v18.20.8\n',
+                stderr: '',
+                code: 0,
+                duration: 100,
+            });
 
             const mapping = {
                 '18': 'react-app',

@@ -10,7 +10,7 @@ jest.mock('@/core/logging/debugLogger', () => ({
     })
 }));
 
-jest.mock('../../../src/utils/timeoutConfig', () => ({
+jest.mock('@/core/utils/timeoutConfig', () => ({
     CACHE_TTL: {
         AUTH_STATUS: 60000,
         VALIDATION: 180000,
@@ -38,7 +38,7 @@ describe('AuthCacheManager', () => {
         });
 
         it('should cache and retrieve project', () => {
-            const project: AdobeProject = { id: 'proj1', name: 'Test Project', title: 'Test Project', org_id: 1 };
+            const project: AdobeProject = { id: 'proj1', name: 'Test Project', title: 'Test Project', org_id: '1' };
 
             cacheManager.setCachedProject(project);
             const result = cacheManager.getCachedProject();
@@ -57,7 +57,7 @@ describe('AuthCacheManager', () => {
 
         it('should clear session caches', () => {
             const org: AdobeOrg = { id: 'org1', name: 'Test Org', code: 'ORG1' };
-            const project: AdobeProject = { id: 'proj1', name: 'Test Project', title: 'Test Project', org_id: 1 };
+            const project: AdobeProject = { id: 'proj1', name: 'Test Project', title: 'Test Project', org_id: '1' };
             const workspace: AdobeWorkspace = { id: 'ws1', name: 'Test Workspace', title: 'Test Workspace' };
 
             cacheManager.setCachedOrganization(org);

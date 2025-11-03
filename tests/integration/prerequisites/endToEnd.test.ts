@@ -13,8 +13,8 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 
 // Mock dependencies
 jest.mock('@/core/config/ConfigurationLoader');
-jest.mock('@/services/serviceLocator');
-jest.mock('@/shared/logging/debugLogger', () => ({
+jest.mock('@/core/di/serviceLocator');
+jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         debug: jest.fn(),
         info: jest.fn(),

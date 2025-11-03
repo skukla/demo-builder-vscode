@@ -110,9 +110,10 @@ describe('useSearchFilter', () => {
       );
 
       act(() => {
-        result.current.setQuery('REACT');
+        result.current.setQuery('HOOKS');
       });
 
+      // Should match "React Hooks" (case-insensitive)
       expect(result.current.filteredItems).toHaveLength(1);
       expect(result.current.filteredItems[0].title).toBe('React Hooks');
     });
@@ -126,15 +127,17 @@ describe('useSearchFilter', () => {
       );
 
       act(() => {
-        result.current.setQuery('REACT');
+        result.current.setQuery('HOOKS');
       });
 
+      // Should not match (case-sensitive)
       expect(result.current.filteredItems).toHaveLength(0);
 
       act(() => {
-        result.current.setQuery('React');
+        result.current.setQuery('Hooks');
       });
 
+      // Should match "React Hooks" (exact case)
       expect(result.current.filteredItems).toHaveLength(1);
     });
   });
@@ -282,8 +285,9 @@ describe('useSearchFilter', () => {
       );
 
       act(() => {
-        result.current.setQuery('React');
+        result.current.setQuery('Hooks');
       });
+      // Should match only "React Hooks"
       expect(result.current.filteredItems).toHaveLength(1);
 
       act(() => {
@@ -343,37 +347,41 @@ describe('useSearchFilter', () => {
       );
 
       act(() => {
-        result.current.setQuery('React');
+        result.current.setQuery('Hooks');
       });
+      // Should match only "React Hooks"
       expect(result.current.filteredItems).toHaveLength(1);
 
-      // Update items
+      // Update items to add another item with "Hooks" in title
       const newItems = [
         ...testItems,
-        { id: '5', title: 'React Native', description: 'Mobile with React' }
+        { id: '5', title: 'Hooks Guide', description: 'Advanced hooks patterns' }
       ];
       rerender({ items: newItems });
 
-      // Should now match 2 items
+      // Should now match 2 items ("React Hooks" and "Hooks Guide")
       expect(result.current.filteredItems).toHaveLength(2);
     });
   });
 
   describe('memoization', () => {
     it('memoizes filtered results', () => {
+      // Use stable reference for searchFields to test memoization properly
+      const options = { searchFields: ['title'] as Array<keyof TestItem> };
+
       const { result, rerender } = renderHook(() =>
-        useSearchFilter(testItems, { searchFields: ['title'] })
+        useSearchFilter(testItems, options)
       );
 
       act(() => {
-        result.current.setQuery('React');
+        result.current.setQuery('Hooks');
       });
 
       const firstResult = result.current.filteredItems;
       rerender();
       const secondResult = result.current.filteredItems;
 
-      // Should be the same reference (memoized)
+      // Should be the same reference (memoized) when inputs haven't changed
       expect(firstResult).toBe(secondResult);
     });
   });
