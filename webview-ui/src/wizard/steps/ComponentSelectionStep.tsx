@@ -26,7 +26,7 @@ interface DependencyOption {
     required: boolean;
 }
 
-export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({ 
+export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     state,
     updateState,
     setCanProceed,
@@ -48,10 +48,27 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     const [selectedAppBuilder, setSelectedAppBuilder] = useState<Set<string>>(
         new Set(components.appBuilderApps || [])
     );
-    
+
+    // Track if we've initialized from defaults to prevent infinite loop
+    const hasInitializedRef = useRef(false);
+
+    // Sync local state when state.components changes (only on initial load)
+    useEffect(() => {
+        if (state.components && !hasInitializedRef.current) {
+            const comps = state.components as any;
+            if (comps.frontend) setSelectedFrontend(comps.frontend);
+            if (comps.backend) setSelectedBackend(comps.backend);
+            if (comps.dependencies) setSelectedDependencies(new Set(comps.dependencies));
+            if (comps.services) setSelectedServices(new Set(comps.services));
+            if (comps.externalSystems) setSelectedExternalSystems(new Set(comps.externalSystems));
+            if (comps.appBuilderApps) setSelectedAppBuilder(new Set(comps.appBuilderApps));
+            hasInitializedRef.current = true;
+        }
+    }, [state.components]);
+
     // Track last sent selection to prevent duplicate messages
     const lastSentSelectionRef = useRef<string>('');
-    
+
     // Use componentsData if available, otherwise fall back to hardcoded
     const dataTyped = (componentsData || {}) as any;
     const frontendOptions = dataTyped.frontends || [
@@ -61,7 +78,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
             description: 'NextJS-based storefront with Adobe mesh integration'
         }
     ];
-    
+
     const backendOptions = dataTyped.backends || [
         {
             id: 'adobe-commerce-paas',

@@ -1,4 +1,5 @@
 import { useCallback, useState, useRef, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { webviewClient } from '../utils/WebviewClient';
 
 interface UseVSCodeRequestReturn<T> {
@@ -81,8 +82,13 @@ export function useVSCodeRequest<T = unknown>(
         return result;
       } catch (err) {
         const error = err instanceof Error ? err : new Error(String(err));
-        setError(error);
-        setLoading(false);
+
+        // Use flushSync to ensure state updates are applied before throwing
+        // This is critical for React 18's automatic batching
+        flushSync(() => {
+          setError(error);
+          setLoading(false);
+        });
 
         // Call error callback if provided
         if (optionsRef.current.onError) {

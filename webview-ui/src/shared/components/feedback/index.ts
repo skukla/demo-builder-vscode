@@ -13,9 +13,6 @@ export type { LoadingDisplayProps } from './LoadingDisplay';
 export { StatusCard } from './StatusCard';
 export type { StatusCardProps } from './StatusCard';
 
-export { LoadingOverlay } from './LoadingOverlay';
-export type { LoadingOverlayProps } from './LoadingOverlay';
-
 export { ErrorDisplay } from './ErrorDisplay';
 export type { ErrorDisplayProps } from './ErrorDisplay';
 

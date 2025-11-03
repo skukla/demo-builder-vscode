@@ -19,12 +19,6 @@ export type { SpinnerProps } from './Spinner';
 export { StatusDot } from './StatusDot';
 export type { StatusDotProps, StatusDotVariant } from './StatusDot';
 
-export { Tag } from './Tag';
-export type { TagProps } from './Tag';
-
-export { Transition } from './Transition';
-export type { TransitionProps } from './Transition';
-
 export { FadeTransition } from './FadeTransition';
 
 export { Modal } from './Modal';
