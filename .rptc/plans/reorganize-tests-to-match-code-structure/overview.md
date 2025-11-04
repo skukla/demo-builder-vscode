@@ -10,7 +10,7 @@
 
 **Created:** 2025-01-04
 **Last Updated:** 2025-01-05
-**Steps:** 7 total steps (Steps 1-3 completed)
+**Steps:** 7 total steps (Steps 1-4 completed)
 
 ---
 
