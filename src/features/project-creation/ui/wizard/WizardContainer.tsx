@@ -271,7 +271,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                             frontend: state.components?.frontend,
                             backend: state.components?.backend,
                             dependencies: state.components?.dependencies || [],
-                            externalSystems: state.components?.externalSystems || [],
+                            integrations: state.components?.integrations || [],
                             appBuilderApps: state.components?.appBuilderApps || []
                         },
                         apiMesh: state.apiMesh,

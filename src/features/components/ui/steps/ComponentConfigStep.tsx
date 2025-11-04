@@ -42,7 +42,7 @@ interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];
-    externalSystems?: ComponentData[];
+    integrations?: ComponentData[];
     appBuilder?: ComponentData[];
     envVars?: Record<string, ComponentEnvVar>;
 }
@@ -108,7 +108,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             return componentsData.frontends?.find(c => c.id === componentId) ||
                    componentsData.backends?.find(c => c.id === componentId) ||
                    componentsData.dependencies?.find(c => c.id === componentId) ||
-                   componentsData.externalSystems?.find(c => c.id === componentId) ||
+                   componentsData.integrations?.find(c => c.id === componentId) ||
                    componentsData.appBuilder?.find(c => c.id === componentId);
         };
         
@@ -168,8 +168,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             }
         });
         
-        state.components?.externalSystems?.forEach(sysId => {
-            const sys = componentsData.externalSystems?.find(s => s.id === sysId);
+        state.components?.integrations?.forEach(sysId => {
+            const sys = componentsData.integrations?.find(s => s.id === sysId);
             if (sys) components.push({ id: sys.id, data: sys, type: 'External System' });
         });
         

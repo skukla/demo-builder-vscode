@@ -37,7 +37,7 @@ describe('ComponentSelectionStep - Pattern B (request-response)', () => {
             backend: '',
             dependencies: [],
             services: [],
-            externalSystems: [],
+            integrations: [],
             appBuilderApps: [],
         },
     } as any;
@@ -55,7 +55,7 @@ describe('ComponentSelectionStep - Pattern B (request-response)', () => {
                 backends: [
                     { id: 'b1', name: 'Backend 1', description: 'Backend description' },
                 ],
-                externalSystems: [],
+                integrations: [],
                 appBuilder: [],
                 dependencies: [],
                 envVars: {},
@@ -90,7 +90,7 @@ describe('ComponentSelectionStep - Pattern B (request-response)', () => {
             const mockComponentsData = {
                 frontends: [],
                 backends: [],
-                externalSystems: [],
+                integrations: [],
                 appBuilder: [],
                 dependencies: [],
                 envVars: {},
@@ -153,7 +153,7 @@ describe('ComponentSelectionStep - Pattern B (request-response)', () => {
             const emptyData = {
                 frontends: [],
                 backends: [],
-                externalSystems: [],
+                integrations: [],
                 appBuilder: [],
                 dependencies: [],
                 envVars: {},

@@ -24,7 +24,7 @@ interface ConfigureInitialData {
         frontends?: unknown[];
         backends?: unknown[];
         dependencies?: unknown[];
-        externalSystems?: unknown[];
+        integrations?: unknown[];
         appBuilder?: unknown[];
         envVars: Record<string, unknown>;
     };
@@ -117,7 +117,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             frontends: registry.components.frontends,
             backends: registry.components.backends,
             dependencies: registry.components.dependencies,
-            externalSystems: registry.components.externalSystems,
+            integrations: registry.components.integrations,
             appBuilder: registry.components.appBuilder,
             envVars: registry.envVars || {},
         };

@@ -172,7 +172,7 @@ export interface ComponentSelection {
     backend?: string;
     dependencies?: string[];
     services?: string[];
-    externalSystems?: string[];
+    integrations?: string[];
     appBuilderApps?: string[];
     preset?: string;
 }

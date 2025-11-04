@@ -32,7 +32,7 @@ describe('ComponentConfigStep', () => {
             components: {
                 frontend: 'react-storefront',
                 backend: 'commerce-paas',
-                externalSystems: ['adobe-io'],
+                integrations: ['adobe-io'],
             },
             componentConfigs: {},
             adobeAuth: {
@@ -67,7 +67,7 @@ describe('ComponentConfigStep', () => {
                 },
             },
         ],
-        externalSystems: [
+        integrations: [
             {
                 id: 'adobe-io',
                 name: 'Adobe I/O',
@@ -245,7 +245,7 @@ describe('ComponentConfigStep', () => {
             const emptyData = {
                 frontends: [],
                 backends: [],
-                externalSystems: [],
+                integrations: [],
                 dependencies: [],
                 envVars: {},
             };

@@ -26,7 +26,7 @@ interface ProjectCreationConfig {
         frontend?: string;
         backend?: string;
         dependencies?: string[];
-        externalSystems?: string[];
+        integrations?: string[];
         appBuilderApps?: string[];
     };
     componentConfigs?: Record<string, Record<string, unknown>>;
@@ -138,7 +138,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             frontend: typedConfig.components?.frontend,
             backend: typedConfig.components?.backend,
             dependencies: typedConfig.components?.dependencies || [],
-            externalSystems: typedConfig.components?.externalSystems || [],
+            integrations: typedConfig.components?.integrations || [],
             appBuilder: typedConfig.components?.appBuilderApps || [],
         },
     };

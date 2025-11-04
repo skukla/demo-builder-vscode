@@ -28,7 +28,7 @@ export async function getNodeVersionMapping(
             context.sharedState.currentComponentSelection.frontend,
             context.sharedState.currentComponentSelection.backend,
             context.sharedState.currentComponentSelection.dependencies,
-            context.sharedState.currentComponentSelection.externalSystems,
+            context.sharedState.currentComponentSelection.integrations,
             context.sharedState.currentComponentSelection.appBuilder,
         );
     } catch (error) {
@@ -54,7 +54,7 @@ export async function getRequiredNodeVersions(context: HandlerContext): Promise<
             context.sharedState.currentComponentSelection.frontend,
             context.sharedState.currentComponentSelection.backend,
             context.sharedState.currentComponentSelection.dependencies,
-            context.sharedState.currentComponentSelection.externalSystems,
+            context.sharedState.currentComponentSelection.integrations,
             context.sharedState.currentComponentSelection.appBuilder,
         );
         // Sort versions in ascending order (18, 20, 24) for predictable installation order

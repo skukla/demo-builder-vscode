@@ -75,7 +75,7 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
 
         const frontends = await registryManager.getFrontends();
         const backends = await registryManager.getBackends();
-        const externalSystems = await registryManager.getExternalSystems();
+        const integrations = await registryManager.getIntegrations();
         const appBuilder = await registryManager.getAppBuilder();
         const dependencies = await registryManager.getDependencies();
         const presets = await registryManager.getPresets();
@@ -95,7 +95,7 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
                 description: b.description,
                 configuration: b.configuration,
             })),
-            externalSystems: externalSystems.map(e => ({
+            integrations: integrations.map(e => ({
                 id: e.id,
                 name: e.name,
                 description: e.description,
@@ -142,7 +142,7 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
 
         const frontends = await registryManager.getFrontends();
         const backends = await registryManager.getBackends();
-        const externalSystems = await registryManager.getExternalSystems();
+        const integrations = await registryManager.getIntegrations();
         const appBuilder = await registryManager.getAppBuilder();
         const dependencies = await registryManager.getDependencies();
         const registry = await registryManager.loadRegistry();
@@ -162,7 +162,7 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
                 dependencies: b.dependencies,
                 configuration: b.configuration,
             })),
-            externalSystems: externalSystems.map(e => ({
+            integrations: integrations.map(e => ({
                 id: e.id,
                 name: e.name,
                 description: e.description,

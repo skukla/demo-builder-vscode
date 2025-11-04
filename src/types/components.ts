@@ -142,7 +142,7 @@ export interface PresetDefinition {
         frontend: string;
         backend: string;
         dependencies: string[];
-        externalSystems?: string[];
+        integrations?: string[];
         appBuilder?: string[];
     };
 }
@@ -190,7 +190,7 @@ export interface ComponentRegistry {
         frontends: TransformedComponentDefinition[];
         backends: TransformedComponentDefinition[];
         dependencies: TransformedComponentDefinition[];
-        externalSystems?: TransformedComponentDefinition[];
+        integrations?: TransformedComponentDefinition[];
         appBuilder?: TransformedComponentDefinition[];
     };
     services?: Record<string, ServiceDefinition>;
@@ -205,7 +205,7 @@ export interface ComponentSelection {
     frontend?: string;
     backend?: string;
     dependencies?: string[];
-    externalSystems?: string[];
+    integrations?: string[];
     appBuilder?: string[];
     services?: ServiceDefinition[];
     preset?: string;

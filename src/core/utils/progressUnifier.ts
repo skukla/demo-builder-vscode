@@ -2,6 +2,31 @@ import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import { Logger } from '@/core/logging';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 
+/**
+ * Date provider interface for dependency injection
+ * Allows tests to control time for testing elapsed time display
+ */
+export interface IDateProvider {
+    now(): number;
+}
+
+/**
+ * Timer provider interface for dependency injection
+ * Allows tests to control timers and time advancement
+ */
+export interface ITimerProvider {
+    setInterval(callback: () => void, ms: number): NodeJS.Timeout;
+    clearInterval(timeout: NodeJS.Timeout): void;
+    setTimeout(callback: () => void, ms: number): NodeJS.Timeout;
+    clearTimeout(timeout: NodeJS.Timeout): void;
+}
+
+/**
+ * Process spawner interface for dependency injection
+ * Allows tests to mock child process creation
+ */
+export type IProcessSpawner = typeof spawn;
+
 export interface UnifiedProgress {
     overall: {
         percent: number;
@@ -47,8 +72,27 @@ export class ProgressUnifier {
     private startTime: number | undefined;
     private timer: NodeJS.Timeout | undefined;
 
-    constructor(logger: Logger) {
+    // Injected dependencies (private for encapsulation)
+    private readonly dateProvider: IDateProvider;
+    private readonly timerProvider: ITimerProvider;
+    private readonly processSpawner: IProcessSpawner;
+
+    constructor(
+        logger: Logger,
+        // Optional dependencies with production defaults
+        dateProvider: IDateProvider = Date,
+        timerProvider: ITimerProvider = {
+            setInterval: setInterval.bind(global),
+            clearInterval: clearInterval.bind(global),
+            setTimeout: setTimeout.bind(global),
+            clearTimeout: clearTimeout.bind(global),
+        },
+        processSpawner: IProcessSpawner = spawn
+    ) {
         this.logger = logger;
+        this.dateProvider = dateProvider;
+        this.timerProvider = timerProvider;
+        this.processSpawner = processSpawner;
     }
 
     /**
@@ -59,7 +103,7 @@ export class ProgressUnifier {
             return detail;
         }
 
-        const elapsed = Date.now() - this.startTime;
+        const elapsed = this.dateProvider.now() - this.startTime;
 
         // Only show elapsed time for operations exceeding threshold (30s)
         if (elapsed > ELAPSED_TIME_THRESHOLD_MS) {
@@ -74,7 +118,7 @@ export class ProgressUnifier {
      * Start elapsed time timer
      */
     private startElapsedTimer() {
-        this.startTime = Date.now();
+        this.startTime = this.dateProvider.now();
         this.timer = undefined; // Will be set by individual progress strategies
     }
 
@@ -83,7 +127,7 @@ export class ProgressUnifier {
      */
     private stopElapsedTimer() {
         if (this.timer) {
-            clearInterval(this.timer);
+            this.timerProvider.clearInterval(this.timer);
             this.timer = undefined;
         }
         this.startTime = undefined;
@@ -324,12 +368,12 @@ export class ProgressUnifier {
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
-            const startTime = Date.now();
+            const startTime = this.dateProvider.now();
             const estimatedDuration = step.estimatedDuration || 10000;
 
             // Update progress every second
-            const progressInterval = setInterval(async () => {
-                const elapsed = Date.now() - startTime;
+            const progressInterval = this.timerProvider.setInterval(async () => {
+                const elapsed = this.dateProvider.now() - startTime;
                 const progress = Math.min(95, (elapsed / estimatedDuration) * 100);
 
                 const baseDetail = `Processing... (${Math.round(progress)}% estimated)`;
@@ -359,7 +403,7 @@ export class ProgressUnifier {
             });
 
             child.on('close', async (code) => {
-                clearInterval(progressInterval);
+                this.timerProvider.clearInterval(progressInterval);
 
                 // Final update
                 await onProgress({
@@ -421,22 +465,22 @@ export class ProgressUnifier {
             const child = this.spawnCommand(command);
             const estimatedDuration = step.estimatedDuration || 500;
             const minDuration = Math.min(estimatedDuration, 1000); // Cap at 1 second for immediate operations
-            const startTime = Date.now();
+            const startTime = this.dateProvider.now();
             let commandCompleted = false;
             let commandExitCode: number | null = null;
-            
+
             // Create smooth progress updates (skip initial 0% to avoid blip)
             const progressSteps = [
                 { time: minDuration * 0.2, percent: 20, detail: 'Processing...' },
                 { time: minDuration * 0.5, percent: 50, detail: 'Configuring...' },
                 { time: minDuration * 0.8, percent: 80, detail: 'Finishing...' },
             ];
-            
+
             const progressTimeouts: NodeJS.Timeout[] = [];
-            
+
             // Schedule progress updates
             progressSteps.forEach(({ time, percent, detail }) => {
-                const timeout = setTimeout(async () => {
+                const timeout = this.timerProvider.setTimeout(async () => {
                     if (!commandCompleted) {
                         await onProgress({
                             overall: {
@@ -456,20 +500,20 @@ export class ProgressUnifier {
                 }, time);
                 progressTimeouts.push(timeout);
             });
-            
+
             child.on('close', async (code) => {
                 commandCompleted = true;
                 commandExitCode = code;
-                
+
                 // Clear any pending progress updates
-                progressTimeouts.forEach(timeout => clearTimeout(timeout));
-                
+                progressTimeouts.forEach(timeout => this.timerProvider.clearTimeout(timeout));
+
                 // Calculate how long we should wait before showing completion
-                const elapsed = Date.now() - startTime;
+                const elapsed = this.dateProvider.now() - startTime;
                 const remainingTime = Math.max(0, minDuration - elapsed);
-                
+
                 // Wait for minimum duration to ensure smooth transition
-                setTimeout(async () => {
+                this.timerProvider.setTimeout(async () => {
                     await onProgress({
                         overall: {
                             percent: Math.round(((stepIndex + 1) / totalSteps) * 100),
@@ -530,7 +574,7 @@ export class ProgressUnifier {
         }
 
         // For complex commands, use shell
-        return spawn(actualCommand, [], {
+        return this.processSpawner(actualCommand, [], {
             shell: true,
             env: {
                 ...process.env,

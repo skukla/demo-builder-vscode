@@ -36,13 +36,13 @@ export class ComponentRegistryManager {
             frontends: TransformedComponentDefinition[];
             backends: TransformedComponentDefinition[];
             dependencies: TransformedComponentDefinition[];
-            externalSystems: TransformedComponentDefinition[];
+            integrations: TransformedComponentDefinition[];
             appBuilder: TransformedComponentDefinition[];
         } = {
             frontends: [],
             backends: [],
             dependencies: [],
-            externalSystems: [],
+            integrations: [],
             appBuilder: [],
         };
 
@@ -76,7 +76,7 @@ export class ComponentRegistryManager {
         addComponents(groups.frontends, components.frontends);
         addComponents(groups.backends, components.backends);
         addComponents(groups.appBuilderApps, components.appBuilder);
-        addComponents(groups.integrations, components.externalSystems);
+        addComponents(groups.integrations, components.integrations);
         addComponents(groups.dependencies, components.dependencies);
 
         const infrastructure: TransformedComponentDefinition[] = [];
@@ -179,9 +179,9 @@ export class ComponentRegistryManager {
         return registry.components.dependencies;
     }
 
-    async getExternalSystems(): Promise<TransformedComponentDefinition[]> {
+    async getIntegrations(): Promise<TransformedComponentDefinition[]> {
         const registry = await this.loadRegistry();
-        return registry.components.externalSystems || [];
+        return registry.components.integrations || [];
     }
 
     async getAppBuilder(): Promise<TransformedComponentDefinition[]> {
@@ -205,7 +205,7 @@ export class ComponentRegistryManager {
             ...registry.components.frontends,
             ...registry.components.backends,
             ...registry.components.dependencies,
-            ...(registry.components.externalSystems || []),
+            ...(registry.components.integrations || []),
             ...(registry.components.appBuilder || []),
         ];
         return allComponents.find(c => c.id === id) as ComponentDefinition | undefined;
@@ -227,7 +227,7 @@ export class ComponentRegistryManager {
         frontendId?: string,
         backendId?: string,
         dependencies?: string[],
-        externalSystems?: string[],
+        integrations?: string[],
         appBuilder?: string[],
     ): Promise<Set<string>> {
         const nodeVersions = new Set<string>();
@@ -275,7 +275,7 @@ export class ComponentRegistryManager {
         frontendId?: string,
         backendId?: string,
         dependencies?: string[],
-        externalSystems?: string[],
+        integrations?: string[],
         appBuilder?: string[],
     ): Promise<Record<string, string>> {
         const mapping: Record<string, string> = {};

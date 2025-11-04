@@ -27,7 +27,7 @@ interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];
-    externalSystems?: ComponentData[];
+    integrations?: ComponentData[];
     appBuilder?: ComponentData[];
 }
 
@@ -133,9 +133,9 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
         }
         
         // 5. External systems
-        if (state.components?.externalSystems && componentsData?.externalSystems) {
-            state.components.externalSystems.forEach(systemId => {
-                const system = componentsData.externalSystems?.find(s => s.id === systemId);
+        if (state.components?.integrations && componentsData?.integrations) {
+            state.components.integrations.forEach(systemId => {
+                const system = componentsData.integrations?.find(s => s.id === systemId);
                 if (system) {
                     sections.push({
                         type: 'external',

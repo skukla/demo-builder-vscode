@@ -42,8 +42,8 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     const [selectedServices, setSelectedServices] = useState<Set<string>>(
         new Set(components.services || [])
     );
-    const [selectedExternalSystems, setSelectedExternalSystems] = useState<Set<string>>(
-        new Set(components.externalSystems || [])
+    const [selectedIntegrations, setSelectedIntegrations] = useState<Set<string>>(
+        new Set(components.integrations || [])
     );
     const [selectedAppBuilder, setSelectedAppBuilder] = useState<Set<string>>(
         new Set(components.appBuilderApps || [])
@@ -60,7 +60,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
             if (comps.backend) setSelectedBackend(comps.backend);
             if (comps.dependencies) setSelectedDependencies(new Set(comps.dependencies));
             if (comps.services) setSelectedServices(new Set(comps.services));
-            if (comps.externalSystems) setSelectedExternalSystems(new Set(comps.externalSystems));
+            if (comps.integrations) setSelectedIntegrations(new Set(comps.integrations));
             if (comps.appBuilderApps) setSelectedAppBuilder(new Set(comps.appBuilderApps));
             hasInitializedRef.current = true;
         }
@@ -116,7 +116,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     ];
     
     // External Systems options from componentsData
-    const externalSystemsOptions = dataTyped.externalSystems || [
+    const integrationsOptions = dataTyped.integrations || [
         {
             id: 'target',
             name: 'Target',
@@ -176,7 +176,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
             backend: selectedBackend,
             dependencies: Array.from(selectedDependencies),
             services: Array.from(selectedServices),
-            externalSystems: Array.from(selectedExternalSystems),
+            integrations: Array.from(selectedIntegrations),
             appBuilderApps: Array.from(selectedAppBuilder)
         };
         
@@ -189,7 +189,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
             lastSentSelectionRef.current = selectionKey;
             webviewClient.postMessage('update-component-selection', components);
         }
-    }, [selectedFrontend, selectedBackend, selectedDependencies, selectedServices, selectedExternalSystems, selectedAppBuilder, setCanProceed, updateState]);
+    }, [selectedFrontend, selectedBackend, selectedDependencies, selectedServices, selectedIntegrations, selectedAppBuilder, setCanProceed, updateState]);
 
     const handleDependencyToggle = (id: string, selected: boolean) => {
         setSelectedDependencies(prev => {
@@ -337,12 +337,12 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     </Text>
 
                     <View UNSAFE_className={cn('border', 'rounded', 'bg-gray-50', 'p-3')}>
-                        {externalSystemsOptions.map((system: any) => (
+                        {integrationsOptions.map((system: any) => (
                             <Checkbox
                                 key={system.id}
-                                isSelected={selectedExternalSystems.has(system.id)}
+                                isSelected={selectedIntegrations.has(system.id)}
                                 onChange={(isSelected) => {
-                                    setSelectedExternalSystems(prev => {
+                                    setSelectedIntegrations(prev => {
                                         const newSet = new Set(prev);
                                         if (isSelected) {
                                             newSet.add(system.id);

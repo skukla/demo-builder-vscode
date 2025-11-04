@@ -20,7 +20,7 @@ interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];
-    externalSystems?: ComponentData[];
+    integrations?: ComponentData[];
     appBuilder?: ComponentData[];
     envVars?: Record<string, ComponentEnvVar>;
 }
@@ -85,7 +85,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             return componentsData.frontends?.find(c => c.id === componentId) ||
                    componentsData.backends?.find(c => c.id === componentId) ||
                    componentsData.dependencies?.find(c => c.id === componentId) ||
-                   componentsData.externalSystems?.find(c => c.id === componentId) ||
+                   componentsData.integrations?.find(c => c.id === componentId) ||
                    componentsData.appBuilder?.find(c => c.id === componentId);
         };
 
@@ -141,8 +141,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             }
         });
 
-        project.componentSelections?.externalSystems?.forEach((sysId: string) => {
-            const sys = componentsData.externalSystems?.find((s: ComponentData) => s.id === sysId);
+        project.componentSelections?.integrations?.forEach((sysId: string) => {
+            const sys = componentsData.integrations?.find((s: ComponentData) => s.id === sysId);
             if (sys) components.push({ id: sys.id, data: sys, type: 'External System' });
         });
 
@@ -157,7 +157,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     ...(componentsData.frontends || []),
                     ...(componentsData.backends || []),
                     ...(componentsData.dependencies || []),
-                    ...(componentsData.externalSystems || []),
+                    ...(componentsData.integrations || []),
                     ...(componentsData.appBuilder || [])
                 ];
 

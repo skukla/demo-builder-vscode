@@ -27,7 +27,7 @@ export interface Project {
         frontend?: string;  // Component ID
         backend?: string;   // Component ID
         dependencies?: string[]; // Component IDs
-        externalSystems?: string[]; // Component IDs
+        integrations?: string[]; // Component IDs
         appBuilder?: string[]; // Component IDs
     };
     // Component configurations (environment variables and settings)
