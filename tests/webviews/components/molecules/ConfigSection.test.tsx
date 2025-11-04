@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderWithProviders, screen } from "../../../helpers/react-test-utils';
+import { renderWithProviders, screen } from "../../../helpers/react-test-utils";
 import { ConfigSection } from '@/webview-ui/shared/components/forms/ConfigSection';
 
 describe('ConfigSection', () => {

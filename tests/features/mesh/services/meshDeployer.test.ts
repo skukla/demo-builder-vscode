@@ -422,7 +422,7 @@ Secondary endpoint: https://secondary.adobe.io/graphql
     });
 
     describe('delete', () => {
-        const { validateMeshId } = require('../../src/core/validation/securityValidation');
+        const { validateMeshId } = require('@/core/validation/securityValidation');
 
         it('should delete mesh successfully', async () => {
             (mockCommandExecutor.executeAdobeCLI as jest.Mock).mockResolvedValue({

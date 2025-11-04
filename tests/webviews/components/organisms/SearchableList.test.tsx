@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderWithProviders, screen, waitFor } from "../../../helpers/react-test-utils';
+import { renderWithProviders, screen, waitFor } from "../../../helpers/react-test-utils";
 import userEvent from '@testing-library/user-event';
 import { Item, Text } from '@adobe/react-spectrum';
 import { SearchableList, SearchableListItem } from '@/webview-ui/shared/components/navigation/SearchableList';
