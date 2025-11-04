@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderWithProviders, screen } from '../../../utils/react-test-utils';
+import { renderWithProviders, screen } from "../../../helpers/react-test-utils';
 import userEvent from '@testing-library/user-event';
 import { FormField } from '@/webview-ui/shared/components/forms/FormField';
 

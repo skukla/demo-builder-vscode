@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderWithProviders, screen } from '../../../utils/react-test-utils';
+import { renderWithProviders, screen } from "../../../helpers/react-test-utils';
 import { Badge } from '@/webview-ui/shared/components/ui/Badge';
 
 describe('Badge', () => {
