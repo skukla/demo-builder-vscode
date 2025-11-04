@@ -50,7 +50,7 @@ const mockVSCode = {
 };
 
 jest.mock('vscode', () => mockVSCode, { virtual: true });
-jest.mock('../../../src/core/validation/securityValidation');
+jest.mock('@/core/validation/securityValidation');
 
 // Mock component handlers module
 jest.mock('@/features/components/handlers/componentHandlers', () => ({
