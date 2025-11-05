@@ -9,8 +9,6 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: [
         '**/tests/**/*.test.ts',
-        '!**/tests/webviews/**/*.test.ts',
-        '!**/tests/webviews/**/*.test.tsx',
         '!**/tests/webview-ui/**/*.test.ts',
         '!**/tests/webview-ui/**/*.test.tsx'
       ],
@@ -43,8 +41,6 @@ module.exports = {
       displayName: 'react',
       testEnvironment: 'jsdom',
       testMatch: [
-        '**/tests/webviews/**/*.test.ts',
-        '**/tests/webviews/**/*.test.tsx',
         '**/tests/webview-ui/**/*.test.ts',
         '**/tests/webview-ui/**/*.test.tsx'
       ],
