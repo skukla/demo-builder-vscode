@@ -38,7 +38,7 @@ describe('FormField', () => {
             expect(handleChange).toHaveBeenCalled();
         });
 
-        it('displays placeholder', () => {
+        it('displays help text from placeholder', () => {
             const handleChange = jest.fn();
             renderWithProviders(
                 <FormField
@@ -50,7 +50,8 @@ describe('FormField', () => {
                     placeholder="user@example.com"
                 />
             );
-            expect(screen.getByPlaceholderText('user@example.com')).toBeInTheDocument();
+            // Placeholder is now displayed as description (help text) for accessibility
+            expect(screen.getByText('user@example.com')).toBeInTheDocument();
         });
 
         it('displays description', () => {

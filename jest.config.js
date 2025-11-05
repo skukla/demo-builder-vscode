@@ -13,7 +13,12 @@ module.exports = {
         '!**/tests/webview-ui/**/*.test.tsx'
       ],
       transform: {
-        '^.+\\.ts$': 'ts-jest',
+        '^.+\\.ts$': ['ts-jest', {
+          tsconfig: {
+            esModuleInterop: true,
+            allowSyntheticDefaultImports: true,
+          },
+        }],
       },
       moduleFileExtensions: ['ts', 'js', 'json'],
       moduleNameMapper: {
@@ -27,14 +32,6 @@ module.exports = {
         '^@/utils/(.*)$': '<rootDir>/src/utils/$1',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
-      },
-      globals: {
-        'ts-jest': {
-          tsconfig: {
-            esModuleInterop: true,
-            allowSyntheticDefaultImports: true,
-          },
-        },
       },
     },
     {
@@ -69,15 +66,6 @@ module.exports = {
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
-      },
-      globals: {
-        'ts-jest': {
-          tsconfig: {
-            jsx: 'react',
-            esModuleInterop: true,
-            allowSyntheticDefaultImports: true,
-          },
-        },
       },
     }
   ],
