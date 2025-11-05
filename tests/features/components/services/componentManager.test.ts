@@ -7,8 +7,8 @@
  * Target Coverage: 75%+
  */
 
-import { ComponentManager, ComponentInstallOptions, ComponentInstallResult } from '@/features/components/services/componentManager';
-import { Project, ComponentInstance, ComponentStatus } from '@/types';
+import { ComponentManager } from '@/features/components/services/componentManager';
+import { Project } from '@/types';
 import { TransformedComponentDefinition } from '@/types/components';
 import { Logger } from '@/types/logger';
 import { ServiceLocator } from '@/core/di/serviceLocator';
@@ -116,8 +116,6 @@ describe('ComponentManager', () => {
 
         describe('Git-based components', () => {
             it('should clone Git repository', async () => {
-                const fs = require('fs/promises');
-
                 const componentDef: TransformedComponentDefinition = {
                     id: 'test-component',
                     name: 'Test Component',

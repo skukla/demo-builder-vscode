@@ -9,7 +9,7 @@
 
 import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication/webviewCommunicationManager';
 import * as vscode from 'vscode';
-import { Message, MessageType, MessagePayload } from '@/types/messages';
+import { Message, MessageType } from '@/types/messages';
 
 // Mock VS Code API
 jest.mock('vscode');
@@ -734,8 +734,8 @@ describe('WebviewCommunicationManager', () => {
         });
 
         it('should clear all pending requests', async () => {
-            const request1 = manager.request('request-1');
-            const request2 = manager.request('request-2');
+            void manager.request('request-1');
+            void manager.request('request-2');
 
             manager.dispose();
 

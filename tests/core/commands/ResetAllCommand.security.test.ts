@@ -130,9 +130,6 @@ describe('ResetAllCommand - Security Tests', () => {
         });
 
         it('should validate path is within home directory', async () => {
-            // Mock lstat for a path outside home directory
-            const homeDir = os.homedir();
-
             // This test verifies the security function behavior
             // The actual implementation checks if path starts with expectedParent
             (require('fs/promises').lstat as jest.Mock).mockResolvedValue({
