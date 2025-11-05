@@ -61,6 +61,12 @@ Guides for developers working on the extension.
 - Logging levels → [Error Logging - Notification Levels](./systems/error-logging.md#error-notification-levels)
 - Debugging → [Error Logging - Implementation](./systems/error-logging.md#implementation)
 
+**Testing**
+- Test organization → [Test README](../tests/README.md)
+- Running tests → [Test README - Running Tests](../tests/README.md#running-tests)
+- Writing new tests → [Test README - Writing New Tests](../tests/README.md#writing-new-tests)
+- Test coverage → [Test README - Test Coverage](../tests/README.md#test-coverage)
+
 ### By Audience
 
 **Extension Users**

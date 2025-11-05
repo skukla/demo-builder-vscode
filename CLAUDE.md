@@ -196,7 +196,7 @@ demo-builder-vscode/
 - **Extension**: TypeScript, VS Code Extension API
 - **UI**: React, Adobe Spectrum, Webpack
 - **Build**: TypeScript compiler, Webpack
-- **Testing**: Manual testing checklist (automated tests planned)
+- **Testing**: Jest with ts-jest, @testing-library/react, structure-aligned test organization (see tests/README.md)
 
 ## Development Workflow
 

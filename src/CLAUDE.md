@@ -241,11 +241,60 @@ class StateManager extends EventEmitter {
 
 ## Testing Approach
 
-Currently manual testing with plans for:
-- Unit tests for utilities
-- Integration tests for commands
-- Component tests for React UI
-- E2E tests for critical paths
+**Framework:** Jest with ts-jest (Node environment) and @testing-library/react (jsdom for React)
+
+**Test Organization:** Tests mirror the src/ directory structure for easy discovery.
+
+```
+tests/
+├── core/              # Core infrastructure tests (mirrors src/core/)
+│   ├── base/          # Base classes and types (TDD placeholder)
+│   ├── commands/      # Command infrastructure tests
+│   ├── communication/ # Webview communication protocol tests
+│   ├── config/        # Configuration management (TDD placeholder)
+│   ├── di/            # Dependency injection (TDD placeholder)
+│   ├── logging/       # Logging system (TDD placeholder)
+│   ├── shell/         # Command execution tests (ExternalCommandManager, polling)
+│   ├── state/         # State management tests (StateManager, StateCoordinator)
+│   ├── utils/         # Core utility tests
+│   ├── validation/    # Validation tests (security, field validation)
+│   └── vscode/        # VS Code API wrapper tests (TDD placeholder)
+├── features/          # Feature tests (mirrors src/features/)
+│   ├── authentication/
+│   │   ├── handlers/  # Authentication handler tests
+│   │   └── services/  # Authentication service tests
+│   ├── components/    # Component management tests
+│   ├── lifecycle/     # Project lifecycle tests
+│   ├── mesh/          # API Mesh deployment tests
+│   └── [other features]
+└── webview-ui/        # React webview tests (mirrors webview-ui/src/)
+    └── shared/
+        ├── components/ # Shared component tests (ui/, forms/, feedback/, navigation/)
+        └── hooks/      # Shared hook tests
+```
+
+**Test Types:**
+- **Unit tests:** Isolated component/function testing (majority of tests)
+- **Integration tests:** Component interaction testing (tests/integration/)
+- **React component tests:** UI component testing with @testing-library/react
+
+**Running Tests:**
+```bash
+npm test                        # Run all tests (Node + React)
+npm test -- --selectProjects node   # Node tests only
+npm test -- --selectProjects react  # React tests only
+npm test -- tests/core/         # Specific directory
+```
+
+**Path Aliases:** Tests use the same path aliases as source code:
+- `@/core/*` - Core infrastructure
+- `@/features/*` - Feature modules
+- `@/shared/*` - Shared utilities
+- `@/webview-ui/*` - Webview UI components
+
+**TDD Placeholder Directories:** Some test directories (e.g., tests/core/base/, tests/core/logging/) contain only README.md files. These are reserved for future tests following TDD (tests written before implementation).
+
+**For Complete Test Documentation:** See `tests/README.md`
 
 ## Performance Considerations
 
