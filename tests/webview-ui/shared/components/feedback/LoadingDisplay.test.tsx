@@ -1,8 +1,14 @@
 import React from 'react';
-import { renderWithProviders, screen, waitFor } from "../../../../helpers/react-test-utils";
+import { renderWithProviders, screen, waitFor, cleanup } from "../../../../helpers/react-test-utils";
 import { LoadingDisplay } from '@/webview-ui/shared/components/feedback/LoadingDisplay';
 
 describe('LoadingDisplay', () => {
+    afterEach(() => {
+        cleanup(); // React Testing Library cleanup
+        jest.clearAllMocks();
+        jest.restoreAllMocks();
+        jest.clearAllTimers(); // Clear any pending timers from waitFor
+    });
     describe('Basic Rendering', () => {
         it('renders with message', () => {
             renderWithProviders(<LoadingDisplay message="Loading..." />);
