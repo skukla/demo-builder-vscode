@@ -270,6 +270,6 @@ export function isTimeoutError(error: unknown): boolean {
         message.includes('timeout') ||
         message.includes('timed out') ||
         message.includes('etimedout') ||
-        (isRecord(error) && (error as any).code === 'ETIMEDOUT')
+        (isRecord(error) && error.code === 'ETIMEDOUT')
     );
 }

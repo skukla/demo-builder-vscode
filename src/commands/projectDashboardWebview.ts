@@ -3,7 +3,16 @@ import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { DashboardHandlerRegistry } from '@/features/dashboard/handlers';
+import type { Project, ComponentInstance } from '@/types/base';
 import { HandlerContext } from '@/types/handlers';
+
+interface DashboardInitialData {
+    theme: 'dark' | 'light';
+    project: {
+        name: string;
+        path: string;
+    } | null;
+}
 
 /**
  * Command to show the "Project Dashboard" after project creation
@@ -67,7 +76,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         </html>`;
     }
 
-    protected async getInitialData(): Promise<any> {
+    protected async getInitialData(): Promise<DashboardInitialData> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
@@ -189,16 +198,17 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
     /**
      * Create handler context with all dependencies
+     * Dashboard doesn't use all managers, so we provide stub values
      */
     private createHandlerContext(): HandlerContext {
         return {
             // Managers (dashboard doesn't use all managers, but context requires them)
-            prereqManager: null as any,
-            authManager: null as any,
-            componentHandler: null as any,
-            errorLogger: null as any,
-            progressUnifier: null as any,
-            stepLogger: null as any,
+            prereqManager: undefined!,
+            authManager: undefined!,
+            componentHandler: undefined!,
+            errorLogger: undefined!,
+            progressUnifier: undefined!,
+            stepLogger: undefined!,
 
             // Loggers
             logger: this.logger,
@@ -211,8 +221,8 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             communicationManager: this.communicationManager,
             sendMessage: (type: string, data?: unknown) => this.sendMessage(type, data),
 
-            // Shared state (dashboard doesn't use shared state)
-            sharedState: {} as any,
+            // Shared state (dashboard doesn't use shared state, provide minimal valid object)
+            sharedState: { isAuthenticating: false },
         };
     }
 
@@ -220,7 +230,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
      * Initialize file hashes for a running demo
      * Collects all .env files from component instances and initializes their hashes for change detection
      */
-    private async initializeFileHashesForRunningDemo(project: any): Promise<void> {
+    private async initializeFileHashesForRunningDemo(project: Project): Promise<void> {
         const envFiles: string[] = [];
 
         this.logger.debug('[Project Dashboard] Initializing file hashes for running demo');
@@ -228,7 +238,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // Collect .env files from all component instances
         if (project.componentInstances) {
             for (const componentInstance of Object.values(project.componentInstances)) {
-                const instance = componentInstance as any;
+                const instance = componentInstance as ComponentInstance;
                 if (instance.path) {
                     const componentPath = instance.path;
                     const envPath = path.join(componentPath, '.env');
