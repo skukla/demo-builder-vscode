@@ -198,18 +198,10 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
     /**
      * Create handler context with all dependencies
-     * Dashboard doesn't use all managers, so we provide stub values
+     * Dashboard doesn't use manager fields, so they are omitted
      */
     private createHandlerContext(): HandlerContext {
         return {
-            // Managers (dashboard doesn't use all managers, but context requires them)
-            prereqManager: undefined!,
-            authManager: undefined!,
-            componentHandler: undefined!,
-            errorLogger: undefined!,
-            progressUnifier: undefined!,
-            stepLogger: undefined!,
-
             // Loggers
             logger: this.logger,
             debugLogger: this.logger,

@@ -43,7 +43,7 @@ export async function handleInstallPrerequisite(
         // Resolve install steps from config
         const nodeVersions = await getRequiredNodeVersions(context);
 
-        const installPlan = context.prereqManager.getInstallSteps(prereq, {
+        const installPlan = context.prereqManager?.getInstallSteps(prereq, {
             nodeVersions: prereq.perNodeVersion
                 ? (nodeVersions.length ? nodeVersions : [version || '20'])
                 : (prereq.id === 'node' ? (version ? [version] : undefined) : undefined),
@@ -82,7 +82,7 @@ export async function handleInstallPrerequisite(
             // Determine missing majors from mapping
             const mapping = await getNodeVersionMapping(context);
             const nodeStatus = Object.keys(mapping).length > 0
-                ? await context.prereqManager.checkMultipleNodeVersions(mapping)
+                ? await context.prereqManager?.checkMultipleNodeVersions(mapping)
                 : undefined;
             const missingMajors = nodeStatus
                 ? Object.keys(mapping).filter(m => !nodeStatus.some(s => s.version.startsWith(`Node ${m}`) && s.installed))
@@ -161,7 +161,7 @@ export async function handleInstallPrerequisite(
 
             // Debug before step
             context.debugLogger.debug(`[Prerequisites] Executing step: ${resolvedStepName}`);
-            await context.progressUnifier.executeStep(
+            await context.progressUnifier?.executeStep(
                 step,
                 counter,
                 total,
@@ -206,13 +206,13 @@ export async function handleInstallPrerequisite(
         }
 
         // Invalidate cache after installation (Step 2: Prerequisite Caching)
-        context.prereqManager.getCacheManager().invalidate(prereq.id);
+        context.prereqManager?.getCacheManager().invalidate(prereq.id);
         context.logger.debug(`[Prerequisites] Cache invalidated for ${prereq.id} after installation`);
 
         // Re-check after installation and include variant details/messages
         let installResult;
         try {
-            installResult = await context.prereqManager.checkPrerequisite(prereq);
+            installResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;
         } catch (error) {
             // Handle timeout or other check errors during verification
             const errorMessage = toError(error).message;
@@ -221,16 +221,16 @@ export async function handleInstallPrerequisite(
             // Log to all appropriate channels
             if (isTimeout) {
                 context.logger.warn(`[Prerequisites] ${prereq.name} verification timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
-                context.stepLogger.log('prerequisites', `⏱️ ${prereq.name} verification timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s) - installation may have succeeded`, 'warn');
+                context.stepLogger?.log('prerequisites', `⏱️ ${prereq.name} verification timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s) - installation may have succeeded`, 'warn');
                 context.debugLogger.debug('[Prerequisites] Verification timeout details:', { prereq: prereq.id, timeout: TIMEOUTS.PREREQUISITE_CHECK, error: errorMessage });
             } else {
                 context.logger.error(`[Prerequisites] Failed to verify ${prereq.name} after installation:`, error as Error);
-                context.stepLogger.log('prerequisites', `✗ ${prereq.name} verification failed: ${errorMessage}`, 'error');
+                context.stepLogger?.log('prerequisites', `✗ ${prereq.name} verification failed: ${errorMessage}`, 'error');
                 context.debugLogger.debug('[Prerequisites] Verification failure details:', { prereq: prereq.id, error });
 
                 // Log to error channel for critical errors
                 try {
-                    context.errorLogger.logError(error as Error, `Prerequisite Verification - ${prereq.name}`, true);
+                    context.errorLogger?.logError(error as Error, `Prerequisite Verification - ${prereq.name}`, true);
                 } catch {
                     // Ignore errors from error logger
                 }
@@ -251,13 +251,18 @@ export async function handleInstallPrerequisite(
             return { success: true }; // Installation steps completed even if verification failed
         }
 
+        if (!installResult) {
+            context.logger.error(`[Prerequisites] Installation verification failed - no result returned for ${prereq.name}`);
+            return { success: false };
+        }
+
         let finalNodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
         let finalPerNodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
         if (prereq.id === 'node') {
             // Build mapping and check installed status per required major
             const mapping = await getNodeVersionMapping(context);
             if (Object.keys(mapping).length > 0) {
-                finalNodeVersionStatus = await context.prereqManager.checkMultipleNodeVersions(mapping);
+                finalNodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(mapping);
             }
         } else if (prereq.perNodeVersion) {
             // For per-node-version prerequisites (e.g., Adobe I/O CLI), re-check under each required Node major
@@ -330,7 +335,7 @@ export async function handleInstallPrerequisite(
         context.logger.error(`Failed to install prerequisite ${prereqId}:`, error as Error);
         // Surface to error channel with context
         try {
-            context.errorLogger.logError(error as Error, 'Prerequisite Installation', true);
+            context.errorLogger?.logError(error as Error, 'Prerequisite Installation', true);
         } catch {
             // Ignore errors from error logger
         }

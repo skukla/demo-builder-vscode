@@ -24,11 +24,11 @@ export async function handleCheckPrerequisites(
     payload?: { componentSelection?: import('../../../types/components').ComponentSelection; isRecheck?: boolean },
 ): Promise<SimpleResult> {
     try {
-        context.stepLogger.log('prerequisites', 'Starting prerequisites check', 'info');
+        context.stepLogger?.log('prerequisites', 'Starting prerequisites check', 'info');
 
         // Clear cache on Recheck button click (Step 2: Prerequisite Caching)
         if (payload?.isRecheck) {
-            context.prereqManager.getCacheManager().clearAll();
+            context.prereqManager?.getCacheManager().clearAll();
             context.logger.debug('[Prerequisites] Cache cleared for recheck');
         }
 
@@ -38,9 +38,9 @@ export async function handleCheckPrerequisites(
         }
 
         // Load config and get prerequisites
-        const config = await context.prereqManager.loadConfig();
+        const config = await context.prereqManager?.loadConfig();
         // Get prerequisites and resolve dependency order
-        const prerequisites = context.prereqManager.resolveDependencies(config.prerequisites || []);
+        const prerequisites = context.prereqManager?.resolveDependencies(config?.prerequisites || []);
         context.sharedState.currentPrerequisites = prerequisites;
 
         // Initialize state tracking
@@ -49,11 +49,11 @@ export async function handleCheckPrerequisites(
         // Get Node version to component mapping if we have components selected
         const nodeVersionMapping = await getNodeVersionMapping(context);
 
-        context.stepLogger.log('prerequisites', `Found ${prerequisites.length} prerequisites to check`, 'info');
+        context.stepLogger?.log('prerequisites', `Found ${prerequisites?.length ?? 0} prerequisites to check`, 'info');
 
         // Send prerequisites list to UI so it can display them
         await context.sendMessage('prerequisites-loaded', {
-            prerequisites: prerequisites.map((p, index) => ({
+            prerequisites: prerequisites?.map((p, index) => ({
                 id: index,
                 name: p.name,
                 description: p.description,
@@ -67,9 +67,11 @@ export async function handleCheckPrerequisites(
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // Check each prerequisite
-        for (let i = 0; i < prerequisites.length; i++) {
-            const prereq = prerequisites[i];
-            context.stepLogger.log('prerequisites', `Checking ${prereq.name}...`, 'info');
+        for (let i = 0; i < (prerequisites?.length ?? 0); i++) {
+            const prereq = prerequisites?.[i];
+            if (!prereq) continue;
+
+            context.stepLogger?.log('prerequisites', `Checking ${prereq.name}...`, 'info');
 
             // Send status update
             await context.sendMessage('prerequisite-status', {
@@ -83,7 +85,7 @@ export async function handleCheckPrerequisites(
             // Check prerequisite with timeout error handling
             let checkResult;
             try {
-                checkResult = await context.prereqManager.checkPrerequisite(prereq);
+                checkResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;
             } catch (error) {
                 // Handle timeout or other check errors
                 const errorMessage = toError(error).message;
@@ -91,11 +93,11 @@ export async function handleCheckPrerequisites(
                 // Log to all appropriate channels
                 if (isTimeoutError(error)) {
                     context.logger.warn(`[Prerequisites] ${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
-                    context.stepLogger.log('prerequisites', `⏱️ ${prereq.name} check timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`, 'warn');
+                    context.stepLogger?.log('prerequisites', `⏱️ ${prereq.name} check timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`, 'warn');
                     context.debugLogger.debug('[Prerequisites] Timeout details:', { prereq: prereq.id, timeout: TIMEOUTS.PREREQUISITE_CHECK, error: errorMessage });
                 } else {
                     context.logger.error(`[Prerequisites] Failed to check ${prereq.name}:`, error as Error);
-                    context.stepLogger.log('prerequisites', `✗ ${prereq.name} check failed: ${errorMessage}`, 'error');
+                    context.stepLogger?.log('prerequisites', `✗ ${prereq.name} check failed: ${errorMessage}`, 'error');
                     context.debugLogger.debug('[Prerequisites] Check failure details:', { prereq: prereq.id, error });
                 }
 
@@ -116,10 +118,12 @@ export async function handleCheckPrerequisites(
                 continue;
             }
 
+            if (!checkResult || !prereq) continue;
+
             // For Node.js, check multiple versions if we have a mapping
             let nodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
             if (prereq.id === 'node' && Object.keys(nodeVersionMapping).length > 0) {
-                nodeVersionStatus = await context.prereqManager.checkMultipleNodeVersions(nodeVersionMapping);
+                nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);
             }
 
             // For per-node-version prerequisites (e.g., Adobe I/O CLI), detect partial installs across required Node majors
@@ -162,9 +166,9 @@ export async function handleCheckPrerequisites(
 
             // Log the result
             if (checkResult.installed) {
-                context.stepLogger.log('prerequisites', `✓ ${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`, 'info');
+                context.stepLogger?.log('prerequisites', `✓ ${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`, 'info');
             } else {
-                context.stepLogger.log('prerequisites', `✗ ${prereq.name} is not installed`, 'warn');
+                context.stepLogger?.log('prerequisites', `✗ ${prereq.name} is not installed`, 'warn');
             }
 
             // Compute dependency gating (disable install until deps are installed)
@@ -231,7 +235,7 @@ export async function handleCheckPrerequisites(
             })),
         });
 
-        context.stepLogger.log('prerequisites', `Prerequisites check complete. All required installed: ${allRequiredInstalled}`, 'info');
+        context.stepLogger?.log('prerequisites', `Prerequisites check complete. All required installed: ${allRequiredInstalled}`, 'info');
 
         return { success: true };
     } catch (error) {

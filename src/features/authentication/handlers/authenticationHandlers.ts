@@ -33,7 +33,7 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
 
     try {
         // Use quick auth check for faster wizard experience (< 1 second vs 9+ seconds)
-        const isAuthenticated = await context.authManager.isAuthenticatedQuick();
+        const isAuthenticated = await context.authManager?.isAuthenticatedQuick();
         const checkDuration = Date.now() - checkStartTime;
 
         context.logger.info(`[Auth] Quick authentication check completed in ${checkDuration}ms: ${isAuthenticated}`);
@@ -44,12 +44,12 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
 
         if (isAuthenticated) {
             // Check cache only (no fetch, no CLI calls)
-            currentOrg = context.authManager.getCachedOrganization();
-            currentProject = context.authManager.getCachedProject();
+            currentOrg = context.authManager?.getCachedOrganization();
+            currentProject = context.authManager?.getCachedProject();
 
             // Don't show cached org if validation failed
             if (currentOrg) {
-                const validation = context.authManager.getValidationCache();
+                const validation = context.authManager?.getValidationCache();
 
                 if (validation) {
                     // Check if this is the same org that was validated
@@ -158,7 +158,7 @@ export async function handleAuthenticate(
         if (!force) {
             context.logger.debug('[Auth] Checking for existing valid authentication (quick mode)...');
             // Use quick check to avoid 9+ second delay before showing browser
-            const isAlreadyAuth = await context.authManager.isAuthenticatedQuick();
+            const isAlreadyAuth = await context.authManager?.isAuthenticatedQuick();
 
             if (isAlreadyAuth) {
                 context.logger.info('[Auth] Already authenticated, skipping login');
@@ -172,17 +172,17 @@ export async function handleAuthenticate(
                 });
 
                 // Initialize SDK for faster org/project operations
-                await context.authManager.ensureSDKInitialized();
+                await context.authManager?.ensureSDKInitialized();
 
                 // Get the current context
-                const currentOrg = await context.authManager.getCurrentOrganization();
-                const currentProject = await context.authManager.getCurrentProject();
+                const currentOrg = await context.authManager?.getCurrentOrganization();
+                const currentProject = await context.authManager?.getCurrentProject();
 
                 // Now done checking
                 context.sharedState.isAuthenticating = false;
 
                 // Check if org was cleared due to validation failure
-                const orgLacksAccess = !currentOrg ? context.authManager.wasOrgClearedDueToValidation() : false;
+                const orgLacksAccess = !currentOrg ? context.authManager?.wasOrgClearedDueToValidation() : false;
 
                 await context.sendMessage('auth-status', {
                     authenticated: true,
@@ -216,7 +216,7 @@ export async function handleAuthenticate(
         });
 
         // Start login process
-        const loginSuccess = await context.authManager.login(force);
+        const loginSuccess = await context.authManager?.login(force);
 
         const loginDuration = Date.now() - authStartTime;
         context.sharedState.isAuthenticating = false;
@@ -234,7 +234,7 @@ export async function handleAuthenticate(
             try {
                 // Initialize SDK for faster operations (token stable after login)
                 context.logger.debug('[Auth] Ensuring SDK is initialized for org fetching');
-                await context.authManager.ensureSDKInitialized();
+                await context.authManager?.ensureSDKInitialized();
                 await context.sendMessage('auth-status', {
                     isChecking: true,
                     message: AUTH_LOADING_MESSAGE,
@@ -244,12 +244,12 @@ export async function handleAuthenticate(
 
                 // Fetch organization list (uses SDK if available, falls back to CLI)
                 context.logger.debug('[Auth] Fetching available organizations');
-                const orgs = await context.authManager.getOrganizations();
-                context.logger.info(`[Auth] Found ${orgs.length} organization(s) accessible to user`);
+                const orgs = await context.authManager?.getOrganizations();
+                context.logger.info(`[Auth] Found ${orgs?.length ?? 0} organization(s) accessible to user`);
 
-                if (orgs.length === 1) {
+                if (orgs?.length === 1) {
                     // Auto-select single org
-                    context.logger.info(`[Auth] Single organization available: ${orgs[0].name}, auto-selecting`);
+                    context.logger.info(`[Auth] Single organization available: ${orgs?.[0].name}, auto-selecting`);
                     await context.sendMessage('auth-status', {
                         isChecking: true,
                         message: AUTH_LOADING_MESSAGE,
@@ -257,18 +257,18 @@ export async function handleAuthenticate(
                         isAuthenticated: true,
                     });
 
-                    const selected = await context.authManager.selectOrganization(orgs[0].id);
+                    const selected = await context.authManager?.selectOrganization(orgs?.[0].id);
 
                     if (selected) {
-                        currentOrg = orgs[0];
-                        context.authManager.setCachedOrganization(currentOrg);
-                        context.logger.info(`[Auth] Successfully auto-selected and cached organization: ${orgs[0].name}`);
+                        currentOrg = orgs?.[0];
+                        context.authManager?.setCachedOrganization(currentOrg);
+                        context.logger.info(`[Auth] Successfully auto-selected and cached organization: ${orgs?.[0].name}`);
                     } else {
-                        context.logger.warn(`[Auth] Failed to auto-select organization: ${orgs[0].name}`);
+                        context.logger.warn(`[Auth] Failed to auto-select organization: ${orgs?.[0].name}`);
                         requiresOrgSelection = true;
                     }
-                } else if (orgs.length > 1) {
-                    context.logger.info(`[Auth] ${orgs.length} organizations available, user must select`);
+                } else if (orgs && orgs.length > 1) {
+                    context.logger.info(`[Auth] ${orgs?.length} organizations available, user must select`);
                     requiresOrgSelection = true;
                 } else {
                     context.logger.warn('[Auth] No organizations accessible for this user');

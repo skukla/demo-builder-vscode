@@ -146,13 +146,13 @@ export interface SharedState {
  * - Shared state (passed by reference for automatic synchronization)
  */
 export interface HandlerContext {
-    // Managers
-    prereqManager: PrerequisitesManager;
-    authManager: AuthenticationService;
-    componentHandler: IComponentHandler;
-    errorLogger: ErrorLogger;
-    progressUnifier: ProgressUnifier;
-    stepLogger: StepLogger;
+    // Managers (optional - not all handlers need all managers)
+    prereqManager?: PrerequisitesManager;
+    authManager?: AuthenticationService;
+    componentHandler?: IComponentHandler;
+    errorLogger?: ErrorLogger;
+    progressUnifier?: ProgressUnifier;
+    stepLogger?: StepLogger;
 
     // Loggers
     logger: Logger;

@@ -47,7 +47,7 @@ export async function handleContinuePrerequisites(
             // Check prerequisite with timeout error handling
             let checkResult;
             try {
-                checkResult = await context.prereqManager.checkPrerequisite(prereq);
+                checkResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;
             } catch (error) {
                 // Handle timeout or other check errors
                 const errorMessage = toError(error).message;
@@ -56,11 +56,11 @@ export async function handleContinuePrerequisites(
                 // Log to all appropriate channels
                 if (isTimeout) {
                     context.logger.warn(`[Prerequisites] ${prereq.name} re-check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
-                    context.stepLogger.log('prerequisites', `⏱️ ${prereq.name} re-check timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`, 'warn');
+                    context.stepLogger?.log('prerequisites', `⏱️ ${prereq.name} re-check timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`, 'warn');
                     context.debugLogger.debug('[Prerequisites] Re-check timeout details:', { prereq: prereq.id, timeout: TIMEOUTS.PREREQUISITE_CHECK, error: errorMessage });
                 } else {
                     context.logger.error(`[Prerequisites] Failed to re-check ${prereq.name}:`, error as Error);
-                    context.stepLogger.log('prerequisites', `✗ ${prereq.name} re-check failed: ${errorMessage}`, 'error');
+                    context.stepLogger?.log('prerequisites', `✗ ${prereq.name} re-check failed: ${errorMessage}`, 'error');
                     context.debugLogger.debug('[Prerequisites] Re-check failure details:', { prereq: prereq.id, error });
                 }
 
@@ -81,12 +81,14 @@ export async function handleContinuePrerequisites(
                 continue;
             }
 
+            if (!checkResult) continue;
+
             context.sharedState.currentPrerequisiteStates.set(i, { prereq, result: checkResult });
 
             // Variant checks
             let nodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
             if (prereq.id === 'node' && Object.keys(nodeVersionMapping).length > 0) {
-                nodeVersionStatus = await context.prereqManager.checkMultipleNodeVersions(nodeVersionMapping);
+                nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);
             }
 
             let perNodeVariantMissing = false;

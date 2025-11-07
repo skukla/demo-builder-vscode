@@ -26,7 +26,7 @@ export async function handleGetWorkspaces(
 ): Promise<DataResult<AdobeWorkspace[]>> {
     try {
         // Send loading status with sub-message
-        const currentProject = await context.authManager.getCurrentProject();
+        const currentProject = await context.authManager?.getCurrentProject();
         if (currentProject) {
             await context.sendMessage('workspace-loading-status', {
                 isLoading: true,
@@ -36,8 +36,12 @@ export async function handleGetWorkspaces(
         }
 
         // Wrap getWorkspaces with timeout (30 seconds)
+        const workspacesPromise = context.authManager?.getWorkspaces();
+        if (!workspacesPromise) {
+            throw new Error('Auth manager not available');
+        }
         const workspaces = await withTimeout(
-            context.authManager.getWorkspaces(),
+            workspacesPromise,
             {
                 timeoutMs: TIMEOUTS.WORKSPACE_LIST,
                 timeoutMessage: 'Request timed out. Please check your connection and try again.',
@@ -80,7 +84,7 @@ export async function handleSelectWorkspace(
 
     try {
         // Actually call the authManager to select the workspace
-        const success = await context.authManager.selectWorkspace(workspaceId);
+        const success = await context.authManager?.selectWorkspace(workspaceId);
         if (success) {
             context.logger.info(`Selected workspace: ${workspaceId}`);
 

@@ -215,9 +215,9 @@ describe('Prerequisites Install Handler', () => {
             const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
             expect(result.success).toBe(true);
-            expect(mockContext.prereqManager.getInstallSteps).toHaveBeenCalled();
-            expect(mockContext.progressUnifier.executeStep).toHaveBeenCalled();
-            expect(mockContext.prereqManager.checkPrerequisite).toHaveBeenCalled();
+            expect(mockContext.prereqManager!.getInstallSteps).toHaveBeenCalled();
+            expect(mockContext.progressUnifier!.executeStep).toHaveBeenCalled();
+            expect(mockContext.prereqManager!.checkPrerequisite).toHaveBeenCalled();
             expect(mockContext.sendMessage).toHaveBeenCalledWith(
                 'prerequisite-install-complete',
                 expect.objectContaining({ index: 0, continueChecking: true })
@@ -228,7 +228,7 @@ describe('Prerequisites Install Handler', () => {
             const states = new Map();
             states.set(0, { prereq: mockManualPrereq, result: mockNodeResult });
             mockContext.sharedState.currentPrerequisiteStates = states;
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue({
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
                 manual: true,
                 url: 'https://www.docker.com/get-started',
             });
@@ -250,13 +250,13 @@ describe('Prerequisites Install Handler', () => {
             const states = new Map();
             states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
             mockContext.sharedState.currentPrerequisiteStates = states;
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue({
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
                 steps: [
                     { name: 'Install Node {version}', message: 'Installing Node {version}...', command: 'fnm install {version}' },
                     { name: 'Set Node {version} as default', message: 'Setting as default...', command: 'fnm default {version}' },
                 ],
             });
-            (mockContext.prereqManager.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
                 { version: 'Node 18', component: 'v18.0.0', installed: false },
                 { version: 'Node 20', component: 'v20.0.0', installed: true },
             ]);
@@ -272,7 +272,7 @@ describe('Prerequisites Install Handler', () => {
             const states = new Map();
             states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
             mockContext.sharedState.currentPrerequisiteStates = states;
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue({
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
                 steps: [
                     { name: 'Install Adobe CLI for Node {version}', message: 'Installing Adobe CLI...', command: 'npm install -g @adobe/aio-cli' },
                 ],
@@ -307,12 +307,12 @@ describe('Prerequisites Install Handler', () => {
                 installed: true,
                 version: '9.0.0',
             };
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockResolvedValue(verifiedResult);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(verifiedResult);
 
             const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
             expect(result.success).toBe(true);
-            expect(mockContext.prereqManager.checkPrerequisite).toHaveBeenCalledWith(mockNpmPrereq);
+            expect(mockContext.prereqManager!.checkPrerequisite).toHaveBeenCalledWith(mockNpmPrereq);
             expect(mockContext.sendMessage).toHaveBeenCalledWith(
                 'prerequisite-status',
                 expect.objectContaining({
@@ -327,7 +327,7 @@ describe('Prerequisites Install Handler', () => {
             const states = new Map();
             states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
             mockContext.sharedState.currentPrerequisiteStates = states;
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue({
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
                 steps: [
                     { name: 'Install Adobe CLI for Node {version}', message: 'Installing...', command: 'npm install -g @adobe/aio-cli' },
                 ],
@@ -337,7 +337,7 @@ describe('Prerequisites Install Handler', () => {
             const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
             expect(result.success).toBe(true);
-            expect(mockContext.progressUnifier.executeStep).not.toHaveBeenCalled();
+            expect(mockContext.progressUnifier!.executeStep).not.toHaveBeenCalled();
             expect(mockContext.sendMessage).toHaveBeenCalledWith(
                 'prerequisite-install-complete',
                 expect.objectContaining({ index: 0, continueChecking: true })
@@ -348,18 +348,18 @@ describe('Prerequisites Install Handler', () => {
             const states = new Map();
             states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
             mockContext.sharedState.currentPrerequisiteStates = states;
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue({
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
                 steps: [
                     { name: 'Install Node {version}', message: 'Installing Node {version}...', command: 'fnm install {version}' },
                 ],
             });
-            (mockContext.prereqManager.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
                 { version: 'Node 18', component: 'v18.0.0', installed: false },
             ]);
 
             await handleInstallPrerequisite(mockContext, { prereqId: 0, version: '18' });
 
-            expect(mockContext.progressUnifier.executeStep).toHaveBeenCalledWith(
+            expect(mockContext.progressUnifier!.executeStep).toHaveBeenCalledWith(
                 expect.objectContaining({ name: 'Install Node {version}' }),
                 expect.any(Number),
                 expect.any(Number),
@@ -372,13 +372,13 @@ describe('Prerequisites Install Handler', () => {
             const states = new Map();
             states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
             mockContext.sharedState.currentPrerequisiteStates = states;
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue({
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
                 steps: [
                     { name: 'Install Node {version}', message: 'Installing Node {version}...', command: 'fnm install {version}' },
                     { name: 'Set Node {version} as default', message: 'Setting as default...', command: 'fnm default {version}' },
                 ],
             });
-            (mockContext.prereqManager.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
                 { version: 'Node 18', component: 'v18.0.0', installed: false },
                 { version: 'Node 20', component: 'v20.0.0', installed: false },
             ]);
@@ -387,7 +387,7 @@ describe('Prerequisites Install Handler', () => {
 
             // Install step should be called for both versions (18 and 20)
             // Default step should only be called once for version 20
-            expect(mockContext.progressUnifier.executeStep).toHaveBeenCalledTimes(3); // 2 installs + 1 default
+            expect(mockContext.progressUnifier!.executeStep).toHaveBeenCalledTimes(3); // 2 installs + 1 default
         });
     });
 
@@ -406,7 +406,7 @@ describe('Prerequisites Install Handler', () => {
         });
 
         it('should throw error when no installation steps defined', async () => {
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue(null);
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue(null);
 
             const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
@@ -421,20 +421,20 @@ describe('Prerequisites Install Handler', () => {
         });
 
         it('should handle installation step execution failures', async () => {
-            (mockContext.progressUnifier.executeStep as jest.Mock).mockRejectedValue(
+            (mockContext.progressUnifier!.executeStep as jest.Mock).mockRejectedValue(
                 new Error('Command execution failed')
             );
 
             const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
             expect(result.success).toBe(false);
-            expect(mockContext.errorLogger.logError).toHaveBeenCalled();
+            expect(mockContext.errorLogger!.logError).toHaveBeenCalled();
         });
 
         it('should handle post-installation verification timeout', async () => {
             const timeoutError: any = new Error('Timeout after 10000ms');
             timeoutError.isTimeout = true;
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockRejectedValue(timeoutError);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockRejectedValue(timeoutError);
 
             const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
@@ -449,7 +449,7 @@ describe('Prerequisites Install Handler', () => {
         });
 
         it('should handle post-installation verification general error', async () => {
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockRejectedValue(
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockRejectedValue(
                 new Error('Verification failed')
             );
 
@@ -463,21 +463,21 @@ describe('Prerequisites Install Handler', () => {
                     message: expect.stringContaining('verification failed'),
                 })
             );
-            expect(mockContext.errorLogger.logError).toHaveBeenCalled();
+            expect(mockContext.errorLogger!.logError).toHaveBeenCalled();
         });
 
         it('should handle Node version check failures during multi-version', async () => {
             const states = new Map();
             states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
             mockContext.sharedState.currentPrerequisiteStates = states;
-            (mockContext.prereqManager.checkMultipleNodeVersions as jest.Mock).mockRejectedValue(
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockRejectedValue(
                 new Error('Node check failed')
             );
 
             const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
             expect(result.success).toBe(false);
-            expect(mockContext.errorLogger.logError).toHaveBeenCalled();
+            expect(mockContext.errorLogger!.logError).toHaveBeenCalled();
         });
 
         it('should handle per-node prerequisite check failures', async () => {
@@ -502,7 +502,7 @@ describe('Prerequisites Install Handler', () => {
             const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
             expect(result.success).toBe(false);
-            expect(mockContext.errorLogger.logError).toHaveBeenCalled();
+            expect(mockContext.errorLogger!.logError).toHaveBeenCalled();
         });
 
         it('should handle sendMessage failures gracefully', async () => {
@@ -517,7 +517,7 @@ describe('Prerequisites Install Handler', () => {
 
         it('should handle complete error with error logging', async () => {
             const criticalError = new Error('Critical installation failure');
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockImplementation(() => {
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockImplementation(() => {
                 throw criticalError;
             });
 
@@ -528,7 +528,7 @@ describe('Prerequisites Install Handler', () => {
                 expect.stringContaining('Failed to install prerequisite'),
                 criticalError
             );
-            expect(mockContext.errorLogger.logError).toHaveBeenCalledWith(
+            expect(mockContext.errorLogger!.logError).toHaveBeenCalledWith(
                 criticalError,
                 'Prerequisite Installation',
                 true
@@ -542,7 +542,7 @@ describe('Prerequisites Install Handler', () => {
 
             expect(result.success).toBe(true);
             // Should not use version templating
-            expect(mockContext.progressUnifier.executeStep).toHaveBeenCalledWith(
+            expect(mockContext.progressUnifier!.executeStep).toHaveBeenCalledWith(
                 expect.any(Object),
                 expect.any(Number),
                 expect.any(Number),
@@ -574,14 +574,14 @@ describe('Prerequisites Install Handler', () => {
 
             expect(result.success).toBe(true);
             // Should return early with no versions to install
-            expect(mockContext.progressUnifier.executeStep).not.toHaveBeenCalled();
+            expect(mockContext.progressUnifier!.executeStep).not.toHaveBeenCalled();
         });
 
         it('should handle per-node prerequisite partially installed', async () => {
             const states = new Map();
             states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
             mockContext.sharedState.currentPrerequisiteStates = states;
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue({
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
                 steps: [
                     { name: 'Install Adobe CLI for Node {version}', message: 'Installing Adobe CLI...', command: 'npm install -g @adobe/aio-cli' },
                 ],
@@ -600,28 +600,28 @@ describe('Prerequisites Install Handler', () => {
 
             expect(result.success).toBe(true);
             // Should only install for Node 20 (1 step)
-            expect(mockContext.progressUnifier.executeStep).toHaveBeenCalledTimes(1);
+            expect(mockContext.progressUnifier!.executeStep).toHaveBeenCalledTimes(1);
         });
 
         it('should handle install steps empty array', async () => {
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue({ steps: [] });
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({ steps: [] });
 
             const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
             expect(result.success).toBe(true);
-            expect(mockContext.progressUnifier.executeStep).not.toHaveBeenCalled();
+            expect(mockContext.progressUnifier!.executeStep).not.toHaveBeenCalled();
         });
 
         it('should handle default steps empty array', async () => {
             const states = new Map();
             states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
             mockContext.sharedState.currentPrerequisiteStates = states;
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue({
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
                 steps: [
                     { name: 'Install Node {version}', message: 'Installing...', command: 'fnm install {version}' },
                 ],
             });
-            (mockContext.prereqManager.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
                 { version: 'Node 18', component: 'v18.0.0', installed: false },
                 { version: 'Node 20', component: 'v20.0.0', installed: true },
             ]);
@@ -630,11 +630,11 @@ describe('Prerequisites Install Handler', () => {
 
             expect(result.success).toBe(true);
             // Should only run install step for Node 18, no default steps
-            expect(mockContext.progressUnifier.executeStep).toHaveBeenCalledTimes(1);
+            expect(mockContext.progressUnifier!.executeStep).toHaveBeenCalledTimes(1);
         });
 
         it('should handle version templating with no version', async () => {
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue({
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
                 steps: [
                     { name: 'Install {version}', message: 'Installing {version}...', command: 'install command' },
                 ],
@@ -643,7 +643,7 @@ describe('Prerequisites Install Handler', () => {
             await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
             // Should not replace {version} template
-            expect(mockContext.progressUnifier.executeStep).toHaveBeenCalledWith(
+            expect(mockContext.progressUnifier!.executeStep).toHaveBeenCalledWith(
                 expect.objectContaining({ name: 'Install {version}' }),
                 expect.any(Number),
                 expect.any(Number),
@@ -657,7 +657,7 @@ describe('Prerequisites Install Handler', () => {
                 ...mockNodeResult,
                 installed: false,
             };
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockResolvedValue(notInstalledResult);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(notInstalledResult);
 
             const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
 
@@ -676,12 +676,12 @@ describe('Prerequisites Install Handler', () => {
             const states = new Map();
             states.set(0, { prereq: mockNodePrereq, result: mockNodeResult });
             mockContext.sharedState.currentPrerequisiteStates = states;
-            (mockContext.prereqManager.getInstallSteps as jest.Mock).mockReturnValue({
+            (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
                 steps: [
                     { name: 'Install Node {version}', message: 'Installing...', command: 'fnm install {version}' },
                 ],
             });
-            (mockContext.prereqManager.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
                 { version: 'Node 18', component: 'v18.0.0', installed: true },
                 { version: 'Node 20', component: 'v20.0.0', installed: false },
             ]);
@@ -690,7 +690,7 @@ describe('Prerequisites Install Handler', () => {
 
             expect(result.success).toBe(true);
             // Should only install Node 20, not Node 18
-            expect(mockContext.progressUnifier.executeStep).toHaveBeenCalledTimes(1);
+            expect(mockContext.progressUnifier!.executeStep).toHaveBeenCalledTimes(1);
         });
     });
 });

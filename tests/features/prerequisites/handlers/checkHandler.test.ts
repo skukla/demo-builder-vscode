@@ -119,17 +119,17 @@ describe('Prerequisites Check Handler', () => {
     describe('happy path', () => {
         it('should load prerequisites config and send to UI', async () => {
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
 
             await handleCheckPrerequisites(context);
 
-            expect(context.prereqManager.loadConfig).toHaveBeenCalledTimes(1);
+            expect(context.prereqManager!.loadConfig).toHaveBeenCalledTimes(1);
             expect(context.sendMessage).toHaveBeenCalledWith(
                 'prerequisites-loaded',
                 expect.objectContaining({
@@ -143,22 +143,22 @@ describe('Prerequisites Check Handler', () => {
 
         it('should check all prerequisites in dependency order', async () => {
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
 
             await handleCheckPrerequisites(context);
 
-            expect(context.prereqManager.checkPrerequisite).toHaveBeenCalledTimes(2);
-            expect(context.prereqManager.checkPrerequisite).toHaveBeenNthCalledWith(
+            expect(context.prereqManager!.checkPrerequisite).toHaveBeenCalledTimes(2);
+            expect(context.prereqManager!.checkPrerequisite).toHaveBeenNthCalledWith(
                 1,
                 mockConfig.prerequisites[0]
             );
-            expect(context.prereqManager.checkPrerequisite).toHaveBeenNthCalledWith(
+            expect(context.prereqManager!.checkPrerequisite).toHaveBeenNthCalledWith(
                 2,
                 mockConfig.prerequisites[1]
             );
@@ -166,11 +166,11 @@ describe('Prerequisites Check Handler', () => {
 
         it('should handle all prerequisites installed successfully', async () => {
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
 
@@ -194,11 +194,11 @@ describe('Prerequisites Check Handler', () => {
                 ],
             };
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(optionalConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(optionalConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 optionalConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce({ ...mockNpmResult, installed: false });
 
@@ -229,21 +229,21 @@ describe('Prerequisites Check Handler', () => {
                     },
                 },
             });
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
-            (context.prereqManager.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            (context.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
                 { version: '18', component: 'v18.0.0', installed: true },
                 { version: '20', component: 'v20.0.0', installed: true },
             ]);
 
             await handleCheckPrerequisites(context);
 
-            expect(context.prereqManager.checkMultipleNodeVersions).toHaveBeenCalledWith(
+            expect(context.prereqManager!.checkMultipleNodeVersions).toHaveBeenCalledWith(
                 nodeMapping
             );
         });
@@ -281,11 +281,11 @@ describe('Prerequisites Check Handler', () => {
                     },
                 },
             });
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(configWithCli);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(configWithCli);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 configWithCli.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce({ installed: true, canInstall: false });
 
@@ -300,11 +300,11 @@ describe('Prerequisites Check Handler', () => {
 
         it('should send progress updates during checking', async () => {
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
 
@@ -329,11 +329,11 @@ describe('Prerequisites Check Handler', () => {
 
         it('should complete with allInstalled=true when all required installed', async () => {
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
 
@@ -352,11 +352,11 @@ describe('Prerequisites Check Handler', () => {
         it('should handle prerequisite check timeout errors', async () => {
             const timeoutError = new Error('Operation timeout');
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 [mockConfig.prerequisites[0]]
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock).mockRejectedValue(timeoutError);
+            (context.prereqManager!.checkPrerequisite as jest.Mock).mockRejectedValue(timeoutError);
 
             await handleCheckPrerequisites(context);
 
@@ -375,11 +375,11 @@ describe('Prerequisites Check Handler', () => {
         it('should handle general check errors and continue', async () => {
             const checkError = new Error('Check failed');
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockRejectedValueOnce(checkError)
                 .mockResolvedValueOnce(mockNpmResult);
 
@@ -390,13 +390,13 @@ describe('Prerequisites Check Handler', () => {
                 checkError
             );
             // Should continue to check npm despite Node.js failure
-            expect(context.prereqManager.checkPrerequisite).toHaveBeenCalledTimes(2);
+            expect(context.prereqManager!.checkPrerequisite).toHaveBeenCalledTimes(2);
         });
 
         it('should handle config loading failures', async () => {
             const loadError = new Error('Config not found');
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockRejectedValue(loadError);
+            (context.prereqManager!.loadConfig as jest.Mock).mockRejectedValue(loadError);
 
             const result = await handleCheckPrerequisites(context);
 
@@ -416,8 +416,8 @@ describe('Prerequisites Check Handler', () => {
         it('should handle dependency resolution failures', async () => {
             const resolveError = new Error('Circular dependency');
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockImplementation(() => {
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockImplementation(() => {
                 throw resolveError;
             });
 
@@ -439,8 +439,8 @@ describe('Prerequisites Check Handler', () => {
                 .mockRejectedValueOnce(sendError)
                 .mockResolvedValue(undefined);
 
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
 
@@ -464,11 +464,11 @@ describe('Prerequisites Check Handler', () => {
                     },
                 },
             });
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
 
@@ -482,8 +482,8 @@ describe('Prerequisites Check Handler', () => {
         it('should handle empty prerequisites list', async () => {
             const emptyConfig = { version: '1.0', prerequisites: [] };
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(emptyConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue([]);
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(emptyConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue([]);
 
             const result = await handleCheckPrerequisites(context);
 
@@ -499,11 +499,11 @@ describe('Prerequisites Check Handler', () => {
 
         it('should handle prerequisites with no component selection', async () => {
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
 
@@ -515,11 +515,11 @@ describe('Prerequisites Check Handler', () => {
 
         it('should handle mix of installed and not-installed prerequisites', async () => {
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce({ installed: false, canInstall: true });
 
@@ -538,14 +538,14 @@ describe('Prerequisites Check Handler', () => {
             (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue(nodeMapping);
 
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
-            (context.prereqManager.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            (context.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
                 { version: '18', component: 'v18.0.0', installed: true },
                 { version: '20', component: '', installed: false },
             ]);
@@ -597,11 +597,11 @@ describe('Prerequisites Check Handler', () => {
                     },
                 },
             });
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(configWithCli);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(configWithCli);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 configWithCli.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce({ installed: true, canInstall: false });
 
@@ -621,11 +621,11 @@ describe('Prerequisites Check Handler', () => {
             (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(false);
 
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce({ installed: false, canInstall: true });
 
@@ -650,11 +650,11 @@ describe('Prerequisites Check Handler', () => {
             };
 
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
 
@@ -668,11 +668,11 @@ describe('Prerequisites Check Handler', () => {
             const setTimeoutSpy = jest.spyOn(global, 'setTimeout');
 
             const context = createMockContext();
-            (context.prereqManager.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
-            (context.prereqManager.resolveDependencies as jest.Mock).mockReturnValue(
+            (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
+            (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager.checkPrerequisite as jest.Mock)
+            (context.prereqManager!.checkPrerequisite as jest.Mock)
                 .mockResolvedValueOnce(mockNodeResult)
                 .mockResolvedValueOnce(mockNpmResult);
 

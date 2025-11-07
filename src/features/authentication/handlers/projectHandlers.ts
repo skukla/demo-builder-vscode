@@ -25,7 +25,7 @@ import { parseJSON, toError } from '@/types/typeGuards';
  */
 export async function handleEnsureOrgSelected(context: HandlerContext): Promise<DataResult<{ hasOrg: boolean }>> {
     try {
-        const currentOrg = await context.authManager.getCurrentOrganization();
+        const currentOrg = await context.authManager?.getCurrentOrganization();
         const hasOrg = !!currentOrg;
         await context.sendMessage('orgSelectionStatus', { hasOrg });
         return { success: true, data: { hasOrg } };
@@ -51,7 +51,7 @@ export async function handleGetProjects(
 ): Promise<DataResult<AdobeProject[]>> {
     try {
         // Send loading status with sub-message
-        const currentOrg = await context.authManager.getCurrentOrganization();
+        const currentOrg = await context.authManager?.getCurrentOrganization();
         if (currentOrg) {
             await context.sendMessage('project-loading-status', {
                 isLoading: true,
@@ -61,8 +61,12 @@ export async function handleGetProjects(
         }
 
         // Wrap getProjects with timeout (30 seconds)
+        const projectsPromise = context.authManager?.getProjects();
+        if (!projectsPromise) {
+            throw new Error('Auth manager not available');
+        }
         const projects = await withTimeout(
-            context.authManager.getProjects(),
+            projectsPromise,
             {
                 timeoutMs: TIMEOUTS.PROJECT_LIST,
                 timeoutMessage: 'Request timed out. Please check your connection and try again.',
@@ -108,7 +112,7 @@ export async function handleSelectProject(
     try {
         context.debugLogger.debug('[Project] About to call authManager.selectProject');
         // Directly select the project - we already have the projectId
-        const success = await context.authManager.selectProject(projectId);
+        const success = await context.authManager?.selectProject(projectId);
 
         context.debugLogger.debug(`[Project] authManager.selectProject returned: ${success}`);
 

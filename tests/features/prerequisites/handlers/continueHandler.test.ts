@@ -116,7 +116,7 @@ describe('Prerequisites Continue Handler', () => {
             const result = await handleContinuePrerequisites(mockContext);
 
             expect(result.success).toBe(true);
-            expect(mockContext.prereqManager.checkPrerequisite).toHaveBeenCalledTimes(2);
+            expect(mockContext.prereqManager!.checkPrerequisite).toHaveBeenCalledTimes(2);
             expect(mockContext.sendMessage).toHaveBeenCalledWith(
                 'prerequisites-complete',
                 expect.objectContaining({ allInstalled: true })
@@ -127,8 +127,8 @@ describe('Prerequisites Continue Handler', () => {
             const result = await handleContinuePrerequisites(mockContext, { fromIndex: 1 });
 
             expect(result.success).toBe(true);
-            expect(mockContext.prereqManager.checkPrerequisite).toHaveBeenCalledTimes(1);
-            expect(mockContext.prereqManager.checkPrerequisite).toHaveBeenCalledWith(mockNpmPrereq);
+            expect(mockContext.prereqManager!.checkPrerequisite).toHaveBeenCalledTimes(1);
+            expect(mockContext.prereqManager!.checkPrerequisite).toHaveBeenCalledWith(mockNpmPrereq);
         });
 
         it('should re-check Node.js with multi-version mapping', async () => {
@@ -136,7 +136,7 @@ describe('Prerequisites Continue Handler', () => {
 
             expect(result.success).toBe(true);
             expect(shared.getNodeVersionMapping).toHaveBeenCalled();
-            expect(mockContext.prereqManager.checkMultipleNodeVersions).toHaveBeenCalledWith({
+            expect(mockContext.prereqManager!.checkMultipleNodeVersions).toHaveBeenCalledWith({
                 '18': 'React App',
                 '20': 'Node Backend',
             });
@@ -171,7 +171,7 @@ describe('Prerequisites Continue Handler', () => {
                 currentPrerequisites: [mockAdobeCliPrereq],
                 currentPrerequisiteStates: states,
             };
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
 
             const result = await handleContinuePrerequisites(mockContext);
 
@@ -196,7 +196,7 @@ describe('Prerequisites Continue Handler', () => {
                 currentPrerequisites: [mockAdobeCliPrereq],
                 currentPrerequisiteStates: states,
             };
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
 
             const result = await handleContinuePrerequisites(mockContext);
 
@@ -246,7 +246,7 @@ describe('Prerequisites Continue Handler', () => {
             const result = await handleContinuePrerequisites(mockContext);
 
             expect(result.success).toBe(false);
-            expect(mockContext.prereqManager.checkPrerequisite).not.toHaveBeenCalled();
+            expect(mockContext.prereqManager!.checkPrerequisite).not.toHaveBeenCalled();
         });
 
         it('should return false when currentPrerequisiteStates missing', async () => {
@@ -255,13 +255,13 @@ describe('Prerequisites Continue Handler', () => {
             const result = await handleContinuePrerequisites(mockContext);
 
             expect(result.success).toBe(false);
-            expect(mockContext.prereqManager.checkPrerequisite).not.toHaveBeenCalled();
+            expect(mockContext.prereqManager!.checkPrerequisite).not.toHaveBeenCalled();
         });
 
         it('should handle prerequisite check timeout errors', async () => {
             const timeoutError: any = new Error('Timeout after 10000ms');
             timeoutError.isTimeout = true;
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockRejectedValueOnce(timeoutError);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockRejectedValueOnce(timeoutError);
 
             const result = await handleContinuePrerequisites(mockContext);
 
@@ -279,7 +279,7 @@ describe('Prerequisites Continue Handler', () => {
         });
 
         it('should handle prerequisite check general errors', async () => {
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockRejectedValueOnce(
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockRejectedValueOnce(
                 new Error('Check failed')
             );
 
@@ -317,7 +317,7 @@ describe('Prerequisites Continue Handler', () => {
                 currentPrerequisiteStates: states,
             };
             // Simulate checkPrerequisite throwing an error
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockRejectedValue(new Error('Check failed'));
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockRejectedValue(new Error('Check failed'));
 
             const result = await handleContinuePrerequisites(mockContext);
 
@@ -357,7 +357,7 @@ describe('Prerequisites Continue Handler', () => {
             const result = await handleContinuePrerequisites(mockContext, {});
 
             expect(result.success).toBe(true);
-            expect(mockContext.prereqManager.checkPrerequisite).toHaveBeenCalledTimes(2);
+            expect(mockContext.prereqManager!.checkPrerequisite).toHaveBeenCalledTimes(2);
         });
 
         it('should handle empty prerequisites list', async () => {
@@ -366,7 +366,7 @@ describe('Prerequisites Continue Handler', () => {
             const result = await handleContinuePrerequisites(mockContext);
 
             expect(result.success).toBe(true);
-            expect(mockContext.prereqManager.checkPrerequisite).not.toHaveBeenCalled();
+            expect(mockContext.prereqManager!.checkPrerequisite).not.toHaveBeenCalled();
             expect(mockContext.sendMessage).toHaveBeenCalledWith(
                 'prerequisites-complete',
                 expect.objectContaining({ allInstalled: true })
@@ -390,7 +390,7 @@ describe('Prerequisites Continue Handler', () => {
                 currentPrerequisites: [mockAdobeCliPrereq],
                 currentPrerequisiteStates: states,
             };
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
             // Note: Per-node version checking happens inside checkPrerequisite which is mocked,
             // so specific Node version scenarios are tested in integration tests.
 
@@ -424,7 +424,7 @@ describe('Prerequisites Continue Handler', () => {
                 currentPrerequisites: [mockAdobeCliPrereq],
                 currentPrerequisiteStates: states,
             };
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
             // Mock the command execution sequence:
             // 1. fnm list (get installed Node versions)
             // 2. aio --version with Node 18 (succeeds)
@@ -448,7 +448,7 @@ describe('Prerequisites Continue Handler', () => {
         });
 
         it('should handle Node.js with some versions missing', async () => {
-            (mockContext.prereqManager.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
                 { version: 'Node 18', component: 'v18.0.0', installed: true },
                 { version: 'Node 20', component: '', installed: false },
             ]);
@@ -490,7 +490,7 @@ describe('Prerequisites Continue Handler', () => {
                 currentPrerequisites: [optionalPrereq],
                 currentPrerequisiteStates: states,
             };
-            (mockContext.prereqManager.checkPrerequisite as jest.Mock).mockResolvedValue(optionalResult);
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(optionalResult);
 
             const result = await handleContinuePrerequisites(mockContext);
 
