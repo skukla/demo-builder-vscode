@@ -9,11 +9,11 @@
 import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { Project } from '@/types';
-import { parseJSON } from '@/types/typeGuards';
 import { Logger } from '@/core/logging';
 import { getFrontendEnvVars, updateFrontendState } from '@/core/state';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
+import { Project } from '@/types';
+import { parseJSON } from '@/types/typeGuards';
 
 export type { MeshState, MeshChanges };
 

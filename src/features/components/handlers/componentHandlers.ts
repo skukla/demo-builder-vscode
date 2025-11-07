@@ -15,9 +15,9 @@
  * - validateSelection: Validate component selection
  */
 
+import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
 import { ComponentSelection } from '@/types/components';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
-import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
 
 /**
  * Get or create ComponentRegistryManager from context

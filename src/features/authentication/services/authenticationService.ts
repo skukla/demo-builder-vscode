@@ -1,6 +1,6 @@
 import * as path from 'path';
-import type { CommandExecutor } from '@/core/shell';
 import { getLogger, Logger, StepLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, CACHE_TTL } from '@/core/utils/timeoutConfig';
 import { AdobeEntityService } from '@/features/authentication/services/adobeEntityService';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
@@ -70,7 +70,7 @@ export class AuthenticationService {
         this.stepLoggerInitPromise = StepLogger.create(
             this.logger,
             undefined,
-            this.templatesPath
+            this.templatesPath,
         ).then(stepLogger => {
             this.stepLogger = stepLogger;
 

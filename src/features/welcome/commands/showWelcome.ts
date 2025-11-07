@@ -1,9 +1,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { setLoadingState } from '@/core/utils/loadingHTML';
-import { generateWebviewHTML } from '@/core/utils/webviewHTMLBuilder';
 import { BaseWebviewCommand } from '@/core/base';
 import type { WebviewCommunicationManager } from '@/core/communication';
+import { generateWebviewHTML } from '@/core/utils/webviewHTMLBuilder';
 
 export class WelcomeWebviewCommand extends BaseWebviewCommand {
 
@@ -74,7 +73,7 @@ export class WelcomeWebviewCommand extends BaseWebviewCommand {
 
         // Get fallback bundle URI for development
         const fallbackBundleUri = this.panel!.webview.asWebviewUri(
-            vscode.Uri.file(path.join(webviewPath, 'main-bundle.js'))
+            vscode.Uri.file(path.join(webviewPath, 'main-bundle.js')),
         );
 
         const nonce = this.getNonce();

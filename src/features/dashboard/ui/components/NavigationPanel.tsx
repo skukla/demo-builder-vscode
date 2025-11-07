@@ -1,7 +1,7 @@
-import React, { useCallback } from 'react';
 import { Heading, Flex, Text } from '@adobe/react-spectrum';
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
+import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
+import React, { useCallback } from 'react';
 
 export interface NavigationField {
     key: string;
@@ -57,7 +57,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
     activeField,
     expandedSections,
     onToggleSection,
-    onNavigateToField
+    onNavigateToField,
 }) => {
     const handleToggleSection = useCallback((sectionId: string) => {
         onToggleSection(sectionId);
@@ -76,7 +76,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                 borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
                 display: 'flex',
                 flexDirection: 'column',
-                overflow: 'hidden'
+                overflow: 'hidden',
             }}
         >
             <Heading level={3} marginBottom="size-200">
@@ -110,7 +110,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                     flexDirection: 'column',
                                     alignItems: 'flex-start',
                                     gap: '4px',
-                                    transition: 'all 0.2s ease'
+                                    transition: 'all 0.2s ease',
                                 }}
                                 onMouseEnter={(e) => {
                                     if (!isActive) {
@@ -161,7 +161,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                         marginTop: '4px',
                                         marginLeft: '12px',
                                         paddingLeft: '12px',
-                                        borderLeft: '2px solid var(--spectrum-global-color-gray-300)'
+                                        borderLeft: '2px solid var(--spectrum-global-color-gray-300)',
                                     }}
                                 >
                                     {section.fields.map((field) => {
@@ -189,7 +189,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                                     justifyContent: 'space-between',
                                                     textAlign: 'left',
                                                     transition: 'all 0.2s',
-                                                    borderRadius: '4px'
+                                                    borderRadius: '4px',
                                                 }}
                                                 onMouseEnter={(e) => {
                                                     if (!isActiveField) {

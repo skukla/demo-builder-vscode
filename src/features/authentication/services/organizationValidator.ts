@@ -1,8 +1,8 @@
-import { parseJSON, toError, isTimeoutError } from '@/types/typeGuards';
-import type { CommandExecutor } from '@/core/shell';
 import { getLogger, Logger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
+import { parseJSON, toError, isTimeoutError } from '@/types/typeGuards';
 
 /**
  * Validates organization access and manages invalid organization contexts

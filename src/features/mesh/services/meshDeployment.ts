@@ -4,11 +4,11 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import type { Logger } from '@/types/logger';
-import { parseJSON, toError } from '@/types/typeGuards';
 import { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
+import type { Logger } from '@/types/logger';
+import { parseJSON, toError } from '@/types/typeGuards';
 
 export type { MeshDeploymentResult };
 

@@ -10,12 +10,12 @@
 
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
-import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { toError, isTimeoutError } from '@/types/typeGuards';
-import { SimpleResult } from '@/types/results';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 import { getRequiredNodeVersions, getNodeVersionMapping } from '@/features/prerequisites/handlers/shared';
+import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { SimpleResult } from '@/types/results';
+import { toError, isTimeoutError } from '@/types/typeGuards';
 
 /**
  * install-prerequisite - Install a missing prerequisite

@@ -4,10 +4,10 @@
  */
 
 import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateMeshId } from '@/core/validation';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
-import { validateMeshId } from '@/core/validation';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * MeshDeploymentVerificationResult - Result from deployment verification polling

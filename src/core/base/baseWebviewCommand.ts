@@ -1,8 +1,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { setLoadingState } from '@/core/utils/loadingHTML';
-import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication';
 import { BaseCommand } from './baseCommand';
+import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication';
+import { setLoadingState } from '@/core/utils/loadingHTML';
 
 /**
  * Base class for commands that use webviews with robust communication

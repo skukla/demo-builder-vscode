@@ -5,9 +5,8 @@
  * Maps message types to handler functions for the Project Dashboard.
  */
 
-import { BaseHandlerRegistry } from '@/core/base';
-import { MessageHandler, HandlerContext } from '@/types/handlers';
 import * as handlers from './dashboardHandlers';
+import { BaseHandlerRegistry } from '@/core/base';
 
 /**
  * Dashboard HandlerRegistry class

@@ -4,16 +4,16 @@
  * Maps message types to handler functions and provides centralized dispatch logic.
  */
 
+import { MessageHandler } from './HandlerContext';
+import * as creation from './';
 import { BaseHandlerRegistry } from '@/core/base';
 import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
-import { HandlerContext, MessageHandler } from './HandlerContext';
 
 // Import all handler modules
 import * as lifecycle from '@/features/lifecycle/handlers';
 import * as mesh from '@/features/mesh/handlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
-import * as creation from './';
 
 /**
  * HandlerRegistry class

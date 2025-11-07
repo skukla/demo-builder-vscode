@@ -1,4 +1,3 @@
-import React, { useEffect, useCallback } from 'react';
 import {
     View,
     Flex,
@@ -6,24 +5,25 @@ import {
     Text,
     Grid,
     Divider,
-    ActionButton
+    ActionButton,
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
-import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Book from '@spectrum-icons/workflow/Book';
+import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Settings from '@spectrum-icons/workflow/Settings';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import React, { useEffect, useCallback } from 'react';
 import { useFocusTrap } from '@/webview-ui/shared/hooks';
 import { cn } from '@/webview-ui/shared/utils/classNames';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 
 interface WelcomeScreenProps {
     theme?: 'light' | 'dark';
 }
 
-export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
+export function WelcomeScreen(_props: WelcomeScreenProps) {
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
-        autoFocus: true
+        autoFocus: true,
     });
 
     useEffect(() => {

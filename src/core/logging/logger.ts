@@ -1,4 +1,3 @@
-import type { LogLevel } from '@/types/logger';
 import { getLogger, DebugLogger } from './debugLogger';
 
 /**

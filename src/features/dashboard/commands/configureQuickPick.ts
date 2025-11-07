@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Project } from '@/types';
 import { BaseCommand } from '@/core/base';
+import { Project } from '@/types';
 
 export class ConfigureQuickPickCommand extends BaseCommand {
     public async execute(): Promise<void> {

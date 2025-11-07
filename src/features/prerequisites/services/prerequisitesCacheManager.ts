@@ -37,9 +37,9 @@
  * ```
  */
 
+import type { PrerequisiteStatus, CachedPrerequisiteResult } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
-import type { PrerequisiteStatus, CachedPrerequisiteResult } from './types';
 
 export class PrerequisitesCacheManager {
     private logger = getLogger();
@@ -145,7 +145,7 @@ export class PrerequisitesCacheManager {
         prereqId: string,
         result: PrerequisiteStatus,
         ttlMs: number = CACHE_TTL.PREREQUISITE_CHECK,
-        nodeVersion?: string
+        nodeVersion?: string,
     ): void {
         const key = this.getCacheKey(prereqId, nodeVersion);
         const jitteredTTL = this.getCacheTTLWithJitter(ttlMs);
@@ -181,7 +181,7 @@ export class PrerequisitesCacheManager {
         const versionSuffix = nodeVersion ? ` (Node ${nodeVersion})` : '';
         this.logger.debug(
             `[Prereq Cache] Cached ${prereqId}${versionSuffix}: ` +
-            `installed=${result.installed}, TTL=${jitteredTTL}ms (sets=${this.stats.sets})`
+            `installed=${result.installed}, TTL=${jitteredTTL}ms (sets=${this.stats.sets})`,
         );
     }
 
@@ -210,7 +210,7 @@ export class PrerequisitesCacheManager {
         if (keysToDelete.length > 0) {
             this.logger.debug(
                 `[Prereq Cache] Invalidated ${keysToDelete.length} cache entries for ${prereqId} ` +
-                `(total invalidations=${this.stats.invalidations})`
+                `(total invalidations=${this.stats.invalidations})`,
             );
         }
     }
@@ -225,7 +225,7 @@ export class PrerequisitesCacheManager {
         this.stats.invalidations += count;
         this.logger.debug(
             `[Prereq Cache] Cleared all caches (${count} entries, ` +
-            `total invalidations=${this.stats.invalidations})`
+            `total invalidations=${this.stats.invalidations})`,
         );
     }
 

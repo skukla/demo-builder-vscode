@@ -1,16 +1,16 @@
-import React, { useEffect, useState } from 'react';
 import { Heading, Text, Flex, Button, ActionButton, DialogTrigger } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Info from '@spectrum-icons/workflow/Info';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
-import { vscode } from '@/webview-ui/shared/vscode-api';
-import { WizardState, WizardStep } from '@/webview-ui/shared/types';
+import React, { useEffect, useState } from 'react';
 import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
-import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 import { FadeTransition } from '@/webview-ui/shared/components/FadeTransition';
+import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 import { Modal } from '@/webview-ui/shared/components/Modal';
 import { NumberedInstructions } from '@/webview-ui/shared/components/NumberedInstructions';
+import { WizardState, WizardStep } from '@/webview-ui/shared/types';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 
 interface ApiMeshStepProps {
     state: WizardState;
@@ -61,8 +61,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                 message: 'Checking API Mesh API...',
                 subMessage: 'Downloading workspace configuration',
                 apiEnabled: false,
-                meshExists: false
-            } 
+                meshExists: false,
+            }, 
         });
 
         // Show progress
@@ -81,7 +81,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
         try {
             const result = await vscode.request('check-api-mesh', { 
                 workspaceId: state.adobeWorkspace?.id,
-                selectedComponents: []
+                selectedComponents: [],
             });
 
             if (result?.success && result.apiEnabled) {
@@ -91,7 +91,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     setMeshData({
                         meshId: result.meshId,
                         status: result.meshStatus,
-                        endpoint: result.endpoint
+                        endpoint: result.endpoint,
                     });
                     
                     updateState({ 
@@ -101,8 +101,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                             meshExists: true,
                             meshId: result.meshId,
                             meshStatus: result.meshStatus,
-                            endpoint: result.endpoint
-                        } 
+                            endpoint: result.endpoint,
+                        }, 
                     });
                     
                     setIsChecking(false);
@@ -114,8 +114,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                             isChecking: false,
                             apiEnabled: true,
                             meshExists: false,
-                            meshStatus: 'pending'
-                        } 
+                            meshStatus: 'pending',
+                        }, 
                     });
                     
                     setIsChecking(false);
@@ -131,8 +131,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                         apiEnabled: false,
                         meshExists: false,
                         error: err,
-                        setupInstructions: result?.setupInstructions  // Include setup instructions
-                    } 
+                        setupInstructions: result?.setupInstructions,  // Include setup instructions
+                    }, 
                 });
                 setIsChecking(false);
                 setCanProceed(false);
@@ -145,8 +145,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     isChecking: false,
                     apiEnabled: false,
                     meshExists: false,
-                    error: err
-                } 
+                    error: err,
+                }, 
             });
             setIsChecking(false);
             setCanProceed(false);
@@ -167,7 +167,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                 padding: '24px',
                 display: 'flex',
                 flexDirection: 'column',
-                minWidth: 0
+                minWidth: 0,
             }}>
                 <Heading level={2} marginBottom="size-300">API Mesh</Heading>
                 <Text marginBottom="size-400">
@@ -215,10 +215,10 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                             vscode.postMessage('open-adobe-console', {
                                                                 orgId: state.adobeProject?.org_id,
                                                                 projectId: state.adobeProject?.id,
-                                                                workspaceId: state.adobeWorkspace?.id
+                                                                workspaceId: state.adobeWorkspace?.id,
                                                             });
-                                                        }
-                                                    }
+                                                        },
+                                                    },
                                                 ]}
                                                 onClose={close}
                                             >
@@ -282,7 +282,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                             try {
                                                 // Step 1: Delete the broken mesh
                                                 await vscode.request('delete-api-mesh', {
-                                                    workspaceId: state.adobeWorkspace?.id
+                                                    workspaceId: state.adobeWorkspace?.id,
                                                 });
                                                 
                                                 // Step 2: Create a new mesh immediately
@@ -291,7 +291,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                 setHelperText('This could take up to 2 minutes');
                                                 
                                                 const result = await vscode.request('create-api-mesh', {
-                                                    workspaceId: state.adobeWorkspace?.id
+                                                    workspaceId: state.adobeWorkspace?.id,
                                                 });
 
                                                 if (result?.success) {
@@ -303,8 +303,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                             meshExists: true,
                                                             meshId: result.meshId,
                                                             meshStatus: 'deployed',
-                                                            endpoint: result.endpoint
-                                                        } 
+                                                            endpoint: result.endpoint,
+                                                        }, 
                                                     });
                                                     setMeshData(null); // Clear error state
                                                     setCanProceed(true);
@@ -313,7 +313,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                     setMeshData({
                                                         meshId: result.meshId,
                                                         status: 'error',
-                                                        endpoint: undefined
+                                                        endpoint: undefined,
                                                     });
                                                     updateState({ 
                                                         apiMesh: { 
@@ -322,8 +322,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                             meshExists: true,
                                                             meshId: result.meshId,
                                                             meshStatus: 'error',
-                                                            error: result.error
-                                                        } 
+                                                            error: result.error,
+                                                        }, 
                                                     });
                                                     setCanProceed(false);
                                                 } else {
@@ -337,8 +337,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                         isChecking: false,
                                                         apiEnabled: true,
                                                         meshExists: false,
-                                                        error: err
-                                                    } 
+                                                        error: err,
+                                                    }, 
                                                 });
                                             } finally {
                                                 setIsChecking(false);
@@ -377,14 +377,14 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                             ...state.apiMesh,
                                             isChecking: true,
                                             apiEnabled: state.apiMesh?.apiEnabled ?? false,
-                                            meshExists: state.apiMesh?.meshExists ?? false
-                                        } 
+                                            meshExists: state.apiMesh?.meshExists ?? false,
+                                        }, 
                                     });
 
                                     try {
                                         // Backend automatically specifies required timeout via __timeout_hint__
                                         const result = await vscode.request('create-api-mesh', {
-                                            workspaceId: state.adobeWorkspace?.id
+                                            workspaceId: state.adobeWorkspace?.id,
                                         });
 
                                         if (result?.success) {
@@ -399,8 +399,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                     meshId: result.meshId, // May be undefined if still provisioning
                                                     meshStatus: isDeployed ? 'deployed' : 'pending', // Deployed if we have ID, pending otherwise
                                                     endpoint: result.endpoint, // Pass endpoint to next step
-                                                    message: result.message // Show warning if timeout occurred
-                                                } 
+                                                    message: result.message, // Show warning if timeout occurred
+                                                }, 
                                             });
                                             
                                             // Update meshData to show the success state (deployed mesh with ID)
@@ -408,7 +408,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                 setMeshData({
                                                     meshId: result.meshId,
                                                     status: 'deployed',
-                                                    endpoint: result.endpoint
+                                                    endpoint: result.endpoint,
                                                 });
                                             } else {
                                                 // Timeout case: mesh still provisioning
@@ -429,7 +429,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                             setMeshData({
                                                 meshId: result.meshId,
                                                 status: 'error',
-                                                endpoint: undefined
+                                                endpoint: undefined,
                                             });
                                             updateState({ 
                                                 apiMesh: { 
@@ -438,8 +438,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                     meshExists: true,
                                                     meshId: result.meshId,
                                                     meshStatus: 'error',
-                                                    error: result.error
-                                                } 
+                                                    error: result.error,
+                                                }, 
                                             });
                                             setCanProceed(false);
                                         } else {
@@ -453,8 +453,8 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                 isChecking: false,
                                                 apiEnabled: true,
                                                 meshExists: false,
-                                                error: err
-                                            } 
+                                                error: err,
+                                            }, 
                                         });
                                     } finally {
                                         setIsChecking(false);
@@ -473,7 +473,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                 flex: '1',
                 padding: '24px',
                 backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
+                borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
             }}>
                 <ConfigurationSummary state={state} completedSteps={completedSteps} currentStep={state.currentStep} />
             </div>

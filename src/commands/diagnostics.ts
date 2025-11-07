@@ -3,8 +3,8 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
-import { parseJSON } from '@/types/typeGuards';
 import { getLogger, CommandResultWithContext } from '@/core/logging';
+import { parseJSON } from '@/types/typeGuards';
 
 // Diagnostic Type Definitions
 interface SystemInfo {

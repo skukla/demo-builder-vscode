@@ -87,7 +87,7 @@ export class ProgressUnifier {
             setTimeout: setTimeout.bind(global),
             clearTimeout: clearTimeout.bind(global),
         },
-        processSpawner: IProcessSpawner = spawn
+        processSpawner: IProcessSpawner = spawn,
     ) {
         this.logger = logger;
         this.dateProvider = dateProvider;

@@ -4,9 +4,9 @@
  */
 
 import { ServiceLocator } from '@/core/di';
+import type { MeshVerificationResult } from '@/features/mesh/services/types';
 import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
-import type { MeshVerificationResult } from '@/features/mesh/services/types';
 
 export type { MeshVerificationResult };
 

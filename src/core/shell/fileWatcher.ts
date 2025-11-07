@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { getLogger } from '@/core/logging';
 import { PollingService } from './pollingService';
+import { getLogger } from '@/core/logging';
 
 /**
  * Manages file system change detection

@@ -1,19 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
 import {
     Flex,
     Heading,
     Text,
-    Button
+    Button,
 } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Alert from '@spectrum-icons/workflow/Alert';
+import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
+import React, { useEffect, useState, useRef } from 'react';
+import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 import { WizardState } from '@/webview-ui/shared/types';
 import { vscode } from '@/webview-ui/shared/vscode-api';
-import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 
 interface AdobeAuthStepProps {
     state: WizardState;
@@ -63,8 +63,8 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                     adobeAuth: {
                         ...state.adobeAuth,
                         isChecking: false,
-                        error: 'timeout'
-                    }
+                        error: 'timeout',
+                    },
                 });
                 setAuthStatus(data.message || '');
                 setAuthSubMessage(data.subMessage || '');
@@ -88,14 +88,14 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                     email: data.email,
                     error: data.error,
                     requiresOrgSelection: data.requiresOrgSelection,
-                    orgLacksAccess: data.orgLacksAccess
+                    orgLacksAccess: data.orgLacksAccess,
                 },
                 // Always update org - set to undefined when null/undefined
                 adobeOrg: data.organization ? {
                     id: data.organization.id,
                     code: data.organization.code,
-                    name: data.organization.name
-                } : undefined
+                    name: data.organization.name,
+                } : undefined,
             });
             setAuthStatus(data.message || '');
             setAuthSubMessage(data.subMessage || '');
@@ -118,7 +118,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
         }
         setAuthStatus('Checking Adobe authentication...');
         updateState({
-            adobeAuth: { ...state.adobeAuth, isChecking: true }
+            adobeAuth: { ...state.adobeAuth, isChecking: true },
         });
         vscode.postMessage('check-auth');
     };
@@ -153,8 +153,8 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             ...(force && {
                 adobeOrg: undefined,
                 adobeProject: undefined,
-                adobeWorkspace: undefined
-            })
+                adobeWorkspace: undefined,
+            }),
         });
         // Backend sends auth-status message immediately - will override our initial message
 
@@ -220,7 +220,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                             <Text UNSAFE_className="text-xl font-medium">
                                 Select Your Organization
                             </Text>
-                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
+                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
                                 {state.adobeAuth.orgLacksAccess ? (
                                     <>
                                         No organizations are currently accessible. If you just selected an organization, it may lack App Builder access, or there may be a temporary authentication issue.
@@ -259,7 +259,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                             <Text UNSAFE_className="text-xl font-medium">
                                 {authStatus || 'Sign in to Adobe'}
                             </Text>
-                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
+                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
                                 {authSubMessage || "Connect your Adobe account to create and deploy App Builder applications. You'll be redirected to sign in through your browser."}
                             </Text>
                         </Flex>
@@ -288,7 +288,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                             <Text UNSAFE_className="text-xl font-medium">
                                 {state.adobeAuth.error === 'no_app_builder_access' ? 'Insufficient Privileges' : 'Connection Issue'}
                             </Text>
-                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
+                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
                                 {authSubMessage || (state.adobeAuth.error === 'no_app_builder_access'
                                     ? "You need Developer or System Admin role in an Adobe organization with App Builder access. Please contact your administrator to request the appropriate permissions."
                                     : "We couldn't connect to Adobe services. Please check your internet connection and try again.")}
@@ -328,7 +328,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                             <Text UNSAFE_className="text-xl font-medium">
                                 Authentication Timed Out
                             </Text>
-                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
+                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
                                 The browser authentication window may have been closed or the session expired. You can try again.
                             </Text>
                         </Flex>

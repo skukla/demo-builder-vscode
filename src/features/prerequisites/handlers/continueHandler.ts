@@ -9,10 +9,10 @@
 
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { toError, isTimeoutError } from '@/types/typeGuards';
-import { SimpleResult } from '@/types/results';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 import { getNodeVersionMapping, areDependenciesInstalled } from '@/features/prerequisites/handlers/shared';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { SimpleResult } from '@/types/results';
+import { toError, isTimeoutError } from '@/types/typeGuards';
 
 /**
  * continue-prerequisites - Resume checking prerequisites after an install

@@ -1,5 +1,5 @@
-import { getLogger } from '@/core/logging';
 import type { CommandResult, CommandConfig } from './types';
+import { getLogger } from '@/core/logging';
 
 /**
  * Manages sequential and parallel command execution

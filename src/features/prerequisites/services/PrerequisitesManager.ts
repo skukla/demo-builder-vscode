@@ -1,10 +1,4 @@
 import * as path from 'path';
-import { ServiceLocator } from '@/core/di';
-import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
-import { toError, isTimeoutError } from '@/types/typeGuards';
-import { Logger } from '@/types/logger';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DEFAULT_SHELL } from '@/types/shell';
 import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
 import type {
     PrerequisiteCheck,
@@ -17,6 +11,12 @@ import type {
     PrerequisitesConfig,
     PrerequisiteStatus,
 } from './types';
+import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
+import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { Logger } from '@/types/logger';
+import { DEFAULT_SHELL } from '@/types/shell';
+import { toError, isTimeoutError } from '@/types/typeGuards';
 
 export type {
     PrerequisiteCheck,
@@ -52,7 +52,7 @@ export class PrerequisitesManager {
 
     async loadConfig(): Promise<PrerequisitesConfig> {
         return await this.configLoader.load({
-            validationErrorMessage: 'Failed to parse prerequisites configuration'
+            validationErrorMessage: 'Failed to parse prerequisites configuration',
         });
     }
 

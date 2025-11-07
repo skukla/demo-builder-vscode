@@ -1,6 +1,6 @@
-import React from 'react';
 import { View, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React from 'react';
 import { WizardStep } from '@/webview-ui/shared/types';
 import { cn, getTimelineStepDotClasses, getTimelineStepLabelClasses } from '@/webview-ui/shared/utils/classNames';
 
@@ -12,10 +12,10 @@ interface TimelineNavProps {
     onStepClick?: (step: WizardStep) => void;
 }
 
-export function TimelineNav({ steps, currentStep, completedSteps, highestCompletedStepIndex, onStepClick }: TimelineNavProps) {
+export function TimelineNav({ steps, currentStep, completedSteps, highestCompletedStepIndex: _highestCompletedStepIndex, onStepClick }: TimelineNavProps) {
     const currentStepIndex = steps.findIndex(s => s.id === currentStep);
 
-    const getStepStatus = (step: WizardStep, index: number) => {
+    const getStepStatus = (step: WizardStep, _index: number) => {
         const isCompleted = completedSteps.includes(step);
         const isCurrent = step === currentStep;
 
@@ -61,12 +61,12 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
                             {/* Step item */}
                             <div
                                 style={{
-                                    marginBottom: index < steps.length - 1 ? 'var(--spectrum-global-dimension-size-400)' : undefined
+                                    marginBottom: index < steps.length - 1 ? 'var(--spectrum-global-dimension-size-400)' : undefined,
                                 }}
                                 className={cn(
                                     isClickable ? 'cursor-pointer' : 'cursor-default',
                                     status === 'upcoming' ? 'opacity-50' : 'opacity-100',
-                                    'transition-opacity'
+                                    'transition-opacity',
                                 )}
                                 onClick={() => handleStepClick(step.id, index)}
                             >
@@ -113,7 +113,7 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
                                     left="11px"
                                     UNSAFE_className={cn(
                                         'timeline-connector',
-                                        status === 'completed' ? 'timeline-connector-completed' : 'timeline-connector-pending'
+                                        status === 'completed' ? 'timeline-connector-completed' : 'timeline-connector-pending',
                                     )}
                                 />
                             )}

@@ -1,13 +1,14 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { GridLayout } from '@/webview-ui/shared/components/layout/GridLayout';
+import type { DimensionValue } from '@/webview-ui/shared/utils/spectrumTokens';
 
 describe('GridLayout', () => {
   describe('Token Translation', () => {
     it('should translate gap token size-300 to 24px', () => {
-      // Type assertion needed until DimensionValue type is applied
+      const gap: DimensionValue = 'size-300';
       const { container } = render(
-        <GridLayout gap={'size-300' as any}>
+        <GridLayout gap={gap}>
           <div>Item 1</div>
         </GridLayout>
       );
@@ -16,9 +17,9 @@ describe('GridLayout', () => {
     });
 
     it('should translate maxWidth token size-6000 to 480px', () => {
-      // Type assertion needed until DimensionValue type is applied
+      const maxWidth: DimensionValue = 'size-6000';
       const { container } = render(
-        <GridLayout maxWidth={'size-6000' as any}>
+        <GridLayout maxWidth={maxWidth}>
           <div>Item 1</div>
         </GridLayout>
       );
@@ -27,9 +28,9 @@ describe('GridLayout', () => {
     });
 
     it('should translate padding token size-200 to 16px', () => {
-      // Type assertion needed until DimensionValue type is applied
+      const padding: DimensionValue = 'size-200';
       const { container } = render(
-        <GridLayout padding={'size-200' as any}>
+        <GridLayout padding={padding}>
           <div>Item 1</div>
         </GridLayout>
       );
@@ -38,12 +39,14 @@ describe('GridLayout', () => {
     });
 
     it('should translate multiple token props simultaneously', () => {
-      // Type assertions needed until DimensionValue type is applied
+      const gap: DimensionValue = 'size-300';
+      const maxWidth: DimensionValue = 'size-6000';
+      const padding: DimensionValue = 'size-400';
       const { container } = render(
         <GridLayout
-          gap={'size-300' as any}
-          maxWidth={'size-6000' as any}
-          padding={'size-400' as any}
+          gap={gap}
+          maxWidth={maxWidth}
+          padding={padding}
         >
           <div>Item 1</div>
         </GridLayout>
@@ -55,9 +58,9 @@ describe('GridLayout', () => {
     });
 
     it('should handle mixed token and pixel values', () => {
-      // Type assertion needed until DimensionValue type is applied
+      const gap: DimensionValue = 'size-300';
       const { container } = render(
-        <GridLayout gap={'size-300' as any} padding="16px">
+        <GridLayout gap={gap} padding="16px">
           <div>Item 1</div>
         </GridLayout>
       );
@@ -69,9 +72,9 @@ describe('GridLayout', () => {
 
   describe('Backward Compatibility', () => {
     it('should pass through numeric gap values as pixels', () => {
-      // Type assertion needed until DimensionValue type is applied
+      const gap: DimensionValue = 16;
       const { container } = render(
-        <GridLayout gap={16 as any}>
+        <GridLayout gap={gap}>
           <div>Item 1</div>
         </GridLayout>
       );
@@ -102,9 +105,10 @@ describe('GridLayout', () => {
 
   describe('Error Handling', () => {
     it('should handle invalid token gracefully', () => {
-      // Type assertion needed to test runtime behavior (TypeScript correctly rejects at compile-time)
+      // Testing invalid token (intentionally bypassing type check for negative test)
+      const gap = 'size-999' as unknown as DimensionValue;
       const { container } = render(
-        <GridLayout gap={'size-999' as any}>
+        <GridLayout gap={gap}>
           <div>Item 1</div>
         </GridLayout>
       );

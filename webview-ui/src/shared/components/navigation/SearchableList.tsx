@@ -199,7 +199,7 @@ export function SearchableList<T extends SearchableListItem>({
                     height="100%"
                     UNSAFE_style={{ flex: 1 }}
                 >
-                    {itemRenderer}
+                    {filteredItems.map(itemRenderer)}
                 </ListView>
 
                 {/* No results message */}

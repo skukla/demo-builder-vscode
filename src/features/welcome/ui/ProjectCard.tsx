@@ -1,17 +1,16 @@
-import React from 'react';
 import {
-    View,
     Flex,
     Text,
     ActionButton,
     Badge,
-    Well
+    Well,
 } from '@adobe/react-spectrum';
-import { cn } from '@/webview-ui/shared/utils/classNames';
-import Folder from '@spectrum-icons/workflow/Folder';
-import Delete from '@spectrum-icons/workflow/Delete';
-import Clock from '@spectrum-icons/workflow/Clock';
 import Building from '@spectrum-icons/workflow/Building';
+import Clock from '@spectrum-icons/workflow/Clock';
+import Delete from '@spectrum-icons/workflow/Delete';
+import Folder from '@spectrum-icons/workflow/Folder';
+import React from 'react';
+import { cn } from '@/webview-ui/shared/utils/classNames';
 
 interface ProjectCardProps {
     project: {
@@ -49,7 +48,7 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
         <Well 
             UNSAFE_className={cn(
                 'project-card-wrapper',
-                isCurrent ? 'project-card-current' : 'project-card-default'
+                isCurrent ? 'project-card-current' : 'project-card-default',
             )}
             onPress={onOpen}
         >

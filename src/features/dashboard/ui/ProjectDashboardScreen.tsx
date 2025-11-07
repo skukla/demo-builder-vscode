@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     View,
     Flex,
@@ -6,22 +5,23 @@ import {
     Text,
     ActionButton,
     Divider,
-    ProgressCircle
+    ProgressCircle,
 } from '@adobe/react-spectrum';
-import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
-import StopCircle from '@spectrum-icons/workflow/StopCircle';
-import Settings from '@spectrum-icons/workflow/Settings';
-import Refresh from '@spectrum-icons/workflow/Refresh';
-import Globe from '@spectrum-icons/workflow/Globe';
-import Delete from '@spectrum-icons/workflow/Delete';
-import ViewList from '@spectrum-icons/workflow/ViewList';
-import DataMapping from '@spectrum-icons/workflow/DataMapping';
 import Data from '@spectrum-icons/workflow/Data';
+import DataMapping from '@spectrum-icons/workflow/DataMapping';
+import Delete from '@spectrum-icons/workflow/Delete';
+import Globe from '@spectrum-icons/workflow/Globe';
 import Login from '@spectrum-icons/workflow/Login';
-import { vscode } from '@/webview-ui/shared/vscode-api';
-import { useFocusTrap } from '@/webview-ui/shared/hooks';
+import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
+import Refresh from '@spectrum-icons/workflow/Refresh';
+import Settings from '@spectrum-icons/workflow/Settings';
+import StopCircle from '@spectrum-icons/workflow/StopCircle';
+import ViewList from '@spectrum-icons/workflow/ViewList';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { StatusCard } from '@/webview-ui/shared/components/molecules';
 import { GridLayout } from '@/webview-ui/shared/components/templates';
+import { useFocusTrap } from '@/webview-ui/shared/hooks';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 
 type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'error';
 
@@ -53,7 +53,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
 
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
-        autoFocus: false
+        autoFocus: false,
     });
 
     useEffect(() => {
@@ -70,8 +70,8 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                 mesh: {
                     status: data.status,
                     message: data.message,
-                    endpoint: data.endpoint
-                }
+                    endpoint: data.endpoint,
+                },
             } : prev);
         });
 
@@ -191,7 +191,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                 margin: '0 auto',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
             }}
         >
             <Flex direction="column" gap="size-200" UNSAFE_style={{ width: '100%' }}>

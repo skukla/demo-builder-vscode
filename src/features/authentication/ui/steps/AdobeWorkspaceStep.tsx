@@ -1,4 +1,3 @@
-import React from 'react';
 import {
     Heading,
     ListView,
@@ -9,15 +8,16 @@ import {
     Flex,
     ActionButton,
     SearchField,
-    ProgressCircle
+    ProgressCircle,
 } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
+import React from 'react';
+import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
 import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
 import { FadeTransition } from '@/webview-ui/shared/components/FadeTransition';
+import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 import { WizardState, Workspace, WizardStep } from '@/webview-ui/shared/types';
-import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
 
 interface AdobeWorkspaceStepProps {
     state: WizardState;
@@ -49,7 +49,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
         searchQuery,
         setSearchQuery,
         load: loadWorkspaces,
-        refresh
+        refresh,
     } = useSelectionStep<Workspace>({
         cacheKey: 'workspacesCache',
         messageType: 'get-workspaces',
@@ -64,7 +64,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
             // Look for Stage workspace (case-insensitive)
             return workspaces.find(ws =>
                 ws.name?.toLowerCase().includes('stage') ||
-                ws.title?.toLowerCase().includes('stage')
+                ws.title?.toLowerCase().includes('stage'),
             );
         },
         onSelect: (workspace) => {
@@ -75,19 +75,19 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                 adobeWorkspace: {
                     id: workspace.id,
                     name: workspace.name,
-                    title: workspace.title
-                }
+                    title: workspace.title,
+                },
             });
         },
         validateBeforeLoad: () => {
             if (!state.adobeProject?.id) {
                 return {
                     valid: false,
-                    error: 'No project selected. Please go back and select a project.'
+                    error: 'No project selected. Please go back and select a project.',
                 };
             }
             return { valid: true };
-        }
+        },
     });
 
     // Update can-proceed state when selection changes
@@ -103,7 +103,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                 width: '100%',
                 padding: '24px',
                 display: 'flex',
-                flexDirection: 'column'
+                flexDirection: 'column',
             }}>
                 <Heading level={2} marginBottom="size-300">
                     Select Workspace
@@ -127,7 +127,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                                     <Text UNSAFE_className="text-xl font-medium">
                                         Error Loading Workspaces
                                     </Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
+                                    <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
                                         {error}
                                     </Text>
                                 </Flex>
@@ -203,7 +203,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                             flex: 1,
                             transition: 'opacity 200ms ease-in-out',
                             opacity: isRefreshing ? 0.5 : 1,
-                            pointerEvents: isRefreshing ? 'none' : 'auto'
+                            pointerEvents: isRefreshing ? 'none' : 'auto',
                         }}>
                             <ListView
                             items={filteredWorkspaces}
@@ -217,8 +217,8 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                                         adobeWorkspace: {
                                             id: workspace.id,
                                             name: workspace.name,
-                                            title: workspace.title
-                                        }
+                                            title: workspace.title,
+                                        },
                                     });
                                 }
                             }}
@@ -247,7 +247,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                 flex: '1',
                 padding: '24px',
                 backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
+                borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
             }}>
                 <ConfigurationSummary state={state} completedSteps={completedSteps} currentStep={state.currentStep} />
             </div>

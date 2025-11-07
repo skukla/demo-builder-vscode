@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useRef } from 'react';
 import {
     View,
     Flex,
@@ -6,11 +5,12 @@ import {
     Picker,
     Item,
     Checkbox,
-    Divider
+    Divider,
 } from '@adobe/react-spectrum';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/webview-ui/shared/utils/classNames';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 
 interface ComponentSelectionStepProps {
     state: Record<string, unknown>;
@@ -29,22 +29,22 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     state,
     updateState,
     setCanProceed,
-    componentsData
+    componentsData,
 }) => {
     // Use defaults from state.components (which includes componentDefaults from init)
     const [selectedFrontend, setSelectedFrontend] = useState<string>(state.components?.frontend || '');
     const [selectedBackend, setSelectedBackend] = useState<string>(state.components?.backend || '');
     const [selectedDependencies, setSelectedDependencies] = useState<Set<string>>(
-        new Set(state.components?.dependencies || [])
+        new Set(state.components?.dependencies || []),
     );
     const [selectedServices, setSelectedServices] = useState<Set<string>>(
-        new Set(state.components?.services || [])
+        new Set(state.components?.services || []),
     );
     const [selectedIntegrations, setSelectedIntegrations] = useState<Set<string>>(
-        new Set(state.components?.integrations || [])
+        new Set(state.components?.integrations || []),
     );
     const [selectedAppBuilder, setSelectedAppBuilder] = useState<Set<string>>(
-        new Set(state.components?.appBuilderApps || [])
+        new Set(state.components?.appBuilderApps || []),
     );
     
     // Track last sent selection to prevent duplicate messages
@@ -55,16 +55,16 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         {
             id: 'citisignal-nextjs',
             name: 'Headless CitiSignal',
-            description: 'NextJS-based storefront with Adobe mesh integration'
-        }
+            description: 'NextJS-based storefront with Adobe mesh integration',
+        },
     ];
     
     const backendOptions = componentsData?.backends || [
         {
             id: 'adobe-commerce-paas',
             name: 'Adobe Commerce PaaS',
-            description: 'Adobe Commerce DSN instance'
-        }
+            description: 'Adobe Commerce DSN instance',
+        },
     ];
     
     // Frontend dependencies
@@ -72,13 +72,13 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         {
             id: 'commerce-mesh',
             name: 'API Mesh',
-            required: true
+            required: true,
         },
         {
             id: 'demo-inspector',
             name: 'Demo Inspector',
-            required: false
-        }
+            required: false,
+        },
     ];
     
     // Backend services (required for PaaS)
@@ -86,13 +86,13 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         {
             id: 'catalog-service',
             name: 'Catalog Service',
-            required: true
+            required: true,
         },
         {
             id: 'live-search',
             name: 'Live Search',
-            required: true
-        }
+            required: true,
+        },
     ];
     
     // External Systems options from componentsData
@@ -100,13 +100,13 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         {
             id: 'target',
             name: 'Target',
-            description: 'Adobe Target for personalization'
+            description: 'Adobe Target for personalization',
         },
         {
             id: 'experience-platform',
             name: 'Experience Platform',
-            description: 'Adobe Experience Platform integration'
-        }
+            description: 'Adobe Experience Platform integration',
+        },
     ];
     
     // App Builder Apps options from componentsData
@@ -114,8 +114,8 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         {
             id: 'integration-service',
             name: 'Integration Service',
-            description: 'Custom integration service app'
-        }
+            description: 'Custom integration service app',
+        },
     ];
 
     // Initialize required dependencies when frontend changes
@@ -157,7 +157,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
             dependencies: Array.from(selectedDependencies),
             services: Array.from(selectedServices),
             integrations: Array.from(selectedIntegrations),
-            appBuilderApps: Array.from(selectedAppBuilder)
+            appBuilderApps: Array.from(selectedAppBuilder),
         };
         
         updateState({ components });

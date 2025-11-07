@@ -28,7 +28,7 @@ export function generateWebviewHTML(options: WebviewHTMLOptions): string {
         loadingMessage = 'Loading...',
         isDark = false,
         fallbackBundleUri,
-        additionalImgSources = []
+        additionalImgSources = [],
     } = options;
 
     const imgSources = ['https:', 'data:', ...additionalImgSources].join(' ');
@@ -123,7 +123,7 @@ function getLoadingStyles(isDark: boolean): string {
     </style>`;
 }
 
-function getLoadingHTML(message: string, isDark: boolean): string {
+function getLoadingHTML(message: string, _isDark: boolean): string {
     return `
     <div class="loading-container">
         <div class="spinner">

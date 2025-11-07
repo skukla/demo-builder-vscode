@@ -163,6 +163,31 @@ button[class*="spectrum-Button"][disabled],
     padding: 0 20px !important;
 }
 
+/* Override React Spectrum CTA button variant to use Tangerine Orange (Option 3 palette) */
+.spectrum-Button--cta,
+.spectrum-Button[data-variant="cta"],
+button[class*="spectrum-Button"][class*="cta"] {
+    background-color: #f97316 !important; /* Tangerine Orange */
+    border-color: #f97316 !important;
+}
+
+.spectrum-Button--cta:hover,
+.spectrum-Button--cta:focus,
+.spectrum-Button[data-variant="cta"]:hover,
+.spectrum-Button[data-variant="cta"]:focus,
+button[class*="spectrum-Button"][class*="cta"]:hover,
+button[class*="spectrum-Button"][class*="cta"]:focus {
+    background-color: #ea580c !important; /* Tangerine Dark */
+    border-color: #ea580c !important;
+}
+
+.spectrum-Button--cta:active,
+.spectrum-Button[data-variant="cta"]:active,
+button[class*="spectrum-Button"][class*="cta"]:active {
+    background-color: #c2410c !important; /* Tangerine Darker */
+    border-color: #c2410c !important;
+}
+
 /* ===========================================
    Container Classes
    =========================================== */
@@ -563,12 +588,12 @@ button[class*="spectrum-Button"][disabled],
 }
 
 .timeline-step-dot-completed {
-    background: var(--spectrum-global-color-green-600) !important;
+    background: #1e7cd6 !important; /* Sapphire Light - Completed steps */
 }
 
 .timeline-step-dot-current {
-    background: var(--spectrum-global-color-blue-600) !important;
-    border: 2px solid var(--spectrum-global-color-blue-400) !important;
+    background: #f97316 !important; /* Tangerine Orange - Active step */
+    border: 2px solid #fb923c !important; /* Tangerine Light - Active step border */
 }
 
 .timeline-step-dot-upcoming {

@@ -1,9 +1,9 @@
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { Project } from '@/types';
+import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
 import { Logger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
+import { Project } from '@/types';
 
 export type { UpdateCheckResult };
 

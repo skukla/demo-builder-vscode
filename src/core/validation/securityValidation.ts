@@ -117,7 +117,7 @@ export function sanitizeError(error: Error): Error {
  */
 export async function validatePathSafety(
     targetPath: string,
-    expectedParent?: string
+    expectedParent?: string,
 ): Promise<{ safe: boolean; reason?: string }> {
     const fs = await import('fs/promises');
     const path = await import('path');
@@ -130,7 +130,7 @@ export async function validatePathSafety(
         if (stats.isSymbolicLink()) {
             return {
                 safe: false,
-                reason: 'Path is a symbolic link - refusing to delete for security'
+                reason: 'Path is a symbolic link - refusing to delete for security',
             };
         }
 
@@ -142,7 +142,7 @@ export async function validatePathSafety(
             if (!normalizedTarget.startsWith(normalizedParent)) {
                 return {
                     safe: false,
-                    reason: 'Path is outside expected directory - refusing to delete for security'
+                    reason: 'Path is outside expected directory - refusing to delete for security',
                 };
             }
         }
@@ -157,7 +157,7 @@ export async function validatePathSafety(
         // Other errors are suspicious - be conservative
         return {
             safe: false,
-            reason: `Unable to validate path safety: ${sanitizeErrorForLogging(error as Error)}`
+            reason: `Unable to validate path safety: ${sanitizeErrorForLogging(error as Error)}`,
         };
     }
 }
@@ -186,7 +186,7 @@ export function validateGitHubDownloadURL(url: string): boolean {
         // Must be a releases download URL pattern
         const validPatterns = [
             /^\/[^\/]+\/[^\/]+\/releases\/download\//,  // Standard releases
-            /^\/repos\/[^\/]+\/[^\/]+\/releases\/assets\// // API endpoint
+            /^\/repos\/[^\/]+\/[^\/]+\/releases\/assets\//, // API endpoint
         ];
 
         return validPatterns.some(pattern => pattern.test(parsedUrl.pathname));

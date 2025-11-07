@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { 
     View, 
     Flex, 
@@ -55,7 +55,6 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     });
 
     const [canProceed, setCanProceed] = useState(false);
-    const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
     const [completedSteps, setCompletedSteps] = useState<WizardStep[]>([]);
     const [highestCompletedStepIndex, setHighestCompletedStepIndex] = useState(-1);
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
@@ -409,7 +408,6 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     };
 
     const currentStepIndex = getCurrentStepIndex();
-    const isFirstStep = currentStepIndex === 0;
     const isLastStep = state.currentStep === 'project-creation';
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
 

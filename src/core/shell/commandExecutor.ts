@@ -1,7 +1,4 @@
-import { spawn } from 'child_process';
-import type { ExecOptions } from 'child_process';
-import { getLogger } from '@/core/logging';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { spawn, type ExecOptions } from 'child_process';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
@@ -9,6 +6,8 @@ import { PollingService } from './pollingService';
 import { ResourceLocker } from './resourceLocker';
 import { RetryStrategyManager } from './retryStrategyManager';
 import type { CommandResult, ExecuteOptions, CommandRequest, CommandConfig, PollOptions } from './types';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Main command executor - orchestrates all command execution operations
@@ -359,7 +358,7 @@ export class CommandExecutor {
         return this.commandSequencer.executeSequence(
             commands,
             async (command, config) => {
-                return await this.execute(command, {
+                return this.execute(command, {
                     ...config.options,
                     exclusive: config.resource,
                     configureTelemetry: command.startsWith('aio '),
@@ -378,7 +377,7 @@ export class CommandExecutor {
         return this.commandSequencer.executeParallel(
             commands,
             async (command, config) => {
-                return await this.execute(command, {
+                return this.execute(command, {
                     ...config.options,
                     configureTelemetry: command.startsWith('aio '),
                     enhancePath: command.startsWith('aio '),
@@ -411,7 +410,7 @@ export class CommandExecutor {
 
     /**
      * Process the command queue
-     * Uses index-based iteration instead of shift() for O(n) complexity
+     * Continues processing until queue is empty, handling commands added during processing
      */
     private async processQueue(): Promise<void> {
         if (this.isProcessingQueue || this.commandQueue.length === 0) {
@@ -420,25 +419,28 @@ export class CommandExecutor {
 
         this.isProcessingQueue = true;
 
-        // Process all queued commands
-        const commands = [...this.commandQueue];
-        this.commandQueue = [];
+        // Keep processing until queue is empty
+        while (this.commandQueue.length > 0) {
+            // Process all currently queued commands
+            const commands = [...this.commandQueue];
+            this.commandQueue = [];
 
-        for (const request of commands) {
-            try {
-                let result: CommandResult;
+            for (const request of commands) {
+                try {
+                    let result: CommandResult;
 
-                if (request.resourceLock) {
-                    result = await this.executeExclusive(request.resourceLock, () =>
-                        this.execute(request.command, request.options),
-                    );
-                } else {
-                    result = await this.execute(request.command, request.options);
+                    if (request.resourceLock) {
+                        result = await this.executeExclusive(request.resourceLock, () =>
+                            this.execute(request.command, request.options),
+                        );
+                    } else {
+                        result = await this.execute(request.command, request.options);
+                    }
+
+                    request.resolve(result);
+                } catch (error) {
+                    request.reject(error as Error);
                 }
-
-                request.resolve(result);
-            } catch (error) {
-                request.reject(error as Error);
             }
         }
 
@@ -453,7 +455,7 @@ export class CommandExecutor {
     async commandExists(command: string): Promise<boolean> {
         // SECURITY: Validate command name to prevent command injection
         // Only allow alphanumeric characters, hyphens, underscores, dots, and forward slashes (for paths)
-        if (!/^[a-zA-Z0-9_.\/-]+$/.test(command)) {
+        if (!/^[a-zA-Z0-9_./\-]+$/.test(command)) {
             this.logger.warn(`[Command Executor] Invalid command name rejected: ${command}`);
             return false;
         }

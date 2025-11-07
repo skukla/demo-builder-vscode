@@ -85,7 +85,7 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
 
     // Mock timer provider - tracks timers without actually setting them
     const mockTimers: jest.Mocked<ITimerProvider> = {
-        setInterval: jest.fn((callback: () => void, ms: number) => {
+        setInterval: jest.fn((callback: () => void, ms: number): NodeJS.Timeout => {
             const id = nextTimerId++;
             activeTimers.set(id, {
                 type: 'interval',
@@ -93,12 +93,12 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
                 ms,
                 lastTriggered: currentTime
             });
-            return id as any;
+            return id as unknown as NodeJS.Timeout;
         }),
-        clearInterval: jest.fn((id: any) => {
-            activeTimers.delete(id);
+        clearInterval: jest.fn((timeout: NodeJS.Timeout) => {
+            activeTimers.delete(timeout as unknown as number);
         }),
-        setTimeout: jest.fn((callback: () => void, ms: number) => {
+        setTimeout: jest.fn((callback: () => void, ms: number): NodeJS.Timeout => {
             const id = nextTimerId++;
             activeTimers.set(id, {
                 type: 'timeout',
@@ -106,10 +106,10 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
                 ms,
                 lastTriggered: currentTime
             });
-            return id as any;
+            return id as unknown as NodeJS.Timeout;
         }),
-        clearTimeout: jest.fn((id: any) => {
-            activeTimers.delete(id);
+        clearTimeout: jest.fn((timeout: NodeJS.Timeout) => {
+            activeTimers.delete(timeout as unknown as number);
         })
     };
 
@@ -124,7 +124,7 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
         const mockProcess: MockChildProcess = {
             stdout: stdoutEmitter,
             stderr: stderrEmitter,
-            on: jest.fn((event: string, handler: any) => {
+            on: jest.fn((event: string, handler: (...args: unknown[]) => void | Promise<void>) => {
                 if (event === 'close') {
                     closeHandlers.push(handler);
                 }
@@ -137,8 +137,8 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
                     try {
                         const result = handler(code);
                         // Attach catch handler immediately to prevent unhandled rejection detection
-                        if (result && typeof (result as any).then === 'function') {
-                            (result as Promise<any>).catch(() => {
+                        if (result && typeof result === 'object' && 'then' in result) {
+                            (result as Promise<void>).catch(() => {
                                 // Swallow rejections - prevents Node unhandled rejection event
                             });
                         }
@@ -172,7 +172,11 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
      * Mock spawn function - returns controllable mock process
      * By default, processes complete successfully after 10ms of fake time
      */
-    const mockSpawn = jest.fn((command: string, args: any[], options: any) => {
+    const mockSpawn = jest.fn((
+        command: string,
+        args: string[],
+        options: Record<string, unknown>
+    ): ChildProcessWithoutNullStreams => {
         const process = createMockProcess();
         currentMockProcess = process;
 
@@ -181,7 +185,7 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
             await process.triggerClose(0);
         }, 10);
 
-        return process as any as ChildProcessWithoutNullStreams;
+        return process as unknown as ChildProcessWithoutNullStreams;
     });
 
     /**
@@ -191,7 +195,7 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
         logger,
         mockDate,
         mockTimers,
-        mockSpawn as any
+        mockSpawn as unknown as IProcessSpawner
     );
 
     /**
@@ -250,9 +254,10 @@ export function createTestableProgressUnifier(logger: Logger): ProgressUnifierTe
             // Execute callback (may be async and may create new timers)
             // Errors from callbacks are stored but don't stop time advancement
             try {
-                const result: any = timer.callback();
-                if (result && typeof (result as any).then === 'function') {
-                    await (result as Promise<any>).catch(() => {
+                const result = timer.callback();
+                // Check if result is thenable (Promise-like)
+                if (result != null && typeof result === 'object' && 'then' in result) {
+                    await (result as Promise<unknown>).catch(() => {
                         // Swallow errors from async callbacks
                         // The original promise will still reject appropriately
                     });

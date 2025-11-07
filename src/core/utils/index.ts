@@ -11,7 +11,7 @@ export { extractEnvVars, extractEnvVarsSync } from './envVarExtraction';
 
 export { ProgressUnifier } from './progressUnifier';
 export type {
-    UnifiedProgress
+    UnifiedProgress,
 } from './progressUnifier';
 
 export { setLoadingState } from './loadingHTML';

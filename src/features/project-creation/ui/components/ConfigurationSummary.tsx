@@ -1,8 +1,8 @@
-import React from 'react';
 import { View, Heading, Text, Flex, Divider } from '@adobe/react-spectrum';
+import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
+import React from 'react';
 import { WizardState, WizardStep } from '@/webview-ui/shared/types';
 import { cn } from '@/webview-ui/shared/utils/classNames';
 
@@ -24,7 +24,7 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
         'api-mesh',
         'settings',
         'review',
-        'project-creation'
+        'project-creation',
     ];
     
     const getCurrentStepIndex = () => {

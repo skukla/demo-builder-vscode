@@ -47,7 +47,7 @@ export class StepLogger {
     static async create(
         logger: Logger,
         wizardSteps?: WizardStepConfig[],
-        templatesPath?: string
+        templatesPath?: string,
     ): Promise<StepLogger> {
         // For now, construction is synchronous, but this factory method allows
         // for future async initialization if needed (e.g., loading config from files)

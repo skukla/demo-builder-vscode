@@ -1,9 +1,8 @@
-import React, { useEffect, useState } from 'react';
 import { Provider, defaultTheme, View } from '@adobe/react-spectrum';
+import React, { useEffect, useState } from 'react';
 import { WizardContainer } from './wizard/WizardContainer';
-import { vscode } from '@/webview-ui/shared/vscode-api';
 import { ThemeMode, ComponentSelection } from '@/webview-ui/shared/types';
-import { cn } from '@/webview-ui/shared/utils/classNames';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 
 interface WizardStepConfig {
     id: string;

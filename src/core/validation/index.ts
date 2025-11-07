@@ -18,7 +18,7 @@ export {
     sanitizeErrorForLogging,
     sanitizeError,
     validatePathSafety,
-    validateGitHubDownloadURL
+    validateGitHubDownloadURL,
 } from './securityValidation';
 
 // UI field validation
@@ -26,5 +26,5 @@ export {
     validateProjectNameUI,
     validateCommerceUrlUI,
     validateFieldUI,
-    FieldValidation
+    FieldValidation,
 } from './fieldValidation';

@@ -1,4 +1,3 @@
-import React from 'react';
 import {
     View,
     Flex,
@@ -6,11 +5,11 @@ import {
     Button,
     Content,
     IllustratedMessage,
-    Heading
+    Heading,
 } from '@adobe/react-spectrum';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Import from '@spectrum-icons/workflow/Import';
-import { cn } from '@/webview-ui/shared/utils/classNames';
+import React from 'react';
 
 interface EmptyStateProps {
     onImport: () => void;

@@ -6,15 +6,15 @@
  */
 
 import * as vscode from 'vscode';
+import { HandlerContext } from './HandlerContext';
+import { ProgressTracker } from './shared';
 import { ServiceLocator } from '@/core/di';
-import { AdobeConfig } from '@/types/base';
-import { parseJSON } from '@/types/typeGuards';
 import {
     generateComponentEnvFile as generateEnvFile,
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
-import { HandlerContext } from './HandlerContext';
-import { ProgressTracker } from './shared';
+import { AdobeConfig } from '@/types/base';
+import { parseJSON } from '@/types/typeGuards';
 
 /**
  * ProjectCreationConfig - Configuration passed to project creation

@@ -304,15 +304,23 @@ export class StateManager {
         await this.saveRecentProjects();
     }
 
-    public async loadProjectFromPath(projectPath: string): Promise<Project | null> {
+    /**
+     * Load a project from a directory path
+     * @param projectPath - Path to the project directory
+     * @param terminalProvider - Optional function to get terminals (for testing)
+     */
+    public async loadProjectFromPath(
+        projectPath: string,
+        terminalProvider: () => readonly vscode.Terminal[] = () => vscode.window.terminals,
+    ): Promise<Project | null> {
         try {
             // Check if path exists
             await fs.access(projectPath);
-            
+
             // Check for .demo-builder.json manifest
             const manifestPath = path.join(projectPath, '.demo-builder.json');
             await fs.access(manifestPath);
-            
+
             // Load project manifest
             const manifestData = await fs.readFile(manifestPath, 'utf-8');
             const manifest = parseJSON<{
@@ -379,10 +387,10 @@ export class StateManager {
             const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
             if (frontendComponent) {
                 try {
-                    const vscode = await import('vscode');
                     const projectTerminalName = `${project.name} - Frontend`;
-                    const hasProjectTerminal = vscode.window.terminals.some(t => t.name === projectTerminalName);
-                    
+                    const terminals = terminalProvider();
+                    const hasProjectTerminal = terminals.some(t => t.name === projectTerminalName);
+
                     if (hasProjectTerminal) {
                         // This project's demo is running, update status
                         project.status = 'running';

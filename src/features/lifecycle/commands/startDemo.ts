@@ -1,8 +1,8 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { updateFrontendState } from '@/core/state';
-import { BaseCommand } from '@/core/base';
 import { DEFAULT_SHELL } from '@/types/shell';
 
 export class StartDemoCommand extends BaseCommand {

@@ -1,17 +1,16 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
-import { parseJSON } from '@/types/typeGuards';
-import { AuthenticationService } from '@/features/authentication';
-import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
-import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
-import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import { WebviewCommunicationManager } from '@/core/communication';
 import { BaseWebviewCommand } from '@/core/base';
+import { WebviewCommunicationManager } from '@/core/communication';
+import { ServiceLocator } from '@/core/di';
+import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
+import { ProgressUnifier } from '@/core/utils/progressUnifier';
 import { generateWebviewHTML } from '@/core/utils/webviewHTMLBuilder';
+import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 // Extracted helper functions
 import { HandlerContext, SharedState } from '@/features/project-creation/handlers/HandlerContext';
 import { HandlerRegistry } from '@/features/project-creation/handlers/HandlerRegistry';
@@ -22,6 +21,7 @@ import {
     getEndpoint as getEndpointHelper,
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
+import { parseJSON } from '@/types/typeGuards';
 
 // Type definitions for createProjectWebview
 interface WizardStep {

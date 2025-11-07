@@ -1,10 +1,10 @@
-import type { CommandExecutor } from '@/core/shell';
-import { getLogger } from '@/core/logging';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { toError } from '@/types/typeGuards';
-import type { AuthToken } from '@/features/authentication/services/types';
 import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
+import { getLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { AuthToken } from '@/features/authentication/services/types';
+import { toError } from '@/types/typeGuards';
 
 /**
  * Manages Adobe access tokens
@@ -124,7 +124,7 @@ export class TokenManager {
                     // Format user-friendly corruption message
                     const formatted = AuthenticationErrorFormatter.formatError(
                         new Error('Token corruption: expiry=0'),
-                        { operation: 'token-validation' }
+                        { operation: 'token-validation' },
                     );
 
                     this.logger.error(`[Token] ${formatted.message}`);

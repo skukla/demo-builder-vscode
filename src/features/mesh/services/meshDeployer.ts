@@ -1,9 +1,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ServiceLocator } from '@/core/di';
-import { Project } from '@/types';
 import { Logger } from '@/core/logging';
 import { validateMeshId } from '@/core/validation';
+import { Project } from '@/types';
 import { DataResult, SimpleResult } from '@/types/results';
 
 export class MeshDeployer {

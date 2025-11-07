@@ -1,14 +1,14 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
-import { Project } from '@/types/base';
-import { parseJSON } from '@/types/typeGuards';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { BaseCommand } from '@/core/base';
+import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { Project } from '@/types/base';
+import { parseJSON } from '@/types/typeGuards';
 
 /**
  * Deploy (or redeploy) API Mesh using the mesh.json from the mesh component

@@ -4,8 +4,8 @@ import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { generateWebviewHTML } from '@/core/utils/webviewHTMLBuilder';
 import { DashboardHandlerRegistry } from '@/features/dashboard/handlers';
-import { HandlerContext, SharedState } from '@/types/handlers';
 import { Project, ComponentInstance } from '@/types';
+import { HandlerContext, SharedState } from '@/types/handlers';
 
 /**
  * Command to show the "Project Dashboard" after project creation
@@ -208,7 +208,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
             // Shared state (dashboard doesn't use shared state)
             sharedState: {
-                isAuthenticating: false
+                isAuthenticating: false,
             } as SharedState,
         };
     }

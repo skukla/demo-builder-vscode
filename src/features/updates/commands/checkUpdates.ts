@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { Project } from '@/types';
-import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
-import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
-import { UpdateManager, UpdateCheckResult } from '@/features/updates/services/updateManager';
 import { BaseCommand } from '@/core/base';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
+import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
+import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
+import { UpdateManager, UpdateCheckResult } from '@/features/updates/services/updateManager';
+import { Project } from '@/types';
 
 /**
  * Command to check for and apply updates to extension and components
@@ -20,7 +20,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                 {
                     location: vscode.ProgressLocation.Notification,
                     title: 'Demo Builder Updates',
-                    cancellable: false
+                    cancellable: false,
                 },
                 async (progress) => {
                     // Show initial message
@@ -51,13 +51,13 @@ export class CheckUpdatesCommand extends BaseCommand {
                     if (!hasUpdates) {
                         // Show "up to date" result using centralized timeout
                         progress.report({
-                            message: `Up to date (v${extensionUpdate.current})`
+                            message: `Up to date (v${extensionUpdate.current})`,
                         });
                         await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_RESULT_DISPLAY));
                     }
 
                     return { extensionUpdate, componentUpdates, project, hasUpdates };
-                }
+                },
             );
 
             // If no updates, we already showed the result - just return

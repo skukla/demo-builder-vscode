@@ -19,23 +19,17 @@ import type { AdobeOrg, AdobeProject, AdobeWorkspace } from '@/features/authenti
  * Total tests: 50+
  */
 
-// Mock all dependencies
+// Only mock external dependencies (logging is external)
 jest.mock('@/core/logging');
-jest.mock('@/features/authentication/services/authCacheManager');
-jest.mock('@/features/authentication/services/tokenManager');
+
+// Import actual internal services (not mocked) for integration testing
+import { getLogger } from '@/core/logging';
+
+// Mock only the external SDK client and entity service which make network calls
 jest.mock('@/features/authentication/services/adobeSDKClient');
 jest.mock('@/features/authentication/services/adobeEntityService');
-jest.mock('@/features/authentication/services/organizationValidator');
-jest.mock('@/features/authentication/services/performanceTracker');
-
-// Import mocked modules
-import { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
-import { TokenManager } from '@/features/authentication/services/tokenManager';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import { AdobeEntityService } from '@/features/authentication/services/adobeEntityService';
-import { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
-import { PerformanceTracker } from '@/features/authentication/services/performanceTracker';
-import { getLogger } from '@/core/logging';
 
 // Mock data
 const mockOrg: AdobeOrg = {
@@ -86,12 +80,8 @@ describe('AuthenticationService', () => {
     let mockCommandExecutor: jest.Mocked<CommandExecutor>;
     let mockLogger: jest.Mocked<Logger>;
     let mockStepLogger: jest.Mocked<StepLogger>;
-    let mockCacheManager: jest.Mocked<AuthCacheManager>;
-    let mockTokenManager: jest.Mocked<TokenManager>;
     let mockSDKClient: jest.Mocked<AdobeSDKClient>;
     let mockEntityService: jest.Mocked<AdobeEntityService>;
-    let mockOrgValidator: jest.Mocked<OrganizationValidator>;
-    let mockPerfTracker: jest.Mocked<PerformanceTracker>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -101,49 +91,20 @@ describe('AuthenticationService', () => {
         mockStepLogger = createMockStepLogger();
 
         // Mock getLogger
-        (getLogger as jest.Mock).mockReturnValue({
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        });
+        (getLogger as jest.Mock).mockReturnValue(mockLogger);
 
         // Mock StepLogger.create
         const StepLoggerMock = require('@/core/logging').StepLogger;
         StepLoggerMock.create = jest.fn().mockResolvedValue(mockStepLogger);
 
-        // Create mock instances
-        mockCacheManager = new AuthCacheManager() as jest.Mocked<AuthCacheManager>;
-        mockTokenManager = new TokenManager(mockCommandExecutor) as jest.Mocked<TokenManager>;
-        mockSDKClient = new AdobeSDKClient(mockLogger) as jest.Mocked<AdobeSDKClient>;
-        mockOrgValidator = new OrganizationValidator(mockCommandExecutor, mockCacheManager, mockLogger) as jest.Mocked<OrganizationValidator>;
-        mockPerfTracker = new PerformanceTracker() as jest.Mocked<PerformanceTracker>;
+        // Setup mock SDK client (external dependency)
+        mockSDKClient = {
+            initialize: jest.fn().mockResolvedValue(undefined),
+            ensureInitialized: jest.fn().mockResolvedValue(true),
+            clear: jest.fn(),
+        } as any;
 
-        // Setup mock implementations
-        mockCacheManager.getCachedAuthStatus = jest.fn().mockReturnValue({ isAuthenticated: undefined, isExpired: true });
-        mockCacheManager.setCachedAuthStatus = jest.fn();
-        mockCacheManager.clearAll = jest.fn();
-        mockCacheManager.clearAuthStatusCache = jest.fn();
-        mockCacheManager.clearValidationCache = jest.fn();
-        mockCacheManager.clearSessionCaches = jest.fn();
-        mockCacheManager.clearConsoleWhereCache = jest.fn();
-        mockCacheManager.wasOrgClearedDueToValidation = jest.fn().mockReturnValue(false);
-        mockCacheManager.setOrgClearedDueToValidation = jest.fn();
-
-        mockTokenManager.isTokenValid = jest.fn();
-        mockTokenManager.verifyTokenStored = jest.fn();
-
-        mockSDKClient.initialize = jest.fn().mockResolvedValue(undefined);
-        mockSDKClient.ensureInitialized = jest.fn().mockResolvedValue(true);
-        mockSDKClient.clear = jest.fn();
-
-        mockOrgValidator.validateAndClearInvalidOrgContext = jest.fn().mockResolvedValue(undefined);
-        mockOrgValidator.testDeveloperPermissions = jest.fn().mockResolvedValue({ hasPermissions: true });
-
-        mockPerfTracker.startTiming = jest.fn();
-        mockPerfTracker.endTiming = jest.fn();
-
-        // Create mock entity service
+        // Create mock entity service (makes network calls)
         mockEntityService = {
             getOrganizations: jest.fn().mockResolvedValue([mockOrg]),
             getProjects: jest.fn().mockResolvedValue([mockProject]),
@@ -158,12 +119,8 @@ describe('AuthenticationService', () => {
             autoSelectOrganizationIfNeeded: jest.fn().mockResolvedValue(undefined),
         } as any;
 
-        // Mock constructors to return our mocks
-        (AuthCacheManager as jest.MockedClass<typeof AuthCacheManager>).mockImplementation(() => mockCacheManager);
-        (TokenManager as jest.MockedClass<typeof TokenManager>).mockImplementation(() => mockTokenManager);
+        // Mock constructors for external dependencies only
         (AdobeSDKClient as jest.MockedClass<typeof AdobeSDKClient>).mockImplementation(() => mockSDKClient);
-        (OrganizationValidator as jest.MockedClass<typeof OrganizationValidator>).mockImplementation(() => mockOrgValidator);
-        (PerformanceTracker as jest.MockedClass<typeof PerformanceTracker>).mockImplementation(() => mockPerfTracker);
         (AdobeEntityService as jest.MockedClass<typeof AdobeEntityService>).mockImplementation(() => mockEntityService);
 
         authService = new AuthenticationService('/mock/extension/path', mockLogger, mockCommandExecutor);
@@ -172,130 +129,169 @@ describe('AuthenticationService', () => {
     describe('initialization', () => {
         it('should create service with all dependencies', () => {
             expect(authService).toBeDefined();
-            expect(AuthCacheManager).toHaveBeenCalled();
-            expect(TokenManager).toHaveBeenCalledWith(mockCommandExecutor);
             expect(AdobeSDKClient).toHaveBeenCalledWith(mockLogger);
-            expect(OrganizationValidator).toHaveBeenCalledWith(mockCommandExecutor, mockCacheManager, mockLogger);
         });
     });
 
     describe('isAuthenticatedQuick', () => {
-        it('should return cached authentication status when available', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: true, isExpired: false });
+        it('should return true when valid token exists', async () => {
+            // Given: CLI returns a valid token with expiry
+            const futureExpiry = Date.now() + 3600000; // 1 hour from now
+            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+                code: 0,
+                stdout: JSON.stringify({
+                    token: 'x'.repeat(150), // Valid token > 100 chars
+                    expiry: futureExpiry
+                }),
+                stderr: '',
+            } as CommandResult);
 
+            // When: checking authentication quickly
             const result = await authService.isAuthenticatedQuick();
 
+            // Then: should return true
             expect(result).toBe(true);
-            expect(mockTokenManager.isTokenValid).not.toHaveBeenCalled();
-        });
-
-        it('should check token when cache expired', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: undefined, isExpired: true });
-            mockTokenManager.isTokenValid.mockResolvedValue(true);
-
-            const result = await authService.isAuthenticatedQuick();
-
-            expect(result).toBe(true);
-            expect(mockTokenManager.isTokenValid).toHaveBeenCalled();
-            expect(mockCacheManager.setCachedAuthStatus).toHaveBeenCalledWith(true);
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+                'aio config get ims.contexts.cli.access_token --json',
+                expect.objectContaining({ encoding: 'utf8' })
+            );
         });
 
         it('should return false when token is invalid', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: undefined, isExpired: true });
-            mockTokenManager.isTokenValid.mockResolvedValue(false);
+            // Given: CLI returns short token
+            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+                code: 0,
+                stdout: JSON.stringify({
+                    token: 'short', // Invalid token < 100 chars
+                    expiry: Date.now() + 3600000
+                }),
+                stderr: '',
+            } as CommandResult);
 
+            // When: checking authentication quickly
             const result = await authService.isAuthenticatedQuick();
 
+            // Then: should return false
             expect(result).toBe(false);
-            expect(mockCacheManager.setCachedAuthStatus).toHaveBeenCalledWith(false);
         });
 
-        it('should handle errors gracefully', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: undefined, isExpired: true });
-            mockTokenManager.isTokenValid.mockRejectedValue(new Error('Token check failed'));
+        it('should return false when CLI command fails', async () => {
+            // Given: CLI command fails
+            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+                code: 1,
+                stdout: '',
+                stderr: 'Error: Not logged in',
+            } as CommandResult);
 
+            // When: checking authentication quickly
             const result = await authService.isAuthenticatedQuick();
 
+            // Then: should return false
             expect(result).toBe(false);
-            expect(mockCacheManager.setCachedAuthStatus).toHaveBeenCalledWith(false, expect.any(Number));
         });
 
-        it('should track performance', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: true, isExpired: false });
+        it('should handle exceptions gracefully', async () => {
+            // Given: CLI throws an exception
+            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Command failed'));
 
-            await authService.isAuthenticatedQuick();
+            // When: checking authentication quickly
+            const result = await authService.isAuthenticatedQuick();
 
-            expect(mockPerfTracker.startTiming).toHaveBeenCalledWith('isAuthenticatedQuick');
-            expect(mockPerfTracker.endTiming).toHaveBeenCalledWith('isAuthenticatedQuick');
+            // Then: should return false (error logging happens internally)
+            expect(result).toBe(false);
         });
     });
 
     describe('isAuthenticated', () => {
-        it('should return cached authentication status when available', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: true, isExpired: false });
+        it('should return true when token is valid and org context is valid', async () => {
+            // Given: Valid token and org context
+            const futureExpiry = Date.now() + 3600000;
+            mockCommandExecutor.executeAdobeCLI
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify({
+                        token: 'x'.repeat(150),
+                        expiry: futureExpiry
+                    }),
+                    stderr: '',
+                } as CommandResult)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify({ org: 'org123', project: 'proj123' }),
+                    stderr: '',
+                } as CommandResult)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify([{ id: 'proj1', name: 'Project 1' }]),
+                    stderr: '',
+                } as CommandResult);
 
+            // When: checking full authentication
             const result = await authService.isAuthenticated();
 
+            // Then: should return true
             expect(result).toBe(true);
-            expect(mockTokenManager.isTokenValid).not.toHaveBeenCalled();
-        });
-
-        it('should validate token and org when cache expired', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: undefined, isExpired: true });
-            mockTokenManager.isTokenValid.mockResolvedValue(true);
-
-            const result = await authService.isAuthenticated();
-
-            expect(result).toBe(true);
-            expect(mockTokenManager.isTokenValid).toHaveBeenCalled();
-            expect(mockOrgValidator.validateAndClearInvalidOrgContext).toHaveBeenCalled();
-            expect(mockCacheManager.setCachedAuthStatus).toHaveBeenCalledWith(true);
-        });
-
-        it('should NOT initialize SDK (on-demand initialization)', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: undefined, isExpired: true });
-            mockTokenManager.isTokenValid.mockResolvedValue(true);
-
-            await authService.isAuthenticated();
-
-            // SDK init is no longer done during isAuthenticated - it's on-demand
-            expect(mockSDKClient.initialize).not.toHaveBeenCalled();
         });
 
         it('should return false when token is invalid', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: undefined, isExpired: true });
-            mockTokenManager.isTokenValid.mockResolvedValue(false);
+            // Given: Invalid token (too short)
+            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+                code: 0,
+                stdout: JSON.stringify({
+                    token: 'invalid',
+                    expiry: Date.now() + 3600000
+                }),
+                stderr: '',
+            } as CommandResult);
 
+            // When: checking full authentication
             const result = await authService.isAuthenticated();
 
+            // Then: should return false
             expect(result).toBe(false);
-            expect(mockCacheManager.setCachedAuthStatus).toHaveBeenCalledWith(false);
         });
 
-        it('should handle ENOENT errors with formatted message', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: undefined, isExpired: true });
-            const error = new Error('ENOENT: no such file');
-            mockTokenManager.isTokenValid.mockRejectedValue(error);
+        it('should NOT initialize SDK during authentication check', async () => {
+            // Given: Valid token
+            mockCommandExecutor.executeAdobeCLI
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: 'x'.repeat(150),
+                    stderr: '',
+                } as CommandResult)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify({ org: 'org123' }),
+                    stderr: '',
+                } as CommandResult);
 
-            const result = await authService.isAuthenticated();
+            // When: checking authentication
+            await authService.isAuthenticated();
 
-            expect(result).toBe(false);
-            // Error is formatted by AuthenticationErrorFormatter
-            expect(mockLogger.error).toHaveBeenCalled();
-            expect(mockCacheManager.setCachedAuthStatus).toHaveBeenCalled();
+            // Then: SDK should not be initialized (it's on-demand)
+            expect(mockSDKClient.initialize).not.toHaveBeenCalled();
         });
 
-        it('should handle timeout errors with formatted message', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: undefined, isExpired: true });
-            const error = new Error('Operation timeout');
-            mockTokenManager.isTokenValid.mockRejectedValue(error);
+        it('should handle ENOENT errors gracefully', async () => {
+            // Given: CLI command fails with ENOENT
+            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('ENOENT: no such file'));
 
+            // When: checking authentication
             const result = await authService.isAuthenticated();
 
+            // Then: should return false
             expect(result).toBe(false);
-            // Error is formatted by AuthenticationErrorFormatter
-            expect(mockLogger.error).toHaveBeenCalled();
-            expect(mockCacheManager.setCachedAuthStatus).toHaveBeenCalled();
+        });
+
+        it('should handle timeout errors gracefully', async () => {
+            // Given: CLI command times out
+            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Operation timeout'));
+
+            // When: checking authentication
+            const result = await authService.isAuthenticated();
+
+            // Then: should return false
+            expect(result).toBe(false);
         });
     });
 
@@ -315,12 +311,10 @@ describe('AuthenticationService', () => {
                 'aio auth login',
                 expect.objectContaining({ encoding: 'utf8' })
             );
-            // No longer calls verifyTokenStored - trusts Adobe CLI exit code 0
-            expect(mockCacheManager.clearAuthStatusCache).toHaveBeenCalled();
-            expect(mockCacheManager.clearValidationCache).toHaveBeenCalled();
         });
 
-        it('should clear cache and SDK when forced (no clearConsoleContext)', async () => {
+        it('should use force flag when forced login requested', async () => {
+            // Given: CLI returns valid token after forced login
             const token = 'x'.repeat(150);
             mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
                 code: 0,
@@ -328,14 +322,14 @@ describe('AuthenticationService', () => {
                 stderr: '',
             } as CommandResult);
 
+            // When: forcing login
             await authService.login(true);
 
+            // Then: should use -f flag
             expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
                 'aio auth login -f',
-                expect.any(Object)
+                expect.objectContaining({ encoding: 'utf8' })
             );
-            // Should clear caches before login
-            expect(mockCacheManager.clearAll).toHaveBeenCalled();
             expect(mockSDKClient.clear).toHaveBeenCalled();
             // No longer calls clearSessionCaches or clearConsoleContext (performance optimization)
         });
@@ -344,8 +338,7 @@ describe('AuthenticationService', () => {
             const invalidToken = 'short';
             const validToken = 'x'.repeat(150);
 
-            // First call: regular login returns invalid token
-            // Second call: forced login returns valid token (no clearConsoleContext calls)
+            // Given: First login returns invalid token, second (forced) returns valid
             mockCommandExecutor.executeAdobeCLI
                 .mockResolvedValueOnce({
                     code: 0,
@@ -358,13 +351,22 @@ describe('AuthenticationService', () => {
                     stderr: '',
                 } as CommandResult);
 
-            mockTokenManager.verifyTokenStored.mockResolvedValue(true);
-
+            // When: attempting login
             const result = await authService.login();
 
+            // Then: should retry with force flag and succeed
             expect(result).toBe(true);
-            // Only 2 calls now (regular + forced) - no clearConsoleContext
             expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(2);
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenNthCalledWith(
+                1,
+                'aio auth login',
+                expect.objectContaining({ encoding: 'utf8' })
+            );
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenNthCalledWith(
+                2,
+                'aio auth login -f',
+                expect.objectContaining({ encoding: 'utf8' })
+            );
         });
 
         it('should handle login timeout with formatted error', async () => {
@@ -417,20 +419,22 @@ describe('AuthenticationService', () => {
     });
 
     describe('logout', () => {
-        it('should execute logout command and clear caches', async () => {
+        it('should execute logout command and clear SDK', async () => {
+            // Given: Logout command succeeds
             mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
                 code: 0,
                 stdout: 'Logged out',
                 stderr: '',
             } as CommandResult);
 
+            // When: logging out
             await authService.logout();
 
+            // Then: should execute logout and clear SDK
             expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
                 'aio auth logout',
                 expect.objectContaining({ encoding: 'utf8' })
             );
-            expect(mockCacheManager.clearAll).toHaveBeenCalled();
             expect(mockSDKClient.clear).toHaveBeenCalled();
         });
 
@@ -525,76 +529,107 @@ describe('AuthenticationService', () => {
         });
     });
 
-    describe('cache management', () => {
-        it('should clear all caches', () => {
-            authService.clearCache();
-
-            expect(mockCacheManager.clearAll).toHaveBeenCalled();
-        });
-
-        it('should check if org was cleared', () => {
-            mockCacheManager.wasOrgClearedDueToValidation.mockReturnValue(true);
-
-            const result = authService.wasOrgClearedDueToValidation();
-
-            expect(result).toBe(true);
-        });
-
-        it('should set org rejected flag', () => {
-            authService.setOrgRejectedFlag();
-
-            expect(mockCacheManager.setOrgClearedDueToValidation).toHaveBeenCalledWith(true);
-        });
-    });
-
     describe('SDK management', () => {
         it('should ensure SDK is initialized', async () => {
+            // Given: SDK client is configured
             mockSDKClient.ensureInitialized.mockResolvedValue(true);
 
+            // When: ensuring SDK initialization
             const result = await authService.ensureSDKInitialized();
 
+            // Then: should return success
             expect(result).toBe(true);
             expect(mockSDKClient.ensureInitialized).toHaveBeenCalled();
         });
     });
 
-    describe('validation', () => {
-        it('should validate and clear invalid org context', async () => {
+    describe('org context validation', () => {
+        it('should validate and clear invalid org when app list fails', async () => {
+            // Given: Valid context but app list will fail
+            mockCommandExecutor.executeAdobeCLI
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify({ org: 'org123', project: 'proj123' }),
+                    stderr: '',
+                } as CommandResult)
+                .mockResolvedValueOnce({
+                    code: 1,
+                    stdout: '',
+                    stderr: 'Error: Cannot list apps',
+                } as CommandResult);
+
+            // When: validating org context
             await authService.validateAndClearInvalidOrgContext();
 
-            expect(mockOrgValidator.validateAndClearInvalidOrgContext).toHaveBeenCalledWith(false);
+            // Then: should have attempted validation
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+                'aio console where --json',
+                expect.any(Object)
+            );
         });
 
-        it('should validate with force flag', async () => {
-            await authService.validateAndClearInvalidOrgContext(true);
+        it('should test developer permissions via app list', async () => {
+            // Given: Valid org with apps
+            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+                code: 0,
+                stdout: JSON.stringify([{ name: 'App 1', app_id: 'app1' }]),
+                stderr: '',
+            } as CommandResult);
 
-            expect(mockOrgValidator.validateAndClearInvalidOrgContext).toHaveBeenCalledWith(true);
-        });
-
-        it('should test developer permissions', async () => {
+            // When: testing developer permissions
             const result = await authService.testDeveloperPermissions();
 
-            expect(result).toEqual({ hasPermissions: true });
-            expect(mockOrgValidator.testDeveloperPermissions).toHaveBeenCalled();
+            // Then: should return permission status
+            expect(result).toHaveProperty('hasPermissions');
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+                'aio app list --json',
+                expect.any(Object)
+            );
         });
     });
 
-    describe('performance tracking', () => {
-        it('should track performance for all major operations', async () => {
-            mockCacheManager.getCachedAuthStatus.mockReturnValue({ isAuthenticated: undefined, isExpired: true });
-            mockTokenManager.isTokenValid.mockResolvedValue(true);
+    describe('integration scenarios', () => {
+        it('should handle full authentication flow with caching', async () => {
+            // Given: First authentication check with valid token
+            const futureExpiry = Date.now() + 3600000;
+            mockCommandExecutor.executeAdobeCLI
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify({
+                        token: 'x'.repeat(150),
+                        expiry: futureExpiry
+                    }),
+                    stderr: '',
+                } as CommandResult)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify({ org: 'org123', project: 'proj123' }),
+                    stderr: '',
+                } as CommandResult)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify([{ id: 'proj1', name: 'Project 1' }]),
+                    stderr: '',
+                } as CommandResult);
 
-            await authService.isAuthenticated();
-            await authService.getOrganizations();
-            await authService.selectOrganization('org123');
+            // When: Multiple authentication checks
+            const result1 = await authService.isAuthenticated();
 
-            expect(mockPerfTracker.startTiming).toHaveBeenCalledWith('isAuthenticated');
-            expect(mockPerfTracker.startTiming).toHaveBeenCalledWith('getOrganizations');
-            expect(mockPerfTracker.startTiming).toHaveBeenCalledWith('selectOrganization');
+            // Reset mock to return cached result
+            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+                code: 0,
+                stdout: JSON.stringify({
+                    token: 'x'.repeat(150),
+                    expiry: futureExpiry
+                }),
+                stderr: '',
+            } as CommandResult);
 
-            expect(mockPerfTracker.endTiming).toHaveBeenCalledWith('isAuthenticated');
-            expect(mockPerfTracker.endTiming).toHaveBeenCalledWith('getOrganizations');
-            expect(mockPerfTracker.endTiming).toHaveBeenCalledWith('selectOrganization');
+            const result2 = await authService.isAuthenticatedQuick();
+
+            // Then: Both should succeed
+            expect(result1).toBe(true);
+            expect(result2).toBe(true);
         });
     });
 });

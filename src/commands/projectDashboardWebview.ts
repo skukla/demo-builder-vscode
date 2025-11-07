@@ -92,7 +92,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         for (const messageType of messageTypes) {
             comm.on(messageType, async (data: unknown) => {
                 const context = this.createHandlerContext();
-                return await this.handlerRegistry.handle(context, messageType, data);
+                return this.handlerRegistry.handle(context, messageType, data);
             });
         }
     }

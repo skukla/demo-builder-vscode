@@ -1,8 +1,8 @@
 // @ts-expect-error - Adobe SDK lacks TypeScript declarations
 import * as sdk from '@adobe/aio-lib-console';
 import { getLogger, Logger } from '@/core/logging';
-import { validateAccessToken } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateAccessToken } from '@/core/validation';
 
 /**
  * Manages Adobe Console SDK client for high-performance operations

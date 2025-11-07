@@ -1,6 +1,6 @@
-import { getLogger } from '@/core/logging';
 import { RateLimiter } from './rateLimiter';
 import type { PollOptions } from './types';
+import { getLogger } from '@/core/logging';
 
 /**
  * Service for polling operations with exponential backoff

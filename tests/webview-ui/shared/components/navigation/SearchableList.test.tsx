@@ -462,10 +462,8 @@ describe('SearchableList', () => {
     });
 
     describe('Custom Item Renderer', () => {
-        it.skip('uses custom renderer when provided', () => {
-            // SKIP: Custom renderer implementation has a bug - it passes the function
-            // instead of calling it. See SearchableList.tsx line 202: {itemRenderer}
-            // Should be: {filteredItems.map(itemRenderer)}
+        it('uses custom renderer when provided', () => {
+            // Custom renderer is properly implemented with filteredItems.map(itemRenderer)
             const customRenderer = (item: TestItem) => (
                 <Item key={item.id} textValue={item.title}>
                     <Text>Custom: {item.title}</Text>

@@ -1,14 +1,14 @@
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/core/base';
 import { CommandManager } from '@/commands/commandManager';
-import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
+import { initializeLogger, Logger } from '@/core/logging';
+import { CommandExecutor } from '@/core/shell';
+import { StateManager } from '@/core/state';
+import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
 import { parseJSON } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
-import { CommandExecutor } from '@/core/shell';
-import { initializeLogger, Logger } from '@/core/logging';
-import { StateManager } from '@/core/state';
 
 let logger: Logger;
 let statusBar: StatusBarManager;
@@ -275,7 +275,7 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-    logger?.info('Adobe Demo Builder extension is deactivating...');
+    logger.info('Adobe Demo Builder extension is deactivating...');
 
     // Clean up resources
     statusBar?.dispose();
@@ -286,7 +286,7 @@ export function deactivate() {
     // Reset service locator
     ServiceLocator.reset();
 
-    logger?.info('Adobe Demo Builder extension deactivated.');
+    logger.info('Adobe Demo Builder extension deactivated.');
 }
 
 function registerFileWatchers(context: vscode.ExtensionContext) {

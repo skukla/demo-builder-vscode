@@ -6,13 +6,13 @@
  */
 
 import * as vscode from 'vscode';
-import { MessageHandler, HandlerResponse, HandlerContext } from '@/types/handlers';
-import { Project, ComponentInstance } from '@/types';
-import { validateURL } from '@/core/validation';
-import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
-import { AuthenticationService } from '@/features/authentication';
 import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
+import { validateURL } from '@/core/validation';
+import { AuthenticationService } from '@/features/authentication';
+import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
+import { Project, ComponentInstance } from '@/types';
+import { MessageHandler, HandlerResponse, HandlerContext } from '@/types/handlers';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -368,7 +368,7 @@ async function checkMeshStatusAsync(
     context: HandlerContext,
     project: Project,
     meshComponent: ComponentInstance,
-    frontendConfigChanged: boolean
+    frontendConfigChanged: boolean,
 ): Promise<void> {
     try {
         let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = 'not-deployed';

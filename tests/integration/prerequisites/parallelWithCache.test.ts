@@ -15,8 +15,8 @@ import { checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/sha
 import { PrerequisitesCacheManager } from '@/features/prerequisites/services/prerequisitesCacheManager';
 import { ServiceLocator } from '@/core/di/serviceLocator';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
-import type { HandlerContext } from '@/types/handlers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
+import { createMockHandlerContext } from '../../helpers/handlerContextTestHelpers';
 
 // Mock ServiceLocator
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -36,40 +36,10 @@ jest.mock('@/core/logging/debugLogger', () => ({
     }),
 }));
 
-// Helper to create mock HandlerContext
-function createMockContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
-    return {
-        prereqManager: {} as any,
-        authManager: {} as any,
-        componentHandler: {} as any,
-        errorLogger: {} as any,
-        progressUnifier: {} as any,
-        stepLogger: {} as any,
-        logger: {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as any,
-        debugLogger: {} as any,
-        context: {
-            extensionPath: '/test/extension/path',
-        } as any,
-        panel: undefined,
-        stateManager: {} as any,
-        communicationManager: undefined,
-        sendMessage: jest.fn(),
-        sharedState: {
-            isAuthenticating: false,
-            currentComponentSelection: undefined,
-            currentPrerequisiteStates: new Map(),
-        },
-        ...overrides,
-    } as jest.Mocked<HandlerContext>;
-}
-
 describe('Integration: Parallel Execution with Cache', () => {
-    let mockCommandExecutor: any;
+    let mockCommandExecutor: jest.Mocked<{
+        execute: jest.Mock;
+    }>;
     let cacheManager: PrerequisitesCacheManager;
 
     beforeEach(() => {
@@ -87,7 +57,7 @@ describe('Integration: Parallel Execution with Cache', () => {
 
     describe('Cache Integration with Parallel Checks', () => {
         it('should use cache for Node 18 while executing Node 20/24 in parallel', async () => {
-            const prereq: PrerequisiteDefinition = {
+            const prereq: Partial<PrerequisiteDefinition> = {
                 id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
                 perNodeVersion: true,
@@ -95,7 +65,7 @@ describe('Integration: Parallel Execution with Cache', () => {
                     command: 'aio --version',
                     parseVersion: '@adobe/aio-cli/(\\S+)',
                 },
-            } as any;
+            };
 
             // Pre-populate cache for Node 18 only
             // Note: Current implementation doesn't use cache in checkPerNodeVersionStatus
@@ -111,7 +81,8 @@ describe('Integration: Parallel Execution with Cache', () => {
             }, CACHE_TTL.PREREQUISITE_CHECK, '18');
 
             // Mock fnm list
-            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: any) => {
+            type ExecuteOptions = { useNodeVersion?: string };
+            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
@@ -140,9 +111,9 @@ describe('Integration: Parallel Execution with Cache', () => {
                 });
             });
 
-            const context = createMockContext();
+            const context = createMockHandlerContext();
             const startTime = Date.now();
-            const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
+            const result = await checkPerNodeVersionStatus(prereq as PrerequisiteDefinition, ['18', '20', '24'], context);
             const duration = Date.now() - startTime;
 
             // With parallel execution: ~500ms (max of Node 20/24 checks)
@@ -161,14 +132,14 @@ describe('Integration: Parallel Execution with Cache', () => {
         });
 
         it('should handle cache miss for all versions with parallel execution', async () => {
-            const prereq: PrerequisiteDefinition = {
+            const prereq: Partial<PrerequisiteDefinition> = {
                 id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
                 perNodeVersion: true,
                 check: {
                     command: 'aio --version',
                 },
-            } as any;
+            };
 
             // No cache entries - all checks must execute
             expect(cacheManager.getCachedResult('adobe-cli', '18')).toBeUndefined();
@@ -176,7 +147,8 @@ describe('Integration: Parallel Execution with Cache', () => {
             expect(cacheManager.getCachedResult('adobe-cli', '24')).toBeUndefined();
 
             // Mock fnm list
-            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: any) => {
+            type ExecuteOptions = { useNodeVersion?: string };
+            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
@@ -196,9 +168,9 @@ describe('Integration: Parallel Execution with Cache', () => {
                 });
             });
 
-            const context = createMockContext();
+            const context = createMockHandlerContext();
             const startTime = Date.now();
-            const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
+            const result = await checkPerNodeVersionStatus(prereq as PrerequisiteDefinition, ['18', '20', '24'], context);
             const duration = Date.now() - startTime;
 
             // Parallel execution should complete in ~400ms (max), not ~1200ms (sum)
@@ -208,14 +180,14 @@ describe('Integration: Parallel Execution with Cache', () => {
         });
 
         it('should handle partial cache hits without blocking parallel execution', async () => {
-            const prereq: PrerequisiteDefinition = {
+            const prereq: Partial<PrerequisiteDefinition> = {
                 id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
                 perNodeVersion: true,
                 check: {
                     command: 'aio --version',
                 },
-            } as any;
+            };
 
             // Cache Node 18 and 20, not 24
             cacheManager.setCachedResult('adobe-cli', {
@@ -238,7 +210,8 @@ describe('Integration: Parallel Execution with Cache', () => {
             }, CACHE_TTL.PREREQUISITE_CHECK, '20');
 
             // Mock fnm list
-            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: any) => {
+            type ExecuteOptions = { useNodeVersion?: string };
+            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
@@ -267,9 +240,9 @@ describe('Integration: Parallel Execution with Cache', () => {
                 });
             });
 
-            const context = createMockContext();
+            const context = createMockHandlerContext();
             const startTime = Date.now();
-            const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
+            const result = await checkPerNodeVersionStatus(prereq as PrerequisiteDefinition, ['18', '20', '24'], context);
             const duration = Date.now() - startTime;
 
             // With cache for 2/3 versions, only Node 24 executes (~600ms)

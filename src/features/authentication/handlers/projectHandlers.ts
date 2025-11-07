@@ -9,13 +9,13 @@
  */
 
 import { ServiceLocator } from '@/core/di';
-import { parseJSON, toError } from '@/types/typeGuards';
 import { withTimeout } from '@/core/utils/promiseUtils';
-import { validateProjectId } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateProjectId } from '@/core/validation';
+import type { AdobeProject } from '@/features/authentication/services/types';
 import { HandlerContext } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
-import type { AdobeProject } from '@/features/authentication/services/types';
+import { parseJSON, toError } from '@/types/typeGuards';
 
 /**
  * ensure-org-selected - Check if organization is selected

@@ -1,12 +1,11 @@
-import React, { useEffect } from 'react';
-import { 
-    View, 
-    Text, 
+import {
+    View,
+    Text,
     Flex,
-    Divider,
-    Well
+    Well,
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React, { useEffect } from 'react';
 import { WizardState } from '@/webview-ui/shared/types';
 
 interface ComponentData {
@@ -75,7 +74,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     type: 'frontend',
                     label: 'Frontend',
                     name: frontend.name,
-                    children: frontendChildren.length > 0 ? frontendChildren : undefined
+                    children: frontendChildren.length > 0 ? frontendChildren : undefined,
                 });
             }
         }
@@ -89,7 +88,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     sections.push({
                         type: 'middleware',
                         label: 'API Mesh',
-                        name: dep.name
+                        name: dep.name,
                     });
                 }
             });
@@ -112,7 +111,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     type: 'backend',
                     label: 'Backend',
                     name: backend.name,
-                    children: backendChildren.length > 0 ? backendChildren : undefined
+                    children: backendChildren.length > 0 ? backendChildren : undefined,
                 });
             }
         }
@@ -126,7 +125,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     sections.push({
                         type: 'other',
                         label: 'Additional',
-                        name: dep.name
+                        name: dep.name,
                     });
                 }
             });
@@ -140,7 +139,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     sections.push({
                         type: 'external',
                         label: 'External System',
-                        name: system.name
+                        name: system.name,
                     });
                 }
             });
@@ -154,7 +153,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     sections.push({
                         type: 'app-builder',
                         label: 'App Builder',
-                        name: app.name
+                        name: app.name,
                     });
                 }
             });
@@ -184,7 +183,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                             fontSize: '26px', 
                             fontWeight: 700,
                             color: 'var(--spectrum-global-color-gray-900)',
-                            lineHeight: '1.3'
+                            lineHeight: '1.3',
                         }}>
                             {state.projectName}
                         </Text>
@@ -200,7 +199,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                                 fontSize: '15px', 
                                 fontWeight: 600,
                                 color: 'var(--spectrum-global-color-gray-800)',
-                                lineHeight: '1.5'
+                                lineHeight: '1.5',
                             }}>
                                 {section.name}
                             </Text>
@@ -213,14 +212,14 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                                             <Text UNSAFE_style={{ 
                                                 fontSize: '14px', 
                                                 lineHeight: '1',
-                                                color: 'var(--spectrum-global-color-gray-500)'
+                                                color: 'var(--spectrum-global-color-gray-500)',
                                             }}>
                                                 ›
                                             </Text>
                                             <Text UNSAFE_style={{ 
                                                 fontSize: '14px', 
                                                 color: 'var(--spectrum-global-color-gray-700)',
-                                                lineHeight: '1.5'
+                                                lineHeight: '1.5',
                                             }}>
                                                 {child}
                                             </Text>

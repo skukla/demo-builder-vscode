@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import {
     ComponentDefinition,
     ComponentRegistry,
@@ -10,7 +11,6 @@ import {
     PresetDefinition,
 } from '@/types';
 import { ProjectConfig } from '@/types/handlers';
-import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 
 export class ComponentRegistryManager {
     private rawLoader: ConfigurationLoader<RawComponentRegistry>;
@@ -24,7 +24,7 @@ export class ComponentRegistryManager {
     async loadRegistry(): Promise<ComponentRegistry> {
         if (!this.transformedRegistry) {
             const rawRegistry = await this.rawLoader.load({
-                validationErrorMessage: 'Failed to parse component registry'
+                validationErrorMessage: 'Failed to parse component registry',
             });
             this.transformedRegistry = this.transformToGroupedStructure(rawRegistry);
         }

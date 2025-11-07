@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
 import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import { WizardState } from '@/webview-ui/shared/types';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React, { useState } from 'react';
 import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
+import { WizardState } from '@/webview-ui/shared/types';
 import { vscode } from '@/webview-ui/shared/vscode-api';
 
 interface ProjectCreationStepProps {
@@ -129,7 +129,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                     style={{
                         padding: '16px',
                         borderTop: '1px solid var(--vscode-panel-border)',
-                        backgroundColor: 'var(--spectrum-global-color-gray-75)'
+                        backgroundColor: 'var(--spectrum-global-color-gray-75)',
                     }}
                 >
                     <div style={{ maxWidth: '800px', width: '100%' }}>
@@ -153,7 +153,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                     style={{
                         padding: '16px',
                         borderTop: '1px solid var(--vscode-panel-border)',
-                        backgroundColor: 'var(--spectrum-global-color-gray-75)'
+                        backgroundColor: 'var(--spectrum-global-color-gray-75)',
                     }}
                 >
                     <div style={{ maxWidth: '800px', width: '100%' }}>

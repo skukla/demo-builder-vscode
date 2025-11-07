@@ -20,7 +20,7 @@ interface WelcomeScreenProps {
     theme?: 'light' | 'dark';
 }
 
-export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
+export function WelcomeScreen(_props: WelcomeScreenProps) {
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
         autoFocus: true

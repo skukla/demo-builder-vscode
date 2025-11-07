@@ -1,13 +1,15 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { TwoColumnLayout } from '@/webview-ui/shared/components/layout/TwoColumnLayout';
+import type { DimensionValue } from '@/webview-ui/shared/utils/spectrumTokens';
 
 describe('TwoColumnLayout', () => {
   describe('Token Translation', () => {
     it('should translate gap token size-300 to 24px', () => {
+      const gap: DimensionValue = 'size-300';
       const { container } = render(
         <TwoColumnLayout
-          gap={'size-300' as any}
+          gap={gap}
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
         />
@@ -17,9 +19,10 @@ describe('TwoColumnLayout', () => {
     });
 
     it('should translate leftPadding token size-200 to 16px', () => {
+      const leftPadding: DimensionValue = 'size-200';
       const { container } = render(
         <TwoColumnLayout
-          leftPadding={'size-200' as any}
+          leftPadding={leftPadding}
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
         />
@@ -29,9 +32,10 @@ describe('TwoColumnLayout', () => {
     });
 
     it('should translate rightPadding token size-400 to 32px', () => {
+      const rightPadding: DimensionValue = 'size-400';
       const { container } = render(
         <TwoColumnLayout
-          rightPadding={'size-400' as any}
+          rightPadding={rightPadding}
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
         />
@@ -41,9 +45,10 @@ describe('TwoColumnLayout', () => {
     });
 
     it('should translate leftMaxWidth token size-6000 to 480px', () => {
+      const leftMaxWidth: DimensionValue = 'size-6000';
       const { container } = render(
         <TwoColumnLayout
-          leftMaxWidth={'size-6000' as any}
+          leftMaxWidth={leftMaxWidth}
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
         />
@@ -53,12 +58,16 @@ describe('TwoColumnLayout', () => {
     });
 
     it('should translate multiple token props simultaneously', () => {
+      const gap: DimensionValue = 'size-300';
+      const leftPadding: DimensionValue = 'size-200';
+      const rightPadding: DimensionValue = 'size-400';
+      const leftMaxWidth: DimensionValue = 'size-6000';
       const { container } = render(
         <TwoColumnLayout
-          gap={'size-300' as any}
-          leftPadding={'size-200' as any}
-          rightPadding={'size-400' as any}
-          leftMaxWidth={'size-6000' as any}
+          gap={gap}
+          leftPadding={leftPadding}
+          rightPadding={rightPadding}
+          leftMaxWidth={leftMaxWidth}
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
         />
@@ -74,9 +83,10 @@ describe('TwoColumnLayout', () => {
     });
 
     it('should handle mixed token and pixel values', () => {
+      const gap: DimensionValue = 'size-300';
       const { container } = render(
         <TwoColumnLayout
-          gap={'size-300' as any}
+          gap={gap}
           leftPadding="32px"
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
@@ -92,9 +102,10 @@ describe('TwoColumnLayout', () => {
 
   describe('Backward Compatibility', () => {
     it('should pass through numeric padding values as pixels', () => {
+      const leftPadding: DimensionValue = 24;
       const { container } = render(
         <TwoColumnLayout
-          leftPadding={24 as any}
+          leftPadding={leftPadding}
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
         />
@@ -135,9 +146,11 @@ describe('TwoColumnLayout', () => {
 
   describe('Error Handling', () => {
     it('should handle invalid token gracefully', () => {
+      // Testing invalid token (intentionally bypassing type check for negative test)
+      const gap = 'size-999' as unknown as DimensionValue;
       const { container } = render(
         <TwoColumnLayout
-          gap={'size-999' as any}
+          gap={gap}
           leftContent={<div>Left</div>}
           rightContent={<div>Right</div>}
         />

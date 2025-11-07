@@ -2,11 +2,11 @@
  * Mesh endpoint resolution utilities
  */
 
+import type { CommandExecutor } from '@/core/shell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateMeshId } from '@/core/validation';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
-import type { CommandExecutor } from '@/core/shell';
-import { validateMeshId } from '@/core/validation';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Get mesh endpoint - single source of truth approach:
@@ -56,7 +56,7 @@ export async function getEndpoint(
             if (jsonMatch) {
                 const meshData = parseJSON<{ meshEndpoint?: string; endpoint?: string }>(jsonMatch[0]);
                 if (!meshData) {
-                    logger?.warn('[Mesh Endpoint] Failed to parse mesh data');
+                    logger.warn('[Mesh Endpoint] Failed to parse mesh data');
                     // Continue to fallback
                 } else {
                     const endpoint = meshData.meshEndpoint || meshData.endpoint;

@@ -1,10 +1,10 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ServiceLocator } from '@/core/di';
+import type { ComponentInstallOptions, ComponentInstallResult } from '@/features/components/services/types';
 import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '@/types';
 import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
-import type { ComponentInstallOptions, ComponentInstallResult } from '@/features/components/services/types';
 
 export type { ComponentInstallOptions, ComponentInstallResult };
 

@@ -1,13 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as vscode from 'vscode';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     Message,
     MessageType,
     MessagePayload,
     PendingRequest,
 } from '@/types/messages';
-import { getLogger } from '@/core/logging';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Message Handler Function Type

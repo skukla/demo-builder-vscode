@@ -7,8 +7,8 @@ import { BaseWebviewCommand } from '@/core/base/baseWebviewCommand';
 import { LAST_UPDATE_CHECK_VERSION } from '@/core/constants';
 import { ServiceLocator } from '@/core/di';
 import { sanitizeErrorForLogging, validatePathSafety } from '@/core/validation/securityValidation';
-import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
+import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
 
 export class ResetAllCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -97,7 +97,7 @@ export class ResetAllCommand extends BaseCommand {
                 const sanitizedError = sanitizeErrorForLogging(error as Error);
                 this.logger.warn(
                     `Adobe CLI logout failed: ${sanitizedError}. You may need to manually clear authentication.`,
-                    error as Error
+                    error as Error,
                 );
                 this.logger.warn('To manually logout, run: aio auth logout');
             }

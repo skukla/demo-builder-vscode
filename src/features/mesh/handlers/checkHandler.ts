@@ -11,10 +11,10 @@ import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
-import { parseJSON, toError } from '@/types/typeGuards';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
-import { getSetupInstructions, getEndpoint } from '@/features/mesh/handlers/shared';
 import { validateWorkspaceId } from '@/core/validation';
+import { getSetupInstructions, getEndpoint } from '@/features/mesh/handlers/shared';
+import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { parseJSON, toError } from '@/types/typeGuards';
 
 /**
  * Handler: check-api-mesh

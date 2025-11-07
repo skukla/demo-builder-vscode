@@ -1,14 +1,14 @@
-import React, { useEffect } from 'react';
 import {
     View,
     Flex,
     Form,
     TextField,
     Heading,
-    Text
+    Text,
 } from '@adobe/react-spectrum';
-import { WizardState } from '@/webview-ui/shared/types';
+import React, { useEffect } from 'react';
 import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
+import { WizardState } from '@/webview-ui/shared/types';
 
 interface WelcomeStepProps {
     state: WizardState;

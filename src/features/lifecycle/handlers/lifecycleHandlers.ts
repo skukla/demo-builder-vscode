@@ -11,8 +11,8 @@
 
 import { validateProjectPath, validateURL } from '@/core/validation';
 import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
-import { toError } from '@/types/typeGuards';
 import { SimpleResult, DataResult } from '@/types/results';
+import { toError } from '@/types/typeGuards';
 
 /**
  * ready - Initial wizard ready event

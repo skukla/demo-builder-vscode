@@ -1,8 +1,7 @@
-import { parseJSON } from '@/types/typeGuards';
-import type { CommandExecutor } from '@/core/shell';
 import { getLogger, Logger, StepLogger } from '@/core/logging';
-import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
@@ -18,6 +17,7 @@ import type {
     AdobeConsoleWhereResponse,
     SDKResponse,
 } from '@/features/authentication/services/types';
+import { parseJSON } from '@/types/typeGuards';
 
 /**
  * Service for managing Adobe entities (organizations, projects, workspaces)

@@ -11,8 +11,8 @@
 
 import { checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import type { HandlerContext } from '@/types/handlers';
 import type { PrerequisiteDefinition } from '@/features/prerequisites/services/PrerequisitesManager';
+import { createMockHandlerContext } from '../../helpers/handlerContextTestHelpers';
 
 // Mock ServiceLocator
 jest.mock('@/core/di/serviceLocator', () => ({
@@ -22,40 +22,10 @@ jest.mock('@/core/di/serviceLocator', () => ({
     },
 }));
 
-// Helper to create mock HandlerContext
-function createMockContext(overrides?: Partial<HandlerContext>): jest.Mocked<HandlerContext> {
-    return {
-        prereqManager: {} as any,
-        authManager: {} as any,
-        componentHandler: {} as any,
-        errorLogger: {} as any,
-        progressUnifier: {} as any,
-        stepLogger: {} as any,
-        logger: {
-            debug: jest.fn(),
-            info: jest.fn(),
-            warn: jest.fn(),
-            error: jest.fn(),
-        } as any,
-        debugLogger: {} as any,
-        context: {
-            extensionPath: '/test/extension/path',
-        } as any,
-        panel: undefined,
-        stateManager: {} as any,
-        communicationManager: undefined,
-        sendMessage: jest.fn(),
-        sharedState: {
-            isAuthenticating: false,
-            currentComponentSelection: undefined,
-            currentPrerequisiteStates: new Map(),
-        },
-        ...overrides,
-    } as jest.Mocked<HandlerContext>;
-}
-
 describe('Parallel Per-Node-Version Checking', () => {
-    let mockCommandExecutor: any;
+    let mockCommandExecutor: jest.Mocked<{
+        execute: jest.Mock;
+    }>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -69,7 +39,7 @@ describe('Parallel Per-Node-Version Checking', () => {
 
     describe('1. Performance: Parallel checks faster than sequential', () => {
         it('should complete 3 Node version checks in ≤2s (parallel) vs 3-6s (sequential)', async () => {
-            const prereq: PrerequisiteDefinition = {
+            const prereq: Partial<PrerequisiteDefinition> = {
                 id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
                 perNodeVersion: true,
@@ -77,7 +47,7 @@ describe('Parallel Per-Node-Version Checking', () => {
                     command: 'aio --version',
                     parseVersion: '@adobe/aio-cli/(\\S+)',
                 },
-            } as any;
+            };
 
             // Mock fnm list to show all 3 Node versions installed
             mockCommandExecutor.execute.mockImplementation((cmd: string) => {
@@ -100,9 +70,9 @@ describe('Parallel Per-Node-Version Checking', () => {
                 });
             });
 
-            const context = createMockContext();
+            const context = createMockHandlerContext();
             const startTime = Date.now();
-            const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
+            const result = await checkPerNodeVersionStatus(prereq as PrerequisiteDefinition, ['18', '20', '24'], context);
             const duration = Date.now() - startTime;
 
             // Parallel: Should complete in ~500ms (max of all parallel checks)
@@ -119,7 +89,7 @@ describe('Parallel Per-Node-Version Checking', () => {
 
     describe('2. Isolation: Parallel checks maintain Node version isolation', () => {
         it('should correctly identify version-specific results without cross-contamination', async () => {
-            const prereq: PrerequisiteDefinition = {
+            const prereq: Partial<PrerequisiteDefinition> = {
                 id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
                 perNodeVersion: true,
@@ -127,10 +97,11 @@ describe('Parallel Per-Node-Version Checking', () => {
                     command: 'aio --version',
                     parseVersion: '@adobe/aio-cli/(\\S+)',
                 },
-            } as any;
+            };
 
             // Mock fnm list
-            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: any) => {
+            type ExecuteOptions = { useNodeVersion?: string };
+            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
@@ -150,8 +121,8 @@ describe('Parallel Per-Node-Version Checking', () => {
                 return Promise.reject(new Error('Unknown version'));
             });
 
-            const context = createMockContext();
-            const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
+            const context = createMockHandlerContext();
+            const result = await checkPerNodeVersionStatus(prereq as PrerequisiteDefinition, ['18', '20', '24'], context);
 
             // Each Node version should report its unique CLI version
             expect(result.perNodeVersionStatus).toEqual([
@@ -164,17 +135,18 @@ describe('Parallel Per-Node-Version Checking', () => {
 
     describe('3. Error Handling: Mixed success/failure scenarios', () => {
         it('should handle Node 18 success while Node 20/24 fail without blocking', async () => {
-            const prereq: PrerequisiteDefinition = {
+            const prereq: Partial<PrerequisiteDefinition> = {
                 id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
                 perNodeVersion: true,
                 check: {
                     command: 'aio --version',
                 },
-            } as any;
+            };
 
             // Mock fnm list
-            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: any) => {
+            type ExecuteOptions = { useNodeVersion?: string };
+            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
@@ -190,8 +162,8 @@ describe('Parallel Per-Node-Version Checking', () => {
                 return Promise.reject(new Error('Command failed'));
             });
 
-            const context = createMockContext();
-            const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
+            const context = createMockHandlerContext();
+            const result = await checkPerNodeVersionStatus(prereq as PrerequisiteDefinition, ['18', '20', '24'], context);
 
             // Node 18 should succeed, Node 20/24 should fail, all results returned
             expect(result.perNodeVersionStatus).toEqual([
@@ -206,17 +178,18 @@ describe('Parallel Per-Node-Version Checking', () => {
 
     describe('4. Performance: Varying execution times', () => {
         it('should complete in time ≈ max(check times), not sum', async () => {
-            const prereq: PrerequisiteDefinition = {
+            const prereq: Partial<PrerequisiteDefinition> = {
                 id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
                 perNodeVersion: true,
                 check: {
                     command: 'aio --version',
                 },
-            } as any;
+            };
 
             // Mock fnm list
-            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: any) => {
+            type ExecuteOptions = { useNodeVersion?: string };
+            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
@@ -234,9 +207,9 @@ describe('Parallel Per-Node-Version Checking', () => {
                 });
             });
 
-            const context = createMockContext();
+            const context = createMockHandlerContext();
             const startTime = Date.now();
-            await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
+            await checkPerNodeVersionStatus(prereq as PrerequisiteDefinition, ['18', '20', '24'], context);
             const duration = Date.now() - startTime;
 
             // Parallel: Should take ~500ms (max of 100ms, 300ms, 500ms)
@@ -251,14 +224,14 @@ describe('Parallel Per-Node-Version Checking', () => {
 
     describe('5. Edge Case: Single Node version', () => {
         it('should handle single Node version without parallel overhead', async () => {
-            const prereq: PrerequisiteDefinition = {
+            const prereq: Partial<PrerequisiteDefinition> = {
                 id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
                 perNodeVersion: true,
                 check: {
                     command: 'aio --version',
                 },
-            } as any;
+            };
 
             // Mock fnm list
             mockCommandExecutor.execute.mockImplementation((cmd: string) => {
@@ -272,9 +245,9 @@ describe('Parallel Per-Node-Version Checking', () => {
                 return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
             });
 
-            const context = createMockContext();
+            const context = createMockHandlerContext();
             const startTime = Date.now();
-            const result = await checkPerNodeVersionStatus(prereq, ['18'], context);
+            const result = await checkPerNodeVersionStatus(prereq as PrerequisiteDefinition, ['18'], context);
             const duration = Date.now() - startTime;
 
             // Should complete quickly (no parallel overhead for single item)
@@ -287,17 +260,18 @@ describe('Parallel Per-Node-Version Checking', () => {
 
     describe('6. Error Handling: Timeout isolation', () => {
         it('should not let one check timeout block other checks', async () => {
-            const prereq: PrerequisiteDefinition = {
+            const prereq: Partial<PrerequisiteDefinition> = {
                 id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
                 perNodeVersion: true,
                 check: {
                     command: 'aio --version',
                 },
-            } as any;
+            };
 
             // Mock fnm list
-            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: any) => {
+            type ExecuteOptions = { useNodeVersion?: string };
+            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
@@ -318,12 +292,12 @@ describe('Parallel Per-Node-Version Checking', () => {
                 return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
             });
 
-            const context = createMockContext();
+            const context = createMockHandlerContext();
             const startTime = Date.now();
 
             // Note: In real implementation, timeout handling would reject the promise
             // For this test, we verify that other checks complete even if one is slow
-            const resultPromise = checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
+            const resultPromise = checkPerNodeVersionStatus(prereq as PrerequisiteDefinition, ['18', '20', '24'], context);
 
             // Wait up to 2 seconds (much less than the 10s timeout)
             const result = await Promise.race([
@@ -353,17 +327,18 @@ describe('Parallel Per-Node-Version Checking', () => {
 
     describe('7. Error Handling: fnm exec failure isolation', () => {
         it('should handle Node version not installed without affecting other versions', async () => {
-            const prereq: PrerequisiteDefinition = {
+            const prereq: Partial<PrerequisiteDefinition> = {
                 id: 'adobe-cli',
                 name: 'Adobe I/O CLI',
                 perNodeVersion: true,
                 check: {
                     command: 'aio --version',
                 },
-            } as any;
+            };
 
             // Mock fnm list - only Node 18 and 24 installed, not 20
-            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: any) => {
+            type ExecuteOptions = { useNodeVersion?: string };
+            mockCommandExecutor.execute.mockImplementation((cmd: string, options?: ExecuteOptions) => {
                 if (cmd === 'fnm list') {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv24.0.0',
@@ -379,8 +354,8 @@ describe('Parallel Per-Node-Version Checking', () => {
                 return Promise.reject(new Error('Node version not found'));
             });
 
-            const context = createMockContext();
-            const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
+            const context = createMockHandlerContext();
+            const result = await checkPerNodeVersionStatus(prereq as PrerequisiteDefinition, ['18', '20', '24'], context);
 
             // Node 20 should be skipped (not installed), but 18 and 24 should succeed
             expect(result.perNodeVersionStatus).toEqual([

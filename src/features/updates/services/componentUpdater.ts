@@ -1,11 +1,11 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Project } from '@/types';
-import { parseJSON } from '@/types/typeGuards';
 import { Logger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { Project } from '@/types';
 import { DEFAULT_SHELL } from '@/types/shell';
+import { parseJSON } from '@/types/typeGuards';
 
 export class ComponentUpdater {
     private logger: Logger;

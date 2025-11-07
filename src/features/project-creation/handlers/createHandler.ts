@@ -9,14 +9,14 @@ import { promises as fsPromises } from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { executeProjectCreation } from './executor';
+import { HandlerContext } from './HandlerContext';
+import { OVERALL_TIMEOUT_MS } from './shared';
 import { ServiceLocator } from '@/core/di';
 import { withTimeout } from '@/core/utils/promiseUtils';
-import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
 import { toError } from '@/types/typeGuards';
-import { HandlerContext } from './HandlerContext';
-import { executeProjectCreation } from './executor';
-import { OVERALL_TIMEOUT_MS } from './shared';
 
 /**
  * Handler: create-project

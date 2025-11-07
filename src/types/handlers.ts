@@ -6,18 +6,18 @@
  */
 
 import * as vscode from 'vscode';
-import { AuthenticationService } from '@/features/authentication';
+import { ComponentSelection, ComponentConfigs } from './components';
+import { Logger } from './logger';
+import { StateManager } from './state';
+import { WebviewCommunicationManager } from '@/core/communication';
 import { ErrorLogger, StepLogger } from '@/core/logging';
+import { ProgressUnifier } from '@/core/utils/progressUnifier';
+import { AuthenticationService } from '@/features/authentication';
 import {
     PrerequisitesManager,
     PrerequisiteDefinition,
     PrerequisiteStatus,
 } from '@/features/prerequisites/services/PrerequisitesManager';
-import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import { WebviewCommunicationManager } from '@/core/communication';
-import { ComponentSelection, ComponentConfigs } from './components';
-import { Logger } from './logger';
-import { StateManager } from './state';
 
 /**
  * ProjectConfig - Project configuration generated from component selections

@@ -1,19 +1,19 @@
-import React, { useEffect, useState, useRef } from 'react';
 import {
     View,
     Flex,
     Text,
     Button,
     ProgressCircle,
-    ProgressBar
+    ProgressBar,
 } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
+import React, { useEffect, useState, useRef } from 'react';
 import { WizardState, PrerequisiteCheck } from '@/webview-ui/shared/types';
-import { vscode } from '@/webview-ui/shared/vscode-api';
 import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '@/webview-ui/shared/utils/classNames';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 
 interface PrerequisitesStepProps {
     state: WizardState;
@@ -35,8 +35,8 @@ const getDefaultPrerequisites = (): PrerequisiteCheck[] => {
             status: 'checking',
             canInstall: false,
             isOptional: false,
-            message: 'Initializing...'
-        }
+            message: 'Initializing...',
+        },
     ];
 };
 
@@ -63,7 +63,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                     canInstall: false,
                     isOptional: p.optional || false,
                     plugins: p.plugins,
-                    message: 'Waiting...'
+                    message: 'Waiting...',
                 };
             });
             setChecks(prerequisites);
@@ -136,14 +136,14 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                 const scrollTo = itemTop + itemHeight - containerHeight + 10; // 10px padding from bottom
                                 container.scrollTo({
                                     top: Math.max(0, scrollTo),
-                                    behavior: 'smooth'
+                                    behavior: 'smooth',
                                 });
                             }
                             // If item is above visible area (shouldn't happen), scroll to show it at top
                             else if (itemTop < containerScrollTop) {
                                 container.scrollTo({
                                     top: Math.max(0, itemTop - 10), // 10px padding from top
-                                    behavior: 'smooth'
+                                    behavior: 'smooth',
                                 });
                             }
                         }
@@ -167,7 +167,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                         // Respect backend gating for install button
                         canInstall: typeof canInstall === 'boolean' ? canInstall : newChecks[index].canInstall,
                         unifiedProgress,
-                        nodeVersionStatus: typeof nodeVersionStatus !== 'undefined' ? nodeVersionStatus : newChecks[index].nodeVersionStatus
+                        nodeVersionStatus: typeof nodeVersionStatus !== 'undefined' ? nodeVersionStatus : newChecks[index].nodeVersionStatus,
                     };
                 }
                 
@@ -176,7 +176,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                     check.status === 'success' || 
                     check.status === 'error' || 
                     check.status === 'warning' ||
-                    check.status === 'pending'
+                    check.status === 'pending',
                 );
                 
                 if (allDone) {
@@ -226,7 +226,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 if (scrollContainerRef.current) {
                     scrollContainerRef.current.scrollTo({
                         top: scrollContainerRef.current.scrollHeight,
-                        behavior: 'auto'  // Instant scroll to prevent shudder during content changes
+                        behavior: 'auto',  // Instant scroll to prevent shudder during content changes
                     });
                 }
             }, 200);
@@ -259,7 +259,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
     // Reset the check-in-progress flag when all checks are complete
     useEffect(() => {
         const allDone = checks.every(check => 
-            check.status !== 'checking' && check.status !== 'pending'
+            check.status !== 'checking' && check.status !== 'pending',
         );
         
         if (allDone && checkInProgressRef.current) {
@@ -282,7 +282,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTo({
                 top: 0,
-                behavior: 'smooth'
+                behavior: 'smooth',
             });
         }
     };
@@ -294,7 +294,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         vscode.postMessage('install-prerequisite', {
             prereqId: index,  // Handler expects 'prereqId', not 'index'
             id: checks[index].id,
-            name: checks[index].name
+            name: checks[index].name,
         });
 
         setChecks(prev => {

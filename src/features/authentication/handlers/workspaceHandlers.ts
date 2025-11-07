@@ -7,12 +7,12 @@
  */
 
 import { withTimeout } from '@/core/utils/promiseUtils';
-import { validateWorkspaceId } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { toError } from '@/types/typeGuards';
+import { validateWorkspaceId } from '@/core/validation';
+import type { AdobeWorkspace } from '@/features/authentication/services/types';
 import { HandlerContext } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
-import type { AdobeWorkspace } from '@/features/authentication/services/types';
+import { toError } from '@/types/typeGuards';
 
 /**
  * get-workspaces - Fetch workspaces for current project

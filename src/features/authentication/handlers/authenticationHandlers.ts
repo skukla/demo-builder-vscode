@@ -6,11 +6,11 @@
  * - authenticate: Browser-based Adobe login flow
  */
 
-import { toError } from '@/types/typeGuards';
-import { SimpleResult } from '@/types/results';
+import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
 import type { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
-import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
+import { SimpleResult } from '@/types/results';
+import { toError } from '@/types/typeGuards';
 
 /**
  * check-auth - Check Adobe authentication status
@@ -80,8 +80,8 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
         // Determine final status with user-friendly messaging
         let message: string;
         let subMessage: string | undefined;
-        let requiresOrgSelection = false;
-        let orgLacksAccess = false;
+        const requiresOrgSelection = false;
+        const orgLacksAccess = false;
 
         if (isAuthenticated) {
             // Show cached org if available (good UX), otherwise generic message
@@ -162,7 +162,14 @@ export async function handleAuthenticate(
 
             if (isAlreadyAuth) {
                 context.logger.info('[Auth] Already authenticated, skipping login');
-                context.sharedState.isAuthenticating = false;
+
+                // Send loading message while we verify credentials and initialize SDK
+                await context.sendMessage('auth-status', {
+                    isChecking: true,
+                    message: 'Verifying authentication...',
+                    subMessage: 'Checking Adobe credentials...',
+                    isAuthenticated: true, // Shows authenticated during check
+                });
 
                 // Initialize SDK for faster org/project operations
                 await context.authManager.ensureSDKInitialized();
@@ -170,6 +177,9 @@ export async function handleAuthenticate(
                 // Get the current context
                 const currentOrg = await context.authManager.getCurrentOrganization();
                 const currentProject = await context.authManager.getCurrentProject();
+
+                // Now done checking
+                context.sharedState.isAuthenticating = false;
 
                 // Check if org was cleared due to validation failure
                 const orgLacksAccess = !currentOrg ? context.authManager.wasOrgClearedDueToValidation() : false;
@@ -336,11 +346,9 @@ export async function handleAuthenticate(
 
         context.logger.error(`[Auth] Failed to start authentication after ${failDuration}ms:`, error as Error);
 
-        // SECURITY: Sanitize error message before sending to UI to prevent information disclosure
-        const sanitizedError = sanitizeErrorForLogging(toError(error));
-
+        // SECURITY: Never expose internal state details to UI - use generic message
         await context.sendMessage('authError', {
-            error: sanitizedError,
+            error: 'Authentication failed',
         });
 
         return { success: false };

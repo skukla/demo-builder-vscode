@@ -1,4 +1,3 @@
-import React from 'react';
 import {
     Heading,
     ListView,
@@ -9,15 +8,16 @@ import {
     Well,
     Flex,
     ActionButton,
-    ProgressCircle
+    ProgressCircle,
 } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
+import React from 'react';
+import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
 import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
 import { FadeTransition } from '@/webview-ui/shared/components/FadeTransition';
+import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 import { WizardState, AdobeProject, WizardStep } from '@/webview-ui/shared/types';
-import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
 
 interface AdobeProjectStepProps {
     state: WizardState;
@@ -49,7 +49,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
         searchQuery,
         setSearchQuery,
         load: loadProjects,
-        refresh
+        refresh,
     } = useSelectionStep<AdobeProject>({
         cacheKey: 'projectsCache',
         messageType: 'get-projects',
@@ -71,22 +71,22 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                     name: project.name,
                     title: project.title,
                     description: project.description,
-                    org_id: project.org_id  // Include numeric org ID for Adobe Console URLs
+                    org_id: project.org_id,  // Include numeric org ID for Adobe Console URLs
                 },
                 // Clear dependent state when parent selection changes
                 // This maintains state consistency in the UI layer
-                adobeWorkspace: undefined
+                adobeWorkspace: undefined,
             });
         },
         validateBeforeLoad: () => {
             if (!state.adobeOrg?.id) {
                 return {
                     valid: false,
-                    error: 'No organization available. Please authenticate again.'
+                    error: 'No organization available. Please authenticate again.',
                 };
             }
             return { valid: true };
-        }
+        },
     });
 
     // Update can-proceed state when selection changes
@@ -103,7 +103,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                 padding: '24px',
                 display: 'flex',
                 flexDirection: 'column',
-                minWidth: 0  // Prevent flex shrinking issues
+                minWidth: 0,  // Prevent flex shrinking issues
             }}>
                 <Heading level={2} marginBottom="size-300">
                     {state.adobeOrg?.name ? `Projects in ${state.adobeOrg.name}` : 'Select Adobe Project'}
@@ -127,7 +127,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                                     <Text UNSAFE_className="text-xl font-medium">
                                         Error Loading Projects
                                     </Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
+                                    <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
                                         {error}
                                     </Text>
                                 </Flex>
@@ -216,7 +216,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                             flex: 1,
                             transition: 'opacity 200ms ease-in-out',
                             opacity: isRefreshing ? 0.5 : 1,
-                            pointerEvents: isRefreshing ? 'none' : 'auto'
+                            pointerEvents: isRefreshing ? 'none' : 'auto',
                         }}>
                             <ListView
                                 items={filteredProjects}
@@ -232,9 +232,9 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                                                 name: project.name,
                                                 title: project.title,
                                                 description: project.description,
-                                                org_id: project.org_id
+                                                org_id: project.org_id,
                                             },
-                                            adobeWorkspace: undefined
+                                            adobeWorkspace: undefined,
                                         });
                                     }
                                 }}
@@ -270,7 +270,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                 flex: '1',
                 padding: '24px',
                 backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
+                borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
             }}>
                 <ConfigurationSummary state={state} completedSteps={completedSteps} currentStep={state.currentStep} />
             </div>

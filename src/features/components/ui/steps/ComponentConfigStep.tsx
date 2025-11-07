@@ -1,4 +1,3 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
     Heading,
     Text,
@@ -8,14 +7,15 @@ import {
     Picker,
     Item,
     Form,
-    Divider
+    Divider,
 } from '@adobe/react-spectrum';
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
-import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '@/webview-ui/shared/types';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
 import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
+import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '@/webview-ui/shared/types';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 
 interface ComponentConfigStepProps {
     state: WizardState;
@@ -82,11 +82,11 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                     frontends: data.frontends?.map((f: ComponentData) => ({
                         id: f.id,
                         hasDeps: !!f.dependencies,
-                        depsDetail: f.dependencies
+                        depsDetail: f.dependencies,
                     })),
                     dependencies: data.dependencies?.map((d: ComponentData) => d.id),
                     hasEnvVars: !!data.envVars,
-                    envVarsCount: Object.keys(data.envVars || {}).length
+                    envVarsCount: Object.keys(data.envVars || {}).length,
                 });
                 setComponentsData(data);
                 setIsLoading(false);
@@ -200,7 +200,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         fieldMap.set(envVarKey, {
                             ...envVarDef,
                             key: envVarKey,
-                            componentIds: [id]
+                            componentIds: [id],
                         });
                     } else {
                         const existing = fieldMap.get(envVarKey)!;
@@ -219,7 +219,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         fieldMap.set(envVarKey, {
                             ...envVarDef,
                             key: envVarKey,
-                            componentIds: [id]
+                            componentIds: [id],
                         });
                     } else {
                         const existing = fieldMap.get(envVarKey)!;
@@ -260,8 +260,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                     'ADOBE_COMMERCE_STORE_VIEW_CODE',
                     'ADOBE_COMMERCE_CUSTOMER_GROUP',
                     'ADOBE_COMMERCE_ADMIN_USERNAME',
-                    'ADOBE_COMMERCE_ADMIN_PASSWORD'
-                ]
+                    'ADOBE_COMMERCE_ADMIN_PASSWORD',
+                ],
             },
             { 
                 id: 'catalog-service', 
@@ -270,14 +270,14 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 fieldOrder: [
                     'ADOBE_CATALOG_SERVICE_ENDPOINT',
                     'ADOBE_COMMERCE_ENVIRONMENT_ID',
-                    'ADOBE_CATALOG_API_KEY'
-                ]
+                    'ADOBE_CATALOG_API_KEY',
+                ],
             },
             { id: 'mesh', label: 'API Mesh', order: 3 },
             { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
             { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
             { id: 'experience-platform', label: 'Experience Platform', order: 6 },
-            { id: 'other', label: 'Additional Settings', order: 99 }
+            { id: 'other', label: 'Additional Settings', order: 99 },
         ];
 
         // Build final service groups with fields, ordered and filtered
@@ -299,7 +299,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 return {
                     id: def.id,
                     label: def.label,
-                    fields: sortedFields
+                    fields: sortedFields,
                 };
             })
             .filter(group => group.fields.length > 0)
@@ -365,7 +365,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             
             // Find which section this field belongs to
             const section = serviceGroups.find(group => 
-                group.fields.some(f => f.key === fieldId)
+                group.fields.some(f => f.key === fieldId),
             );
             
             if (!section) return;
@@ -553,7 +553,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 if (field.required && !isDeferredField) {
                     // Check if ANY component that needs this field has it filled
                     const hasValue = field.componentIds.some(compId => 
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
                     
                     if (!hasValue) {
@@ -565,7 +565,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 // URL validation (check first component that has a value)
                 if (field.type === 'url') {
                     const firstComponentWithValue = field.componentIds.find(compId => 
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
                     
                     if (firstComponentWithValue) {
@@ -582,7 +582,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 // Custom validation
                 if (field.validation?.pattern) {
                     const firstComponentWithValue = field.componentIds.find(compId => 
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
                     
                     if (firstComponentWithValue) {
@@ -659,7 +659,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         return {
             total: requiredFields.length,
             completed: completedFields.length,
-            isComplete: requiredFields.length === 0 || completedFields.length === requiredFields.length
+            isComplete: requiredFields.length === 0 || completedFields.length === requiredFields.length,
         };
     };
 
@@ -828,7 +828,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 display: 'flex',
                 flexDirection: 'column',
                 minWidth: 0,
-                overflow: 'hidden'
+                overflow: 'hidden',
             }}>
                 <Heading level={2} marginBottom="size-300">Settings Collection</Heading>
                 <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
@@ -862,13 +862,13 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                                     <div id={`section-${group.id}`} style={{ 
                                         scrollMarginTop: '-16px',
                                         paddingTop: index > 0 ? '4px' : '0',
-                                        paddingBottom: '4px'
+                                        paddingBottom: '4px',
                                     }}>
                                         {/* Section Header */}
                                         <div style={{
                                             paddingBottom: '4px',
                                             marginBottom: '12px',
-                                            borderBottom: '1px solid var(--spectrum-global-color-gray-200)'
+                                            borderBottom: '1px solid var(--spectrum-global-color-gray-200)',
                                         }}>
                                             <Heading level={3}>{group.label}</Heading>
                                         </div>
@@ -893,7 +893,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                     borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
                     display: 'flex',
                     flexDirection: 'column',
-                    overflow: 'hidden'
+                    overflow: 'hidden',
                 }}>
                     <Heading level={3} marginBottom="size-200">Configuration</Heading>
                     
@@ -922,7 +922,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                                             flexDirection: 'column',
                                             alignItems: 'flex-start',
                                             gap: '4px',
-                                            transition: 'all 0.2s ease'
+                                            transition: 'all 0.2s ease',
                                         }}
                                         onMouseEnter={(e) => {
                                             if (!isActive) {
@@ -956,7 +956,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                                         marginTop: '4px',
                                         marginLeft: '12px',
                                         paddingLeft: '12px',
-                                        borderLeft: '2px solid var(--spectrum-global-color-gray-300)'
+                                        borderLeft: '2px solid var(--spectrum-global-color-gray-300)',
                                     }}>
                                         {group.fields.map((field) => {
                                             const isComplete = isFieldComplete(field);
@@ -980,7 +980,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                                                         justifyContent: 'space-between',
                                                         textAlign: 'left',
                                                         transition: 'all 0.2s',
-                                                        borderRadius: '4px'
+                                                        borderRadius: '4px',
                                                     }}
                                                     onMouseEnter={(e) => {
                                                         if (!isActiveField) {

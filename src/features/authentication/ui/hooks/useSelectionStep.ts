@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { vscode } from '@/webview-ui/shared/vscode-api';
 import { useDebouncedLoading } from './useDebouncedLoading';
 import { WizardState } from '@/webview-ui/shared/types';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 
 /**
  * Configuration options for the selection step hook
@@ -137,7 +137,7 @@ export interface UseSelectionStepResult<T extends { id: string }> {
  * ```
  */
 export function useSelectionStep<T extends { id: string }>(
-  options: UseSelectionStepOptions<T>
+  options: UseSelectionStepOptions<T>,
 ): UseSelectionStepResult<T> {
   const {
     cacheKey,
@@ -152,7 +152,7 @@ export function useSelectionStep<T extends { id: string }>(
     onSelect,
     autoLoad = true,
     searchFields = [],
-    validateBeforeLoad
+    validateBeforeLoad,
   } = options;
 
   // Get cached items from wizard state
@@ -166,7 +166,7 @@ export function useSelectionStep<T extends { id: string }>(
   const [searchQuery, setSearchQuery] = useState(
     searchFilterKey && typeof state[searchFilterKey] === 'string'
       ? (state[searchFilterKey] as string)
-      : ''
+      : '',
   );
 
   // Debounce loading state: only show loading UI if operation takes >300ms
@@ -265,7 +265,7 @@ export function useSelectionStep<T extends { id: string }>(
     selectedItem,
     autoSelectSingle,
     autoSelectCustom,
-    onSelect
+    onSelect,
   ]);
 
   // Select an item
@@ -289,7 +289,7 @@ export function useSelectionStep<T extends { id: string }>(
           return false;
         }
         return String(value).toLowerCase().includes(query);
-      })
+      }),
     );
   }, [items, searchQuery, searchFields]);
 
@@ -305,6 +305,6 @@ export function useSelectionStep<T extends { id: string }>(
     setSearchQuery,
     load,
     refresh,
-    selectItem
+    selectItem,
   };
 }

@@ -1,19 +1,19 @@
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import {
     Heading,
     Text,
     Flex,
     Form,
     Button,
-    View
+    View,
 } from '@adobe/react-spectrum';
-import { ComponentEnvVar, ComponentConfigs, DemoProject } from '@/webview-ui/shared/types';
-import { vscode } from '@/webview-ui/shared/vscode-api';
-import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
-import { useDebouncedValue } from '@/webview-ui/shared/hooks';
-import { cn } from '@/webview-ui/shared/utils/classNames';
-import { FormField, ConfigSection } from '@/webview-ui/shared/components/molecules';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { NavigationPanel, NavigationSection, NavigationField } from './components/NavigationPanel';
+import { FormField, ConfigSection } from '@/webview-ui/shared/components/molecules';
+import { useDebouncedValue } from '@/webview-ui/shared/hooks';
+import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
+import { ComponentEnvVar, ComponentConfigs, DemoProject } from '@/webview-ui/shared/types';
+import { cn } from '@/webview-ui/shared/utils/classNames';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 
 interface ComponentsData {
     frontends?: ComponentData[];
@@ -157,7 +157,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     ...(componentsData.backends || []),
                     ...(componentsData.dependencies || []),
                     ...(componentsData.integrations || []),
-                    ...(componentsData.appBuilder || [])
+                    ...(componentsData.appBuilder || []),
                 ];
 
                 const componentDef = allComponentDefs.find((c: ComponentData) => c.id === id);
@@ -168,7 +168,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         components.push({
                             id: componentDef.id,
                             data: componentDef,
-                            type: instance.type.charAt(0).toUpperCase() + instance.type.slice(1)
+                            type: instance.type.charAt(0).toUpperCase() + instance.type.slice(1),
                         });
                     }
                 }
@@ -191,7 +191,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         fieldMap.set(envVarKey, {
                             ...envVarDef,
                             key: envVarKey,
-                            componentIds: [id]
+                            componentIds: [id],
                         });
                     } else {
                         const existing = fieldMap.get(envVarKey)!;
@@ -209,7 +209,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         fieldMap.set(envVarKey, {
                             ...envVarDef,
                             key: envVarKey,
-                            componentIds: [id]
+                            componentIds: [id],
                         });
                     } else {
                         const existing = fieldMap.get(envVarKey)!;
@@ -246,8 +246,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     'ADOBE_COMMERCE_STORE_VIEW_CODE',
                     'ADOBE_COMMERCE_CUSTOMER_GROUP',
                     'ADOBE_COMMERCE_ADMIN_USERNAME',
-                    'ADOBE_COMMERCE_ADMIN_PASSWORD'
-                ]
+                    'ADOBE_COMMERCE_ADMIN_PASSWORD',
+                ],
             },
             {
                 id: 'catalog-service',
@@ -256,14 +256,14 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 fieldOrder: [
                     'ADOBE_CATALOG_SERVICE_ENDPOINT',
                     'ADOBE_COMMERCE_ENVIRONMENT_ID',
-                    'ADOBE_CATALOG_API_KEY'
-                ]
+                    'ADOBE_CATALOG_API_KEY',
+                ],
             },
             { id: 'mesh', label: 'API Mesh', order: 3 },
             { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
             { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
             { id: 'experience-platform', label: 'Experience Platform', order: 6 },
-            { id: 'other', label: 'Additional Settings', order: 99 }
+            { id: 'other', label: 'Additional Settings', order: 99 },
         ];
 
         const orderedGroups: ServiceGroup[] = serviceGroupDefs
@@ -283,7 +283,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 return {
                     id: def.id,
                     label: def.label,
-                    fields: sortedFields
+                    fields: sortedFields,
                 };
             })
             .filter(group => group.fields.length > 0)
@@ -307,7 +307,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
             const fieldId = fieldWrapper.id.replace('field-', '');
             const section = serviceGroups.find(group =>
-                group.fields.some(f => f.key === fieldId)
+                group.fields.some(f => f.key === fieldId),
             );
 
             if (!section) return;
@@ -390,7 +390,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
                 if (field.required && !isDeferredField) {
                     const hasValue = field.componentIds.some(compId =>
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
 
                     if (!hasValue) {
@@ -400,7 +400,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
                 if (field.type === 'url') {
                     const firstComponentWithValue = field.componentIds.find(compId =>
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
 
                     if (firstComponentWithValue) {
@@ -415,7 +415,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
                 if (field.validation?.pattern) {
                     const firstComponentWithValue = field.componentIds.find(compId =>
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
 
                     if (firstComponentWithValue) {
@@ -499,11 +499,11 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 fields: group.fields.map(f => ({
                     key: f.key,
                     label: f.label,
-                    isComplete: isFieldComplete(f)
+                    isComplete: isFieldComplete(f),
                 })),
                 isComplete: requiredFields.length === 0 || completedFields.length === requiredFields.length,
                 completedCount: completedFields.length,
-                totalCount: requiredFields.length
+                totalCount: requiredFields.length,
             };
         });
     }, [serviceGroups, isFieldComplete]);
@@ -592,7 +592,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         display: 'flex',
                         flexDirection: 'column',
                         minWidth: 0,
-                        overflow: 'hidden'
+                        overflow: 'hidden',
                     }}>
                         <Heading level={2} marginBottom="size-300">Configuration Settings</Heading>
                         <Text marginBottom="size-300" UNSAFE_className="text-gray-700">

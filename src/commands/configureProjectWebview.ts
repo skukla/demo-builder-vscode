@@ -1,17 +1,17 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Project } from '@/types';
-import { parseJSON } from '@/types/typeGuards';
-import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
-import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { WebviewCommunicationManager } from '@/core/communication';
-import { BaseWebviewCommand } from '@/core/base';
 import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
+import { BaseWebviewCommand } from '@/core/base';
+import { WebviewCommunicationManager } from '@/core/communication';
 import {
     validateProjectPath,
     sanitizeErrorForLogging,
 } from '@/core/validation/securityValidation';
+import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
+import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
+import { Project } from '@/types';
+import { parseJSON } from '@/types/typeGuards';
 
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;

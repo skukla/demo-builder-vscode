@@ -7,8 +7,8 @@
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { toError } from '@/types/typeGuards';
 import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { toError } from '@/types/typeGuards';
 
 /**
  * Handler: delete-api-mesh

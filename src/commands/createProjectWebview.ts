@@ -1,16 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
-import { parseJSON } from '@/types/typeGuards';
-import { AuthenticationService } from '@/features/authentication';
-import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
-import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
-import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import { WebviewCommunicationManager } from '@/core/communication';
-import { BaseWebviewCommand } from '@/core/base';
 // Prerequisites checking is handled by PrerequisitesManager
-import { ComponentHandler } from '@/features/components/handlers/componentHandler';
 // Extracted helper functions
 import { HandlerContext, SharedState } from './handlers/HandlerContext';
 import { HandlerRegistry } from './handlers/HandlerRegistry';
@@ -21,6 +12,15 @@ import {
     getEndpoint as getEndpointHelper,
     deployMeshComponent as deployMeshHelper,
 } from './helpers';
+import { BaseWebviewCommand } from '@/core/base';
+import { WebviewCommunicationManager } from '@/core/communication';
+import { ServiceLocator } from '@/core/di';
+import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
+import { ProgressUnifier } from '@/core/utils/progressUnifier';
+import { AuthenticationService } from '@/features/authentication';
+import { ComponentHandler } from '@/features/components/handlers/componentHandler';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import { parseJSON } from '@/types/typeGuards';
 
 // Type definitions for createProjectWebview
 interface WizardStep {
@@ -345,13 +345,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                         });
                     };
                     const context = this.createHandlerContext();
-                    return await this.handlerRegistry.handle(context, messageType, { ...(data as object), onProgress });
+                    return this.handlerRegistry.handle(context, messageType, { ...(data as object), onProgress });
                 });
             } else {
                 // Standard handler registration (all other handlers)
                 comm.on(messageType, async (data: unknown) => {
                     const context = this.createHandlerContext();
-                    return await this.handlerRegistry.handle(context, messageType, data);
+                    return this.handlerRegistry.handle(context, messageType, data);
                 });
             }
         }
