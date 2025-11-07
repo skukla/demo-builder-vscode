@@ -240,69 +240,79 @@ export class DiagnosticsCommand {
         adobe.version = aioVersion.output;
 
         if (adobe.installed) {
-            // Check authentication status
-            const authCheck = await this.checkCommand('aio config get ims.contexts.aio-cli-plugin-auth');
-            adobe.authConfigured = authCheck.installed && !!authCheck.output && authCheck.output.length > 0;
-
-            if (adobe.authConfigured && authCheck.output) {
-                // Try to parse the auth config
-                try {
-                    const authData = parseJSON<{ access_token?: string; refresh_token?: string; expires_in?: string }>(authCheck.output);
-                    if (!authData) {
-                        throw new Error('Invalid auth data format');
-                    }
-                    adobe.hasToken = !!authData.access_token;
-                    adobe.hasRefreshToken = !!authData.refresh_token;
-                    adobe.expiresIn = authData.expires_in;
-
-                    // Check if token is expired
-                    if (adobe.expiresIn) {
-                        const expiryTime = parseInt(adobe.expiresIn);
-                        const now = Date.now();
-                        adobe.tokenExpired = expiryTime < now;
-                        adobe.expiryDate = new Date(expiryTime).toISOString();
-                    }
-                } catch (e) {
-                    adobe.authParseError = (e as Error).message;
-                    this.logger.debug('Failed to parse auth config', authCheck.output);
-                }
-            }
-
-            // Check current context using 'aio console where'
-            const whereCheck = await this.checkCommand('aio console where --json');
-            if (whereCheck.installed && whereCheck.output) {
-                try {
-                    const context = parseJSON<{ org?: { name?: string }; project?: { name?: string }; workspace?: { name?: string } }>(whereCheck.output);
-                    if (!context) {
-                        throw new Error('Invalid context format');
-                    }
-                    adobe.currentContext = {
-                        org: context.org?.name || 'Not selected',
-                        project: context.project?.name || 'Not selected',
-                        workspace: context.workspace?.name || 'Not selected',
-                    };
-                } catch {
-                    adobe.currentContext = whereCheck.output;
-                }
-            }
-
-            // Try to list organizations
-            const orgCheck = await this.checkCommand('aio console org list --json');
-            adobe.canListOrgs = orgCheck.installed && orgCheck.output !== undefined && !orgCheck.output.includes('Error');
-            if (adobe.canListOrgs && orgCheck.output) {
-                try {
-                    const orgs = parseJSON<{ id?: string; name?: string }[]>(orgCheck.output);
-                    if (!orgs) {
-                        throw new Error('Invalid orgs format');
-                    }
-                    adobe.organizationCount = Array.isArray(orgs) ? orgs.length : 0;
-                } catch {
-                    // Fallback to raw output
-                }
-            }
+            await this.checkAuthenticationStatus(adobe);
+            await this.checkCurrentContext(adobe);
+            await this.checkOrganizations(adobe);
         }
 
         return adobe;
+    }
+
+    private async checkAuthenticationStatus(adobe: AdobeCLIInfo): Promise<void> {
+        const authCheck = await this.checkCommand('aio config get ims.contexts.aio-cli-plugin-auth');
+        adobe.authConfigured = authCheck.installed && !!authCheck.output && authCheck.output.length > 0;
+
+        if (adobe.authConfigured && authCheck.output) {
+            this.parseAuthConfig(adobe, authCheck.output);
+        }
+    }
+
+    private parseAuthConfig(adobe: AdobeCLIInfo, output: string): void {
+        try {
+            const authData = parseJSON<{ access_token?: string; refresh_token?: string; expires_in?: string }>(output);
+            if (!authData) {
+                throw new Error('Invalid auth data format');
+            }
+            adobe.hasToken = !!authData.access_token;
+            adobe.hasRefreshToken = !!authData.refresh_token;
+            adobe.expiresIn = authData.expires_in;
+
+            if (adobe.expiresIn) {
+                const expiryTime = parseInt(adobe.expiresIn);
+                const now = Date.now();
+                adobe.tokenExpired = expiryTime < now;
+                adobe.expiryDate = new Date(expiryTime).toISOString();
+            }
+        } catch (e) {
+            adobe.authParseError = (e as Error).message;
+            this.logger.debug('Failed to parse auth config', output);
+        }
+    }
+
+    private async checkCurrentContext(adobe: AdobeCLIInfo): Promise<void> {
+        const whereCheck = await this.checkCommand('aio console where --json');
+        if (whereCheck.installed && whereCheck.output) {
+            try {
+                const context = parseJSON<{ org?: { name?: string }; project?: { name?: string }; workspace?: { name?: string } }>(whereCheck.output);
+                if (!context) {
+                    throw new Error('Invalid context format');
+                }
+                adobe.currentContext = {
+                    org: context.org?.name || 'Not selected',
+                    project: context.project?.name || 'Not selected',
+                    workspace: context.workspace?.name || 'Not selected',
+                };
+            } catch {
+                adobe.currentContext = whereCheck.output;
+            }
+        }
+    }
+
+    private async checkOrganizations(adobe: AdobeCLIInfo): Promise<void> {
+        const orgCheck = await this.checkCommand('aio console org list --json');
+        adobe.canListOrgs = orgCheck.installed && orgCheck.output !== undefined && !orgCheck.output.includes('Error');
+
+        if (adobe.canListOrgs && orgCheck.output) {
+            try {
+                const orgs = parseJSON<{ id?: string; name?: string }[]>(orgCheck.output);
+                if (!orgs) {
+                    throw new Error('Invalid orgs format');
+                }
+                adobe.organizationCount = Array.isArray(orgs) ? orgs.length : 0;
+            } catch {
+                // Fallback to raw output
+            }
+        }
     }
 
     private getEnvironment(): EnvironmentInfo {
