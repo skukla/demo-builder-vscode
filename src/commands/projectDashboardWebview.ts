@@ -37,6 +37,10 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     protected async getWebviewContent(): Promise<string> {
+        if (!this.panel) {
+            throw new Error('Panel not initialized');
+        }
+
         const nonce = this.getNonce();
 
         // Get bundle URI
@@ -46,14 +50,14 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             'webview',
             'dashboard-bundle.js',
         );
-        const bundleUri = this.panel!.webview.asWebviewUri(bundlePath);
+        const bundleUri = this.panel.webview.asWebviewUri(bundlePath);
 
         return `<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${this.panel!.webview.cspSource} 'unsafe-inline'; font-src ${this.panel!.webview.cspSource}; img-src ${this.panel!.webview.cspSource} https: data:; script-src 'nonce-${nonce}';">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${this.panel.webview.cspSource} 'unsafe-inline'; font-src ${this.panel.webview.cspSource}; img-src ${this.panel.webview.cspSource} https: data:; script-src 'nonce-${nonce}';">
             <title>Project Dashboard</title>
         </head>
         <body>

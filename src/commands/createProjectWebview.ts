@@ -151,23 +151,27 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     protected async getWebviewContent(): Promise<string> {
+        if (!this.panel) {
+            throw new Error('Panel not initialized');
+        }
+
         const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
-        
+
         // Get URI for bundle
-        const bundleUri = this.panel!.webview.asWebviewUri(
+        const bundleUri = this.panel.webview.asWebviewUri(
             vscode.Uri.file(path.join(webviewPath, 'wizard-bundle.js')),
         );
-        
+
         const nonce = this.getNonce();
         const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
-        
+
         // Build the HTML content
         return `<!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' 'unsafe-eval'; style-src 'unsafe-inline' ${this.panel!.webview.cspSource}; img-src data: https:; font-src data:;">
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'nonce-${nonce}' 'unsafe-eval'; style-src 'unsafe-inline' ${this.panel.webview.cspSource}; img-src data: https:; font-src data:;">
             <title>Adobe Demo Builder</title>
             <style>
                 :root {

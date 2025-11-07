@@ -82,8 +82,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     protected async getWebviewContent(): Promise<string> {
+        if (!this.panel) {
+            throw new Error('Panel not initialized');
+        }
+
         const nonce = this.getNonce();
-        const scriptUri = this.panel!.webview.asWebviewUri(
+        const scriptUri = this.panel.webview.asWebviewUri(
             vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'webview', 'configure-bundle.js')),
         );
 
@@ -92,7 +96,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${this.panel!.webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${this.panel!.webview.cspSource} https: data:; font-src ${this.panel!.webview.cspSource};">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${this.panel.webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; img-src ${this.panel.webview.cspSource} https: data:; font-src ${this.panel.webview.cspSource};">
     <title>Configure Project</title>
 </head>
 <body>
