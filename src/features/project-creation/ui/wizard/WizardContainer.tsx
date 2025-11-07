@@ -1,25 +1,25 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
     View,
     Flex,
     Heading,
     Button,
-    Text
+    Text,
 } from '@adobe/react-spectrum';
-import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/webview-ui/shared/types';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { TimelineNav } from './TimelineNav';
-import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
-import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
-import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
-import { ApiMeshStep } from '@/features/mesh/ui/steps/ApiMeshStep';
 import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
-import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
+import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
+import { ApiMeshStep } from '@/features/mesh/ui/steps/ApiMeshStep';
+import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
+import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
+import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/webview-ui/shared/types';
 import { cn } from '@/webview-ui/shared/utils/classNames';
+import { vscode } from '@/webview-ui/shared/vscode-api';
 
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;
@@ -27,21 +27,15 @@ interface WizardContainerProps {
 }
 
 export function WizardContainer({ componentDefaults, wizardSteps }: WizardContainerProps) {
-    // Configuration is required - no fallback
-    if (!wizardSteps || wizardSteps.length === 0) {
-        return (
-            <View padding="size-400" height="100vh">
-                <Heading level={2}>Configuration Error</Heading>
-                <Text>Wizard configuration not loaded. Please restart the extension.</Text>
-            </View>
-        );
-    }
-    
     // Use the provided configuration, filtering out disabled steps
-    const WIZARD_STEPS = wizardSteps
-        .filter(step => step.enabled)
-        .map(step => ({ id: step.id as WizardStep, name: step.name }));
-    
+    // NOTE: Must filter before using in hooks to avoid conditional hook calls
+    // Wrapped in useMemo to prevent changing on every render
+    const WIZARD_STEPS = useMemo(() => {
+        return (wizardSteps && wizardSteps.length > 0)
+            ? wizardSteps.filter(step => step.enabled).map(step => ({ id: step.id as WizardStep, name: step.name }))
+            : [];
+    }, [wizardSteps]);
+
     const [state, setState] = useState<WizardState>({
         currentStep: 'welcome',
         projectName: '',
@@ -49,13 +43,12 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         componentConfigs: {},
         adobeAuth: {
             isAuthenticated: undefined,  // Start as undefined to indicate not yet checked
-            isChecking: false  // Allow the check to proceed
+            isChecking: false,  // Allow the check to proceed
         },
-        components: componentDefaults || undefined
+        components: componentDefaults || undefined,
     });
 
     const [canProceed, setCanProceed] = useState(false);
-    const [feedback, setFeedback] = useState<FeedbackMessage | null>(null);
     const [completedSteps, setCompletedSteps] = useState<WizardStep[]>([]);
     const [highestCompletedStepIndex, setHighestCompletedStepIndex] = useState(-1);
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
@@ -66,8 +59,6 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     // Listen for feedback messages from extension
     useEffect(() => {
         const unsubscribe = vscode.onMessage('feedback', (message: FeedbackMessage) => {
-            setFeedback(message);
-            
             // Update creation progress if in project-creation step
             if (state.currentStep === 'project-creation' && state.creationProgress) {
                 setState(prev => ({
@@ -80,8 +71,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                         logs: message.log 
                             ? [...prev.creationProgress!.logs, message.log]
                             : prev.creationProgress!.logs,
-                        error: message.error
-                    }
+                        error: message.error,
+                    },
                 }));
             }
         });
@@ -108,8 +99,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                     progress: data.progress || 0,
                     message: data.message || '',
                     logs: data.logs || [],
-                    error: data.error
-                }
+                    error: data.error,
+                },
             }));
         });
 
@@ -135,7 +126,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
     const getCurrentStepIndex = useCallback(() => {
         return WIZARD_STEPS.findIndex(step => step.id === state.currentStep);
-    }, [state.currentStep]);
+    }, [state.currentStep, WIZARD_STEPS]);
 
     // Internal navigation function used by both timeline and Continue button
     const navigateToStep = useCallback((step: WizardStep, targetIndex: number, currentIndex: number) => {
@@ -202,7 +193,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 setIsTransitioning(false);
             }, 300);
         }
-    }, []);
+    }, [WIZARD_STEPS]);
 
     // Timeline navigation (backward only)
     const goToStepViaTimeline = useCallback((step: WizardStep) => {
@@ -218,7 +209,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
         // Use internal navigation function
         navigateToStep(step, targetIndex, currentIndex);
-    }, [getCurrentStepIndex, navigateToStep]);
+    }, [getCurrentStepIndex, navigateToStep, WIZARD_STEPS]);
 
     const goNext = useCallback(async () => {
         const currentIndex = getCurrentStepIndex();
@@ -265,17 +256,17 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                             projectId: state.adobeProject?.id,
                             projectName: state.adobeProject?.name,
                             workspace: state.adobeWorkspace?.id,
-                            workspaceName: state.adobeWorkspace?.name
+                            workspaceName: state.adobeWorkspace?.name,
                         },
                         components: {
                             frontend: state.components?.frontend,
                             backend: state.components?.backend,
                             dependencies: state.components?.dependencies || [],
                             integrations: state.components?.integrations || [],
-                            appBuilderApps: state.components?.appBuilderApps || []
+                            appBuilderApps: state.components?.appBuilderApps || [],
                         },
                         apiMesh: state.apiMesh,
-                        componentConfigs: state.componentConfigs
+                        componentConfigs: state.componentConfigs,
                     };
                     
                     // Send to backend - don't await, let it run asynchronously
@@ -297,17 +288,14 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
             } catch (error) {
                 console.error('Failed to proceed to next step:', error);
-                setFeedback({
-                    type: 'error',
-                    message: error instanceof Error ? error.message : 'Failed to proceed. Please try again.'
-                });
+                // TODO: Display error to user via state.creationProgress or separate error state
                 // Clear loading state on error
                 setIsConfirmingSelection(false);
             }
         } else {
             console.log('Already at last step');
         }
-    }, [state.currentStep, state.adobeProject, state.adobeWorkspace, completedSteps, canProceed, getCurrentStepIndex, navigateToStep]);
+    }, [state.currentStep, state.adobeProject, state.adobeWorkspace, state, completedSteps, highestCompletedStepIndex, getCurrentStepIndex, navigateToStep, WIZARD_STEPS]);
 
     const handleCancel = useCallback(() => {
         vscode.postMessage('cancel');
@@ -322,7 +310,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             const targetIndex = currentIndex - 1;
             navigateToStep(WIZARD_STEPS[targetIndex].id, targetIndex, currentIndex);
         }
-    }, [getCurrentStepIndex, navigateToStep, handleCancel]);
+    }, [getCurrentStepIndex, navigateToStep, handleCancel, WIZARD_STEPS]);
 
     const updateState = useCallback((updates: Partial<WizardState>) => {
         setState(prev => ({ ...prev, ...updates }));
@@ -338,7 +326,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                     'input:not([disabled]):not([tabindex="-1"]), ' +
                     'select:not([disabled]):not([tabindex="-1"]), ' +
                     'textarea:not([disabled]):not([tabindex="-1"]), ' +
-                    '[tabindex]:not([tabindex="-1"]):not([tabindex="0"])'
+                    '[tabindex]:not([tabindex="-1"]):not([tabindex="0"])',
                 );
 
                 const focusableArray = Array.from(focusableElements);
@@ -374,7 +362,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             onNext: goNext,
             onBack: goBack,
             setCanProceed,
-            componentsData
+            componentsData,
         };
 
         // Calculate required Node versions based on selected components
@@ -425,8 +413,17 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         }
     };
 
+    // Configuration error check - AFTER all hooks to comply with Rules of Hooks
+    if (WIZARD_STEPS.length === 0) {
+        return (
+            <View padding="size-400" height="100vh">
+                <Heading level={2}>Configuration Error</Heading>
+                <Text>Wizard configuration not loaded. Please restart the extension.</Text>
+            </View>
+        );
+    }
+
     const currentStepIndex = getCurrentStepIndex();
-    const isFirstStep = currentStepIndex === 0;
     const isLastStep = state.currentStep === 'project-creation';
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
 
@@ -479,7 +476,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                                 'step-content',
                                 animationDirection,
                                 isTransitioning && 'transitioning',
-                                'transition-all'
+                                'transition-all',
                             )}
                         >
                             {renderStep()}
@@ -498,7 +495,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 zIndex: 1000,
-                                borderRadius: '4px'
+                                borderRadius: '4px',
                             }}>
                                 <div style={{
                                     backgroundColor: 'var(--spectrum-global-color-gray-50)',
@@ -507,7 +504,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    justifyContent: 'center'
+                                    justifyContent: 'center',
                                 }}>
                                     <div style={{
                                         width: '32px',
@@ -515,8 +512,8 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                                         borderRadius: '50%',
                                         border: '3px solid var(--spectrum-global-color-blue-400)',
                                         borderTopColor: 'transparent',
-                                        animation: 'spin 1s linear infinite'
-                                    }}></div>
+                                        animation: 'spin 1s linear infinite',
+                                    }} />
                                 </div>
                             </div>
                         )}
@@ -549,10 +546,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                                         </Button>
                                         <Button
                                             variant="accent"
-                                            onPress={() => {
-                                                console.log('Continue button clicked!');
-                                                goNext();
-                                            }}
+                                            onPress={goNext}
                                             isDisabled={!canProceed || isConfirmingSelection}
                                         >
                                             {isConfirmingSelection
