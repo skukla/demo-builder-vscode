@@ -1,191 +1,505 @@
-/**
- * Tests for ComponentSelectionStep - Pattern B (request-response)
- *
- * Tests verify that the component fetches data on mount using vscode.request()
- * instead of receiving it as props, following the request-response pattern.
- */
-
+import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import '@testing-library/jest-dom';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
-import { vscode } from '@/webview-ui/shared/vscode-api';
-import { createMockVSCode, mockSuccessfulRequest, mockFailedRequest } from '../../../../utils/webviewMocks';
+import { WizardState } from '@/types/webview';
+import '@testing-library/jest-dom';
 
-// Mock vscode API (use factory function to avoid hoisting issues)
-jest.mock('@/core/ui/vscode-api', () => ({
-    vscode: {
-        request: jest.fn(),
-        postMessage: jest.fn(),
-        onMessage: jest.fn(() => () => {}),
-        ready: jest.fn(() => Promise.resolve()),
+// Mock WebviewClient
+const mockPostMessage = jest.fn();
+const mockOnMessage = jest.fn().mockReturnValue(jest.fn());
+
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
+    webviewClient: {
+        postMessage: (...args: any[]) => mockPostMessage(...args),
+        onMessage: (...args: any[]) => mockOnMessage(...args),
     },
 }));
 
-describe('ComponentSelectionStep - Pattern B (request-response)', () => {
-    let mockVscode: ReturnType<typeof createMockVSCode>;
-
-    beforeEach(() => {
-        mockVscode = vscode as any;
-        jest.clearAllMocks();
-    });
-
-    const mockState = {
-        components: {
-            frontend: '',
-            backend: '',
-            dependencies: [],
-            services: [],
-            integrations: [],
-            appBuilderApps: [],
-        },
-    } as any;
-
+describe('ComponentSelectionStep', () => {
     const mockUpdateState = jest.fn();
     const mockSetCanProceed = jest.fn();
 
-    describe('Data fetching on mount', () => {
-        it('should fetch components data on mount using vscode.request()', async () => {
-            // Arrange: Mock successful component data response
-            const mockComponentsData = {
-                frontends: [
-                    { id: 'f1', name: 'Frontend 1', description: 'Frontend description' },
-                ],
-                backends: [
-                    { id: 'b1', name: 'Backend 1', description: 'Backend description' },
-                ],
-                integrations: [],
-                appBuilder: [],
-                dependencies: [],
-                envVars: {},
-            };
+    const baseState: Partial<WizardState> = {
+        currentStep: 'component-selection',
+        components: undefined,
+    };
 
-            mockSuccessfulRequest(mockVscode, mockComponentsData);
+    const mockComponentsData = {
+        frontends: [
+            { id: 'citisignal-nextjs', name: 'Headless CitiSignal', description: 'NextJS storefront' }
+        ],
+        backends: [
+            { id: 'adobe-commerce-paas', name: 'Adobe Commerce PaaS', description: 'Commerce DSN' }
+        ],
+        integrations: [
+            { id: 'target', name: 'Target', description: 'Adobe Target' }
+        ],
+        appBuilder: [
+            { id: 'integration-service', name: 'Integration Service', description: 'Custom service' }
+        ]
+    };
 
-            // Act: Render component with Provider wrapper
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockOnMessage.mockReturnValue(jest.fn());
+    });
+
+    describe('Happy Path - Component Selection', () => {
+        it('should render with available components', () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ComponentSelectionStep
-                        state={mockState}
+                        state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
                     />
                 </Provider>
             );
 
-            // Assert: Verify vscode.request was called
-            await waitFor(() => {
-                expect(mockVscode.request).toHaveBeenCalledWith('get-components-data');
-            });
-
-            // Verify component options are rendered from fetched data
-            await waitFor(() => {
-                expect(screen.getByText('Frontend 1')).toBeInTheDocument();
-            });
+            expect(screen.getByText('Frontend')).toBeInTheDocument();
+            expect(screen.getByText('Backend')).toBeInTheDocument();
+            expect(screen.getByText('External Systems')).toBeInTheDocument();
+            expect(screen.getByText('App Builder Apps')).toBeInTheDocument();
         });
 
-        it('should show loading state while fetching components', async () => {
-            // Arrange: Mock delayed response to keep loading state visible
-            const mockComponentsData = {
-                frontends: [],
-                backends: [],
-                integrations: [],
-                appBuilder: [],
-                dependencies: [],
-                envVars: {},
-            };
-
-            // Create a promise that won't resolve immediately
-            let resolveRequest: (value: any) => void;
-            const requestPromise = new Promise((resolve) => {
-                resolveRequest = resolve;
-            });
-
-            (mockVscode.request as jest.Mock).mockReturnValue(requestPromise);
-
-            // Act: Render component with Provider wrapper
+        it('should allow frontend selection', () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ComponentSelectionStep
-                        state={mockState}
+                        state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
                     />
                 </Provider>
             );
 
-            // Assert: Verify loading state is shown
-            expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
-
-            // Resolve the request
-            resolveRequest!(mockComponentsData);
-
-            // Verify loading state is removed
-            await waitFor(() => {
-                expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
-            });
+            const frontendPicker = screen.getByLabelText('Select frontend system');
+            expect(frontendPicker).toBeInTheDocument();
         });
 
-        it('should handle error state and empty component list', async () => {
-            // Arrange: Mock failed request
-            const error = new Error('Failed to fetch components');
-            mockFailedRequest(mockVscode, error);
-
-            // Act: Render component with Provider wrapper
+        it('should allow backend selection', () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ComponentSelectionStep
-                        state={mockState}
+                        state={baseState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
                     />
                 </Provider>
             );
 
-            // Assert: Verify error message is displayed
-            await waitFor(() => {
-                expect(screen.getByText(/failed to load components/i)).toBeInTheDocument();
-            });
+            const backendPicker = screen.getByLabelText('Select backend system');
+            expect(backendPicker).toBeInTheDocument();
+        });
 
-            // Test empty list case
-            jest.clearAllMocks();
-            const emptyData = {
-                frontends: [],
-                backends: [],
-                integrations: [],
-                appBuilder: [],
-                dependencies: [],
-                envVars: {},
+        it('should enable continue when frontend and backend selected', () => {
+            const stateWithSelections = {
+                ...baseState,
+                components: {
+                    frontend: 'citisignal-nextjs',
+                    backend: 'adobe-commerce-paas',
+                    dependencies: ['commerce-mesh'],
+                    services: ['catalog-service', 'live-search'],
+                    integrations: [],
+                    appBuilderApps: []
+                }
             };
-            mockSuccessfulRequest(mockVscode, emptyData);
 
-            // Re-render with empty data and Provider wrapper
+            render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={stateWithSelections as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            expect(mockSetCanProceed).toHaveBeenCalledWith(true);
+        });
+
+        it('should update state when selections change', () => {
+            const stateWithSelections = {
+                ...baseState,
+                components: {
+                    frontend: 'citisignal-nextjs',
+                    backend: 'adobe-commerce-paas',
+                    dependencies: ['commerce-mesh'],
+                    services: ['catalog-service', 'live-search'],
+                    integrations: [],
+                    appBuilderApps: []
+                }
+            };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={stateWithSelections as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            expect(mockUpdateState).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    components: expect.objectContaining({
+                        frontend: 'citisignal-nextjs',
+                        backend: 'adobe-commerce-paas'
+                    })
+                })
+            );
+        });
+    });
+
+    describe('Required Dependencies', () => {
+        it('should mark required dependencies as checked and disabled', () => {
+            const stateWithFrontend = {
+                ...baseState,
+                components: {
+                    frontend: 'citisignal-nextjs',
+                    backend: '',
+                    dependencies: ['commerce-mesh'],
+                    services: [],
+                    integrations: [],
+                    appBuilderApps: []
+                }
+            };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={stateWithFrontend as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            const meshCheckbox = screen.getByLabelText('API Mesh');
+            expect(meshCheckbox).toBeChecked();
+            expect(meshCheckbox).toBeDisabled();
+        });
+
+        it('should auto-select required dependencies when frontend selected', () => {
+            const stateInitial = {
+                ...baseState,
+                components: {
+                    frontend: '',
+                    backend: '',
+                    dependencies: [],
+                    services: [],
+                    integrations: [],
+                    appBuilderApps: []
+                }
+            };
+
             const { rerender } = render(
                 <Provider theme={defaultTheme}>
                     <ComponentSelectionStep
-                        state={mockState}
+                        state={stateInitial as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
                     />
                 </Provider>
             );
+
+            // Simulate frontend selection
+            const stateWithFrontend = {
+                ...baseState,
+                components: {
+                    frontend: 'citisignal-nextjs',
+                    backend: '',
+                    dependencies: ['commerce-mesh'],
+                    services: [],
+                    integrations: [],
+                    appBuilderApps: []
+                }
+            };
 
             rerender(
                 <Provider theme={defaultTheme}>
                     <ComponentSelectionStep
-                        state={mockState}
+                        state={stateWithFrontend as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
                     />
                 </Provider>
             );
 
-            // Verify empty state handling (pickers should still be rendered but empty)
-            await waitFor(() => {
-                expect(screen.getByLabelText('Select frontend system')).toBeInTheDocument();
-                expect(screen.getByLabelText('Select backend system')).toBeInTheDocument();
-            });
+            expect(mockUpdateState).toHaveBeenCalled();
+        });
+
+        it('should auto-select required services when backend selected', () => {
+            const stateWithBackend = {
+                ...baseState,
+                components: {
+                    frontend: '',
+                    backend: 'adobe-commerce-paas',
+                    dependencies: [],
+                    services: ['catalog-service', 'live-search'],
+                    integrations: [],
+                    appBuilderApps: []
+                }
+            };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={stateWithBackend as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            const catalogCheckbox = screen.getByLabelText('Catalog Service');
+            const liveSearchCheckbox = screen.getByLabelText('Live Search');
+
+            expect(catalogCheckbox).toBeChecked();
+            expect(catalogCheckbox).toBeDisabled();
+            expect(liveSearchCheckbox).toBeChecked();
+            expect(liveSearchCheckbox).toBeDisabled();
+        });
+    });
+
+    describe('Optional Components', () => {
+        it('should allow toggling optional dependencies', () => {
+            const stateWithFrontend = {
+                ...baseState,
+                components: {
+                    frontend: 'citisignal-nextjs',
+                    backend: '',
+                    dependencies: ['commerce-mesh'],
+                    services: [],
+                    integrations: [],
+                    appBuilderApps: []
+                }
+            };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={stateWithFrontend as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            const demoInspectorCheckbox = screen.getByLabelText('Demo Inspector');
+            expect(demoInspectorCheckbox).not.toBeDisabled();
+        });
+
+        it('should allow selecting external integrations', () => {
+            render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={baseState as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            const targetCheckbox = screen.getByLabelText('Target');
+            expect(targetCheckbox).toBeInTheDocument();
+            expect(targetCheckbox).not.toBeChecked();
+        });
+
+        it('should allow selecting app builder apps', () => {
+            render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={baseState as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            const appCheckbox = screen.getByLabelText('Integration Service');
+            expect(appCheckbox).toBeInTheDocument();
+            expect(appCheckbox).not.toBeChecked();
+        });
+    });
+
+    describe('Backend Communication', () => {
+        it('should send component selection to backend', () => {
+            const stateWithSelections = {
+                ...baseState,
+                components: {
+                    frontend: 'citisignal-nextjs',
+                    backend: 'adobe-commerce-paas',
+                    dependencies: ['commerce-mesh'],
+                    services: ['catalog-service', 'live-search'],
+                    integrations: [],
+                    appBuilderApps: []
+                }
+            };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={stateWithSelections as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            expect(mockPostMessage).toHaveBeenCalledWith(
+                'update-component-selection',
+                expect.objectContaining({
+                    frontend: 'citisignal-nextjs',
+                    backend: 'adobe-commerce-paas'
+                })
+            );
+        });
+    });
+
+    describe('Validation', () => {
+        it('should not allow proceed without frontend', () => {
+            const stateNoFrontend = {
+                ...baseState,
+                components: {
+                    frontend: '',
+                    backend: 'adobe-commerce-paas',
+                    dependencies: [],
+                    services: ['catalog-service', 'live-search'],
+                    integrations: [],
+                    appBuilderApps: []
+                }
+            };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={stateNoFrontend as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            expect(mockSetCanProceed).toHaveBeenCalledWith(false);
+        });
+
+        it('should not allow proceed without backend', () => {
+            const stateNoBackend = {
+                ...baseState,
+                components: {
+                    frontend: 'citisignal-nextjs',
+                    backend: '',
+                    dependencies: ['commerce-mesh'],
+                    services: [],
+                    integrations: [],
+                    appBuilderApps: []
+                }
+            };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={stateNoBackend as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            expect(mockSetCanProceed).toHaveBeenCalledWith(false);
+        });
+    });
+
+    describe('Edge Cases', () => {
+        it('should initialize from state defaults', () => {
+            const stateWithDefaults = {
+                ...baseState,
+                components: {
+                    frontend: 'citisignal-nextjs',
+                    backend: 'adobe-commerce-paas',
+                    dependencies: ['commerce-mesh'],
+                    services: ['catalog-service', 'live-search'],
+                    integrations: ['target'],
+                    appBuilderApps: ['integration-service']
+                }
+            };
+
+            render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={stateWithDefaults as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            const targetCheckbox = screen.getByLabelText('Target');
+            const appCheckbox = screen.getByLabelText('Integration Service');
+
+            expect(targetCheckbox).toBeChecked();
+            expect(appCheckbox).toBeChecked();
+        });
+
+        it('should prevent duplicate backend messages', () => {
+            const stateWithSelections = {
+                ...baseState,
+                components: {
+                    frontend: 'citisignal-nextjs',
+                    backend: 'adobe-commerce-paas',
+                    dependencies: ['commerce-mesh'],
+                    services: ['catalog-service', 'live-search'],
+                    integrations: [],
+                    appBuilderApps: []
+                }
+            };
+
+            const { rerender } = render(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={stateWithSelections as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            const initialCallCount = mockPostMessage.mock.calls.length;
+
+            // Re-render with same state
+            rerender(
+                <Provider theme={defaultTheme}>
+                    <ComponentSelectionStep
+                        state={stateWithSelections as WizardState}
+                        updateState={mockUpdateState}
+                        setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
+                    />
+                </Provider>
+            );
+
+            // Should not send duplicate messages
+            expect(mockPostMessage.mock.calls.length).toBe(initialCallCount);
         });
     });
 });

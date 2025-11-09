@@ -3,7 +3,7 @@
  */
 
 export { ProjectDashboardScreen } from './ProjectDashboardScreen';
-export { ConfigureScreen } from './ConfigureScreen';
+export { ConfigureScreen } from './configure/ConfigureScreen';
 
 // Components
 export { NavigationPanel } from './components';

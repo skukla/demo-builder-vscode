@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderWithProviders, screen, waitFor, cleanup } from "../../../../helpers/react-test-utils";
-import { LoadingDisplay } from '@/webview-ui/shared/components/feedback/LoadingDisplay';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 
 describe('LoadingDisplay', () => {
     afterEach(() => {

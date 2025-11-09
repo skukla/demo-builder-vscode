@@ -1,8 +1,8 @@
 import { View, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
-import { WizardStep } from '@/webview-ui/shared/types';
-import { cn, getTimelineStepDotClasses, getTimelineStepLabelClasses } from '@/webview-ui/shared/utils/classNames';
+import { WizardStep } from '@/types/webview';
+import { cn, getTimelineStepDotClasses, getTimelineStepLabelClasses } from '@/core/ui/utils/classNames';
 
 interface TimelineNavProps {
     steps: { id: WizardStep; name: string }[];
@@ -122,7 +122,7 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
                 })}
             </View>
 
-            <style jsx>{`
+            <style>{`
                 @keyframes pulse {
                     0% {
                         transform: scale(1);

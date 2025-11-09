@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDebouncedLoading } from './useDebouncedLoading';
-import { WizardState } from '@/webview-ui/shared/types';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { WizardState } from '@/types/webview';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /**
  * Configuration options for the selection step hook
@@ -189,7 +189,7 @@ export function useSelectionStep<T extends { id: string }>(
     }
 
     // Send request to extension (extension will respond via message)
-    vscode.postMessage(messageType, {});
+    webviewClient.postMessage(messageType, {});
   }, [messageType, validateBeforeLoad]);
 
   // Refresh items (keeps cache visible during load)
@@ -214,7 +214,7 @@ export function useSelectionStep<T extends { id: string }>(
 
   // Listen for items from extension
   useEffect(() => {
-    const unsubscribeItems = vscode.onMessage(messageType, (data) => {
+    const unsubscribeItems = webviewClient.onMessage(messageType, (data) => {
       if (Array.isArray(data)) {
         // Store items in wizard state cache for persistence
         updateState({ [cacheKey]: data } as Partial<WizardState>);
@@ -246,7 +246,7 @@ export function useSelectionStep<T extends { id: string }>(
       }
     });
 
-    const unsubscribeError = vscode.onMessage(errorMessageType, (data) => {
+    const unsubscribeError = webviewClient.onMessage(errorMessageType, (data) => {
       const errorData = data as { error?: string };
       setError(errorData.error || 'Failed to load items');
       setIsLoading(false);

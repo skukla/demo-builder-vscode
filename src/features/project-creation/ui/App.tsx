@@ -1,13 +1,23 @@
 import { Provider, defaultTheme, View } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import { WizardContainer } from './wizard/WizardContainer';
-import { ThemeMode, ComponentSelection } from '@/webview-ui/shared/types';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { ThemeMode, ComponentSelection } from '@/types/webview';
+import { vscode } from '@/core/ui/utils/vscode-api';
 
 interface WizardStepConfig {
     id: string;
     name: string;
     enabled: boolean;
+}
+
+interface InitMessageData {
+    theme?: ThemeMode;
+    componentDefaults?: ComponentSelection;
+    wizardSteps?: WizardStepConfig[];
+}
+
+interface ThemeChangedMessageData {
+    theme: ThemeMode;
 }
 
 export function App() {
@@ -23,31 +33,33 @@ export function App() {
         document.body.classList.add('vscode-dark');
         
         // Listen for initialization from extension
-        const unsubscribe = vscode.onMessage('init', (data) => {
-            console.log('Received init message:', data);
-            if (data.theme) {
-                setTheme(data.theme);
+        const unsubscribe = vscode.onMessage('init', (data: unknown) => {
+            const initData = data as InitMessageData;
+            console.log('Received init message:', initData);
+            if (initData.theme) {
+                setTheme(initData.theme);
                 // Update body class based on theme
                 document.body.classList.remove('vscode-light', 'vscode-dark');
-                document.body.classList.add(data.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
+                document.body.classList.add(initData.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
             }
-            if (data.componentDefaults) {
-                setComponentDefaults(data.componentDefaults);
+            if (initData.componentDefaults) {
+                setComponentDefaults(initData.componentDefaults);
             }
-            if (data.wizardSteps) {
-                setWizardSteps(data.wizardSteps);
-                console.log('Loaded wizard steps from configuration:', data.wizardSteps);
+            if (initData.wizardSteps) {
+                setWizardSteps(initData.wizardSteps);
+                console.log('Loaded wizard steps from configuration:', initData.wizardSteps);
             }
             setIsReady(true);
         });
 
         // Listen for theme changes
-        const unsubscribeTheme = vscode.onMessage('theme-changed', (data) => {
-            console.log('Received theme change:', data);
-            setTheme(data.theme);
+        const unsubscribeTheme = vscode.onMessage('theme-changed', (data: unknown) => {
+            const themeData = data as ThemeChangedMessageData;
+            console.log('Received theme change:', themeData);
+            setTheme(themeData.theme);
             // Update body class based on theme
             document.body.classList.remove('vscode-light', 'vscode-dark');
-            document.body.classList.add(data.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
+            document.body.classList.add(themeData.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
         });
 
         // Request initialization
@@ -75,9 +87,9 @@ export function App() {
             isQuiet // Enable quiet mode globally for minimal appearance
             UNSAFE_className="app-container"
         >
-            <WizardContainer 
-                componentDefaults={componentDefaults} 
-                wizardSteps={wizardSteps}
+            <WizardContainer
+                componentDefaults={componentDefaults ?? undefined}
+                wizardSteps={wizardSteps ?? undefined}
             />
         </Provider>
     );

@@ -2,7 +2,7 @@ import React from 'react';
 import { renderWithProviders, screen, waitFor } from "../../../../helpers/react-test-utils";
 import userEvent from '@testing-library/user-event';
 import { Item, Text } from '@adobe/react-spectrum';
-import { SearchableList, SearchableListItem } from '@/webview-ui/shared/components/navigation/SearchableList';
+import { SearchableList, SearchableListItem } from '@/core/ui/components/navigation/SearchableList';
 
 interface TestItem extends SearchableListItem {
     id: string;

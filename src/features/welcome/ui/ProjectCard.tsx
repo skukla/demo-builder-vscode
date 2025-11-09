@@ -10,7 +10,7 @@ import Clock from '@spectrum-icons/workflow/Clock';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Folder from '@spectrum-icons/workflow/Folder';
 import React from 'react';
-import { cn } from '@/webview-ui/shared/utils/classNames';
+import { cn } from '@/core/ui/utils/classNames';
 
 interface ProjectCardProps {
     project: {
@@ -29,7 +29,8 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
         const date = new Date(dateString);
         const now = new Date();
         const diffTime = Math.abs(now.getTime() - date.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        // Use Math.round for more predictable day boundaries (<12h = same day, >=12h = next day)
+        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
         
         if (diffDays === 0) {
             return 'Today';
@@ -45,16 +46,18 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
     };
 
     return (
-        <Well 
-            UNSAFE_className={cn(
+        <div
+            onClick={onOpen}
+            className={cn(
                 'project-card-wrapper',
                 isCurrent ? 'project-card-current' : 'project-card-default',
             )}
-            onPress={onOpen}
+            style={{ cursor: 'pointer' }}
         >
+            <Well>
             <Flex direction="column" gap="size-100">
                 {/* Header with badge */}
-                <Flex justifyContent="space-between" alignItems="flex-start">
+                <Flex justifyContent="space-between" alignItems="start">
                     <Flex gap="size-100" alignItems="center">
                         <Folder size="S" />
                         <Text UNSAFE_className="project-card-title">
@@ -70,7 +73,7 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
                 {project.organization && (
                     <Flex gap="size-100" alignItems="center">
                         <Building size="XS" UNSAFE_className="opacity-60" />
-                        <Text elementType="small" color="gray-700">
+                        <Text UNSAFE_style={{ fontSize: '0.875rem', color: 'var(--spectrum-global-color-gray-700)' }}>
                             {project.organization}
                         </Text>
                     </Flex>
@@ -79,33 +82,33 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
                 {/* Last opened */}
                 <Flex gap="size-100" alignItems="center">
                     <Clock size="XS" UNSAFE_className="opacity-60" />
-                    <Text elementType="small" color="gray-600">
+                    <Text UNSAFE_style={{ fontSize: '0.875rem', color: 'var(--spectrum-global-color-gray-600)' }}>
                         {formatDate(project.lastOpened)}
                     </Text>
                 </Flex>
 
                 {/* Path */}
-                <Text elementType="small" color="gray-500" UNSAFE_className="project-card-path">
+                <Text UNSAFE_style={{ fontSize: '0.875rem', color: 'var(--spectrum-global-color-gray-500)' }} UNSAFE_className="project-card-path">
                     {project.path}
                 </Text>
 
                 {/* Actions */}
                 <Flex gap="size-100" marginTop="size-100">
-                    <ActionButton 
+                    <ActionButton
                         flex
-                        variant="primary"
                         onPress={(e) => {
-                            e.stopPropagation();
+                            const event = e as any;
+                            event.stopPropagation?.();
                             onOpen();
                         }}
                     >
                         Open
                     </ActionButton>
                     <ActionButton
-                        variant="secondary"
                         isQuiet
                         onPress={(e) => {
-                            e.stopPropagation();
+                            const event = e as any;
+                            event.stopPropagation?.();
                             onDelete();
                         }}
                     >
@@ -113,6 +116,7 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
                     </ActionButton>
                 </Flex>
             </Flex>
-        </Well>
+            </Well>
+        </div>
     );
 }

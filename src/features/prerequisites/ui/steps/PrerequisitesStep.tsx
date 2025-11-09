@@ -11,9 +11,9 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React, { useEffect, useState, useRef } from 'react';
-import { WizardState, PrerequisiteCheck } from '@/webview-ui/shared/types';
-import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '@/webview-ui/shared/utils/classNames';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { WizardState, PrerequisiteCheck } from '@/types/webview';
+import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '@/core/ui/utils/classNames';
 
 interface PrerequisitesStepProps {
     state: WizardState;
@@ -52,8 +52,9 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
 
     useEffect(() => {
         // Listen for prerequisites loaded from backend
-        const unsubscribeLoaded = vscode.onMessage('prerequisites-loaded', (data) => {
-            const prerequisites = data.prerequisites.map((p: Record<string, unknown>) => {
+        const unsubscribeLoaded = webviewClient.onMessage('prerequisites-loaded', (data) => {
+            const prereqData = data as any;
+            const prerequisites = prereqData.prerequisites.map((p: Record<string, unknown>) => {
                 return {
                     id: p.id,
                     name: p.name,
@@ -67,14 +68,14 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 };
             });
             setChecks(prerequisites);
-            
+
             // Store the version to component mapping
-            if (data.nodeVersionMapping) {
-                setVersionComponentMapping(data.nodeVersionMapping);
-            } else if (data.versionComponentMapping) {
-                setVersionComponentMapping(data.versionComponentMapping);
+            if (prereqData.nodeVersionMapping) {
+                setVersionComponentMapping(prereqData.nodeVersionMapping);
+            } else if (prereqData.versionComponentMapping) {
+                setVersionComponentMapping(prereqData.versionComponentMapping);
             }
-            
+
         });
 
         // Check prerequisites on mount to trigger backend to load and check them
@@ -87,29 +88,28 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
 
     useEffect(() => {
         // Listen for installation complete events
-        const unsubscribeInstallComplete = vscode.onMessage('prerequisite-install-complete', (data) => {
-            const { index, continueChecking } = data;
+        const unsubscribeInstallComplete = webviewClient.onMessage('prerequisite-install-complete', (data) => {
+            const typedData = data as { index: number; continueChecking: boolean };
+            const { index, continueChecking } = typedData;
             
             if (continueChecking) {
                 // Continue checking from the next prerequisite, not from the beginning
                 setTimeout(() => {
-                    vscode.postMessage('continue-prerequisites', { fromIndex: index + 1 });
+                    webviewClient.postMessage('continue-prerequisites', { fromIndex: index + 1 });
                 }, 500);
             }
         });
         
         // Listen for check stopped events
-        const unsubscribeCheckStopped = vscode.onMessage('prerequisite-check-stopped', (data) => {
-            const { stoppedAt, reason } = data;
+        const unsubscribeCheckStopped = webviewClient.onMessage('prerequisite-check-stopped', (_data) => {
+            // Data contains stoppedAt and reason, but we only need to update checking state
             setIsChecking(false);
-            
-            // Show a message about why checking stopped
-            console.log(`Prerequisites check stopped at index ${stoppedAt}: ${reason}`);
         });
 
         // Listen for feedback from extension
-        const unsubscribe = vscode.onMessage('prerequisite-status', (data) => {
-            const { index, status, message, version, plugins, unifiedProgress, nodeVersionStatus, canInstall } = data;
+        const unsubscribe = webviewClient.onMessage('prerequisite-status', (data) => {
+            const typedData = data as any;
+            const { index, status, message, version, plugins, unifiedProgress, nodeVersionStatus, canInstall } = typedData;
 
             // Auto-scroll within the container to the item being checked (skip first item as it's already visible)
             if (status === 'checking' && itemRefs.current[index] && scrollContainerRef.current && index > 0) {
@@ -194,13 +194,9 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         });
 
         // Listen for prerequisites complete message
-        const unsubscribeComplete = vscode.onMessage('prerequisites-complete', (data) => {
-            const { allInstalled } = data;
+        const unsubscribeComplete = webviewClient.onMessage('prerequisites-complete', (_data) => {
+            // Data contains allInstalled status, but we only need to update checking state
             setIsChecking(false);
-            
-            // Don't update individual statuses here - they should already be set by prerequisite-status messages
-            // Just log the completion
-            console.log(`Prerequisites check complete. All installed: ${allInstalled}`);
         });
 
         return () => {
@@ -240,10 +236,10 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         if (currentStep === 'prerequisites' && !isChecking && !checkInProgressRef.current) {
             // Mark check as in progress
             checkInProgressRef.current = true;
-            
+
             // Reset auto-scroll flag so it can work again on fresh check
             hasAutoScrolled.current = false;
-            
+
             // Small delay to ensure UI has settled
             const timer = setTimeout(() => {
                 checkPrerequisites();
@@ -254,6 +250,8 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 // Don't reset flag here - let the backend response reset it when all checks complete
             };
         }
+
+        return () => {}; // Always return a cleanup function
     }, [currentStep]);  // Re-run when currentStep changes
 
     // Reset the check-in-progress flag when all checks are complete
@@ -275,7 +273,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         
         checkInProgressRef.current = true;
         setIsChecking(true);
-        vscode.postMessage('check-prerequisites');
+        webviewClient.postMessage('check-prerequisites');
         
         // Don't set all to checking - let the backend control status individually
         // Just scroll container to top to show first item being checked
@@ -291,7 +289,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         setInstallingIndex(index);
 
         // Send prereqId (numeric index) to match handler expectation
-        vscode.postMessage('install-prerequisite', {
+        webviewClient.postMessage('install-prerequisite', {
             prereqId: index,  // Handler expects 'prereqId', not 'index'
             id: checks[index].id,
             name: checks[index].name,
@@ -335,9 +333,9 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 className="prerequisites-container">
                 <Flex direction="column" gap="size-150">
                     {checks.map((check, index) => (
-                        <div 
-                            key={check.name} 
-                            ref={el => itemRefs.current[index] = el}
+                        <div
+                            key={check.name}
+                            ref={el => { itemRefs.current[index] = el; }}
                         >
                             <Flex justifyContent="space-between" alignItems="center" 
                                 UNSAFE_className={getPrerequisiteItemClasses('pending', index === checks.length - 1)}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderWithProviders, screen } from "../../../../helpers/react-test-utils";
-import { ConfigSection } from '@/webview-ui/shared/components/forms/ConfigSection';
+import { ConfigSection } from '@/core/ui/components/forms/ConfigSection';
 
 describe('ConfigSection', () => {
     describe('Rendering', () => {

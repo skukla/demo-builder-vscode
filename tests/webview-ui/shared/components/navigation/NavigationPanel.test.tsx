@@ -5,7 +5,7 @@ import {
     NavigationPanel,
     NavigationSection,
     NavigationField
-} from '@/webview-ui/shared/components/navigation/NavigationPanel';
+} from '@/core/ui/components/navigation/NavigationPanel';
 
 const mockFields: NavigationField[] = [
     { key: 'field1', label: 'Field 1', isComplete: true },

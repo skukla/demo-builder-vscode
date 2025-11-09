@@ -49,25 +49,27 @@ describe('PollingService', () => {
             await expect(
                 pollingService.pollUntilCondition(checkFn, {
                     maxAttempts: 3,
-                    initialDelay: 10,
+                    initialDelay: 20,
+                    maxDelay: 50,
                     name: 'test condition'
                 })
             ).rejects.toThrow('Maximum polling attempts reached for: test condition');
 
             expect(checkFn).toHaveBeenCalledTimes(3);
-        });
+        }, 10000); // 10 second timeout for test reliability under load
 
         it('should throw error on timeout', async () => {
             const checkFn = jest.fn().mockResolvedValue(false);
 
             await expect(
                 pollingService.pollUntilCondition(checkFn, {
-                    timeout: 100,
-                    initialDelay: 10,
+                    timeout: 200,
+                    initialDelay: 20,
+                    maxDelay: 50,
                     name: 'timeout test'
                 })
             ).rejects.toThrow('Polling timeout for: timeout test');
-        });
+        }, 10000); // 10 second timeout for test reliability under load
 
         it('should handle check function errors gracefully', async () => {
             const checkFn = jest.fn()

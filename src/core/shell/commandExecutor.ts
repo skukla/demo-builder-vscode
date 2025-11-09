@@ -246,6 +246,7 @@ export class CommandExecutor {
 
             // Handle timeout
             if (options.timeout) {
+                let forceKillTimeoutId: NodeJS.Timeout | undefined;
                 const timeoutId = setTimeout(() => {
                     this.logger.warn(`[Command Executor] Command timed out after ${options.timeout}ms (PID: ${child.pid})`);
 
@@ -253,19 +254,24 @@ export class CommandExecutor {
                         child.kill('SIGTERM');
 
                         // Force kill after 2 seconds
-                        setTimeout(() => {
+                        forceKillTimeoutId = setTimeout(() => {
                             if (!child.killed && child.exitCode === null) {
                                 this.logger.warn(`[Command Executor] Force killing process ${child.pid} (SIGKILL)`);
                                 child.kill('SIGKILL');
                             }
-                        }, 2000);
+                        }, 2000).unref(); // Don't keep process alive for force kill timeout
                     }
 
                     reject(new Error(`Command timed out after ${options.timeout}ms`));
-                }, options.timeout);
+                }, options.timeout).unref(); // Don't keep process alive for command timeout
 
-                // Clear timeout when process completes
-                child.on('close', () => clearTimeout(timeoutId));
+                // Clear both timeouts when process completes
+                child.on('close', () => {
+                    clearTimeout(timeoutId);
+                    if (forceKillTimeoutId) {
+                        clearTimeout(forceKillTimeoutId);
+                    }
+                });
             }
         });
     }

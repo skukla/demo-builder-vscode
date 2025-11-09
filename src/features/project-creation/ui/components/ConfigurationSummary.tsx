@@ -3,8 +3,8 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import React from 'react';
-import { WizardState, WizardStep } from '@/webview-ui/shared/types';
-import { cn } from '@/webview-ui/shared/utils/classNames';
+import { WizardState, WizardStep } from '@/types/webview';
+import { cn } from '@/core/ui/utils/classNames';
 
 interface ConfigurationSummaryProps {
     state: WizardState;
@@ -163,7 +163,7 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                         </Flex>
                     ) : state.apiMesh?.apiEnabled && state.apiMesh?.meshExists ? (
                         <Flex gap="size-100" alignItems="center">
-                            {state.apiMesh?.meshStatus === 'deployed' || state.apiMesh?.meshStatus === 'success' ? (
+                            {state.apiMesh?.meshStatus === 'deployed' ? (
                                 <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
                             ) : state.apiMesh?.meshStatus === 'error' ? (
                                 <AlertCircle size="S" UNSAFE_className="text-red-600" />
@@ -171,7 +171,7 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                                 <Clock size="S" UNSAFE_className="text-blue-600" />
                             )}
                             <Text UNSAFE_className="text-sm">
-                                {state.apiMesh?.meshStatus === 'deployed' || state.apiMesh?.meshStatus === 'success' ? 'Mesh Deployed' :
+                                {state.apiMesh?.meshStatus === 'deployed' ? 'Mesh Deployed' :
                                  state.apiMesh?.meshStatus === 'error' ? 'Mesh Error' :
                                  'Mesh Pending'}
                             </Text>

@@ -9,12 +9,13 @@ import {
 } from '@adobe/react-spectrum';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
 import React, { useState, useEffect, useRef } from 'react';
-import { cn } from '@/webview-ui/shared/utils/classNames';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { WizardState } from '@/types/webview';
+import { cn } from '@/core/ui/utils/classNames';
 
 interface ComponentSelectionStepProps {
-    state: Record<string, unknown>;
-    updateState: (updates: Record<string, unknown>) => void;
+    state: WizardState;
+    updateState: (updates: Partial<WizardState>) => void;
     setCanProceed: (canProceed: boolean) => void;
     componentsData?: Record<string, unknown>;
 }
@@ -49,17 +50,18 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     
     // Track last sent selection to prevent duplicate messages
     const lastSentSelectionRef = useRef<string>('');
-    
+
     // Use componentsData if available, otherwise fall back to hardcoded
-    const frontendOptions = componentsData?.frontends || [
+    const dataTyped = (componentsData || {}) as any;
+    const frontendOptions = dataTyped.frontends || [
         {
             id: 'citisignal-nextjs',
             name: 'Headless CitiSignal',
             description: 'NextJS-based storefront with Adobe mesh integration',
         },
     ];
-    
-    const backendOptions = componentsData?.backends || [
+
+    const backendOptions = dataTyped.backends || [
         {
             id: 'adobe-commerce-paas',
             name: 'Adobe Commerce PaaS',
@@ -96,7 +98,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     ];
     
     // External Systems options from componentsData
-    const integrationsOptions = componentsData?.integrations || [
+    const integrationsOptions = dataTyped.integrations || [
         {
             id: 'target',
             name: 'Target',
@@ -108,9 +110,9 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
             description: 'Adobe Experience Platform integration',
         },
     ];
-    
+
     // App Builder Apps options from componentsData
-    const appBuilderOptions = componentsData?.appBuilder || [
+    const appBuilderOptions = dataTyped.appBuilder || [
         {
             id: 'integration-service',
             name: 'Integration Service',
@@ -167,7 +169,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         const selectionKey = JSON.stringify(components);
         if (selectionKey !== lastSentSelectionRef.current) {
             lastSentSelectionRef.current = selectionKey;
-            vscode.postMessage('update-component-selection', components);
+            webviewClient.postMessage('update-component-selection', components);
         }
     }, [selectedFrontend, selectedBackend, selectedDependencies, selectedServices, selectedIntegrations, selectedAppBuilder, setCanProceed, updateState]);
 
@@ -218,7 +220,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         menuWidth="size-4600"
                         UNSAFE_className={cn('cursor-pointer')}
                     >
-                            {frontendOptions.map(option => (
+                            {frontendOptions.map((option: any) => (
                                 <Item key={option.id} textValue={option.name}>
                                     <Text>{option.name}</Text>
                                     <Text slot="description">{option.description}</Text>
@@ -271,7 +273,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         menuWidth="size-4600"
                         UNSAFE_className={cn('cursor-pointer')}
                     >
-                            {backendOptions.map(option => (
+                            {backendOptions.map((option: any) => (
                                 <Item key={option.id} textValue={option.name}>
                                     <Text>{option.name}</Text>
                                     <Text slot="description">{option.description}</Text>
@@ -317,7 +319,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     </Text>
                     
                     <View UNSAFE_className={cn('border', 'rounded', 'bg-gray-50', 'p-3')}>
-                        {integrationsOptions.map(system => (
+                        {integrationsOptions.map((system: any) => (
                             <Checkbox
                                 key={system.id}
                                 isSelected={selectedIntegrations.has(system.id)}
@@ -355,7 +357,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     </Text>
                     
                     <View UNSAFE_className={cn('border', 'rounded', 'bg-gray-50', 'p-3')}>
-                        {appBuilderOptions.map(app => (
+                        {appBuilderOptions.map((app: any) => (
                             <Checkbox
                                 key={app.id}
                                 isSelected={selectedAppBuilder.has(app.id)}

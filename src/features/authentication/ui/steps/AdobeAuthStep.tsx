@@ -11,9 +11,9 @@ import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import React, { useEffect, useState, useRef } from 'react';
-import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
-import { WizardState } from '@/webview-ui/shared/types';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { WizardState } from '@/types/webview';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 interface AdobeAuthStepProps {
     state: WizardState;
@@ -44,11 +44,13 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
         }
 
         // Listen for auth status updates
-        const unsubscribe = vscode.onMessage('auth-status', (data) => {
+        const unsubscribe = webviewClient.onMessage('auth-status', (data) => {
+            const authData = data as any;
+
             // Debug logging to see what we're receiving
-            console.log('Auth status received:', data);
-            console.log('Message:', data.message);
-            console.log('SubMessage:', data.subMessage);
+            console.log('Auth status received:', authData);
+            console.log('Message:', authData.message);
+            console.log('SubMessage:', authData.subMessage);
 
             // Clear timeout on any auth status update
             if (authTimeoutRef.current) {
@@ -57,7 +59,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             }
 
             // Check if this is a timeout error
-            if (data.error === 'timeout') {
+            if (authData.error === 'timeout') {
                 setAuthTimeout(true);
                 updateState({
                     adobeAuth: {
@@ -66,39 +68,39 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                         error: 'timeout',
                     },
                 });
-                setAuthStatus(data.message || '');
-                setAuthSubMessage(data.subMessage || '');
+                setAuthStatus(authData.message || '');
+                setAuthSubMessage(authData.subMessage || '');
                 return;
             }
 
             // Reset the switching flag when authentication completes
-            if (data.isAuthenticated && isSwitchingRef.current) {
+            if (authData.isAuthenticated && isSwitchingRef.current) {
                 isSwitchingRef.current = false;
             }
 
             // Clear timeout state on successful auth OR when starting a new check
-            if (data.isAuthenticated || data.isChecking) {
+            if (authData.isAuthenticated || authData.isChecking) {
                 setAuthTimeout(false);
             }
 
             updateState({
                 adobeAuth: {
-                    isAuthenticated: data.isAuthenticated,
-                    isChecking: data.isChecking !== undefined ? data.isChecking : false,
-                    email: data.email,
-                    error: data.error,
-                    requiresOrgSelection: data.requiresOrgSelection,
-                    orgLacksAccess: data.orgLacksAccess,
+                    isAuthenticated: authData.isAuthenticated,
+                    isChecking: authData.isChecking !== undefined ? authData.isChecking : false,
+                    email: authData.email,
+                    error: authData.error,
+                    requiresOrgSelection: authData.requiresOrgSelection,
+                    orgLacksAccess: authData.orgLacksAccess,
                 },
                 // Always update org - set to undefined when null/undefined
-                adobeOrg: data.organization ? {
-                    id: data.organization.id,
-                    code: data.organization.code,
-                    name: data.organization.name,
+                adobeOrg: authData.organization ? {
+                    id: authData.organization.id,
+                    code: authData.organization.code,
+                    name: authData.organization.name,
                 } : undefined,
             });
-            setAuthStatus(data.message || '');
-            setAuthSubMessage(data.subMessage || '');
+            setAuthStatus(authData.message || '');
+            setAuthSubMessage(authData.subMessage || '');
         });
 
         return unsubscribe;
@@ -120,7 +122,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
         updateState({
             adobeAuth: { ...state.adobeAuth, isChecking: true },
         });
-        vscode.postMessage('check-auth');
+        webviewClient.postMessage('check-auth');
     };
 
     const handleLogin = (force: boolean = false) => {
@@ -162,7 +164,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
         // Backend will send auth-status with error='timeout' if authentication times out
         // This prevents race conditions where frontend timeout fires before backend completes post-login work
 
-        vscode.requestAuth(force);
+        webviewClient.requestAuth(force);
     };
 
     return (

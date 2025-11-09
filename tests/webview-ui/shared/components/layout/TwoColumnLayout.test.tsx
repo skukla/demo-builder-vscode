@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import { TwoColumnLayout } from '@/webview-ui/shared/components/layout/TwoColumnLayout';
-import type { DimensionValue } from '@/webview-ui/shared/utils/spectrumTokens';
+import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import type { DimensionValue } from '@/core/ui/utils/spectrumTokens';
 
 describe('TwoColumnLayout', () => {
   describe('Token Translation', () => {

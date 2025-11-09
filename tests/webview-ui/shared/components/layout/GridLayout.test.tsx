@@ -1,7 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import { GridLayout } from '@/webview-ui/shared/components/layout/GridLayout';
-import type { DimensionValue } from '@/webview-ui/shared/utils/spectrumTokens';
+import { GridLayout } from '@/core/ui/components/layout/GridLayout';
+import type { DimensionValue } from '@/core/ui/utils/spectrumTokens';
 
 describe('GridLayout', () => {
   describe('Token Translation', () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderWithProviders, screen } from "../../../../helpers/react-test-utils";
-import { Badge } from '@/webview-ui/shared/components/ui/Badge';
+import { Badge } from '@/core/ui/components/ui/Badge';
 
 describe('Badge', () => {
     describe('Rendering', () => {

@@ -405,15 +405,21 @@ webview-ui/src/configure/
 
 **Complex UIs (>5 files)** → Nested with subdirectories:
 ```
-webview-ui/src/wizard/
-├── index.tsx                # Entry point with inline App component
-├── components/              # Wizard-specific components
-│   ├── TimelineNav.tsx
-│   └── WizardContainer.tsx
-└── steps/                   # Step components (10 files)
-    ├── WelcomeStep.tsx
-    ├── AdobeAuthStep.tsx
-    └── ...
+src/features/project-creation/ui/wizard/
+├── index.tsx                # Entry point
+├── TimelineNav.tsx          # Timeline navigation component
+├── WizardContainer.tsx      # Main wizard orchestrator
+└── (steps imported from feature directories - see below)
+```
+
+**Wizard Steps** (distributed across features):
+```
+src/features/
+├── authentication/ui/steps/    # AdobeAuthStep, AdobeProjectStep, AdobeWorkspaceStep
+├── components/ui/steps/        # ComponentSelectionStep
+├── prerequisites/ui/steps/     # PrerequisitesStep
+├── mesh/ui/steps/             # ApiMeshStep
+└── project-creation/ui/steps/ # WelcomeStep, ReviewStep, ProjectCreationStep
 ```
 
 **Note**: After the Frontend Architecture Cleanup (v1.x), all webviews use inline App components in `index.tsx` rather than separate `app/` directories. Shared utilities like `WebviewClient` live in `webview-ui/src/shared/`.
@@ -444,7 +450,7 @@ All webview apps (flat or nested) must have consistent entry points for webpack:
 ```javascript
 // webpack.config.js
 entry: {
-    wizard: './webview-ui/src/wizard/index.tsx',
+    wizard: './src/features/project-creation/ui/wizard/index.tsx',
     welcome: './webview-ui/src/welcome/index.tsx',
     dashboard: './webview-ui/src/dashboard/index.tsx',
     configure: './webview-ui/src/configure/index.tsx'

@@ -1,7 +1,7 @@
 import React from 'react';
 import { renderWithProviders, screen } from "../../../../helpers/react-test-utils";
 import userEvent from '@testing-library/user-event';
-import { ErrorDisplay } from '@/webview-ui/shared/components/feedback/ErrorDisplay';
+import { ErrorDisplay } from '@/core/ui/components/feedback/ErrorDisplay';
 
 describe('ErrorDisplay', () => {
     describe('Rendering', () => {

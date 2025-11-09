@@ -3,7 +3,6 @@ import {
     Flex,
     Heading,
     Text,
-    Grid,
     Divider,
     ActionButton,
 } from '@adobe/react-spectrum';
@@ -12,9 +11,10 @@ import Book from '@spectrum-icons/workflow/Book';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Settings from '@spectrum-icons/workflow/Settings';
 import React, { useEffect, useCallback } from 'react';
-import { useFocusTrap } from '@/webview-ui/shared/hooks';
-import { cn } from '@/webview-ui/shared/utils/classNames';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { GridLayout } from '@/core/ui/components/layout';
+import { useFocusTrap } from '@/core/ui/hooks';
+import { cn } from '@/core/ui/utils/classNames';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 interface WelcomeScreenProps {
     theme?: 'light' | 'dark';
@@ -27,30 +27,30 @@ export function WelcomeScreen(_props: WelcomeScreenProps) {
     });
 
     useEffect(() => {
-        vscode.postMessage('ready');
+        webviewClient.postMessage('ready');
     }, []);
 
     // Action handlers with useCallback
     const handleCreateNew = useCallback(() => {
-        vscode.postMessage('create-new');
+        webviewClient.postMessage('create-new');
     }, []);
 
     const handleOpenExisting = useCallback(() => {
-        vscode.postMessage('open-project');
+        webviewClient.postMessage('open-project');
     }, []);
 
     const handleOpenDocs = useCallback(() => {
-        vscode.postMessage('open-docs');
+        webviewClient.postMessage('open-docs');
     }, []);
 
     const handleOpenSettings = useCallback(() => {
-        vscode.postMessage('open-settings');
+        webviewClient.postMessage('open-settings');
     }, []);
 
     return (
         <View height="100vh" backgroundColor="gray-50">
             <Flex direction="column" alignItems="center" justifyContent="center" height="100%">
-                <View ref={containerRef} width="100%" maxWidth="900px" padding="size-400">
+                <View ref={containerRef as any} width="100%" maxWidth="900px" padding="size-400">
                     {/* Header */}
                     <View marginBottom="size-400">
                         <Flex justifyContent="space-between" alignItems="center">
@@ -78,10 +78,7 @@ export function WelcomeScreen(_props: WelcomeScreenProps) {
                     <Divider size="S" marginBottom="size-400" />
 
                     {/* Main Actions */}
-                    <Grid
-                        columns={['1fr', '1fr']}
-                        gap="size-300"
-                    >
+                    <GridLayout columns={2} gap="size-300">
                         {/* Create New Project Card */}
                         <ActionButton
                             onPress={handleCreateNew}
@@ -116,7 +113,7 @@ export function WelcomeScreen(_props: WelcomeScreenProps) {
                                 Continue working on a demo
                             </Text>
                         </ActionButton>
-                    </Grid>
+                    </GridLayout>
                 </View>
             </Flex>
         </View>

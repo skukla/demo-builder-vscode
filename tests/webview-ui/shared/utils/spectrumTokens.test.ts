@@ -1,4 +1,4 @@
-import { translateSpectrumToken, DimensionValue, SpectrumSizeToken } from '@/webview-ui/shared/utils/spectrumTokens';
+import { translateSpectrumToken, DimensionValue, SpectrumSizeToken } from '@/core/ui/utils/spectrumTokens';
 
 describe('translateSpectrumToken', () => {
   describe('Happy Path - Spectrum Tokens', () => {

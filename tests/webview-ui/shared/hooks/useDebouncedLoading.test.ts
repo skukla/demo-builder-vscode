@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useDebouncedLoading } from '@/webview-ui/shared/hooks/useDebouncedLoading';
+import { useDebouncedLoading } from '@/core/ui/hooks/useDebouncedLoading';
 
 describe('useDebouncedLoading', () => {
   beforeEach(() => {

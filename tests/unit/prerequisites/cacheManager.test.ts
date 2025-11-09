@@ -426,11 +426,12 @@ describe('PrerequisitesCacheManager', () => {
                 };
 
                 // Fill cache to max size with different TTLs
-                // Use large TTL spread (1000ms per entry) to ensure jitter (±10%) doesn't affect ordering
+                // Use large TTL spread (3000ms per entry) to ensure jitter (±10%) doesn't affect ordering
+                // With ±10% jitter, we need >20% gap between entries to prevent overlap
                 for (let i = 0; i < 100; i++) {
                     // Earlier entries have shorter TTL (will expire first)
-                    // 10s, 11s, 12s, etc. - jitter of ±1s won't change ordering
-                    const ttl = 10000 + (i * 1000);
+                    // 10s, 13s, 16s, etc. - jitter of ±10% can't change ordering
+                    const ttl = 10000 + (i * 3000);
                     cacheManager.setCachedResult(`prereq-${i}`, mockResult, ttl);
                 }
 

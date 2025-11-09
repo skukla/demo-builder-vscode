@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     View,
     Flex,
@@ -5,23 +6,22 @@ import {
     Text,
     ActionButton,
     Divider,
-    ProgressCircle,
+    ProgressCircle
 } from '@adobe/react-spectrum';
-import Data from '@spectrum-icons/workflow/Data';
-import DataMapping from '@spectrum-icons/workflow/DataMapping';
-import Delete from '@spectrum-icons/workflow/Delete';
-import Globe from '@spectrum-icons/workflow/Globe';
-import Login from '@spectrum-icons/workflow/Login';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
-import Refresh from '@spectrum-icons/workflow/Refresh';
-import Settings from '@spectrum-icons/workflow/Settings';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
+import Settings from '@spectrum-icons/workflow/Settings';
+import Refresh from '@spectrum-icons/workflow/Refresh';
+import Globe from '@spectrum-icons/workflow/Globe';
+import Delete from '@spectrum-icons/workflow/Delete';
 import ViewList from '@spectrum-icons/workflow/ViewList';
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StatusCard } from '@/webview-ui/shared/components/molecules';
-import { GridLayout } from '@/webview-ui/shared/components/templates';
-import { useFocusTrap } from '@/webview-ui/shared/hooks';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import DataMapping from '@spectrum-icons/workflow/DataMapping';
+import Data from '@spectrum-icons/workflow/Data';
+import Login from '@spectrum-icons/workflow/Login';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { useFocusTrap } from '@/core/ui/hooks';
+import { StatusCard } from '@/core/ui/components/feedback';
+import { GridLayout } from '@/core/ui/components/layout';
 
 type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'error';
 
@@ -57,21 +57,23 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
     });
 
     useEffect(() => {
-        vscode.postMessage('requestStatus');
+        webviewClient.postMessage('requestStatus');
 
-        const unsubscribeStatus = vscode.onMessage('statusUpdate', (data: ProjectStatus) => {
-            setProjectStatus(data);
-            setIsRunning(data.status === 'running');
+        const unsubscribeStatus = webviewClient.onMessage('statusUpdate', (data: unknown) => {
+            const projectData = data as ProjectStatus;
+            setProjectStatus(projectData);
+            setIsRunning(projectData.status === 'running');
         });
 
-        const unsubscribeMesh = vscode.onMessage('meshStatusUpdate', (data: { status: MeshStatus; message?: string; endpoint?: string }) => {
+        const unsubscribeMesh = webviewClient.onMessage('meshStatusUpdate', (data: unknown) => {
+            const meshData = data as { status: string; message?: string; endpoint?: string };
             setProjectStatus(prev => prev ? {
                 ...prev,
                 mesh: {
-                    status: data.status,
-                    message: data.message,
-                    endpoint: data.endpoint,
-                },
+                    status: meshData.status as any,
+                    message: meshData.message,
+                    endpoint: meshData.endpoint
+                }
             } : prev);
         });
 
@@ -92,15 +94,16 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
             }, 100);
             return () => clearTimeout(timer);
         }
+        return undefined;
     }, []); // Only on mount
 
     // Action handlers with useCallback for performance
-    const handleStartDemo = useCallback(() => vscode.postMessage('startDemo'), []);
-    const handleStopDemo = useCallback(() => vscode.postMessage('stopDemo'), []);
-    const handleReAuthenticate = useCallback(() => vscode.postMessage('re-authenticate'), []);
+    const handleStartDemo = useCallback(() => webviewClient.postMessage('startDemo'), []);
+    const handleStopDemo = useCallback(() => webviewClient.postMessage('stopDemo'), []);
+    const handleReAuthenticate = useCallback(() => webviewClient.postMessage('re-authenticate'), []);
 
     const handleViewLogs = useCallback(() => {
-        vscode.postMessage('viewLogs');
+        webviewClient.postMessage('viewLogs');
         setTimeout(() => {
             const logsButton = document.querySelector('[data-action="logs"]') as HTMLElement;
             if (logsButton) {
@@ -110,7 +113,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
     }, []);
 
     const handleDeployMesh = useCallback(() => {
-        vscode.postMessage('deployMesh');
+        webviewClient.postMessage('deployMesh');
         setTimeout(() => {
             const deployButton = document.querySelector('[data-action="deploy-mesh"]') as HTMLElement;
             if (deployButton) {
@@ -119,10 +122,10 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
         }, 50);
     }, []);
 
-    const handleOpenBrowser = useCallback(() => vscode.postMessage('openBrowser'), []);
-    const handleConfigure = useCallback(() => vscode.postMessage('configure'), []);
-    const handleOpenDevConsole = useCallback(() => vscode.postMessage('openDevConsole'), []);
-    const handleDeleteProject = useCallback(() => vscode.postMessage('deleteProject'), []);
+    const handleOpenBrowser = useCallback(() => webviewClient.postMessage('openBrowser'), []);
+    const handleConfigure = useCallback(() => webviewClient.postMessage('configure'), []);
+    const handleOpenDevConsole = useCallback(() => webviewClient.postMessage('openDevConsole'), []);
+    const handleDeleteProject = useCallback(() => webviewClient.postMessage('deleteProject'), []);
 
     const displayName = projectStatus?.name || project?.name || 'Demo Project';
     const status = projectStatus?.status || 'ready';
@@ -183,7 +186,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
 
     return (
         <View
-            ref={containerRef}
+            ref={containerRef as any}
             padding="size-400"
             height="100vh"
             UNSAFE_style={{
@@ -191,7 +194,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                 margin: '0 auto',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                justifyContent: 'center'
             }}
         >
             <Flex direction="column" gap="size-200" UNSAFE_style={{ width: '100%' }}>

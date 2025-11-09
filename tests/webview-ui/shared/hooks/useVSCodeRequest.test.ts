@@ -1,9 +1,9 @@
 import { renderHook, act, waitFor, cleanup } from '@testing-library/react';
-import { useVSCodeRequest } from '@/webview-ui/shared/hooks/useVSCodeRequest';
-import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
+import { useVSCodeRequest } from '@/core/ui/hooks/useVSCodeRequest';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 // Mock the vscode API module at module level (before singleton is created)
-jest.mock('@/webview-ui/shared/utils/WebviewClient', () => ({
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
   webviewClient: {
     request: jest.fn(),
     postMessage: jest.fn(),

@@ -39,7 +39,9 @@ module.exports = {
       testEnvironment: 'jsdom',
       testMatch: [
         '**/tests/webview-ui/**/*.test.ts',
-        '**/tests/webview-ui/**/*.test.tsx'
+        '**/tests/webview-ui/**/*.test.tsx',
+        '**/tests/features/**/*.test.tsx',
+        '**/src/features/**/*.test.tsx'
       ],
       transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', {
@@ -61,8 +63,6 @@ module.exports = {
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
         '^@/utils/(.*)$': '<rootDir>/src/utils/$1',
-        '^@/webview-ui/(.*)$': '<rootDir>/webview-ui/src/$1',
-        '^@/(.*)$': '<rootDir>/src/webviews/$1',
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',

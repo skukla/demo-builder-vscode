@@ -12,10 +12,10 @@ import {
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
-import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
-import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '@/webview-ui/shared/types';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
+import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '@/types/webview';
+import { vscode } from '@/core/ui/utils/vscode-api';
 
 interface ComponentConfigStepProps {
     state: WizardState;
@@ -77,7 +77,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
         const loadData = async () => {
             try {
                 const response = await vscode.request<{ success: boolean; type: string; data: ComponentsData }>('get-components-data');
-                const data = response.data;
+                const data = (response as { success: boolean; type: string; data: ComponentsData }).data;
                 console.log('[ComponentConfigStep] Received components-data:', {
                     frontends: data.frontends?.map((f: ComponentData) => ({
                         id: f.id,

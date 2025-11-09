@@ -6,9 +6,9 @@ import {
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useEffect } from 'react';
-import { WizardState } from '@/webview-ui/shared/types';
+import { WizardState } from '@/types/webview';
 
-interface ComponentData {
+export interface ComponentData {
     id: string;
     name: string;
     description?: string;
@@ -22,7 +22,7 @@ interface ComponentData {
     };
 }
 
-interface ComponentsData {
+export interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];

@@ -15,9 +15,9 @@ import Refresh from '@spectrum-icons/workflow/Refresh';
 import React from 'react';
 import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
 import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
-import { FadeTransition } from '@/webview-ui/shared/components/FadeTransition';
-import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
-import { WizardState, AdobeProject, WizardStep } from '@/webview-ui/shared/types';
+import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { WizardState, AdobeProject, WizardStep } from '@/types/webview';
 
 interface AdobeProjectStepProps {
     state: WizardState;
@@ -158,7 +158,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                 ) : (
                     <>
                         {projects.length > 5 && (
-                            <Flex gap="size-100" marginBottom="size-200" alignItems="flex-end">
+                            <Flex gap="size-100" marginBottom="size-200" alignItems="end">
                                 <SearchField
                                     placeholder="Type to filter projects..."
                                     value={searchQuery}

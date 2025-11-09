@@ -1,16 +1,16 @@
 import { renderHook, act } from '@testing-library/react';
-import { useAsyncData } from '@/webview-ui/shared/hooks/useAsyncData';
-import { webviewClient } from '@/webview-ui/shared/utils/WebviewClient';
+import { useAsyncData } from '@/core/ui/hooks/useAsyncData';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 // Mock vscode API
-jest.mock('@/webview-ui/shared/utils/WebviewClient', () => ({
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
   webviewClient: {
     onMessage: jest.fn()
   }
 }));
 
 // Mock useVSCodeMessage and useLoadingState since useAsyncData depends on them
-jest.mock('@/webview-ui/shared/hooks/useVSCodeMessage', () => ({
+jest.mock('@/core/ui/hooks/useVSCodeMessage', () => ({
   useVSCodeMessage: jest.fn()
 }));
 

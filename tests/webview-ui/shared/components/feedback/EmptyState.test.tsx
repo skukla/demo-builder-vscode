@@ -1,6 +1,6 @@
 import React from 'react';
 import { renderWithProviders, screen, createMockIcon } from "../../../../helpers/react-test-utils";
-import { EmptyState } from '@/webview-ui/shared/components/feedback/EmptyState';
+import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 
 const MockCustomIcon = createMockIcon('Custom');
 

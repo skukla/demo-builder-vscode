@@ -4,13 +4,13 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Info from '@spectrum-icons/workflow/Info';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import React, { useEffect, useState } from 'react';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
-import { FadeTransition } from '@/webview-ui/shared/components/FadeTransition';
-import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
-import { Modal } from '@/webview-ui/shared/components/Modal';
-import { NumberedInstructions } from '@/webview-ui/shared/components/NumberedInstructions';
-import { WizardState, WizardStep } from '@/webview-ui/shared/types';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { Modal } from '@/core/ui/components/ui/Modal';
+import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
+import { WizardState, WizardStep } from '@/types/webview';
 
 interface ApiMeshStepProps {
     state: WizardState;
@@ -79,10 +79,10 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
         }, 2000);
 
         try {
-            const result = await vscode.request('check-api-mesh', { 
+            const result = await webviewClient.request('check-api-mesh', {
                 workspaceId: state.adobeWorkspace?.id,
                 selectedComponents: [],
-            });
+            }) as any;
 
             if (result?.success && result.apiEnabled) {
                 // API is enabled
@@ -212,7 +212,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                         label: 'Open Workspace in Console',
                                                         variant: 'secondary',
                                                         onPress: () => {
-                                                            vscode.postMessage('open-adobe-console', {
+                                                            webviewClient.postMessage('open-adobe-console', {
                                                                 orgId: state.adobeProject?.org_id,
                                                                 projectId: state.adobeProject?.id,
                                                                 workspaceId: state.adobeWorkspace?.id,
@@ -281,7 +281,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                             setHelperText('This could take up to 2 minutes');
                                             try {
                                                 // Step 1: Delete the broken mesh
-                                                await vscode.request('delete-api-mesh', {
+                                                await webviewClient.request('delete-api-mesh', {
                                                     workspaceId: state.adobeWorkspace?.id,
                                                 });
                                                 
@@ -290,9 +290,9 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                 setSubMessage('Submitting configuration to Adobe');
                                                 setHelperText('This could take up to 2 minutes');
                                                 
-                                                const result = await vscode.request('create-api-mesh', {
+                                                const result = await webviewClient.request('create-api-mesh', {
                                                     workspaceId: state.adobeWorkspace?.id,
-                                                });
+                                                }) as any;
 
                                                 if (result?.success) {
                                                     // Success! Mesh was created and deployed
@@ -383,9 +383,9 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
 
                                     try {
                                         // Backend automatically specifies required timeout via __timeout_hint__
-                                        const result = await vscode.request('create-api-mesh', {
+                                        const result = await webviewClient.request('create-api-mesh', {
                                             workspaceId: state.adobeWorkspace?.id,
-                                        });
+                                        }) as any;
 
                                         if (result?.success) {
                                             // Success! Mesh was created (and possibly deployed)
