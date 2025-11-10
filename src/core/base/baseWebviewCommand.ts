@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
 import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication';
 import { setLoadingState } from '@/core/utils/loadingHTML';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Base class for commands that use webviews with robust communication
@@ -19,10 +20,14 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     // Singleton: Track active webview panels and their communication managers by ID to prevent duplicates
     private static activePanels = new Map<string, vscode.WebviewPanel>();
     private static activeCommunicationManagers = new Map<string, WebviewCommunicationManager>();
-    
+
     // Static callback for disposal notifications
     private static disposalCallback?: (webviewId: string) => Promise<void>;
-    
+
+    // Track when we're transitioning between webviews to prevent auto-welcome
+    private static webviewTransitionInProgress = false;
+    private static transitionTimeout?: NodeJS.Timeout;
+
     protected panel: vscode.WebviewPanel | undefined;
     protected communicationManager: WebviewCommunicationManager | undefined;
     protected disposables: vscode.Disposable[] = [];
@@ -34,7 +39,45 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     public static setDisposalCallback(callback: (webviewId: string) => Promise<void>): void {
         BaseWebviewCommand.disposalCallback = callback;
     }
-    
+
+    /**
+     * Start a webview transition (prevents auto-welcome during transition)
+     */
+    public static startWebviewTransition(): void {
+        // Clear existing timeout if present (safety for double-start)
+        if (BaseWebviewCommand.transitionTimeout) {
+            clearTimeout(BaseWebviewCommand.transitionTimeout);
+        }
+
+        BaseWebviewCommand.webviewTransitionInProgress = true;
+
+        // Auto-clear after 3 seconds (safety timeout)
+        BaseWebviewCommand.transitionTimeout = setTimeout(() => {
+            BaseWebviewCommand.webviewTransitionInProgress = false;
+            BaseWebviewCommand.transitionTimeout = undefined;
+        }, TIMEOUTS.WEBVIEW_TRANSITION);
+    }
+
+    /**
+     * End a webview transition
+     */
+    public static endWebviewTransition(): void {
+        // Clear timeout if present
+        if (BaseWebviewCommand.transitionTimeout) {
+            clearTimeout(BaseWebviewCommand.transitionTimeout);
+            BaseWebviewCommand.transitionTimeout = undefined;
+        }
+
+        BaseWebviewCommand.webviewTransitionInProgress = false;
+    }
+
+    /**
+     * Check if a webview transition is in progress
+     */
+    public static isWebviewTransitionInProgress(): boolean {
+        return BaseWebviewCommand.webviewTransitionInProgress;
+    }
+
     /**
      * Get count of active webview panels
      * Used to check if any webviews are still open
@@ -337,14 +380,13 @@ export abstract class BaseWebviewCommand extends BaseCommand {
 
     /**
      * Get nonce for CSP
+     * Uses cryptographically secure random for security
      */
     protected getNonce(): string {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (let i = 0; i < 32; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-        }
-        return text;
+        // Use Node.js crypto for cryptographically secure random
+        // Prevents CSP bypass attacks via nonce prediction
+        const crypto = require('crypto');
+        return crypto.randomBytes(16).toString('base64');
     }
 
     /**

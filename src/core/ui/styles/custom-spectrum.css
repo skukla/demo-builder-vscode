@@ -588,12 +588,12 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 }
 
 .timeline-step-dot-completed {
-    background: #1e7cd6 !important; /* Sapphire Light - Completed steps */
+    background: var(--spectrum-global-color-green-600) !important; /* Green - Completed steps */
 }
 
 .timeline-step-dot-current {
-    background: #f97316 !important; /* Tangerine Orange - Active step */
-    border: 2px solid #fb923c !important; /* Tangerine Light - Active step border */
+    background: var(--spectrum-global-color-blue-600) !important; /* Blue - Active step */
+    border: 2px solid var(--spectrum-global-color-blue-400) !important; /* Blue - Active step border */
 }
 
 .timeline-step-dot-upcoming {

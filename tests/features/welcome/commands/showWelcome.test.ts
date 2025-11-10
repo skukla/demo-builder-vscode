@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
+import * as webviewHelpers from '@/core/utils/getWebviewHTMLWithBundles';
 
 // Mock VS Code API
 jest.mock('vscode');
@@ -287,6 +288,29 @@ describe('WelcomeWebviewCommand - Bundle Loading', () => {
             nonces.forEach(nonce => {
                 expect(nonce).toBe(firstNonce);
             });
+        });
+    });
+
+    describe('Helper Function Usage', () => {
+        it('should use getWebviewHTMLWithBundles helper for consistency', async () => {
+            // Spy on the helper function
+            const helperSpy = jest.spyOn(webviewHelpers, 'getWebviewHTMLWithBundles');
+
+            // Set up panel so getWebviewContent can access it
+            (command as any).panel = mockPanel;
+            await (command as any).getWebviewContent();
+
+            // Verify helper was called
+            expect(helperSpy).toHaveBeenCalledTimes(1);
+
+            // Verify it was called with correct bundle names
+            const callArgs = helperSpy.mock.calls[0][0];
+            expect(callArgs.bundleUris.runtime.toString()).toContain('runtime-bundle.js');
+            expect(callArgs.bundleUris.vendors.toString()).toContain('vendors-bundle.js');
+            expect(callArgs.bundleUris.common.toString()).toContain('common-bundle.js');
+            expect(callArgs.bundleUris.feature.toString()).toContain('welcome-bundle.js');
+
+            helperSpy.mockRestore();
         });
     });
 });

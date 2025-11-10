@@ -121,12 +121,18 @@ export async function activate(context: vscode.ExtensionContext) {
         BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
             // Small delay to let disposal complete before checking
             await new Promise(resolve => setTimeout(resolve, 100));
-            
+
             // Check if any webviews are still open using the singleton map
             const activeWebviewCount = BaseWebviewCommand.getActivePanelCount();
-            
+
             logger.debug(`[Extension] Webview ${webviewId} closed. Active webviews remaining: ${activeWebviewCount}`);
-            
+
+            // Don't auto-reopen Welcome if we're transitioning between webviews
+            if (BaseWebviewCommand.isWebviewTransitionInProgress()) {
+                logger.debug('[Extension] Webview transition in progress, skipping auto-welcome');
+                return;
+            }
+
             // If no webviews are open, show Welcome to prevent user being stuck
             if (activeWebviewCount === 0) {
                 logger.info('[Extension] No webviews open after disposal - opening Welcome');

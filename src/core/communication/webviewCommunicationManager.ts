@@ -54,15 +54,24 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
 
 /**
  * Manages robust bidirectional communication between extension and webview
- * 
+ *
  * Features:
  * - Message queuing until both sides are ready
- * - Two-way handshake protocol
+ * - Webview-initiated handshake protocol (VS Code Issue #125546)
  * - Request-response pattern with timeouts
  * - Automatic retry for failed messages
  * - State version tracking
  * - Comprehensive logging
  * - Backend-specified timeouts (single source of truth)
+ *
+ * Handshake Protocol (Reversed - Webview Initiates):
+ * 1. Extension sets up message listener and waits passively
+ * 2. Webview loads JavaScript bundle and sends `__webview_ready__`
+ * 3. Extension receives ready signal and sends `__handshake_complete__`
+ * 4. Both sides flush queued messages and begin normal communication
+ *
+ * This approach eliminates race conditions where the extension sends messages
+ * before the webview JavaScript bundle has finished loading.
  */
 export class WebviewCommunicationManager {
     private panel: vscode.WebviewPanel;
@@ -112,14 +121,8 @@ export class WebviewCommunicationManager {
                 reject(new Error('Webview handshake timeout'));
             }, this.config.handshakeTimeout);
 
-            // Send extension ready signal
-            this.sendRawMessage({
-                id: uuidv4(),
-                type: '__extension_ready__',
-                timestamp: Date.now(),
-            });
-
             // Set up handshake completion handler
+            // Extension waits passively for webview ready signal (VS Code Issue #125546)
             this.once('__webview_ready__', () => {
                 this.isWebviewReady = true;
                 
@@ -317,25 +320,25 @@ export class WebviewCommunicationManager {
         if (handler) {
             try {
                 // Send timeout hint for requests that need extended timeouts
+                // NOTE: Nesting depth intentional - timeout hint must not block handler execution
                 if (message.id && message.expectsResponse) {
                     const requestTimeout = REQUEST_TIMEOUTS[message.type];
                     if (requestTimeout) {
-                        try {
-                            await this.sendRawMessage({
-                                id: uuidv4(),
-                                type: '__timeout_hint__',
-                                payload: { 
-                                    requestId: message.id,
-                                    timeout: requestTimeout, 
-                                },
-                                timestamp: Date.now(),
-                            });
-                        } catch (hintError) {
+                        // Fire-and-forget: Don't await to avoid blocking handler
+                        this.sendRawMessage({
+                            id: uuidv4(),
+                            type: '__timeout_hint__',
+                            payload: {
+                                requestId: message.id,
+                                timeout: requestTimeout,
+                            },
+                            timestamp: Date.now(),
+                        }).catch(hintError => {
                             // Timeout hint is non-critical, log and continue
                             if (this.config.enableLogging) {
                                 this.logger.warn(`[WebviewComm] Failed to send timeout hint (non-fatal): ${hintError}`);
                             }
-                        }
+                        });
                     }
                 }
 

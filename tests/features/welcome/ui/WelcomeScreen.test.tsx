@@ -54,11 +54,12 @@ describe('WelcomeScreen', () => {
         expect(screen.getByText('Settings')).toBeInTheDocument();
     });
 
-    it('should post ready message on mount', () => {
-        const { webviewClient } = require('@/core/ui/utils/WebviewClient');
-        render(<WelcomeScreen />);
-        expect(webviewClient.postMessage).toHaveBeenCalledWith('ready');
-    });
+    // Note: Manual 'ready' message test removed (previously lines 57-61)
+    // The manual postMessage('ready') call was removed from WebviewApp.tsx during
+    // handshake refactor. WebviewClient constructor now handles __webview_ready__
+    // automatically as part of the handshake protocol.
+    // See: src/core/ui/components/WebviewApp.tsx (lines 108-109 removed)
+    //      src/core/ui/utils/WebviewClient.ts (constructor lines 49-60)
 
     it('should handle create new action', () => {
         const { webviewClient } = require('@/core/ui/utils/WebviewClient');

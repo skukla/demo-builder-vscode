@@ -2,7 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import type { WebviewCommunicationManager } from '@/core/communication';
-import { generateWebviewHTML } from '@/core/utils/webviewHTMLBuilder';
+import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 
 export class WelcomeWebviewCommand extends BaseWebviewCommand {
 
@@ -46,6 +46,8 @@ export class WelcomeWebviewCommand extends BaseWebviewCommand {
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
         comm.onStreaming('create-new', async () => {
+            // Start webview transition to prevent auto-welcome reopening
+            BaseWebviewCommand.startWebviewTransition();
             WelcomeWebviewCommand.disposeActivePanel();
             await new Promise(resolve => setTimeout(resolve, 50));
             await vscode.commands.executeCommand('demoBuilder.createProject');
@@ -63,32 +65,45 @@ export class WelcomeWebviewCommand extends BaseWebviewCommand {
         });
     }
 
+    /**
+     * Generate webview HTML with webpack 4-bundle pattern.
+     *
+     * Loads bundles in correct order for code splitting:
+     * 1. runtime-bundle.js - Webpack runtime
+     * 2. vendors-bundle.js - Third-party libraries (React, Spectrum)
+     * 3. common-bundle.js - Shared application code (WebviewClient)
+     * 4. welcome-bundle.js - Welcome-specific code
+     */
     protected async getWebviewContent(): Promise<string> {
         this.logger.debug('[UI] getWebviewContent called');
         const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
 
-        // Get URI for bundle
-        const bundlePath = path.join(webviewPath, 'welcome-bundle.js');
-        const bundleUri = this.panel!.webview.asWebviewUri(vscode.Uri.file(bundlePath));
-
-        // Get fallback bundle URI for development
-        const fallbackBundleUri = this.panel!.webview.asWebviewUri(
-            vscode.Uri.file(path.join(webviewPath, 'main-bundle.js')),
-        );
+        // Build bundle URIs for webpack code-split bundles
+        const bundleUris = {
+            runtime: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'runtime-bundle.js'))
+            ),
+            vendors: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'vendors-bundle.js'))
+            ),
+            common: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'common-bundle.js'))
+            ),
+            feature: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'welcome-bundle.js'))
+            ),
+        };
 
         const nonce = this.getNonce();
-        const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
+        const cspSource = this.panel!.webview.cspSource;
 
-        // Build the HTML content using shared utility
-        const html = generateWebviewHTML({
-            scriptUri: bundleUri,
+        // Generate HTML using 4-bundle helper
+        const html = getWebviewHTMLWithBundles({
+            bundleUris,
             nonce,
+            cspSource,
             title: 'Demo Builder',
-            cspSource: this.panel!.webview.cspSource,
-            includeLoadingSpinner: true,
-            loadingMessage: 'Loading Demo Builder...',
-            isDark,
-            fallbackBundleUri,
+            additionalImgSources: ['https:', 'data:'],
         });
 
         this.logger.debug('[UI] getWebviewContent completed, returning HTML');

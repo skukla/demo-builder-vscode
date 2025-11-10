@@ -62,15 +62,17 @@ describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
     });
 
     describe('initialization and handshake', () => {
-        it('should send extension ready signal on initialization', async () => {
+        it('should NOT send extension ready signal on initialization', async () => {
+            // Reversed handshake: extension waits passively for webview
             manager = new WebviewCommunicationManager(mockPanel);
 
             const initPromise = manager.initialize();
 
-            // Fast-forward to allow message to be sent
+            // Fast-forward to allow any messages to be sent
             await Promise.resolve();
 
-            expect(mockWebview.postMessage).toHaveBeenCalledWith(
+            // Extension should NOT send __extension_ready__ (webview initiates now)
+            expect(mockWebview.postMessage).not.toHaveBeenCalledWith(
                 expect.objectContaining({
                     type: '__extension_ready__'
                 })
@@ -205,6 +207,43 @@ describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
 
             // Verify all messages were sent
             expect(mockWebview.postMessage).toHaveBeenCalledTimes(4); // 3 messages + handshake_complete
+        });
+
+        it('should handle automatic __webview_ready__ from WebviewClient constructor', async () => {
+            // This test documents the reversed handshake behavior (VS Code Issue #125546).
+            // The WebviewClient constructor now sends __webview_ready__ immediately after
+            // initialization (line 142-148 in WebviewClient.ts), eliminating the need for
+            // manual postMessage('ready') calls in UI components.
+            // Extension waits passively for this signal instead of sending __extension_ready__.
+
+            manager = new WebviewCommunicationManager(mockPanel);
+            const initPromise = manager.initialize();
+
+            await Promise.resolve();
+
+            // Extension should NOT send __extension_ready__ (waits passively)
+            expect(mockWebview.postMessage).not.toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: '__extension_ready__'
+                })
+            );
+
+            // WebviewClient constructor automatically sends __webview_ready__ (simulated here)
+            // In the real webview, this happens in WebviewClient constructor after addEventListener
+            messageListener({
+                id: 'webview-auto-handshake',
+                type: '__webview_ready__',
+                timestamp: Date.now()
+            });
+
+            await initPromise;
+
+            // Extension responds with handshake complete
+            expect(mockWebview.postMessage).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: '__handshake_complete__'
+                })
+            );
         });
     });
 

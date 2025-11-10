@@ -43,6 +43,9 @@ export const TIMEOUTS = {
     // Demo lifecycle timeouts
     DEMO_STOP_WAIT: 2000,           // Wait time after stopping demo before cleanup (2 seconds)
 
+    // Webview lifecycle timeouts
+    WEBVIEW_TRANSITION: 3000,       // 3 seconds - webview transition tracking (prevents race conditions)
+
     // Default fallbacks
     COMMAND_DEFAULT: 30000,         // Default command timeout
 } as const;

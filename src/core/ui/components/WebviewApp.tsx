@@ -77,6 +77,11 @@ export function WebviewApp({
         // Apply VSCode theme class to body
         document.body.classList.add('vscode-dark');
 
+        // Send ready message to extension immediately
+        // This bypasses the handshake deadlock (extension waits for __webview_ready__,
+        // WebviewClient waits for __extension_ready__)
+        webviewClient.postMessage('ready');
+
         // Listen for initialization from extension
         const unsubscribeInit = webviewClient.onMessage('init', (data) => {
             const initData = data as any;
@@ -104,9 +109,6 @@ export function WebviewApp({
             document.body.classList.remove('vscode-light', 'vscode-dark');
             document.body.classList.add(themeData.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
         });
-
-        // Request initialization
-        webviewClient.postMessage('ready');
 
         return () => {
             unsubscribeInit();

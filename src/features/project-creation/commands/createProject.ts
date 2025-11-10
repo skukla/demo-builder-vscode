@@ -6,7 +6,10 @@ import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di';
 import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
 import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import { generateWebviewHTML } from '@/core/utils/webviewHTMLBuilder';
+import {
+    getWebviewHTMLWithBundles,
+    type BundleUris
+} from '@/core/utils/getWebviewHTMLWithBundles';
 import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
@@ -170,26 +173,51 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         return 'Create Demo Project';
     }
 
+    /**
+     * Generates webview HTML content with webpack 4-bundle pattern.
+     *
+     * Bundle loading order is critical for proper initialization:
+     * 1. runtime-bundle.js - Webpack runtime enables chunk loading
+     * 2. vendors-bundle.js - React/Spectrum must load before application code
+     * 3. common-bundle.js - Shared code (including WebviewClient for handshake)
+     * 4. wizard-bundle.js - Wizard-specific code executes last
+     *
+     * This pattern eliminates race conditions where webview JavaScript
+     * attempts to execute before dependencies are loaded, causing timeout errors.
+     *
+     * @returns HTML string with all 4 bundles in correct order
+     */
     protected async getWebviewContent(): Promise<string> {
         const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
 
-        // Get URI for bundle
-        const bundleUri = this.panel!.webview.asWebviewUri(
-            vscode.Uri.file(path.join(webviewPath, 'main-bundle.js')),
-        );
+        // Webpack code splitting requires loading bundles in order:
+        // 1. runtime (webpack runtime and chunk loading)
+        // 2. vendors (React, Spectrum, third-party libraries)
+        // 3. common (shared code including WebviewClient)
+        // 4. wizard (wizard-specific code)
+        const bundleUris: BundleUris = {
+            runtime: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'runtime-bundle.js'))
+            ),
+            vendors: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'vendors-bundle.js'))
+            ),
+            common: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'common-bundle.js'))
+            ),
+            feature: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'wizard-bundle.js'))
+            ),
+        };
 
         const nonce = this.getNonce();
-        const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
 
-        // Build the HTML content using shared utility
-        return generateWebviewHTML({
-            scriptUri: bundleUri,
+        // Build HTML with 4-bundle pattern
+        return getWebviewHTMLWithBundles({
+            bundleUris,
             nonce,
-            title: 'Adobe Demo Builder',
             cspSource: this.panel!.webview.cspSource,
-            includeLoadingSpinner: true,
-            loadingMessage: 'Loading Adobe Demo Builder...',
-            isDark,
+            title: 'Adobe Demo Builder',
         });
     }
 
@@ -325,8 +353,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             } else {
                 this.logger.debug('Wizard webview already initialized, reusing existing communication');
             }
-            
+
+            // End webview transition (wizard successfully opened)
+            BaseWebviewCommand.endWebviewTransition();
+
         } catch (error) {
+            // Ensure transition is ended even on error
+            BaseWebviewCommand.endWebviewTransition();
             this.logger.error('Failed to create webview', error as Error);
             await this.showError('Failed to create webview', error as Error);
         }

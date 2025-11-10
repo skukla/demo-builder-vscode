@@ -26,10 +26,6 @@ export function WelcomeScreen(_props: WelcomeScreenProps) {
         autoFocus: true,
     });
 
-    useEffect(() => {
-        webviewClient.postMessage('ready');
-    }, []);
-
     // Action handlers with useCallback
     const handleCreateNew = useCallback(() => {
         webviewClient.postMessage('create-new');

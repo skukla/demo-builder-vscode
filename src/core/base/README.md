@@ -155,7 +155,7 @@ class MyWebviewCommand extends BaseWebviewCommand {
     }
 
     async execute(): Promise<void> {
-        const panel = await this.createOrRevealPanel();
+        await this.createOrRevealPanel();
         await this.initializeCommunication();
     }
 }
@@ -176,9 +176,10 @@ class MyWebviewCommand extends BaseWebviewCommand {
 
 **Key Methods**:
 - `createOrRevealPanel()` - Create or reveal singleton panel
-- `initializeCommunication()` - Initialize communication manager
+- `initializeCommunication()` - Initialize communication manager (idempotent)
 - `sendMessage(type, payload?)` - Send message to webview
 - `request<T>(type, payload?)` - Request-response with webview
+- `getNonce()` - Generate cryptographically secure nonce for CSP
 - `isVisible()` - Check if webview is visible
 - `dispose()` - Clean up resources
 - `shouldReopenWelcomeOnDispose()` - Override to control Welcome reopen
@@ -512,8 +513,9 @@ async execute(): Promise<void> {
     const panel = await this.createOrRevealPanel();
     // Shows loading state automatically
 
-    // Step 2: Initialize communication (performs handshake)
+    // Step 2: Initialize communication (webview-initiated handshake)
     await this.initializeCommunication();
+    // Webview sends __webview_ready__, extension responds with __handshake_complete__
     // Handshake complete, webview ready
 
     // Step 3: Communication ready, initial data sent

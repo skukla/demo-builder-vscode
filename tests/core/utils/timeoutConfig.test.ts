@@ -64,4 +64,43 @@ describe('Timeout Configuration', () => {
             expect(TIMEOUTS).not.toBeNull();
         });
     });
+
+    describe('WEBVIEW_TRANSITION timeout', () => {
+        it('should be defined in TIMEOUTS', () => {
+            // Arrange & Act
+            const hasProperty = 'WEBVIEW_TRANSITION' in TIMEOUTS;
+
+            // Assert
+            expect(hasProperty).toBe(true);
+            expect(TIMEOUTS.WEBVIEW_TRANSITION).toBeDefined();
+        });
+
+        it('should be set to 3000ms (3 seconds)', () => {
+            // Prevents race conditions during webview transitions
+            expect(TIMEOUTS.WEBVIEW_TRANSITION).toBe(3000);
+        });
+
+        it('should be longer than typical UI transitions', () => {
+            // Webview transitions need reasonable safety margin
+            expect(TIMEOUTS.WEBVIEW_TRANSITION).toBeGreaterThanOrEqual(2000);
+        });
+
+        it('should be shorter than user patience threshold', () => {
+            // Users won't wait more than a few seconds for transitions
+            expect(TIMEOUTS.WEBVIEW_TRANSITION).toBeLessThanOrEqual(5000);
+        });
+
+        it('should be appropriate for webview lifecycle operations', () => {
+            // 3 seconds is reasonable for webview transitions
+            expect(TIMEOUTS.WEBVIEW_TRANSITION).toBeGreaterThanOrEqual(2000);
+            expect(TIMEOUTS.WEBVIEW_TRANSITION).toBeLessThanOrEqual(5000);
+        });
+
+        it('should use const assertion for type safety', () => {
+            // Verify TIMEOUTS object structure
+            expect(TIMEOUTS).toBeDefined();
+            expect(typeof TIMEOUTS).toBe('object');
+            expect(TIMEOUTS).not.toBeNull();
+        });
+    });
 });

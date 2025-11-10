@@ -4,6 +4,14 @@
  * Client-side communication manager for VS Code webviews.
  * Provides handshake protocol, message queuing, and request-response patterns
  * for bidirectional communication with the extension backend.
+ *
+ * Handshake Protocol (Webview-Initiated - VS Code Issue #125546):
+ * 1. Webview loads and sends `__webview_ready__` immediately
+ * 2. Extension receives ready signal and sends `__handshake_complete__`
+ * 3. Both sides flush queued messages and begin normal communication
+ *
+ * This webview-first approach eliminates race conditions where the extension
+ * sends messages before the webview JavaScript bundle has loaded.
  */
 
 declare global {
@@ -69,18 +77,8 @@ class WebviewClient {
         // Set up message listener
         window.addEventListener('message', (event) => {
             const message = event.data as Message;
-            
+
             // Handle handshake protocol
-            if (message.type === '__extension_ready__') {
-                // Extension is ready, send webview ready signal
-                this.sendRawMessage({
-                    id: this.generateMessageId(),
-                    type: '__webview_ready__',
-                    timestamp: Date.now()
-                });
-                return;
-            }
-            
             if (message.type === '__handshake_complete__') {
                 this.handshakeComplete = true;
                 if (this.readyResolve) {
@@ -93,7 +91,7 @@ class WebviewClient {
             
             // Handle timeout hints from backend (backend specifies required timeout)
             if (message.type === '__timeout_hint__' && message.payload) {
-                const payloadData = message.payload as any;
+                const payloadData = message.payload as { requestId: string; timeout: number };
                 const { requestId, timeout: newTimeout } = payloadData;
                 const pending = this.pendingRequests.get(requestId);
                 if (pending) {
@@ -129,7 +127,7 @@ class WebviewClient {
                 if (handlers) {
                     handlers.forEach(handler => {
                         const result = handler(message.payload);
-                        
+
                         // Send response if expected
                         if (message.expectsResponse && message.id) {
                             this.sendRawMessage({
@@ -138,7 +136,7 @@ class WebviewClient {
                                 payload: result,
                                 timestamp: Date.now(),
                                 isResponse: true,
-                                responseToId: message.id
+                                responseToId: message.id,
                             });
                         }
                     });
@@ -148,12 +146,21 @@ class WebviewClient {
             // Note: Acknowledgment is sent by the extension side (webviewCommunicationManager)
             // to avoid duplicate acknowledgements
         });
+
+        // Send webview ready signal to initiate handshake
+        // Following VS Code Issue #125546 best practice: webview initiates handshake
+        this.sendRawMessage({
+            id: this.generateMessageId(),
+            type: '__webview_ready__',
+            timestamp: Date.now(),
+        });
     }
 
     private getApi(): VSCodeApi {
         if (!this.vscodeApi) {
             this.initialize();
         }
+        // Safe non-null assertion: initialize() sets vscodeApi
         return this.vscodeApi!;
     }
 
@@ -168,7 +175,7 @@ class WebviewClient {
             id: this.generateMessageId(),
             type,
             payload,
-            timestamp: Date.now()
+            timestamp: Date.now(),
         };
         
         if (!this.handshakeComplete) {
@@ -196,7 +203,7 @@ class WebviewClient {
             type,
             payload,
             timestamp: Date.now(),
-            expectsResponse: true
+            expectsResponse: true,
         };
         
         if (!this.handshakeComplete) {
@@ -205,7 +212,7 @@ class WebviewClient {
         
         return new Promise<T>((resolve, reject) => {
             // Set up initial timeout (may be extended by backend timeout hint)
-            let timeout = setTimeout(() => {
+            const timeout = setTimeout(() => {
                 this.pendingRequests.delete(message.id);
                 reject(new Error(`Request timeout: ${type}`));
             }, timeoutMs);
@@ -214,7 +221,7 @@ class WebviewClient {
             this.pendingRequests.set(message.id, {
                 resolve: resolve as (value: unknown) => void,
                 reject,
-                timeout
+                timeout,
             });
 
             // Send the request
@@ -245,10 +252,11 @@ class WebviewClient {
         if (!this.initialized) {
             this.initialize();
         }
-        
+
         if (!this.listeners.has(type)) {
             this.listeners.set(type, new Set());
         }
+        // Safe non-null assertion: we just set it if it didn't exist
         this.listeners.get(type)!.add(handler);
 
         // Return unsubscribe function
