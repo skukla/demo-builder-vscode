@@ -1,13 +1,13 @@
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
-import { ConfigureProjectWebviewCommand } from './configureProjectWebview';
-import { CreateProjectWebviewCommand } from './createProjectWebview';
+import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { DeleteProjectCommand } from './deleteProject';
 import { DiagnosticsCommand } from './diagnostics';
-import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
+import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ResetAllCommand } from './resetAll';
 import { ViewStatusCommand } from './viewStatus';
-import { WelcomeWebviewCommand } from './welcomeWebview';
+import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';

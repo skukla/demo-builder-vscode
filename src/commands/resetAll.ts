@@ -38,14 +38,14 @@ export class ResetAllCommand extends BaseCommand {
 
             // 2. Close all open webview panels (Welcome, Project Dashboard, Create Project wizard)
             try {
-                const { WelcomeWebviewCommand } = await import('./welcomeWebview');
-                const { ProjectDashboardWebviewCommand } = await import('./projectDashboardWebview');
+                const { WelcomeWebviewCommand } = await import('@/features/welcome/commands/showWelcome');
+                const { ProjectDashboardWebviewCommand } = await import('@/features/dashboard/commands/showDashboard');
                 const { BaseWebviewCommand } = await import('@/core/base');
-                
+
                 WelcomeWebviewCommand.disposeActivePanel();
                 ProjectDashboardWebviewCommand.disposeActivePanel();
                 BaseWebviewCommand.disposeAllActivePanels();
-                
+
                 this.logger.info('Closed all webview panels');
             } catch (err) {
                 this.logger.warn('Error closing webview panels:', err as Error);

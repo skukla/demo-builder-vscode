@@ -13,8 +13,8 @@ import { StateManager } from '@/core/state';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
 import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
-import { ProjectDashboardWebviewCommand } from '@/commands/projectDashboardWebview';
-import { ConfigureProjectWebviewCommand } from '@/commands/configureProjectWebview';
+import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
+import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 
 // Mock VS Code API
 jest.mock('vscode');
@@ -30,9 +30,9 @@ jest.mock('@/features/welcome/commands/showWelcome', () => {
         WelcomeWebviewCommand: MockWelcomeWebviewCommand,
     };
 });
-jest.mock('@/commands/createProjectWebview');
-jest.mock('@/commands/projectDashboardWebview');
-jest.mock('@/commands/configureProjectWebview');
+jest.mock('@/features/project-creation/commands/createProject');
+jest.mock('@/features/dashboard/commands/showDashboard');
+jest.mock('@/features/dashboard/commands/configure');
 jest.mock('@/commands/configure');
 jest.mock('@/commands/deleteProject');
 jest.mock('@/commands/diagnostics');
