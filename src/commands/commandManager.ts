@@ -1,20 +1,20 @@
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
-import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
-import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { DeleteProjectCommand } from './deleteProject';
 import { DiagnosticsCommand } from './diagnostics';
-import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ResetAllCommand } from './resetAll';
 import { ViewStatusCommand } from './viewStatus';
-import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
 import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
+import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
+import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
 import { Project } from '@/types';
 
 export class CommandManager {

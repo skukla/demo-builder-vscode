@@ -108,6 +108,9 @@ describe('Enhanced Progress Visibility - Integration', () => {
             currentTime += 35000;
             await new Promise(resolve => setTimeout(resolve, 100));
 
+            // Wait for execution to complete
+            await executePromise;
+
             // Cleanup
             Date.now = originalDateNow;
 
@@ -186,6 +189,9 @@ describe('Enhanced Progress Visibility - Integration', () => {
                 }
 
                 await new Promise(resolve => setTimeout(resolve, 50));
+
+                // Wait for step to complete before moving to next
+                await executePromise;
             }
 
             // Cleanup
