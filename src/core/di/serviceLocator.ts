@@ -66,6 +66,7 @@ export class ServiceLocator {
      */
     static reset(): void {
         this.commandExecutor = null;
+        this.authenticationService = null;
     }
 
     /**

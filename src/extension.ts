@@ -7,6 +7,7 @@ import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
+import { AuthenticationService } from '@/features/authentication';
 import { parseJSON } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
 
@@ -15,6 +16,7 @@ let statusBar: StatusBarManager;
 let stateManager: StateManager;
 let autoUpdater: AutoUpdater;
 let externalCommandManager: CommandExecutor;
+let authenticationService: AuthenticationService;
 
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
@@ -58,6 +60,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register CommandExecutor with ServiceLocator (breaks circular dependencies)
         ServiceLocator.setCommandExecutor(externalCommandManager);
+
+        // Initialize authentication service
+        authenticationService = new AuthenticationService(
+            context.extensionPath,
+            logger,
+            externalCommandManager
+        );
+
+        // Register AuthenticationService with ServiceLocator
+        ServiceLocator.setAuthenticationService(authenticationService);
 
         // Check workspace trust
         if (!vscode.workspace.isTrusted) {
@@ -282,6 +294,7 @@ export function deactivate() {
     autoUpdater?.dispose();
     stateManager?.dispose();
     externalCommandManager?.dispose();
+    // Note: authenticationService has no dispose method
 
     // Reset service locator
     ServiceLocator.reset();
