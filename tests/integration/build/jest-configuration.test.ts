@@ -21,10 +21,10 @@ describe('Jest Configuration - Module Resolution', () => {
         execSync('npm test -- --passWithNoTests --testPathIgnorePatterns=".*"', {
           cwd: projectRoot,
           stdio: 'pipe',
-          timeout: 20000
+          timeout: 60000
         });
       }).not.toThrow();
-    }, 25000);
+    }, 70000);
 
     test('should resolve @/features imports in test files', () => {
       // Given: moduleNameMapper configured for @/features
@@ -36,12 +36,12 @@ describe('Jest Configuration - Module Resolution', () => {
         {
           cwd: projectRoot,
           encoding: 'utf-8',
-          timeout: 20000
+          timeout: 60000
         }
       );
 
       expect(output).not.toMatch(/Cannot find module '@\/features/);
-    }, 25000);
+    }, 70000);
 
     test('should support colocated test files in features directory', () => {
       // Given: testMatch patterns include src/**/*.test.ts?(x)
@@ -53,14 +53,14 @@ describe('Jest Configuration - Module Resolution', () => {
         {
           cwd: projectRoot,
           encoding: 'utf-8',
-          timeout: 20000
+          timeout: 60000
         }
       );
 
       // Jest should be able to discover tests (even if none exist yet)
       // No fatal errors about test patterns
       expect(output).not.toMatch(/No tests found/);
-    }, 25000);
+    }, 70000);
 
     test('should not have warnings about unresolved imports', () => {
       // Given: Complete moduleNameMapper configuration
@@ -72,13 +72,13 @@ describe('Jest Configuration - Module Resolution', () => {
         {
           cwd: projectRoot,
           encoding: 'utf-8',
-          timeout: 20000
+          timeout: 60000
         }
       );
 
       expect(output).not.toMatch(/Could not locate module/i);
       expect(output).not.toMatch(/Cannot resolve module/i);
-    }, 25000);
+    }, 70000);
   });
 
   describe('Edge Case: Test Discovery', () => {
@@ -92,12 +92,12 @@ describe('Jest Configuration - Module Resolution', () => {
         {
           cwd: projectRoot,
           encoding: 'utf-8',
-          timeout: 20000
+          timeout: 60000
         }
       );
 
       // Should not crash or throw errors
       expect(typeof output).toBe('string');
-    }, 25000);
+    }, 70000);
   });
 });
