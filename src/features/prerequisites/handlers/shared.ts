@@ -7,12 +7,24 @@
 
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { DEFAULT_SHELL } from '@/types/shell';
 import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 
 /**
  * Get Node version mapping from component selection
  *
  * Returns a map of Node major versions to component names that require them.
+ * Component-driven approach: versions are determined by what components need.
+ *
+ * @param context - Handler context with component selection
+ * @returns Mapping of Node major version to component name (e.g., {'18': 'frontend', '20': 'backend'})
+ *
+ * @example
+ * // User selected:
+ * // - frontend: citisignal-nextjs (requires Node 18)
+ * // - backend: commerce-paas (requires Node 20)
+ * const mapping = await getNodeVersionMapping(context);
+ * // Returns: { '18': 'citisignal-nextjs', '20': 'commerce-paas' }
  */
 export async function getNodeVersionMapping(
     context: HandlerContext,
@@ -41,9 +53,13 @@ export async function getNodeVersionMapping(
  * Get required Node versions from component selection
  *
  * Returns array of Node major versions required by selected components.
+ * Component-driven approach: versions determined by what components need.
  */
 export async function getRequiredNodeVersions(context: HandlerContext): Promise<string[]> {
     if (!context.sharedState.currentComponentSelection) {
+        context.debugLogger.debug('[Prerequisites] No component selection - no Node versions required', {
+            hasSelection: false,
+        });
         return [];
     }
 
@@ -58,7 +74,19 @@ export async function getRequiredNodeVersions(context: HandlerContext): Promise<
             context.sharedState.currentComponentSelection.appBuilder,
         );
         // Sort versions in ascending order (18, 20, 24) for predictable installation order
-        return Array.from(mapping).sort((a, b) => parseInt(a) - parseInt(b));
+        const sortedVersions = Array.from(mapping).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+
+        context.debugLogger.debug('[Prerequisites] Detected component Node requirements', {
+            frontend: context.sharedState.currentComponentSelection.frontend,
+            backend: context.sharedState.currentComponentSelection.backend,
+            dependencies: context.sharedState.currentComponentSelection.dependencies,
+            integrations: context.sharedState.currentComponentSelection.integrations,
+            appBuilder: context.sharedState.currentComponentSelection.appBuilder,
+            totalVersions: sortedVersions.length,
+            versions: sortedVersions,
+        });
+
+        return sortedVersions;
     } catch {
         return [];
     }
@@ -97,6 +125,33 @@ export function areDependenciesInstalled(
  *
  * For prerequisites that must be installed per Node version (like Adobe I/O CLI),
  * checks which Node versions have it installed.
+ *
+ * Component-driven approach: Tools like Adobe CLI adapt to the Node version they're
+ * installed under. This function verifies that each required Node version has the
+ * tool installed in its context.
+ *
+ * @param prereq - Prerequisite definition with perNodeVersion flag
+ * @param nodeVersions - Array of Node major versions to check (e.g., ['18', '20', '24'])
+ * @param context - Handler context with logger
+ * @returns Status object with per-version installation details
+ *
+ * @example
+ * // Check if Adobe CLI is installed for Node 18, 20, and 24
+ * const result = await checkPerNodeVersionStatus(
+ *     aioCliPrereq,
+ *     ['18', '20', '24'],
+ *     context
+ * );
+ * // Returns:
+ * // {
+ * //   perNodeVersionStatus: [
+ * //     { version: 'Node 18', component: '10.0.0', installed: true },
+ * //     { version: 'Node 20', component: '', installed: false },
+ * //     { version: 'Node 24', component: '10.0.0', installed: true }
+ * //   ],
+ * //   perNodeVariantMissing: true,
+ * //   missingVariantMajors: ['20']
+ * // }
  */
 export async function checkPerNodeVersionStatus(
     prereq: import('@/features/prerequisites/services/PrerequisitesManager').PrerequisiteDefinition,
@@ -121,7 +176,10 @@ export async function checkPerNodeVersionStatus(
 
     // CRITICAL: Get list of actually installed Node versions FIRST
     // This prevents false positives when fnm falls back to other versions
-    const fnmListResult = await commandManager.execute('fnm list', { timeout: TIMEOUTS.PREREQUISITE_CHECK });
+    const fnmListResult = await commandManager.execute('fnm list', {
+        timeout: TIMEOUTS.PREREQUISITE_CHECK,
+        shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
+    });
     const installedVersions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
     const installedMajors = new Set<string>();
     for (const version of installedVersions) {

@@ -128,6 +128,12 @@ export interface FormValidation {
     field: string;
 }
 
+/**
+ * Unified progress reporting interface for prerequisite operations.
+ *
+ * Supports both overall step progress and granular command-level progress,
+ * including milestone tracking for multi-step operations.
+ */
 export interface UnifiedProgress {
     overall: {
         percent: number;
@@ -140,6 +146,19 @@ export interface UnifiedProgress {
         percent?: number;
         detail?: string;
         confidence: 'exact' | 'estimated' | 'synthetic';
+
+        /**
+         * Current milestone index (0-based) for multi-step operations.
+         * Used with totalMilestones to display substep progress like "Step 2 of 3".
+         * Only present when an operation has multiple milestones.
+         */
+        currentMilestoneIndex?: number;
+
+        /**
+         * Total number of milestones in the current operation.
+         * Used with currentMilestoneIndex to display substep progress.
+         */
+        totalMilestones?: number;
     };
 }
 

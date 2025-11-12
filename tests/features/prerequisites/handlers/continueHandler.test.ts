@@ -111,6 +111,75 @@ describe('Prerequisites Continue Handler', () => {
         } as jest.Mocked<HandlerContext>;
     }
 
+    describe('shell option for fnm list', () => {
+        it('should execute fnm list with shell option in continue handler', async () => {
+            const states = new Map();
+            const adobeResult: PrerequisiteStatus = {
+                id: 'adobe-cli',
+                name: 'Adobe I/O CLI',
+                description: 'Adobe I/O CLI',
+                installed: true,
+                version: '10.0.0',
+                optional: false,
+                canInstall: true,
+            };
+            states.set(0, { prereq: mockAdobeCliPrereq, result: adobeResult });
+            mockContext.sharedState = {
+                isAuthenticating: false,
+                currentPrerequisites: [mockAdobeCliPrereq],
+                currentPrerequisiteStates: states,
+            };
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(adobeResult);
+
+            const mockExecute = jest.fn()
+                .mockResolvedValueOnce({ stdout: 'v18.20.8\nv20.19.5\n', stderr: '', code: 0, duration: 100 }) // fnm list with shell
+                .mockResolvedValueOnce({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', code: 0, duration: 100 }) // Node 18 check
+                .mockResolvedValueOnce({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', code: 0, duration: 100 }); // Node 20 check
+
+            (mockCommandExecutor.execute as jest.Mock) = mockExecute;
+
+            await handleContinuePrerequisites(mockContext);
+
+            // Verify fnm list was called with shell option
+            expect(mockExecute).toHaveBeenCalledWith('fnm list', expect.objectContaining({
+                shell: expect.any(String), // Expects shell path (e.g., '/bin/bash')
+                timeout: expect.any(Number),
+            }));
+        });
+
+        it('should allow continuation when Node versions installed', async () => {
+            const states = new Map();
+            const nodeResult: PrerequisiteStatus = {
+                id: 'node',
+                name: 'Node.js',
+                description: 'JavaScript runtime',
+                installed: true,
+                version: 'v18.0.0',
+                optional: false,
+                canInstall: false,
+            };
+            states.set(0, { prereq: mockNodePrereq, result: nodeResult });
+            mockContext.sharedState = {
+                isAuthenticating: false,
+                currentPrerequisites: [mockNodePrereq],
+                currentPrerequisiteStates: states,
+            };
+            (mockContext.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValue(nodeResult);
+            (mockContext.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+                { version: 'Node 18', component: 'v18.0.0', installed: true },
+                { version: 'Node 20', component: 'v20.0.0', installed: true },
+            ]);
+
+            const result = await handleContinuePrerequisites(mockContext);
+
+            expect(result.success).toBe(true);
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'prerequisites-complete',
+                expect.objectContaining({ allInstalled: true })
+            );
+        });
+    });
+
     describe('happy path', () => {
         it('should re-check prerequisites from index 0', async () => {
             const result = await handleContinuePrerequisites(mockContext);

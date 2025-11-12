@@ -156,20 +156,22 @@ export class ProgressUnifier {
                 // Calculate overall progress
                 const stepProgress = ((stepIndex + (cmdIndex / totalCommands)) / totalSteps) * 100;
 
-                // Initial progress update
-                await onProgress({
-                    overall: {
-                        percent: Math.round(stepProgress),
-                        currentStep: stepIndex + 1,
-                        totalSteps,
-                        stepName: this.resolveStepName(step, options),
-                    },
-                    command: {
-                        type: 'indeterminate',
-                        detail: this.enhanceDetailWithElapsedTime('Starting...'),
-                        confidence: 'synthetic',
-                    },
-                });
+                // Initial progress update (skip for exact progress - tool provides immediate feedback)
+                if (step.progressStrategy !== 'exact') {
+                    await onProgress({
+                        overall: {
+                            percent: Math.round(stepProgress),
+                            currentStep: stepIndex + 1,
+                            totalSteps,
+                            stepName: this.resolveStepName(step, options),
+                        },
+                        command: {
+                            type: 'indeterminate',
+                            detail: this.enhanceDetailWithElapsedTime('Starting...'),
+                            confidence: 'synthetic',
+                        },
+                    });
+                }
 
                 // Execute based on strategy
                 switch (step.progressStrategy) {
@@ -242,42 +244,99 @@ export class ProgressUnifier {
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
-            let lastProgress = 0;
-            
+            let lastDetail = '';
+            const isFnmParser = step.progressParser === 'fnm';
+
             child.stdout.on('data', async (data) => {
                 const output = data.toString();
-                
-                // Parse fnm-style progress: "Downloading: 75%"
-                const percentMatch = output.match(/(\d+)%/);
-                if (percentMatch) {
-                    const percent = parseInt(percentMatch[1]);
-                    if (percent !== lastProgress) {
-                        lastProgress = percent;
-                        
+
+                if (isFnmParser) {
+                    // Parse fnm-specific output format
+                    // fnm outputs lines like "Downloading: 75%" or "Installing Node v20.11.0"
+                    const trimmedOutput = output.trim();
+
+                    // Skip empty lines
+                    if (!trimmedOutput) {
+                        return;
+                    }
+
+                    // Look for percentage progress (e.g., "Downloading: 75%")
+                    const percentMatch = trimmedOutput.match(/(\d+)%/);
+                    if (percentMatch) {
+                        const percent = parseInt(percentMatch[1]);
+                        const detail = trimmedOutput.substring(0, 100); // Full line as detail
+
+                        if (detail !== lastDetail) {
+                            lastDetail = detail;
+
+                            await onProgress({
+                                overall: {
+                                    percent: Math.round(((stepIndex + (percent / 100)) / totalSteps) * 100),
+                                    currentStep: stepIndex + 1,
+                                    totalSteps,
+                                    stepName: this.resolveStepName(step, options),
+                                },
+                                command: {
+                                    type: 'determinate',
+                                    percent,
+                                    detail,
+                                    confidence: 'exact',
+                                },
+                            });
+                        }
+                    } else if (trimmedOutput !== lastDetail) {
+                        // Non-percentage updates (e.g., "Installing Node v20.11.0", "Extracting...")
+                        lastDetail = trimmedOutput;
+
                         await onProgress({
                             overall: {
-                                percent: Math.round(((stepIndex + (percent / 100)) / totalSteps) * 100),
+                                percent: Math.round(((stepIndex + 0.5) / totalSteps) * 100),
                                 currentStep: stepIndex + 1,
                                 totalSteps,
                                 stepName: this.resolveStepName(step, options),
                             },
                             command: {
-                                type: 'determinate',
-                                percent,
-                                detail: output.trim(),
+                                type: 'indeterminate',
+                                detail: trimmedOutput,
                                 confidence: 'exact',
                             },
                         });
                     }
+                } else {
+                    // Generic percentage-based parsing
+                    const percentMatch = output.match(/(\d+)%/);
+                    if (percentMatch) {
+                        const percent = parseInt(percentMatch[1]);
+                        const detail = output.trim().substring(0, 100);
+
+                        if (detail !== lastDetail) {
+                            lastDetail = detail;
+
+                            await onProgress({
+                                overall: {
+                                    percent: Math.round(((stepIndex + (percent / 100)) / totalSteps) * 100),
+                                    currentStep: stepIndex + 1,
+                                    totalSteps,
+                                    stepName: this.resolveStepName(step, options),
+                                },
+                                command: {
+                                    type: 'determinate',
+                                    percent,
+                                    detail,
+                                    confidence: 'exact',
+                                },
+                            });
+                        }
+                    }
                 }
-                
+
                 this.logger.info(`[${step.name}] ${output.trim()}`);
             });
-            
+
             child.stderr.on('data', (data) => {
                 this.logger.warn(`[${step.name}] ${data.toString().trim()}`);
             });
-            
+
             child.on('close', (code) => {
                 if (code === 0 || step.continueOnError) {
                     resolve();
@@ -376,7 +435,7 @@ export class ProgressUnifier {
                 const elapsed = this.dateProvider.now() - startTime;
                 const progress = Math.min(95, (elapsed / estimatedDuration) * 100);
 
-                const baseDetail = `Processing... (${Math.round(progress)}% estimated)`;
+                const baseDetail = step.message || this.resolveStepName(step, options);
 
                 await onProgress({
                     overall: {
@@ -454,7 +513,7 @@ export class ProgressUnifier {
                 command: {
                     type: 'determinate',
                     percent: 100,
-                    detail: 'Configuring shell...',
+                    detail: step.message || this.resolveStepName(step, options),
                     confidence: 'exact',
                 },
             });
@@ -470,10 +529,11 @@ export class ProgressUnifier {
             let commandExitCode: number | null = null;
 
             // Create smooth progress updates (skip initial 0% to avoid blip)
+            const stepDetail = step.message || this.resolveStepName(step, options);
             const progressSteps = [
-                { time: minDuration * 0.2, percent: 20, detail: 'Processing...' },
-                { time: minDuration * 0.5, percent: 50, detail: 'Configuring...' },
-                { time: minDuration * 0.8, percent: 80, detail: 'Finishing...' },
+                { time: minDuration * 0.2, percent: 20, detail: stepDetail },
+                { time: minDuration * 0.5, percent: 50, detail: stepDetail },
+                { time: minDuration * 0.8, percent: 80, detail: stepDetail },
             ];
 
             const progressTimeouts: NodeJS.Timeout[] = [];

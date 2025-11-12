@@ -32,7 +32,12 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
         progressUnifier: {} as HandlerContext['progressUnifier'],
         stepLogger: {} as HandlerContext['stepLogger'],
         logger: createMockLogger(),
-        debugLogger: {} as HandlerContext['debugLogger'],
+        debugLogger: {
+            debug: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+        } as HandlerContext['debugLogger'],
         context: {
             extensionPath: '/test/extension/path',
         } as HandlerContext['context'],

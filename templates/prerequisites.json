@@ -88,18 +88,12 @@
         "dynamic": true,
         "steps": [
           {
-            "name": "Install Node.js",
-            "message": "Installing Node.js",
+            "name": "Install Node.js {version}",
+            "message": "Installing Node.js {version}",
             "commandTemplate": "fnm install {version}",
             "estimatedDuration": 30000,
-            "progressStrategy": "synthetic"
-          },
-          {
-            "name": "Set as default",
-            "message": "Setting as default Node.js version",
-            "commandTemplate": "fnm default {version}",
-            "estimatedDuration": 2000,
-            "progressStrategy": "immediate"
+            "progressStrategy": "exact",
+            "progressParser": "fnm"
           }
         ]
       },

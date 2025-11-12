@@ -47,6 +47,64 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
         jest.clearAllMocks();
     });
 
+    it('should execute fnm list with shell option in shared handler', async () => {
+        const prereq: PrerequisiteDefinition = {
+            id: 'adobe-cli',
+            name: 'Adobe I/O CLI',
+            perNodeVersion: true,
+            check: {
+                command: 'aio --version',
+                parseVersion: '@adobe/aio-cli/(\\S+)',
+            },
+        } as PrerequisiteDefinition;
+
+        mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+            if (cmd === 'fnm list') {
+                return Promise.resolve(createCommandResult('v18.0.0\nv20.0.0'));
+            }
+            return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
+        });
+
+        const context = createMockContext();
+        await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
+
+        // Verify fnm list was called with shell option
+        expect(mockCommandExecutor.execute).toHaveBeenCalledWith('fnm list', expect.objectContaining({
+            shell: expect.any(String), // Expects shell path (e.g., '/bin/bash')
+            timeout: expect.any(Number),
+        }));
+    });
+
+    it('should parse fnm list output correctly in shared handler', async () => {
+        const prereq: PrerequisiteDefinition = {
+            id: 'adobe-cli',
+            name: 'Adobe I/O CLI',
+            perNodeVersion: true,
+            check: {
+                command: 'aio --version',
+                parseVersion: '@adobe/aio-cli/(\\S+)',
+            },
+        } as PrerequisiteDefinition;
+
+        // fnm list output with various formats
+        mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+            if (cmd === 'fnm list') {
+                return Promise.resolve(createCommandResult('v18.20.8\nv20.19.5\nv24.0.0'));
+            }
+            return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0'));
+        });
+
+        const context = createMockContext();
+        const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
+
+        expect(result.perNodeVersionStatus).toEqual([
+            { version: 'Node 18', component: '10.0.0', installed: true },
+            { version: 'Node 20', component: '10.0.0', installed: true },
+            { version: 'Node 24', component: '10.0.0', installed: true },
+        ]);
+        expect(mockCommandExecutor.execute).toHaveBeenCalledWith('fnm list', expect.objectContaining({ shell: expect.any(String) }));
+    });
+
     it('should check all Node versions for per-node prerequisite', async () => {
         const prereq: PrerequisiteDefinition = {
             id: 'adobe-cli',

@@ -12,6 +12,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getNodeVersionMapping, areDependenciesInstalled } from '@/features/prerequisites/handlers/shared';
 import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 import { SimpleResult } from '@/types/results';
+import { DEFAULT_SHELL } from '@/types/shell';
 import { toError, isTimeoutError } from '@/types/typeGuards';
 
 /**
@@ -117,7 +118,10 @@ export async function handleContinuePrerequisites(
                     // CRITICAL: Get list of actually installed Node versions FIRST
                     // This prevents false positives when fnm falls back to other versions
                     const commandManager = ServiceLocator.getCommandExecutor();
-                    const fnmListResult = await commandManager.execute('fnm list', { timeout: TIMEOUTS.PREREQUISITE_CHECK });
+                    const fnmListResult = await commandManager.execute('fnm list', {
+                        timeout: TIMEOUTS.PREREQUISITE_CHECK,
+                        shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
+                    });
                     const installedVersions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
                     const installedMajors = new Set<string>();
                     for (const version of installedVersions) {

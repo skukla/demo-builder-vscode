@@ -3,9 +3,15 @@
  *
  * Handles the install-prerequisite message:
  * - Manages installation of missing prerequisites
- * - Supports multi-version Node.js installation
+ * - Supports multi-version Node.js installation (component-driven)
  * - Handles per-node-version tools (e.g., Adobe I/O CLI)
  * - Provides unified progress tracking during installation
+ *
+ * Component-Driven Approach:
+ * - Node versions are determined by component requirements, not infrastructure
+ * - Adobe CLI and other per-node-version tools adapt to the Node version they're installed under
+ * - This is the opposite of traditional approaches where infrastructure dictates versions
+ * - Tools conform to what components need, not the other way around
  */
 
 import * as vscode from 'vscode';
@@ -15,7 +21,38 @@ import { getRequiredNodeVersions, getNodeVersionMapping } from '@/features/prere
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 import { SimpleResult } from '@/types/results';
+import { DEFAULT_SHELL } from '@/types/shell';
 import { toError, isTimeoutError } from '@/types/typeGuards';
+
+/**
+ * Determine which Node versions to pass to getInstallSteps
+ *
+ * Logic:
+ * - Per-node-version prerequisites (e.g., Adobe CLI): Use all required Node versions
+ * - Node.js prerequisite: Use explicit version if provided, otherwise all required versions
+ * - Other prerequisites: No nodeVersions needed (undefined)
+ */
+function determineNodeVersionsForInstall(
+    prereq: { id: string; perNodeVersion?: boolean },
+    nodeVersions: string[],
+    version?: string,
+): string[] | undefined {
+    // Per-node-version prerequisites need to install for all Node versions
+    if (prereq.perNodeVersion) {
+        return nodeVersions.length ? nodeVersions : [version || '20'];
+    }
+
+    // Node.js prerequisite: explicit version overrides, otherwise use all required versions
+    if (prereq.id === 'node') {
+        if (version) {
+            return [version];
+        }
+        return nodeVersions.length ? nodeVersions : undefined;
+    }
+
+    // Other prerequisites don't need nodeVersions
+    return undefined;
+}
 
 /**
  * install-prerequisite - Install a missing prerequisite
@@ -43,10 +80,51 @@ export async function handleInstallPrerequisite(
         // Resolve install steps from config
         const nodeVersions = await getRequiredNodeVersions(context);
 
+        // CRITICAL: For Node.js, determine missing versions BEFORE generating steps
+        // This prevents generating steps for already-installed versions
+        let targetVersions: string[] | undefined = undefined;
+        if (prereq.id === 'node') {
+            // Step 3: Check version satisfaction before installation
+            // If a specific version was requested, check if it's already satisfied
+            if (version) {
+                context.debugLogger.debug(`[Prerequisites] Checking if Node ${version}.x is already satisfied`);
+                const satisfied = await context.prereqManager?.checkVersionSatisfaction(version);
+                if (satisfied) {
+                    context.logger.info(`[Prerequisites] Node ${version}.x already installed, skipping installation`);
+                    context.debugLogger.debug(`[Prerequisites] Version satisfaction check passed - no installation needed for Node ${version}`);
+                    await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
+                    return { success: true };
+                }
+                context.debugLogger.debug(`[Prerequisites] Node ${version}.x not satisfied, proceeding with installation`);
+            }
+
+            // Determine missing majors from mapping
+            const mapping = await getNodeVersionMapping(context);
+            context.debugLogger.debug(`[Prerequisites] Node version mapping: ${JSON.stringify(mapping)}`);
+            const nodeStatus = Object.keys(mapping).length > 0
+                ? await context.prereqManager?.checkMultipleNodeVersions(mapping)
+                : undefined;
+            context.debugLogger.debug(`[Prerequisites] Node status check results: ${JSON.stringify(nodeStatus)}`);
+            const missingMajors = nodeStatus
+                ? Object.keys(mapping).filter(m => !nodeStatus.some(s => s.version.startsWith(`Node ${m}`) && s.installed))
+                : [];
+            context.debugLogger.debug(`[Prerequisites] Missing major versions: ${JSON.stringify(missingMajors)}`);
+            // Sort versions in ascending order (18, 20, 24) for predictable installation order
+            const sortedMissingMajors = missingMajors.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+            context.debugLogger.debug(`[Prerequisites] Sorted missing majors for installation: ${JSON.stringify(sortedMissingMajors)}`);
+            targetVersions = sortedMissingMajors.length > 0 ? sortedMissingMajors : (version ? [version] : undefined);
+
+            // If no versions need installation, we're done
+            if (!targetVersions || targetVersions.length === 0) {
+                context.logger.info(`[Prerequisites] All required Node versions already installed`);
+                await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
+                return { success: true };
+            }
+        }
+
+        // Generate install steps using targetVersions (only missing versions) instead of all nodeVersions
         const installPlan = context.prereqManager?.getInstallSteps(prereq, {
-            nodeVersions: prereq.perNodeVersion
-                ? (nodeVersions.length ? nodeVersions : [version || '20'])
-                : (prereq.id === 'node' ? (version ? [version] : undefined) : undefined),
+            nodeVersions: targetVersions || determineNodeVersionsForInstall(prereq, nodeVersions, version),
         });
 
         if (!installPlan) {
@@ -67,39 +145,23 @@ export async function handleInstallPrerequisite(
 
         const steps = installPlan.steps || [];
 
-        // If Node requires additional versions (multi-version case), surface Install when any required version missing
-        if (prereq.id === 'node') {
-            const mapping = await getNodeVersionMapping(context);
-            const requiredMajors = Object.keys(mapping);
-            if (requiredMajors.length > 0) {
-                // ensure steps include per required version when not installed; ProgressUnifier handles template replacement
-            }
-        }
-
-        // Execute steps with unified progress. For Node multi-version, iterate missing majors.
-        let targetVersions: string[] | undefined = undefined;
-        if (prereq.id === 'node') {
-            // Determine missing majors from mapping
-            const mapping = await getNodeVersionMapping(context);
-            const nodeStatus = Object.keys(mapping).length > 0
-                ? await context.prereqManager?.checkMultipleNodeVersions(mapping)
-                : undefined;
-            const missingMajors = nodeStatus
-                ? Object.keys(mapping).filter(m => !nodeStatus.some(s => s.version.startsWith(`Node ${m}`) && s.installed))
-                : [];
-            // Sort versions in ascending order (18, 20, 24) for predictable installation order
-            const sortedMissingMajors = missingMajors.sort((a, b) => parseInt(a) - parseInt(b));
-            targetVersions = sortedMissingMajors.length > 0 ? sortedMissingMajors : (version ? [version] : undefined);
-        } else if (prereq.perNodeVersion) {
-            // For per-node-version prerequisites, check which Node versions are missing this prereq
+        // Execute steps with unified progress. For Node multi-version or per-node-version prereqs
+        if (prereq.perNodeVersion) {
+            // For per-node-version prerequisites (e.g., Adobe CLI), check which Node versions need this tool
+            // Component-driven approach: Adobe CLI and other tools adapt to the Node version
+            // they're installed under. This ensures each component's required Node version
+            // has all necessary tools installed in its context.
             // CRITICAL: Use the same version resolution logic as getInstallSteps to ensure consistency
             const versionsToCheck = nodeVersions.length ? nodeVersions : [version || '20'];
             // Sort versions in ascending order (18, 20, 24) for predictable installation order
-            versionsToCheck.sort((a, b) => parseInt(a) - parseInt(b));
+            versionsToCheck.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 
             // CRITICAL: First verify which Node versions are actually installed
             const commandManager = ServiceLocator.getCommandExecutor();
-            const fnmListResult = await commandManager.execute('fnm list', { timeout: TIMEOUTS.PREREQUISITE_CHECK });
+            const fnmListResult = await commandManager.execute('fnm list', {
+                timeout: TIMEOUTS.PREREQUISITE_CHECK,
+                shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
+            });
             const installedVersions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
             const installedMajors = new Set<string>();
             for (const version of installedVersions) {
@@ -137,11 +199,11 @@ export async function handleInstallPrerequisite(
             }
 
             // Sort versions in ascending order (18, 20, 24) for predictable installation order
-            missingNodeVersions.sort((a, b) => parseInt(a) - parseInt(b));
+            missingNodeVersions.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
             targetVersions = missingNodeVersions.length > 0 ? missingNodeVersions : [];
 
             // If no versions need installation, return early
-            if (targetVersions.length === 0) {
+            if (!targetVersions || targetVersions.length === 0) {
                 context.logger.info(`[Prerequisites] ${prereq.name} already installed for all required Node versions or no Node versions available`);
                 await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
                 return { success: true };

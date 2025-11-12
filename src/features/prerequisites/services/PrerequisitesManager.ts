@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as semver from 'semver';
 import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
 import type {
     PrerequisiteCheck,
@@ -30,10 +31,27 @@ export type {
     PrerequisiteStatus,
 };
 
+/**
+ * Prerequisites Manager - Component-Driven Version Management
+ *
+ * This manager checks and installs prerequisites based on component requirements.
+ * Node.js versions are determined by the components selected by the user:
+ * - Each component can specify its required Node version
+ * - Multiple Node versions can be installed side-by-side via fnm
+ * - Adobe CLI and other tools adapt to the Node version they run under
+ *
+ * There is NO infrastructure-dictated Node version. Components drive all version requirements.
+ *
+ * @example
+ * // User selects:
+ * // - frontend: needs Node 18
+ * // - backend: needs Node 20
+ * // - mesh: needs Node 24
+ * // Result: All three Node versions installed, tools adapt to each
+ */
 export class PrerequisitesManager {
     private configLoader: ConfigurationLoader<PrerequisitesConfig>;
     private logger: Logger;
-    private resolvedVersionCache = new Map<string, string>();
     private cacheManager = new PrerequisitesCacheManager();
 
     constructor(extensionPath: string, logger: Logger) {
@@ -318,24 +336,33 @@ export class PrerequisitesManager {
             };
         }
 
+        // Handle dynamic installation (e.g., Node.js with versions) - convert to steps
+        if (prereq.install && prereq.install.dynamic && prereq.install.steps) {
+            // Adobe CLI adapts to component needs - no default version needed
+            const versions = options?.nodeVersions || [];
+            const templateSteps = prereq.install.steps;
+            // Create a step for each version and each template step
+            const steps: InstallStep[] = versions.flatMap(version =>
+                templateSteps.map(templateStep => ({
+                    name: templateStep.name?.replace(/{version}/g, version) || `Install Node.js ${version}`,
+                    message: templateStep.message?.replace(/{version}/g, version) || `Installing Node.js ${version}`,
+                    commandTemplate: templateStep.commandTemplate?.replace(/{version}/g, version),
+                    commands: templateStep.commands,
+                    progressStrategy: templateStep.progressStrategy || ('synthetic' as const),
+                    progressParser: templateStep.progressParser,
+                    estimatedDuration: templateStep.estimatedDuration || 30000,
+                    milestones: templateStep.milestones,
+                    continueOnError: templateStep.continueOnError,
+                }))
+            );
+            return { steps };
+        }
+
         // Return steps directly if available
         if (prereq.install.steps) {
             return {
                 steps: prereq.install.steps,
             };
-        }
-
-        // Handle dynamic installation (e.g., Node.js with versions) - convert to steps
-        if (prereq.install && prereq.install.dynamic && prereq.install.template) {
-            const versions = options?.nodeVersions || ['latest'];
-            const steps: InstallStep[] = versions.map(version => ({
-                name: `Install Node.js ${version}`,
-                message: prereq.install!.message?.replace(/{version}/g, version) || `Installing Node.js ${version}`,
-                commandTemplate: prereq.install!.template,
-                progressStrategy: 'exact' as const,
-                estimatedDuration: 30000,
-            }));
-            return { steps };
         }
 
         return null;
@@ -358,12 +385,6 @@ export class PrerequisitesManager {
         };
     }
 
-    async resolveNodeVersion(version: string): Promise<string> {
-        // Version families are simple - just return as-is
-        // fnm will handle resolving "18" to "18.x.x", "20" to "20.x.x", etc.
-        return version;
-    }
-    
     async getLatestInFamily(versionFamily: string): Promise<string | null> {
         // Get the actual installed version for a version family
         // This is used for display purposes after installation
@@ -400,19 +421,6 @@ export class PrerequisitesManager {
         return null;
     }
 
-    async getRequiredNodeVersions(
-        _selectedComponents?: {
-            frontend?: string;
-            backend?: string;
-            dependencies?: string[];
-            appBuilderApps?: string[];
-        },
-    ): Promise<string[]> {
-        // Node versions should come from components.json, not prerequisites.json
-        // This method is deprecated - use ComponentRegistryManager.getRequiredNodeVersions() instead
-        return ['20']; // Return LTS as default
-    }
-
     async checkMultipleNodeVersions(
         versionToComponentMapping: Record<string, string>,
     ): Promise<{ version: string; component: string; installed: boolean }[]> {
@@ -420,7 +428,10 @@ export class PrerequisitesManager {
 
         try {
             const commandManager = ServiceLocator.getCommandExecutor();
-            const fnmListResult = await commandManager.execute('fnm list', { timeout: TIMEOUTS.PREREQUISITE_CHECK });
+            const fnmListResult = await commandManager.execute('fnm list', {
+                timeout: TIMEOUTS.PREREQUISITE_CHECK,
+                shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
+            });
             const versions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
 
             // Parse installed versions - create mapping of major version to full version
@@ -464,6 +475,87 @@ export class PrerequisitesManager {
         }
 
         return results;
+    }
+
+    /**
+     * Check if ANY installed Node version satisfies the required version family
+     *
+     * Component-driven approach: This checks if a component's Node version requirement
+     * is already satisfied by an installed version. Uses semver for flexible matching.
+     *
+     * @param requiredFamily - Version family (e.g., '24' for 24.x)
+     * @returns true if any installed version satisfies the requirement
+     *
+     * @example
+     * // Component requires Node 24
+     * // Installed: Node 24.0.10, Node 18.20.0
+     * await checkVersionSatisfaction('24') // → true (24.0.10 satisfies 24.x)
+     *
+     * @example
+     * // Component requires Node 22
+     * // Installed: Node 24.0.10, Node 18.20.0
+     * await checkVersionSatisfaction('22') // → false (no 22.x installed)
+     */
+    async checkVersionSatisfaction(requiredFamily: string): Promise<boolean> {
+        const startTime = Date.now();
+        this.logger.debug(`[Version Satisfaction] Checking if Node ${requiredFamily}.x is satisfied`);
+
+        // SECURITY: Validate requiredFamily to prevent injection (defense-in-depth)
+        // Only allow digits (e.g., "18", "20", "22")
+        if (!/^\d+$/.test(requiredFamily)) {
+            this.logger.warn(`[Version Satisfaction] Invalid version family rejected: ${requiredFamily}`);
+            return false;
+        }
+
+        try {
+            const commandManager = ServiceLocator.getCommandExecutor();
+            const fnmListResult = await commandManager.execute('fnm list', {
+                timeout: TIMEOUTS.PREREQUISITE_CHECK,
+                shell: DEFAULT_SHELL,
+            });
+
+            const installedVersions = this.parseInstalledVersions(fnmListResult.stdout);
+            const semverRange = `${requiredFamily}.x`;
+
+            // Check if any installed version satisfies the required family
+            const satisfied = installedVersions.some(version => {
+                const matches = semver.satisfies(version, semverRange);
+                if (matches) {
+                    this.logger.debug(`[Version Satisfaction] ✓ Node ${version} satisfies ${semverRange}`);
+                }
+                return matches;
+            });
+
+            const duration = Date.now() - startTime;
+            if (satisfied) {
+                this.logger.debug(`[Version Satisfaction] ✓ Node ${requiredFamily}.x satisfied in ${duration}ms`);
+            } else {
+                this.logger.debug(`[Version Satisfaction] ✗ Node ${requiredFamily}.x NOT satisfied (${duration}ms) - installed: ${installedVersions.join(', ')}`);
+            }
+
+            return satisfied;
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            this.logger.warn(`[Version Satisfaction] Error checking Node ${requiredFamily}.x after ${duration}ms: ${error}`);
+            return false; // Safe default: not satisfied
+        }
+    }
+
+    /**
+     * Parse installed Node versions from fnm list output
+     * @param stdout - Output from fnm list command
+     * @returns Array of version strings (e.g., ['18.20.8', '20.19.5'])
+     */
+    private parseInstalledVersions(stdout: string): string[] {
+        return stdout
+            .trim()
+            .split('\n')
+            .map(line => {
+                // Match patterns like "v20.19.5" or "20.19.5"
+                const match = /v?(\d+\.\d+\.\d+)/.exec(line.trim());
+                return match ? match[1] : null;
+            })
+            .filter((v): v is string => v !== null);
     }
 
     async checkAllPrerequisites(

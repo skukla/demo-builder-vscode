@@ -422,37 +422,27 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                             )}
                                             {check.status === 'checking' && check.unifiedProgress && (
                                                 <View marginTop="size-100" UNSAFE_className="animate-fade-in">
-                                                    {check.unifiedProgress.command?.type === 'determinate' &&
-                                                     check.unifiedProgress.command?.percent != null &&
-                                                     check.unifiedProgress.overall.totalSteps === 1 ? (
-                                                        // Show command-level progress for SINGLE-STEP installations
-                                                        // This provides detailed milestone progress without "resetting" confusion
-                                                        // STANDARDIZED FORMAT: "Step 1/1: Task - Detail"
-                                                        <ProgressBar
-                                                            label={
-                                                                `Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}${
-                                                                    check.unifiedProgress.command.detail ? ` - ${check.unifiedProgress.command.detail}` : ''
-                                                                }`
-                                                            }
-                                                            value={check.unifiedProgress.command.percent}
-                                                            maxValue={100}
-                                                            showValueLabel
-                                                            size="S"
-                                                            UNSAFE_className="mb-2 progress-bar-small-label progress-bar-full-width"
-                                                        />
-                                                    ) : (
-                                                        // Show overall progress for MULTI-STEP installations or synthetic progress
-                                                        // This prevents the progress bar from "resetting" between steps
-                                                        // STANDARDIZED FORMAT: "Step X/Y: Task"
-                                                        <ProgressBar
-                                                            label={`Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}`}
-                                                            value={check.unifiedProgress.overall.percent}
-                                                            maxValue={100}
-                                                            showValueLabel
-                                                            size="S"
-                                                            UNSAFE_className="mb-2 progress-bar-small-label progress-bar-full-width"
-                                                        />
-                                                    )}
+                                                    <ProgressBar
+                                                        label={
+                                                            // UNIFIED LABEL FORMAT: "Step X/Y: Task Name - Detail"
+                                                            // Detail text updates IN PLACE (no milestone counters)
+                                                            // Historical: Milestone counters removed Oct 17, 2025 (commit 8551d05)
+                                                            `Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}${
+                                                                check.unifiedProgress.command?.detail ? ` - ${check.unifiedProgress.command.detail}` : ''
+                                                            }`
+                                                        }
+                                                        value={
+                                                            // Use command-level percent when available (exact progress),
+                                                            // otherwise use overall percent (multi-step progress)
+                                                            check.unifiedProgress.command?.type === 'determinate' &&
+                                                            check.unifiedProgress.command?.percent != null
+                                                                ? check.unifiedProgress.command.percent
+                                                                : check.unifiedProgress.overall.percent
+                                                        }
+                                                        maxValue={100}
+                                                        size="S"
+                                                        UNSAFE_className="mb-2 progress-bar-small-label progress-bar-full-width"
+                                                    />
                                                 </View>
                                             )}
                                             {check.plugins && check.plugins.length > 0 &&
