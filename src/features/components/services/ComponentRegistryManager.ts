@@ -11,6 +11,7 @@ import {
     PresetDefinition,
 } from '@/types';
 import { ProjectConfig } from '@/types/handlers';
+import { validateNodeVersion } from '@/core/validation/securityValidation';
 
 export class ComponentRegistryManager {
     private rawLoader: ConfigurationLoader<RawComponentRegistry>;
@@ -19,6 +20,113 @@ export class ComponentRegistryManager {
     constructor(extensionPath: string) {
         const registryPath = path.join(extensionPath, 'templates', 'components.json');
         this.rawLoader = new ConfigurationLoader<RawComponentRegistry>(registryPath);
+    }
+
+    /**
+     * Formats validation error with component context
+     *
+     * Helper method to provide consistent error messages when Node.js version validation
+     * fails, helping developers quickly identify and fix issues in components.json.
+     *
+     * @param componentName - Name of the component with invalid version
+     * @param componentType - Type of component (e.g., "component", "infrastructure")
+     * @param originalError - Original validation error from validateNodeVersion
+     * @returns Formatted error with component context and fix instructions
+     */
+    private formatNodeVersionError(
+        componentName: string,
+        componentType: string,
+        originalError: Error
+    ): Error {
+        return new Error(
+            `Invalid Node version in ${componentType} "${componentName}": ${originalError.message}\n` +
+            `Please edit templates/components.json and ensure nodeVersion uses valid format (e.g., "20", "20.11.0").`
+        );
+    }
+
+    /**
+     * Validates and adds a Node.js version to a collection
+     *
+     * SECURITY: Defense-in-depth validation for CWE-77 (Command Injection)
+     * - Validates nodeVersion from components.json before it reaches CommandExecutor
+     * - Catches malicious versions from manually-edited configuration files
+     * - Prevents command injection attacks via fnm/nvm version parameters
+     *
+     * Error Context: Includes component name to help developers identify and fix issues
+     *
+     * @param version - Node.js version string to validate and add
+     * @param versions - Set to add the validated version to
+     * @param componentName - Component name for error context
+     * @param componentType - Component type (e.g., "component", "infrastructure") for error messages
+     * @throws Error with component context if validation fails
+     *
+     * @example
+     * // Valid version - added to set
+     * this.validateAndAddNodeVersion('20', nodeVersions, 'Frontend', 'component');
+     *
+     * @example
+     * // Invalid version - throws error with context
+     * this.validateAndAddNodeVersion('20; rm -rf /', nodeVersions, 'Frontend', 'component');
+     * // Throws: "Invalid Node version in component "Frontend": Invalid Node.js version format..."
+     */
+    private validateAndAddNodeVersion(
+        version: string,
+        versions: Set<string>,
+        componentName: string,
+        componentType: string = 'component'
+    ): void {
+        try {
+            // SECURITY: Validate nodeVersion from components.json (defense-in-depth for CWE-77)
+            // This validation happens at the SOURCE (component registry) before values reach
+            // CommandExecutor, providing an additional layer of security against command injection.
+            validateNodeVersion(version);
+            versions.add(version);
+        } catch (error) {
+            throw this.formatNodeVersionError(componentName, componentType, error as Error);
+        }
+    }
+
+    /**
+     * Validates and adds a Node.js version to a mapping
+     *
+     * SECURITY: Defense-in-depth validation for CWE-77 (Command Injection)
+     * - Validates nodeVersion from components.json before it reaches CommandExecutor
+     * - Catches malicious versions from manually-edited configuration files
+     * - Prevents command injection attacks via fnm/nvm version parameters
+     *
+     * Error Context: Includes component name to help developers identify and fix issues
+     *
+     * @param version - Node.js version string to validate
+     * @param componentName - Component name to map to the version
+     * @param mapping - Record to add the validated version mapping to
+     * @param componentType - Component type (e.g., "component", "infrastructure") for error messages
+     * @throws Error with component context if validation fails
+     *
+     * @example
+     * // Valid version - added to mapping
+     * this.validateAndMapNodeVersion('20', 'Frontend', mapping, 'component');
+     * // Result: mapping['20'] = 'Frontend'
+     *
+     * @example
+     * // Invalid version - throws error with context
+     * this.validateAndMapNodeVersion('20; rm -rf /', 'Frontend', mapping, 'component');
+     * // Throws: "Invalid Node version in component "Frontend": Invalid Node.js version format..."
+     */
+    private validateAndMapNodeVersion(
+        version: string,
+        componentName: string,
+        mapping: Record<string, string>,
+        componentType: string = 'component'
+    ): void {
+        try {
+            // SECURITY: Validate nodeVersion from components.json (defense-in-depth for CWE-77)
+            // This validation happens at the SOURCE (component registry) before values reach
+            // CommandExecutor, providing an additional layer of security against command injection.
+            validateNodeVersion(version);
+            mapping[version] = componentName;
+        } catch (error) {
+            throw this.formatNodeVersionError(componentName, componentType, error as Error);
+        }
     }
 
     async loadRegistry(): Promise<ComponentRegistry> {
@@ -223,6 +331,21 @@ export class ComponentRegistryManager {
         return frontend.compatibleBackends?.includes(backendId) || false;
     }
 
+    /**
+     * Gets all required Node.js versions for selected components
+     *
+     * SECURITY: Validates all Node.js versions from components.json to prevent
+     * command injection attacks (CWE-77). This provides defense-in-depth by
+     * catching malicious versions at the source before they reach CommandExecutor.
+     *
+     * @param frontendId - Frontend component ID (optional)
+     * @param backendId - Backend component ID (optional)
+     * @param dependencies - Array of dependency component IDs (optional)
+     * @param integrations - Array of integration component IDs (optional)
+     * @param appBuilder - Array of App Builder component IDs (optional)
+     * @returns Set of Node.js version strings required by all components
+     * @throws Error if any component has an invalid nodeVersion format
+     */
     async getRequiredNodeVersions(
         frontendId?: string,
         backendId?: string,
@@ -236,7 +359,11 @@ export class ComponentRegistryManager {
         if (frontendId) {
             const frontend = await this.getComponentById(frontendId);
             if (frontend?.configuration?.nodeVersion) {
-                nodeVersions.add(frontend.configuration.nodeVersion);
+                this.validateAndAddNodeVersion(
+                    frontend.configuration.nodeVersion,
+                    nodeVersions,
+                    frontend.name
+                );
             }
         }
 
@@ -244,7 +371,11 @@ export class ComponentRegistryManager {
         if (backendId) {
             const backend = await this.getComponentById(backendId);
             if (backend?.configuration?.nodeVersion) {
-                nodeVersions.add(backend.configuration.nodeVersion);
+                this.validateAndAddNodeVersion(
+                    backend.configuration.nodeVersion,
+                    nodeVersions,
+                    backend.name
+                );
             }
         }
 
@@ -253,7 +384,11 @@ export class ComponentRegistryManager {
             for (const depId of dependencies) {
                 const dep = await this.getComponentById(depId);
                 if (dep?.configuration?.nodeVersion) {
-                    nodeVersions.add(dep.configuration.nodeVersion);
+                    this.validateAndAddNodeVersion(
+                        dep.configuration.nodeVersion,
+                        nodeVersions,
+                        dep.name
+                    );
                 }
             }
         }
@@ -263,7 +398,11 @@ export class ComponentRegistryManager {
             for (const appId of appBuilder) {
                 const app = await this.getComponentById(appId);
                 if (app?.configuration?.nodeVersion) {
-                    nodeVersions.add(app.configuration.nodeVersion);
+                    this.validateAndAddNodeVersion(
+                        app.configuration.nodeVersion,
+                        nodeVersions,
+                        app.name
+                    );
                 }
             }
         }
@@ -271,6 +410,21 @@ export class ComponentRegistryManager {
         return nodeVersions;
     }
 
+    /**
+     * Gets a mapping of Node.js versions to component names
+     *
+     * SECURITY: Validates all Node.js versions from components.json to prevent
+     * command injection attacks (CWE-77). This provides defense-in-depth by
+     * catching malicious versions at the source before they reach CommandExecutor.
+     *
+     * @param frontendId - Frontend component ID (optional)
+     * @param backendId - Backend component ID (optional)
+     * @param dependencies - Array of dependency component IDs (optional)
+     * @param integrations - Array of integration component IDs (optional)
+     * @param appBuilder - Array of App Builder component IDs (optional)
+     * @returns Record mapping Node.js versions to component names (e.g., {"20": "Frontend", "22": "App Builder"})
+     * @throws Error if any component has an invalid nodeVersion format
+     */
     async getNodeVersionToComponentMapping(
         frontendId?: string,
         backendId?: string,
@@ -285,7 +439,12 @@ export class ComponentRegistryManager {
         if (registry.infrastructure) {
             for (const infra of registry.infrastructure) {
                 if (infra.configuration?.nodeVersion) {
-                    mapping[infra.configuration.nodeVersion] = infra.name;
+                    this.validateAndMapNodeVersion(
+                        infra.configuration.nodeVersion,
+                        infra.name,
+                        mapping,
+                        'infrastructure'
+                    );
                 }
             }
         }
@@ -294,7 +453,11 @@ export class ComponentRegistryManager {
         if (frontendId) {
             const frontend = await this.getComponentById(frontendId);
             if (frontend?.configuration?.nodeVersion) {
-                mapping[frontend.configuration.nodeVersion] = frontend.name;
+                this.validateAndMapNodeVersion(
+                    frontend.configuration.nodeVersion,
+                    frontend.name,
+                    mapping
+                );
             }
         }
 
@@ -302,7 +465,11 @@ export class ComponentRegistryManager {
         if (backendId) {
             const backend = await this.getComponentById(backendId);
             if (backend?.configuration?.nodeVersion) {
-                mapping[backend.configuration.nodeVersion] = backend.name;
+                this.validateAndMapNodeVersion(
+                    backend.configuration.nodeVersion,
+                    backend.name,
+                    mapping
+                );
             }
         }
 
@@ -311,7 +478,11 @@ export class ComponentRegistryManager {
             for (const depId of dependencies) {
                 const dep = await this.getComponentById(depId);
                 if (dep?.configuration?.nodeVersion) {
-                    mapping[dep.configuration.nodeVersion] = dep.name;
+                    this.validateAndMapNodeVersion(
+                        dep.configuration.nodeVersion,
+                        dep.name,
+                        mapping
+                    );
                 }
             }
         }
@@ -321,7 +492,11 @@ export class ComponentRegistryManager {
             for (const appId of appBuilder) {
                 const app = await this.getComponentById(appId);
                 if (app?.configuration?.nodeVersion) {
-                    mapping[app.configuration.nodeVersion] = app.name;
+                    this.validateAndMapNodeVersion(
+                        app.configuration.nodeVersion,
+                        app.name,
+                        mapping
+                    );
                 }
             }
         }

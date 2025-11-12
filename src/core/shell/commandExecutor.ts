@@ -8,6 +8,7 @@ import { RetryStrategyManager } from './retryStrategyManager';
 import type { CommandResult, ExecuteOptions, CommandRequest, CommandConfig, PollOptions } from './types';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateNodeVersion } from '@/core/validation/securityValidation';
 
 /**
  * Main command executor - orchestrates all command execution operations
@@ -89,19 +90,33 @@ export class CommandExecutor {
         // Step 2: Handle Node version management
         // Fix #7 (01b94d6): Use fnm exec for bulletproof isolation instead of fnm use
         if (options.useNodeVersion !== null && options.useNodeVersion !== undefined) {
+            // SECURITY FIX (CWE-77): Validate nodeVersion BEFORE resolving "auto"
+            // Critical: nodeVersion is directly interpolated into shell command at line 113
+            // Attack example: nodeVersion = "20; rm -rf /" → `fnm exec --using=20; rm -rf / npm install`
+            // Allowlist validation blocks ALL shell metacharacters (;, &, |, <, >, etc.)
+            validateNodeVersion(options.useNodeVersion);
+
             const nodeVersion = options.useNodeVersion === 'auto'
                 ? await this.environmentSetup.findAdobeCLINodeVersion()
                 : options.useNodeVersion;
+
+            // SECURITY FIX (CWE-77): Defense-in-depth validation for resolved version
+            // Protects against compromised findAdobeCLINodeVersion() or .aio config tampering
+            // "current" keyword is safe: uses `fnm env` (not interpolated into --using=)
+            if (nodeVersion && nodeVersion !== 'current') {
+                validateNodeVersion(nodeVersion);
+            }
 
             if (nodeVersion) {
                 // Use fnm exec for guaranteed isolation
                 const fnmPath = this.environmentSetup.findFnmPath();
                 if (fnmPath && nodeVersion !== 'current') {
+                    // SECURITY: nodeVersion is validated above - safe for shell interpolation
                     // fnm exec provides bulletproof isolation - no fallback to nvm/system Node
                     finalCommand = `${fnmPath} exec --using=${nodeVersion} ${finalCommand}`;
                     finalOptions.shell = finalOptions.shell || '/bin/zsh';
                 } else if (nodeVersion === 'current') {
-                    // Use fnm env for current version
+                    // Use fnm env for current version (not interpolated - safe without validation)
                     finalCommand = `eval "$(fnm env)" && ${finalCommand}`;
                     finalOptions.shell = finalOptions.shell || '/bin/zsh';
                 }

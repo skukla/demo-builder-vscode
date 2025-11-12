@@ -171,6 +171,47 @@ validateAccessToken('"; rm -rf / #'); // Throws
 validateAccessToken('invalid-token'); // Throws - doesn't start with eyJ
 ```
 
+#### validateNodeVersion
+
+**Purpose**: Validate Node.js version parameter for command execution safety (prevents CWE-77: Command Injection)
+
+**Usage**:
+```typescript
+import { validateNodeVersion } from '@/shared/validation';
+
+validateNodeVersion(nodeVersion);
+// Safe to use in shell commands with fnm/nvm
+
+await executor.execute(`fnm exec --using=${nodeVersion} npm install`, {
+    shell: true,
+});
+```
+
+**Validates**:
+- Non-empty string (or null/undefined to skip)
+- Valid formats: numeric major (18, 20, 22), semantic version (18.20.0), keywords (auto, current)
+- Blocks ALL shell metacharacters: `; & | < > \` ' " $ ( ) \ space` and control characters
+
+**Security**: HIGH severity protection against command injection attacks
+
+**Example**:
+```typescript
+// Valid formats
+validateNodeVersion('20');          // OK - numeric major version
+validateNodeVersion('18.20.0');     // OK - semantic version
+validateNodeVersion('auto');        // OK - keyword
+validateNodeVersion('current');     // OK - keyword
+validateNodeVersion(null);          // OK - skip validation
+
+// Invalid formats (throws)
+validateNodeVersion('20; rm -rf /'); // Throws - command injection attempt
+validateNodeVersion('v20');          // Throws - invalid prefix
+validateNodeVersion('20.11');        // Throws - incomplete semver
+validateNodeVersion('20 && echo');   // Throws - shell metacharacters
+```
+
+**Defense-in-Depth**: Used in multiple layers (CommandExecutor, ComponentRegistryManager) to catch malicious versions at source before reaching shell interpolation.
+
 #### validateURL
 
 **Purpose**: Validate URLs to prevent SSRF and open redirect attacks
@@ -452,6 +493,9 @@ async function setupProject(input: ProjectInput) {
   - `authentication` - Validating Adobe resource IDs
   - `project-creation` - Validating project names and paths
   - `mesh` - Validating mesh IDs and URLs
+  - `components` - Validating Node.js versions from components.json (CWE-77 defense)
+- **Core**:
+  - `shell/commandExecutor` - Node version validation before shell interpolation (CWE-77 defense)
 - **Shared**:
   - `command-execution` - Command name validation
   - `logging` - Error sanitization
@@ -502,6 +546,7 @@ function validateForShellExecution(input: CommandInput) {
     validateProjectId(input.projectId);   // ✓
     validateWorkspaceId(input.workspaceId); // ✓
     validateProjectPath(input.projectPath); // ✓
+    validateNodeVersion(input.nodeVersion); // ✓ CWE-77 protection
     // All validated - safe to use shell: true
 }
 ```
