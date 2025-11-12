@@ -383,4 +383,80 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
         expect(result.perNodeVersionStatus[0].component).toBe('');
         expect(result.perNodeVersionStatus[0].installed).toBe(true);
     });
+
+    describe('exit code checking (Step 1 - Bug Fix)', () => {
+        it('should detect tool as NOT installed when command exits with non-zero code', async () => {
+            // Given: Adobe CLI prerequisite
+            const prereq: PrerequisiteDefinition = {
+                id: 'adobe-cli',
+                name: 'Adobe I/O CLI',
+                perNodeVersion: true,
+                check: {
+                    command: 'aio --version',
+                    parseVersion: '@adobe/aio-cli/(\\S+)',
+                },
+            } as PrerequisiteDefinition;
+
+            // Given: Command returns non-zero exit code (127 = command not found)
+            mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+                if (cmd === 'fnm list') {
+                    return Promise.resolve(createCommandResult('v18.0.0', '', 0));
+                }
+                // Command exits with code 127 (not installed)
+                return Promise.resolve(createCommandResult('', 'aio: command not found', 127));
+            });
+
+            const context = createMockContext();
+
+            // When: Check per-node version status
+            const result = await checkPerNodeVersionStatus(prereq, ['18'], context);
+
+            // Then: Should detect as NOT installed
+            expect(result.perNodeVersionStatus).toHaveLength(1);
+            expect(result.perNodeVersionStatus[0]).toEqual({
+                version: 'Node 18',
+                component: '',
+                installed: false, // CRITICAL: Should be false when exit code !== 0
+            });
+            expect(result.perNodeVariantMissing).toBe(true);
+            expect(result.missingVariantMajors).toEqual(['18']);
+        });
+
+        it('should detect tool as installed when command exits with zero code', async () => {
+            // Given: Adobe CLI prerequisite
+            const prereq: PrerequisiteDefinition = {
+                id: 'adobe-cli',
+                name: 'Adobe I/O CLI',
+                perNodeVersion: true,
+                check: {
+                    command: 'aio --version',
+                    parseVersion: '@adobe/aio-cli/(\\S+)',
+                },
+            } as PrerequisiteDefinition;
+
+            // Given: Command returns zero exit code (success)
+            mockCommandExecutor.execute.mockImplementation((cmd: string) => {
+                if (cmd === 'fnm list') {
+                    return Promise.resolve(createCommandResult('v18.0.0', '', 0));
+                }
+                // Command exits with code 0 (success)
+                return Promise.resolve(createCommandResult('@adobe/aio-cli/10.0.0', '', 0));
+            });
+
+            const context = createMockContext();
+
+            // When: Check per-node version status
+            const result = await checkPerNodeVersionStatus(prereq, ['18'], context);
+
+            // Then: Should detect as installed with parsed version
+            expect(result.perNodeVersionStatus).toHaveLength(1);
+            expect(result.perNodeVersionStatus[0]).toEqual({
+                version: 'Node 18',
+                component: '10.0.0', // Parsed from output
+                installed: true, // CRITICAL: Should be true when exit code === 0
+            });
+            expect(result.perNodeVariantMissing).toBe(false);
+            expect(result.missingVariantMajors).toEqual([]);
+        });
+    });
 });

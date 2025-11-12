@@ -15,13 +15,11 @@
  */
 
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getRequiredNodeVersions, getNodeVersionMapping } from '@/features/prerequisites/handlers/shared';
+import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 import { SimpleResult } from '@/types/results';
-import { DEFAULT_SHELL } from '@/types/shell';
 import { toError, isTimeoutError } from '@/types/typeGuards';
 
 /**
@@ -156,50 +154,9 @@ export async function handleInstallPrerequisite(
             // Sort versions in ascending order (18, 20, 24) for predictable installation order
             versionsToCheck.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 
-            // CRITICAL: First verify which Node versions are actually installed
-            const commandManager = ServiceLocator.getCommandExecutor();
-            const fnmListResult = await commandManager.execute('fnm list', {
-                timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                shell: DEFAULT_SHELL, // Add shell context for fnm availability (fixes ENOENT errors)
-            });
-            const installedVersions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
-            const installedMajors = new Set<string>();
-            for (const version of installedVersions) {
-                const match = /v?(\d+)/.exec(version);
-                if (match) {
-                    installedMajors.add(match[1]);
-                }
-            }
-
-            const missingNodeVersions: string[] = [];
-
-            for (const nodeVer of versionsToCheck) {
-                // Check if this Node version is actually installed first
-                if (!installedMajors.has(nodeVer)) {
-                    // Node version not installed - tool cannot be installed for this version
-                    // Don't add to missingNodeVersions (can't install tool without Node)
-                    context.debugLogger.debug(`[Prerequisites] Node ${nodeVer} not installed, cannot install ${prereq.name} for this version yet`);
-                    continue;
-                }
-
-                try {
-                    // Use fnm exec for reliable version isolation
-                    // This prevents fnm fallback behavior that causes false positives
-                    await commandManager.execute(prereq.check.command, {
-                        useNodeVersion: nodeVer,
-                        timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                    });
-                    // Already installed for this Node version
-                    context.debugLogger.debug(`[Prerequisites] ${prereq.name} already installed for Node ${nodeVer}, skipping`);
-                } catch {
-                    // Missing for this Node version
-                    context.debugLogger.debug(`[Prerequisites] ${prereq.name} not found for Node ${nodeVer}, will install`);
-                    missingNodeVersions.push(nodeVer);
-                }
-            }
-
-            // Sort versions in ascending order (18, 20, 24) for predictable installation order
-            missingNodeVersions.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+            // Use shared utility to check which Node versions need the prerequisite installed
+            const perNodeStatus = await checkPerNodeVersionStatus(prereq, versionsToCheck, context);
+            const missingNodeVersions = perNodeStatus.missingVariantMajors;
             targetVersions = missingNodeVersions.length > 0 ? missingNodeVersions : [];
 
             // If no versions need installation, return early
@@ -331,58 +288,72 @@ export async function handleInstallPrerequisite(
             const mapping = await getNodeVersionMapping(context);
             const requiredMajors = Object.keys(mapping);
             if (requiredMajors.length > 0) {
-                finalPerNodeVersionStatus = [];
-                const commandManager = ServiceLocator.getCommandExecutor();
-                for (const major of requiredMajors) {
-                    try {
-                        const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major });
-                        // Parse CLI version if regex provided
-                        let cliVersion = '';
-                        if (prereq.check.parseVersion) {
-                            try {
-                                const match = new RegExp(prereq.check.parseVersion).exec(stdout);
-                                if (match) cliVersion = match[1] || '';
-                            } catch {
-                                // Ignore regex parse errors
-                            }
-                        }
-                        finalPerNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: true });
-                    } catch {
-                        finalPerNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
-                    }
-                }
+                // Use shared utility to check which Node versions have the prerequisite installed
+                const postCheckStatus = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
+                finalPerNodeVersionStatus = postCheckStatus.perNodeVersionStatus;
             }
         }
 
-        context.sharedState.currentPrerequisiteStates!.set(prereqId, { prereq, result: installResult, nodeVersionStatus: finalNodeVersionStatus });
+        const states = context.sharedState.currentPrerequisiteStates;
+        if (states) {
+            states.set(prereqId, { prereq, result: installResult, nodeVersionStatus: finalNodeVersionStatus });
+        }
 
-        const finalMessage = (prereq.id === 'node' && finalNodeVersionStatus && finalNodeVersionStatus.length > 0)
-            ? finalNodeVersionStatus.every(s => s.installed)
-                ? `${prereq.name} is installed: ${finalNodeVersionStatus.map(s => s.version).join(', ')}`
-                : `${prereq.name} is missing in ${finalNodeVersionStatus.filter(s => !s.installed).map(s => s.version.replace('Node ', 'Node ')).join(', ')}`
-            : (installResult.installed
-                ? `${prereq.name} is installed${installResult.version ? ': ' + installResult.version : ''}`
-                : `${prereq.name} is not installed`);
+        // Build final status message based on prerequisite type
+        let finalMessage: string;
+        if (prereq.id === 'node' && finalNodeVersionStatus && finalNodeVersionStatus.length > 0) {
+            // Node.js: Show version-specific status
+            if (finalNodeVersionStatus.every(s => s.installed)) {
+                const versions = finalNodeVersionStatus.map(s => s.version).join(', ');
+                finalMessage = `${prereq.name} is installed: ${versions}`;
+            } else {
+                const missing = finalNodeVersionStatus
+                    .filter(s => !s.installed)
+                    .map(s => s.version)
+                    .join(', ');
+                finalMessage = `${prereq.name} is missing in ${missing}`;
+            }
+        } else {
+            // Other prerequisites: Show simple status
+            if (installResult.installed) {
+                const version = installResult.version ? `: ${installResult.version}` : '';
+                finalMessage = `${prereq.name} is installed${version}`;
+            } else {
+                finalMessage = `${prereq.name} is not installed`;
+            }
+        }
+
+        // For perNodeVersion prerequisites, determine overall status from per-node checks
+        // For other prerequisites, use the global check result
+        const overallInstalled = prereq.perNodeVersion && finalPerNodeVersionStatus && finalPerNodeVersionStatus.length > 0
+            ? finalPerNodeVersionStatus.every(s => s.installed)
+            : installResult.installed;
 
         // Summarize result in both channels
-        if (installResult.installed) {
+        if (overallInstalled) {
             context.logger.info(`[Prerequisites] ${prereq.name} installation succeeded`);
-            context.debugLogger.debug(`[Prerequisites] ${prereq.name} installation succeeded`, { nodeVersionStatus: finalNodeVersionStatus });
+            context.debugLogger.debug(`[Prerequisites] ${prereq.name} installation succeeded`, {
+                nodeVersionStatus: finalNodeVersionStatus,
+                perNodeVersionStatus: finalPerNodeVersionStatus,
+            });
         } else {
             context.logger.warn(`[Prerequisites] ${prereq.name} installation did not complete`);
-            context.debugLogger.debug(`[Prerequisites] ${prereq.name} installation incomplete`, { nodeVersionStatus: finalNodeVersionStatus });
+            context.debugLogger.debug(`[Prerequisites] ${prereq.name} installation incomplete`, {
+                nodeVersionStatus: finalNodeVersionStatus,
+                perNodeVersionStatus: finalPerNodeVersionStatus,
+            });
         }
 
         await context.sendMessage('prerequisite-status', {
             index: prereqId,
             name: prereq.name,
-            status: installResult.installed ? 'success' : (!prereq.optional ? 'error' : 'warning'),
+            status: overallInstalled ? 'success' : (!prereq.optional ? 'error' : 'warning'),
             description: prereq.description,
             required: !prereq.optional,
-            installed: installResult.installed,
+            installed: overallInstalled,
             version: installResult.version,
             message: finalMessage,
-            canInstall: !installResult.installed,
+            canInstall: !overallInstalled,
             plugins: installResult.plugins,
             // Include per-node-version status for CLI and per-version status for Node
             nodeVersionStatus: prereq.id === 'node' ? finalNodeVersionStatus : finalPerNodeVersionStatus,

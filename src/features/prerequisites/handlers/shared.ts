@@ -7,8 +7,24 @@
 
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { DEFAULT_SHELL } from '@/types/shell';
 import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { ComponentSelection } from '@/types/components';
+import { DEFAULT_SHELL } from '@/types/shell';
+
+/**
+ * Helper to extract component selection parameters for registry manager calls
+ */
+function getComponentSelectionParams(
+    selection: ComponentSelection,
+): [string | undefined, string | undefined, string[] | undefined, string[] | undefined, string[] | undefined] {
+    return [
+        selection.frontend,
+        selection.backend,
+        selection.dependencies,
+        selection.integrations,
+        selection.appBuilder,
+    ];
+}
 
 /**
  * Get Node version mapping from component selection
@@ -36,13 +52,8 @@ export async function getNodeVersionMapping(
     try {
         const { ComponentRegistryManager } = await import('../../components/services/ComponentRegistryManager');
         const registryManager = new ComponentRegistryManager(context.context.extensionPath);
-        return await registryManager.getNodeVersionToComponentMapping(
-            context.sharedState.currentComponentSelection.frontend,
-            context.sharedState.currentComponentSelection.backend,
-            context.sharedState.currentComponentSelection.dependencies,
-            context.sharedState.currentComponentSelection.integrations,
-            context.sharedState.currentComponentSelection.appBuilder,
-        );
+        const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
+        return await registryManager.getNodeVersionToComponentMapping(...params);
     } catch (error) {
         context.logger.warn('Failed to get Node version mapping:', error as Error);
         return {};
@@ -66,13 +77,8 @@ export async function getRequiredNodeVersions(context: HandlerContext): Promise<
     try {
         const { ComponentRegistryManager } = await import('../../components/services/ComponentRegistryManager');
         const registryManager = new ComponentRegistryManager(context.context.extensionPath);
-        const mapping = await registryManager.getRequiredNodeVersions(
-            context.sharedState.currentComponentSelection.frontend,
-            context.sharedState.currentComponentSelection.backend,
-            context.sharedState.currentComponentSelection.dependencies,
-            context.sharedState.currentComponentSelection.integrations,
-            context.sharedState.currentComponentSelection.appBuilder,
-        );
+        const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
+        const mapping = await registryManager.getRequiredNodeVersions(...params);
         // Sort versions in ascending order (18, 20, 24) for predictable installation order
         const sortedVersions = Array.from(mapping).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 
@@ -105,8 +111,13 @@ export function areDependenciesInstalled(
         return true;
     }
 
+    const states = context.sharedState.currentPrerequisiteStates;
+    if (!states) {
+        return false;
+    }
+
     return prereq.depends.every((depId: string) => {
-        for (const entry of context.sharedState.currentPrerequisiteStates!.values()) {
+        for (const entry of states.values()) {
             if (entry.prereq.id === depId) {
                 // Special handling: if dependency is Node and required majors missing, treat as not installed
                 if (depId === 'node' && entry.nodeVersionStatus && entry.nodeVersionStatus.length > 0) {
@@ -189,22 +200,25 @@ export async function checkPerNodeVersionStatus(
         }
     }
 
+    // Helper to create version status object
+    const createVersionStatus = (major: string, installed: boolean, component = '') => ({
+        major,
+        version: `Node ${major}`,
+        component,
+        installed,
+        isMissing: !installed,
+    });
+
     // Check all Node versions in parallel using Promise.all
     // Performance: ~50-66% faster than sequential (3 sequential @ 1-2s each = 3-6s → 1 parallel batch @ 1-2s)
     // Each check maintains isolation via fnm exec with specific Node version
     const startTime = Date.now();
     const checkPromises = nodeVersions.map(async (major) => {
-        // Check if this Node version is actually installed
+        // Scenario 1: Node version not installed on system
+        // Skip checking the tool if Node itself isn't installed for this major version
         if (!installedMajors.has(major)) {
-            // Node version not installed - tool cannot be installed for this version
             context.logger.debug(`[Prerequisites] Node ${major} not installed, skipping ${prereq.name} check for this version`);
-            return {
-                major,
-                version: `Node ${major}`,
-                component: '',
-                installed: false,
-                isMissing: true,
-            };
+            return createVersionStatus(major, false);
         }
 
         try {
@@ -218,32 +232,32 @@ export async function checkPerNodeVersionStatus(
                 },
             );
 
-            // Parse CLI version if regex provided
-            let cliVersion = '';
-            if (prereq.check.parseVersion) {
-                try {
-                    const match = new RegExp(prereq.check.parseVersion).exec(result.stdout);
-                    if (match) cliVersion = match[1] || '';
-                } catch {
-                    // Ignore regex parse errors
+            // CRITICAL BUG FIX: Check exit code to determine command success
+            // Exit code 0 = success, non-zero = failure (e.g., 127 = command not found)
+            // Previously used try-catch which incorrectly treated non-zero exit codes as success
+            if (result.code === 0) {
+                // Scenario 2: Tool is installed and working
+                // Parse CLI version if regex provided
+                let cliVersion = '';
+                if (prereq.check.parseVersion) {
+                    try {
+                        const match = new RegExp(prereq.check.parseVersion).exec(result.stdout);
+                        if (match) cliVersion = match[1] || '';
+                    } catch {
+                        // Ignore regex parse errors
+                    }
                 }
-            }
 
-            return {
-                major,
-                version: `Node ${major}`,
-                component: cliVersion,
-                installed: true,
-                isMissing: false,
-            };
+                return createVersionStatus(major, true, cliVersion);
+            } else {
+                // Scenario 3: Command executed but failed (non-zero exit code)
+                // Tool is not installed or encountered an error
+                return createVersionStatus(major, false);
+            }
         } catch {
-            return {
-                major,
-                version: `Node ${major}`,
-                component: '',
-                installed: false,
-                isMissing: true,
-            };
+            // Scenario 4: Process error (ENOENT, timeout, etc.)
+            // Different from non-zero exit codes - these are execution failures
+            return createVersionStatus(major, false);
         }
     });
 
