@@ -97,7 +97,8 @@ export class EnvironmentSetup {
                 stdio: ['pipe', 'pipe', 'ignore'],
             });
             const fnmPath = result.trim().split('\n')[0];
-            if (fnmPath) {
+            // Verify the path exists before caching (security: prevent PATH manipulation)
+            if (fnmPath && fsSync.existsSync(fnmPath)) {
                 this.logger.debug(`[fnm] Found in PATH: ${fnmPath}`);
                 this.cachedFnmPath = fnmPath;
                 return fnmPath;
