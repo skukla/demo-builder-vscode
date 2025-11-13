@@ -6,6 +6,7 @@ import { PollingService } from './pollingService';
 import { ResourceLocker } from './resourceLocker';
 import { RetryStrategyManager } from './retryStrategyManager';
 import type { CommandResult, ExecuteOptions, CommandRequest, CommandConfig, PollOptions } from './types';
+import { DEFAULT_SHELL } from '@/types/shell';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation/securityValidation';
@@ -329,6 +330,7 @@ export class CommandExecutor {
             configureTelemetry: false,
             useNodeVersion: null,
             enhancePath: true,
+            shell: DEFAULT_SHELL,  // Fixes ENOENT in Dock-launched VS Code
             retryStrategy: this.retryManager.getStrategy('adobe-cli'),
         });
 

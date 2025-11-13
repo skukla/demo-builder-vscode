@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Prerequisites Node.js Installation**: Fixed fnm list ENOENT errors by adding shell context to all fnm list commands
 - **Prerequisites UI**: Added milestone substep display showing "(Step X of Y)" for multi-step operations with progress milestones
 - **Authentication Flow**: Fixed fnm ENOENT errors during environment setup when VS Code launched from Dock (non-terminal launch)
+- **Adobe CLI Commands**: Fixed all aio commands (auth, config, org/project selection, mesh deployment) failing with ENOENT when VS Code launched from Dock
 
 ## [1.3.0] - 2025-01-10
 
