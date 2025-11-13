@@ -449,4 +449,89 @@ describe('PrerequisitesCacheManager', () => {
             expect(cached2?.data).toEqual(result2);
         });
     });
+
+    describe('getPerVersionResults', () => {
+        it('should return all cached per-version results for a prerequisite', () => {
+            const result1 = createMockStatus({ installed: true, version: '1.0.0' });
+            const result2 = createMockStatus({ installed: false });
+            const result3 = createMockStatus({ installed: true, version: '2.0.0' });
+
+            cacheManager.setCachedResult('aio-cli', result1, 300000, '20');
+            cacheManager.setCachedResult('aio-cli', result2, 300000, '18');
+            cacheManager.setCachedResult('aio-cli', result3, 300000, '22');
+
+            const results = cacheManager.getPerVersionResults('aio-cli');
+
+            expect(results).toHaveLength(3);
+            expect(results).toEqual(
+                expect.arrayContaining([
+                    { version: 'Node 20', major: '20', component: '', installed: true },
+                    { version: 'Node 18', major: '18', component: '', installed: false },
+                    { version: 'Node 22', major: '22', component: '', installed: true },
+                ]),
+            );
+        });
+
+        it('should filter out expired results', () => {
+            const originalNow = Date.now;
+            let mockTime = 1000000;
+            jest.spyOn(Date, 'now').mockImplementation(() => mockTime);
+
+            const result = createMockStatus({ installed: true, version: '1.0.0' });
+
+            cacheManager.setCachedResult('aio-cli', result, 10000, '20'); // 10 second TTL
+            cacheManager.setCachedResult('aio-cli', result, 10000, '18'); // 10 second TTL
+
+            // Fast-forward time to expire first entry only
+            mockTime += 11000;
+
+            // Add fresh entry
+            cacheManager.setCachedResult('aio-cli', result, 10000, '22');
+
+            const results = cacheManager.getPerVersionResults('aio-cli');
+
+            // Should only return the fresh entry (others expired)
+            expect(results).toHaveLength(1);
+            expect(results[0].major).toBe('22');
+
+            jest.spyOn(Date, 'now').mockRestore();
+        });
+
+        it('should return empty array when no results cached', () => {
+            const results = cacheManager.getPerVersionResults('nonexistent');
+
+            expect(results).toEqual([]);
+        });
+
+        it('should return results with major field', () => {
+            const result = createMockStatus({ installed: true, version: '1.0.0' });
+
+            cacheManager.setCachedResult('aio-cli', result, 300000, '20');
+
+            const results = cacheManager.getPerVersionResults('aio-cli');
+
+            expect(results).toHaveLength(1);
+            expect(results[0]).toHaveProperty('major');
+            expect(results[0].major).toBe('20');
+            expect(results[0]).toHaveProperty('version');
+            expect(results[0].version).toBe('Node 20');
+        });
+
+        it('should use stored nodeVersion instead of parsing key', () => {
+            const result = createMockStatus({ installed: true, version: '1.0.0' });
+
+            // Set with nodeVersion stored in cache data
+            cacheManager.setCachedResult('aio-cli', result, 300000, '20');
+
+            const results = cacheManager.getPerVersionResults('aio-cli');
+
+            // Verify major is retrieved from stored nodeVersion field
+            expect(results[0].major).toBe('20');
+
+            // Access private cache to verify nodeVersion is stored
+            const cache = (cacheManager as any).cache;
+            const cachedEntry = cache.get('aio-cli##20');
+            expect(cachedEntry.nodeVersion).toBe('20');
+        });
+    });
 });

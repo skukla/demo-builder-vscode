@@ -280,19 +280,106 @@ describe('CommandExecutor', () => {
             const mockChild = createMockChildProcess();
             (spawn as jest.Mock).mockReturnValue(mockChild);
 
-            const promise = commandExecutor.execute('aio --version', {
+            // Use non-version command to test telemetry configuration
+            const promise = commandExecutor.execute('aio console:org:list', {
                 configureTelemetry: true
             });
 
             // Use nextTick to emit events after promise creation
             process.nextTick(() => {
-                mockChild.stdout!.emit('data', Buffer.from('version output\n'));
+                mockChild.stdout!.emit('data', Buffer.from('org list output\n'));
                 mockChild.emit('close', 0);
             });
 
             await promise;
 
             expect(mockEnvironmentSetup.ensureAdobeCLIConfigured).toHaveBeenCalled();
+        });
+
+        it('should skip telemetry configuration for --version commands', async () => {
+            const mockChild = createMockChildProcess();
+            (spawn as jest.Mock).mockReturnValue(mockChild);
+
+            const promise = commandExecutor.execute('aio --version');
+
+            process.nextTick(() => {
+                mockChild.stdout!.emit('data', Buffer.from('9.4.0\n'));
+                mockChild.emit('close', 0);
+            });
+
+            await promise;
+
+            // Should NOT call telemetry configuration for version checks
+            expect(mockEnvironmentSetup.ensureAdobeCLIConfigured).not.toHaveBeenCalled();
+        });
+
+        it('should skip telemetry configuration for -v commands', async () => {
+            const mockChild = createMockChildProcess();
+            (spawn as jest.Mock).mockReturnValue(mockChild);
+
+            const promise = commandExecutor.execute('aio -v');
+
+            process.nextTick(() => {
+                mockChild.stdout!.emit('data', Buffer.from('9.4.0\n'));
+                mockChild.emit('close', 0);
+            });
+
+            await promise;
+
+            expect(mockEnvironmentSetup.ensureAdobeCLIConfigured).not.toHaveBeenCalled();
+        });
+
+        it('should skip telemetry for node --version commands', async () => {
+            const mockChild = createMockChildProcess();
+            (spawn as jest.Mock).mockReturnValue(mockChild);
+
+            const promise = commandExecutor.execute('node --version');
+
+            process.nextTick(() => {
+                mockChild.stdout!.emit('data', Buffer.from('v20.11.0\n'));
+                mockChild.emit('close', 0);
+            });
+
+            await promise;
+
+            // node commands shouldn't trigger Adobe CLI telemetry
+            expect(mockEnvironmentSetup.ensureAdobeCLIConfigured).not.toHaveBeenCalled();
+        });
+
+        it('should still configure telemetry for regular aio commands', async () => {
+            const mockChild = createMockChildProcess();
+            (spawn as jest.Mock).mockReturnValue(mockChild);
+
+            const promise = commandExecutor.execute('aio console:org:list');
+
+            // Use nextTick to emit events after promise creation
+            process.nextTick(() => {
+                mockChild.stdout!.emit('data', Buffer.from('org data\n'));
+                mockChild.emit('close', 0);
+            });
+
+            await promise;
+
+            // Regular commands should still configure telemetry
+            expect(mockEnvironmentSetup.ensureAdobeCLIConfigured).toHaveBeenCalled();
+        });
+
+        it('should skip telemetry when configureTelemetry is explicitly false', async () => {
+            const mockChild = createMockChildProcess();
+            (spawn as jest.Mock).mockReturnValue(mockChild);
+
+            const promise = commandExecutor.execute('aio console:org:list', {
+                configureTelemetry: false
+            });
+
+            process.nextTick(() => {
+                mockChild.stdout!.emit('data', Buffer.from('org data\n'));
+                mockChild.emit('close', 0);
+            });
+
+            await promise;
+
+            expect(mockEnvironmentSetup.ensureAdobeCLIConfigured).not.toHaveBeenCalled();
         });
     });
 

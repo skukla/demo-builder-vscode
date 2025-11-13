@@ -13,13 +13,16 @@ jest.mock('vscode');
 jest.mock('child_process', () => ({
     execSync: jest.fn()
 }));
+// Create shared mock logger instance
+const mockLogger = {
+    error: jest.fn(),
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn()
+};
+
 jest.mock('@/core/logging/debugLogger', () => ({
-    getLogger: () => ({
-        error: jest.fn(),
-        debug: jest.fn(),
-        info: jest.fn(),
-        warn: jest.fn()
-    })
+    getLogger: () => mockLogger
 }));
 
 describe('EnvironmentSetup', () => {
@@ -506,6 +509,57 @@ describe('EnvironmentSetup', () => {
             await expect(
                 environmentSetup.ensureAdobeCLIConfigured(executeCommand)
             ).resolves.not.toThrow();
+        });
+
+        it('should only log success when exit code is 0', async () => {
+            const executeCommand = jest.fn().mockResolvedValue({
+                stdout: '',
+                stderr: '',
+                code: 0,  // Success
+                duration: 100
+            });
+
+            await environmentSetup.ensureAdobeCLIConfigured(executeCommand);
+
+            // Verify info() was called (success message)
+            expect(mockLogger.info).toHaveBeenCalledWith(
+                expect.stringContaining('Configured aio-cli to opt out of telemetry')
+            );
+        });
+
+        it('should log failure when exit code is non-zero', async () => {
+            const executeCommand = jest.fn().mockResolvedValue({
+                stdout: '',
+                stderr: 'Command failed',
+                code: 1,  // Failure
+                duration: 100
+            });
+
+            await environmentSetup.ensureAdobeCLIConfigured(executeCommand);
+
+            // Verify debug() was called (failure message)
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                expect.stringContaining('Failed to configure (exit code 1)')
+            );
+            // Verify info() was NOT called (no false success)
+            expect(mockLogger.info).not.toHaveBeenCalledWith(
+                expect.stringContaining('Configured aio-cli to opt out of telemetry')
+            );
+        });
+
+        it('should mark as configured even after failure', async () => {
+            const executeCommand = jest.fn().mockResolvedValue({
+                stdout: '',
+                stderr: 'Command failed',
+                code: 1,
+                duration: 100
+            });
+
+            await environmentSetup.ensureAdobeCLIConfigured(executeCommand);
+            await environmentSetup.ensureAdobeCLIConfigured(executeCommand);
+
+            // Should only attempt once (marked as configured despite failure)
+            expect(executeCommand).toHaveBeenCalledTimes(1);
         });
     });
 

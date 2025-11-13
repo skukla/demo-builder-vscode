@@ -864,16 +864,16 @@ describe('Prerequisites Install Handler', () => {
             checkPerNodeVersionStatusSpy
                 .mockResolvedValueOnce({
                     perNodeVersionStatus: [
-                        { version: 'Node 18', component: '', installed: false },
-                        { version: 'Node 20', component: '', installed: false },
+                        { version: 'Node 18', major: '18', component: '', installed: false },
+                        { version: 'Node 20', major: '20', component: '', installed: false },
                     ],
                     perNodeVariantMissing: true,
                     missingVariantMajors: ['18', '20'],
                 })
                 .mockResolvedValueOnce({
                     perNodeVersionStatus: [
-                        { version: 'Node 18', component: '10.0.0', installed: true },
-                        { version: 'Node 20', component: '10.0.0', installed: true },
+                        { version: 'Node 18', major: '18', component: '10.0.0', installed: true },
+                        { version: 'Node 20', major: '20', component: '10.0.0', installed: true },
                     ],
                     perNodeVariantMissing: false,
                     missingVariantMajors: [],
