@@ -12,6 +12,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WizardState } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
+import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 
 interface ComponentSelectionStepProps {
     state: WizardState;
@@ -50,6 +51,16 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     
     // Track last sent selection to prevent duplicate messages
     const lastSentSelectionRef = useRef<string>('');
+
+    // Diagnostic: Log component mount
+    useEffect(() => {
+        console.log('[ComponentSelectionStep] Component mounted');
+        console.log('[ComponentSelectionStep] Initial state:', { selectedFrontend, selectedBackend });
+        console.log('[ComponentSelectionStep] Components data available:', !!componentsData);
+        return () => {
+            console.log('[ComponentSelectionStep] Component unmounting');
+        };
+    }, []);
 
     // Use componentsData if available, otherwise fall back to hardcoded
     const dataTyped = (componentsData || {}) as any;
@@ -207,26 +218,38 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         Frontend
                     </Text>
                     
-                    <Picker
-                        width="100%"
-                        selectedKey={selectedFrontend}
-                        onSelectionChange={(key) => setSelectedFrontend(key as string)}
-                        placeholder="Select frontend system"
-                        aria-label="Select frontend system"
-                        isQuiet={false}
-                        align="start"
-                        direction="bottom"
-                        shouldFlip={false}
-                        menuWidth="size-4600"
-                        UNSAFE_className={cn('cursor-pointer')}
+                    <ErrorBoundary
+                        onError={(error) => {
+                            console.error('[ComponentSelectionStep] Frontend Picker error:', error);
+                        }}
                     >
-                            {frontendOptions.map((option: any) => (
-                                <Item key={option.id} textValue={option.name}>
-                                    <Text>{option.name}</Text>
-                                    <Text slot="description">{option.description}</Text>
-                                </Item>
-                            ))}
-                    </Picker>
+                        <Picker
+                            width="100%"
+                            selectedKey={selectedFrontend}
+                            onSelectionChange={(key) => {
+                                console.log('[ComponentSelectionStep] Frontend selection changed:', key);
+                                setSelectedFrontend(key as string);
+                            }}
+                            onOpenChange={(isOpen) => {
+                                console.log('[ComponentSelectionStep] Frontend Picker open state:', isOpen);
+                            }}
+                            placeholder="Select frontend system"
+                            aria-label="Select frontend system"
+                            isQuiet={false}
+                            align="start"
+                            direction="bottom"
+                            shouldFlip={false}
+                            menuWidth="size-4600"
+                            UNSAFE_className={cn('cursor-pointer')}
+                        >
+                                {frontendOptions.map((option: any) => (
+                                    <Item key={option.id} textValue={option.name}>
+                                        <Text>{option.name}</Text>
+                                        <Text slot="description">{option.description}</Text>
+                                    </Item>
+                                ))}
+                        </Picker>
+                    </ErrorBoundary>
 
                     {/* Frontend Dependencies */}
                     {selectedFrontend && frontendDependencies.length > 0 && (
@@ -260,26 +283,38 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         Backend
                     </Text>
                     
-                    <Picker
-                        width="100%"
-                        selectedKey={selectedBackend}
-                        onSelectionChange={(key) => setSelectedBackend(key as string)}
-                        placeholder="Select backend system"
-                        aria-label="Select backend system"
-                        isQuiet={false}
-                        align="start"
-                        direction="bottom"
-                        shouldFlip={false}
-                        menuWidth="size-4600"
-                        UNSAFE_className={cn('cursor-pointer')}
+                    <ErrorBoundary
+                        onError={(error) => {
+                            console.error('[ComponentSelectionStep] Backend Picker error:', error);
+                        }}
                     >
-                            {backendOptions.map((option: any) => (
-                                <Item key={option.id} textValue={option.name}>
-                                    <Text>{option.name}</Text>
-                                    <Text slot="description">{option.description}</Text>
-                                </Item>
-                            ))}
-                    </Picker>
+                        <Picker
+                            width="100%"
+                            selectedKey={selectedBackend}
+                            onSelectionChange={(key) => {
+                                console.log('[ComponentSelectionStep] Backend selection changed:', key);
+                                setSelectedBackend(key as string);
+                            }}
+                            onOpenChange={(isOpen) => {
+                                console.log('[ComponentSelectionStep] Backend Picker open state:', isOpen);
+                            }}
+                            placeholder="Select backend system"
+                            aria-label="Select backend system"
+                            isQuiet={false}
+                            align="start"
+                            direction="bottom"
+                            shouldFlip={false}
+                            menuWidth="size-4600"
+                            UNSAFE_className={cn('cursor-pointer')}
+                        >
+                                {backendOptions.map((option: any) => (
+                                    <Item key={option.id} textValue={option.name}>
+                                        <Text>{option.name}</Text>
+                                        <Text slot="description">{option.description}</Text>
+                                    </Item>
+                                ))}
+                        </Picker>
+                    </ErrorBoundary>
 
                     {/* Backend Services */}
                     {selectedBackend && backendServices.length > 0 && (

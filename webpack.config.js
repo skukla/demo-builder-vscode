@@ -76,6 +76,14 @@ module.exports = {
     }
   },
   plugins: [
+    // Define process.env for browser environment (fixes "process is not defined" error)
+    new webpack.DefinePlugin({
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
+    }),
+    // Provide process global for browser (polyfill for Node.js process object)
+    new webpack.ProvidePlugin({
+      process: 'process/browser'
+    }),
     // Bundle analyzer (only when ANALYZE=true environment variable set)
     ...(process.env.ANALYZE ? [new BundleAnalyzerPlugin()] : [])
   ],

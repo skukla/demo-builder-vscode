@@ -74,18 +74,30 @@ export function WebviewApp({
     const [initData, setInitData] = useState<any>(null);
 
     useEffect(() => {
+        console.log('[WebviewApp] Component mounted');
+
         // Apply VSCode theme class to body
         document.body.classList.add('vscode-dark');
+
+        console.log('[WebviewApp] Sending ready message to extension');
 
         // Send ready message to extension immediately
         // This bypasses the handshake deadlock (extension waits for __webview_ready__,
         // WebviewClient waits for __extension_ready__)
         webviewClient.postMessage('ready');
 
+        console.log('[WebviewApp] Waiting for handshake completion');
+        webviewClient.ready().then(() => {
+            console.log('[WebviewApp] Handshake complete, waiting for init message');
+        });
+
         // Listen for initialization from extension
         const unsubscribeInit = webviewClient.onMessage('init', (data) => {
+            console.log('[WebviewApp] Received init message:', data);
+
             const initData = data as any;
             if (initData.theme) {
+                console.log('[WebviewApp] Setting theme:', initData.theme);
                 setTheme(initData.theme);
                 document.body.classList.remove('vscode-light', 'vscode-dark');
                 document.body.classList.add(initData.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
@@ -99,6 +111,7 @@ export function WebviewApp({
                 onInit(initData);
             }
 
+            console.log('[WebviewApp] Setting isReady = true');
             setIsReady(true);
         });
 
@@ -117,11 +130,16 @@ export function WebviewApp({
     }, [onInit]);
 
     if (!isReady) {
+        console.log('[WebviewApp] Not ready yet, showing loading content');
         return loadingContent;
     }
 
+    console.log('[WebviewApp] Ready! Rendering Provider with theme:', theme);
+
     // Support render props pattern
     const content = typeof children === 'function' ? children(initData) : children;
+
+    console.log('[Provider] About to render content');
 
     return (
         <Provider
