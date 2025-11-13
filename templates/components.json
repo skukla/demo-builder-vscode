@@ -4,8 +4,7 @@
   "infrastructure": {
     "adobe-cli": {
       "name": "Adobe I/O CLI & SDK",
-      "description": "Command-line interface and SDK for Adobe I/O services",
-      "nodeVersion": "18"
+      "description": "Command-line interface and SDK for Adobe I/O services"
     }
   },
   "selectionGroups": {

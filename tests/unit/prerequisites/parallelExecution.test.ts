@@ -55,7 +55,8 @@ describe('Parallel Per-Node-Version Checking', () => {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
                         stderr: '',
-                        exitCode: 0,
+                        code: 0,
+                        duration: 100,
                     });
                 }
                 // Each check takes 500ms (simulating real-world check time)
@@ -64,7 +65,8 @@ describe('Parallel Per-Node-Version Checking', () => {
                         resolve({
                             stdout: '@adobe/aio-cli/10.0.0',
                             stderr: '',
-                            exitCode: 0,
+                            code: 0,
+                            duration: 500,
                         });
                     }, 500);
                 });
@@ -106,17 +108,17 @@ describe('Parallel Per-Node-Version Checking', () => {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
                         stderr: '',
-                        exitCode: 0,
+                        code: 0, duration: 100,
                     });
                 }
                 // Return different versions based on Node major version
                 const nodeVersion = options?.useNodeVersion;
                 if (nodeVersion === '18') {
-                    return Promise.resolve({ stdout: '@adobe/aio-cli/10.1.0', stderr: '', exitCode: 0 });
+                    return Promise.resolve({ stdout: '@adobe/aio-cli/10.1.0', stderr: '', code: 0, duration: 100 });
                 } else if (nodeVersion === '20') {
-                    return Promise.resolve({ stdout: '@adobe/aio-cli/10.2.0', stderr: '', exitCode: 0 });
+                    return Promise.resolve({ stdout: '@adobe/aio-cli/10.2.0', stderr: '', code: 0, duration: 100 });
                 } else if (nodeVersion === '24') {
-                    return Promise.resolve({ stdout: '@adobe/aio-cli/10.3.0', stderr: '', exitCode: 0 });
+                    return Promise.resolve({ stdout: '@adobe/aio-cli/10.3.0', stderr: '', code: 0, duration: 100 });
                 }
                 return Promise.reject(new Error('Unknown version'));
             });
@@ -151,13 +153,13 @@ describe('Parallel Per-Node-Version Checking', () => {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
                         stderr: '',
-                        exitCode: 0,
+                        code: 0, duration: 100,
                     });
                 }
                 // Node 18 succeeds, Node 20/24 fail
                 const nodeVersion = options?.useNodeVersion;
                 if (nodeVersion === '18') {
-                    return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
+                    return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', code: 0, duration: 100 });
                 }
                 return Promise.reject(new Error('Command failed'));
             });
@@ -194,7 +196,7 @@ describe('Parallel Per-Node-Version Checking', () => {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
                         stderr: '',
-                        exitCode: 0,
+                        code: 0, duration: 100,
                     });
                 }
                 // Varying execution times: 100ms, 300ms, 500ms
@@ -202,7 +204,7 @@ describe('Parallel Per-Node-Version Checking', () => {
                 const delay = nodeVersion === '18' ? 100 : nodeVersion === '20' ? 300 : 500;
                 return new Promise((resolve) => {
                     setTimeout(() => {
-                        resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
+                        resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', code: 0, duration: 100 });
                     }, delay);
                 });
             });
@@ -239,10 +241,10 @@ describe('Parallel Per-Node-Version Checking', () => {
                     return Promise.resolve({
                         stdout: 'v18.0.0',
                         stderr: '',
-                        exitCode: 0,
+                        code: 0, duration: 100,
                     });
                 }
-                return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
+                return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', code: 0, duration: 100 });
             });
 
             const context = createMockHandlerContext();
@@ -276,7 +278,7 @@ describe('Parallel Per-Node-Version Checking', () => {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
                         stderr: '',
-                        exitCode: 0,
+                        code: 0, duration: 100,
                     });
                 }
                 // Node 20 times out (never resolves), others succeed quickly
@@ -285,11 +287,11 @@ describe('Parallel Per-Node-Version Checking', () => {
                     return new Promise((resolve) => {
                         // Simulate timeout by taking much longer than test timeout
                         setTimeout(() => {
-                            resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
+                            resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', code: 0, duration: 100 });
                         }, 10000);
                     });
                 }
-                return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
+                return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', code: 0, duration: 100 });
             });
 
             const context = createMockHandlerContext();
@@ -343,13 +345,13 @@ describe('Parallel Per-Node-Version Checking', () => {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv24.0.0',
                         stderr: '',
-                        exitCode: 0,
+                        code: 0, duration: 100,
                     });
                 }
                 // Node 18 and 24 succeed
                 const nodeVersion = options?.useNodeVersion;
                 if (nodeVersion === '18' || nodeVersion === '24') {
-                    return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', exitCode: 0 });
+                    return Promise.resolve({ stdout: '@adobe/aio-cli/10.0.0', stderr: '', code: 0, duration: 100 });
                 }
                 return Promise.reject(new Error('Node version not found'));
             });

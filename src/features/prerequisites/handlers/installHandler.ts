@@ -172,7 +172,13 @@ export async function handleInstallPrerequisite(
         const installSteps = steps.filter(s => !s.name.toLowerCase().includes('default'));
         const defaultSteps = steps.filter(s => s.name.toLowerCase().includes('default'));
 
-        const total = (installSteps.length * (targetVersions?.length || 1)) + defaultSteps.length;
+        // BUG FIX: For dynamic installs (Node.js), PrerequisitesManager already creates
+        // version-specific steps, so we shouldn't multiply by targetVersions.length again.
+        // Only multiply for per-node-version installs (Adobe CLI) where steps are templates.
+        const isDynamicInstall = prereq.id === 'node' && (prereq as any).install?.dynamic;
+        const total = isDynamicInstall
+            ? installSteps.length + defaultSteps.length
+            : (installSteps.length * (targetVersions?.length || 1)) + defaultSteps.length;
         let counter = 0;
         const run = async (step: InstallStep, ver?: string) => {
             // Resolve step name for logging (replace {version} placeholder)
@@ -201,7 +207,15 @@ export async function handleInstallPrerequisite(
             context.debugLogger.debug(`[Prerequisites] Completed step: ${resolvedStepName}`);
         };
 
-        if (targetVersions?.length) {
+        if (isDynamicInstall) {
+            // For dynamic installs (Node.js), steps are already version-specific
+            // Just execute them sequentially without version iteration
+            for (const step of installSteps) {
+                await run(step);
+            }
+            // No default steps for dynamic installs (fnm handles default version automatically)
+        } else if (targetVersions?.length) {
+            // For per-node-version installs (Adobe CLI), steps are templates
             // Install all versions (without default steps)
             for (const ver of targetVersions) {
                 for (const step of installSteps) {
@@ -227,6 +241,18 @@ export async function handleInstallPrerequisite(
         // Invalidate cache after installation (Step 2: Prerequisite Caching)
         context.prereqManager?.getCacheManager().invalidate(prereq.id);
         context.logger.debug(`[Prerequisites] Cache invalidated for ${prereq.id} after installation`);
+
+        // CRITICAL: Also invalidate cache for prerequisites that DEPEND on this one
+        // This fixes the bug where Adobe I/O CLI cache remains stale after Node.js installs
+        const dependents = context.sharedState.currentPrerequisites?.filter(p =>
+            p.depends?.includes(prereq.id)
+        );
+        if (dependents && dependents.length > 0) {
+            dependents.forEach(dep => {
+                context.prereqManager?.getCacheManager().invalidate(dep.id);
+                context.logger.debug(`[Prerequisites] Cache invalidated for dependent ${dep.id} (depends on ${prereq.id})`);
+            });
+        }
 
         // Re-check after installation and include variant details/messages
         let installResult;

@@ -12,6 +12,18 @@ import type { CommandExecutor } from '@/core/shell';
 
 jest.mock('@/core/config/ConfigurationLoader');
 jest.mock('@/core/di/serviceLocator');
+
+// Mock fs module for components.json reading
+jest.mock('fs', () => ({
+    readFileSync: jest.fn().mockReturnValue(JSON.stringify({
+        infrastructure: {
+            'adobe-cli': {
+                nodeVersion: '18'
+            }
+        }
+    }))
+}));
+
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: jest.fn().mockReturnValue({
         info: jest.fn(),

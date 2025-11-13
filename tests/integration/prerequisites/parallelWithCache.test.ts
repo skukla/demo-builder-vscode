@@ -87,7 +87,7 @@ describe('Integration: Parallel Execution with Cache', () => {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
                         stderr: '',
-                        exitCode: 0,
+                        code: 0, duration: 100,
                     });
                 }
                 // Node 20 and 24 take 500ms each (parallel execution)
@@ -98,7 +98,7 @@ describe('Integration: Parallel Execution with Cache', () => {
                             resolve({
                                 stdout: '@adobe/aio-cli/10.0.0',
                                 stderr: '',
-                                exitCode: 0,
+                                code: 0, duration: 100,
                             });
                         }, 500);
                     });
@@ -107,7 +107,7 @@ describe('Integration: Parallel Execution with Cache', () => {
                 return Promise.resolve({
                     stdout: '@adobe/aio-cli/10.0.0',
                     stderr: '',
-                    exitCode: 0,
+                    code: 0, duration: 100,
                 });
             });
 
@@ -153,7 +153,7 @@ describe('Integration: Parallel Execution with Cache', () => {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
                         stderr: '',
-                        exitCode: 0,
+                        code: 0, duration: 100,
                     });
                 }
                 // Each check takes 400ms
@@ -162,7 +162,7 @@ describe('Integration: Parallel Execution with Cache', () => {
                         resolve({
                             stdout: '@adobe/aio-cli/10.0.0',
                             stderr: '',
-                            exitCode: 0,
+                            code: 0, duration: 100,
                         });
                     }, 400);
                 });
@@ -216,7 +216,7 @@ describe('Integration: Parallel Execution with Cache', () => {
                     return Promise.resolve({
                         stdout: 'v18.0.0\nv20.0.0\nv24.0.0',
                         stderr: '',
-                        exitCode: 0,
+                        code: 0, duration: 100,
                     });
                 }
                 // Only Node 24 should execute (600ms)
@@ -227,7 +227,7 @@ describe('Integration: Parallel Execution with Cache', () => {
                             resolve({
                                 stdout: '@adobe/aio-cli/10.0.0',
                                 stderr: '',
-                                exitCode: 0,
+                                code: 0, duration: 100,
                             });
                         }, 600);
                     });
@@ -236,7 +236,7 @@ describe('Integration: Parallel Execution with Cache', () => {
                 return Promise.resolve({
                     stdout: '@adobe/aio-cli/10.0.0',
                     stderr: '',
-                    exitCode: 0,
+                    code: 0, duration: 100,
                 });
             });
 

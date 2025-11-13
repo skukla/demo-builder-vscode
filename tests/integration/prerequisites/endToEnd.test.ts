@@ -14,6 +14,18 @@ import type { CommandExecutor } from '@/core/shell/commandExecutor';
 // Mock dependencies
 jest.mock('@/core/config/ConfigurationLoader');
 jest.mock('@/core/di/serviceLocator');
+
+// Mock fs module for components.json reading
+jest.mock('fs', () => ({
+    readFileSync: jest.fn().mockReturnValue(JSON.stringify({
+        infrastructure: {
+            'adobe-cli': {
+                nodeVersion: '18'
+            }
+        }
+    }))
+}));
+
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         debug: jest.fn(),
@@ -194,14 +206,30 @@ describe('Prerequisite Caching - End to End', () => {
         it('should cache results separately for each Node version', async () => {
             const prereq = mockConfig.prerequisites[1]; // aio-cli (perNodeVersion)
 
-            // Mock different results for Node 18 and 20
-            mockExecutor.executeAdobeCLI
+            // Mock execution sequence for first check
+            mockExecutor.execute
+                // First check: getInstalledNodeVersions() calls 'fnm list'
+                .mockResolvedValueOnce({
+                    stdout: 'v18.20.8\nv20.19.5',
+                    stderr: '',
+                    code: 0,
+                    duration: 100,
+                })
+                // First check: checkPerNodeVersionStatus() calls 'fnm list' again
+                .mockResolvedValueOnce({
+                    stdout: 'v18.20.8\nv20.19.5',
+                    stderr: '',
+                    code: 0,
+                    duration: 100,
+                })
+                // First check: aio --version for Node 18
                 .mockResolvedValueOnce({
                     stdout: '@adobe/aio-cli/10.0.0',
                     stderr: '',
                     code: 0,
                     duration: 1000,
                 })
+                // First check: aio --version for Node 20
                 .mockResolvedValueOnce({
                     stdout: '@adobe/aio-cli/10.0.0',
                     stderr: '',
@@ -209,21 +237,23 @@ describe('Prerequisite Caching - End to End', () => {
                     duration: 1000,
                 });
 
-            // Check for Node 18 (first call)
+            // First check - cache miss (manager's internal cache is empty)
             const result18 = await manager.checkPrerequisite(prereq, '18');
 
-            // Check for Node 20 (second call)
-            const result20 = await manager.checkPrerequisite(prereq, '20');
+            // Verify result
+            expect(result18.installed).toBe(true);
+            expect(result18.version).toBe('10.0.0');
 
-            // Verify both checks were executed (not cached)
-            expect(mockExecutor.executeAdobeCLI).toHaveBeenCalledTimes(2);
-
-            // Check again for Node 18 - should use cache
+            // Second check - cache hit (manager caches automatically)
             const cached18 = await manager.checkPrerequisite(prereq, '18');
             expect(cached18).toEqual(result18);
+            expect(cached18.installed).toBe(true);
 
-            // Verify no additional execute call (cache hit)
-            expect(mockExecutor.executeAdobeCLI).toHaveBeenCalledTimes(2);
+            // Verify execute was called:
+            // - 2 times for fnm list (getInstalledNodeVersions + checkPerNodeVersionStatus)
+            // - 2 times for aio --version checks (Node 18 and 20 in parallel)
+            // - No additional calls for second check (cache hit)
+            expect(mockExecutor.execute).toHaveBeenCalledTimes(4);
         });
     });
 

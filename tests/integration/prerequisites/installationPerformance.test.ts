@@ -16,6 +16,18 @@ import type { CommandExecutor } from '@/core/shell';
 
 jest.mock('@/core/config/ConfigurationLoader');
 jest.mock('@/core/di/serviceLocator');
+
+// Mock fs module for components.json reading
+jest.mock('fs', () => ({
+    readFileSync: jest.fn().mockReturnValue(JSON.stringify({
+        infrastructure: {
+            'adobe-cli': {
+                nodeVersion: '18'
+            }
+        }
+    }))
+}));
+
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: jest.fn().mockReturnValue({
         info: jest.fn(),
@@ -127,12 +139,28 @@ describe('Adobe AIO CLI Installation Performance (Integration)', () => {
 
         it('should validate installation completes successfully', async () => {
             // After installation with performance flags, check should succeed
-            mockExecutor.executeAdobeCLI.mockResolvedValue({
-                stdout: '@adobe/aio-cli/10.1.0 darwin-arm64 node-v20.11.0',
-                stderr: '',
-                code: 0,
-                duration: 1000,
-            });
+            mockExecutor.execute
+                // getInstalledNodeVersions() calls 'fnm list'
+                .mockResolvedValueOnce({
+                    stdout: 'v18.20.8',
+                    stderr: '',
+                    code: 0,
+                    duration: 100,
+                })
+                // checkPerNodeVersionStatus() calls 'fnm list' again
+                .mockResolvedValueOnce({
+                    stdout: 'v18.20.8',
+                    stderr: '',
+                    code: 0,
+                    duration: 100,
+                })
+                // Mock aio --version check for Node 18
+                .mockResolvedValueOnce({
+                    stdout: '@adobe/aio-cli/10.1.0 darwin-arm64 node-v18.20.8',
+                    stderr: '',
+                    code: 0,
+                    duration: 1000,
+                });
 
             const prereq = await manager.getPrerequisiteById('aio-cli');
             const status = await manager.checkPrerequisite(prereq!);

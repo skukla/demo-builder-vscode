@@ -13,6 +13,18 @@ import type { CommandExecutor } from '@/core/shell';
 
 jest.mock('@/core/config/ConfigurationLoader');
 jest.mock('@/core/di/serviceLocator');
+
+// Mock fs module for components.json reading
+jest.mock('fs', () => ({
+    readFileSync: jest.fn().mockReturnValue(JSON.stringify({
+        infrastructure: {
+            'adobe-cli': {
+                nodeVersion: '18'
+            }
+        }
+    }))
+}));
+
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: jest.fn().mockReturnValue({
         info: jest.fn(),
@@ -48,6 +60,30 @@ describe('npm --prefer-offline Fallback Logic', () => {
                     message: 'Installing Adobe I/O CLI globally',
                     commands: ['npm install -g @adobe/aio-cli --no-audit --no-fund --prefer-offline --verbose'],
                     estimatedDuration: 60000,
+                    progressStrategy: 'milestones' as const,
+                },
+            ],
+        },
+    };
+
+    // Non-perNodeVersion prerequisite for testing npm fallback logic
+    const npmToolPrereq = {
+        id: 'npm-tool',
+        name: 'NPM Tool',
+        description: 'Generic npm-based tool',
+        optional: false,
+        perNodeVersion: false, // Uses executeAdobeCLI code path
+        check: {
+            command: 'npm-tool --version',
+            parseVersion: '([0-9.]+)',
+        },
+        install: {
+            steps: [
+                {
+                    name: 'Install NPM Tool',
+                    message: 'Installing NPM Tool globally',
+                    commands: ['npm install -g npm-tool --no-audit --no-fund --prefer-offline --verbose'],
+                    estimatedDuration: 30000,
                     progressStrategy: 'milestones' as const,
                 },
             ],
@@ -164,15 +200,17 @@ describe('npm --prefer-offline Fallback Logic', () => {
             const networkError: any = new Error('npm ERR! network request failed');
             networkError.code = 'ENOENT'; // Use ENOENT to avoid timeout detection
 
-            mockExecutor.executeAdobeCLI.mockRejectedValueOnce(networkError);
+            // checkPrerequisite uses execute(), not executeAdobeCLI()
+            mockExecutor.execute.mockRejectedValueOnce(networkError);
 
             // checkPrerequisite returns status object, doesn't throw
-            const status = await manager.checkPrerequisite(aioCliPrereq);
+            // Use npmToolPrereq (non-perNodeVersion) to test standard check path
+            const status = await manager.checkPrerequisite(npmToolPrereq);
             expect(status.installed).toBe(false);
             expect(status.canInstall).toBe(true);
 
             // Should NOT have attempted a second execution
-            expect(mockExecutor.executeAdobeCLI).toHaveBeenCalledTimes(1);
+            expect(mockExecutor.execute).toHaveBeenCalledTimes(1);
         });
 
         it('should log fallback attempt for debugging', async () => {

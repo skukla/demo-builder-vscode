@@ -321,10 +321,11 @@ for (const prereq of orderedPrereqs) {
       "install": {
         "steps": [
           {
+            "name": "Install Adobe I/O CLI (Node {version})",
+            "message": "Installing Adobe I/O CLI for Node {version}",
             "command": "npm install -g @adobe/aio-cli",
-            "message": "Installing Adobe I/O CLI...",
-            "progressStrategy": "exact",
-            "estimatedDuration": 45000
+            "progressStrategy": "milestones",
+            "estimatedDuration": 60000
           }
         ]
       },
@@ -385,9 +386,10 @@ for (const prereq of orderedPrereqs) {
    {
      "steps": [
        {
+         "name": "Install Adobe I/O CLI (Node {version})",
+         "message": "Installing Adobe I/O CLI for Node {version}",
          "command": "npm install -g @adobe/aio-cli",
-         "message": "Installing Adobe I/O CLI...",
-         "progressStrategy": "exact"
+         "progressStrategy": "milestones"
        }
      ]
    }

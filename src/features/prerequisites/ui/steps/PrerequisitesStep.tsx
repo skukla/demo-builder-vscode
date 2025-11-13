@@ -337,7 +337,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                             key={check.name}
                             ref={el => { itemRefs.current[index] = el; }}
                         >
-                            <Flex justifyContent="space-between" alignItems="center" 
+                            <Flex justifyContent="space-between" alignItems="center"
                                 UNSAFE_className={getPrerequisiteItemClasses('pending', index === checks.length - 1)}
                             >
                             <Flex gap="size-150" alignItems="center" flex>
@@ -432,12 +432,15 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                                             }`
                                                         }
                                                         value={
-                                                            // Use command-level percent when available (exact progress),
-                                                            // otherwise use overall percent (multi-step progress)
-                                                            check.unifiedProgress.command?.type === 'determinate' &&
-                                                            check.unifiedProgress.command?.percent != null
-                                                                ? check.unifiedProgress.command.percent
-                                                                : check.unifiedProgress.overall.percent
+                                                            // For multi-step operations (e.g., installing for multiple Node versions),
+                                                            // show overall percent to maintain continuous progress across all steps.
+                                                            // For single-step operations, show command percent for granular feedback.
+                                                            check.unifiedProgress.overall.totalSteps > 1
+                                                                ? check.unifiedProgress.overall.percent
+                                                                : (check.unifiedProgress.command?.type === 'determinate' &&
+                                                                   check.unifiedProgress.command?.percent != null
+                                                                    ? check.unifiedProgress.command.percent
+                                                                    : check.unifiedProgress.overall.percent)
                                                         }
                                                         maxValue={100}
                                                         size="S"

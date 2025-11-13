@@ -31,6 +31,27 @@
     margin-bottom: 30px;
 }
 
+/* Smooth transition for prerequisite cards when content expands/collapses */
+.prerequisite-content {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Smooth transition for progress bar appearance */
+.prerequisites-container .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Circular Number Badge */
 .number-badge {
     min-width: 32px;

@@ -110,16 +110,23 @@ export class CommandExecutor {
             if (nodeVersion) {
                 // Use fnm exec for guaranteed isolation
                 const fnmPath = this.environmentSetup.findFnmPath();
+                this.logger.debug(`[Command Executor] nodeVersion=${nodeVersion}, fnmPath=${fnmPath}, finalOptions.shell before=${finalOptions.shell}`);
                 if (fnmPath && nodeVersion !== 'current') {
                     // SECURITY: nodeVersion is validated above - safe for shell interpolation
                     // fnm exec provides bulletproof isolation - no fallback to nvm/system Node
                     finalCommand = `${fnmPath} exec --using=${nodeVersion} ${finalCommand}`;
-                    finalOptions.shell = finalOptions.shell || '/bin/zsh';
+                    // CRITICAL: fnm exec REQUIRES /bin/zsh shell, override any caller-provided shell
+                    // Bug fix: Don't use ||, always force zsh for fnm commands
+                    finalOptions.shell = '/bin/zsh';
+                    this.logger.debug(`[Command Executor] Set shell to /bin/zsh for fnm exec`);
                 } else if (nodeVersion === 'current') {
                     // Use fnm env for current version (not interpolated - safe without validation)
                     finalCommand = `eval "$(fnm env)" && ${finalCommand}`;
-                    finalOptions.shell = finalOptions.shell || '/bin/zsh';
+                    // CRITICAL: fnm env also requires /bin/zsh shell
+                    finalOptions.shell = '/bin/zsh';
+                    this.logger.debug(`[Command Executor] Set shell to /bin/zsh for fnm env`);
                 }
+                this.logger.debug(`[Command Executor] finalCommand="${finalCommand}", finalOptions.shell after=${finalOptions.shell}`);
             }
         }
 

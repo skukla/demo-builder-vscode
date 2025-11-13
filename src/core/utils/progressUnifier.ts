@@ -206,19 +206,30 @@ export class ProgressUnifier {
     
     private resolveCommands(step: InstallStep, options?: { nodeVersion?: string }): string[] {
         let commands: string[] = [];
+
         if (step.commands) {
             commands = step.commands;
-        } else if (step.commandTemplate && options?.nodeVersion) {
-            commands = [step.commandTemplate.replace(/{version}/g, options.nodeVersion)];
+        } else if (step.commandTemplate) {
+            const template = step.commandTemplate;
+            const hasPlaceholder = template.includes('{version}');
+
+            if (hasPlaceholder) {
+                // Template requires substitution
+                if (options?.nodeVersion) {
+                    commands = [template.replace(/{version}/g, options.nodeVersion)];
+                }
+                // If nodeVersion not provided, return empty array
+            } else {
+                // Pre-substituted template (e.g., "fnm install 18")
+                commands = [template];
+            }
         }
 
-        // If a specific Node version is requested and the command isn't already using fnm,
-        // run the command under that version using `fnm exec --using <version>`.
+        // Wrap commands with fnm if Node version specified
         if (options?.nodeVersion && commands.length > 0) {
-            commands = commands.map(cmd => {
-                if (cmd.startsWith('fnm ')) return cmd;
-                return `fnm exec --using ${options.nodeVersion} ${cmd}`;
-            });
+            commands = commands.map(cmd =>
+                cmd.startsWith('fnm ') ? cmd : `fnm exec --using ${options.nodeVersion} ${cmd}`
+            );
         }
 
         return commands;

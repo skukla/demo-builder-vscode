@@ -164,16 +164,29 @@ describe('AuthCacheManager', () => {
         });
 
         it('should expire auth status cache after TTL', () => {
-            const shortTTL = 10; // 10ms
+            // Mock Date.now to control time (consistent with other TTL tests)
+            const originalNow = Date.now;
+            let mockTime = 1000000;
+            jest.spyOn(Date, 'now').mockImplementation(() => mockTime);
+
+            const shortTTL = 100; // 100ms
             cacheManager.setCachedAuthStatus(true, shortTTL);
 
-            // Wait for cache to expire
-            return new Promise(resolve => setTimeout(() => {
-                const result = cacheManager.getCachedAuthStatus();
-                expect(result.isExpired).toBe(true);
-                expect(result.isAuthenticated).toBeUndefined();
-                resolve(undefined);
-            }, 50));
+            // Verify cache is valid immediately
+            let result = cacheManager.getCachedAuthStatus();
+            expect(result.isExpired).toBe(false);
+            expect(result.isAuthenticated).toBe(true);
+
+            // Fast-forward time beyond TTL (including max jitter of 10%)
+            mockTime += shortTTL * 1.1 + 10; // TTL + max jitter + buffer
+
+            // Cache should now be expired
+            result = cacheManager.getCachedAuthStatus();
+            expect(result.isExpired).toBe(true);
+            expect(result.isAuthenticated).toBeUndefined();
+
+            // Restore Date.now
+            jest.spyOn(Date, 'now').mockRestore();
         });
 
         it('should use custom TTL when provided', () => {

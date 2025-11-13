@@ -139,52 +139,54 @@ export class PrerequisitesManager {
 
         try {
             const commandManager = ServiceLocator.getCommandExecutor();
-            // Use fnm wrapper for Node.js checks, enhanced path for others
-            let checkResult;
-            
-            const cmdStartTime = Date.now();
-            if (prereq.id === 'aio-cli') {
-                // Use executeAdobeCLI for proper Node version management and caching
-                // For prerequisite checks, disable retries to fail fast on timeout
-                // IMPORTANT: Check for aio-cli BEFORE perNodeVersion since aio-cli has perNodeVersion=true
-                this.logger.debug(`[Prereq Check] aio-cli: Executing via executeAdobeCLI with timeout=${TIMEOUTS.PREREQUISITE_CHECK}ms`);
-                checkResult = await commandManager.executeAdobeCLI(prereq.check.command, {
-                    timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                    retryStrategy: {
-                        maxAttempts: 1,
-                        initialDelay: 0,
-                        maxDelay: 0,
-                        backoffFactor: 1,
-                    },
-                });
-                const cmdDuration = Date.now() - cmdStartTime;
-                this.logger.debug(`[Prereq Check] aio-cli: Command completed in ${cmdDuration}ms`);
-                this.logger.debug(`[Prereq Check] aio-cli: stdout length=${checkResult.stdout?.length || 0}, stderr length=${checkResult.stderr?.length || 0}`);
-                this.logger.debug(`[Prereq Check] aio-cli: stdout preview: ${checkResult.stdout?.substring(0, 200)}`);
-            } else if (prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm') {
-                // Fix #5 (5a22e45) + Fix #7 (01b94d6): Check under TARGET Node version (20)
-                // This prevents detecting aio-cli from old nvm installations (Node v14)
-                // which causes ES module errors. Trust fnm exec isolation instead of path verification.
-                const targetNodeVersion = '20';
 
-                this.logger.debug(`[Prereq Check] ${prereq.id}: Checking under Node v${targetNodeVersion} (perNodeVersion=true)`);
+            // Step 2 Fix: Use fnm-aware logic for perNodeVersion prerequisites
+            // Check perNodeVersion prerequisites using checkPerNodeVersionStatus (same as per-node check)
+            if (prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm') {
+                this.logger.debug(`[Prereq Check] ${prereq.id}: Using fnm-aware detection (perNodeVersion=true)`);
 
-                try {
-                    checkResult = await commandManager.execute(prereq.check.command, {
-                        useNodeVersion: targetNodeVersion,
-                        timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                    });
-                    this.logger.debug(`[Prereq Check] ${prereq.id}: Command completed under Node v${targetNodeVersion}`);
-                } catch (error) {
-                    this.logger.debug(`[Prereq Check] ${prereq.id}: Not found under Node v${targetNodeVersion}`);
-                    checkResult = {
-                        stdout: '',
-                        stderr: toError(error).message,
-                        code: 1,
-                        duration: Date.now() - cmdStartTime,
-                    };
+                // Get list of installed Node versions to check against
+                const installedNodeVersions = await this.getInstalledNodeVersions();
+
+                if (installedNodeVersions.length === 0) {
+                    // No Node versions installed - prerequisite can't be installed
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: No Node versions installed`);
+                    status.installed = false;
+                } else {
+                    // Check prerequisite against all installed Node versions using fnm-aware logic
+                    const { checkPerNodeVersionStatus } = await import('@/features/prerequisites/handlers/shared');
+
+                    const perNodeStatus = await checkPerNodeVersionStatus(
+                        prereq,
+                        installedNodeVersions,
+                        this.createMinimalContext()
+                    );
+
+                    // If installed for ANY Node version, mark as installed
+                    const anyInstalled = perNodeStatus.perNodeVersionStatus.some(v => v.installed);
+                    status.installed = anyInstalled;
+
+                    // Extract version from first installed variant
+                    if (anyInstalled) {
+                        status.version = this.extractVersionFromPerNodeStatus(perNodeStatus);
+                    }
+
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: fnm-aware check complete, installed=${status.installed}`);
                 }
-            } else if (prereq.id === 'node' || prereq.id === 'npm') {
+
+                const totalDuration = Date.now() - startTime;
+                this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Complete in ${totalDuration}ms, installed=${status.installed}`);
+
+                // Cache result
+                this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
+                return status;
+            }
+
+            // Original logic for non-perNodeVersion prerequisites
+            let checkResult;
+            const cmdStartTime = Date.now();
+
+            if (prereq.id === 'node' || prereq.id === 'npm') {
                 // For node/npm themselves, check current version
                 this.logger.debug(`[Prereq Check] ${prereq.id}: Executing command with useNodeVersion=current`);
                 checkResult = await commandManager.execute(prereq.check.command, {
@@ -538,6 +540,64 @@ export class PrerequisitesManager {
             const duration = Date.now() - startTime;
             this.logger.warn(`[Version Satisfaction] Error checking Node ${requiredFamily}.x after ${duration}ms: ${error}`);
             return false; // Safe default: not satisfied
+        }
+    }
+
+    /**
+     * Create minimal context for checkPerNodeVersionStatus
+     * Provides logger interface required by shared handler functions
+     */
+    private createMinimalContext(): any {
+        return {
+            logger: this.logger,
+            debugLogger: {
+                debug: this.logger.debug.bind(this.logger),
+                info: this.logger.info.bind(this.logger),
+                warn: this.logger.warn.bind(this.logger),
+                error: this.logger.error.bind(this.logger),
+            },
+        };
+    }
+
+    /**
+     * Extract version string from per-node version status result
+     * Returns the version from the first installed variant
+     */
+    private extractVersionFromPerNodeStatus(perNodeStatus: {
+        perNodeVersionStatus: { version: string; component: string; installed: boolean }[];
+    }): string | undefined {
+        const firstInstalled = perNodeStatus.perNodeVersionStatus.find(v => v.installed);
+        return firstInstalled?.component || undefined;
+    }
+
+    /**
+     * Get installed Node major versions (e.g., ['18', '20', '24'])
+     * Used for checking perNodeVersion prerequisites against all installed Node versions
+     * @returns Array of Node major versions
+     */
+    private async getInstalledNodeVersions(): Promise<string[]> {
+        try {
+            const commandManager = ServiceLocator.getCommandExecutor();
+            const fnmListResult = await commandManager.execute('fnm list', {
+                timeout: TIMEOUTS.PREREQUISITE_CHECK,
+                shell: DEFAULT_SHELL,
+            });
+
+            const versions = fnmListResult.stdout.trim().split('\n').filter(v => v.trim());
+            const majors = new Set<string>();
+
+            for (const version of versions) {
+                // Match patterns like "v20.19.5" or "20.19.5"
+                const match = /v?(\d+)/.exec(version);
+                if (match) {
+                    majors.add(match[1]);
+                }
+            }
+
+            return Array.from(majors).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+        } catch (error) {
+            this.logger.warn(`[Prerequisites] Could not get installed Node versions: ${error}`);
+            return [];
         }
     }
 
