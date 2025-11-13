@@ -1,5 +1,6 @@
 import { EnvironmentSetup } from '@/core/shell/environmentSetup';
 import type { CommandResult, ExecuteOptions } from '@/core/shell/types';
+import { DEFAULT_SHELL } from '@/types/shell';
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -8,6 +9,7 @@ import * as vscode from 'vscode';
 jest.mock('fs');
 jest.mock('os', () => ({
     homedir: jest.fn(() => '/mock/home'),
+    platform: jest.fn(() => process.platform),
 }));
 jest.mock('vscode');
 jest.mock('child_process', () => ({
@@ -52,6 +54,21 @@ describe('EnvironmentSetup', () => {
         // Reset instance caches
         (environmentSetup as any).cachedFnmPath = undefined;
         (environmentSetup as any).cachedAdobeCLINodeVersion = undefined;
+    });
+
+    describe('DEFAULT_SHELL constant', () => {
+        it('should have access to DEFAULT_SHELL constant', () => {
+            expect(DEFAULT_SHELL).toBeDefined();
+            expect(typeof DEFAULT_SHELL).toBe('string');
+        });
+
+        it('should use correct shell for platform', () => {
+            if (process.platform === 'win32') {
+                expect(DEFAULT_SHELL).toBe('cmd.exe');
+            } else {
+                expect(DEFAULT_SHELL).toBe('/bin/bash');
+            }
+        });
     });
 
     describe('findFnmPath', () => {
@@ -392,14 +409,77 @@ describe('EnvironmentSetup', () => {
     });
 
     describe('ensureAdobeCLINodeVersion', () => {
+        it('should pass shell option when checking fnm availability', async () => {
+            environmentSetup.resetSession();
+
+            const mockExtension = {
+                extensionPath: '/path/to/extension'
+            };
+            (vscode.extensions.getExtension as jest.Mock).mockReturnValue(mockExtension);
+            (fsSync.existsSync as jest.Mock).mockReturnValue(true);
+            (fsSync.readFileSync as jest.Mock).mockReturnValue(JSON.stringify({
+                infrastructure: {
+                    'adobe-cli': {
+                        nodeVersion: '18'
+                    }
+                }
+            }));
+
+            const executeCommand = jest.fn()
+                .mockResolvedValueOnce({ stdout: 'fnm 1.38.1', stderr: '', code: 0, duration: 100 }); // fnm --version
+
+            await environmentSetup.ensureAdobeCLINodeVersion(executeCommand);
+
+            // Verify shell option passed to fnm --version check
+            const fnmVersionCall = executeCommand.mock.calls.find(call =>
+                call[0].includes('fnm --version')
+            );
+            expect(fnmVersionCall).toBeDefined();
+            expect(fnmVersionCall[1]).toHaveProperty('shell', DEFAULT_SHELL);
+        });
+
+        it('should pass shell option when getting fnm version', async () => {
+            environmentSetup.resetSession();
+
+            const mockExtension = {
+                extensionPath: '/path/to/extension'
+            };
+            (vscode.extensions.getExtension as jest.Mock).mockReturnValue(mockExtension);
+            (fsSync.existsSync as jest.Mock).mockReturnValue(true);
+            (fsSync.readFileSync as jest.Mock).mockReturnValue(JSON.stringify({
+                infrastructure: {
+                    'adobe-cli': {
+                        nodeVersion: '18'
+                    }
+                }
+            }));
+
+            const executeCommand = jest.fn()
+                .mockResolvedValueOnce({ stdout: 'fnm 1.38.1', stderr: '', code: 0, duration: 100 }) // fnm --version
+                .mockResolvedValueOnce({ stdout: 'v20.19.5', stderr: '', code: 0, duration: 100 }); // fnm current
+
+            await environmentSetup.ensureAdobeCLINodeVersion(executeCommand);
+
+            // Verify shell option passed to fnm current check
+            const fnmCurrentCall = executeCommand.mock.calls.find(call =>
+                call[0].includes('fnm current')
+            );
+            expect(fnmCurrentCall).toBeDefined();
+            expect(fnmCurrentCall[1]).toHaveProperty('shell', DEFAULT_SHELL);
+        });
+
         it('should skip if already set for session', async () => {
+            // Reset mocks to ensure no Node version is found
+            (vscode.extensions.getExtension as jest.Mock).mockReturnValue(undefined);
+            (fsSync.existsSync as jest.Mock).mockReturnValue(false);
+
             const executeCommand = jest.fn();
 
             // Call twice
             await environmentSetup.ensureAdobeCLINodeVersion(executeCommand);
             await environmentSetup.ensureAdobeCLINodeVersion(executeCommand);
 
-            // Should only setup once
+            // Should only setup once (no commands executed because no Node version found)
             expect(executeCommand).not.toHaveBeenCalled();
         });
 

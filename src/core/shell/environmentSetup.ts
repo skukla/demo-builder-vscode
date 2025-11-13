@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import type { CommandResult, ExecuteOptions } from './types';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
  * Manages environment setup for command execution
@@ -342,7 +343,10 @@ export class EnvironmentSetup {
      */
     private async checkFnmAvailable(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<boolean> {
         try {
-            await executeCommand('fnm --version', { timeout: 2000 });
+            await executeCommand('fnm --version', {
+                timeout: 2000,
+                shell: DEFAULT_SHELL  // Fixes ENOENT in Dock-launched VS Code
+            });
             return true;
         } catch {
             return false;
@@ -354,7 +358,10 @@ export class EnvironmentSetup {
      */
     private async getCurrentFnmVersion(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<string | null> {
         try {
-            const result = await executeCommand('fnm current', { timeout: 2000 });
+            const result = await executeCommand('fnm current', {
+                timeout: 2000,
+                shell: DEFAULT_SHELL  // Fixes ENOENT in Dock-launched VS Code
+            });
             return result.stdout?.trim() || null;
         } catch {
             return null;
