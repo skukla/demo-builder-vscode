@@ -2,6 +2,11 @@ module.exports = {
   preset: 'ts-jest',
   roots: ['<rootDir>/tests'],
 
+  // Performance optimizations
+  cache: true,
+  cacheDirectory: '<rootDir>/.jest-cache',
+  maxWorkers: '75%',
+
   // Separate test environments for Node and React tests
   projects: [
     {
