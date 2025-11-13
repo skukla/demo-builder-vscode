@@ -8,7 +8,7 @@
  * - Spectrum Provider setup
  */
 
-import React, { useEffect, useState, ReactNode } from 'react';
+import React, { useEffect, useState, useRef, ReactNode } from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { webviewClient } from '../utils/WebviewClient';
 import { ThemeMode } from '@/types/webview';
@@ -73,25 +73,16 @@ export function WebviewApp({
     const [isReady, setIsReady] = useState(false);
     const [initData, setInitData] = useState<any>(null);
 
+    // Track whether we've sent ready message (prevent StrictMode double-send)
+    const readySentRef = useRef(false);
+
     useEffect(() => {
         console.log('[WebviewApp] Component mounted');
 
         // Apply VSCode theme class to body
         document.body.classList.add('vscode-dark');
 
-        console.log('[WebviewApp] Sending ready message to extension');
-
-        // Send ready message to extension immediately
-        // This bypasses the handshake deadlock (extension waits for __webview_ready__,
-        // WebviewClient waits for __extension_ready__)
-        webviewClient.postMessage('ready');
-
-        console.log('[WebviewApp] Waiting for handshake completion');
-        webviewClient.ready().then(() => {
-            console.log('[WebviewApp] Handshake complete, waiting for init message');
-        });
-
-        // Listen for initialization from extension
+        // Listen for initialization from extension (set up listener BEFORE sending ready)
         const unsubscribeInit = webviewClient.onMessage('init', (data) => {
             console.log('[WebviewApp] Received init message:', data);
 
@@ -123,6 +114,18 @@ export function WebviewApp({
             document.body.classList.add(themeData.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
         });
 
+        // Wait for handshake, then send ready message to trigger init (guard prevents StrictMode double-send)
+        console.log('[WebviewApp] Waiting for handshake completion');
+        webviewClient.ready().then(() => {
+            if (!readySentRef.current) {
+                readySentRef.current = true;
+                console.log('[WebviewApp] Handshake complete, sending ready message');
+                webviewClient.postMessage('ready');
+            } else {
+                console.log('[WebviewApp] Handshake complete, but ready already sent (StrictMode remount)');
+            }
+        });
+
         return () => {
             unsubscribeInit();
             unsubscribeTheme();
@@ -137,7 +140,7 @@ export function WebviewApp({
     console.log('[WebviewApp] Ready! Rendering Provider with theme:', theme);
 
     // Support render props pattern
-    const content = typeof children === 'function' ? children(initData) : children;
+    const content: ReactNode = typeof children === 'function' ? children(initData) : children;
 
     console.log('[Provider] About to render content');
 
