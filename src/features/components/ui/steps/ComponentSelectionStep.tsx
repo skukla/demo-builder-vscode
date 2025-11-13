@@ -27,7 +27,24 @@ interface DependencyOption {
     required: boolean;
 }
 
-export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({ 
+// Custom hook for debouncing values
+function useDebounce<T>(value: T, delay: number): T {
+    const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+}
+
+export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     state,
     updateState,
     setCanProceed,
@@ -48,9 +65,17 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     const [selectedAppBuilder, setSelectedAppBuilder] = useState<Set<string>>(
         new Set(state.components?.appBuilderApps || []),
     );
-    
+
     // Track last sent selection to prevent duplicate messages
     const lastSentSelectionRef = useRef<string>('');
+
+    // Create debounced version of selections (wait 500ms after last change)
+    const debouncedFrontend = useDebounce(selectedFrontend, 500);
+    const debouncedBackend = useDebounce(selectedBackend, 500);
+    const debouncedDependencies = useDebounce(selectedDependencies, 500);
+    const debouncedServices = useDebounce(selectedServices, 500);
+    const debouncedIntegrations = useDebounce(selectedIntegrations, 500);
+    const debouncedAppBuilder = useDebounce(selectedAppBuilder, 500);
 
     // Diagnostic: Log component mount
     useEffect(() => {
@@ -159,22 +184,22 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         }
     }, [selectedBackend]);
 
-    // Update parent state and canProceed
+    // Update parent state and canProceed using debounced values
     useEffect(() => {
-        const isValid = !!(selectedFrontend && selectedBackend);
+        const isValid = !!(debouncedFrontend && debouncedBackend);
         setCanProceed(isValid);
-        
+
         const components = {
-            frontend: selectedFrontend,
-            backend: selectedBackend,
-            dependencies: Array.from(selectedDependencies),
-            services: Array.from(selectedServices),
-            integrations: Array.from(selectedIntegrations),
-            appBuilderApps: Array.from(selectedAppBuilder),
+            frontend: debouncedFrontend,
+            backend: debouncedBackend,
+            dependencies: Array.from(debouncedDependencies),
+            services: Array.from(debouncedServices),
+            integrations: Array.from(debouncedIntegrations),
+            appBuilderApps: Array.from(debouncedAppBuilder),
         };
-        
+
         updateState({ components });
-        
+
         // Send component selection to backend for prerequisite determination
         // Guard: only send if selection actually changed to prevent duplicates
         const selectionKey = JSON.stringify(components);
@@ -182,7 +207,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
             lastSentSelectionRef.current = selectionKey;
             webviewClient.postMessage('update-component-selection', components);
         }
-    }, [selectedFrontend, selectedBackend, selectedDependencies, selectedServices, selectedIntegrations, selectedAppBuilder, setCanProceed, updateState]);
+    }, [debouncedFrontend, debouncedBackend, debouncedDependencies, debouncedServices, debouncedIntegrations, debouncedAppBuilder, setCanProceed, updateState]);
 
     const handleDependencyToggle = (id: string, selected: boolean) => {
         setSelectedDependencies(prev => {

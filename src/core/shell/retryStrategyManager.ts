@@ -112,7 +112,6 @@ export class RetryStrategyManager {
      */
     registerStrategy(name: string, strategy: RetryStrategy): void {
         this.strategies.set(name, strategy);
-        this.logger.debug(`[Retry Strategy] Registered strategy: ${name}`);
     }
 
     /**
@@ -152,11 +151,13 @@ export class RetryStrategyManager {
                 lastError = error as Error;
                 const duration = Date.now() - startTime;
 
-                // Enhanced error logging
+                // Log errors only on final attempt
                 const errorMessage = error instanceof Error ? error.message : String(error);
-                this.logger.debug(`[Retry Strategy] Command failed (attempt ${attempt}/${strategy.maxAttempts}) after ${duration}ms:`);
-                this.logger.debug(`  Command: ${commandDescription}`);
-                this.logger.debug(`  Error: ${errorMessage}`);
+                if (attempt === strategy.maxAttempts) {
+                    this.logger.debug(`[Retry Strategy] Command failed after ${strategy.maxAttempts} attempts:`);
+                    this.logger.debug(`  Command: ${commandDescription}`);
+                    this.logger.debug(`  Error: ${errorMessage}`);
+                }
 
                 // Don't retry on timeout errors
                 const isTimeout = errorMessage.toLowerCase().includes('timed out');

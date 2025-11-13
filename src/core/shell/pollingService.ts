@@ -28,8 +28,6 @@ export class PollingService {
             name = 'condition',
         } = options;
 
-        this.logger.debug(`[Polling Service] Starting poll for: ${name}`);
-
         const startTime = Date.now();
         let attempt = 0;
         let delay = initialDelay;
@@ -56,7 +54,6 @@ export class PollingService {
             }
 
             // Wait before next attempt
-            this.logger.debug(`[Polling Service] Poll attempt ${attempt} for ${name} - waiting ${delay}ms`);
             await this.delay(delay);
 
             // Calculate next delay with exponential backoff

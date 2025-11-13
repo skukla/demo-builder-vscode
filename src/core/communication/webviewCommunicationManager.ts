@@ -85,6 +85,7 @@ export class WebviewCommunicationManager {
     private disposables: vscode.Disposable[] = [];
     private logger = getLogger();
     private config: Required<CommunicationConfig>;
+    private isDisposed = false;
 
     constructor(panel: vscode.WebviewPanel, config: CommunicationConfig = {}) {
         this.panel = panel;
@@ -262,6 +263,9 @@ export class WebviewCommunicationManager {
      * Clean up resources
      */
     dispose(): void {
+        // Mark as disposed to prevent further message sends
+        this.isDisposed = true;
+
         // Clear all timeouts
         this.pendingRequests.forEach(request => {
             clearTimeout(request.timeout);
@@ -408,6 +412,14 @@ export class WebviewCommunicationManager {
      * Send raw message to webview
      */
     private async sendRawMessage(message: Message): Promise<void> {
+        // Silently ignore if disposed (prevents error spam during webview transitions)
+        if (this.isDisposed) {
+            if (this.config.enableLogging) {
+                this.logger.debug(`[WebviewComm] Ignoring message to disposed webview: ${message.type}`);
+            }
+            return;
+        }
+
         try {
             await this.panel.webview.postMessage(message);
         } catch (error) {

@@ -136,4 +136,5 @@ export interface PrerequisiteStatus {
 export interface CachedPrerequisiteResult {
     data: PrerequisiteStatus;
     expiry: number; // Unix timestamp in milliseconds
+    nodeVersion?: string; // Node major version for perNodeVersion prerequisites (e.g., "20", "24")
 }

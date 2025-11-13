@@ -169,7 +169,7 @@ export async function checkPerNodeVersionStatus(
     nodeVersions: string[],
     context: HandlerContext,
 ): Promise<{
-    perNodeVersionStatus: { version: string; component: string; installed: boolean }[];
+    perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[];
     perNodeVariantMissing: boolean;
     missingVariantMajors: string[];
 }> {
@@ -181,7 +181,7 @@ export async function checkPerNodeVersionStatus(
         };
     }
 
-    const perNodeVersionStatus: { version: string; component: string; installed: boolean }[] = [];
+    const perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[] = [];
     const missingVariantMajors: string[] = [];
     const commandManager = ServiceLocator.getCommandExecutor();
 
@@ -270,6 +270,7 @@ export async function checkPerNodeVersionStatus(
     for (const result of results) {
         perNodeVersionStatus.push({
             version: result.version,
+            major: result.major,
             component: result.component,
             installed: result.installed,
         });

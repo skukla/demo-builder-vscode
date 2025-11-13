@@ -83,7 +83,9 @@ export class CommandExecutor {
         const finalOptions: ExecOptions = { ...options };
 
         // Step 1: Handle telemetry configuration for Adobe CLI
-        if (options.configureTelemetry || (command.startsWith('aio ') && options.configureTelemetry !== false)) {
+        // Skip telemetry configuration for version checks (AIO CLI might not be installed yet)
+        const isVersionCheck = command.includes('--version') || command.includes('-v');
+        if (!isVersionCheck && (options.configureTelemetry || (command.startsWith('aio ') && options.configureTelemetry !== false))) {
             await this.environmentSetup.ensureAdobeCLIConfigured(this.execute.bind(this));
         }
 
@@ -110,7 +112,6 @@ export class CommandExecutor {
             if (nodeVersion) {
                 // Use fnm exec for guaranteed isolation
                 const fnmPath = this.environmentSetup.findFnmPath();
-                this.logger.debug(`[Command Executor] nodeVersion=${nodeVersion}, fnmPath=${fnmPath}, finalOptions.shell before=${finalOptions.shell}`);
                 if (fnmPath && nodeVersion !== 'current') {
                     // SECURITY: nodeVersion is validated above - safe for shell interpolation
                     // fnm exec provides bulletproof isolation - no fallback to nvm/system Node
@@ -118,15 +119,12 @@ export class CommandExecutor {
                     // CRITICAL: fnm exec REQUIRES /bin/zsh shell, override any caller-provided shell
                     // Bug fix: Don't use ||, always force zsh for fnm commands
                     finalOptions.shell = '/bin/zsh';
-                    this.logger.debug(`[Command Executor] Set shell to /bin/zsh for fnm exec`);
                 } else if (nodeVersion === 'current') {
                     // Use fnm env for current version (not interpolated - safe without validation)
                     finalCommand = `eval "$(fnm env)" && ${finalCommand}`;
                     // CRITICAL: fnm env also requires /bin/zsh shell
                     finalOptions.shell = '/bin/zsh';
-                    this.logger.debug(`[Command Executor] Set shell to /bin/zsh for fnm env`);
                 }
-                this.logger.debug(`[Command Executor] finalCommand="${finalCommand}", finalOptions.shell after=${finalOptions.shell}`);
             }
         }
 
@@ -233,7 +231,7 @@ export class CommandExecutor {
 
                 // Auto-handle Adobe CLI telemetry prompt
                 if (output.includes('Would you like to allow @adobe/aio-cli to collect anonymous usage data?')) {
-                    this.logger.info('[Command Executor] Auto-answered aio-cli telemetry prompt');
+                    this.logger.debug('[Command Executor] Auto-answered aio-cli telemetry prompt');
                     child.stdin?.write('n\n');
                     child.stdin?.end();
                 }
@@ -316,11 +314,9 @@ export class CommandExecutor {
     async executeAdobeCLI(command: string, options?: ExecuteOptions): Promise<CommandResult> {
         // Check cache for specific commands
         if (command === 'aio --version' && this.adobeVersionCache) {
-            this.logger.debug('[Command Executor] Using cached aio --version result');
             return this.adobeVersionCache;
         }
         if (command === 'aio plugins' && this.adobePluginsCache) {
-            this.logger.debug('[Command Executor] Using cached aio plugins result');
             return this.adobePluginsCache;
         }
 
@@ -339,10 +335,8 @@ export class CommandExecutor {
         // Cache results for version and plugins commands
         if (command === 'aio --version' && result.code === 0) {
             this.adobeVersionCache = result;
-            this.logger.debug('[Command Executor] Cached aio --version result');
         } else if (command === 'aio plugins' && result.code === 0) {
             this.adobePluginsCache = result;
-            this.logger.debug('[Command Executor] Cached aio plugins result');
         }
 
         return result;
@@ -546,7 +540,5 @@ export class CommandExecutor {
 
         // Reset environment setup session
         this.environmentSetup.resetSession();
-
-        this.logger.debug('[Command Executor] Disposed all resources');
     }
 }

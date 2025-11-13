@@ -5,7 +5,7 @@ import {
     Button,
     Text,
 } from '@adobe/react-spectrum';
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { TimelineNav } from './TimelineNav';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
@@ -205,6 +205,9 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     // Note: We no longer auto-close the wizard on success
     // The ProjectCreationStep has Browse Files and Close buttons instead
 
+    // Track whether we've already requested components (prevent double-load in StrictMode)
+    const componentsRequestedRef = useRef(false);
+
     // Listen for components data from extension
     useEffect(() => {
         const unsubscribe = vscode.onMessage('componentsLoaded', (data: unknown) => {
@@ -212,8 +215,11 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             setComponentsData(data as import('@/types/components').ComponentRegistry);
         });
 
-        // Request components when component mounts
-        vscode.postMessage('loadComponents');
+        // Request components when component mounts (guard prevents StrictMode double-load)
+        if (!componentsRequestedRef.current) {
+            componentsRequestedRef.current = true;
+            vscode.postMessage('loadComponents');
+        }
 
         return unsubscribe;
     }, []);

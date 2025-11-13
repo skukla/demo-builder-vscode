@@ -41,6 +41,15 @@ import type { PrerequisiteStatus, CachedPrerequisiteResult } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
 
+/**
+ * Separator for cache keys with Node version suffix
+ * Format: "{prereqId}{SEPARATOR}{nodeVersion}"
+ * Example: "aio-cli##20"
+ *
+ * SECURITY: Must be a sequence that cannot appear in prereqId
+ */
+const CACHE_KEY_SEPARATOR = '##' as const;
+
 export class PrerequisitesCacheManager {
     private logger = getLogger();
 
@@ -73,18 +82,18 @@ export class PrerequisitesCacheManager {
      * Generate cache key for a prerequisite
      * Separate cache entries for each Node version when perNodeVersion is true
      *
-     * SECURITY: Uses "##" separator to prevent collision between:
+     * SECURITY: Uses CACHE_KEY_SEPARATOR to prevent collision between:
      *   - prereqId "aio:cli" vs prereqId "aio" + nodeVersion "cli"
-     * Validates prereqId doesn't contain "##" to ensure no collisions
+     * Validates prereqId doesn't contain separator to ensure no collisions
      */
     private getCacheKey(prereqId: string, nodeVersion?: string): string {
         // SECURITY: Validate prereqId doesn't contain separator
-        if (prereqId.includes('##')) {
-            throw new Error(`Invalid prereqId: "${prereqId}" - cannot contain "##" separator`);
+        if (prereqId.includes(CACHE_KEY_SEPARATOR)) {
+            throw new Error(`Invalid prereqId: "${prereqId}" - cannot contain "${CACHE_KEY_SEPARATOR}" separator`);
         }
 
         if (nodeVersion) {
-            return `${prereqId}##${nodeVersion}`;
+            return `${prereqId}${CACHE_KEY_SEPARATOR}${nodeVersion}`;
         }
         return prereqId;
     }
@@ -129,7 +138,6 @@ export class PrerequisitesCacheManager {
         }
 
         this.stats.hits++;
-        this.logger.debug(`[Prereq Cache] Cache hit for ${key} (hits=${this.stats.hits}, misses=${this.stats.misses})`);
         return cached;
     }
 
@@ -173,6 +181,7 @@ export class PrerequisitesCacheManager {
         const cached: CachedPrerequisiteResult = {
             data: result,
             expiry: now + jitteredTTL,
+            nodeVersion,
         };
 
         this.cache.set(key, cached);
@@ -198,8 +207,8 @@ export class PrerequisitesCacheManager {
 
         for (const key of this.cache.keys()) {
             // Match exact ID or ID with version suffix (e.g., "aio-cli" or "aio-cli##20")
-            // SECURITY: Uses "##" separator (updated from ":" to prevent collisions)
-            if (key === prereqId || key.startsWith(`${prereqId}##`)) {
+            // SECURITY: Uses CACHE_KEY_SEPARATOR to prevent collisions
+            if (key === prereqId || key.startsWith(`${prereqId}${CACHE_KEY_SEPARATOR}`)) {
                 keysToDelete.push(key);
             }
         }
@@ -227,6 +236,39 @@ export class PrerequisitesCacheManager {
             `[Prereq Cache] Cleared all caches (${count} entries, ` +
             `total invalidations=${this.stats.invalidations})`,
         );
+    }
+
+    /**
+     * Get per-version results for a perNodeVersion prerequisite
+     * Returns all cached version-specific results for a given prerequisite
+     *
+     * @param prereqId - Prerequisite ID (e.g., "aio-cli")
+     * @returns Array of version statuses, or empty array if none cached
+     */
+    getPerVersionResults(prereqId: string): Array<{ version: string; major: string; component: string; installed: boolean }> {
+        const results: Array<{ version: string; major: string; component: string; installed: boolean }> = [];
+
+        // Find all cache entries for this prerequisite with version suffix
+        for (const [key, cached] of this.cache.entries()) {
+            // Match entries like "aio-cli##20", "aio-cli##24", etc.
+            if (key.startsWith(`${prereqId}${CACHE_KEY_SEPARATOR}`)) {
+                // Check if expired
+                const now = Date.now();
+                if (now < cached.expiry && cached.data) {
+                    // Use stored Node version (avoid string parsing)
+                    // Fallback to parsing from key for backward compatibility with old cache entries
+                    const major = cached.nodeVersion || key.split(CACHE_KEY_SEPARATOR)[1];
+                    results.push({
+                        version: `Node ${major}`,
+                        major,
+                        component: '',
+                        installed: cached.data.installed || false,
+                    });
+                }
+            }
+        }
+
+        return results;
     }
 
     /**

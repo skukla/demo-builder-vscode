@@ -127,12 +127,12 @@ export async function handleCheckPrerequisites(
             }
 
             // For per-node-version prerequisites (e.g., Adobe I/O CLI), detect partial installs across required Node majors
-            // Always show required Node versions from component selection
-            // If main tool not installed: show all as "not installed"
-            // If main tool installed: check each Node version properly
+            // OPTIMIZATION: Reuse cached per-version results from checkPrerequisite() instead of re-checking
+            // The initial check already ran checkPerNodeVersionStatus for ALL installed Node versions
+            // We just need to filter to required versions and determine missing variants
             let perNodeVariantMissing = false;
             const missingVariantMajors: string[] = [];
-            const perNodeVersionStatus: { version: string; component: string; installed: boolean }[] = [];
+            const perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[] = [];
             if (prereq.perNodeVersion && Object.keys(nodeVersionMapping).length > 0) {
                 const requiredMajors = Object.keys(nodeVersionMapping);
 
@@ -142,6 +142,7 @@ export async function handleCheckPrerequisites(
                     for (const major of requiredMajors) {
                         perNodeVersionStatus.push({
                             version: `Node ${major}`,
+                            major,
                             component: '',
                             installed: false,
                         });
@@ -149,11 +150,41 @@ export async function handleCheckPrerequisites(
                     perNodeVariantMissing = true;
                     missingVariantMajors.push(...requiredMajors);
                 } else {
-                    // Main tool installed: check each Node version properly
-                    const result = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
-                    perNodeVariantMissing = result.perNodeVariantMissing;
-                    missingVariantMajors.push(...result.missingVariantMajors);
-                    perNodeVersionStatus.push(...result.perNodeVersionStatus);
+                    // Main tool installed: filter cached per-version results to required versions only
+                    // This avoids duplicate checks - checkPrerequisite() already checked all versions
+                    const cachedResults = context.prereqManager?.getCacheManager().getPerVersionResults(prereq.id);
+
+                    if (cachedResults && cachedResults.length > 0) {
+                        // Use cached results - just filter to required versions
+                        context.logger.debug(`[Prerequisites] Reusing cached per-version results for ${prereq.name} (${requiredMajors.length} required versions)`);
+
+                        for (const major of requiredMajors) {
+                            const cached = cachedResults.find(r => r.version === `Node ${major}`);
+                            if (cached) {
+                                perNodeVersionStatus.push(cached);
+                                if (!cached.installed) {
+                                    missingVariantMajors.push(major);
+                                }
+                            } else {
+                                // Fallback: version not in cache, assume not installed
+                                perNodeVersionStatus.push({
+                                    version: `Node ${major}`,
+                                    major,
+                                    component: nodeVersionMapping[major] || '',
+                                    installed: false,
+                                });
+                                missingVariantMajors.push(major);
+                            }
+                        }
+                        perNodeVariantMissing = missingVariantMajors.length > 0;
+                    } else {
+                        // Fallback: no cached results, run the check (shouldn't happen but be safe)
+                        context.logger.warn(`[Prerequisites] No cached per-version results for ${prereq.name}, falling back to re-check`);
+                        const result = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
+                        perNodeVariantMissing = result.perNodeVariantMissing;
+                        missingVariantMajors.push(...result.missingVariantMajors);
+                        perNodeVersionStatus.push(...result.perNodeVersionStatus);
+                    }
                 }
             }
 

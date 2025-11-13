@@ -162,6 +162,21 @@ export class PrerequisitesManager {
                         this.createMinimalContext()
                     );
 
+                    // Cache per-version results for reuse (avoids duplicate checks later)
+                    // Each version gets its own cache entry: "aio-cli##20", "aio-cli##24", etc.
+                    for (const versionStatus of perNodeStatus.perNodeVersionStatus) {
+                        // Use major version directly (no string parsing needed)
+                        const versionSpecificStatus: PrerequisiteStatus = {
+                            id: prereq.id,
+                            name: prereq.name,
+                            description: prereq.description,
+                            installed: versionStatus.installed,
+                            optional: prereq.optional || false,
+                            canInstall: true,
+                        };
+                        this.cacheManager.setCachedResult(prereq.id, versionSpecificStatus, undefined, versionStatus.major);
+                    }
+
                     // If installed for ANY Node version, mark as installed
                     const anyInstalled = perNodeStatus.perNodeVersionStatus.some(v => v.installed);
                     status.installed = anyInstalled;
@@ -171,7 +186,7 @@ export class PrerequisitesManager {
                         status.version = this.extractVersionFromPerNodeStatus(perNodeStatus);
                     }
 
-                    this.logger.debug(`[Prereq Check] ${prereq.id}: fnm-aware check complete, installed=${status.installed}`);
+                    this.logger.debug(`[Prereq Check] ${prereq.id}: fnm-aware check complete, installed=${status.installed}, cached ${perNodeStatus.perNodeVersionStatus.length} per-version results`);
                 }
 
                 const totalDuration = Date.now() - startTime;

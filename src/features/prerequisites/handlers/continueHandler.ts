@@ -94,7 +94,7 @@ export async function handleContinuePrerequisites(
 
             let perNodeVariantMissing = false;
             const missingVariantMajors: string[] = [];
-            const perNodeVersionStatus: { version: string; component: string; installed: boolean }[] = [];
+            const perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[] = [];
             // Always show required Node versions from component selection
             // If main tool not installed: show all as "not installed"
             // If main tool installed: check each Node version properly
@@ -107,6 +107,7 @@ export async function handleContinuePrerequisites(
                     for (const major of requiredMajors) {
                         perNodeVersionStatus.push({
                             version: `Node ${major}`,
+                            major,
                             component: '',
                             installed: false,
                         });
@@ -138,7 +139,7 @@ export async function handleContinuePrerequisites(
                             context.logger.debug(`[Prerequisites] Node ${major} not installed, skipping ${prereq.name} check for this version`);
                             perNodeVariantMissing = true;
                             missingVariantMajors.push(major);
-                            perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+                            perNodeVersionStatus.push({ version: `Node ${major}`, major, component: '', installed: false });
                             continue;
                         }
 
@@ -155,11 +156,11 @@ export async function handleContinuePrerequisites(
                                     // Ignore regex parse errors
                                 }
                             }
-                            perNodeVersionStatus.push({ version: `Node ${major}`, component: cliVersion, installed: true });
+                            perNodeVersionStatus.push({ version: `Node ${major}`, major, component: cliVersion, installed: true });
                         } catch {
                             perNodeVariantMissing = true;
                             missingVariantMajors.push(major);
-                            perNodeVersionStatus.push({ version: `Node ${major}`, component: '', installed: false });
+                            perNodeVersionStatus.push({ version: `Node ${major}`, major, component: '', installed: false });
                         }
                     }
                 }

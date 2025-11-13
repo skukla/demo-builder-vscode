@@ -82,7 +82,6 @@ export class EnvironmentSetup {
         // Check common install locations first
         for (const fnmPath of commonPaths) {
             if (fsSync.existsSync(fnmPath)) {
-                this.logger.debug(`[fnm] Found at: ${fnmPath}`);
                 this.cachedFnmPath = fnmPath;
                 return fnmPath;
             }
@@ -99,7 +98,6 @@ export class EnvironmentSetup {
             const fnmPath = result.trim().split('\n')[0];
             // Verify the path exists before caching (security: prevent PATH manipulation)
             if (fnmPath && fsSync.existsSync(fnmPath)) {
-                this.logger.debug(`[fnm] Found in PATH: ${fnmPath}`);
                 this.cachedFnmPath = fnmPath;
                 return fnmPath;
             }
@@ -183,7 +181,6 @@ export class EnvironmentSetup {
                 return String(nodeVersion);
             }
 
-            this.logger.debug(`[Env Setup] No infrastructure Node version defined for ${component}`);
             return null;
         } catch (error) {
             this.logger.debug(`[Env Setup] Failed to read infrastructure Node version: ${error instanceof Error ? error.message : String(error)}`);
@@ -223,8 +220,6 @@ export class EnvironmentSetup {
         // }
 
         // PRIORITY 3: Scan for installed aio-cli (fallback)
-        this.logger.debug('[Env Setup] No infrastructure/project version, scanning for aio-cli installation');
-
         const homeDir = os.homedir();
         // Fix #7 (01b94d6): Support FNM_DIR environment variable
         const fnmBase = process.env.FNM_DIR
@@ -381,21 +376,27 @@ export class EnvironmentSetup {
 
         try {
             // Set config directly without checking first
-            await executeCommand(
+            const result = await executeCommand(
                 'aio config set aio-cli-telemetry.optOut true',
                 {
                     configureTelemetry: false,  // Don't check telemetry for telemetry commands
                     encoding: 'utf8',
                     timeout: 5000,
                 },
-            ).catch(error => {
-                this.logger.debug('[Telemetry] Failed to configure (non-critical):', error.message);
-            });
+            );
 
-            EnvironmentSetup.telemetryConfigured = true;
-            this.logger.info('[Telemetry] Configured aio-cli to opt out of telemetry');
+            // Only log success if command actually succeeded
+            if (result.code === 0) {
+                EnvironmentSetup.telemetryConfigured = true;
+                this.logger.info('[Telemetry] Configured aio-cli to opt out of telemetry');
+            } else {
+                this.logger.debug(`[Telemetry] Failed to configure (exit code ${result.code})`);
+                // Still mark as configured to avoid repeated attempts
+                EnvironmentSetup.telemetryConfigured = true;
+            }
 
-        } catch {
+        } catch (error) {
+            this.logger.debug('[Telemetry] Failed to configure (non-critical):', error instanceof Error ? error.message : String(error));
             // Still mark as configured to avoid repeated attempts
             EnvironmentSetup.telemetryConfigured = true;
         } finally {
