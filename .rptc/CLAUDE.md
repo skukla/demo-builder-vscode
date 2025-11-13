@@ -106,6 +106,23 @@ Every feature follows this workflow:
   - **YOU approve** Master Security Agent review
 - **YOU approve** final completion
 
+**Optimized Test Execution (5-10 Second Feedback Loop)**:
+
+During TDD implementation, use fast test commands for rapid iteration:
+
+```bash
+# RECOMMENDED: Watch mode for instant feedback (5-10s per change)
+npm run test:watch -- tests/path/to/working-on
+
+# Alternative: Single file testing (5-10s)
+npm run test:file -- tests/path/to/specific.test.ts
+
+# Changed files only (30s-2min)
+npm run test:changed
+```
+
+**See `TESTING.md` for complete test workflow guide.**
+
 **Master Efficiency Agent** (with permission):
 
 - Removes dead code and unused imports
@@ -125,6 +142,8 @@ Every feature follows this workflow:
 **Comprehensive Verification**:
 
 - Full test suite (BLOCKS if any fail)
+  - Use `npm run test:fast` (3-5 min) for quick validation
+  - Use `npm test` for full pretest + lint + tests
 - Coverage validation (80%+ target)
 - Code quality checks
 - Generates conventional commit message
