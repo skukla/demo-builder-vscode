@@ -66,7 +66,7 @@ describe('AdobeEntityService - Projects', () => {
 
             expect(result).toHaveLength(1);
             expect(result[0].id).toBe('proj1');
-            expect(mockSDKGetProjects).toHaveBeenCalledWith('ORG1@AdobeOrg');
+            expect(mockSDKGetProjects).toHaveBeenCalledWith('org1'); // SDK uses numeric org ID
         });
 
         it('should fallback to CLI if SDK fails', async () => {

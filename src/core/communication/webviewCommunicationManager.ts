@@ -434,7 +434,7 @@ export class WebviewCommunicationManager {
      * Flush queued messages after handshake
      */
     private flushMessageQueue(): void {
-        if (this.config.enableLogging) {
+        if (this.config.enableLogging && this.messageQueue.length > 0) {
             this.logger.debug(`[WebviewComm] Flushing ${this.messageQueue.length} queued messages`);
         }
 

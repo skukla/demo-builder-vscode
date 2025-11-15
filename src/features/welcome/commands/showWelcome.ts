@@ -75,7 +75,6 @@ export class WelcomeWebviewCommand extends BaseWebviewCommand {
      * 4. welcome-bundle.js - Welcome-specific code
      */
     protected async getWebviewContent(): Promise<string> {
-        this.logger.debug('[UI] getWebviewContent called');
         const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
 
         // Build bundle URIs for webpack code-split bundles
@@ -106,7 +105,6 @@ export class WelcomeWebviewCommand extends BaseWebviewCommand {
             additionalImgSources: ['https:', 'data:'],
         });
 
-        this.logger.debug('[UI] getWebviewContent completed, returning HTML');
         return html;
     }
 

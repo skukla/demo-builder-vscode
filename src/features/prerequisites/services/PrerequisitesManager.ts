@@ -118,7 +118,6 @@ export class PrerequisitesManager {
 
     async checkPrerequisite(prereq: PrerequisiteDefinition, nodeVersion?: string): Promise<PrerequisiteStatus> {
         const startTime = Date.now();
-        this.logger.debug(`[Prereq Check] Starting check for ${prereq.id}`);
 
         // Check cache first (Step 2: Prerequisite Caching)
         const cached = this.cacheManager.getCachedResult(prereq.id, nodeVersion);
@@ -199,11 +198,9 @@ export class PrerequisitesManager {
 
             // Original logic for non-perNodeVersion prerequisites
             let checkResult;
-            const cmdStartTime = Date.now();
 
             if (prereq.id === 'node' || prereq.id === 'npm') {
                 // For node/npm themselves, check current version
-                this.logger.debug(`[Prereq Check] ${prereq.id}: Executing command with useNodeVersion=current`);
                 checkResult = await commandManager.execute(prereq.check.command, {
                     useNodeVersion: 'current',
                     timeout: TIMEOUTS.PREREQUISITE_CHECK,
@@ -211,49 +208,36 @@ export class PrerequisitesManager {
             } else {
                 // Enable shell for system tool detection (homebrew, fnm, git, etc.)
                 // Commands from prerequisites.json are trusted sources
-                this.logger.debug(`[Prereq Check] ${prereq.id}: Executing command with shell enabled`);
                 checkResult = await commandManager.execute(prereq.check.command, {
                     timeout: TIMEOUTS.PREREQUISITE_CHECK,
                     shell: DEFAULT_SHELL,
                 });
             }
-            
-            const cmdDuration = Date.now() - cmdStartTime;
-            this.logger.debug(`[Prereq Check] ${prereq.id}: Command execution took ${cmdDuration}ms`);
-            
+
             const { stdout } = checkResult;
             
             // Check if installed
             if (prereq.check.parseVersion) {
-                this.logger.debug(`[Prereq Check] ${prereq.id}: Parsing version with regex: ${prereq.check.parseVersion}`);
                 const versionRegex = new RegExp(prereq.check.parseVersion);
                 const match = stdout.match(versionRegex);
                 if (match) {
                     status.installed = true;
                     status.version = match[1];
-                    this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Version found: ${match[1]}`);
                 } else {
                     this.logger.debug(`[Prereq Check] ${prereq.id}: ✗ Version regex did not match`);
                     this.logger.debug(`[Prereq Check] ${prereq.id}: stdout to match against: ${stdout.substring(0, 300)}`);
                 }
             } else if (prereq.check.contains) {
-                this.logger.debug(`[Prereq Check] ${prereq.id}: Checking if stdout contains: ${prereq.check.contains}`);
                 status.installed = stdout.includes(prereq.check.contains);
-                this.logger.debug(`[Prereq Check] ${prereq.id}: Contains check result: ${status.installed}`);
             } else {
                 status.installed = true; // Command succeeded
-                this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Command succeeded (no version check required)`);
             }
             
             // Check plugins if any
             if (prereq.plugins && status.installed) {
-                this.logger.debug(`[Prereq Check] ${prereq.id}: Checking ${prereq.plugins.length} plugins`);
                 status.plugins = [];
                 for (const plugin of prereq.plugins) {
-                    const pluginStartTime = Date.now();
                     const pluginStatus = await this.checkPlugin(plugin);
-                    const pluginDuration = Date.now() - pluginStartTime;
-                    this.logger.debug(`[Prereq Check] ${prereq.id}: Plugin ${plugin.id} check took ${pluginDuration}ms, installed=${pluginStatus.installed}`);
                     status.plugins.push(pluginStatus);
                 }
             }

@@ -164,15 +164,11 @@ export abstract class BaseWebviewCommand extends BaseCommand {
      */
     protected async createOrRevealPanel(): Promise<vscode.WebviewPanel> {
         const webviewId = this.getWebviewId();
-        
-        this.logger.debug(`[Webview] createOrRevealPanel() for ${webviewId}. Active panels count: ${BaseWebviewCommand.activePanels.size}`);
-        
+
         // Check if this webview type already has an active panel
         const existingPanel = BaseWebviewCommand.activePanels.get(webviewId);
         const existingCommManager = BaseWebviewCommand.activeCommunicationManagers.get(webviewId);
-        
-        this.logger.debug(`[Webview] Singleton check for ${webviewId}: panel=${existingPanel ? 'exists' : 'none'}, comm=${existingCommManager ? 'exists' : 'none'}`);
-        
+
         if (existingPanel && existingCommManager) {
             this.logger.debug(`[Webview] Revealing existing ${webviewId} panel`);
             existingPanel.reveal();
@@ -206,7 +202,6 @@ export abstract class BaseWebviewCommand extends BaseCommand {
 
         // Register in singleton map
         BaseWebviewCommand.activePanels.set(webviewId, this.panel);
-        this.logger.debug(`[Webview] Registered ${webviewId} in singleton map. Active panels: ${BaseWebviewCommand.activePanels.size}`);
 
         // Set up disposal handling
         this.panel.onDidDispose(

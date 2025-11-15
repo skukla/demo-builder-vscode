@@ -61,7 +61,7 @@ describe('AdobeEntityService - Workspaces', () => {
 
             expect(result).toHaveLength(2);
             expect(result[0].id).toBe('ws1');
-            expect(mockSDKGetWorkspaces).toHaveBeenCalledWith('ORG1@AdobeOrg', 'proj1');
+            expect(mockSDKGetWorkspaces).toHaveBeenCalledWith('org1', 'proj1'); // SDK uses numeric org ID
         });
 
         it('should fallback to CLI if SDK fails', async () => {

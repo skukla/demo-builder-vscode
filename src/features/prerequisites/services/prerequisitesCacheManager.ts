@@ -186,12 +186,6 @@ export class PrerequisitesCacheManager {
 
         this.cache.set(key, cached);
         this.stats.sets++;
-
-        const versionSuffix = nodeVersion ? ` (Node ${nodeVersion})` : '';
-        this.logger.debug(
-            `[Prereq Cache] Cached ${prereqId}${versionSuffix}: ` +
-            `installed=${result.installed}, TTL=${jitteredTTL}ms (sets=${this.stats.sets})`,
-        );
     }
 
     /**

@@ -167,16 +167,16 @@ export class AdobeEntityService {
             let mappedProjects: AdobeProject[] = [];
             const cachedOrg = this.cacheManager.getCachedOrganization();
 
-            // Try SDK first if available and we have a VALID org code
-            // PERFORMANCE FIX: SDK requires org code with @AdobeOrg suffix (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
-            // The 'code' field contains the full IMS org ID, while 'id' is just numeric (e.g., "3397333")
-            // Passing org name or numeric ID causes 400 Bad Request and forces slow CLI fallback
-            const hasValidOrgCode = cachedOrg?.code && cachedOrg.code.includes('@');
+            // Try SDK first if available and we have a VALID numeric org ID
+            // PERFORMANCE FIX: SDK requires numeric org ID (e.g., "3397333")
+            // The 'id' field contains the numeric org ID, while 'code' is the IMS org ID (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
+            // Passing IMS org code or org name causes 400 Bad Request and forces slow CLI fallback
+            const hasValidOrgId = cachedOrg?.id && cachedOrg.id.length > 0;
 
-            if (this.sdkClient.isInitialized() && hasValidOrgCode) {
+            if (this.sdkClient.isInitialized() && hasValidOrgId) {
                 try {
                     const client = this.sdkClient.getClient() as { getProjectsForOrg: (orgId: string) => Promise<SDKResponse<RawAdobeProject[]>> };
-                    const sdkResult = await client.getProjectsForOrg(cachedOrg.code);
+                    const sdkResult = await client.getProjectsForOrg(cachedOrg.id);
                     const sdkDuration = Date.now() - startTime;
 
                     if (sdkResult.body && Array.isArray(sdkResult.body)) {
@@ -190,8 +190,8 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] SDK failed, falling back to CLI:', sdkError);
                     this.debugLogger.warn('[Entity Service] SDK unavailable, using slower CLI fallback for projects');
                 }
-            } else if (this.sdkClient.isInitialized() && !hasValidOrgCode) {
-                this.debugLogger.debug('[Entity Service] SDK available but org code is invalid (expected IMS org code like "ABC@AdobeOrg"), using CLI');
+            } else if (this.sdkClient.isInitialized() && !hasValidOrgId) {
+                this.debugLogger.debug('[Entity Service] SDK available but org ID is missing (expected numeric ID like "3397333"), using CLI');
             }
 
             // CLI fallback
@@ -249,17 +249,17 @@ export class AdobeEntityService {
             const cachedOrg = this.cacheManager.getCachedOrganization();
             const cachedProject = this.cacheManager.getCachedProject();
 
-            // Try SDK first if available and we have VALID org code and project ID
-            // PERFORMANCE FIX: SDK requires org code with @AdobeOrg suffix (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
-            // The 'code' field contains the full IMS org ID, while 'id' is just numeric (e.g., "3397333")
-            const hasValidOrgCode = cachedOrg?.code && cachedOrg.code.includes('@');
+            // Try SDK first if available and we have VALID numeric org ID and project ID
+            // PERFORMANCE FIX: SDK requires numeric org ID (e.g., "3397333")
+            // The 'id' field contains the numeric org ID, while 'code' is the IMS org ID (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
+            const hasValidOrgId = cachedOrg?.id && cachedOrg.id.length > 0;
             const hasValidProjectId = cachedProject?.id && cachedProject.id.length > 0;
 
-            if (this.sdkClient.isInitialized() && hasValidOrgCode && hasValidProjectId) {
+            if (this.sdkClient.isInitialized() && hasValidOrgId && hasValidProjectId) {
                 try {
                     const client = this.sdkClient.getClient() as { getWorkspacesForProject: (orgId: string, projectId: string) => Promise<SDKResponse<RawAdobeWorkspace[]>> };
                     const sdkResult = await client.getWorkspacesForProject(
-                        cachedOrg.code,
+                        cachedOrg.id,
                         cachedProject.id,
                     );
                     const sdkDuration = Date.now() - startTime;
@@ -275,8 +275,8 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] SDK failed, falling back to CLI:', sdkError);
                     this.debugLogger.warn('[Entity Service] SDK unavailable, using slower CLI fallback for workspaces');
                 }
-            } else if (this.sdkClient.isInitialized() && (!hasValidOrgCode || !hasValidProjectId)) {
-                this.debugLogger.debug('[Entity Service] SDK available but org code or project ID is invalid, using CLI');
+            } else if (this.sdkClient.isInitialized() && (!hasValidOrgId || !hasValidProjectId)) {
+                this.debugLogger.debug('[Entity Service] SDK available but org ID or project ID is missing, using CLI');
             }
 
             // CLI fallback
@@ -361,8 +361,8 @@ export class AdobeEntityService {
                         this.debugLogger.debug(`[Entity Service] Current organization name: ${context.org}`);
 
                         // PERFORMANCE FIX: Always resolve full org object for SDK compatibility
-                        // The SDK requires org code with @AdobeOrg suffix (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg"), not names
-                        // Passing name causes 400 Bad Request and forces slow CLI fallback
+                        // The SDK requires numeric org ID (e.g., "3397333"), not names or IMS org codes
+                        // Passing name or IMS org code causes 400 Bad Request and forces slow CLI fallback
 
                         // Check if we're in post-login phase (no cached org list)
                         const cachedOrgList = this.cacheManager.getCachedOrgList();
