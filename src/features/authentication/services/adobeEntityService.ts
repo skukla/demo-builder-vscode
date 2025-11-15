@@ -90,8 +90,6 @@ export class AdobeEntityService {
             // Try SDK first for 30x performance improvement
             if (this.sdkClient.isInitialized()) {
                 try {
-                    this.debugLogger.debug('[Entity Service] Fetching organizations via SDK (fast path)');
-
                     const client = this.sdkClient.getClient() as { getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>> };
                     const sdkResult = await client.getOrganizations();
                     const sdkDuration = Date.now() - startTime;
@@ -111,7 +109,6 @@ export class AdobeEntityService {
 
             // CLI fallback (if SDK not available or failed)
             if (mappedOrgs.length === 0) {
-                this.debugLogger.debug('[Entity Service] Fetching organizations via CLI (fallback path)');
 
                 const result = await this.commandManager.executeAdobeCLI(
                     'aio console org list --json',
@@ -178,8 +175,6 @@ export class AdobeEntityService {
 
             if (this.sdkClient.isInitialized() && hasValidOrgCode) {
                 try {
-                    this.debugLogger.debug(`[Entity Service] Fetching projects for org ${cachedOrg.code} via SDK (fast path)`);
-
                     const client = this.sdkClient.getClient() as { getProjectsForOrg: (orgId: string) => Promise<SDKResponse<RawAdobeProject[]>> };
                     const sdkResult = await client.getProjectsForOrg(cachedOrg.code);
                     const sdkDuration = Date.now() - startTime;
@@ -201,8 +196,6 @@ export class AdobeEntityService {
 
             // CLI fallback
             if (mappedProjects.length === 0) {
-                this.debugLogger.debug('[Entity Service] Fetching projects via CLI (fallback path)');
-
                 const result = await this.commandManager.executeAdobeCLI(
                     'aio console project list --json',
                     { encoding: 'utf8' },
@@ -264,8 +257,6 @@ export class AdobeEntityService {
 
             if (this.sdkClient.isInitialized() && hasValidOrgCode && hasValidProjectId) {
                 try {
-                    this.debugLogger.debug(`[Entity Service] Fetching workspaces for project ${cachedProject.id} via SDK (fast path)`);
-
                     const client = this.sdkClient.getClient() as { getWorkspacesForProject: (orgId: string, projectId: string) => Promise<SDKResponse<RawAdobeWorkspace[]>> };
                     const sdkResult = await client.getWorkspacesForProject(
                         cachedOrg.code,
@@ -290,8 +281,6 @@ export class AdobeEntityService {
 
             // CLI fallback
             if (mappedWorkspaces.length === 0) {
-                this.debugLogger.debug('[Entity Service] Fetching workspaces via CLI (fallback path)');
-
                 const result = await this.commandManager.executeAdobeCLI(
                     'aio console workspace list --json',
                     { encoding: 'utf8' },
@@ -335,7 +324,6 @@ export class AdobeEntityService {
             // Check cache first
             const cachedOrg = this.cacheManager.getCachedOrganization();
             if (cachedOrg) {
-                this.debugLogger.debug('[Entity Service] Using cached organization data');
                 return cachedOrg;
             }
 
@@ -389,7 +377,6 @@ export class AdobeEntityService {
                                 const matchedOrg = orgs.find(o => o.name === context.org || o.code === context.org);
 
                                 if (matchedOrg) {
-                                    this.debugLogger.debug(`[Entity Service] Resolved org "${context.org}" to ID: ${matchedOrg.id}`);
                                     orgData = matchedOrg;
                                 } else {
                                     this.debugLogger.warn('[Entity Service] Could not find org in list, using name as fallback');
@@ -410,14 +397,11 @@ export class AdobeEntityService {
                             }
                         } else {
                             // We have cached org list, safe to resolve full org object without API calls
-                            this.debugLogger.debug('[Entity Service] Using cached org list to resolve org code');
-
                             try {
                                 // Try to resolve ID from cache
                                 const matchedOrg = cachedOrgList.find(o => o.name === context.org || o.code === context.org);
 
                                 if (matchedOrg) {
-                                    this.debugLogger.debug(`[Entity Service] Resolved org "${context.org}" to ID: ${matchedOrg.id} (from cache)`);
                                     orgData = matchedOrg;
                                 } else {
                                     this.debugLogger.warn('[Entity Service] Could not find org in cached list, using name as fallback');
@@ -474,7 +458,6 @@ export class AdobeEntityService {
             // Check cache first
             const cachedProject = this.cacheManager.getCachedProject();
             if (cachedProject) {
-                this.debugLogger.debug('[Entity Service] Using cached project data');
                 return cachedProject;
             }
 
@@ -514,7 +497,6 @@ export class AdobeEntityService {
                         const matchedProject = projects.find(p => p.name === context.project || p.title === context.project);
 
                         if (matchedProject) {
-                            this.debugLogger.debug(`[Entity Service] Resolved project "${context.project}" to ID: ${matchedProject.id}`);
                             projectData = matchedProject;
                         } else {
                             this.debugLogger.warn(`[Entity Service] Could not find numeric ID for project "${context.project}", using name as fallback`);
@@ -568,7 +550,6 @@ export class AdobeEntityService {
             // Check cache first
             const cachedWorkspace = this.cacheManager.getCachedWorkspace();
             if (cachedWorkspace) {
-                this.debugLogger.debug('[Entity Service] Using cached workspace data');
                 return cachedWorkspace;
             }
 

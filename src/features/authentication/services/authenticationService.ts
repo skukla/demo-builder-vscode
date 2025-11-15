@@ -118,7 +118,6 @@ export class AuthenticationService {
         // Check cache first
         const { isAuthenticated, isExpired } = this.cacheManager.getCachedAuthStatus();
         if (!isExpired && isAuthenticated !== undefined) {
-            this.debugLogger.debug(`[Auth] Using cached authentication status: ${isAuthenticated}`);
             this.performanceTracker.endTiming('isAuthenticated');
             return isAuthenticated;
         }
@@ -157,7 +156,6 @@ export class AuthenticationService {
         // Check cache first
         const { isAuthenticated, isExpired } = this.cacheManager.getCachedAuthStatus();
         if (!isExpired && isAuthenticated !== undefined) {
-            this.debugLogger.debug(`[Auth] Using cached authentication status: ${isAuthenticated}`);
             this.performanceTracker.endTiming('isFullyAuthenticated');
             return isAuthenticated;
         }

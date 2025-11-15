@@ -45,10 +45,12 @@ export class PerformanceTracker {
         const duration = Date.now() - start;
         this.timings.delete(operation);
 
-        // Log performance metrics to debug channel with warning if exceeded
+        // Log performance metrics to debug channel only when slow (exceeded expected time)
         const expected = this.expectedTimes[operation];
         const warning = expected && duration > expected ? ` ⚠️ SLOW (expected <${expected}ms)` : '';
-        this.logger.debug(`[Performance] ${operation} took ${duration}ms${warning}`);
+        if (warning) {
+            this.logger.debug(`[Performance] ${operation} took ${duration}ms${warning}`);
+        }
 
         return duration;
     }

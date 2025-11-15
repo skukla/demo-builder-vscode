@@ -96,8 +96,6 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
                     // No validation cache - show org from cache (validation deferred until org is used)
                     context.logger.debug(`[Auth] Using cached organization: ${currentOrg.name}`);
                 }
-            } else {
-                context.logger.debug('[Auth] No cached organization available');
             }
         }
 
@@ -256,7 +254,6 @@ export async function handleAuthenticate(
 
             try {
                 // STEP 2 FIX: Check token expiry BEFORE fetching organizations
-                context.logger.debug('[Auth] Checking token expiry before org fetch');
                 const tokenValid = await checkTokenExpiry(context);
 
                 if (!tokenValid) {
@@ -280,7 +277,6 @@ export async function handleAuthenticate(
                 context.logger.info('[Auth] Fetching organizations after login');
 
                 // Initialize SDK for faster operations (token stable after login)
-                context.logger.debug('[Auth] Ensuring SDK is initialized for org fetching');
                 await context.authManager?.ensureSDKInitialized();
                 await context.sendMessage('auth-status', {
                     isChecking: true,
@@ -290,7 +286,6 @@ export async function handleAuthenticate(
                 });
 
                 // Fetch organization list (uses SDK if available, falls back to CLI)
-                context.logger.debug('[Auth] Fetching available organizations');
                 const orgs = await context.authManager?.getOrganizations();
                 context.logger.info(`[Auth] Found ${orgs?.length ?? 0} organization(s) accessible to user`);
 
