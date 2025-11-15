@@ -162,6 +162,7 @@ export function useSelectionStep<T extends { id: string }>(
   const [isLoading, setIsLoading] = useState(!state[cacheKey]); // Only load if cache is empty
   const [isRefreshing, setIsRefreshing] = useState(false); // Track refresh vs initial load
   const [hasLoadedOnce, setHasLoadedOnce] = useState(!!state[cacheKey]); // Track if we've ever loaded data
+  const [loadRequested, setLoadRequested] = useState(!!state[cacheKey]); // Prevent StrictMode double-load
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState(
     searchFilterKey && typeof state[searchFilterKey] === 'string'
@@ -205,12 +206,13 @@ export function useSelectionStep<T extends { id: string }>(
     }
   }, [searchQuery, searchFilterKey, updateState]);
 
-  // Auto-load on mount if cache is empty
+  // Auto-load on mount if cache is empty (guard prevents StrictMode double-load)
   useEffect(() => {
-    if (autoLoad && !state[cacheKey]) {
+    if (autoLoad && !state[cacheKey] && !loadRequested) {
+      setLoadRequested(true);
       load();
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [autoLoad, state, cacheKey, loadRequested, load]);
 
   // Listen for items from extension
   useEffect(() => {
