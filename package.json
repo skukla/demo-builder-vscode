@@ -136,9 +136,11 @@
     }
   },
   "scripts": {
+    "clean": "rm -rf dist",
+    "clean:webview": "rm -rf dist/webview",
     "compile": "npm run compile:typescript && npm run compile:webview && npm run copy:media",
     "compile:typescript": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
-    "compile:webview": "webpack --mode production",
+    "compile:webview": "npm run clean:webview && webpack --mode production",
     "copy:media": "mkdir -p dist/media && cp -r media/* dist/media/",
     "watch": "tsc -watch -p ./",
     "watch:webview": "webpack --mode development --watch",

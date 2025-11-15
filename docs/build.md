@@ -91,6 +91,41 @@ This ensures:
 
 **Note**: If manually compiling TypeScript without npm scripts, you must run `tsc-alias` afterward.
 
+### Webpack Caching Issues
+
+If the extension shows stale behavior after rebuilding (e.g., old code running despite successful compilation):
+
+**Problem**: Webpack can cache output bundles even with `output.clean: true`, causing the extension to load outdated code.
+
+**Solution**: The build scripts now explicitly clean before webpack compilation:
+
+```bash
+npm run compile:webview
+# Runs: npm run clean:webview && webpack --mode production
+```
+
+**Manual Cleanup** (if needed):
+```bash
+# Clean all build output
+npm run clean
+
+# Clean only webview bundles
+npm run clean:webview
+
+# Then rebuild
+npm run compile
+```
+
+**Why This Happens**:
+- Webpack's persistent caching can survive clean operations in some cases
+- Module federation or code splitting can leave orphaned chunks
+- Build errors partway through can leave partial output
+
+**Prevention**:
+- Always use `npm run compile` instead of direct `webpack` commands
+- The compile scripts automatically clean before building
+- If suspicious behavior persists, run `npm run clean` manually
+
 ## Build Output
 
 After successful build, you should have:
