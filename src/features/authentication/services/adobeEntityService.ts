@@ -136,6 +136,13 @@ export class AdobeEntityService {
                 this.debugLogger.debug(`[Entity Service] Retrieved ${mappedOrgs.length} organizations via CLI in ${cliDuration}ms`);
             }
 
+            // Clear stale CLI context if no orgs accessible
+            if (mappedOrgs.length === 0) {
+                this.logger.info('No organizations accessible. Clearing previous selections...');
+                this.debugLogger.debug('[Entity Service] No organizations accessible - clearing stale CLI context');
+                await this.clearConsoleContext();
+            }
+
             // Cache the result
             this.cacheManager.setCachedOrgList(mappedOrgs);
 
@@ -887,6 +894,29 @@ export class AdobeEntityService {
         } catch (error) {
             this.debugLogger.error('[Entity Service] Failed to auto-select organization:', error as Error);
             return undefined;
+        }
+    }
+
+    /**
+     * Clear Adobe CLI console context (org/project/workspace selections)
+     * Preserves authentication token (ims context)
+     */
+    private async clearConsoleContext(): Promise<void> {
+        try {
+            // Use established pattern: Promise.all for parallel execution
+            await Promise.all([
+                this.commandManager.executeAdobeCLI('aio config delete console.org', { encoding: 'utf8' }),
+                this.commandManager.executeAdobeCLI('aio config delete console.project', { encoding: 'utf8' }),
+                this.commandManager.executeAdobeCLI('aio config delete console.workspace', { encoding: 'utf8' }),
+            ]);
+
+            // Clear console.where cache since context was cleared
+            this.cacheManager.clearConsoleWhereCache();
+
+            this.debugLogger.debug('[Entity Service] Cleared Adobe CLI console context (preserved token)');
+        } catch (error) {
+            // Fail gracefully - config may not exist
+            this.debugLogger.debug('[Entity Service] Failed to clear console context (non-critical):', error);
         }
     }
 }

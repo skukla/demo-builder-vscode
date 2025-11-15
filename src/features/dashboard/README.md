@@ -140,7 +140,7 @@ handleRequestStatus()
     ├─→ Get project
     ├─→ Detect frontend changes
     ├─→ Check mesh status (async)
-    │    ├─→ Quick auth check (isAuthenticatedQuick)
+    │    ├─→ Token-only auth check (isAuthenticated)
     │    ├─→ Fetch deployed config
     │    └─→ Detect config changes
     ↓
@@ -156,7 +156,7 @@ Dashboard Load
 handleRequestStatus()
     ↓
 Mesh deployed? → YES → checkMeshStatusAsync()
-                           ├─→ isAuthenticatedQuick()
+                           ├─→ isAuthenticated()
                            ├─→ Check org access
                            ├─→ detectMeshChanges()
                            └─→ verifyMeshDeployment() (background)
@@ -314,7 +314,7 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 ## Performance Considerations
 
 ### Async Mesh Checking
-- **Quick auth check**: Use `isAuthenticatedQuick()` (<1s) instead of `isAuthenticated()` (3-10s)
+- **Token-only auth check**: Use `isAuthenticated()` (2-3s) instead of `isFullyAuthenticated()` (3-10s)
 - **Non-blocking**: Mesh status checked asynchronously, doesn't block UI
 - **Initial feedback**: Show "checking" status immediately while checking in background
 - **Background verification**: Verify mesh exists in Adobe I/O without blocking status display
@@ -359,7 +359,7 @@ The dashboard is stateless - it requests status on demand and receives updates v
 ### Authentication Errors
 ```typescript
 // In checkMeshStatusAsync
-const isAuth = await authManager.isAuthenticatedQuick();
+const isAuth = await authManager.isAuthenticated();
 
 if (!isAuth) {
     // Show auth prompt

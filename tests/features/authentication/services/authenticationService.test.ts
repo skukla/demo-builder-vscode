@@ -133,7 +133,7 @@ describe('AuthenticationService', () => {
         });
     });
 
-    describe('isAuthenticatedQuick', () => {
+    describe('isAuthenticated', () => {
         it('should return true when valid token exists', async () => {
             // Given: CLI returns a valid token with expiry
             const futureExpiry = Date.now() + 3600000; // 1 hour from now
@@ -147,7 +147,7 @@ describe('AuthenticationService', () => {
             } as CommandResult);
 
             // When: checking authentication quickly
-            const result = await authService.isAuthenticatedQuick();
+            const result = await authService.isAuthenticated();
 
             // Then: should return true
             expect(result).toBe(true);
@@ -169,7 +169,7 @@ describe('AuthenticationService', () => {
             } as CommandResult);
 
             // When: checking authentication quickly
-            const result = await authService.isAuthenticatedQuick();
+            const result = await authService.isAuthenticated();
 
             // Then: should return false
             expect(result).toBe(false);
@@ -184,7 +184,7 @@ describe('AuthenticationService', () => {
             } as CommandResult);
 
             // When: checking authentication quickly
-            const result = await authService.isAuthenticatedQuick();
+            const result = await authService.isAuthenticated();
 
             // Then: should return false
             expect(result).toBe(false);
@@ -195,14 +195,14 @@ describe('AuthenticationService', () => {
             mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Command failed'));
 
             // When: checking authentication quickly
-            const result = await authService.isAuthenticatedQuick();
+            const result = await authService.isAuthenticated();
 
             // Then: should return false (error logging happens internally)
             expect(result).toBe(false);
         });
     });
 
-    describe('isAuthenticated', () => {
+    describe('isFullyAuthenticated', () => {
         it('should return true when token is valid and org context is valid', async () => {
             // Given: Valid token and org context
             const futureExpiry = Date.now() + 3600000;
@@ -227,7 +227,7 @@ describe('AuthenticationService', () => {
                 } as CommandResult);
 
             // When: checking full authentication
-            const result = await authService.isAuthenticated();
+            const result = await authService.isFullyAuthenticated();
 
             // Then: should return true
             expect(result).toBe(true);
@@ -245,7 +245,7 @@ describe('AuthenticationService', () => {
             } as CommandResult);
 
             // When: checking full authentication
-            const result = await authService.isAuthenticated();
+            const result = await authService.isFullyAuthenticated();
 
             // Then: should return false
             expect(result).toBe(false);
@@ -266,7 +266,7 @@ describe('AuthenticationService', () => {
                 } as CommandResult);
 
             // When: checking authentication
-            await authService.isAuthenticated();
+            await authService.isFullyAuthenticated();
 
             // Then: SDK should not be initialized (it's on-demand)
             expect(mockSDKClient.initialize).not.toHaveBeenCalled();
@@ -277,7 +277,7 @@ describe('AuthenticationService', () => {
             mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('ENOENT: no such file'));
 
             // When: checking authentication
-            const result = await authService.isAuthenticated();
+            const result = await authService.isFullyAuthenticated();
 
             // Then: should return false
             expect(result).toBe(false);
@@ -288,7 +288,7 @@ describe('AuthenticationService', () => {
             mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Operation timeout'));
 
             // When: checking authentication
-            const result = await authService.isAuthenticated();
+            const result = await authService.isFullyAuthenticated();
 
             // Then: should return false
             expect(result).toBe(false);
@@ -625,7 +625,7 @@ describe('AuthenticationService', () => {
                 stderr: '',
             } as CommandResult);
 
-            const result2 = await authService.isAuthenticatedQuick();
+            const result2 = await authService.isAuthenticated();
 
             // Then: Both should succeed
             expect(result1).toBe(true);

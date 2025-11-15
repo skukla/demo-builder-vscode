@@ -46,7 +46,8 @@ export function createMockHandlerContext(overrides?: Partial<HandlerContext>): j
     return {
         prereqManager: {} as PrerequisitesManager,
         authManager: {
-            isAuthenticatedQuick: jest.fn(),
+            isAuthenticated: jest.fn(),
+            isFullyAuthenticated: jest.fn(),
             ensureSDKInitialized: jest.fn(),
             getCurrentOrganization: jest.fn(),
             getCurrentProject: jest.fn(),

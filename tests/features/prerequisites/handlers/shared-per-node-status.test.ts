@@ -98,9 +98,9 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
         const result = await checkPerNodeVersionStatus(prereq, ['18', '20', '24'], context);
 
         expect(result.perNodeVersionStatus).toEqual([
-            { version: 'Node 18', component: '10.0.0', installed: true },
-            { version: 'Node 20', component: '10.0.0', installed: true },
-            { version: 'Node 24', component: '10.0.0', installed: true },
+            { version: 'Node 18', component: '10.0.0', installed: true, major: '18' },
+            { version: 'Node 20', component: '10.0.0', installed: true, major: '20' },
+            { version: 'Node 24', component: '10.0.0', installed: true, major: '24' },
         ]);
         expect(mockCommandExecutor.execute).toHaveBeenCalledWith('fnm list', expect.objectContaining({ shell: expect.any(String) }));
     });
@@ -127,8 +127,8 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
         const result = await checkPerNodeVersionStatus(prereq, ['18', '20'], context);
 
         expect(result.perNodeVersionStatus).toEqual([
-            { version: 'Node 18', component: '10.0.0', installed: true },
-            { version: 'Node 20', component: '10.0.0', installed: true },
+            { version: 'Node 18', component: '10.0.0', installed: true, major: '18' },
+            { version: 'Node 20', component: '10.0.0', installed: true, major: '20' },
         ]);
         expect(result.perNodeVariantMissing).toBe(false);
         expect(result.missingVariantMajors).toEqual([]);
@@ -201,6 +201,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
             version: 'Node 20',
             component: '',
             installed: false,
+            major: '20',
         });
         expect(result.missingVariantMajors).toContain('20');
     });
@@ -417,6 +418,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
                 version: 'Node 18',
                 component: '',
                 installed: false, // CRITICAL: Should be false when exit code !== 0
+                major: '18',
             });
             expect(result.perNodeVariantMissing).toBe(true);
             expect(result.missingVariantMajors).toEqual(['18']);
@@ -454,6 +456,7 @@ describe('Prerequisites Handlers - checkPerNodeVersionStatus', () => {
                 version: 'Node 18',
                 component: '10.0.0', // Parsed from output
                 installed: true, // CRITICAL: Should be true when exit code === 0
+                major: '18',
             });
             expect(result.perNodeVariantMissing).toBe(false);
             expect(result.missingVariantMajors).toEqual([]);

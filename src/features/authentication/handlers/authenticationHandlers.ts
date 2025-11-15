@@ -13,6 +13,30 @@ import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 
 /**
+ * Check if current token is valid
+ * Returns true if valid, false if expired/invalid
+ * Logs errors and continues gracefully if check fails
+ */
+async function checkTokenExpiry(context: HandlerContext): Promise<boolean> {
+    try {
+        const tokenManager = context.authManager?.getTokenManager();
+        const tokenInspection = await tokenManager?.inspectToken();
+
+        if (tokenInspection && !tokenInspection.valid) {
+            context.logger.warn('[Auth] Token expired or invalid, user must re-authenticate');
+            return false;
+        }
+
+        context.logger.debug(`[Auth] Token valid, expires in ${tokenInspection?.expiresIn || 0} minutes`);
+        return true;
+    } catch (error) {
+        // Token inspection failed - log warning but continue (graceful degradation)
+        context.logger.warn('[Auth] Token inspection failed, assuming valid', error as Error);
+        return true; // Graceful degradation
+    }
+}
+
+/**
  * check-auth - Check Adobe authentication status
  *
  * Performs a quick check of authentication status and retrieves
@@ -32,11 +56,11 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
     });
 
     try {
-        // Use quick auth check for faster wizard experience (< 1 second vs 9+ seconds)
-        const isAuthenticated = await context.authManager?.isAuthenticatedQuick();
+        // Use token-only auth check for faster wizard experience (2-3s vs 9+ seconds for full validation)
+        const isAuthenticated = await context.authManager?.isAuthenticated();
         const checkDuration = Date.now() - checkStartTime;
 
-        context.logger.info(`[Auth] Quick authentication check completed in ${checkDuration}ms: ${isAuthenticated}`);
+        context.logger.info(`[Auth] Token-only authentication check completed in ${checkDuration}ms: ${isAuthenticated}`);
 
         // Get cached org/project if available (fast - no fetch or CLI calls)
         let currentOrg: AdobeOrg | undefined;
@@ -156,9 +180,9 @@ export async function handleAuthenticate(
 
         // If not forcing, check if already authenticated
         if (!force) {
-            context.logger.debug('[Auth] Checking for existing valid authentication (quick mode)...');
-            // Use quick check to avoid 9+ second delay before showing browser
-            const isAlreadyAuth = await context.authManager?.isAuthenticatedQuick();
+            context.logger.debug('[Auth] Checking for existing valid authentication (token-only)...');
+            // Use token-only check to avoid 9+ second delay before showing browser
+            const isAlreadyAuth = await context.authManager?.isAuthenticated();
 
             if (isAlreadyAuth) {
                 context.logger.info('[Auth] Already authenticated, skipping login');
@@ -223,7 +247,6 @@ export async function handleAuthenticate(
 
         if (loginSuccess) {
             context.logger.info(`[Auth] Authentication completed successfully after ${loginDuration}ms`);
-            context.logger.info('[Auth] Fetching organizations after login');
 
             const setupStart = Date.now();
             let currentOrg: AdobeOrg | undefined;
@@ -232,6 +255,30 @@ export async function handleAuthenticate(
             let orgLacksAccess = false;
 
             try {
+                // STEP 2 FIX: Check token expiry BEFORE fetching organizations
+                context.logger.debug('[Auth] Checking token expiry before org fetch');
+                const tokenValid = await checkTokenExpiry(context);
+
+                if (!tokenValid) {
+                    // Token expired or invalid - send clear message
+                    context.sharedState.isAuthenticating = false;
+
+                    await context.sendMessage('auth-status', {
+                        authenticated: false,
+                        isAuthenticated: false,
+                        isChecking: false,
+                        message: 'Session expired',
+                        subMessage: 'Please sign in again to continue',
+                        requiresOrgSelection: true,
+                        orgLacksAccess: false,
+                    });
+
+                    return { success: false };
+                }
+
+                // Token is valid (or inspection failed but we continue) - proceed with org fetch
+                context.logger.info('[Auth] Fetching organizations after login');
+
                 // Initialize SDK for faster operations (token stable after login)
                 context.logger.debug('[Auth] Ensuring SDK is initialized for org fetching');
                 await context.authManager?.ensureSDKInitialized();

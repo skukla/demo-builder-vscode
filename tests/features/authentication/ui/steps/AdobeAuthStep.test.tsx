@@ -649,4 +649,132 @@ describe('AdobeAuthStep', () => {
             expect(mockRequestAuth).toHaveBeenCalled();
         });
     });
+
+    describe('UX Message Flash Fix - handleLogin() Message Behavior', () => {
+        it('should set authStatus to empty string when Sign In clicked, not optimistic message', () => {
+            const state = {
+                ...baseState,
+                adobeAuth: { isAuthenticated: false, isChecking: false },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={mockUpdateState}
+                    setCanProceed={mockSetCanProceed}
+                />
+            );
+
+            const signInButton = screen.getByText('Sign In with Adobe');
+            fireEvent.click(signInButton);
+
+            // Verify authStatus is cleared (empty string), NOT set to optimistic message
+            // The optimistic message should NEVER appear after clicking Sign In
+            expect(screen.queryByText('Opening browser for Adobe authentication...')).not.toBeInTheDocument();
+        });
+
+        it('should clear authSubMessage when handleLogin() called', async () => {
+            let messageCallback: (data: any) => void = () => {};
+            mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
+                if (type === 'auth-status') {
+                    messageCallback = callback;
+                }
+                return jest.fn();
+            });
+
+            const state = {
+                ...baseState,
+                adobeAuth: { isAuthenticated: false, isChecking: false },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={mockUpdateState}
+                    setCanProceed={mockSetCanProceed}
+                />
+            );
+
+            // Simulate existing subMessage from previous operation
+            messageCallback({
+                isChecking: false,
+                isAuthenticated: false,
+                message: 'Previous message',
+                subMessage: 'Previous sub-message',
+            });
+
+            await waitFor(() => {
+                expect(screen.getByText('Previous sub-message')).toBeInTheDocument();
+            });
+
+            // Click Sign In - should clear messages
+            const signInButton = screen.getByText('Sign In with Adobe');
+            fireEvent.click(signInButton);
+
+            // Sub-message should be cleared
+            expect(screen.queryByText('Previous sub-message')).not.toBeInTheDocument();
+        });
+
+        it('should allow backend to control first message when authStatus is empty', async () => {
+            let messageCallback: (data: any) => void = () => {};
+            mockOnMessage.mockImplementation((type: string, callback: (data: any) => void) => {
+                if (type === 'auth-status') {
+                    messageCallback = callback;
+                }
+                return jest.fn();
+            });
+
+            const state = {
+                ...baseState,
+                adobeAuth: { isAuthenticated: false, isChecking: false },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={mockUpdateState}
+                    setCanProceed={mockSetCanProceed}
+                />
+            );
+
+            // Click Sign In
+            const signInButton = screen.getByText('Sign In with Adobe');
+            fireEvent.click(signInButton);
+
+            // Simulate backend sending accurate first message
+            messageCallback({
+                isChecking: true,
+                isAuthenticated: false,
+                message: 'Already authenticated, selecting organization...',
+                subMessage: 'Please choose your organization',
+            });
+
+            // Backend message should display (proving no optimistic message conflict)
+            await waitFor(() => {
+                expect(screen.getByText('Already authenticated, selecting organization...')).toBeInTheDocument();
+            });
+        });
+
+        it('should not display "Opening browser..." at any point during login flow', () => {
+            const state = {
+                ...baseState,
+                adobeAuth: { isAuthenticated: false, isChecking: false },
+            };
+
+            render(
+                <AdobeAuthStep
+                    state={state as WizardState}
+                    updateState={mockUpdateState}
+                    setCanProceed={mockSetCanProceed}
+                />
+            );
+
+            const signInButton = screen.getByText('Sign In with Adobe');
+            fireEvent.click(signInButton);
+
+            // The optimistic message should NEVER appear
+            expect(screen.queryByText('Opening browser for Adobe authentication...')).not.toBeInTheDocument();
+            expect(screen.queryByText(/Opening browser/i)).not.toBeInTheDocument();
+        });
+    });
 });

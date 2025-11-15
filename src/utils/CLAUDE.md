@@ -567,14 +567,14 @@ abstract class BaseWebviewCommand extends BaseCommand {
 
 **Performance Optimizations (v1.6.0)**:
 
-**Quick Authentication Check** (`isAuthenticatedQuick()`):
+**Token-Only Authentication Check** (`isAuthenticated()`):
 - Token-only validation (no org validation)
-- < 1 second vs 9+ seconds for full check
+- 2-3 seconds vs 3-10 seconds for full check with `isFullyAuthenticated()`
 - Used for dashboard loads and wizard startup
 - Pre-flight checks before Adobe I/O operations
 
 ```typescript
-async isAuthenticatedQuick(): Promise<boolean> {
+async isAuthenticated(): Promise<boolean> {
     // Only check token validity, skip org validation
     const token = await this.getToken();
     if (!token) return false;
@@ -619,7 +619,7 @@ async ensureSDKInitialized(): Promise<void> {
 - Use `executeExclusive()` for authentication operations
 - Replace `setTimeout` polling with `pollUntilCondition()`
 - Use StateCoordinator for all state updates
-- Use `isAuthenticatedQuick()` for pre-flight checks
+- Use `isAuthenticated()` for pre-flight checks (token-only validation)
 - Call `ensureSDKInitialized()` before org/project operations
 
 ### UpdateManager

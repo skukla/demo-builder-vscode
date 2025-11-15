@@ -132,9 +132,9 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             authTimeoutRef.current = null;
         }
 
-        // Reset timeout state and clear old messages
+        // Reset timeout state and clear old messages to let backend send accurate first message
         setAuthTimeout(false);
-        setAuthStatus('Opening browser for Adobe authentication...');
+        setAuthStatus('');
         setAuthSubMessage('');
 
         // Immediately set the ref when switching orgs to prevent race conditions

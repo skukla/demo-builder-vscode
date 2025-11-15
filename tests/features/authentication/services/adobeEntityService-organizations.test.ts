@@ -479,4 +479,295 @@ describe('AdobeEntityService - Organizations', () => {
             await expect(service.getOrganizations()).rejects.toThrow('Network error');
         });
     });
+
+    describe('CLI context clearing when no orgs', () => {
+        it('should clear CLI context when SDK returns empty organizations array', async () => {
+            const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
+
+            // Arrange: SDK returns empty array, then falls back to CLI which also returns empty
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            const mockSDKGetOrgs = jest.fn().mockResolvedValue({
+                body: [], // Empty orgs array from SDK
+            });
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: mockSDKGetOrgs
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            // Mock CLI calls: first org list (returns empty), then 3 config delete commands
+            mockCommandExecutor.executeAdobeCLI
+                .mockResolvedValueOnce({
+                    stdout: '[]', // CLI also returns empty
+                    stderr: '',
+                    code: 0,
+                    duration: 1000,
+                })
+                .mockResolvedValue({
+                    stdout: '',
+                    stderr: '',
+                    code: 0,
+                    duration: 100,
+                });
+
+            (parseJSON as jest.Mock).mockReturnValue([]);
+
+            // Act
+            const result = await service.getOrganizations();
+
+            // Assert
+            expect(result).toEqual([]); // Empty array returned
+
+            // Verify 4 CLI calls: 1 for org list + 3 for config delete
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(4);
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+                'aio console org list --json',
+                expect.any(Object)
+            );
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+                'aio config delete console.org',
+                { encoding: 'utf8' }
+            );
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+                'aio config delete console.project',
+                { encoding: 'utf8' }
+            );
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+                'aio config delete console.workspace',
+                { encoding: 'utf8' }
+            );
+
+            // Verify cache cleared
+            expect(mockCacheManager.clearConsoleWhereCache).toHaveBeenCalledTimes(1);
+        });
+
+        it('should clear CLI context when CLI returns empty organizations array', async () => {
+            const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
+
+            // Arrange: SDK not initialized, CLI returns empty array
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(false);
+
+            // First call: CLI org list returns empty array
+            // Subsequent calls: config delete commands
+            mockCommandExecutor.executeAdobeCLI
+                .mockResolvedValueOnce({
+                    stdout: '[]', // Empty orgs from CLI
+                    stderr: '',
+                    code: 0,
+                    duration: 1000,
+                })
+                .mockResolvedValue({
+                    stdout: '',
+                    stderr: '',
+                    code: 0,
+                    duration: 100,
+                });
+
+            (parseJSON as jest.Mock).mockReturnValue([]);
+
+            // Act
+            const result = await service.getOrganizations();
+
+            // Assert
+            expect(result).toEqual([]);
+
+            // Verify 4 CLI calls: 1 for org list + 3 for config delete
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(4);
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+                'aio console org list --json',
+                expect.any(Object)
+            );
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+                'aio config delete console.org',
+                { encoding: 'utf8' }
+            );
+            expect(mockCacheManager.clearConsoleWhereCache).toHaveBeenCalledTimes(1);
+        });
+
+        it('should use Promise.all for parallel execution of config delete commands', async () => {
+            const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
+
+            // Arrange: SDK returns empty array
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: jest.fn().mockResolvedValue({ body: [] })
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            // Track when each command is called
+            const callTimestamps: number[] = [];
+            let callCount = 0;
+            mockCommandExecutor.executeAdobeCLI.mockImplementation(async (cmd) => {
+                callCount++;
+                if (callCount === 1) {
+                    // First call is org list
+                    (parseJSON as jest.Mock).mockReturnValue([]);
+                    return { stdout: '[]', stderr: '', code: 0, duration: 1000 };
+                }
+                // Config delete calls - track timing
+                callTimestamps.push(Date.now());
+                // Add small delay to verify parallelism
+                await new Promise(resolve => setTimeout(resolve, 10));
+                return { stdout: '', stderr: '', code: 0, duration: 10 };
+            });
+
+            // Act
+            await service.getOrganizations();
+
+            // Assert: All 3 config delete commands should start within ~10ms of each other (parallel)
+            expect(callTimestamps).toHaveLength(3);
+            const maxTimeDiff = Math.max(...callTimestamps) - Math.min(...callTimestamps);
+            expect(maxTimeDiff).toBeLessThan(50); // Parallel calls start nearly simultaneously
+        });
+
+        it('should NOT clear ims context (preserve token)', async () => {
+            const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
+
+            // Arrange: Empty orgs
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: jest.fn().mockResolvedValue({ body: [] })
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            // Mock CLI calls: first org list, then config deletes
+            mockCommandExecutor.executeAdobeCLI
+                .mockResolvedValueOnce({
+                    stdout: '[]',
+                    stderr: '',
+                    code: 0,
+                    duration: 1000,
+                })
+                .mockResolvedValue({
+                    stdout: '',
+                    stderr: '',
+                    code: 0,
+                    duration: 100,
+                });
+
+            (parseJSON as jest.Mock).mockReturnValue([]);
+
+            // Act
+            await service.getOrganizations();
+
+            // Assert: Verify ims context NOT cleared
+            expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalledWith(
+                expect.stringContaining('ims'),
+                expect.any(Object)
+            );
+            // Only console.* configs cleared
+            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+                'aio config delete console.org',
+                expect.any(Object)
+            );
+        });
+
+        it('should call clearConsoleWhereCache after CLI clearing completes', async () => {
+            const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
+
+            // Arrange: Empty orgs
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: jest.fn().mockResolvedValue({ body: [] })
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            // Track call order
+            const callOrder: string[] = [];
+            let callCount = 0;
+            mockCommandExecutor.executeAdobeCLI.mockImplementation(async (cmd) => {
+                callCount++;
+                if (callCount === 1) {
+                    // First call is org list
+                    (parseJSON as jest.Mock).mockReturnValue([]);
+                    callOrder.push(`cli:${cmd}`);
+                    return { stdout: '[]', stderr: '', code: 0, duration: 1000 };
+                }
+                // Config delete calls
+                callOrder.push(`cli:${cmd}`);
+                return { stdout: '', stderr: '', code: 0, duration: 100 };
+            });
+            mockCacheManager.clearConsoleWhereCache.mockImplementation(() => {
+                callOrder.push('cache:clear');
+            });
+
+            // Act
+            await service.getOrganizations();
+
+            // Assert: Cache clear happens AFTER all CLI commands (including org list)
+            expect(callOrder).toEqual([
+                'cli:aio console org list --json',
+                expect.stringContaining('console.org'),
+                expect.stringContaining('console.project'),
+                expect.stringContaining('console.workspace'),
+                'cache:clear',
+            ]);
+        });
+
+        it('should NOT clear CLI context when orgs exist', async () => {
+            const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
+
+            // Arrange: SDK returns non-empty orgs
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            const mockSDKGetOrgs = jest.fn().mockResolvedValue({
+                body: [
+                    { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' },
+                ],
+            });
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: mockSDKGetOrgs
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            // Act
+            const result = await service.getOrganizations();
+
+            // Assert
+            expect(result).toHaveLength(1);
+
+            // Verify NO config delete commands called
+            expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalledWith(
+                expect.stringContaining('config delete'),
+                expect.any(Object)
+            );
+            expect(mockCacheManager.clearConsoleWhereCache).not.toHaveBeenCalled();
+        });
+
+        it('should call clearConsoleWhereCache even if config delete commands fail', async () => {
+            const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
+
+            // Arrange: Empty orgs
+            mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
+            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.getClient.mockReturnValue({
+                getOrganizations: jest.fn().mockResolvedValue({ body: [] })
+            } as ReturnType<typeof mockSDKClient.getClient>);
+
+            // Mock CLI: first org list succeeds, then config deletes fail
+            mockCommandExecutor.executeAdobeCLI
+                .mockResolvedValueOnce({
+                    stdout: '[]',
+                    stderr: '',
+                    code: 0,
+                    duration: 1000,
+                })
+                .mockResolvedValue({
+                    stdout: '',
+                    stderr: 'Config not found',
+                    code: 1, // Failure
+                    duration: 100,
+                });
+
+            (parseJSON as jest.Mock).mockReturnValue([]);
+
+            // Act
+            const result = await service.getOrganizations();
+
+            // Assert: Should not throw error
+            expect(result).toEqual([]);
+
+            // Cache clear should still be called (cleanup proceeds despite failures)
+            expect(mockCacheManager.clearConsoleWhereCache).toHaveBeenCalledTimes(1);
+        });
+    });
 });

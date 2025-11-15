@@ -380,7 +380,7 @@ async function checkMeshStatusAsync(
 
             const authManager = ServiceLocator.getAuthenticationService();
 
-            const isAuthenticated = await authManager.isAuthenticatedQuick();
+            const isAuthenticated = await authManager.isAuthenticated();
 
             if (!isAuthenticated) {
                 context.logger.debug('[Dashboard] Not authenticated, showing auth prompt');

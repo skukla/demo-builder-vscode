@@ -465,8 +465,8 @@ if (hash !== previousHash) {
 
 **Implementation**:
 ```typescript
-// Fast token check (< 1 second)
-const isQuickAuth = await authManager.isAuthenticatedQuick();
+// Token-only check (2-3 seconds, no org validation)
+const isQuickAuth = await authManager.isAuthenticated();
 
 if (!isQuickAuth) {
     // Show prompt, don't proceed
@@ -496,7 +496,7 @@ const orgs = await authManager.getOrganizations(); // Uses SDK, cached
 **Implementation**:
 ```typescript
 // Before expensive Adobe I/O operations
-const isAuthenticated = await authManager.isAuthenticatedQuick();
+const isAuthenticated = await authManager.isAuthenticated();
 
 if (!isAuthenticated) {
     const action = await vscode.window.showWarningMessage(
@@ -504,11 +504,11 @@ if (!isAuthenticated) {
         'Sign In',
         'Cancel'
     );
-    
+
     if (action !== 'Sign In') {
         return; // User declined
     }
-    
+
     // User confirmed → Browser-based login
     await authManager.login();
 }

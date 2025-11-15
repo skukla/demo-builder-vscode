@@ -11,8 +11,8 @@ export class PerformanceTracker {
 
     // Expected operation times in milliseconds
     private readonly expectedTimes: Record<string, number> = {
-        'isAuthenticated': 3000,
-        'isAuthenticatedQuick': 1000,
+        'isAuthenticated': 2500,
+        'isFullyAuthenticated': 3000,
         'getOrganizations': 5000,
         'getProjects': 5000,
         'getWorkspaces': 5000,

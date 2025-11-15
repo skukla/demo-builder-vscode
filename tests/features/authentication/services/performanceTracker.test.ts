@@ -104,9 +104,9 @@ describe('PerformanceTracker', () => {
         });
 
         it('should log warning for slow operations', () => {
-            tracker.startTiming('isAuthenticated');
+            tracker.startTiming('isFullyAuthenticated');
             jest.advanceTimersByTime(5000);
-            const duration = tracker.endTiming('isAuthenticated');
+            const duration = tracker.endTiming('isFullyAuthenticated');
 
             expect(duration).toBe(5000);
             expect(mockDebug).toHaveBeenCalledWith(
@@ -114,10 +114,10 @@ describe('PerformanceTracker', () => {
             );
         });
 
-        it('should not log warning for fast operations', () => {
-            tracker.startTiming('isAuthenticatedQuick');
-            jest.advanceTimersByTime(500);
-            tracker.endTiming('isAuthenticatedQuick');
+        it('should not log warning for fast operations within threshold', () => {
+            tracker.startTiming('isAuthenticated');
+            jest.advanceTimersByTime(2200);
+            tracker.endTiming('isAuthenticated');
 
             expect(mockDebug).toHaveBeenCalledWith(
                 expect.not.stringContaining('⚠️'),
@@ -126,8 +126,8 @@ describe('PerformanceTracker', () => {
 
         it('should use correct expected times for different operations', () => {
             const operations = [
-                { name: 'isAuthenticated', expected: 3000, actual: 4000 },
-                { name: 'isAuthenticatedQuick', expected: 1000, actual: 2000 },
+                { name: 'isFullyAuthenticated', expected: 3000, actual: 4000 },
+                { name: 'isAuthenticated', expected: 2500, actual: 3000 },
                 { name: 'getOrganizations', expected: 5000, actual: 6000 },
                 { name: 'login', expected: 30000, actual: 31000 },
             ];
@@ -144,6 +144,28 @@ describe('PerformanceTracker', () => {
                     expect.stringContaining(`${name} took ${actual}ms ⚠️ SLOW (expected <${expected}ms)`),
                 );
             });
+        });
+
+        it('should NOT warn when isAuthenticated() takes 2200ms (within 2500ms threshold)', () => {
+            tracker.startTiming('isAuthenticated');
+            jest.advanceTimersByTime(2200);
+            const duration = tracker.endTiming('isAuthenticated');
+
+            expect(duration).toBe(2200);
+            expect(mockDebug).toHaveBeenCalledWith(
+                '[Performance] isAuthenticated took 2200ms'
+            );
+        });
+
+        it('should warn when isAuthenticated() exceeds 2500ms threshold', () => {
+            tracker.startTiming('isAuthenticated');
+            jest.advanceTimersByTime(3000);
+            const duration = tracker.endTiming('isAuthenticated');
+
+            expect(duration).toBe(3000);
+            expect(mockDebug).toHaveBeenCalledWith(
+                expect.stringContaining('⚠️ SLOW (expected <2500ms)'),
+            );
         });
     });
 
