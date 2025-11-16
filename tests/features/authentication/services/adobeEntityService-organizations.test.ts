@@ -58,7 +58,8 @@ describe('AdobeEntityService - Organizations', () => {
         it('should fetch organizations via SDK if initialized', async () => {
             const { service, mockCacheManager, mockSDKClient } = testMocks;
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.isInitialized.mockReturnValue(false).mockReturnValueOnce(false).mockReturnValue(true);
+            mockSDKClient.ensureInitialized.mockResolvedValue(true);
             const mockSDKGetOrgs = jest.fn().mockResolvedValue({
                 body: [
                     { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' },
@@ -71,6 +72,7 @@ describe('AdobeEntityService - Organizations', () => {
 
             expect(result).toHaveLength(2);
             expect(result[0].id).toBe('org1');
+            expect(mockSDKClient.ensureInitialized).toHaveBeenCalled();
             expect(mockSDKGetOrgs).toHaveBeenCalled();
             expect(mockCacheManager.setCachedOrgList).toHaveBeenCalledWith(result);
         });
@@ -102,7 +104,8 @@ describe('AdobeEntityService - Organizations', () => {
         it('should use CLI if SDK not initialized', async () => {
             const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(false);
+            mockSDKClient.isInitialized.mockReturnValue(false); // SDK init fails
+            mockSDKClient.ensureInitialized.mockResolvedValue(false); // Auto-init attempted but failed
             mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
                 stdout: JSON.stringify(mockOrgs.map(o => ({ id: o.id, code: o.code, name: o.name }))),
                 stderr: '',
@@ -114,6 +117,7 @@ describe('AdobeEntityService - Organizations', () => {
             const result = await service.getOrganizations();
 
             expect(result).toHaveLength(2);
+            expect(mockSDKClient.ensureInitialized).toHaveBeenCalled(); // Auto-init was attempted
             expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
         });
 
@@ -241,15 +245,25 @@ describe('AdobeEntityService - Organizations', () => {
         });
 
         it('should return name-only org when no cached org list (deferred)', async () => {
-            const { service, mockCacheManager, mockSDKClient } = testMocks;
+            const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue({ org: 'Test Org' });
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined); // No cached list
+            mockSDKClient.isInitialized.mockReturnValue(false);
+            mockSDKClient.ensureInitialized.mockResolvedValue(false); // Auto-init attempted but failed
+            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+                stdout: '[]', // Empty org list
+                stderr: '',
+                code: 0,
+                duration: 1000,
+            });
+            (parseJSON as jest.Mock).mockReturnValue([]);
 
             const result = await service.getCurrentOrganization();
 
-            // Should return name-only org (deferred ID resolution)
-            expect(mockSDKClient.ensureInitialized).not.toHaveBeenCalled();
+            // SDK auto-init attempted when getOrganizations() is called internally
+            expect(mockSDKClient.ensureInitialized).toHaveBeenCalled();
+            // Returns name-only org since org list fetch returned empty
             expect(result).toEqual({
                 id: 'Test Org',
                 code: 'Test Org',
@@ -486,7 +500,8 @@ describe('AdobeEntityService - Organizations', () => {
 
             // Arrange: SDK returns empty array, then falls back to CLI which also returns empty
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.isInitialized.mockReturnValue(false).mockReturnValueOnce(false).mockReturnValue(true);
+            mockSDKClient.ensureInitialized.mockResolvedValue(true);
             const mockSDKGetOrgs = jest.fn().mockResolvedValue({
                 body: [], // Empty orgs array from SDK
             });
@@ -546,6 +561,7 @@ describe('AdobeEntityService - Organizations', () => {
             // Arrange: SDK not initialized, CLI returns empty array
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false);
+            mockSDKClient.ensureInitialized.mockResolvedValue(false); // Auto-init attempted but failed
 
             // First call: CLI org list returns empty array
             // Subsequent calls: config delete commands
@@ -589,7 +605,8 @@ describe('AdobeEntityService - Organizations', () => {
 
             // Arrange: SDK returns empty array
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.isInitialized.mockReturnValue(false).mockReturnValueOnce(false).mockReturnValue(true);
+            mockSDKClient.ensureInitialized.mockResolvedValue(true);
             mockSDKClient.getClient.mockReturnValue({
                 getOrganizations: jest.fn().mockResolvedValue({ body: [] })
             } as ReturnType<typeof mockSDKClient.getClient>);
@@ -625,7 +642,8 @@ describe('AdobeEntityService - Organizations', () => {
 
             // Arrange: Empty orgs
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.isInitialized.mockReturnValue(false).mockReturnValueOnce(false).mockReturnValue(true);
+            mockSDKClient.ensureInitialized.mockResolvedValue(true);
             mockSDKClient.getClient.mockReturnValue({
                 getOrganizations: jest.fn().mockResolvedValue({ body: [] })
             } as ReturnType<typeof mockSDKClient.getClient>);
@@ -667,7 +685,8 @@ describe('AdobeEntityService - Organizations', () => {
 
             // Arrange: Empty orgs
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.isInitialized.mockReturnValue(false).mockReturnValueOnce(false).mockReturnValue(true);
+            mockSDKClient.ensureInitialized.mockResolvedValue(true);
             mockSDKClient.getClient.mockReturnValue({
                 getOrganizations: jest.fn().mockResolvedValue({ body: [] })
             } as ReturnType<typeof mockSDKClient.getClient>);
@@ -709,7 +728,8 @@ describe('AdobeEntityService - Organizations', () => {
 
             // Arrange: SDK returns non-empty orgs
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.isInitialized.mockReturnValue(false).mockReturnValueOnce(false).mockReturnValue(true);
+            mockSDKClient.ensureInitialized.mockResolvedValue(true);
             const mockSDKGetOrgs = jest.fn().mockResolvedValue({
                 body: [
                     { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' },
@@ -738,7 +758,8 @@ describe('AdobeEntityService - Organizations', () => {
 
             // Arrange: Empty orgs
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
-            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.isInitialized.mockReturnValue(false).mockReturnValueOnce(false).mockReturnValue(true);
+            mockSDKClient.ensureInitialized.mockResolvedValue(true);
             mockSDKClient.getClient.mockReturnValue({
                 getOrganizations: jest.fn().mockResolvedValue({ body: [] })
             } as ReturnType<typeof mockSDKClient.getClient>);

@@ -48,7 +48,8 @@ describe('AdobeEntityService - Workspaces', () => {
             const { service, mockCacheManager, mockSDKClient } = testMocks;
             mockCacheManager.getCachedOrganization.mockReturnValue({ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' });
             mockCacheManager.getCachedProject.mockReturnValue(mockProjects[0]);
-            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.isInitialized.mockReturnValue(false).mockReturnValueOnce(false).mockReturnValue(true);
+            mockSDKClient.ensureInitialized.mockResolvedValue(true);
             const mockSDKGetWorkspaces = jest.fn().mockResolvedValue({
                 body: [
                     { id: 'ws1', name: 'Production', title: 'Production' },
@@ -61,6 +62,7 @@ describe('AdobeEntityService - Workspaces', () => {
 
             expect(result).toHaveLength(2);
             expect(result[0].id).toBe('ws1');
+            expect(mockSDKClient.ensureInitialized).toHaveBeenCalled();
             expect(mockSDKGetWorkspaces).toHaveBeenCalledWith('org1', 'proj1'); // SDK uses numeric org ID
         });
 
@@ -96,6 +98,7 @@ describe('AdobeEntityService - Workspaces', () => {
         it('should use CLI if SDK not initialized', async () => {
             const { service, mockSDKClient, mockCommandExecutor } = testMocks;
             mockSDKClient.isInitialized.mockReturnValue(false);
+            mockSDKClient.ensureInitialized.mockResolvedValue(false); // Auto-init attempted but failed
             mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
                 stdout: JSON.stringify([
                     { id: 'ws1', name: 'Production', title: 'Production' },
@@ -111,6 +114,7 @@ describe('AdobeEntityService - Workspaces', () => {
             const result = await service.getWorkspaces();
 
             expect(result).toHaveLength(1);
+            expect(mockSDKClient.ensureInitialized).toHaveBeenCalled(); // Auto-init was attempted
             expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
         });
 

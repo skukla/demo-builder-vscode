@@ -47,7 +47,8 @@ describe('AdobeEntityService - Projects', () => {
         it('should fetch projects via SDK if initialized', async () => {
             const { service, mockCacheManager, mockSDKClient } = testMocks;
             mockCacheManager.getCachedOrganization.mockReturnValue({ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' });
-            mockSDKClient.isInitialized.mockReturnValue(true);
+            mockSDKClient.isInitialized.mockReturnValue(false).mockReturnValueOnce(false).mockReturnValue(true);
+            mockSDKClient.ensureInitialized.mockResolvedValue(true);
             const mockSDKGetProjects = jest.fn().mockResolvedValue({
                 body: [
                     {
@@ -66,6 +67,7 @@ describe('AdobeEntityService - Projects', () => {
 
             expect(result).toHaveLength(1);
             expect(result[0].id).toBe('proj1');
+            expect(mockSDKClient.ensureInitialized).toHaveBeenCalled();
             expect(mockSDKGetProjects).toHaveBeenCalledWith('org1'); // SDK uses numeric org ID
         });
 
@@ -114,6 +116,7 @@ describe('AdobeEntityService - Projects', () => {
         it('should use CLI if SDK not initialized', async () => {
             const { service, mockSDKClient, mockCommandExecutor } = testMocks;
             mockSDKClient.isInitialized.mockReturnValue(false);
+            mockSDKClient.ensureInitialized.mockResolvedValue(false); // Auto-init attempted but failed
             mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
                 stdout: JSON.stringify([
                     {
@@ -143,6 +146,7 @@ describe('AdobeEntityService - Projects', () => {
             const result = await service.getProjects();
 
             expect(result).toHaveLength(1);
+            expect(mockSDKClient.ensureInitialized).toHaveBeenCalled(); // Auto-init was attempted
             expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
         });
 

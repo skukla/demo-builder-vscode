@@ -87,6 +87,11 @@ export class AdobeEntityService {
 
             let mappedOrgs: AdobeOrg[] = [];
 
+            // Auto-initialize SDK if not ready (lazy init pattern)
+            if (!this.sdkClient.isInitialized()) {
+                await this.sdkClient.ensureInitialized();
+            }
+
             // Try SDK first for 30x performance improvement
             if (this.sdkClient.isInitialized()) {
                 try {
@@ -173,6 +178,11 @@ export class AdobeEntityService {
             // Passing IMS org code or org name causes 400 Bad Request and forces slow CLI fallback
             const hasValidOrgId = cachedOrg?.id && cachedOrg.id.length > 0;
 
+            // Auto-initialize SDK if not ready (lazy init pattern)
+            if (!this.sdkClient.isInitialized()) {
+                await this.sdkClient.ensureInitialized();
+            }
+
             if (this.sdkClient.isInitialized() && hasValidOrgId) {
                 try {
                     const client = this.sdkClient.getClient() as { getProjectsForOrg: (orgId: string) => Promise<SDKResponse<RawAdobeProject[]>> };
@@ -254,6 +264,11 @@ export class AdobeEntityService {
             // The 'id' field contains the numeric org ID, while 'code' is the IMS org ID (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
             const hasValidOrgId = cachedOrg?.id && cachedOrg.id.length > 0;
             const hasValidProjectId = cachedProject?.id && cachedProject.id.length > 0;
+
+            // Auto-initialize SDK if not ready (lazy init pattern)
+            if (!this.sdkClient.isInitialized()) {
+                await this.sdkClient.ensureInitialized();
+            }
 
             if (this.sdkClient.isInitialized() && hasValidOrgId && hasValidProjectId) {
                 try {
