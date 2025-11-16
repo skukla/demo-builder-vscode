@@ -212,10 +212,11 @@ describe('AdobeAuthStep', () => {
                 />
             );
 
-            // Note: Actual implementation may check auth on first mount with false state
+            // Should always call check-auth on mount to validate token and auto-skip if valid
+            expect(mockPostMessage).toHaveBeenCalledWith('check-auth');
         });
 
-        it('should not check authentication on mount when already authenticated', () => {
+        it('should check authentication on mount even when already authenticated', () => {
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: true, isChecking: false },
@@ -230,7 +231,9 @@ describe('AdobeAuthStep', () => {
                 />
             );
 
-            expect(mockPostMessage).not.toHaveBeenCalled();
+            // Always validate token on mount, even if already authenticated
+            // This ensures token is still valid and provides consistent behavior
+            expect(mockPostMessage).toHaveBeenCalledWith('check-auth');
         });
     });
 
