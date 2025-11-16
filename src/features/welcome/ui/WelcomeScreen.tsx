@@ -47,7 +47,8 @@ export function WelcomeScreen(_props: WelcomeScreenProps) {
     return (
         <View height="100vh" backgroundColor="gray-50">
             <Flex direction="column" alignItems="center" justifyContent="center" height="100%">
-                <View ref={containerRef as any} width="100%" maxWidth="900px" padding="size-400">
+                <div ref={containerRef} style={{ width: '100%', maxWidth: '900px', padding: 'var(--spectrum-global-dimension-size-400)' }}>
+                <View>
                     {/* Header */}
                     <View marginBottom="size-400">
                         <Flex justifyContent="space-between" alignItems="center">
@@ -111,6 +112,7 @@ export function WelcomeScreen(_props: WelcomeScreenProps) {
                         </ActionButton>
                     </GridLayout>
                 </View>
+                </div>
             </Flex>
         </View>
     );
