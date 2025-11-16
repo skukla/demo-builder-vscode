@@ -54,6 +54,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
         autoFocus: false,
+        containFocus: true,  // Prevent focus escape (WCAG 2.1 AA)
     });
 
     useEffect(() => {
@@ -185,11 +186,11 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
     }, [meshStatus, meshMessage]);
 
     return (
-        <View
-            ref={containerRef as any}
-            padding="size-400"
-            height="100vh"
-            UNSAFE_style={{
+        <div
+            ref={containerRef}
+            style={{
+                padding: 'var(--spectrum-global-dimension-size-400)',
+                height: '100vh',
                 maxWidth: '500px',
                 margin: '0 auto',
                 display: 'flex',
@@ -197,6 +198,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                 justifyContent: 'center'
             }}
         >
+        <View>
             <Flex direction="column" gap="size-200" UNSAFE_style={{ width: '100%' }}>
                 {/* Project Header */}
                 <View marginBottom="size-200">
@@ -351,5 +353,6 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                 </GridLayout>
             </Flex>
         </View>
+        </div>
     );
 }
