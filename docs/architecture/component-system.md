@@ -131,9 +131,6 @@ External systems provide optional integrations with Adobe Experience Cloud servi
 }
 ```
 
-### Target Integration
-Enables personalization and A/B testing capabilities through Adobe Target.
-
 ## App Builder Applications
 
 App Builder apps extend functionality with custom serverless applications:
