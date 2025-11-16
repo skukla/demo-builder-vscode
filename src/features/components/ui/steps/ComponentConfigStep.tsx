@@ -432,7 +432,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 setTimeout(() => {
                     const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
                     if (navFieldElement) {
-                        navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 }, 150);
             } else {
