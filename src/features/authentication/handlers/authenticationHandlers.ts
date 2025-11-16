@@ -62,17 +62,53 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
 
         context.logger.info(`[Auth] Token-only authentication check completed in ${checkDuration}ms: ${isAuthenticated}`);
 
-        // Get cached org/project if available (fast - no fetch or CLI calls)
+        // Check token expiry to warn user if token is about to expire
+        let tokenExpiresIn: number | undefined;
+        let tokenExpiringSoon = false;
+        if (isAuthenticated) {
+            try {
+                const tokenManager = context.authManager?.getTokenManager();
+                if (tokenManager) {
+                    const tokenInspection = await tokenManager.inspectToken();
+                    if (tokenInspection) {
+                        tokenExpiresIn = tokenInspection.expiresIn;
+                        tokenExpiringSoon = tokenInspection.expiresIn < 5; // Less than 5 minutes
+
+                        if (tokenExpiringSoon) {
+                            context.logger.warn(`[Auth] Token expires in ${tokenExpiresIn} minutes - user should re-authenticate`);
+                        } else {
+                            context.logger.debug(`[Auth] Token expires in ${tokenExpiresIn} minutes`);
+                        }
+                    }
+                }
+            } catch (error) {
+                // Token inspection failed - log but continue (non-critical feature)
+                context.logger.debug('[Auth] Token expiry check failed, continuing without expiry warning', error as Error);
+            }
+        }
+
+        // Get org/project context (check cache first, then Adobe CLI if cache miss)
         let currentOrg: AdobeOrg | undefined;
         let currentProject: AdobeProject | undefined;
 
         if (isAuthenticated) {
-            // Check cache only (no fetch, no CLI calls)
+            // Check cache first (fast - no API calls)
             currentOrg = context.authManager?.getCachedOrganization();
             currentProject = context.authManager?.getCachedProject();
 
-            // Don't show cached org if validation failed
-            if (currentOrg) {
+            // If cache is empty, read from Adobe CLI (persists across extension restarts)
+            if (!currentOrg) {
+                context.logger.debug('[Auth] Cache miss - fetching org context from Adobe CLI');
+                currentOrg = await context.authManager?.getCurrentOrganization();
+                currentProject = await context.authManager?.getCurrentProject();
+
+                if (currentOrg) {
+                    context.logger.info(`[Auth] Retrieved persisted organization from Adobe CLI: ${currentOrg.name}`);
+                } else {
+                    context.logger.debug('[Auth] No persisted organization found in Adobe CLI');
+                }
+            } else {
+                // Don't show cached org if validation failed
                 const validation = context.authManager?.getValidationCache();
 
                 if (validation) {
@@ -132,6 +168,8 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
             subMessage,
             requiresOrgSelection,
             orgLacksAccess,
+            tokenExpiresIn, // Minutes until token expires
+            tokenExpiringSoon, // True if < 5 minutes remaining
         });
 
         return { success: true };

@@ -69,6 +69,8 @@ export interface AdobeAuthState {
     error?: string;
     requiresOrgSelection?: boolean;
     orgLacksAccess?: boolean;  // Selected organization doesn't have App Builder access
+    tokenExpiresIn?: number;  // Minutes until token expires
+    tokenExpiringSoon?: boolean;  // True if < 5 minutes remaining
 }
 
 export interface Organization {

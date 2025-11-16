@@ -43,6 +43,8 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 subMessage: 'Sign in with your Adobe account to continue',
                 requiresOrgSelection: false,
                 orgLacksAccess: false,
+                tokenExpiresIn: undefined,
+                tokenExpiringSoon: false,
             });
         });
 
@@ -69,6 +71,8 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 subMessage: `Signed in as ${mockOrg.name}`,
                 requiresOrgSelection: false,
                 orgLacksAccess: false,
+                tokenExpiresIn: undefined,
+                tokenExpiringSoon: false,
             });
         });
 
@@ -91,6 +95,8 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 subMessage: `Signed in as ${mockOrg.name}`,
                 requiresOrgSelection: false,
                 orgLacksAccess: false,
+                tokenExpiresIn: undefined,
+                tokenExpiringSoon: false,
             });
         });
 
@@ -144,7 +150,7 @@ describe('authenticationHandlers - handleCheckAuth', () => {
             );
         });
 
-        it('should use cached data only (no org/project fetching)', async () => {
+        it('should use cached data when available (no CLI fetching)', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
             (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(mockOrg);
             (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(mockProject);
@@ -152,7 +158,7 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
             await handleCheckAuth(mockContext);
 
-            // Uses cached data - no fetching
+            // Uses cached data - no CLI fetching when cache hit
             expect(mockContext.authManager!.getCurrentOrganization).not.toHaveBeenCalled();
             expect(mockContext.authManager!.getCurrentProject).not.toHaveBeenCalled();
         });
@@ -172,15 +178,21 @@ describe('authenticationHandlers - handleCheckAuth', () => {
             );
         });
 
-        it('should handle getCachedOrganization() returning undefined gracefully', async () => {
+        it('should fetch from Adobe CLI when cache is empty', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
             (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(undefined);
             (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
             (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
 
             const result = await handleCheckAuth(mockContext);
 
-            // Should succeed - just means no cached org/project
+            // Should fetch from CLI when cache is empty
+            expect(mockContext.authManager!.getCurrentOrganization).toHaveBeenCalledTimes(1);
+            expect(mockContext.authManager!.getCurrentProject).toHaveBeenCalledTimes(1);
+
+            // Should succeed - just means no persisted org/project
             expect(result.success).toBe(true);
             expect(mockContext.sendMessage).toHaveBeenLastCalledWith(
                 'auth-status',
@@ -231,10 +243,50 @@ describe('authenticationHandlers - handleCheckAuth', () => {
     });
 
     describe('edge cases', () => {
-        it('should handle authenticated but no cached org (requiresOrgSelection = true)', async () => {
+        it('should retrieve persisted org from Adobe CLI when cache is empty (post-restart scenario)', async () => {
+            // This is the critical UX improvement: extension restart with valid token + persisted org
+            (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
+            (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(undefined); // Cache empty (restart)
+            (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(mockOrg); // CLI has persisted org
+            (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(mockProject); // CLI has persisted project
+            (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
+
+            const result = await handleCheckAuth(mockContext);
+
+            expect(result.success).toBe(true);
+
+            // Should fetch from Adobe CLI when cache is empty
+            expect(mockContext.authManager!.getCurrentOrganization).toHaveBeenCalledTimes(1);
+            expect(mockContext.authManager!.getCurrentProject).toHaveBeenCalledTimes(1);
+
+            // Should show persisted org/project from Adobe CLI
+            expect(mockContext.sendMessage).toHaveBeenLastCalledWith('auth-status', {
+                authenticated: true,
+                isAuthenticated: true,
+                isChecking: false,
+                organization: mockOrg,
+                project: mockProject,
+                message: 'Authentication verified',
+                subMessage: `Signed in as ${mockOrg.name}`,
+                requiresOrgSelection: false,
+                orgLacksAccess: false,
+                tokenExpiresIn: undefined,
+                tokenExpiringSoon: false,
+            });
+
+            // Should log that it retrieved from CLI
+            expect(mockContext.logger.info).toHaveBeenCalledWith(
+                expect.stringMatching(/Retrieved persisted organization from Adobe CLI: Test Organization/)
+            );
+        });
+
+        it('should handle authenticated but no cached org and no persisted org', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
             (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(undefined);
             (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
             (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
@@ -249,6 +301,8 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 subMessage: 'Organization selection required',
                 requiresOrgSelection: false,
                 orgLacksAccess: false,
+                tokenExpiresIn: undefined,
+                tokenExpiringSoon: false,
             });
         });
 
@@ -273,6 +327,8 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 subMessage: 'Organization selection required',
                 requiresOrgSelection: false,
                 orgLacksAccess: false,
+                tokenExpiresIn: undefined,
+                tokenExpiringSoon: false,
             });
         });
 
@@ -298,6 +354,8 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 subMessage: `Signed in as ${mockOrg.name}`,
                 requiresOrgSelection: false,
                 orgLacksAccess: false,
+                tokenExpiresIn: undefined,
+                tokenExpiringSoon: false,
             });
         });
 
@@ -320,19 +378,23 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 subMessage: `Signed in as ${mockOrg.name}`,
                 requiresOrgSelection: false,
                 orgLacksAccess: false,
+                tokenExpiresIn: undefined,
+                tokenExpiringSoon: false,
             });
         });
 
-        it('should check cached project even when no org is cached', async () => {
+        it('should fetch project from CLI even when no org is found', async () => {
             (mockContext.authManager!.isAuthenticated as jest.Mock).mockResolvedValue(true);
             (mockContext.authManager!.getCachedOrganization as jest.Mock).mockReturnValue(undefined);
             (mockContext.authManager!.getCachedProject as jest.Mock).mockReturnValue(undefined);
+            (mockContext.authManager!.getCurrentOrganization as jest.Mock).mockResolvedValue(undefined);
+            (mockContext.authManager!.getCurrentProject as jest.Mock).mockResolvedValue(undefined);
             (mockContext.authManager!.getValidationCache as jest.Mock).mockReturnValue(null);
 
             await handleCheckAuth(mockContext);
 
-            // getCachedProject is called even without org (but result may be cleared)
-            expect(mockContext.authManager!.getCachedProject).toHaveBeenCalled();
+            // getCurrentProject is called from CLI even when org is not found
+            expect(mockContext.authManager!.getCurrentProject).toHaveBeenCalled();
         });
     });
 });

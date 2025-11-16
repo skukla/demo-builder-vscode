@@ -12,6 +12,7 @@ import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import React, { useEffect, useState, useRef } from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { WizardState } from '@/types/webview';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
@@ -32,16 +33,9 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     const showLoadingSpinner = state.adobeAuth.isChecking;
 
     useEffect(() => {
-        // Only check authentication if status is unknown (undefined) or explicitly failed
-        // Don't re-check if already authenticated - prevents unnecessary flickering when navigating back
-        if (!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated === undefined) {
-            checkAuthentication();
-        } else if (state.adobeAuth.isAuthenticated && state.adobeOrg) {
-            // If already authenticated on mount, clear any stale messages
-            // This prevents "left over" feeling when navigating back to this step
-            setAuthStatus('');
-            setAuthSubMessage('');
-        }
+        // Always check authentication on mount to validate token and auto-skip if valid
+        // This provides better UX for returning users with valid tokens
+        checkAuthentication();
 
         // Listen for auth status updates
         const unsubscribe = webviewClient.onMessage('auth-status', (data) => {
@@ -91,6 +85,8 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                     error: authData.error,
                     requiresOrgSelection: authData.requiresOrgSelection,
                     orgLacksAccess: authData.orgLacksAccess,
+                    tokenExpiresIn: authData.tokenExpiresIn,
+                    tokenExpiringSoon: authData.tokenExpiringSoon,
                 },
                 // Always update org - set to undefined when null/undefined
                 adobeOrg: authData.organization ? {
@@ -107,9 +103,13 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     }, []);
 
     useEffect(() => {
-        // Can only proceed if authenticated AND has organization selected
-        setCanProceed(state.adobeAuth.isAuthenticated && !!state.adobeOrg?.name);
-    }, [state.adobeAuth.isAuthenticated, state.adobeOrg, setCanProceed]);
+        // Can only proceed if authenticated AND has organization selected AND token is not expiring soon
+        setCanProceed(
+            state.adobeAuth.isAuthenticated &&
+            !!state.adobeOrg?.name &&
+            !state.adobeAuth.tokenExpiringSoon
+        );
+    }, [state.adobeAuth.isAuthenticated, state.adobeAuth.tokenExpiringSoon, state.adobeOrg, setCanProceed]);
 
     const checkAuthentication = () => {
         // Don't check if we're already in the process of switching organizations
@@ -168,11 +168,11 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
     };
 
     return (
-        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+        <SingleColumnLayout>
             <Heading level={2} marginBottom="size-300">
                 Adobe Authentication
             </Heading>
-            
+
             <Text marginBottom="size-400">
                 We need to authenticate with Adobe to deploy your API Mesh and access Adobe services.
             </Text>
@@ -189,8 +189,33 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 </Flex>
             )}
 
+            {/* Token expiring soon - warning state */}
+            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && state.adobeAuth.tokenExpiringSoon && (
+                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+                    <Flex direction="column" gap="size-200" alignItems="center">
+                        <Alert UNSAFE_className="text-orange-500" size="L" />
+                        <Flex direction="column" gap="size-100" alignItems="center">
+                            <Text UNSAFE_className="text-xl font-medium">
+                                Session Expiring Soon
+                            </Text>
+                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
+                                Your Adobe session expires in {state.adobeAuth.tokenExpiresIn || 0} {state.adobeAuth.tokenExpiresIn === 1 ? 'minute' : 'minutes'}. Please re-authenticate to avoid interruption during project setup.
+                            </Text>
+                        </Flex>
+                        <Button
+                            variant="accent"
+                            onPress={() => handleLogin(true)}
+                            marginTop="size-300"
+                        >
+                            <Login size="S" marginEnd="size-100" />
+                            Re-authenticate Now
+                        </Button>
+                    </Flex>
+                </Flex>
+            )}
+
             {/* Authenticated with valid organization */}
-            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && state.adobeOrg && (
+            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && state.adobeOrg && !state.adobeAuth.tokenExpiringSoon && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <CheckmarkCircle UNSAFE_className="text-green-600" size="L" />
@@ -351,6 +376,6 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                     text-align: center;
                 }
             `}</style>
-        </div>
+        </SingleColumnLayout>
     );
 }
