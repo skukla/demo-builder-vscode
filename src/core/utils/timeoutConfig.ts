@@ -12,8 +12,8 @@ export const TIMEOUTS = {
     // Adobe CLI operations
     CONFIG_READ: 5000,              // Reading config values (expiry, other config)
     TOKEN_READ: 10000,              // Reading JWT tokens (longer due to size)
-    CONFIG_WRITE: 10000,            // Writing config values (CRITICAL FIX: increased from 5000ms)
-    // Adobe CLI project/workspace selection often takes 8-10 seconds
+    CONFIG_WRITE: 20000,            // Writing config values (INCREASED: project/workspace selection can take 8-15 seconds)
+    // Adobe CLI project/workspace selection often takes 8-10 seconds, but can exceed 10s
     API_CALL: 10000,                // API-based commands (console where, org list)
     BROWSER_AUTH: 60000,            // Browser-based authentication flow (1 minute)
     API_MESH_CREATE: 120000,        // API Mesh creation (2 minutes)
