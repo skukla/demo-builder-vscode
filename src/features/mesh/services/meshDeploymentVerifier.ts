@@ -8,6 +8,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateMeshId } from '@/core/validation';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
+import { getMeshNodeVersion } from './meshConfig';
 
 /**
  * MeshDeploymentVerificationResult - Result from deployment verification polling
@@ -167,7 +168,7 @@ async function getEndpoint(meshId: string, logger?: Logger): Promise<string | un
             {
                 timeout: 30000,
                 configureTelemetry: false,
-                useNodeVersion: null,
+                useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,
             },
         );

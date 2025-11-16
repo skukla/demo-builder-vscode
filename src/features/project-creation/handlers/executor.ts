@@ -15,6 +15,7 @@ import {
 } from '@/features/project-creation/helpers';
 import { AdobeConfig } from '@/types/base';
 import { parseJSON } from '@/types/typeGuards';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 
 /**
  * ProjectCreationConfig - Configuration passed to project creation
@@ -249,6 +250,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                         const describeResult = await commandManager.execute('aio api-mesh:describe', {
                             timeout: 30000,
                             configureTelemetry: false,
+                            useNodeVersion: getMeshNodeVersion(),
                             enhancePath: true,
                         });
 
