@@ -80,11 +80,19 @@ describe('meshEndpoint', () => {
         });
 
         it('should call describe command if no cached endpoint', async () => {
-            (mockCommandManager.execute as jest.Mock).mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ meshEndpoint: 'https://describe-endpoint.adobe.io/graphql' }),
-                stderr: '',
-            });
+            // Mock plugin check first (returns plugin installed)
+            (mockCommandManager.execute as jest.Mock)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: '@adobe/aio-cli-plugin-api-mesh',
+                    stderr: '',
+                })
+                // Then mock describe command
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify({ meshEndpoint: 'https://describe-endpoint.adobe.io/graphql' }),
+                    stderr: '',
+                });
 
             await getEndpoint(
                 meshId,
@@ -94,12 +102,22 @@ describe('meshEndpoint', () => {
                 mockDebugLogger,
             );
 
+            // Should check plugin first
+            expect(mockCommandManager.execute).toHaveBeenCalledWith(
+                'aio plugins',
+                expect.objectContaining({
+                    timeout: 5000,
+                    configureTelemetry: false,
+                    enhancePath: true,
+                }),
+            );
+
+            // Then call describe
             expect(mockCommandManager.execute).toHaveBeenCalledWith(
                 'aio api-mesh:describe',
                 expect.objectContaining({
                     timeout: 30000,
                     configureTelemetry: false,
-                    useNodeVersion: null,
                     enhancePath: true,
                 }),
             );
@@ -107,11 +125,18 @@ describe('meshEndpoint', () => {
 
         it('should parse meshEndpoint from describe output', async () => {
             const describeEndpoint = 'https://describe-endpoint.adobe.io/graphql';
-            (mockCommandManager.execute as jest.Mock).mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ meshEndpoint: describeEndpoint }),
-                stderr: '',
-            });
+            // Mock plugin check first, then describe
+            (mockCommandManager.execute as jest.Mock)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: '@adobe/aio-cli-plugin-api-mesh',
+                    stderr: '',
+                })
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify({ meshEndpoint: describeEndpoint }),
+                    stderr: '',
+                });
 
             const result = await getEndpoint(
                 meshId,
@@ -130,11 +155,18 @@ describe('meshEndpoint', () => {
 
         it('should parse endpoint field as fallback', async () => {
             const endpoint = 'https://fallback-endpoint.adobe.io/graphql';
-            (mockCommandManager.execute as jest.Mock).mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ endpoint }),
-                stderr: '',
-            });
+            // Mock plugin check first, then describe
+            (mockCommandManager.execute as jest.Mock)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: '@adobe/aio-cli-plugin-api-mesh',
+                    stderr: '',
+                })
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify({ endpoint }),
+                    stderr: '',
+                });
 
             const result = await getEndpoint(
                 meshId,
@@ -169,9 +201,14 @@ describe('meshEndpoint', () => {
         });
 
         it('should construct endpoint if describe throws error', async () => {
-            (mockCommandManager.execute as jest.Mock).mockRejectedValue(
-                new Error('Command failed'),
-            );
+            // Mock plugin check succeeds, then describe throws
+            (mockCommandManager.execute as jest.Mock)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: '@adobe/aio-cli-plugin-api-mesh',
+                    stderr: '',
+                })
+                .mockRejectedValueOnce(new Error('Command failed'));
 
             const result = await getEndpoint(
                 meshId,
@@ -224,11 +261,18 @@ describe('meshEndpoint', () => {
         });
 
         it('should log debug message when fetching from describe', async () => {
-            (mockCommandManager.execute as jest.Mock).mockResolvedValue({
-                code: 0,
-                stdout: JSON.stringify({ meshEndpoint: 'https://test.adobe.io/graphql' }),
-                stderr: '',
-            });
+            // Mock plugin check first, then describe
+            (mockCommandManager.execute as jest.Mock)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: '@adobe/aio-cli-plugin-api-mesh',
+                    stderr: '',
+                })
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: JSON.stringify({ meshEndpoint: 'https://test.adobe.io/graphql' }),
+                    stderr: '',
+                });
 
             await getEndpoint(
                 meshId,
@@ -245,11 +289,18 @@ describe('meshEndpoint', () => {
 
         it('should handle describe output with extra whitespace', async () => {
             const endpoint = 'https://test.adobe.io/graphql';
-            (mockCommandManager.execute as jest.Mock).mockResolvedValue({
-                code: 0,
-                stdout: `\n\n  ${JSON.stringify({ meshEndpoint: endpoint })}  \n\n`,
-                stderr: '',
-            });
+            // Mock plugin check first, then describe
+            (mockCommandManager.execute as jest.Mock)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: '@adobe/aio-cli-plugin-api-mesh',
+                    stderr: '',
+                })
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: `\n\n  ${JSON.stringify({ meshEndpoint: endpoint })}  \n\n`,
+                    stderr: '',
+                });
 
             const result = await getEndpoint(
                 meshId,
@@ -264,11 +315,18 @@ describe('meshEndpoint', () => {
 
         it('should handle describe output with multiple JSON objects', async () => {
             const endpoint = 'https://test.adobe.io/graphql';
-            (mockCommandManager.execute as jest.Mock).mockResolvedValue({
-                code: 0,
-                stdout: `Some text\n${JSON.stringify({ meshEndpoint: endpoint })}\nMore text`,
-                stderr: '',
-            });
+            // Mock plugin check first, then describe
+            (mockCommandManager.execute as jest.Mock)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: '@adobe/aio-cli-plugin-api-mesh',
+                    stderr: '',
+                })
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: `Some text\n${JSON.stringify({ meshEndpoint: endpoint })}\nMore text`,
+                    stderr: '',
+                });
 
             const result = await getEndpoint(
                 meshId,
@@ -282,11 +340,18 @@ describe('meshEndpoint', () => {
         });
 
         it('should warn if mesh data parsing fails', async () => {
-            (mockCommandManager.execute as jest.Mock).mockResolvedValue({
-                code: 0,
-                stdout: '{invalid json}',  // Has {} so regex matches, but JSON.parse will fail
-                stderr: '',
-            });
+            // Mock plugin check first, then describe with invalid JSON
+            (mockCommandManager.execute as jest.Mock)
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: '@adobe/aio-cli-plugin-api-mesh',
+                    stderr: '',
+                })
+                .mockResolvedValueOnce({
+                    code: 0,
+                    stdout: '{invalid json}',  // Has {} so regex matches, but JSON.parse will fail
+                    stderr: '',
+                });
 
             await getEndpoint(
                 meshId,

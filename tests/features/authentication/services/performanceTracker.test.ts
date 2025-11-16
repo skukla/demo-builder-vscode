@@ -77,14 +77,15 @@ describe('PerformanceTracker', () => {
 
     describe('endTiming', () => {
         it('should calculate duration and log', () => {
-            tracker.startTiming('operation');
+            // Use an operation that exceeds expected time to trigger logging
+            tracker.startTiming('isAuthenticated');
 
-            jest.advanceTimersByTime(500);
-            const duration = tracker.endTiming('operation');
+            jest.advanceTimersByTime(3000); // Exceeds 2500ms threshold
+            const duration = tracker.endTiming('isAuthenticated');
 
-            expect(duration).toBe(500);
+            expect(duration).toBe(3000);
             expect(mockDebug).toHaveBeenCalledWith(
-                '[Performance] operation took 500ms',
+                expect.stringContaining('[Performance] isAuthenticated took 3000ms'),
             );
         });
 
@@ -114,14 +115,13 @@ describe('PerformanceTracker', () => {
             );
         });
 
-        it('should not log warning for fast operations within threshold', () => {
+        it('should not log anything for fast operations within threshold', () => {
             tracker.startTiming('isAuthenticated');
             jest.advanceTimersByTime(2200);
             tracker.endTiming('isAuthenticated');
 
-            expect(mockDebug).toHaveBeenCalledWith(
-                expect.not.stringContaining('⚠️'),
-            );
+            // Fast operations (within threshold) should not log at all
+            expect(mockDebug).not.toHaveBeenCalled();
         });
 
         it('should use correct expected times for different operations', () => {
@@ -146,15 +146,14 @@ describe('PerformanceTracker', () => {
             });
         });
 
-        it('should NOT warn when isAuthenticated() takes 2200ms (within 2500ms threshold)', () => {
+        it('should NOT log when isAuthenticated() takes 2200ms (within 2500ms threshold)', () => {
             tracker.startTiming('isAuthenticated');
             jest.advanceTimersByTime(2200);
             const duration = tracker.endTiming('isAuthenticated');
 
             expect(duration).toBe(2200);
-            expect(mockDebug).toHaveBeenCalledWith(
-                '[Performance] isAuthenticated took 2200ms'
-            );
+            // Fast operations (within threshold) should not log at all
+            expect(mockDebug).not.toHaveBeenCalled();
         });
 
         it('should warn when isAuthenticated() exceeds 2500ms threshold', () => {
