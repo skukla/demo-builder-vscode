@@ -337,17 +337,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     public async execute(): Promise<void> {
         try {
             this.logger.info('[Project Creation] Initializing wizard interface...');
-            this.logger.debug(`[Project Creation] execute() called. Current panel: ${this.panel ? 'exists' : 'undefined'}, comm: ${this.communicationManager ? 'exists' : 'undefined'}`);
-            
+
             // Create or reveal panel
             await this.createOrRevealPanel();
-            
-            this.logger.debug(`[Project Creation] After createOrRevealPanel(). Panel: ${this.panel ? 'exists' : 'undefined'}, comm: ${this.communicationManager ? 'exists' : 'undefined'}`);
-            
+
             // Initialize communication only if not already initialized
             // (singleton pattern: panel might already exist with active communication)
             if (!this.communicationManager) {
-                this.logger.debug('[Project Creation] No communication manager, initializing...');
                 await this.initializeCommunication();
                 this.logger.debug('Wizard webview initialized with handshake protocol');
             } else {

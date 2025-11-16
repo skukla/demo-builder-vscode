@@ -107,25 +107,18 @@ export async function handleSelectProject(
         throw new Error(`Invalid project ID: ${toError(validationError).message}`);
     }
 
-    context.debugLogger.debug(`[Project] handleSelectProject called with projectId: ${projectId}`);
-
     try {
-        context.debugLogger.debug('[Project] About to call authManager.selectProject');
         // Directly select the project - we already have the projectId
         const success = await context.authManager?.selectProject(projectId);
 
-        context.debugLogger.debug(`[Project] authManager.selectProject returned: ${success}`);
-
         if (success) {
             context.logger.info(`Selected project: ${projectId}`);
-            context.debugLogger.debug('[Project] Project selection succeeded, about to send projectSelected message');
 
             // Ensure fresh workspace data after project change
             // (selectProject already clears workspace cache)
 
             try {
                 await context.sendMessage('projectSelected', { projectId });
-                context.debugLogger.debug('[Project] projectSelected message sent successfully');
             } catch (sendError) {
                 context.debugLogger.debug('[Project] Failed to send projectSelected message:', sendError);
                 throw new Error(`Failed to send project selection response: ${toError(sendError).message}`);

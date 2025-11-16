@@ -122,8 +122,6 @@ export class PrerequisitesManager {
         // Check cache first (Step 2: Prerequisite Caching)
         const cached = this.cacheManager.getCachedResult(prereq.id, nodeVersion);
         if (cached) {
-            const duration = Date.now() - startTime;
-            this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Cache hit in ${duration}ms`);
             return cached.data;
         }
 

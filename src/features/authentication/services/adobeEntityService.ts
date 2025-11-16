@@ -331,7 +331,6 @@ export class AdobeEntityService {
             let context = this.cacheManager.getCachedConsoleWhere();
 
             if (!context) {
-                this.debugLogger.debug('[Entity Service] Fetching organization data from Adobe CLI');
                 const result = await this.commandManager.executeAdobeCLI(
                     'aio console where --json',
                     { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
@@ -369,8 +368,6 @@ export class AdobeEntityService {
 
                         if (!cachedOrgList || cachedOrgList.length === 0) {
                             // No cached org list = likely post-login, fetch it now to resolve full org object
-                            this.debugLogger.debug('[Entity Service] Org list not cached, fetching to resolve org code');
-
                             try {
                                 // Fetch org list to get full org object with code (required for SDK operations)
                                 const orgs = await this.getOrganizations();
@@ -490,8 +487,6 @@ export class AdobeEntityService {
                 let projectData;
 
                 if (typeof context.project === 'string') {
-                    this.debugLogger.debug(`[Entity Service] Current project name: ${context.project}, fetching numeric ID...`);
-
                     try {
                         const projects = await this.getProjects();
                         const matchedProject = projects.find(p => p.name === context.project || p.title === context.project);

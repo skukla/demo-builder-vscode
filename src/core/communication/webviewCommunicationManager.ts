@@ -285,10 +285,6 @@ export class WebviewCommunicationManager {
      * Handle incoming message from webview
      */
     private async handleWebviewMessage(message: Message): Promise<void> {
-        if (this.config.enableLogging) {
-            this.logger.debug(`[WebviewComm] Received: ${message.type}`);
-        }
-
         // Handle special protocol messages
         if (message.type === '__webview_ready__') {
             const handler = this.messageHandlers.get('__webview_ready__');
