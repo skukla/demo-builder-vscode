@@ -130,7 +130,38 @@ describe('WizardContainer', () => {
         jest.clearAllMocks();
         jest.resetAllMocks();
         mockOnMessage.mockReturnValue(jest.fn());
-        mockRequest.mockResolvedValue({ success: true });
+
+        // Mock get-components-data request with proper response structure
+        mockRequest.mockImplementation((type: string) => {
+            if (type === 'get-components-data') {
+                return Promise.resolve({
+                    success: true,
+                    type: 'components-data',
+                    data: {
+                        frontends: [
+                            {
+                                id: 'citisignal-nextjs',
+                                name: 'CitiSignal Next.js',
+                                description: 'Frontend application',
+                                configuration: { services: [] }
+                            }
+                        ],
+                        backends: [
+                            {
+                                id: 'commerce-paas',
+                                name: 'Adobe Commerce PaaS',
+                                description: 'Backend platform',
+                                configuration: { services: [] }
+                            }
+                        ],
+                        dependencies: [],
+                        integrations: [],
+                        appBuilder: [],
+                    },
+                });
+            }
+            return Promise.resolve({ success: true });
+        });
     });
 
     afterEach(async () => {
@@ -141,6 +172,20 @@ describe('WizardContainer', () => {
     });
 
     describe('Happy Path - Wizard Orchestration', () => {
+        it('should load component data on mount', async () => {
+            render(
+                <WizardContainer
+                    componentDefaults={mockComponentDefaults}
+                    wizardSteps={mockWizardSteps}
+                />
+            );
+
+            // Wait for async component data loading
+            await waitFor(() => {
+                expect(mockRequest).toHaveBeenCalledWith('get-components-data');
+            });
+        });
+
         it('should render initial welcome step', () => {
             render(
                 <WizardContainer

@@ -145,7 +145,13 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [isConfirmingSelection, setIsConfirmingSelection] = useState(false);
-    const [componentsData, setComponentsData] = useState<import('@/types/components').ComponentRegistry | null>(null);
+
+    // Store response from get-components-data handler (includes full component data with envVars)
+    const [componentsData, setComponentsData] = useState<{
+        success: boolean;
+        type: string;
+        data: ComponentsData;
+    } | null>(null);
 
     // Listen for feedback messages from extension
     useEffect(() => {
@@ -208,20 +214,28 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     // Track whether we've already requested components (prevent double-load in StrictMode)
     const componentsRequestedRef = useRef(false);
 
-    // Listen for components data from extension
+    // Load full component data with envVars using request-response pattern
     useEffect(() => {
-        const unsubscribe = vscode.onMessage('componentsLoaded', (data: unknown) => {
-            // Type assertion: data is expected to be ComponentRegistry from extension
-            setComponentsData(data as import('@/types/components').ComponentRegistry);
-        });
-
-        // Request components when component mounts (guard prevents StrictMode double-load)
-        if (!componentsRequestedRef.current) {
+        const loadData = async () => {
+            if (componentsRequestedRef.current) {
+                return; // Prevent double-load in StrictMode
+            }
             componentsRequestedRef.current = true;
-            vscode.postMessage('loadComponents');
-        }
 
-        return unsubscribe;
+            try {
+                const response = await vscode.request<{
+                    success: boolean;
+                    type: string;
+                    data: ComponentsData;
+                }>('get-components-data');
+
+                setComponentsData(response);
+            } catch (error) {
+                console.error('[WizardContainer] Failed to load components data:', error);
+            }
+        };
+
+        loadData();
     }, []);
 
     const getCurrentStepIndex = useCallback(() => {
@@ -423,7 +437,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             case 'settings':
                 return <ComponentConfigStep {...props} />;
             case 'review':
-                return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.components as ComponentsData | undefined} />;
+                return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} />;
             case 'project-creation':
                 return <ProjectCreationStep state={state} onBack={goBack} />;
             default:
