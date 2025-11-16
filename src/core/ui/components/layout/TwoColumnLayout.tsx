@@ -70,7 +70,8 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
                 display: 'flex',
                 height: '100%',
                 width: '100%',
-                gap: translateSpectrumToken(gap)
+                gap: translateSpectrumToken(gap),
+                alignItems: 'stretch' // Ensure both columns stretch to full height
             }}
             className={className}
         >
@@ -80,8 +81,6 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
                     maxWidth: translateSpectrumToken(leftMaxWidth),
                     width: '100%',
                     padding: translateSpectrumToken(leftPadding),
-                    display: 'flex',
-                    flexDirection: 'column',
                     minWidth: 0 // Prevent flex shrinking issues
                 }}
             >

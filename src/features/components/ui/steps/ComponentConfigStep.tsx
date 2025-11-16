@@ -14,6 +14,7 @@ import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import React, { useEffect, useMemo, useState, useRef } from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
+import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '@/types/webview';
 import { vscode } from '@/core/ui/utils/vscode-api';
 
@@ -438,7 +439,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 // Within same section, only update navigation highlighting (no scroll)
                 const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
                 if (navFieldElement) {
-                    navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }
             }
         };
@@ -470,7 +471,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             setTimeout(() => {
                 const firstFieldElement = document.querySelector(`#field-${firstEditableField.key} input, #field-${firstEditableField.key} select`);
                 if (firstFieldElement instanceof HTMLElement) {
-                    firstFieldElement.focus();
+                    // Prevent scroll on initial focus to keep page at top
+                    firstFieldElement.focus({ preventScroll: true });
                 }
             }, 100);
         }
@@ -819,25 +821,17 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     };
 
     return (
-        <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0', overflow: 'hidden' }}>
-            {/* Left: Settings Configuration */}
-            <div style={{
-                maxWidth: '800px',
-                width: '100%',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                minWidth: 0,
-                overflow: 'hidden',
-            }}>
-                <Heading level={2} marginBottom="size-300">Settings Collection</Heading>
-                <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
-                    Configure the settings for your selected components. Required fields are marked with an asterisk.
-                </Text>
+        <TwoColumnLayout
+            leftContent={
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                    <Heading level={2} marginBottom="size-300">Settings Collection</Heading>
+                    <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
+                        Configure the settings for your selected components. Required fields are marked with an asterisk.
+                    </Text>
 
                 {isLoading ? (
-                    <Flex justifyContent="center" alignItems="center" height="350px">
-                        <LoadingDisplay 
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+                        <LoadingDisplay
                             size="L"
                             message="Loading component configurations..."
                         />
@@ -883,20 +877,12 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         })}
                     </Form>
                 )}
-            </div>
-            
-                {/* Right: Navigation Panel */}
-                <div style={{
-                    flex: '1',
-                    padding: '24px',
-                    backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                    borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden',
-                }}>
+                </div>
+            }
+            rightContent={
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                     <Heading level={3} marginBottom="size-200">Configuration</Heading>
-                    
+
                     <Flex direction="column" gap="size-150" UNSAFE_style={{ overflowY: 'auto', flex: 1 }}>
                         {serviceGroups.map((group) => {
                             const completion = getSectionCompletion(group);
@@ -1004,7 +990,8 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         );
                     })}
                 </Flex>
-            </div>
-        </div>
+                </div>
+            }
+        />
     );
 }

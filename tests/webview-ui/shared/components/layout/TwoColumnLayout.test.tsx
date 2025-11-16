@@ -173,9 +173,15 @@ describe('TwoColumnLayout', () => {
       const leftColumn = flexContainer.childNodes[0] as HTMLDivElement;
       const rightColumn = flexContainer.childNodes[1] as HTMLDivElement;
 
+      // Parent container is flex for horizontal layout
       expect(flexContainer.style.display).toBe('flex');
-      expect(leftColumn.style.display).toBe('flex');
-      expect(leftColumn.style.flexDirection).toBe('column');
+
+      // Left column is plain block container (not flex) to match SingleColumnLayout
+      // This ensures consistent content spacing across all wizard steps
+      expect(leftColumn.style.display).toBe('');
+      expect(leftColumn.style.flexDirection).toBe('');
+
+      // Right column is flexible to fill remaining space
       // Flex value may be '1' or '1 1 0%' depending on browser normalization
       expect(rightColumn.style.flex).toMatch(/^1/);
     });
