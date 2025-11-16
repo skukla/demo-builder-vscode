@@ -1,14 +1,33 @@
 import { renderHook, act } from '@testing-library/react';
 import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 
+/**
+ * Tests for useFocusTrap hook
+ *
+ * Coverage:
+ * - ✅ Basic initialization and ref management
+ * - ✅ Auto-focus functionality
+ * - ✅ Tab/Shift+Tab navigation trapping
+ * - ✅ Focusable element detection (disabled, tabindex, custom selectors)
+ * - ✅ Enable/disable toggling
+ * - ✅ Cleanup on unmount
+ * - ✅ Edge cases (empty container, single element, missing ref)
+ * - ✅ Real-world scenarios (modal-like structures)
+ *
+ * Future enhancements (not yet tested):
+ * - containFocus option (focus escape prevention via focusin listener)
+ * - MutationObserver behavior (dynamic DOM changes)
+ * - Development warnings for empty containers
+ */
 describe('useFocusTrap', () => {
   let container: HTMLDivElement;
   let button1: HTMLButtonElement;
   let button2: HTMLButtonElement;
   let button3: HTMLButtonElement;
 
-  // Helper to wait for the polling cycle to detect ref attachment
-  const waitForPolling = () => new Promise(resolve => setTimeout(resolve, 20));
+  // Helper to wait for effect execution (useLayoutEffect runs synchronously, but this provides safety margin)
+  // Note: Previously used for polling-based implementation; now used as safety delay for async test execution
+  const waitForEffectExecution = () => new Promise(resolve => setTimeout(resolve, 20));
 
   beforeEach(() => {
     // Create test DOM structure
@@ -62,8 +81,8 @@ describe('useFocusTrap', () => {
       // @ts-ignore - mocking ref
       result.current.current = container;
 
-      // Wait for polling to detect ref attachment and auto-focus
-      await waitForPolling();
+      // Wait for effect to execute
+      await waitForEffectExecution();
 
       // The effect should have auto-focused the first button
       expect(document.activeElement).toBe(button1);
@@ -99,8 +118,8 @@ describe('useFocusTrap', () => {
       // @ts-ignore - mocking ref
       result.current.current = container;
 
-      // Wait for polling to detect ref attachment
-      await waitForPolling();
+      // Wait for effect to execute
+      await waitForEffectExecution();
 
       // Focus last button
       button3.focus();
@@ -131,8 +150,8 @@ describe('useFocusTrap', () => {
       // @ts-ignore - mocking ref
       result.current.current = container;
 
-      // Wait for polling to detect ref attachment
-      await waitForPolling();
+      // Wait for effect to execute
+      await waitForEffectExecution();
 
       // Focus first button
       button1.focus();
@@ -285,8 +304,8 @@ describe('useFocusTrap', () => {
       // Enable
       rerender({ enabled: true });
 
-      // Wait for polling to detect ref attachment now that it's enabled
-      await waitForPolling();
+      // Wait for effect to execute now that it's enabled
+      await waitForEffectExecution();
 
       // Now should trap
       button3.focus();
@@ -359,8 +378,8 @@ describe('useFocusTrap', () => {
       // @ts-ignore - mocking ref
       result.current.current = container;
 
-      // Wait for polling to detect ref attachment
-      await waitForPolling();
+      // Wait for effect to execute
+      await waitForEffectExecution();
 
       singleButton.focus();
 
@@ -420,8 +439,8 @@ describe('useFocusTrap', () => {
       // @ts-ignore - mocking ref
       result.current.current = container;
 
-      // Wait for polling to detect ref attachment
-      await waitForPolling();
+      // Wait for effect to execute
+      await waitForEffectExecution();
 
       // Focus last button (Confirm)
       confirmButton.focus();
