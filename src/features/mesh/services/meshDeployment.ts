@@ -55,10 +55,11 @@ export async function deployMeshComponent(
         // Always use 'update' during project creation since mesh was already created in wizard
         logger.info('[Deploy Mesh] Updating mesh with configuration from commerce-mesh component');
         const deployResult = await commandManager.execute(
-            `aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
+            `aio api-mesh:update "${meshConfigPath}" --autoConfirmAction`,
             {
                 cwd: componentPath, // Run from mesh component directory (where .env file is)
                 streaming: true,
+                shell: true, // Required for command string with arguments and quoted paths
                 timeout: TIMEOUTS.API_MESH_UPDATE,
                 onOutput: (data: string) => {
                     const output = data.toLowerCase();

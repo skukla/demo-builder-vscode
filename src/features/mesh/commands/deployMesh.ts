@@ -141,10 +141,11 @@ export class DeployMeshCommand extends BaseCommand {
                     
                         const commandManager = ServiceLocator.getCommandExecutor();
                         const updateResult = await commandManager.execute(
-                            `aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
+                            `aio api-mesh:update "${meshConfigPath}" --autoConfirmAction`,
                             {
                                 cwd: meshComponent.path, // Run from mesh component directory (where .env file is)
                                 streaming: true,
+                                shell: true, // Required for command string with arguments and quoted paths
                                 timeout: TIMEOUTS.API_MESH_UPDATE,
                                 onOutput: (data: string) => {
                                     // Write detailed streaming output to main logs

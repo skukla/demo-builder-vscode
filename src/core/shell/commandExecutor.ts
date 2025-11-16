@@ -81,7 +81,9 @@ export class CommandExecutor {
      */
     private async executeInternal(command: string, options: ExecuteOptions): Promise<CommandResult> {
         let finalCommand = command;
-        const finalOptions: ExecOptions = { ...options };
+        // Type assertion needed because ExecuteOptions.shell supports boolean, but ExecOptions.shell only supports string
+        // Node.js spawn actually supports both, so this is safe
+        const finalOptions: ExecOptions = { ...options } as ExecOptions;
 
         // Step 1: Handle telemetry configuration for Adobe CLI
         // Skip telemetry configuration for version checks (AIO CLI might not be installed yet)

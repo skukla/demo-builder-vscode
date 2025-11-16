@@ -161,9 +161,10 @@ export async function handleCreateApiMesh(
                 // Update the existing mesh to ensure proper deployment
                 try {
                     const updateResult = await commandManager.execute(
-                        `aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
+                        `aio api-mesh:update "${meshConfigPath}" --autoConfirmAction`,
                         {
                             streaming: true,
+                            shell: true, // Required for command string with arguments and quoted paths
                             timeout: TIMEOUTS.API_MESH_UPDATE,
                             onOutput: (data: string) => {
                                 const output = data.toLowerCase();

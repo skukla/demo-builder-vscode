@@ -39,8 +39,9 @@ export interface PollOptions {
 
 /**
  * Unified command execution options
+ * Omits 'shell' from ExecOptions to override with correct type (boolean | string)
  */
-export interface ExecuteOptions extends ExecOptions {
+export interface ExecuteOptions extends Omit<ExecOptions, 'shell'> {
     // Environment setup
     useNodeVersion?: string | 'auto' | null;  // Use specific Node version ('auto' for Adobe CLI detection, null to skip)
     enhancePath?: boolean;                     // Add npm global paths to PATH
@@ -49,6 +50,7 @@ export interface ExecuteOptions extends ExecOptions {
     // Execution mode
     streaming?: boolean;                       // Stream output in real-time
     exclusive?: string;                        // Resource name for mutual exclusion
+    shell?: boolean | string;                  // Use shell for execution (overrides ExecOptions to support boolean)
 
     // Retry & timeout
     retryStrategy?: RetryStrategy;             // Custom retry logic
