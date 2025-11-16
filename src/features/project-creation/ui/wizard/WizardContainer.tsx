@@ -20,6 +20,7 @@ import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import { useFocusTrap } from '@/core/ui/hooks';
 
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;
@@ -30,12 +31,6 @@ interface WizardContainerProps {
 // Note: UI animation timings kept local (not in @/core/utils/timeoutConfig)
 // because they're tied to CSS transitions, not backend operation timeouts
 const STEP_TRANSITION_DURATION_MS = 300; // Matches CSS transition in <style> block
-const FOCUSABLE_ELEMENTS_SELECTOR =
-    'button:not([disabled]):not([tabindex="-1"]), ' +
-    'input:not([disabled]):not([tabindex="-1"]), ' +
-    'select:not([disabled]):not([tabindex="-1"]), ' +
-    'textarea:not([disabled]):not([tabindex="-1"]), ' +
-    '[tabindex]:not([tabindex="-1"]):not([tabindex="0"])';
 
 const LOADING_OVERLAY_STYLES = {
     container: {
@@ -145,6 +140,13 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [isConfirmingSelection, setIsConfirmingSelection] = useState(false);
+
+    // Focus trap for keyboard navigation (replaces manual implementation)
+    const wizardContainerRef = useFocusTrap<HTMLDivElement>({
+        enabled: true,
+        autoFocus: false,  // Wizard steps manage their own focus
+        containFocus: true,  // Prevent escape (WCAG 2.1 AA)
+    });
 
     // Store response from get-components-data handler (includes full component data with envVars)
     const [componentsData, setComponentsData] = useState<{
@@ -376,39 +378,6 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         setState(prev => ({ ...prev, ...updates }));
     }, []);
 
-    // Focus trap for tab navigation
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Tab') {
-                // Get all focusable elements within the wizard
-                const focusableElements = document.querySelectorAll(FOCUSABLE_ELEMENTS_SELECTOR);
-
-                const focusableArray = Array.from(focusableElements);
-                if (focusableArray.length === 0) return;
-
-                const currentIndex = focusableArray.indexOf(document.activeElement as HTMLElement);
-
-                e.preventDefault(); // Prevent default tab behavior
-
-                if (e.shiftKey) {
-                    // Shift+Tab - go backwards
-                    const nextIndex = currentIndex <= 0 ? focusableArray.length - 1 : currentIndex - 1;
-                    (focusableArray[nextIndex] as HTMLElement).focus();
-                } else {
-                    // Tab - go forwards
-                    const nextIndex = currentIndex >= focusableArray.length - 1 ? 0 : currentIndex + 1;
-                    (focusableArray[nextIndex] as HTMLElement).focus();
-                }
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-
-        return () => {
-            document.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [state.currentStep]);
-
     const renderStep = () => {
         const props = {
             state,
@@ -466,7 +435,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             height="100vh"
             UNSAFE_className={cn('flex', 'overflow-hidden')}
         >
-            <div style={{ display: 'flex', height: '100%', width: '100%' }}>
+            <div ref={wizardContainerRef as any} style={{ display: 'flex', height: '100%', width: '100%' }}>
                 {/* Timeline Navigation */}
                 <View 
                     width="size-3000" 

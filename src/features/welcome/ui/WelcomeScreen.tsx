@@ -24,6 +24,7 @@ export function WelcomeScreen(_props: WelcomeScreenProps) {
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
         autoFocus: true,
+        containFocus: true,  // Prevent focus escape (WCAG 2.1 AA)
     });
 
     // Action handlers with useCallback
@@ -80,7 +81,6 @@ export function WelcomeScreen(_props: WelcomeScreenProps) {
                             onPress={handleCreateNew}
                             isQuiet
                             UNSAFE_className="welcome-action-card"
-                            autoFocus
                         >
                             <View UNSAFE_className={cn('mb-5', 'scale-180')}>
                                 <Add size="L" UNSAFE_className="text-blue-600" />

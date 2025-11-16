@@ -1,4 +1,4 @@
-import { useEffect, useRef, RefObject } from 'react';
+import { useLayoutEffect, useRef, RefObject } from 'react';
 
 interface UseFocusTrapOptions {
   /** Enable/disable the focus trap */
@@ -7,6 +7,8 @@ interface UseFocusTrapOptions {
   autoFocus?: boolean;
   /** Custom selector for focusable elements */
   focusableSelector?: string;
+  /** Enable focus containment (prevents focus escape) */
+  containFocus?: boolean;
 }
 
 const DEFAULT_FOCUSABLE_SELECTOR =
@@ -21,11 +23,12 @@ const DEFAULT_FOCUSABLE_SELECTOR =
  *
  * Prevents Tab navigation from escaping the container.
  * Useful for modals, wizards, and dashboard components.
- * Extracted from WizardContainer and project-dashboard.
  *
- * **Note**: This hook uses a polling approach to detect when the ref is attached.
- * In tests, you should manually trigger the effect by setting the ref and waiting
- * for the next event loop iteration.
+ * **Improvements in v2**:
+ * - Uses useLayoutEffect instead of polling (synchronous with React rendering)
+ * - Adds focus containment to prevent escape
+ * - Caches focusable elements for better performance
+ * - Adds development warnings for debugging
  *
  * @param options - Configuration options
  * @returns Ref to attach to the container element
@@ -34,7 +37,8 @@ const DEFAULT_FOCUSABLE_SELECTOR =
  * ```tsx
  * const containerRef = useFocusTrap({
  *   enabled: isOpen,
- *   autoFocus: true
+ *   autoFocus: true,
+ *   containFocus: true
  * });
  *
  * return (
@@ -52,86 +56,119 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   const {
     enabled = true,
     autoFocus = false,
-    focusableSelector = DEFAULT_FOCUSABLE_SELECTOR
+    focusableSelector = DEFAULT_FOCUSABLE_SELECTOR,
+    containFocus = true
   } = options;
 
   const containerRef = useRef<T>(null);
-  const hasAttachedRef = useRef(false);
-  const cleanupRef = useRef<(() => void) | null>(null);
+  const focusableElementsCacheRef = useRef<HTMLElement[]>([]);
+  const observerRef = useRef<MutationObserver | null>(null);
 
-  useEffect(() => {
-    if (!enabled) return;
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!enabled || !container) return;
 
-    // Poll for ref attachment every 16ms (one animation frame)
-    const intervalId = setInterval(() => {
-      const container = containerRef.current;
-
-      // Skip if ref not attached yet
-      if (!container) return;
-
-      // Skip if already attached
-      if (hasAttachedRef.current) return;
-
-      // Mark as attached
-      hasAttachedRef.current = true;
-
-      // Clear interval
-      clearInterval(intervalId);
-
-      // Get all focusable elements
-      const getFocusableElements = (): HTMLElement[] => {
-        const elements = container.querySelectorAll(focusableSelector);
-        return Array.from(elements) as HTMLElement[];
-      };
-
-      // Auto-focus first element if requested
-      if (autoFocus) {
-        const focusableElements = getFocusableElements();
-        if (focusableElements.length > 0) {
-          focusableElements[0].focus();
-        }
-      }
-
-      // Handle Tab key to trap focus
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key !== 'Tab') return;
-
-        const focusableElements = getFocusableElements();
-        if (focusableElements.length === 0) return;
-
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
-        const activeElement = document.activeElement as HTMLElement;
-
-        // Shift+Tab on first element: go to last
-        if (e.shiftKey && activeElement === firstElement) {
-          e.preventDefault();
-          lastElement.focus();
-        }
-        // Tab on last element: go to first
-        else if (!e.shiftKey && activeElement === lastElement) {
-          e.preventDefault();
-          firstElement.focus();
-        }
-      };
-
-      container.addEventListener('keydown', handleKeyDown);
-
-      // Store cleanup function
-      cleanupRef.current = () => {
-        container.removeEventListener('keydown', handleKeyDown);
-      };
-    }, 16);
-
-    return () => {
-      clearInterval(intervalId);
-      if (cleanupRef.current) {
-        cleanupRef.current();
-        cleanupRef.current = null;
-      }
-      hasAttachedRef.current = false;
+    // Get all focusable elements
+    const getFocusableElements = (): HTMLElement[] => {
+      const elements = container.querySelectorAll(focusableSelector);
+      return Array.from(elements) as HTMLElement[];
     };
-  }, [enabled, autoFocus, focusableSelector]);
+
+    // Update cache
+    const updateCache = () => {
+      focusableElementsCacheRef.current = getFocusableElements();
+
+      // Development warning
+      if (process.env.NODE_ENV === 'development' && focusableElementsCacheRef.current.length === 0) {
+        console.warn('[useFocusTrap] No focusable elements found in container');
+      }
+    };
+
+    // Initial cache update
+    updateCache();
+
+    // Auto-focus first element if requested
+    if (autoFocus && focusableElementsCacheRef.current.length > 0) {
+      focusableElementsCacheRef.current[0].focus();
+    }
+
+    // Observe DOM changes to invalidate cache
+    observerRef.current = new MutationObserver(() => {
+      updateCache();
+    });
+
+    observerRef.current.observe(container, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['disabled', 'tabindex']
+    });
+
+    // Handle Tab key to trap focus
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+
+      const focusableElements = focusableElementsCacheRef.current;
+      if (focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement as HTMLElement;
+
+      // Only trap if focus is within container
+      if (!container.contains(activeElement)) return;
+
+      // Shift+Tab on first element: go to last
+      if (e.shiftKey && activeElement === firstElement) {
+        e.preventDefault();
+        lastElement.focus();
+      }
+      // Tab on last element: go to first
+      else if (!e.shiftKey && activeElement === lastElement) {
+        e.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    // Focus containment: prevent focus from escaping
+    const handleFocusIn = (e: FocusEvent) => {
+      if (!containFocus) return;
+
+      const target = e.target as Node;
+      const focusableElements = focusableElementsCacheRef.current;
+
+      // If focus moved outside container, bring it back
+      if (!container.contains(target) && focusableElements.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        focusableElements[0].focus();
+      }
+    };
+
+    // Use scoped listener on container for Tab
+    container.addEventListener('keydown', handleKeyDown);
+
+    // Use global listener for focus containment (capture phase)
+    if (containFocus) {
+      document.addEventListener('focusin', handleFocusIn, true);
+    }
+
+    // Cleanup
+    return () => {
+      container.removeEventListener('keydown', handleKeyDown);
+
+      if (containFocus) {
+        document.removeEventListener('focusin', handleFocusIn, true);
+      }
+
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+
+      focusableElementsCacheRef.current = [];
+    };
+  }, [enabled, autoFocus, focusableSelector, containFocus]);
 
   return containerRef as RefObject<T>;
 }
