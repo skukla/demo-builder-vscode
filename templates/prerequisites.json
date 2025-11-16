@@ -160,7 +160,7 @@
               }
             ]
           },
-          "requiredFor": ["commerce-mesh"]
+          "requiredFor": ["commerce-mesh", "adobe-commerce-paas", "adobe-commerce-saas"]
         }
       ]
     },
