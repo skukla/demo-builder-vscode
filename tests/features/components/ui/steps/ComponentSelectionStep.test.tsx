@@ -33,7 +33,7 @@ describe('ComponentSelectionStep', () => {
             { id: 'adobe-commerce-paas', name: 'Adobe Commerce PaaS', description: 'Commerce DSN' }
         ],
         integrations: [
-            { id: 'target', name: 'Target', description: 'Adobe Target' }
+            { id: 'experience-platform', name: 'Experience Platform', description: 'Adobe Experience Platform' }
         ],
         appBuilder: [
             { id: 'integration-service', name: 'Integration Service', description: 'Custom service' }
@@ -314,9 +314,9 @@ describe('ComponentSelectionStep', () => {
                 </Provider>
             );
 
-            const targetCheckbox = screen.getByLabelText('Target');
-            expect(targetCheckbox).toBeInTheDocument();
-            expect(targetCheckbox).not.toBeChecked();
+            const platformCheckbox = screen.getByLabelText('Experience Platform');
+            expect(platformCheckbox).toBeInTheDocument();
+            expect(platformCheckbox).not.toBeChecked();
         });
 
         it('should allow selecting app builder apps', () => {
@@ -437,7 +437,7 @@ describe('ComponentSelectionStep', () => {
                     backend: 'adobe-commerce-paas',
                     dependencies: ['commerce-mesh'],
                     services: ['catalog-service', 'live-search'],
-                    integrations: ['target'],
+                    integrations: ['experience-platform'],
                     appBuilderApps: ['integration-service']
                 }
             };
@@ -453,10 +453,10 @@ describe('ComponentSelectionStep', () => {
                 </Provider>
             );
 
-            const targetCheckbox = screen.getByLabelText('Target');
+            const platformCheckbox = screen.getByLabelText('Experience Platform');
             const appCheckbox = screen.getByLabelText('Integration Service');
 
-            expect(targetCheckbox).toBeChecked();
+            expect(platformCheckbox).toBeChecked();
             expect(appCheckbox).toBeChecked();
         });
 

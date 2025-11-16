@@ -17,6 +17,7 @@ import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectio
 import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
 import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { WizardState, Workspace, WizardStep } from '@/types/webview';
 
 interface AdobeWorkspaceStepProps {
@@ -96,21 +97,15 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
     }, [state.adobeWorkspace, setCanProceed]);
 
     return (
-        <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0' }}>
-            {/* Left: Workspace Selection - constrained to 800px like other steps */}
-            <div style={{
-                maxWidth: '800px',
-                width: '100%',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-            }}>
-                <Heading level={2} marginBottom="size-300">
-                    Select Workspace
-                </Heading>
+        <TwoColumnLayout
+            leftContent={
+                <>
+                    <Heading level={2} marginBottom="size-300">
+                        Select Workspace
+                    </Heading>
 
                 {showLoading || (isLoading && !hasLoadedOnce) ? (
-                    <Flex justifyContent="center" alignItems="center" height="350px">
+                    <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                         <LoadingDisplay
                             size="L"
                             message="Loading workspaces..."
@@ -240,17 +235,11 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                         </div>
                     </>
                 )}
-            </div>
-
-            {/* Right: Summary Panel - positioned after main content */}
-            <div style={{
-                flex: '1',
-                padding: '24px',
-                backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
-            }}>
+                </>
+            }
+            rightContent={
                 <ConfigurationSummary state={state} completedSteps={completedSteps} currentStep={state.currentStep} />
-            </div>
-        </div>
+            }
+        />
     );
 }

@@ -136,11 +136,6 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     // External Systems options from componentsData
     const integrationsOptions = dataTyped.integrations || [
         {
-            id: 'target',
-            name: 'Target',
-            description: 'Adobe Target for personalization',
-        },
-        {
             id: 'experience-platform',
             name: 'Experience Platform',
             description: 'Adobe Experience Platform integration',

@@ -24,7 +24,7 @@ describe('ReviewStep', () => {
         ],
         integrations: [
             { id: 'aem', name: 'Adobe Experience Manager', description: 'AEM integration' },
-            { id: 'target', name: 'Adobe Target', description: 'Target integration' }
+            { id: 'experience-platform', name: 'Adobe Experience Platform', description: 'Experience Platform integration' }
         ],
         appBuilder: [
             { id: 'custom-app-1', name: 'Custom App 1', description: 'Custom app' },
@@ -291,7 +291,7 @@ describe('ReviewStep', () => {
                 ...completeState,
                 components: {
                     ...completeState.components!,
-                    integrations: ['aem', 'target'],
+                    integrations: ['aem', 'experience-platform'],
                 },
             };
 
@@ -308,7 +308,7 @@ describe('ReviewStep', () => {
 
             // Integrations should be listed by their display names
             expect(screen.getByText('Adobe Experience Manager')).toBeInTheDocument();
-            expect(screen.getByText('Adobe Target')).toBeInTheDocument();
+            expect(screen.getByText('Adobe Experience Platform')).toBeInTheDocument();
         });
 
         it('should display App Builder apps when selected', () => {

@@ -3,6 +3,7 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState } from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { WizardState } from '@/types/webview';
 import { vscode } from '@/core/ui/utils/vscode-api';
 
@@ -39,13 +40,13 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
             {/* Main content area */}
             <div style={{ flex: 1, display: 'flex', width: '100%' }}>
-                <div style={{ maxWidth: '800px', width: '100%', padding: '24px' }}>
-            <Heading level={2} marginBottom="size-300">
-                Creating Your Demo Project
-            </Heading>
-            <Text marginBottom="size-400">
-                Setting up your project with all selected components and configurations.
-            </Text>
+                <SingleColumnLayout>
+                    <Heading level={2} marginBottom="size-300">
+                        Creating Your Demo Project
+                    </Heading>
+                    <Text marginBottom="size-400">
+                        Setting up your project with all selected components and configurations.
+                    </Text>
 
             {/* Active creation state - matches ApiMeshStep loading pattern (no buttons) */}
             {isActive && (
@@ -112,14 +113,14 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                 {/* Initial loading state (before progress updates arrive) */}
                 {!progress && (
                     <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                        <LoadingDisplay 
+                        <LoadingDisplay
                             size="L"
                             message="Initializing"
                             subMessage="Preparing to create your project..."
                         />
                     </Flex>
                 )}
-                </div>
+                </SingleColumnLayout>
             </div>
 
             {/* Footer - matches WizardContainer footer pattern */}

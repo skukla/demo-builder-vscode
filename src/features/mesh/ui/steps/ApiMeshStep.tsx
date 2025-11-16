@@ -8,6 +8,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
 import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
 import { WizardState, WizardStep } from '@/types/webview';
@@ -159,20 +160,13 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
     }, []); // Only run on mount
 
     return (
-        <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0' }}>
-            {/* Left: Verification content area (max 800px) */}
-            <div style={{
-                maxWidth: '800px',
-                width: '100%',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                minWidth: 0,
-            }}>
-                <Heading level={2} marginBottom="size-300">API Mesh</Heading>
-                <Text marginBottom="size-400">
-                    Verifying API Mesh API availability for your selected workspace.
-                </Text>
+        <TwoColumnLayout
+            leftContent={
+                <>
+                    <Heading level={2} marginBottom="size-300">API Mesh</Heading>
+                    <Text marginBottom="size-400">
+                        Verifying API Mesh API availability for your selected workspace.
+                    </Text>
 
                 {isChecking ? (
                     <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
@@ -466,18 +460,12 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                         </Flex>
                     </Flex>
                 )}
-            </div>
-
-            {/* Right: Summary Panel - positioned after main content */}
-            <div style={{
-                flex: '1',
-                padding: '24px',
-                backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
-            }}>
+                </>
+            }
+            rightContent={
                 <ConfigurationSummary state={state} completedSteps={completedSteps} currentStep={state.currentStep} />
-            </div>
-        </div>
+            }
+        />
     );
 }
 
