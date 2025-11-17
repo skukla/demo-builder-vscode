@@ -8,6 +8,7 @@ import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
  * - ✅ Basic initialization and ref management
  * - ✅ Auto-focus functionality
  * - ✅ Tab/Shift+Tab navigation trapping
+ * - ✅ Tab from outside container (redirects to first/last element)
  * - ✅ Focusable element detection (disabled, tabindex, custom selectors)
  * - ✅ Enable/disable toggling
  * - ✅ Cleanup on unmount
@@ -189,6 +190,77 @@ describe('useFocusTrap', () => {
       container.dispatchEvent(enterEvent);
 
       expect(preventDefaultSpy).not.toHaveBeenCalled();
+    });
+
+    it('redirects Tab from outside container to first element', async () => {
+      const { result } = renderHook(() => useFocusTrap({ enabled: true }));
+
+      // @ts-ignore - mocking ref
+      result.current.current = container;
+
+      // Wait for effect to execute
+      await waitForEffectExecution();
+
+      // Create external element and focus it
+      const externalButton = document.createElement('button');
+      externalButton.textContent = 'External';
+      document.body.appendChild(externalButton);
+      externalButton.focus();
+      expect(document.activeElement).toBe(externalButton);
+
+      // Create Tab key event from outside container
+      const tabEvent = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        bubbles: true,
+        cancelable: true
+      });
+
+      const preventDefaultSpy = jest.spyOn(tabEvent, 'preventDefault');
+
+      // Dispatch on document (simulates global Tab press)
+      document.dispatchEvent(tabEvent);
+
+      // Should have prevented default (indicating it was handled)
+      expect(preventDefaultSpy).toHaveBeenCalled();
+
+      // Cleanup
+      document.body.removeChild(externalButton);
+    });
+
+    it('redirects Shift+Tab from outside container to last element', async () => {
+      const { result } = renderHook(() => useFocusTrap({ enabled: true }));
+
+      // @ts-ignore - mocking ref
+      result.current.current = container;
+
+      // Wait for effect to execute
+      await waitForEffectExecution();
+
+      // Create external element and focus it
+      const externalButton = document.createElement('button');
+      externalButton.textContent = 'External';
+      document.body.appendChild(externalButton);
+      externalButton.focus();
+      expect(document.activeElement).toBe(externalButton);
+
+      // Create Shift+Tab key event from outside container
+      const shiftTabEvent = new KeyboardEvent('keydown', {
+        key: 'Tab',
+        shiftKey: true,
+        bubbles: true,
+        cancelable: true
+      });
+
+      const preventDefaultSpy = jest.spyOn(shiftTabEvent, 'preventDefault');
+
+      // Dispatch on document (simulates global Shift+Tab press)
+      document.dispatchEvent(shiftTabEvent);
+
+      // Should have prevented default (indicating it was handled)
+      expect(preventDefaultSpy).toHaveBeenCalled();
+
+      // Cleanup
+      document.body.removeChild(externalButton);
     });
   });
 

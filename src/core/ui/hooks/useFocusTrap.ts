@@ -21,7 +21,8 @@ const DEFAULT_FOCUSABLE_SELECTOR =
 /**
  * Hook for trapping keyboard focus within a container
  *
- * Prevents Tab navigation from escaping the container.
+ * Prevents Tab navigation from escaping the container and redirects
+ * Tab presses from outside the container to enter it.
  * Useful for modals, wizards, and dashboard components.
  *
  * **Improvements in v2**:
@@ -29,6 +30,11 @@ const DEFAULT_FOCUSABLE_SELECTOR =
  * - Adds focus containment to prevent escape
  * - Caches focusable elements for better performance
  * - Adds development warnings for debugging
+ *
+ * **Improvements in v3**:
+ * - Handles Tab from outside container (redirects to first/last element)
+ * - Uses global keydown listener to catch Tab from anywhere
+ * - Ensures keyboard navigation always enters webview
  *
  * @param options - Configuration options
  * @returns Ref to attach to the container element
@@ -115,9 +121,20 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       const lastElement = focusableElements[focusableElements.length - 1];
       const activeElement = document.activeElement as HTMLElement;
 
-      // Only trap if focus is within container
-      if (!container.contains(activeElement)) return;
+      // If focus is outside container, redirect Tab to first/last element
+      if (!container.contains(activeElement)) {
+        e.preventDefault();
+        if (e.shiftKey) {
+          // Shift+Tab from outside: go to last element
+          lastElement.focus();
+        } else {
+          // Tab from outside: go to first element
+          firstElement.focus();
+        }
+        return;
+      }
 
+      // Focus is inside container: wrap at boundaries
       // Shift+Tab on first element: go to last
       if (e.shiftKey && activeElement === firstElement) {
         e.preventDefault();
@@ -145,8 +162,8 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       }
     };
 
-    // Use scoped listener on container for Tab
-    container.addEventListener('keydown', handleKeyDown);
+    // Use global listener for Tab to catch presses from outside container
+    document.addEventListener('keydown', handleKeyDown, true);
 
     // Use global listener for focus containment (capture phase)
     if (containFocus) {
@@ -155,7 +172,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
 
     // Cleanup
     return () => {
-      container.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
 
       if (containFocus) {
         document.removeEventListener('focusin', handleFocusIn, true);
