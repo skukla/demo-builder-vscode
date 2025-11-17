@@ -148,6 +148,9 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         containFocus: true,  // Prevent escape (WCAG 2.1 AA)
     });
 
+    // Ref for step content area (to focus first element when step changes)
+    const stepContentRef = useRef<HTMLDivElement>(null);
+
     // Store response from get-components-data handler (includes full component data with envVars)
     const [componentsData, setComponentsData] = useState<{
         success: boolean;
@@ -209,6 +212,29 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
         return unsubscribe;
     }, []);
+
+    // Auto-focus first element in step content when step changes
+    useEffect(() => {
+        // Small delay to let step render and transition complete
+        const timer = setTimeout(() => {
+            if (!stepContentRef.current) return;
+
+            // Find first focusable element in step content (exclude footer buttons)
+            const focusableSelector =
+                'button:not([disabled]):not([tabindex="-1"]), ' +
+                'input:not([disabled]):not([tabindex="-1"]), ' +
+                'select:not([disabled]):not([tabindex="-1"]), ' +
+                'textarea:not([disabled]):not([tabindex="-1"]), ' +
+                '[tabindex]:not([tabindex="-1"])';
+
+            const focusableElements = stepContentRef.current.querySelectorAll(focusableSelector);
+            if (focusableElements.length > 0) {
+                (focusableElements[0] as HTMLElement).focus();
+            }
+        }, 150); // Wait for step transition animation
+
+        return () => clearTimeout(timer);
+    }, [state.currentStep]);
 
     // Note: We no longer auto-close the wizard on success
     // The ProjectCreationStep has Browse Files and Close buttons instead
@@ -468,6 +494,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
                     {/* Step Content */}
                     <div
+                        ref={stepContentRef}
                         style={{ width: '100%', height: '100%', overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}
                     >
                         <div
