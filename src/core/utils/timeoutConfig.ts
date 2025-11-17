@@ -46,6 +46,11 @@ export const TIMEOUTS = {
     // Webview lifecycle timeouts
     WEBVIEW_TRANSITION: 3000,       // 3 seconds - webview transition tracking (prevents race conditions)
 
+    // UI timing delays
+    STEP_TRANSITION: 300,           // Step transition animation duration (matches CSS)
+    STEP_CONTENT_FOCUS: 300,        // Delay before focusing step content (allows Spectrum components to mount)
+    SCROLL_ANIMATION: 150,          // Scroll animation delay for UI smoothness
+
     // Default fallbacks
     COMMAND_DEFAULT: 30000,         // Default command timeout
 } as const;

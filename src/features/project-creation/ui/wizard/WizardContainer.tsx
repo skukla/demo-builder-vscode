@@ -21,16 +21,12 @@ import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { useFocusTrap } from '@/core/ui/hooks';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;
     wizardSteps?: { id: string; name: string; enabled: boolean }[];
 }
-
-// UI Constants (local to this component)
-// Note: UI animation timings kept local (not in @/core/utils/timeoutConfig)
-// because they're tied to CSS transitions, not backend operation timeouts
-const STEP_TRANSITION_DURATION_MS = 300; // Matches CSS transition in <style> block
 
 const LOADING_OVERLAY_STYLES = {
     container: {
@@ -241,7 +237,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 console.log('[WizardContainer] First element:', focusableElements[0]);
                 (focusableElements[0] as HTMLElement).focus();
             }
-        }, 300); // Increased delay for Spectrum component mounting
+        }, TIMEOUTS.STEP_CONTENT_FOCUS);
 
         return () => clearTimeout(timer);
     }, [state.currentStep]);
@@ -353,7 +349,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 });
                 setIsTransitioning(false);
                 transitionTimerRef.current = null;
-            }, STEP_TRANSITION_DURATION_MS);
+            }, TIMEOUTS.STEP_TRANSITION);
         } else {
             // Clear any existing transition timer to prevent race conditions
             if (transitionTimerRef.current) {
@@ -365,7 +361,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 setState(prev => ({ ...prev, currentStep: step }));
                 setIsTransitioning(false);
                 transitionTimerRef.current = null;
-            }, STEP_TRANSITION_DURATION_MS);
+            }, TIMEOUTS.STEP_TRANSITION);
         }
     }, [WIZARD_STEPS]);
 
