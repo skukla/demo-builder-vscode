@@ -262,6 +262,9 @@ return (
 - Custom focusable selector
 - WCAG 2.1 AA compliant
 
+**Exported Constants:**
+- `FOCUSABLE_SELECTOR` - Standard selector string for finding focusable elements (includes native elements and ARIA roles for Spectrum components)
+
 ### Utility Hooks
 
 #### useDebouncedValue
