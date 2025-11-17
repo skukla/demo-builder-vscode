@@ -11,6 +11,7 @@ import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 import type { Project } from '@/types/base';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
+import { useFocusTrap } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
@@ -67,6 +68,13 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     const fieldCountInSectionRef = useRef<number>(0);
 
     const selectableDefaultProps = useSelectableDefault();
+
+    // Focus trap for keyboard navigation
+    const containerRef = useFocusTrap<HTMLDivElement>({
+        enabled: true,
+        autoFocus: false,
+        containFocus: true
+    });
 
     // Update componentConfigs when existingEnvValues becomes available
     useEffect(() => {
@@ -565,12 +573,17 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     const canSave = Object.keys(validationErrors).length === 0;
 
     return (
-        <View
-            backgroundColor="gray-50"
-            width="100%"
-            height="100vh"
-            UNSAFE_className={cn('flex', 'overflow-hidden')}
+        <div
+            ref={containerRef}
+            style={{
+                backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                width: '100%',
+                height: '100vh',
+                display: 'flex',
+                overflow: 'hidden'
+            }}
         >
+            <View width="100%" height="100%">
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
                 {/* Header */}
                 <View
@@ -679,6 +692,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     </div>
                 </View>
             </div>
-        </View>
+            </View>
+        </div>
     );
 }
