@@ -75,12 +75,16 @@ describe('useFocusTrap', () => {
 
   describe('auto focus', () => {
     it('focuses first element when autoFocus is true', async () => {
-      const { result } = renderHook(() =>
-        useFocusTrap({ autoFocus: true, enabled: true })
+      const { result, rerender } = renderHook(
+        ({ enabled }) => useFocusTrap({ autoFocus: true, enabled }),
+        { initialProps: { enabled: false } }
       );
 
       // @ts-ignore - mocking ref
       result.current.current = container;
+
+      // Force effect to re-run with container now set by toggling enabled
+      rerender({ enabled: true });
 
       // Wait for effect to execute
       await waitForEffectExecution();
@@ -114,10 +118,16 @@ describe('useFocusTrap', () => {
 
   describe('tab navigation', () => {
     it('traps Tab key at last element', async () => {
-      const { result } = renderHook(() => useFocusTrap({ enabled: true }));
+      const { result, rerender } = renderHook(
+        ({ enabled }) => useFocusTrap({ enabled }),
+        { initialProps: { enabled: false } }
+      );
 
       // @ts-ignore - mocking ref
       result.current.current = container;
+
+      // Force effect to re-run with container now set by toggling enabled
+      rerender({ enabled: true });
 
       // Wait for effect to execute
       await waitForEffectExecution();
@@ -146,10 +156,16 @@ describe('useFocusTrap', () => {
     });
 
     it('traps Shift+Tab key at first element', async () => {
-      const { result } = renderHook(() => useFocusTrap({ enabled: true }));
+      const { result, rerender } = renderHook(
+        ({ enabled }) => useFocusTrap({ enabled }),
+        { initialProps: { enabled: false } }
+      );
 
       // @ts-ignore - mocking ref
       result.current.current = container;
+
+      // Force effect to re-run with container now set by toggling enabled
+      rerender({ enabled: true });
 
       // Wait for effect to execute
       await waitForEffectExecution();
@@ -193,10 +209,16 @@ describe('useFocusTrap', () => {
     });
 
     it('redirects Tab from outside container to first element', async () => {
-      const { result } = renderHook(() => useFocusTrap({ enabled: true }));
+      const { result, rerender } = renderHook(
+        ({ enabled }) => useFocusTrap({ enabled, containFocus: false }),
+        { initialProps: { enabled: false } }
+      );
 
       // @ts-ignore - mocking ref
       result.current.current = container;
+
+      // Force effect to re-run with container now set by toggling enabled
+      rerender({ enabled: true });
 
       // Wait for effect to execute
       await waitForEffectExecution();
@@ -228,10 +250,16 @@ describe('useFocusTrap', () => {
     });
 
     it('redirects Shift+Tab from outside container to last element', async () => {
-      const { result } = renderHook(() => useFocusTrap({ enabled: true }));
+      const { result, rerender } = renderHook(
+        ({ enabled }) => useFocusTrap({ enabled, containFocus: false }),
+        { initialProps: { enabled: false } }
+      );
 
       // @ts-ignore - mocking ref
       result.current.current = container;
+
+      // Force effect to re-run with container now set by toggling enabled
+      rerender({ enabled: true });
 
       // Wait for effect to execute
       await waitForEffectExecution();
@@ -445,10 +473,16 @@ describe('useFocusTrap', () => {
       const singleButton = document.createElement('button');
       container.appendChild(singleButton);
 
-      const { result } = renderHook(() => useFocusTrap({ enabled: true }));
+      const { result, rerender } = renderHook(
+        ({ enabled }) => useFocusTrap({ enabled }),
+        { initialProps: { enabled: false } }
+      );
 
       // @ts-ignore - mocking ref
       result.current.current = container;
+
+      // Force effect to re-run with container now set by toggling enabled
+      rerender({ enabled: true });
 
       // Wait for effect to execute
       await waitForEffectExecution();
@@ -504,12 +538,16 @@ describe('useFocusTrap', () => {
       container.appendChild(cancelButton);
       container.appendChild(confirmButton);
 
-      const { result } = renderHook(() =>
-        useFocusTrap({ enabled: true, autoFocus: true })
+      const { result, rerender } = renderHook(
+        ({ enabled }) => useFocusTrap({ enabled, autoFocus: true }),
+        { initialProps: { enabled: false } }
       );
 
       // @ts-ignore - mocking ref
       result.current.current = container;
+
+      // Force effect to re-run with container now set by toggling enabled
+      rerender({ enabled: true });
 
       // Wait for effect to execute
       await waitForEffectExecution();
