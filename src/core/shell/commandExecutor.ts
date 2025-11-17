@@ -85,6 +85,45 @@ export class CommandExecutor {
         // Node.js spawn actually supports both, so this is safe
         const finalOptions: ExecOptions = { ...options } as ExecOptions;
 
+        // Auto-detect Adobe CLI commands and automatically apply required defaults
+        // Eliminates ENOENT errors by ensuring shell: true is always set for 'aio' commands
+        // Developers can now safely use execute() for Adobe CLI without specifying options
+        const isAdobeCLI = command.startsWith('aio ') || command.startsWith('aio-');
+        if (isAdobeCLI) {
+            // Check cache for specific commands (performance optimization)
+            if (command === 'aio --version' && this.adobeVersionCache) {
+                return this.adobeVersionCache;
+            }
+            if (command === 'aio plugins' && this.adobePluginsCache) {
+                return this.adobePluginsCache;
+            }
+
+            // Ensure Node version is set once per session
+            const isVersionCheck = command.includes('--version') || command.includes('-v');
+            if (!isVersionCheck) {
+                await this.environmentSetup.ensureAdobeCLINodeVersion(this.execute.bind(this));
+            }
+
+            // Auto-apply Adobe CLI defaults (unless explicitly overridden by caller)
+            // This makes execute() work correctly for Adobe CLI without manual options
+            if (!finalOptions.shell) {
+                finalOptions.shell = DEFAULT_SHELL;
+            }
+            if (options.configureTelemetry === undefined) {
+                (options as any).configureTelemetry = false;
+            }
+            if (options.enhancePath === undefined) {
+                (options as any).enhancePath = true;
+            }
+            if (options.useNodeVersion === undefined) {
+                (options as any).useNodeVersion = null;
+            }
+            // Set retry strategy if not provided
+            if (!options.retryStrategy) {
+                (options as any).retryStrategy = this.retryManager.getStrategy('adobe-cli');
+            }
+        }
+
         // Step 1: Handle telemetry configuration for Adobe CLI
         // Skip telemetry configuration for version checks (AIO CLI might not be installed yet)
         const isVersionCheck = command.includes('--version') || command.includes('-v');
@@ -153,11 +192,22 @@ export class CommandExecutor {
 
         // Step 6: Execute with retry logic
         const retryStrategy = options.retryStrategy || this.retryManager.getDefaultStrategy();
-        return this.retryManager.executeWithRetry(
+        const result = await this.retryManager.executeWithRetry(
             () => this.executeStreamingInternal(finalCommand, finalOptions, () => {}),
             retryStrategy,
             command.substring(0, 50),
         );
+
+        // Cache Adobe CLI results for version and plugins commands
+        if (isAdobeCLI && result.code === 0) {
+            if (command === 'aio --version') {
+                this.adobeVersionCache = result;
+            } else if (command === 'aio plugins') {
+                this.adobePluginsCache = result;
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -311,40 +361,6 @@ export class CommandExecutor {
         }
     }
 
-    /**
-     * Execute Adobe CLI command with the correct Node version
-     */
-    async executeAdobeCLI(command: string, options?: ExecuteOptions): Promise<CommandResult> {
-        // Check cache for specific commands
-        if (command === 'aio --version' && this.adobeVersionCache) {
-            return this.adobeVersionCache;
-        }
-        if (command === 'aio plugins' && this.adobePluginsCache) {
-            return this.adobePluginsCache;
-        }
-
-        // Ensure Node version is set once per session
-        await this.environmentSetup.ensureAdobeCLINodeVersion(this.execute.bind(this));
-
-        // Execute command
-        const result = await this.execute(command, {
-            ...options,
-            configureTelemetry: false,
-            useNodeVersion: null,
-            enhancePath: true,
-            shell: DEFAULT_SHELL,  // Fixes ENOENT in Dock-launched VS Code
-            retryStrategy: this.retryManager.getStrategy('adobe-cli'),
-        });
-
-        // Cache results for version and plugins commands
-        if (command === 'aio --version' && result.code === 0) {
-            this.adobeVersionCache = result;
-        } else if (command === 'aio plugins' && result.code === 0) {
-            this.adobePluginsCache = result;
-        }
-
-        return result;
-    }
 
     /**
      * Execute command with exclusive access to a resource

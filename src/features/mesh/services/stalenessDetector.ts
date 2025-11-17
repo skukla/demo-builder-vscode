@@ -67,30 +67,25 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
 
         // Pre-check: Verify authentication status without triggering browser auth
         // Use a fast command that doesn't trigger interactive login
-        logger.debug('[MeshStaleness] Checking authentication status...');
         try {
             const { TIMEOUTS } = await import('@/core/utils/timeoutConfig');
-            const authCheckResult = await commandManager.executeAdobeCLI('aio console where --json', {
+            const authCheckResult = await commandManager.execute('aio console where --json', {
                 timeout: TIMEOUTS.API_CALL, // Use existing timeout constant
             });
-            
+
             if (authCheckResult.code !== 0) {
                 logger.debug('[MeshStaleness] Not authenticated or no org selected, skipping mesh fetch');
                 return null;
             }
-            
-            logger.debug('[MeshStaleness] Authentication verified, proceeding with mesh fetch');
         } catch (authError) {
             logger.debug('[MeshStaleness] Auth check failed, skipping mesh fetch:', authError);
             return null;
         }
         
         // Query the deployed mesh configuration
-        const result = await commandManager.executeAdobeCLI('aio api-mesh:get --active --json', {
+        const result = await commandManager.execute('aio api-mesh:get --active --json', {
             timeout: 30000,
         });
-        
-        logger.debug('[MeshStaleness] Raw mesh response received, parsing...');
 
         // Parse the JSON response
         const meshData = parseJSON<{ meshConfig?: { sources?: { name?: string; handler?: { graphql?: { endpoint?: string; operationHeaders?: Record<string, string> } } }[] } }>(result.stdout);
@@ -104,21 +99,17 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         const deployedEnvVars: Record<string, string> = {};
         
         if (meshData.meshConfig?.sources) {
-            logger.debug(`[MeshStaleness] Found ${meshData.meshConfig.sources.length} mesh sources`);
-            
             for (const source of meshData.meshConfig.sources) {
                 // Commerce GraphQL endpoint (source name: 'magento')
                 if (source.name === 'magento' && source.handler?.graphql?.endpoint) {
                     deployedEnvVars.ADOBE_COMMERCE_GRAPHQL_ENDPOINT = source.handler.graphql.endpoint;
-                    logger.debug(`[MeshStaleness] Found Commerce endpoint: ${source.handler.graphql.endpoint}`);
                 }
-                
+
                 // Catalog Service endpoint (source name: 'catalog')
                 if (source.name === 'catalog' && source.handler?.graphql?.endpoint) {
                     deployedEnvVars.ADOBE_CATALOG_SERVICE_ENDPOINT = source.handler.graphql.endpoint;
-                    logger.debug(`[MeshStaleness] Found Catalog endpoint: ${source.handler.graphql.endpoint}`);
                 }
-                
+
                 // Extract API key from catalog source headers
                 if (source.name === 'catalog' && source.handler?.graphql?.operationHeaders) {
                     const headers = source.handler.graphql.operationHeaders;
@@ -126,7 +117,6 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
                     // Or an actual value - we want the actual value
                     if (headers['x-api-key'] && !headers['x-api-key'].includes('context.headers')) {
                         deployedEnvVars.ADOBE_CATALOG_API_KEY = headers['x-api-key'];
-                        logger.debug('[MeshStaleness] Found Catalog API key');
                     }
                 }
             }
@@ -264,8 +254,7 @@ export async function detectMeshChanges(
         if (deployedConfig) {
             // Successfully fetched deployed config - use it as baseline
             logger.info('[MeshStaleness] Successfully fetched deployed config, populating meshState.envVars');
-            logger.debug('[MeshStaleness] Deployed config:', deployedConfig);
-            
+
             project.meshState!.envVars = deployedConfig;
             didPopulateFromDeployedConfig = true;
             
@@ -289,11 +278,7 @@ export async function detectMeshChanges(
     // Check env vars changes
     const newMeshConfig = (newComponentConfigs['commerce-mesh'] as Record<string, unknown> | undefined) || {};
     const newEnvVars = getMeshEnvVars(newMeshConfig);
-    
-    logger.debug('[MeshStaleness] Comparing deployed state vs current config:');
-    logger.debug('[MeshStaleness]   Deployed (meshState):', currentState.envVars);
-    logger.debug('[MeshStaleness]   Current (config):', newEnvVars);
-    
+
     const changedEnvVars: string[] = [];
     MESH_ENV_VARS.forEach(key => {
         // Normalize: treat missing keys as empty strings for robust comparison
@@ -307,11 +292,9 @@ export async function detectMeshChanges(
     });
     
     const envVarsChanged = changedEnvVars.length > 0;
-    
+
     if (envVarsChanged) {
         logger.info(`[MeshStaleness] Detected ${changedEnvVars.length} changed env vars:`, changedEnvVars);
-    } else {
-        logger.debug('[MeshStaleness] No env var changes detected');
     }
     
     // Check source files changes
