@@ -215,23 +215,30 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
     // Auto-focus first element in step content when step changes
     useEffect(() => {
-        // Small delay to let step render and transition complete
+        // Longer delay to let step render, transition complete, and Spectrum components mount
         const timer = setTimeout(() => {
             if (!stepContentRef.current) return;
 
-            // Find first focusable element in step content (exclude footer buttons)
+            // Find first focusable element in step content (include Spectrum components via ARIA roles)
             const focusableSelector =
                 'button:not([disabled]):not([tabindex="-1"]), ' +
                 'input:not([disabled]):not([tabindex="-1"]), ' +
                 'select:not([disabled]):not([tabindex="-1"]), ' +
                 'textarea:not([disabled]):not([tabindex="-1"]), ' +
-                '[tabindex]:not([tabindex="-1"])';
+                '[role="button"]:not([aria-disabled="true"]):not([tabindex="-1"]), ' +
+                '[role="combobox"]:not([aria-disabled="true"]):not([tabindex="-1"]), ' +
+                '[role="textbox"]:not([aria-disabled="true"]):not([tabindex="-1"]), ' +
+                '[tabindex="0"]';
 
             const focusableElements = stepContentRef.current.querySelectorAll(focusableSelector);
+
+            // Debug logging
+            console.log(`[WizardContainer] Step ${state.currentStep}: Found ${focusableElements.length} focusable elements`);
             if (focusableElements.length > 0) {
+                console.log('[WizardContainer] First element:', focusableElements[0]);
                 (focusableElements[0] as HTMLElement).focus();
             }
-        }, 150); // Wait for step transition animation
+        }, 300); // Increased delay for Spectrum component mounting
 
         return () => clearTimeout(timer);
     }, [state.currentStep]);
