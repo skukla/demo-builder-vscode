@@ -45,7 +45,7 @@ describe('MeshDeployer - Deletion', () => {
         meshDeployer = new MeshDeployer(createTestLogger());
 
         // Mock successful command execution for delete
-        mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+        mockCommandExecutor.execute.mockResolvedValue({
             stdout: 'Mesh deleted',
             stderr: '',
             code: 0,
@@ -59,7 +59,7 @@ describe('MeshDeployer - Deletion', () => {
     describe('delete', () => {
         it('should delete mesh successfully', async () => {
             // Given: Delete command succeeds
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'Mesh deleted',
                 stderr: '',
                 code: 0,
@@ -71,7 +71,7 @@ describe('MeshDeployer - Deletion', () => {
 
             // Then: Should succeed
             expect(result).toBe(true);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio api-mesh:delete mesh-123'
             );
         });
@@ -85,14 +85,14 @@ describe('MeshDeployer - Deletion', () => {
         it('should execute aio api-mesh:delete command', async () => {
             await meshDeployer.delete('mesh-123');
 
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio api-mesh:delete mesh-123'
             );
         });
 
         it('should handle deletion failure', async () => {
             // Given: Delete command fails
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(
+            mockCommandExecutor.execute.mockRejectedValue(
                 new Error('Deletion failed')
             );
 
@@ -116,7 +116,7 @@ describe('MeshDeployer - Deletion', () => {
 
             // Then: Should fail without executing command
             expect(result).toBe(false);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(0);
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(0);
         });
 
         it('should handle empty mesh ID', async () => {

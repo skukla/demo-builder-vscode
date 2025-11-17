@@ -53,7 +53,7 @@ describe('MeshDeployer - Error Handling', () => {
         it('should handle command execution timeout', async () => {
             const mockProject = createMockProject();
             // Given: Command times out
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(
+            mockCommandExecutor.execute.mockRejectedValue(
                 new Error('Command timed out after 120000ms')
             );
 
@@ -67,7 +67,7 @@ describe('MeshDeployer - Error Handling', () => {
 
         it('should handle network errors', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(
+            mockCommandExecutor.execute.mockRejectedValue(
                 new Error('ENOTFOUND: DNS lookup failed')
             );
 
@@ -78,7 +78,7 @@ describe('MeshDeployer - Error Handling', () => {
 
         it('should handle Adobe CLI not authenticated', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(
+            mockCommandExecutor.execute.mockRejectedValue(
                 new Error('Not authenticated. Please run: aio auth login')
             );
 
@@ -89,7 +89,7 @@ describe('MeshDeployer - Error Handling', () => {
 
         it('should handle invalid mesh configuration', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Invalid configuration: missing required field "sources"',
                 code: 1,
@@ -103,7 +103,7 @@ describe('MeshDeployer - Error Handling', () => {
 
         it('should handle workspace not found', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(
+            mockCommandExecutor.execute.mockRejectedValue(
                 new Error('Workspace not found')
             );
 
@@ -138,7 +138,7 @@ describe('MeshDeployer - Error Handling', () => {
 
         it('should handle malformed CLI output', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'Unexpected output format without endpoint',
                 stderr: '',
                 code: 0,
@@ -152,7 +152,7 @@ describe('MeshDeployer - Error Handling', () => {
 
         it('should handle CLI stderr with warnings', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'https://mesh-endpoint.adobe.io/graphql',
                 stderr: 'Warning: Some deprecated configuration detected',
                 code: 0,
@@ -168,7 +168,7 @@ describe('MeshDeployer - Error Handling', () => {
 
         it('should handle quota exceeded errors', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(
+            mockCommandExecutor.execute.mockRejectedValue(
                 new Error('Quota exceeded: Maximum number of meshes reached')
             );
 
@@ -180,7 +180,7 @@ describe('MeshDeployer - Error Handling', () => {
 
         it('should handle rate limiting errors', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(
+            mockCommandExecutor.execute.mockRejectedValue(
                 new Error('Rate limit exceeded. Please try again later.')
             );
 

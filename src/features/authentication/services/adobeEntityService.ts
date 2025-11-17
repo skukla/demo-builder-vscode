@@ -115,7 +115,7 @@ export class AdobeEntityService {
             // CLI fallback (if SDK not available or failed)
             if (mappedOrgs.length === 0) {
 
-                const result = await this.commandManager.executeAdobeCLI(
+                const result = await this.commandManager.execute(
                     'aio console org list --json',
                     { encoding: 'utf8' },
                 );
@@ -206,7 +206,7 @@ export class AdobeEntityService {
 
             // CLI fallback
             if (mappedProjects.length === 0) {
-                const result = await this.commandManager.executeAdobeCLI(
+                const result = await this.commandManager.execute(
                     'aio console project list --json',
                     { encoding: 'utf8' },
                 );
@@ -296,7 +296,7 @@ export class AdobeEntityService {
 
             // CLI fallback
             if (mappedWorkspaces.length === 0) {
-                const result = await this.commandManager.executeAdobeCLI(
+                const result = await this.commandManager.execute(
                     'aio console workspace list --json',
                     { encoding: 'utf8' },
                 );
@@ -346,7 +346,7 @@ export class AdobeEntityService {
             let context = this.cacheManager.getCachedConsoleWhere();
 
             if (!context) {
-                const result = await this.commandManager.executeAdobeCLI(
+                const result = await this.commandManager.execute(
                     'aio console where --json',
                     { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
                 );
@@ -478,7 +478,7 @@ export class AdobeEntityService {
 
             if (!context) {
                 this.debugLogger.debug('[Entity Service] Fetching project data from Adobe CLI');
-                const result = await this.commandManager.executeAdobeCLI(
+                const result = await this.commandManager.execute(
                     'aio console where --json',
                     { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
                 );
@@ -568,7 +568,7 @@ export class AdobeEntityService {
 
             if (!context) {
                 this.debugLogger.debug('[Entity Service] Fetching workspace data from Adobe CLI');
-                const result = await this.commandManager.executeAdobeCLI(
+                const result = await this.commandManager.execute(
                     'aio console where --json',
                     { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
                 );
@@ -643,7 +643,7 @@ export class AdobeEntityService {
             this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'organization' });
             this.debugLogger.debug(`[Entity Service] Selecting organization ${orgId}`);
 
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 `aio console org select ${orgId}`,
                 {
                     encoding: 'utf8',
@@ -717,7 +717,7 @@ export class AdobeEntityService {
             this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'project' });
             this.debugLogger.debug(`[Entity Service] Selecting project ${projectId}`);
 
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 `aio console project select ${projectId}`,
                 {
                     encoding: 'utf8',
@@ -798,7 +798,7 @@ export class AdobeEntityService {
             this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'workspace' });
             this.debugLogger.debug(`[Entity Service] Selecting workspace ${workspaceId}`);
 
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 `aio console workspace select ${workspaceId}`,
                 {
                     encoding: 'utf8',
@@ -896,9 +896,9 @@ export class AdobeEntityService {
         try {
             // Use established pattern: Promise.all for parallel execution
             await Promise.all([
-                this.commandManager.executeAdobeCLI('aio config delete console.org', { encoding: 'utf8' }),
-                this.commandManager.executeAdobeCLI('aio config delete console.project', { encoding: 'utf8' }),
-                this.commandManager.executeAdobeCLI('aio config delete console.workspace', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.org', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.project', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8' }),
             ]);
 
             // Clear console.where cache since context was cleared

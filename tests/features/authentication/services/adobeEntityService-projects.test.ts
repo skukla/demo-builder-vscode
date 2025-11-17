@@ -78,7 +78,7 @@ describe('AdobeEntityService - Projects', () => {
             mockSDKClient.getClient.mockReturnValue({
                 getProjectsForOrg: jest.fn().mockRejectedValue(new Error('SDK error')),
             } as ReturnType<typeof mockSDKClient.getClient>);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([
                     {
                         id: 'proj1',
@@ -107,7 +107,7 @@ describe('AdobeEntityService - Projects', () => {
             const result = await service.getProjects();
 
             expect(result).toHaveLength(1);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console project list --json',
                 expect.any(Object)
             );
@@ -117,7 +117,7 @@ describe('AdobeEntityService - Projects', () => {
             const { service, mockSDKClient, mockCommandExecutor } = testMocks;
             mockSDKClient.isInitialized.mockReturnValue(false);
             mockSDKClient.ensureInitialized.mockResolvedValue(false); // Auto-init attempted but failed
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([
                     {
                         id: 'proj1',
@@ -147,13 +147,13 @@ describe('AdobeEntityService - Projects', () => {
 
             expect(result).toHaveLength(1);
             expect(mockSDKClient.ensureInitialized).toHaveBeenCalled(); // Auto-init was attempted
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
 
         it('should return empty array if no projects exist', async () => {
             const { service, mockSDKClient, mockCommandExecutor } = testMocks;
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'does not have any projects',
                 code: 1,
@@ -168,7 +168,7 @@ describe('AdobeEntityService - Projects', () => {
         it('should throw error for other CLI failures', async () => {
             const { service, mockSDKClient, mockCommandExecutor } = testMocks;
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Network error',
                 code: 1,
@@ -181,7 +181,7 @@ describe('AdobeEntityService - Projects', () => {
         it('should map projects with title fallback', async () => {
             const { service, mockSDKClient, mockCommandExecutor } = testMocks;
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([
                     {
                         id: 'proj1',
@@ -219,14 +219,14 @@ describe('AdobeEntityService - Projects', () => {
             const result = await service.getCurrentProject();
 
             expect(result).toEqual(mockProjects[0]);
-            expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 
         it('should fetch from console.where if not cached', async () => {
             const { service, mockCacheManager, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedProject.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify({
                     project: { id: 'proj1', name: 'Project 1', org_id: 123456 }
                 }),
@@ -239,7 +239,7 @@ describe('AdobeEntityService - Projects', () => {
 
             expect(result).toBeDefined();
             expect(result?.id).toBe('proj1');
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith('aio console where --json', expect.any(Object));
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith('aio console where --json', expect.any(Object));
         });
 
         it('should use cached console.where if available', async () => {
@@ -253,14 +253,14 @@ describe('AdobeEntityService - Projects', () => {
 
             expect(result).toBeDefined();
             expect(result?.id).toBe('proj1');
-            expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 
         it('should return undefined if no project data', async () => {
             const { service, mockCacheManager, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedProject.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify({}),
                 stderr: '',
                 code: 0,
@@ -276,7 +276,7 @@ describe('AdobeEntityService - Projects', () => {
             const { service, mockCacheManager, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedProject.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Error',
                 code: 1,
@@ -292,7 +292,7 @@ describe('AdobeEntityService - Projects', () => {
     describe('selectProject()', () => {
         it('should successfully select project', async () => {
             const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'Project selected',
                 stderr: '',
                 code: 0,
@@ -302,7 +302,7 @@ describe('AdobeEntityService - Projects', () => {
             const result = await service.selectProject('proj1');
 
             expect(result).toBe(true);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console project select proj1',
                 expect.objectContaining({
                     timeout: expect.any(Number)
@@ -323,7 +323,7 @@ describe('AdobeEntityService - Projects', () => {
 
         it('should fail if CLI command fails', async () => {
             const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Project not found',
                 code: 1,
@@ -337,7 +337,7 @@ describe('AdobeEntityService - Projects', () => {
 
         it('should clear cached console.where after successful selection', async () => {
             const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'Project selected',
                 stderr: '',
                 code: 0,
@@ -347,7 +347,7 @@ describe('AdobeEntityService - Projects', () => {
             await service.selectProject('proj1');
 
             // Verify command was called (cache clearing is implementation detail)
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
     });
 
@@ -355,7 +355,7 @@ describe('AdobeEntityService - Projects', () => {
         it('should catch and rethrow errors in getProjects', async () => {
             const { service, mockSDKClient, mockCommandExecutor } = testMocks;
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Network error'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Network error'));
 
             await expect(service.getProjects()).rejects.toThrow('Network error');
         });

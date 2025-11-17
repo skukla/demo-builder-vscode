@@ -45,7 +45,7 @@ export function setupMocks(): TestMocks {
 
     // Mock external dependencies only
     const mockCommandExecutor: jest.Mocked<CommandExecutor> = {
-        executeAdobeCLI: jest.fn(),
+        execute: jest.fn(),
     } as unknown as jest.Mocked<CommandExecutor>;
 
     const mockSDKClient: jest.Mocked<AdobeSDKClient> = {

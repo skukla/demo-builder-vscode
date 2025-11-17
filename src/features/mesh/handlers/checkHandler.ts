@@ -104,7 +104,7 @@ export async function handleCheckApiMesh(
         context.debugLogger.debug('[API Mesh] Using extension temp path', { tempDir });
 
         try {
-            await commandManager.executeAdobeCLI(
+            await commandManager.execute(
                 `aio console workspace download "${configPath}" --workspaceId ${workspaceId}`,
             );
 
@@ -150,7 +150,7 @@ export async function handleCheckApiMesh(
 
             try {
                 // Use 'get' without --active to get JSON response with meshStatus
-                const { stdout, stderr, code } = await commandManager.executeAdobeCLI('aio api-mesh get');
+                const { stdout, stderr, code } = await commandManager.execute('aio api-mesh get');
 
                 if (code !== 0) {
                     // Command failed - check if it's because no mesh exists
@@ -288,7 +288,7 @@ export async function handleCheckApiMesh(
             context.logger.info('[API Mesh] Layer 2 (fallback): Checking API status and mesh');
 
             try {
-                const { stdout, stderr } = await commandManager.executeAdobeCLI('aio api-mesh get --active');
+                const { stdout, stderr } = await commandManager.execute('aio api-mesh get --active');
                 const combined = `${stdout}\n${stderr}`;
 
                 context.debugLogger.debug('[API Mesh] get --active output (fallback)', { stdout, stderr });

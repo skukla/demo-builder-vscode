@@ -37,7 +37,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
 
         // Mock command executor
         mockCommandExecutor = {
-            executeAdobeCLI: jest.fn().mockResolvedValue({
+            execute: jest.fn().mockResolvedValue({
                 code: 0,
                 stdout: '{"meshId":"test-mesh","meshStatus":"deployed"}',
                 stderr: '',
@@ -186,8 +186,8 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                 workspaceId: validWorkspaceId,
             });
 
-            // executeAdobeCLI automatically uses shell: DEFAULT_SHELL (from CommandExecutor line 439)
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
+            // execute() automatically uses shell: DEFAULT_SHELL (from CommandExecutor line 439)
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
 
         it('should pass validated workspaceId to Adobe CLI command', async () => {
@@ -198,7 +198,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
             });
 
             // Check that workspaceId is used in command after validation
-            const firstCall = mockCommandExecutor.executeAdobeCLI.mock.calls[0];
+            const firstCall = mockCommandExecutor.execute.mock.calls[0];
             expect(firstCall[0]).toContain(validWorkspaceId);
         });
     });
@@ -222,8 +222,8 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                 workspaceId: maliciousWorkspaceId,
             });
 
-            // Should NOT call executeAdobeCLI if validation fails
-            expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalled();
+            // Should NOT call execute() if validation fails
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
     });
 });

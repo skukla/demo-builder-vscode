@@ -87,7 +87,7 @@ export class TokenManager {
             try {
                 // Get ENTIRE access_token object (includes both token and expiry)
                 // Using --json flag ensures atomic read of both fields
-                const cmdResult = await this.commandManager.executeAdobeCLI(
+                const cmdResult = await this.commandManager.execute(
                     'aio config get ims.contexts.cli.access_token --json',
                     { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ },
                 );
@@ -203,7 +203,7 @@ export class TokenManager {
      */
     async getTokenExpiry(): Promise<number | undefined> {
         try {
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 'aio config get ims.contexts.cli.access_token.expiry',
                 { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ },
             );

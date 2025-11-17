@@ -29,7 +29,7 @@ import * as crypto from 'crypto';
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(() => ({
-            executeAdobeCLI: jest.fn(),
+            execute: jest.fn(),
             execute: jest.fn(),
         })),
     },
@@ -131,7 +131,7 @@ describe('StalenessDetector', () => {
     describe('fetchDeployedMeshConfig', () => {
         it('should fetch and parse deployed mesh config', async () => {
             const mockCommandManager = {
-                executeAdobeCLI: jest.fn()
+                execute: jest.fn()
                     .mockResolvedValueOnce({ code: 0, stdout: '{"org":"test"}' }) // Auth check
                     .mockResolvedValueOnce({
                         code: 0,
@@ -177,7 +177,7 @@ describe('StalenessDetector', () => {
 
         it('should return null when not authenticated', async () => {
             const mockCommandManager = {
-                executeAdobeCLI: jest.fn()
+                execute: jest.fn()
                     .mockResolvedValueOnce({ code: 1, stdout: '', stderr: 'Not authenticated' }),
             };
 
@@ -191,7 +191,7 @@ describe('StalenessDetector', () => {
 
         it('should return null when mesh fetch fails', async () => {
             const mockCommandManager = {
-                executeAdobeCLI: jest.fn()
+                execute: jest.fn()
                     .mockResolvedValueOnce({ code: 0, stdout: '{"org":"test"}' })
                     .mockRejectedValueOnce(new Error('Network error')),
             };
@@ -206,7 +206,7 @@ describe('StalenessDetector', () => {
 
         it('should return null when JSON parsing fails', async () => {
             const mockCommandManager = {
-                executeAdobeCLI: jest.fn()
+                execute: jest.fn()
                     .mockResolvedValueOnce({ code: 0, stdout: '{"org":"test"}' })
                     .mockResolvedValueOnce({ code: 0, stdout: 'invalid json' }),
             };
@@ -221,7 +221,7 @@ describe('StalenessDetector', () => {
 
         it('should skip API key with context.headers placeholder', async () => {
             const mockCommandManager = {
-                executeAdobeCLI: jest.fn()
+                execute: jest.fn()
                     .mockResolvedValueOnce({ code: 0, stdout: '{"org":"test"}' })
                     .mockResolvedValueOnce({
                         code: 0,

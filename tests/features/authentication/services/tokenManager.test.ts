@@ -27,7 +27,7 @@ jest.mock('@/core/logging', () => ({
 
 // Mock CommandExecutor
 const createMockCommandExecutor = (): jest.Mocked<CommandExecutor> => ({
-    executeAdobeCLI: jest.fn(),
+    execute: jest.fn(),
     executeCommand: jest.fn(),
     executeWithNodeVersion: jest.fn(),
     testCommand: jest.fn(),
@@ -54,7 +54,7 @@ describe('TokenManager', () => {
             const expiry = now + (60 * 60 * 1000); // 1 hour from now
             const token = 'x'.repeat(150); // Valid long token
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -65,14 +65,14 @@ describe('TokenManager', () => {
             expect(result.valid).toBe(true);
             expect(result.token).toBe(token);
             expect(result.expiresIn).toBeGreaterThan(0);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config get ims.contexts.cli.access_token --json',
                 expect.objectContaining({ encoding: 'utf8' }),
             );
         });
 
         it('should return invalid when no token found', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 1,
                 stdout: '',
                 stderr: 'Not found',
@@ -90,7 +90,7 @@ describe('TokenManager', () => {
             const expiry = now + (60 * 60 * 1000);
             const token = 'short-token'; // Too short
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -107,7 +107,7 @@ describe('TokenManager', () => {
             const expiry = now - (60 * 60 * 1000); // 1 hour ago
             const token = 'x'.repeat(150);
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -124,7 +124,7 @@ describe('TokenManager', () => {
             const token = 'x'.repeat(150);
             const expiry = 0; // Corrupted state
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -145,7 +145,7 @@ describe('TokenManager', () => {
             const outputWithFnm = `Using Node v20.10.0
 ${JSON.stringify({ token, expiry })}`;
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: outputWithFnm,
                 stderr: '',
@@ -158,7 +158,7 @@ ${JSON.stringify({ token, expiry })}`;
         });
 
         it('should handle invalid JSON in output', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: 'not-valid-json',
                 stderr: '',
@@ -171,7 +171,7 @@ ${JSON.stringify({ token, expiry })}`;
         });
 
         it('should handle command execution errors', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Command failed'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Command failed'));
 
             const result = await tokenManager.inspectToken();
 
@@ -183,7 +183,7 @@ ${JSON.stringify({ token, expiry })}`;
             const now = Date.now();
             const expiry = now + (60 * 60 * 1000);
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ expiry }), // No token
                 stderr: '',
@@ -197,7 +197,7 @@ ${JSON.stringify({ token, expiry })}`;
         it('should handle missing expiry in JSON', async () => {
             const token = 'x'.repeat(150);
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token }), // No expiry
                 stderr: '',
@@ -213,7 +213,7 @@ ${JSON.stringify({ token, expiry })}`;
             const expiry = now + (120 * 60 * 1000); // 120 minutes from now
             const token = 'x'.repeat(150);
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -233,7 +233,7 @@ ${JSON.stringify({ token, expiry })}`;
             const expiry = now + (60 * 60 * 1000);
             const token = 'x'.repeat(150);
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -245,7 +245,7 @@ ${JSON.stringify({ token, expiry })}`;
         });
 
         it('should return false when token is invalid', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 1,
                 stdout: '',
                 stderr: '',
@@ -261,7 +261,7 @@ ${JSON.stringify({ token, expiry })}`;
             const expiry = now - (60 * 60 * 1000); // Expired
             const token = 'x'.repeat(150);
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -279,7 +279,7 @@ ${JSON.stringify({ token, expiry })}`;
             const expiry = now + (60 * 60 * 1000);
             const token = 'x'.repeat(150);
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -291,7 +291,7 @@ ${JSON.stringify({ token, expiry })}`;
         });
 
         it('should return undefined when token is invalid', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 1,
                 stdout: '',
                 stderr: '',
@@ -307,7 +307,7 @@ ${JSON.stringify({ token, expiry })}`;
         it('should return expiry timestamp', async () => {
             const expiry = Date.now() + (60 * 60 * 1000);
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: String(expiry),
                 stderr: '',
@@ -322,7 +322,7 @@ ${JSON.stringify({ token, expiry })}`;
             const expiry = Date.now() + (60 * 60 * 1000);
             const outputWithFnm = `Using Node v20.10.0\n${expiry}`;
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: outputWithFnm,
                 stderr: '',
@@ -334,7 +334,7 @@ ${JSON.stringify({ token, expiry })}`;
         });
 
         it('should return undefined when command fails', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 1,
                 stdout: '',
                 stderr: 'Error',
@@ -346,7 +346,7 @@ ${JSON.stringify({ token, expiry })}`;
         });
 
         it('should return undefined for invalid expiry value', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: 'not-a-number',
                 stderr: '',
@@ -358,7 +358,7 @@ ${JSON.stringify({ token, expiry })}`;
         });
 
         it('should handle command execution errors', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Failed'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Failed'));
 
             const result = await tokenManager.getTokenExpiry();
 
@@ -372,7 +372,7 @@ ${JSON.stringify({ token, expiry })}`;
             const expiry = now + (60 * 60 * 1000);
             const token = 'x'.repeat(100); // Exactly 100 chars
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -388,7 +388,7 @@ ${JSON.stringify({ token, expiry })}`;
             const expiry = now + (60 * 60 * 1000);
             const token = 'x'.repeat(101); // Just over threshold
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -404,7 +404,7 @@ ${JSON.stringify({ token, expiry })}`;
             const expiry = now; // Exactly now
             const token = 'x'.repeat(150);
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -419,7 +419,7 @@ ${JSON.stringify({ token, expiry })}`;
             const expiry = Date.now() + (365 * 24 * 60 * 60 * 1000); // 1 year
             const token = 'x'.repeat(150);
 
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token, expiry }),
                 stderr: '',
@@ -432,7 +432,7 @@ ${JSON.stringify({ token, expiry })}`;
         });
 
         it('should handle empty JSON object', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({}),
                 stderr: '',
@@ -444,7 +444,7 @@ ${JSON.stringify({ token, expiry })}`;
         });
 
         it('should handle null values in JSON', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({ token: null, expiry: null }),
                 stderr: '',

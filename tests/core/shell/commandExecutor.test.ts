@@ -383,13 +383,13 @@ describe('CommandExecutor', () => {
         });
     });
 
-    describe('executeAdobeCLI', () => {
+    describe('execute', () => {
         it('should cache aio --version results', async () => {
             const mockChild = createMockChildProcess();
             (spawn as jest.Mock).mockReturnValue(mockChild);
 
             // First call
-            const promise1 = commandExecutor.executeAdobeCLI('aio --version');
+            const promise1 = commandExecutor.execute('aio --version');
 
             // Use nextTick to emit events
             process.nextTick(() => {
@@ -400,7 +400,7 @@ describe('CommandExecutor', () => {
             await promise1;
 
             // Second call should use cache
-            const result2 = await commandExecutor.executeAdobeCLI('aio --version');
+            const result2 = await commandExecutor.execute('aio --version');
 
             expect(result2.stdout).toBe('9.4.0\n');
             // spawn should only be called once (cached second time)
@@ -412,7 +412,7 @@ describe('CommandExecutor', () => {
             (spawn as jest.Mock).mockReturnValue(mockChild);
 
             // First call
-            const promise1 = commandExecutor.executeAdobeCLI('aio plugins');
+            const promise1 = commandExecutor.execute('aio plugins');
 
             // Use nextTick to emit events
             process.nextTick(() => {
@@ -423,7 +423,7 @@ describe('CommandExecutor', () => {
             await promise1;
 
             // Second call should use cache
-            const result2 = await commandExecutor.executeAdobeCLI('aio plugins');
+            const result2 = await commandExecutor.execute('aio plugins');
 
             expect(result2.stdout).toBe('plugin list\n');
             expect(spawn).toHaveBeenCalledTimes(1);
@@ -433,7 +433,7 @@ describe('CommandExecutor', () => {
             const mockChild = createMockChildProcess();
             (spawn as jest.Mock).mockReturnValue(mockChild);
 
-            const promise = commandExecutor.executeAdobeCLI('aio console:org:list');
+            const promise = commandExecutor.execute('aio console:org:list');
 
             // Use nextTick to emit events
             process.nextTick(() => {

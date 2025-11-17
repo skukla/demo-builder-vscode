@@ -61,7 +61,7 @@ describe('OrganizationValidator', () => {
 
         // Mock dependencies
         mockCommandExecutor = {
-            executeAdobeCLI: jest.fn(),
+            execute: jest.fn(),
         } as any;
 
         mockCacheManager = {
@@ -90,7 +90,7 @@ describe('OrganizationValidator', () => {
 
     describe('validateOrganizationAccess()', () => {
         it('should return true for valid organization with projects', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([{ id: 'proj1', name: 'Project 1' }]),
                 stderr: '',
                 code: 0,
@@ -100,7 +100,7 @@ describe('OrganizationValidator', () => {
             const result = await validator.validateOrganizationAccess();
 
             expect(result).toBe(true);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console project list --json',
                 expect.objectContaining({
                     timeout: expect.any(Number)
@@ -109,7 +109,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return true for valid organization without projects', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'no Project found',
                 code: 1,
@@ -122,7 +122,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for invalid organization (403)', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: '403 Forbidden',
                 code: 1,
@@ -135,7 +135,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for access denied error', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Access denied',
                 code: 1,
@@ -148,7 +148,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return true on timeout (fail-open)', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Timeout'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Timeout'));
 
             const result = await validator.validateOrganizationAccess();
 
@@ -161,7 +161,7 @@ describe('OrganizationValidator', () => {
         it('should return true on ETIMEDOUT error', async () => {
             const error = new Error('ETIMEDOUT');
             (error as any).code = 'ETIMEDOUT';
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(error);
+            mockCommandExecutor.execute.mockRejectedValue(error);
 
             const result = await validator.validateOrganizationAccess();
 
@@ -169,7 +169,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for non-timeout errors', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Network error'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Network error'));
 
             const result = await validator.validateOrganizationAccess();
 
@@ -177,7 +177,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should handle timed out error message', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Request timed out'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Request timed out'));
 
             const result = await validator.validateOrganizationAccess();
 
@@ -187,7 +187,7 @@ describe('OrganizationValidator', () => {
 
     describe('testDeveloperPermissions()', () => {
         it('should return true for users with Developer role', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([{ name: 'My App' }]),
                 stderr: '',
                 code: 0,
@@ -198,7 +198,7 @@ describe('OrganizationValidator', () => {
 
             expect(result.hasPermissions).toBe(true);
             expect(result.error).toBeUndefined();
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio app list --json',
                 expect.objectContaining({
                     timeout: expect.any(Number)
@@ -207,7 +207,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for users without Developer role (permission error)', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Permission denied',
                 code: 1,
@@ -223,7 +223,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for unauthorized users', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Unauthorized',
                 code: 1,
@@ -237,7 +237,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for forbidden access', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: '403 Forbidden',
                 code: 1,
@@ -251,7 +251,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for access denied error', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Access denied',
                 code: 1,
@@ -264,7 +264,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for insufficient privileges', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Insufficient privileges',
                 code: 1,
@@ -277,7 +277,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return true for non-permission errors (network issues)', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Network timeout',
                 code: 1,
@@ -291,7 +291,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for permission exceptions', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Permission denied'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Permission denied'));
 
             const result = await validator.testDeveloperPermissions();
 
@@ -300,7 +300,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for unauthorized exceptions', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Unauthorized access'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Unauthorized access'));
 
             const result = await validator.testDeveloperPermissions();
 
@@ -308,7 +308,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for forbidden exceptions', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Forbidden resource'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Forbidden resource'));
 
             const result = await validator.testDeveloperPermissions();
 
@@ -316,7 +316,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return false for insufficient privileges exceptions', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Insufficient privileges to access'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Insufficient privileges to access'));
 
             const result = await validator.testDeveloperPermissions();
 
@@ -324,7 +324,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should return true for non-permission exceptions (fail-open)', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Network failure'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Network failure'));
 
             const result = await validator.testDeveloperPermissions();
 
@@ -332,7 +332,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should provide helpful error message for missing role', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Permission error',
                 code: 1,
@@ -348,7 +348,7 @@ describe('OrganizationValidator', () => {
 
     describe('validateAndClearInvalidOrgContext()', () => {
         it('should validate organization and keep if valid', async () => {
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: JSON.stringify({ org: 'org-123' }),
                     stderr: '',
@@ -373,7 +373,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should clear invalid organization after retries', async () => {
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: JSON.stringify({ org: 'org-123' }),
                     stderr: '',
@@ -407,7 +407,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should use cached validation result', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify({ org: 'org-123' }),
                 stderr: '',
                 code: 0,
@@ -423,12 +423,12 @@ describe('OrganizationValidator', () => {
             await validator.validateAndClearInvalidOrgContext();
 
             // Should not call project list since using cache
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(1);
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(1);
             expect(mockCacheManager.setValidationCache).not.toHaveBeenCalled();
         });
 
         it('should clear if cached validation shows invalid', async () => {
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: JSON.stringify({ org: 'org-123' }),
                     stderr: '',
@@ -451,7 +451,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should force validation when requested', async () => {
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: JSON.stringify({ org: 'org-123' }),
                     stderr: '',
@@ -474,11 +474,11 @@ describe('OrganizationValidator', () => {
             await validator.validateAndClearInvalidOrgContext(true);
 
             // Should validate despite cache
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(2);
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(2);
         });
 
         it('should handle missing console.where gracefully', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify({}),
                 stderr: '',
                 code: 0,
@@ -491,7 +491,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should handle invalid JSON response', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'not valid json',
                 stderr: '',
                 code: 0,
@@ -506,7 +506,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should handle validation errors gracefully', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Network error'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Network error'));
 
             await validator.validateAndClearInvalidOrgContext();
 
@@ -518,7 +518,7 @@ describe('OrganizationValidator', () => {
         });
 
         it('should retry validation on first failure', async () => {
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: JSON.stringify({ org: 'org-123' }),
                     stderr: '',

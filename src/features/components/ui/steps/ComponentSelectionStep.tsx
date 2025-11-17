@@ -13,6 +13,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WizardState } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 interface ComponentSelectionStepProps {
     state: WizardState;
@@ -69,6 +70,9 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     // Track last sent selection to prevent duplicate messages
     const lastSentSelectionRef = useRef<string>('');
 
+    // Ref for frontend picker (for focus management)
+    const frontendPickerRef = useRef<HTMLDivElement>(null);
+
     // Create debounced version of selections (wait 500ms after last change)
     const debouncedFrontend = useDebounce(selectedFrontend, 500);
     const debouncedBackend = useDebounce(selectedBackend, 500);
@@ -76,6 +80,82 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     const debouncedServices = useDebounce(selectedServices, 500);
     const debouncedIntegrations = useDebounce(selectedIntegrations, 500);
     const debouncedAppBuilder = useDebounce(selectedAppBuilder, 500);
+
+    // Focus management: Focus the frontend picker when it becomes available
+    // WizardContainer skips auto-focus for this step, so we manage focus ourselves
+    useEffect(() => {
+        const container = frontendPickerRef.current;
+        if (!container) return;
+
+        let focused = false;
+        let observer: MutationObserver | null = null;
+
+        // Helper to check if element is actually visible and focusable
+        const isElementVisible = (element: Element): boolean => {
+            const style = window.getComputedStyle(element);
+            return style.visibility !== 'hidden' &&
+                   style.display !== 'none' &&
+                   style.opacity !== '0';
+        };
+
+        // Try to focus the frontend picker button
+        const tryFocus = () => {
+            if (focused) return; // Already focused
+
+            const button = container.querySelector('button');
+            if (button && isElementVisible(button)) {
+                // Spectrum FocusRing only shows for keyboard navigation
+                // Simulate keyboard focus by dispatching keyboard events before focusing
+                // This triggers Spectrum's focus-visible detection
+                const keyboardEvent = new KeyboardEvent('keydown', {
+                    key: 'Tab',
+                    code: 'Tab',
+                    keyCode: 9,
+                    bubbles: true,
+                    cancelable: true
+                });
+                button.dispatchEvent(keyboardEvent);
+
+                // Now focus the button - Spectrum should detect this as keyboard focus
+                button.focus();
+                focused = true;
+
+                if (observer) {
+                    observer.disconnect(); // Stop watching once focused
+                }
+            }
+        };
+
+        // Watch for Spectrum Picker button to appear/become visible
+        observer = new MutationObserver(() => {
+            tryFocus();
+        });
+
+        observer.observe(container, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style', 'class', 'aria-hidden', 'disabled']
+        });
+
+        // Try immediately in case button is already rendered
+        tryFocus();
+
+        // Safety fallback in case MutationObserver misses something
+        const fallbackTimer = setTimeout(() => {
+            tryFocus();
+            if (observer) {
+                observer.disconnect();
+            }
+        }, TIMEOUTS.FOCUS_FALLBACK);
+
+        return () => {
+            if (observer) {
+                observer.disconnect();
+            }
+            clearTimeout(fallbackTimer);
+        };
+    }, []);
 
     // Diagnostic: Log component mount
     useEffect(() => {
@@ -234,16 +314,17 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
             <Flex gap="size-300" wrap marginBottom="size-300">
                 {/* Frontend Section */}
                 <View flex="1" minWidth="300px">
-                    <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
-                        Frontend
-                    </Text>
-                    
-                    <ErrorBoundary
-                        onError={(error) => {
-                            console.error('[ComponentSelectionStep] Frontend Picker error:', error);
-                        }}
-                    >
-                        <Picker
+                    <div ref={frontendPickerRef}>
+                        <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
+                            Frontend
+                        </Text>
+
+                        <ErrorBoundary
+                            onError={(error) => {
+                                console.error('[ComponentSelectionStep] Frontend Picker error:', error);
+                            }}
+                        >
+                            <Picker
                             width="100%"
                             selectedKey={selectedFrontend}
                             onSelectionChange={(key) => {
@@ -295,6 +376,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                             ))}
                         </View>
                     )}
+                    </div>
                 </View>
 
                 {/* Backend Section */}

@@ -19,7 +19,6 @@ import { HandlerContext, SharedState } from '@/features/project-creation/handler
 import { HandlerRegistry } from '@/features/project-creation/handlers/HandlerRegistry';
 import {
     formatGroupName as formatGroupNameHelper,
-    generateComponentEnvFile as generateEnvFile,
     getSetupInstructions as getSetupInstructionsHelper,
     getEndpoint as getEndpointHelper,
     deployMeshComponent as deployMeshHelper,
@@ -413,20 +412,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     // Project creation with timeout and cancellation support
     
     // Actual project creation logic (extracted for testability)
-    
-    /**
-     * Generate component-specific .env file
-     * Each component gets its own .env with only the variables it needs
-     */
-    private async generateComponentEnvFile(
-        componentPath: string,
-        componentId: string,
-        componentDef: unknown,
-        config: Record<string, unknown>,
-    ): Promise<void> {
-        await generateEnvFile(componentPath, componentId, componentDef as import('@/types/components').TransformedComponentDefinition, config, this.logger);
-    }
-    
+
     /**
      * Format group name for display
      */

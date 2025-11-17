@@ -84,10 +84,17 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         id: f.id,
                         hasDeps: !!f.dependencies,
                         depsDetail: f.dependencies,
+                        hasConfig: !!f.configuration,
+                        configDetail: f.configuration,
                     })),
-                    dependencies: data.dependencies?.map((d: ComponentData) => d.id),
+                    dependencies: data.dependencies?.map((d: ComponentData) => ({
+                        id: d.id,
+                        hasConfig: !!d.configuration,
+                        configDetail: d.configuration,
+                    })),
                     hasEnvVars: !!data.envVars,
                     envVarsCount: Object.keys(data.envVars || {}).length,
+                    envVarsSample: Object.keys(data.envVars || {}).slice(0, 5), // First 5 keys
                 });
                 setComponentsData(data);
                 setIsLoading(false);
@@ -179,8 +186,17 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
             if (app) addComponentWithDeps(app, 'App Builder');
         });
         
-        console.log('[ComponentConfigStep] Selected components with dependencies:', components.map(c => ({ id: c.id, type: c.type })));
-        
+        console.log('[ComponentConfigStep] Selected components with dependencies:', {
+            components: components.map(c => ({
+                id: c.id,
+                type: c.type,
+                hasConfig: !!c.data.configuration,
+                requiredEnvVars: c.data.configuration?.requiredEnvVars || [],
+                optionalEnvVars: c.data.configuration?.optionalEnvVars || [],
+            })),
+            totalComponents: components.length,
+        });
+
         return components;
     }, [state.components, componentsData]);
 
@@ -309,6 +325,18 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                 const bOrder = serviceGroupDefs.find(d => d.id === b.id)?.order || 99;
                 return aOrder - bOrder;
             });
+
+        console.log('[ComponentConfigStep] Service groups:', {
+            groupCount: orderedGroups.length,
+            groups: orderedGroups.map(g => ({
+                id: g.id,
+                label: g.label,
+                fieldCount: g.fields.length,
+                fields: g.fields.map(f => ({ key: f.key, label: f.label, required: f.required })),
+            })),
+            envVarDefsAvailable: Object.keys(envVarDefs).length,
+            envVarDefsSample: Object.keys(envVarDefs).slice(0, 5),
+        });
 
         return orderedGroups;
     }, [selectedComponents]);
@@ -543,7 +571,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
     // Update parent state and validation
     useEffect(() => {
         updateState({ componentConfigs });
-        
+
         // Validate all required fields
         let allValid = true;
         const errors: Record<string, string> = {};

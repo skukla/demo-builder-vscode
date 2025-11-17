@@ -256,10 +256,10 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
 
     // Reset the check-in-progress flag when all checks are complete
     useEffect(() => {
-        const allDone = checks.every(check => 
+        const allDone = checks.every(check =>
             check.status !== 'checking' && check.status !== 'pending',
         );
-        
+
         if (allDone && checkInProgressRef.current) {
             checkInProgressRef.current = false;
         }
@@ -529,14 +529,14 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
 
             <Flex gap="size-150" marginTop="size-200">
                 <Button
-                            variant="secondary"
-                            onPress={checkPrerequisites}
-                            isDisabled={isChecking || installingIndex !== null}
-                            UNSAFE_className={cn('btn-standard', 'text-base')}
-                        >
-                            Recheck
-                        </Button>
-                    </Flex>
+                    variant="secondary"
+                    onPress={checkPrerequisites}
+                    isDisabled={isChecking || installingIndex !== null}
+                    UNSAFE_className={cn('btn-standard', 'text-base')}
+                >
+                    Recheck
+                </Button>
+            </Flex>
         </div>
     );
 }

@@ -27,6 +27,86 @@ describe('envFileGenerator', () => {
     let mockLogger: Logger;
     const mockComponentPath = '/test/path/component';
 
+    // Shared envVars dictionary (simulates registry.envVars)
+    const sharedEnvVars: Record<string, Omit<EnvVarDefinition, 'key'>> = {
+        USED_VAR: {
+            label: 'Used Var',
+            type: 'text',
+            description: 'Used by this component',
+            default: 'value1',
+        },
+        UNUSED_VAR: {
+            label: 'Unused Var',
+            type: 'text',
+            description: 'Used by different component',
+            default: 'value2',
+        },
+        API_KEY: {
+            label: 'API Key',
+            type: 'password',
+            description: 'API key',
+            group: 'api-config',
+        },
+        DB_HOST: {
+            label: 'DB Host',
+            type: 'text',
+            description: 'Database host',
+            group: 'database',
+        },
+        API_URL: {
+            label: 'API URL',
+            type: 'url',
+            description: 'API URL',
+            group: 'api-config',
+        },
+        VAR_WITHOUT_GROUP: {
+            label: 'Var Without Group',
+            type: 'text',
+            description: 'Variable without group',
+        },
+        MESH_ENDPOINT: {
+            label: 'Mesh Endpoint',
+            type: 'url',
+            description: 'Mesh endpoint',
+            default: 'default-endpoint',
+        },
+        SHARED_VAR: {
+            label: 'Shared Var',
+            type: 'text',
+            description: 'Shared variable',
+            default: 'default-value',
+        },
+        DEFAULT_VAR: {
+            label: 'Default Var',
+            type: 'text',
+            description: 'Variable with default',
+            default: 'default-value',
+        },
+        EMPTY_VAR: {
+            label: 'Empty Var',
+            type: 'text',
+            description: 'Variable without default',
+        },
+        DOCUMENTED_VAR: {
+            label: 'Documented Var',
+            type: 'text',
+            description: 'This is a documented variable',
+            default: 'value',
+        },
+        PORT: {
+            label: 'Port',
+            type: 'number',
+            description: 'Port number',
+            default: 3000,
+        },
+        ENABLED: {
+            label: 'Enabled',
+            type: 'boolean',
+            description: 'Feature enabled',
+            default: true,
+        },
+    };
+
     beforeEach(() => {
         jest.clearAllMocks();
         mockLogger = {
@@ -44,7 +124,10 @@ describe('envFileGenerator', () => {
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars: [],
+                    envVars: {
+                        requiredEnvVars: [],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -52,6 +135,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 {},
                 mockLogger,
             );
@@ -72,7 +156,10 @@ describe('envFileGenerator', () => {
                 name: 'Next.js Storefront',
                 type: 'frontend',
                 configuration: {
-                    envVars: [],
+                    envVars: {
+                        requiredEnvVars: [],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -80,6 +167,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'nextjs-storefront',
                 componentDef,
+                sharedEnvVars,
                 {},
                 mockLogger,
             );
@@ -94,31 +182,15 @@ describe('envFileGenerator', () => {
         });
 
         it('should filter environment variables by component', async () => {
-            const envVars: EnvVarDefinition[] = [
-                {
-                    key: 'USED_VAR',
-                    label: 'Used Var',
-                    type: 'text',
-                    description: 'Used by this component',
-                    usedBy: ['test-component'],
-                    default: 'value1',
-                },
-                {
-                    key: 'UNUSED_VAR',
-                    label: 'Unused Var',
-                    type: 'text',
-                    description: 'Used by different component',
-                    usedBy: ['other-component'],
-                    default: 'value2',
-                },
-            ];
-
             const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars,
+                    envVars: {
+                        requiredEnvVars: ['USED_VAR'],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -126,6 +198,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 {},
                 mockLogger,
             );
@@ -136,39 +209,15 @@ describe('envFileGenerator', () => {
         });
 
         it('should group variables by group name', async () => {
-            const envVars: EnvVarDefinition[] = [
-                {
-                    key: 'API_KEY',
-                    label: 'API Key',
-                    type: 'password',
-                    description: 'API key',
-                    usedBy: ['test-component'],
-                    group: 'api-config',
-                },
-                {
-                    key: 'DB_HOST',
-                    label: 'DB Host',
-                    type: 'text',
-                    description: 'Database host',
-                    usedBy: ['test-component'],
-                    group: 'database',
-                },
-                {
-                    key: 'API_URL',
-                    label: 'API URL',
-                    type: 'url',
-                    description: 'API URL',
-                    usedBy: ['test-component'],
-                    group: 'api-config',
-                },
-            ];
-
             const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars,
+                    envVars: {
+                        requiredEnvVars: ['API_KEY', 'DB_HOST', 'API_URL'],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -176,6 +225,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 {},
                 mockLogger,
             );
@@ -186,22 +236,15 @@ describe('envFileGenerator', () => {
         });
 
         it('should use "general" as default group', async () => {
-            const envVars: EnvVarDefinition[] = [
-                {
-                    key: 'VAR_WITHOUT_GROUP',
-                    label: 'Var Without Group',
-                    type: 'text',
-                    description: 'Variable without group',
-                    usedBy: ['test-component'],
-                },
-            ];
-
             const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars,
+                    envVars: {
+                        requiredEnvVars: ['VAR_WITHOUT_GROUP'],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -209,6 +252,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 {},
                 mockLogger,
             );
@@ -218,23 +262,15 @@ describe('envFileGenerator', () => {
         });
 
         it('should prioritize MESH_ENDPOINT from runtime config', async () => {
-            const envVars: EnvVarDefinition[] = [
-                {
-                    key: 'MESH_ENDPOINT',
-                    label: 'Mesh Endpoint',
-                    type: 'url',
-                    description: 'Mesh endpoint',
-                    usedBy: ['test-component'],
-                    default: 'default-endpoint',
-                },
-            ];
-
             const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars,
+                    envVars: {
+                        requiredEnvVars: ['MESH_ENDPOINT'],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -248,6 +284,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 config,
                 mockLogger,
             );
@@ -257,23 +294,15 @@ describe('envFileGenerator', () => {
         });
 
         it('should use user-provided values from componentConfigs', async () => {
-            const envVars: EnvVarDefinition[] = [
-                {
-                    key: 'API_KEY',
-                    label: 'API Key',
-                    type: 'password',
-                    description: 'API key',
-                    usedBy: ['test-component'],
-                    default: 'default-key',
-                },
-            ];
-
             const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars,
+                    envVars: {
+                        requiredEnvVars: ['API_KEY'],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -289,6 +318,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 config,
                 mockLogger,
             );
@@ -298,23 +328,15 @@ describe('envFileGenerator', () => {
         });
 
         it('should search all components for user-provided values', async () => {
-            const envVars: EnvVarDefinition[] = [
-                {
-                    key: 'SHARED_VAR',
-                    label: 'Shared Var',
-                    type: 'text',
-                    description: 'Shared variable',
-                    usedBy: ['test-component'],
-                    default: 'default-value',
-                },
-            ];
-
             const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars,
+                    envVars: {
+                        requiredEnvVars: ['SHARED_VAR'],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -330,6 +352,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 config,
                 mockLogger,
             );
@@ -339,23 +362,15 @@ describe('envFileGenerator', () => {
         });
 
         it('should fall back to default value if no user value', async () => {
-            const envVars: EnvVarDefinition[] = [
-                {
-                    key: 'DEFAULT_VAR',
-                    label: 'Default Var',
-                    type: 'text',
-                    description: 'Variable with default',
-                    usedBy: ['test-component'],
-                    default: 'default-value',
-                },
-            ];
-
             const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars,
+                    envVars: {
+                        requiredEnvVars: ['DEFAULT_VAR'],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -363,6 +378,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 {},
                 mockLogger,
             );
@@ -372,22 +388,15 @@ describe('envFileGenerator', () => {
         });
 
         it('should use empty string if no default or user value', async () => {
-            const envVars: EnvVarDefinition[] = [
-                {
-                    key: 'EMPTY_VAR',
-                    label: 'Empty Var',
-                    type: 'text',
-                    description: 'Variable without default',
-                    usedBy: ['test-component'],
-                },
-            ];
-
             const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars,
+                    envVars: {
+                        requiredEnvVars: ['EMPTY_VAR'],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -395,6 +404,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 {},
                 mockLogger,
             );
@@ -404,23 +414,15 @@ describe('envFileGenerator', () => {
         });
 
         it('should include descriptions as comments', async () => {
-            const envVars: EnvVarDefinition[] = [
-                {
-                    key: 'DOCUMENTED_VAR',
-                    label: 'Documented Var',
-                    type: 'text',
-                    description: 'This is a documented variable',
-                    usedBy: ['test-component'],
-                    default: 'value',
-                },
-            ];
-
             const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars,
+                    envVars: {
+                        requiredEnvVars: ['DOCUMENTED_VAR'],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -428,6 +430,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 {},
                 mockLogger,
             );
@@ -438,31 +441,15 @@ describe('envFileGenerator', () => {
         });
 
         it('should handle numeric and boolean values', async () => {
-            const envVars: EnvVarDefinition[] = [
-                {
-                    key: 'PORT',
-                    label: 'Port',
-                    type: 'number',
-                    description: 'Port number',
-                    usedBy: ['test-component'],
-                    default: 3000,
-                },
-                {
-                    key: 'ENABLED',
-                    label: 'Enabled',
-                    type: 'boolean',
-                    description: 'Feature enabled',
-                    usedBy: ['test-component'],
-                    default: true,
-                },
-            ];
-
             const componentDef: TransformedComponentDefinition = {
                 id: 'test-component',
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars,
+                    envVars: {
+                        requiredEnvVars: ['PORT', 'ENABLED'],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -470,6 +457,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 {},
                 mockLogger,
             );
@@ -491,6 +479,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 {},
                 mockLogger,
             );
@@ -506,7 +495,10 @@ describe('envFileGenerator', () => {
                 name: 'Test Component',
                 type: 'frontend',
                 configuration: {
-                    envVars: [],
+                    envVars: {
+                        requiredEnvVars: [],
+                        optionalEnvVars: [],
+                    },
                 },
             } as TransformedComponentDefinition;
 
@@ -514,6 +506,7 @@ describe('envFileGenerator', () => {
                 mockComponentPath,
                 'test-component',
                 componentDef,
+                sharedEnvVars,
                 {},
                 mockLogger,
             );

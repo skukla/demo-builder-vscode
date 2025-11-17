@@ -52,7 +52,7 @@ describe('AdobeEntityService - Shared Operations', () => {
             mockCacheManager.getCachedOrganization.mockReturnValue(mockOrgs[0]);
             mockCacheManager.getCachedProject.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify({}),
                 stderr: '',
                 code: 0,
@@ -71,7 +71,7 @@ describe('AdobeEntityService - Shared Operations', () => {
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockCacheManager.getCachedProject.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify({}),
                 stderr: '',
                 code: 0,

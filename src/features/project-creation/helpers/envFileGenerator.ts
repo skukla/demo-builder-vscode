@@ -25,6 +25,7 @@ interface EnvGenerationConfig {
  * @param componentPath - Path to the component directory
  * @param componentId - ID of the component
  * @param componentDef - Component definition from components.json
+ * @param sharedEnvVars - Shared environment variable definitions dictionary
  * @param config - Project configuration with user values
  * @param logger - Logger instance for info messages
  */
@@ -32,6 +33,7 @@ export async function generateComponentEnvFile(
     componentPath: string,
     componentId: string,
     componentDef: TransformedComponentDefinition,
+    sharedEnvVars: Record<string, Omit<EnvVarDefinition, 'key'>>,
     config: EnvGenerationConfig,
     logger: Logger,
 ): Promise<void> {
@@ -42,13 +44,23 @@ export async function generateComponentEnvFile(
         '',
     ];
 
-    // Get all environment variables defined for this component
-    const envVars = componentDef.configuration?.envVars || [];
+    // Get environment variable keys from flat structure (directly in configuration)
+    const requiredKeys = componentDef.configuration?.requiredEnvVars || [];
+    const optionalKeys = componentDef.configuration?.optionalEnvVars || [];
+    const allKeys = [...requiredKeys, ...optionalKeys];
 
-    // Filter to only variables used by this component
-    const relevantVars = envVars.filter((envVar: EnvVarDefinition) =>
-        envVar.usedBy?.includes(componentId),
-    );
+    // Build EnvVarDefinition objects by looking up from shared dictionary
+    const relevantVars: EnvVarDefinition[] = [];
+    for (const key of allKeys) {
+        const envVar = sharedEnvVars[key];
+        if (envVar) {
+            relevantVars.push({
+                key,
+                ...envVar,
+                usedBy: [componentId],
+            });
+        }
+    }
 
     if (relevantVars.length > 0) {
         // Group variables by their group

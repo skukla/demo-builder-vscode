@@ -79,7 +79,7 @@ describe('npm --prefer-offline Fallback (Integration)', () => {
 
         mockExecutor = {
             execute: jest.fn(),
-            executeAdobeCLI: jest.fn(),
+            execute: jest.fn(),
         } as any;
 
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockExecutor);
@@ -140,7 +140,7 @@ describe('npm --prefer-offline Fallback (Integration)', () => {
                 });
 
             // After fallback installation, version check should succeed
-            mockExecutor.executeAdobeCLI.mockResolvedValueOnce({
+            mockExecutor.execute.mockResolvedValueOnce({
                 stdout: '@adobe/aio-cli/10.1.0 darwin-arm64 node-v20.11.0',
                 stderr: '',
                 code: 0,
@@ -160,7 +160,7 @@ describe('npm --prefer-offline Fallback (Integration)', () => {
             const networkError: any = new Error('Command not found');
             networkError.code = 'ENOENT';
 
-            mockExecutor.executeAdobeCLI.mockRejectedValue(networkError);
+            mockExecutor.execute.mockRejectedValue(networkError);
 
             const prereq = await manager.getPrerequisiteById('aio-cli');
 
@@ -175,7 +175,7 @@ describe('npm --prefer-offline Fallback (Integration)', () => {
             const permError: any = new Error('npm ERR! code EACCES');
             permError.code = 'EACCES';
 
-            mockExecutor.executeAdobeCLI.mockRejectedValue(permError);
+            mockExecutor.execute.mockRejectedValue(permError);
 
             const prereq = await manager.getPrerequisiteById('aio-cli');
 

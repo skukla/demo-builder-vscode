@@ -154,6 +154,10 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const registryManager = new ComponentRegistryManager(context.context.extensionPath);
     const componentManager = new ComponentManager(context.logger);
 
+    // Load registry to get shared envVars dictionary
+    const registry = await registryManager.loadRegistry();
+    const sharedEnvVars = registry.envVars || {};
+
     // Step 4: Install selected components (25-80%)
     const allComponents = [
         ...(typedConfig.components?.frontend ? [{ id: typedConfig.components.frontend, type: 'frontend' }] : []),
@@ -198,6 +202,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     result.component.path,
                     comp.id,
                     componentDef,
+                    sharedEnvVars,
                     config,
                     context.logger,
                 );

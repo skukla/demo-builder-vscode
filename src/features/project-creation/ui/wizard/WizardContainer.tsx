@@ -62,26 +62,30 @@ const LOADING_OVERLAY_STYLES = {
 };
 
 // Helper: Build project configuration from wizard state
-const buildProjectConfig = (wizardState: WizardState) => ({
-    projectName: wizardState.projectName,
-    projectTemplate: wizardState.projectTemplate,
-    adobe: {
-        organization: wizardState.adobeOrg?.id,
-        projectId: wizardState.adobeProject?.id,
-        projectName: wizardState.adobeProject?.name,
-        workspace: wizardState.adobeWorkspace?.id,
-        workspaceName: wizardState.adobeWorkspace?.name,
-    },
-    components: {
-        frontend: wizardState.components?.frontend,
-        backend: wizardState.components?.backend,
-        dependencies: wizardState.components?.dependencies || [],
-        integrations: wizardState.components?.integrations || [],
-        appBuilderApps: wizardState.components?.appBuilderApps || [],
-    },
-    apiMesh: wizardState.apiMesh,
-    componentConfigs: wizardState.componentConfigs,
-});
+const buildProjectConfig = (wizardState: WizardState) => {
+    const config = {
+        projectName: wizardState.projectName,
+        projectTemplate: wizardState.projectTemplate,
+        adobe: {
+            organization: wizardState.adobeOrg?.id,
+            projectId: wizardState.adobeProject?.id,
+            projectName: wizardState.adobeProject?.name,
+            workspace: wizardState.adobeWorkspace?.id,
+            workspaceName: wizardState.adobeWorkspace?.name,
+        },
+        components: {
+            frontend: wizardState.components?.frontend,
+            backend: wizardState.components?.backend,
+            dependencies: wizardState.components?.dependencies || [],
+            integrations: wizardState.components?.integrations || [],
+            appBuilderApps: wizardState.components?.appBuilderApps || [],
+        },
+        apiMesh: wizardState.apiMesh,
+        componentConfigs: wizardState.componentConfigs,
+    };
+
+    return config;
+};
 
 // Helper: Handle backend calls for step transitions
 const handleStepBackendCalls = async (currentStep: string, nextStepId: string, wizardState: WizardState) => {
@@ -214,6 +218,16 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
     // Auto-focus first element in step content when step changes
     useEffect(() => {
+        // Don't auto-focus on steps that manage their own focus or use natural tab order
+        // - component-selection, component-config: Complex Spectrum components with delayed rendering
+        // - prerequisites: Natural tab order works better (Recheck button is first)
+        const selfManagedFocusSteps = new Set(['component-selection', 'component-config', 'prerequisites']);
+
+        if (selfManagedFocusSteps.has(state.currentStep)) {
+            // Step handles its own focus management or uses natural tab order
+            return;
+        }
+
         // Longer delay to let step render, transition complete, and Spectrum components mount
         const timer = setTimeout(() => {
             if (!stepContentRef.current) return;

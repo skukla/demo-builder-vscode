@@ -50,7 +50,7 @@ describe('Authentication Flow - Zero Organizations Integration', () => {
 
         // Create fresh mocks
         mockCommandExecutor = {
-            executeAdobeCLI: jest.fn(),
+            execute: jest.fn(),
         } as unknown as jest.Mocked<CommandExecutor>;
 
         mockSDKClient = {
@@ -108,7 +108,7 @@ describe('Authentication Flow - Zero Organizations Integration', () => {
             mockSDKClient.isInitialized.mockReturnValue(false);
 
             // Mock CLI to return empty orgs array
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: '[]', // Empty orgs from CLI
                     stderr: '',
@@ -130,15 +130,15 @@ describe('Authentication Flow - Zero Organizations Integration', () => {
 
             // Then: CLI context delete commands executed
             expect(orgs).toEqual([]);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.org',
                 { encoding: 'utf8' }
             );
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.project',
                 { encoding: 'utf8' }
             );
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.workspace',
                 { encoding: 'utf8' }
             );
@@ -157,7 +157,7 @@ describe('Authentication Flow - Zero Organizations Integration', () => {
             mockSDKClient.isInitialized.mockReturnValue(false);
 
             // First: getOrganizations returns empty and clears context
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: '[]', // Empty orgs
                     stderr: '',
@@ -175,14 +175,14 @@ describe('Authentication Flow - Zero Organizations Integration', () => {
 
             // When: User attempts new Adobe CLI operation (e.g., org selection)
             // Simulate selecting organization after re-authentication
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValueOnce({
+            mockCommandExecutor.execute.mockResolvedValueOnce({
                 stdout: 'Organization selected',
                 stderr: '',
                 code: 0, // Success - no 403 error
                 duration: 500,
             });
 
-            const selectOrgResult = await mockCommandExecutor.executeAdobeCLI(
+            const selectOrgResult = await mockCommandExecutor.execute(
                 'aio console org select ORG123@AdobeOrg',
                 { encoding: 'utf8' }
             );

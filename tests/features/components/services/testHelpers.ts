@@ -15,7 +15,6 @@ import { CommandExecutor } from '@/core/shell';
 export function createMockCommandExecutor(): CommandExecutor {
     return {
         execute: jest.fn(),
-        executeAdobeCLI: jest.fn(),
         executeExclusive: jest.fn(),
         pollUntilCondition: jest.fn(),
         waitForFileSystem: jest.fn(),

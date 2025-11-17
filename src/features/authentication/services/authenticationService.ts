@@ -244,7 +244,7 @@ export class AuthenticationService {
             stepLogger.logTemplate('adobe-setup', 'operations.waiting-authentication', {});
 
             // Add timeout to the command execution (2 minutes)
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 loginCommand,
                 {
                     encoding: 'utf8',
@@ -345,7 +345,7 @@ export class AuthenticationService {
      */
     async logout(): Promise<void> {
         try {
-            await this.commandManager.executeAdobeCLI(
+            await this.commandManager.execute(
                 'aio auth logout',
                 { encoding: 'utf8' },
             );

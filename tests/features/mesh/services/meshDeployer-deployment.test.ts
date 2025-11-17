@@ -77,7 +77,7 @@ describe('MeshDeployer - Deployment', () => {
             const mockProject = createMockProject();
             await meshDeployer.deploy(mockProject);
 
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio api-mesh:create mesh.json',
                 expect.objectContaining({
                     cwd: '/test/project'
@@ -87,7 +87,7 @@ describe('MeshDeployer - Deployment', () => {
 
         it('should extract endpoint from command output', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue(
+            mockCommandExecutor.execute.mockResolvedValue(
                 createSuccessResult('Mesh created successfully\nhttps://custom-mesh.adobe.io/graphql\nDone!')
             );
 
@@ -98,7 +98,7 @@ describe('MeshDeployer - Deployment', () => {
 
         it('should handle deployment without endpoint', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue(
+            mockCommandExecutor.execute.mockResolvedValue(
                 createSuccessResult('Mesh created but no endpoint provided')
             );
 
@@ -110,7 +110,7 @@ describe('MeshDeployer - Deployment', () => {
 
         it('should handle deployment failure', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(
+            mockCommandExecutor.execute.mockRejectedValue(
                 new Error('Deployment failed')
             );
 
@@ -146,7 +146,7 @@ describe('MeshDeployer - Deployment', () => {
                 '/test/project/mesh.json',
                 expect.any(String)
             );
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio api-mesh:create mesh.json',
                 expect.objectContaining({ cwd: '/test/project' })
             );
@@ -154,7 +154,7 @@ describe('MeshDeployer - Deployment', () => {
 
         it('should handle multi-line output with endpoint', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue(
+            mockCommandExecutor.execute.mockResolvedValue(
                 createSuccessResult(`
 Deploying mesh...
 Configuration validated
@@ -170,7 +170,7 @@ Deployment complete
 
         it('should handle multiple URLs in output (use first)', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue(
+            mockCommandExecutor.execute.mockResolvedValue(
                 createSuccessResult(`
 Primary endpoint: https://primary.adobe.io/graphql
 Secondary endpoint: https://secondary.adobe.io/graphql
@@ -200,7 +200,7 @@ Secondary endpoint: https://secondary.adobe.io/graphql
             const mockProject = createMockProject();
             await meshDeployer.deploy(mockProject);
 
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 expect.any(String),
                 expect.objectContaining({
                     cwd: '/test/project'
@@ -213,7 +213,7 @@ Secondary endpoint: https://secondary.adobe.io/graphql
             await meshDeployer.deploy(mockProject);
 
             // Command should reference mesh.json relatively
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio api-mesh:create mesh.json',
                 expect.any(Object)
             );

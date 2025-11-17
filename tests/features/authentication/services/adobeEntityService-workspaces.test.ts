@@ -74,7 +74,7 @@ describe('AdobeEntityService - Workspaces', () => {
             mockSDKClient.getClient.mockReturnValue({
                 getWorkspacesForProject: jest.fn().mockRejectedValue(new Error('SDK error')),
             } as ReturnType<typeof mockSDKClient.getClient>);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([
                     { id: 'ws1', name: 'Production', title: 'Production' },
                 ]),
@@ -89,7 +89,7 @@ describe('AdobeEntityService - Workspaces', () => {
             const result = await service.getWorkspaces();
 
             expect(result).toHaveLength(1);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console workspace list --json',
                 expect.any(Object)
             );
@@ -99,7 +99,7 @@ describe('AdobeEntityService - Workspaces', () => {
             const { service, mockSDKClient, mockCommandExecutor } = testMocks;
             mockSDKClient.isInitialized.mockReturnValue(false);
             mockSDKClient.ensureInitialized.mockResolvedValue(false); // Auto-init attempted but failed
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([
                     { id: 'ws1', name: 'Production', title: 'Production' },
                 ]),
@@ -115,7 +115,7 @@ describe('AdobeEntityService - Workspaces', () => {
 
             expect(result).toHaveLength(1);
             expect(mockSDKClient.ensureInitialized).toHaveBeenCalled(); // Auto-init was attempted
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
 
         it('should use CLI if org ID missing', async () => {
@@ -123,7 +123,7 @@ describe('AdobeEntityService - Workspaces', () => {
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockCacheManager.getCachedProject.mockReturnValue(mockProjects[0]);
             mockSDKClient.isInitialized.mockReturnValue(true);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([{ id: 'ws1', name: 'Production', title: 'Production' }]),
                 stderr: '',
                 code: 0,
@@ -134,7 +134,7 @@ describe('AdobeEntityService - Workspaces', () => {
             const result = await service.getWorkspaces();
 
             expect(result).toHaveLength(1);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
 
         it('should use CLI if project ID missing', async () => {
@@ -142,7 +142,7 @@ describe('AdobeEntityService - Workspaces', () => {
             mockCacheManager.getCachedOrganization.mockReturnValue({ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' });
             mockCacheManager.getCachedProject.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(true);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([{ id: 'ws1', name: 'Production', title: 'Production' }]),
                 stderr: '',
                 code: 0,
@@ -153,13 +153,13 @@ describe('AdobeEntityService - Workspaces', () => {
             const result = await service.getWorkspaces();
 
             expect(result).toHaveLength(1);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
 
         it('should throw error if CLI fails', async () => {
             const { service, mockSDKClient, mockCommandExecutor } = testMocks;
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Network error',
                 code: 1,
@@ -172,7 +172,7 @@ describe('AdobeEntityService - Workspaces', () => {
         it('should map workspaces with title fallback', async () => {
             const { service, mockSDKClient, mockCommandExecutor } = testMocks;
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([{ id: 'ws1', name: 'Production' }]),
                 stderr: '',
                 code: 0,
@@ -191,7 +191,7 @@ describe('AdobeEntityService - Workspaces', () => {
             const { service, mockCacheManager, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedWorkspace.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify({
                     workspace: { id: 'ws1', name: 'Production' }
                 }),
@@ -217,13 +217,13 @@ describe('AdobeEntityService - Workspaces', () => {
 
             expect(result).toBeDefined();
             expect(result?.id).toBe('ws1');
-            expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 
         it('should return undefined if no workspace data', async () => {
             const { service, mockCacheManager, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify({}),
                 stderr: '',
                 code: 0,
@@ -238,7 +238,7 @@ describe('AdobeEntityService - Workspaces', () => {
         it('should return undefined if CLI command fails', async () => {
             const { service, mockCacheManager, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Error',
                 code: 1,
@@ -254,7 +254,7 @@ describe('AdobeEntityService - Workspaces', () => {
     describe('selectWorkspace()', () => {
         it('should successfully select workspace', async () => {
             const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'Workspace selected',
                 stderr: '',
                 code: 0,
@@ -264,7 +264,7 @@ describe('AdobeEntityService - Workspaces', () => {
             const result = await service.selectWorkspace('ws1');
 
             expect(result).toBe(true);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console workspace select ws1',
                 expect.objectContaining({
                     timeout: expect.any(Number)
@@ -285,7 +285,7 @@ describe('AdobeEntityService - Workspaces', () => {
 
         it('should fail if CLI command fails', async () => {
             const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Workspace not found',
                 code: 1,
@@ -299,7 +299,7 @@ describe('AdobeEntityService - Workspaces', () => {
 
         it('should clear cached console.where after successful selection', async () => {
             const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'Workspace selected',
                 stderr: '',
                 code: 0,
@@ -308,7 +308,7 @@ describe('AdobeEntityService - Workspaces', () => {
 
             await service.selectWorkspace('ws1');
 
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
     });
 
@@ -316,7 +316,7 @@ describe('AdobeEntityService - Workspaces', () => {
         it('should catch and rethrow errors in getWorkspaces', async () => {
             const { service, mockSDKClient, mockCommandExecutor } = testMocks;
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Network error'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Network error'));
 
             await expect(service.getWorkspaces()).rejects.toThrow('Network error');
         });

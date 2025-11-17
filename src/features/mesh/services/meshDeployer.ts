@@ -26,7 +26,7 @@ export class MeshDeployer {
             // Deploy mesh
             this.logger.info('Deploying API Mesh...');
             const commandManager = ServiceLocator.getCommandExecutor();
-            const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:create mesh.json', {
+            const { stdout } = await commandManager.execute('aio api-mesh:create mesh.json', {
                 cwd: project.path,
             });
 
@@ -106,7 +106,7 @@ export class MeshDeployer {
             await fs.writeFile(meshPath, JSON.stringify(meshConfig, null, 2));
 
             const commandManager = ServiceLocator.getCommandExecutor();
-            const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:update mesh.json', {
+            const { stdout } = await commandManager.execute('aio api-mesh:update mesh.json', {
                 cwd: project.path,
             });
 
@@ -132,7 +132,7 @@ export class MeshDeployer {
             validateMeshId(meshId);
 
             const commandManager = ServiceLocator.getCommandExecutor();
-            await commandManager.executeAdobeCLI(`aio api-mesh:delete ${meshId}`);
+            await commandManager.execute(`aio api-mesh:delete ${meshId}`);
             this.logger.info(`Mesh ${meshId} deleted`);
             return true;
         } catch (error) {

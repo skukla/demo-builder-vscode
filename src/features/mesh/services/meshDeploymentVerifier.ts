@@ -91,6 +91,7 @@ export async function waitForMeshDeployment(
                     configureTelemetry: false,
                     useNodeVersion: null,
                     enhancePath: true,
+                    shell: true,
                 },
             );
             

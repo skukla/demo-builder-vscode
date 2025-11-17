@@ -53,7 +53,7 @@ describe('projectHandlers', () => {
 
         // Mock command executor
         mockCommandExecutor = {
-            executeAdobeCLI: jest.fn()
+            execute: jest.fn()
         };
 
         // Mock ServiceLocator
@@ -332,7 +332,7 @@ describe('projectHandlers', () => {
     describe('handleCheckProjectApis', () => {
         it('should detect API Mesh when enabled', async () => {
             // Mock CLI commands
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     // aio plugins --json
                     stdout: JSON.stringify([
@@ -358,7 +358,7 @@ describe('projectHandlers', () => {
         });
 
         it('should detect when API Mesh is not enabled', async () => {
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     // aio plugins --json
                     stdout: JSON.stringify([
@@ -386,7 +386,7 @@ describe('projectHandlers', () => {
         });
 
         it('should handle when plugin is not installed', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValueOnce({
+            mockCommandExecutor.execute.mockResolvedValueOnce({
                 // aio plugins --json
                 stdout: JSON.stringify([
                     { name: '@adobe/aio-cli-plugin-something-else' }
@@ -403,7 +403,7 @@ describe('projectHandlers', () => {
         });
 
         it('should handle no active mesh but API enabled', async () => {
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     // aio plugins --json
                     stdout: JSON.stringify([
@@ -431,7 +431,7 @@ describe('projectHandlers', () => {
         });
 
         it('should try fallback commands on error', async () => {
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     // aio plugins --json
                     stdout: JSON.stringify([
@@ -460,7 +460,7 @@ describe('projectHandlers', () => {
         });
 
         it('should return false when all probes fail', async () => {
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     // aio plugins --json
                     stdout: JSON.stringify([
@@ -500,7 +500,7 @@ describe('projectHandlers', () => {
         });
 
         it('should handle plugin list parsing errors', async () => {
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValueOnce({
+            mockCommandExecutor.execute.mockResolvedValueOnce({
                 // aio plugins --json with invalid JSON
                 stdout: 'invalid json'
             });
@@ -513,7 +513,7 @@ describe('projectHandlers', () => {
 
         it('should handle general errors', async () => {
             const error = new Error('CLI command failed');
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(error);
+            mockCommandExecutor.execute.mockRejectedValue(error);
 
             // Implementation catches errors and returns success with hasMesh: false
             const result = await handleCheckProjectApis(mockContext);

@@ -71,7 +71,7 @@ describe('MeshDeployer - Update', () => {
             const mockProject = createMockProject();
             await meshDeployer.update(mockProject);
 
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio api-mesh:update mesh.json',
                 expect.objectContaining({
                     cwd: '/test/project'
@@ -81,7 +81,7 @@ describe('MeshDeployer - Update', () => {
 
         it('should extract endpoint from update output', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue(
+            mockCommandExecutor.execute.mockResolvedValue(
                 createSuccessResult('Mesh updated\nhttps://updated-mesh.adobe.io/graphql')
             );
 
@@ -92,7 +92,7 @@ describe('MeshDeployer - Update', () => {
 
         it('should handle update without endpoint', async () => {
             const mockProject = createMockProject();
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue(
+            mockCommandExecutor.execute.mockResolvedValue(
                 createSuccessResult('Update complete')
             );
 
@@ -105,7 +105,7 @@ describe('MeshDeployer - Update', () => {
         it('should handle update failure', async () => {
             const mockProject = createMockProject();
             // Given: Update command fails
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(
+            mockCommandExecutor.execute.mockRejectedValue(
                 new Error('Update failed')
             );
 

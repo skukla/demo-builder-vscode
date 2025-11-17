@@ -72,7 +72,7 @@ describe('npm --prefer-offline Fallback Logic', () => {
         name: 'NPM Tool',
         description: 'Generic npm-based tool',
         optional: false,
-        perNodeVersion: false, // Uses executeAdobeCLI code path
+        perNodeVersion: false, // Uses execute() code path
         check: {
             command: 'npm-tool --version',
             parseVersion: '([0-9.]+)',
@@ -102,7 +102,7 @@ describe('npm --prefer-offline Fallback Logic', () => {
 
         mockExecutor = {
             execute: jest.fn(),
-            executeAdobeCLI: jest.fn(),
+            execute: jest.fn(),
         } as any;
 
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockExecutor);
@@ -200,7 +200,7 @@ describe('npm --prefer-offline Fallback Logic', () => {
             const networkError: any = new Error('npm ERR! network request failed');
             networkError.code = 'ENOENT'; // Use ENOENT to avoid timeout detection
 
-            // checkPrerequisite uses execute(), not executeAdobeCLI()
+            // checkPrerequisite uses execute(), not execute()
             mockExecutor.execute.mockRejectedValueOnce(networkError);
 
             // checkPrerequisite returns status object, doesn't throw

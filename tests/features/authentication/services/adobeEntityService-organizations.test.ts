@@ -84,7 +84,7 @@ describe('AdobeEntityService - Organizations', () => {
             mockSDKClient.getClient.mockReturnValue({
                 getOrganizations: jest.fn().mockRejectedValue(new Error('SDK error')),
             } as ReturnType<typeof mockSDKClient.getClient>);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([
                     { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' },
                 ]),
@@ -95,7 +95,7 @@ describe('AdobeEntityService - Organizations', () => {
             const result = await service.getOrganizations();
 
             expect(result).toHaveLength(1);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console org list --json',
                 expect.any(Object)
             );
@@ -106,7 +106,7 @@ describe('AdobeEntityService - Organizations', () => {
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false); // SDK init fails
             mockSDKClient.ensureInitialized.mockResolvedValue(false); // Auto-init attempted but failed
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify(mockOrgs.map(o => ({ id: o.id, code: o.code, name: o.name }))),
                 stderr: '',
                 code: 0,
@@ -118,14 +118,14 @@ describe('AdobeEntityService - Organizations', () => {
 
             expect(result).toHaveLength(2);
             expect(mockSDKClient.ensureInitialized).toHaveBeenCalled(); // Auto-init was attempted
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
 
         it('should throw error if CLI fails', async () => {
             const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Authentication failed',
                 code: 1,
@@ -139,7 +139,7 @@ describe('AdobeEntityService - Organizations', () => {
             const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '{"invalid": "format"}',
                 stderr: '',
                 code: 0,
@@ -154,7 +154,7 @@ describe('AdobeEntityService - Organizations', () => {
             const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'invalid json',
                 stderr: '',
                 code: 0,
@@ -169,7 +169,7 @@ describe('AdobeEntityService - Organizations', () => {
             const { service, mockCacheManager, mockSDKClient, mockCommandExecutor, mockStepLogger } = testMocks;
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify([{ id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' }]),
                 stderr: '',
                 code: 0,
@@ -193,14 +193,14 @@ describe('AdobeEntityService - Organizations', () => {
             const result = await service.getCurrentOrganization();
 
             expect(result).toEqual(cachedOrg);
-            expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 
         it('should fetch from console.where if not cached', async () => {
             const { service, mockCacheManager, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify({ org: { id: 'org1', code: 'ORG1@AdobeOrg', name: 'Organization 1' } }),
                 stderr: '',
                 code: 0,
@@ -211,7 +211,7 @@ describe('AdobeEntityService - Organizations', () => {
             const result = await service.getCurrentOrganization();
 
             // Should call Adobe CLI and cache the result
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console where --json',
                 expect.any(Object)
             );
@@ -228,7 +228,7 @@ describe('AdobeEntityService - Organizations', () => {
             const result = await service.getCurrentOrganization();
 
             // Should not call CLI since console.where is cached
-            expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 
         it('should handle string org name by looking up ID from cache', async () => {
@@ -251,7 +251,7 @@ describe('AdobeEntityService - Organizations', () => {
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined); // No cached list
             mockSDKClient.isInitialized.mockReturnValue(false);
             mockSDKClient.ensureInitialized.mockResolvedValue(false); // Auto-init attempted but failed
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '[]', // Empty org list
                 stderr: '',
                 code: 0,
@@ -275,7 +275,7 @@ describe('AdobeEntityService - Organizations', () => {
             const { service, mockCacheManager, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: JSON.stringify({}),
                 stderr: '',
                 code: 0,
@@ -292,7 +292,7 @@ describe('AdobeEntityService - Organizations', () => {
             const { service, mockCacheManager, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrganization.mockReturnValue(undefined);
             mockCacheManager.getCachedConsoleWhere.mockReturnValue(undefined);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Error',
                 code: 1,
@@ -310,7 +310,7 @@ describe('AdobeEntityService - Organizations', () => {
             const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrgList.mockReturnValue(mockOrgs);
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'Org selected',
                 stderr: '',
                 code: 0,
@@ -320,7 +320,7 @@ describe('AdobeEntityService - Organizations', () => {
             const result = await service.selectOrganization('org1');
 
             expect(result).toBe(true);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console org select org1',
                 expect.objectContaining({
                     timeout: expect.any(Number)
@@ -342,7 +342,7 @@ describe('AdobeEntityService - Organizations', () => {
         it('should fail if CLI command fails', async () => {
             const { service, mockCacheManager, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrgList.mockReturnValue(mockOrgs);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: '',
                 stderr: 'Organization not found',
                 code: 1,
@@ -356,7 +356,7 @@ describe('AdobeEntityService - Organizations', () => {
 
         it('should handle timeout errors gracefully', async () => {
             const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Timeout'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Timeout'));
 
             const result = await service.selectOrganization('org1');
 
@@ -372,7 +372,7 @@ describe('AdobeEntityService - Organizations', () => {
             const result = await service.autoSelectOrganizationIfNeeded();
 
             expect(result).toEqual(mockOrgs[0]);
-            expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalled();
         });
 
         it('should auto-select if only one org exists', async () => {
@@ -386,7 +386,7 @@ describe('AdobeEntityService - Organizations', () => {
             // Mock CLI calls:
             // 1st call: getCurrentOrganization() -> returns invalid JSON so it returns undefined
             // 2nd call: selectOrganization() -> returns success
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: '{}', // Empty console.where response
                     stderr: '',
@@ -403,7 +403,7 @@ describe('AdobeEntityService - Organizations', () => {
             const result = await service.autoSelectOrganizationIfNeeded();
 
             expect(result).toEqual(mockOrgs[0]);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
 
         it('should return undefined if multiple orgs exist', async () => {
@@ -423,7 +423,7 @@ describe('AdobeEntityService - Organizations', () => {
             mockSDKClient.isInitialized.mockReturnValue(false);
 
             // Only one CLI call needed: selectOrganization()
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 stdout: 'Org selected',
                 stderr: '',
                 code: 0,
@@ -449,7 +449,7 @@ describe('AdobeEntityService - Organizations', () => {
             // 2nd: getOrganizations() fetches org list
             // 3rd: selectOrganization() selects the org
             // 4th: selectOrganization() calls getOrganizations() again to cache (since getCachedOrgList still returns undefined)
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: '{}', // Empty console.where response
                     stderr: '',
@@ -479,7 +479,7 @@ describe('AdobeEntityService - Organizations', () => {
 
             expect(result).toBeDefined();
             expect(result).toEqual(mockOrgs[0]);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalled();
+            expect(mockCommandExecutor.execute).toHaveBeenCalled();
         });
     });
 
@@ -488,7 +488,7 @@ describe('AdobeEntityService - Organizations', () => {
             const { service, mockCacheManager, mockSDKClient, mockCommandExecutor } = testMocks;
             mockCacheManager.getCachedOrgList.mockReturnValue(undefined);
             mockSDKClient.isInitialized.mockReturnValue(false);
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Network error'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Network error'));
 
             await expect(service.getOrganizations()).rejects.toThrow('Network error');
         });
@@ -510,7 +510,7 @@ describe('AdobeEntityService - Organizations', () => {
             } as ReturnType<typeof mockSDKClient.getClient>);
 
             // Mock CLI calls: first org list (returns empty), then 3 config delete commands
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: '[]', // CLI also returns empty
                     stderr: '',
@@ -533,20 +533,20 @@ describe('AdobeEntityService - Organizations', () => {
             expect(result).toEqual([]); // Empty array returned
 
             // Verify 4 CLI calls: 1 for org list + 3 for config delete
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(4);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(4);
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console org list --json',
                 expect.any(Object)
             );
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.org',
                 { encoding: 'utf8' }
             );
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.project',
                 { encoding: 'utf8' }
             );
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.workspace',
                 { encoding: 'utf8' }
             );
@@ -565,7 +565,7 @@ describe('AdobeEntityService - Organizations', () => {
 
             // First call: CLI org list returns empty array
             // Subsequent calls: config delete commands
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: '[]', // Empty orgs from CLI
                     stderr: '',
@@ -588,12 +588,12 @@ describe('AdobeEntityService - Organizations', () => {
             expect(result).toEqual([]);
 
             // Verify 4 CLI calls: 1 for org list + 3 for config delete
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(4);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(4);
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console org list --json',
                 expect.any(Object)
             );
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.org',
                 { encoding: 'utf8' }
             );
@@ -614,7 +614,7 @@ describe('AdobeEntityService - Organizations', () => {
             // Track when each command is called
             const callTimestamps: number[] = [];
             let callCount = 0;
-            mockCommandExecutor.executeAdobeCLI.mockImplementation(async (cmd) => {
+            mockCommandExecutor.execute.mockImplementation(async (cmd) => {
                 callCount++;
                 if (callCount === 1) {
                     // First call is org list
@@ -649,7 +649,7 @@ describe('AdobeEntityService - Organizations', () => {
             } as ReturnType<typeof mockSDKClient.getClient>);
 
             // Mock CLI calls: first org list, then config deletes
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: '[]',
                     stderr: '',
@@ -669,12 +669,12 @@ describe('AdobeEntityService - Organizations', () => {
             await service.getOrganizations();
 
             // Assert: Verify ims context NOT cleared
-            expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalledWith(
                 expect.stringContaining('ims'),
                 expect.any(Object)
             );
             // Only console.* configs cleared
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config delete console.org',
                 expect.any(Object)
             );
@@ -694,7 +694,7 @@ describe('AdobeEntityService - Organizations', () => {
             // Track call order
             const callOrder: string[] = [];
             let callCount = 0;
-            mockCommandExecutor.executeAdobeCLI.mockImplementation(async (cmd) => {
+            mockCommandExecutor.execute.mockImplementation(async (cmd) => {
                 callCount++;
                 if (callCount === 1) {
                     // First call is org list
@@ -746,7 +746,7 @@ describe('AdobeEntityService - Organizations', () => {
             expect(result).toHaveLength(1);
 
             // Verify NO config delete commands called
-            expect(mockCommandExecutor.executeAdobeCLI).not.toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).not.toHaveBeenCalledWith(
                 expect.stringContaining('config delete'),
                 expect.any(Object)
             );
@@ -765,7 +765,7 @@ describe('AdobeEntityService - Organizations', () => {
             } as ReturnType<typeof mockSDKClient.getClient>);
 
             // Mock CLI: first org list succeeds, then config deletes fail
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     stdout: '[]',
                     stderr: '',

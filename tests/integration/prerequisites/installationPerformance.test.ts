@@ -58,7 +58,7 @@ describe('Adobe AIO CLI Installation Performance (Integration)', () => {
 
         mockExecutor = {
             execute: jest.fn(),
-            executeAdobeCLI: jest.fn(),
+            execute: jest.fn(),
         } as any;
 
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockExecutor);
@@ -119,7 +119,7 @@ describe('Adobe AIO CLI Installation Performance (Integration)', () => {
 
         it('should result in faster installation (simulated)', async () => {
             // Simulate installation with performance flags
-            mockExecutor.executeAdobeCLI.mockResolvedValue({
+            mockExecutor.execute.mockResolvedValue({
                 stdout: '@adobe/aio-cli/10.1.0',
                 stderr: '',
                 code: 0,

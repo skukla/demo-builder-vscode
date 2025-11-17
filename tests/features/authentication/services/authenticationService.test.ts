@@ -49,7 +49,6 @@ const mockWorkspace: AdobeWorkspace = {
 };
 
 const createMockCommandExecutor = (): jest.Mocked<CommandExecutor> => ({
-    executeAdobeCLI: jest.fn(),
     execute: jest.fn(),
     executeCommand: jest.fn(),
     executeWithNodeVersion: jest.fn(),
@@ -137,7 +136,7 @@ describe('AuthenticationService', () => {
         it('should return true when valid token exists', async () => {
             // Given: CLI returns a valid token with expiry
             const futureExpiry = Date.now() + 3600000; // 1 hour from now
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({
                     token: 'x'.repeat(150), // Valid token > 100 chars
@@ -151,7 +150,7 @@ describe('AuthenticationService', () => {
 
             // Then: should return true
             expect(result).toBe(true);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio config get ims.contexts.cli.access_token --json',
                 expect.objectContaining({ encoding: 'utf8' })
             );
@@ -159,7 +158,7 @@ describe('AuthenticationService', () => {
 
         it('should return false when token is invalid', async () => {
             // Given: CLI returns short token
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({
                     token: 'short', // Invalid token < 100 chars
@@ -177,7 +176,7 @@ describe('AuthenticationService', () => {
 
         it('should return false when CLI command fails', async () => {
             // Given: CLI command fails
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 1,
                 stdout: '',
                 stderr: 'Error: Not logged in',
@@ -192,7 +191,7 @@ describe('AuthenticationService', () => {
 
         it('should handle exceptions gracefully', async () => {
             // Given: CLI throws an exception
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Command failed'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Command failed'));
 
             // When: checking authentication quickly
             const result = await authService.isAuthenticated();
@@ -206,7 +205,7 @@ describe('AuthenticationService', () => {
         it('should return true when token is valid and org context is valid', async () => {
             // Given: Valid token and org context
             const futureExpiry = Date.now() + 3600000;
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     code: 0,
                     stdout: JSON.stringify({
@@ -235,7 +234,7 @@ describe('AuthenticationService', () => {
 
         it('should return false when token is invalid', async () => {
             // Given: Invalid token (too short)
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({
                     token: 'invalid',
@@ -253,7 +252,7 @@ describe('AuthenticationService', () => {
 
         it('should NOT initialize SDK during authentication check', async () => {
             // Given: Valid token
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     code: 0,
                     stdout: 'x'.repeat(150),
@@ -274,7 +273,7 @@ describe('AuthenticationService', () => {
 
         it('should handle ENOENT errors gracefully', async () => {
             // Given: CLI command fails with ENOENT
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('ENOENT: no such file'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('ENOENT: no such file'));
 
             // When: checking authentication
             const result = await authService.isFullyAuthenticated();
@@ -285,7 +284,7 @@ describe('AuthenticationService', () => {
 
         it('should handle timeout errors gracefully', async () => {
             // Given: CLI command times out
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(new Error('Operation timeout'));
+            mockCommandExecutor.execute.mockRejectedValue(new Error('Operation timeout'));
 
             // When: checking authentication
             const result = await authService.isFullyAuthenticated();
@@ -298,7 +297,7 @@ describe('AuthenticationService', () => {
     describe('login', () => {
         it('should execute login command and trust CLI token storage', async () => {
             const token = 'x'.repeat(150);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: token,
                 stderr: '',
@@ -307,7 +306,7 @@ describe('AuthenticationService', () => {
             const result = await authService.login();
 
             expect(result).toBe(true);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio auth login',
                 expect.objectContaining({ encoding: 'utf8' })
             );
@@ -316,7 +315,7 @@ describe('AuthenticationService', () => {
         it('should use force flag when forced login requested', async () => {
             // Given: CLI returns valid token after forced login
             const token = 'x'.repeat(150);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: token,
                 stderr: '',
@@ -326,7 +325,7 @@ describe('AuthenticationService', () => {
             await authService.login(true);
 
             // Then: should use -f flag
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio auth login -f',
                 expect.objectContaining({ encoding: 'utf8' })
             );
@@ -339,7 +338,7 @@ describe('AuthenticationService', () => {
             const validToken = 'x'.repeat(150);
 
             // Given: First login returns invalid token, second (forced) returns valid
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     code: 0,
                     stdout: invalidToken,
@@ -356,13 +355,13 @@ describe('AuthenticationService', () => {
 
             // Then: should retry with force flag and succeed
             expect(result).toBe(true);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(2);
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenNthCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(2);
+            expect(mockCommandExecutor.execute).toHaveBeenNthCalledWith(
                 1,
                 'aio auth login',
                 expect.objectContaining({ encoding: 'utf8' })
             );
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenNthCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenNthCalledWith(
                 2,
                 'aio auth login -f',
                 expect.objectContaining({ encoding: 'utf8' })
@@ -371,7 +370,7 @@ describe('AuthenticationService', () => {
 
         it('should handle login timeout with formatted error', async () => {
             const error = new Error('timeout');
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(error);
+            mockCommandExecutor.execute.mockRejectedValue(error);
 
             const result = await authService.login();
 
@@ -382,7 +381,7 @@ describe('AuthenticationService', () => {
 
         it('should handle permission errors with formatted error', async () => {
             const error = new Error('EACCES: permission denied');
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(error);
+            mockCommandExecutor.execute.mockRejectedValue(error);
 
             const result = await authService.login();
 
@@ -393,7 +392,7 @@ describe('AuthenticationService', () => {
 
         it('should handle network errors with formatted error', async () => {
             const error = new Error('ENETUNREACH: network unreachable');
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(error);
+            mockCommandExecutor.execute.mockRejectedValue(error);
 
             const result = await authService.login();
 
@@ -404,7 +403,7 @@ describe('AuthenticationService', () => {
 
         it('should NOT retry when CLI succeeds with valid token', async () => {
             const token = 'x'.repeat(150);
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: token,
                 stderr: '',
@@ -414,14 +413,14 @@ describe('AuthenticationService', () => {
 
             expect(result).toBe(true);
             // Should only call login once - trusts CLI exit code 0
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledTimes(1);
+            expect(mockCommandExecutor.execute).toHaveBeenCalledTimes(1);
         });
     });
 
     describe('logout', () => {
         it('should execute logout command and clear SDK', async () => {
             // Given: Logout command succeeds
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: 'Logged out',
                 stderr: '',
@@ -431,7 +430,7 @@ describe('AuthenticationService', () => {
             await authService.logout();
 
             // Then: should execute logout and clear SDK
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio auth logout',
                 expect.objectContaining({ encoding: 'utf8' })
             );
@@ -440,7 +439,7 @@ describe('AuthenticationService', () => {
 
         it('should propagate errors', async () => {
             const error = new Error('Logout failed');
-            mockCommandExecutor.executeAdobeCLI.mockRejectedValue(error);
+            mockCommandExecutor.execute.mockRejectedValue(error);
 
             await expect(authService.logout()).rejects.toThrow('Logout failed');
         });
@@ -546,7 +545,7 @@ describe('AuthenticationService', () => {
     describe('org context validation', () => {
         it('should validate and clear invalid org when app list fails', async () => {
             // Given: Valid context but app list will fail
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     code: 0,
                     stdout: JSON.stringify({ org: 'org123', project: 'proj123' }),
@@ -562,7 +561,7 @@ describe('AuthenticationService', () => {
             await authService.validateAndClearInvalidOrgContext();
 
             // Then: should have attempted validation
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio console where --json',
                 expect.any(Object)
             );
@@ -570,7 +569,7 @@ describe('AuthenticationService', () => {
 
         it('should test developer permissions via app list', async () => {
             // Given: Valid org with apps
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify([{ name: 'App 1', app_id: 'app1' }]),
                 stderr: '',
@@ -581,7 +580,7 @@ describe('AuthenticationService', () => {
 
             // Then: should return permission status
             expect(result).toHaveProperty('hasPermissions');
-            expect(mockCommandExecutor.executeAdobeCLI).toHaveBeenCalledWith(
+            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
                 'aio app list --json',
                 expect.any(Object)
             );
@@ -592,7 +591,7 @@ describe('AuthenticationService', () => {
         it('should handle full authentication flow with caching', async () => {
             // Given: First authentication check with valid token
             const futureExpiry = Date.now() + 3600000;
-            mockCommandExecutor.executeAdobeCLI
+            mockCommandExecutor.execute
                 .mockResolvedValueOnce({
                     code: 0,
                     stdout: JSON.stringify({
@@ -616,7 +615,7 @@ describe('AuthenticationService', () => {
             const result1 = await authService.isAuthenticated();
 
             // Reset mock to return cached result
-            mockCommandExecutor.executeAdobeCLI.mockResolvedValue({
+            mockCommandExecutor.execute.mockResolvedValue({
                 code: 0,
                 stdout: JSON.stringify({
                     token: 'x'.repeat(150),

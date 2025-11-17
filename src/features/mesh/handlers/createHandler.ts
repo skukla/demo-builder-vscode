@@ -264,6 +264,7 @@ export async function handleCreateApiMesh(
                         configureTelemetry: false,
                         useNodeVersion: null,
                         enhancePath: true,
+                        shell: true,
                     },
                 );
 

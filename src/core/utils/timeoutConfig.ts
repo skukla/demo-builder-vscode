@@ -50,6 +50,7 @@ export const TIMEOUTS = {
     STEP_TRANSITION: 300,           // Step transition animation duration (matches CSS)
     STEP_CONTENT_FOCUS: 300,        // Delay before focusing step content (allows Spectrum components to mount)
     SCROLL_ANIMATION: 150,          // Scroll animation delay for UI smoothness
+    FOCUS_FALLBACK: 1000,           // Fallback timeout for MutationObserver-based focus management
 
     // Default fallbacks
     COMMAND_DEFAULT: 30000,         // Default command timeout

@@ -287,11 +287,11 @@ export class PrerequisitesManager {
     private async checkPlugin(plugin: PrerequisitePlugin): Promise<{id: string; name: string; installed: boolean}> {
         try {
             const commandManager = ServiceLocator.getCommandExecutor();
-            // Use executeAdobeCLI for proper Node version management and caching
+            // Use execute for proper Node version management and caching
             // For prerequisite checks, disable retries to fail fast on timeout
-            const { stdout } = await commandManager.executeAdobeCLI(plugin.check.command, {
+            const { stdout } = await commandManager.execute(plugin.check.command, {
                 timeout: TIMEOUTS.PREREQUISITE_CHECK,
-                retryStrategy: { 
+                retryStrategy: {
                     maxAttempts: 1,
                     initialDelay: 0,
                     maxDelay: 0,

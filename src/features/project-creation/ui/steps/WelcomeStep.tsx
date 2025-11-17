@@ -9,6 +9,7 @@ import {
 import React, { useEffect } from 'react';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { WizardState } from '@/types/webview';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 interface WelcomeStepProps {
     state: WizardState;
@@ -39,13 +40,14 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
         }
         
         // Manually focus and select text (more reliable than autoFocus + onFocus)
+        // Delay slightly longer than WizardContainer's auto-focus (300ms + 100ms)
         setTimeout(() => {
             const input = document.querySelector('input[type="text"]') as HTMLInputElement;
             if (input) {
                 input.focus();
                 input.select();
             }
-        }, 100); // Small delay to ensure field is rendered with value
+        }, TIMEOUTS.STEP_CONTENT_FOCUS + 100); // Delay to allow Spectrum components to mount and win focus race
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount
 

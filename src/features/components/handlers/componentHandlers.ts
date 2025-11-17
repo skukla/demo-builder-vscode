@@ -135,6 +135,7 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
  * get-components-data - Fetch component data with full configuration
  *
  * Retrieves component data including dependency relationships and env vars.
+ * Uses flat structure (requiredEnvVars/optionalEnvVars) throughout.
  */
 export const handleGetComponentsData: MessageHandler = async (context: HandlerContext) => {
     try {
@@ -185,6 +186,17 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             })),
             envVars: registry.envVars || {},
         };
+
+        context.logger.debug('[componentHandlers] Sending components-data:', {
+            frontendsCount: frontends.length,
+            backendsCount: backends.length,
+            dependenciesCount: dependencies.length,
+            integrationsCount: integrations.length,
+            appBuilderCount: appBuilder.length,
+            envVarsCount: Object.keys(registry.envVars || {}).length,
+            envVarsSample: Object.keys(registry.envVars || {}).slice(0, 5),
+            sampleFrontendConfig: frontends[0]?.configuration,
+        });
 
         return {
             success: true,

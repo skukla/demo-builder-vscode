@@ -160,17 +160,11 @@ export class ComponentRegistryManager {
         const enhanceComponent = (id: string): TransformedComponentDefinition | null => {
             const comp = componentsMap[id];
             if (!comp) return null;
-            
+
             return {
                 ...comp,
                 id,
-                configuration: comp.configuration ? {
-                    ...comp.configuration,
-                    envVars: this.buildEnvVarsForComponent(id, comp, raw.envVars || {}),
-                    services: comp.configuration.requiredServices 
-                        ? this.buildServicesForComponent(comp.configuration.requiredServices, raw.services || {}, raw.envVars || {})
-                        : undefined,
-                } : undefined,
+                configuration: comp.configuration,
             };
         };
 
@@ -193,13 +187,7 @@ export class ComponentRegistryManager {
                 const enhanced: TransformedComponentDefinition = {
                     ...comp,
                     id,
-                    configuration: comp.configuration ? {
-                        ...comp.configuration,
-                        envVars: this.buildEnvVarsForComponent(id, comp, raw.envVars || {}),
-                        services: comp.configuration.requiredServices
-                            ? this.buildServicesForComponent(comp.configuration.requiredServices, raw.services || {}, raw.envVars || {})
-                            : undefined,
-                    } : undefined,
+                    configuration: comp.configuration,
                 };
                 infrastructure.push(enhanced);
             }
@@ -212,31 +200,6 @@ export class ComponentRegistryManager {
             services: raw.services || {},
             envVars: raw.envVars || {},
         };
-    }
-
-    private buildEnvVarsForComponent(
-        componentId: string,
-        component: RawComponentDefinition,
-        sharedEnvVars: Record<string, Omit<EnvVarDefinition, 'key'>>,
-    ): EnvVarDefinition[] {
-        const envVars: EnvVarDefinition[] = [];
-        const envVarConfig = component.configuration?.envVars;
-        const requiredKeys = envVarConfig?.requiredEnvVars || [];
-        const optionalKeys = envVarConfig?.optionalEnvVars || [];
-        const allKeys = [...requiredKeys, ...optionalKeys];
-
-        for (const key of allKeys) {
-            const envVar = sharedEnvVars[key];
-            if (envVar) {
-                envVars.push({
-                    key,
-                    ...envVar,
-                    usedBy: [componentId],
-                });
-            }
-        }
-
-        return envVars;
     }
 
     private buildServicesForComponent(

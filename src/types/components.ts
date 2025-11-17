@@ -43,15 +43,6 @@ export interface ServiceDefinition {
 }
 
 /**
- * ComponentEnvVars - Component environment variables configuration
- */
-export interface ComponentEnvVars {
-    requiredEnvVars?: string[];
-    optionalEnvVars?: string[];
-    services?: string[];
-}
-
-/**
  * RawComponentDefinition - Raw component from templates/components.json
  */
 export interface RawComponentDefinition {
@@ -83,7 +74,9 @@ export interface RawComponentDefinition {
         optional: string[];
     };
     configuration?: {
-        envVars?: ComponentEnvVars;
+        // Flat structure - requiredEnvVars/optionalEnvVars directly in configuration
+        requiredEnvVars?: string[];
+        optionalEnvVars?: string[];
         port?: number;
         nodeVersion?: string;
         buildScript?: string;
@@ -101,9 +94,16 @@ export interface RawComponentDefinition {
             handlers?: Record<string, unknown>;
         };
         providesEndpoint?: boolean;
+        providesEnvVars?: string[];
+        requiresDeployment?: boolean;
+        deploymentTarget?: string;
+        runtime?: string;
+        actions?: string[];
         impact?: 'minimal' | 'moderate' | 'significant';
         removable?: boolean;
         defaultEnabled?: boolean;
+        position?: string;
+        startOpen?: boolean;
     };
     compatibleBackends?: string[];
     features?: string[];
@@ -150,34 +150,12 @@ export interface PresetDefinition {
 /**
  * TransformedComponentDefinition - Component after transformation
  *
- * After transformation:
- * - envVars becomes EnvVarDefinition[] (expanded from registry)
- * - services becomes ServiceDefinition[] (expanded from service IDs)
+ * NO transformation anymore - just passes through the flat structure from JSON:
+ * - requiredEnvVars/optionalEnvVars directly in configuration (NOT nested)
+ * - services remains as-is (no transformation needed)
  */
-export interface TransformedComponentDefinition extends Omit<RawComponentDefinition, 'configuration'> {
-    configuration?: {
-        port?: number;
-        nodeVersion?: string;
-        buildScript?: string;
-        required?: Record<string, {
-            type: 'string' | 'url' | 'password' | 'number' | 'boolean';
-            label: string;
-            placeholder?: string;
-            default?: string | number | boolean;
-            validation?: string;
-        }>;
-        requiredServices?: string[];
-        meshIntegration?: {
-            sources?: Record<string, unknown>;
-            handlers?: Record<string, unknown>;
-        };
-        providesEndpoint?: boolean;
-        impact?: 'minimal' | 'moderate' | 'significant';
-        removable?: boolean;
-        defaultEnabled?: boolean;
-        envVars?: EnvVarDefinition[];
-        services?: ServiceDefinition[];
-    };
+export interface TransformedComponentDefinition extends RawComponentDefinition {
+    // Just extends RawComponentDefinition - no transformation needed
 }
 
 /**

@@ -26,7 +26,7 @@ export class OrganizationValidator {
             this.debugLogger.debug('[Org Validator] Validating organization access...');
 
             // Try to list projects - this will fail with 403 if org is invalid
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 'aio console project list --json',
                 { encoding: 'utf8', timeout: TIMEOUTS.PROJECT_LIST },
             );
@@ -73,7 +73,7 @@ export class OrganizationValidator {
     async validateAndClearInvalidOrgContext(forceValidation = false): Promise<void> {
         try {
             // Check if we have an organization context
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 'aio console where --json',
                 { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
             );
@@ -159,7 +159,7 @@ export class OrganizationValidator {
             this.debugLogger.debug('[Org Validator] Testing Developer permissions via App Builder access');
 
             // Try to list App Builder projects - this requires Developer or System Admin role
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 'aio app list --json',
                 { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
             );
@@ -217,9 +217,9 @@ export class OrganizationValidator {
         try {
             // Run all three operations in parallel
             await Promise.all([
-                this.commandManager.executeAdobeCLI('aio config delete console.org', { encoding: 'utf8' }),
-                this.commandManager.executeAdobeCLI('aio config delete console.project', { encoding: 'utf8' }),
-                this.commandManager.executeAdobeCLI('aio config delete console.workspace', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.org', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.project', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8' }),
             ]);
 
             // Clear console.where cache since context was cleared

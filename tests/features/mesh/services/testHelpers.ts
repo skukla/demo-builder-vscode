@@ -38,7 +38,7 @@ export function createMockProject(overrides: Partial<Project> = {}): Project {
  */
 export function createMockCommandExecutor(): jest.Mocked<CommandExecutor> {
     return {
-        executeAdobeCLI: jest.fn().mockResolvedValue({
+        execute: jest.fn().mockResolvedValue({
             stdout: 'https://mesh-endpoint.adobe.io/graphql',
             stderr: '',
             code: 0,

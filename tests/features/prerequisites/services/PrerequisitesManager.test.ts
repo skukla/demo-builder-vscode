@@ -710,7 +710,7 @@ describe('PrerequisitesManager', () => {
             // Then: Should call checkPerNodeVersionStatus (fnm-aware)
             expect(checkPerNodeVersionStatusSpy).toHaveBeenCalled();
 
-            // And: Should NOT directly call executeAdobeCLI or plain execute
+            // And: Should NOT directly call deprecated methods or plain execute
             // (This is implicitly tested - if we didn't call checkPerNodeVersionStatus,
             // the mock wouldn't have been invoked)
         });

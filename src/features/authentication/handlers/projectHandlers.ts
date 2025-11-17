@@ -161,7 +161,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
 
         // Step 1: Verify CLI has the API Mesh plugin installed (so commands exist)
         try {
-            const { stdout } = await commandManager.executeAdobeCLI('aio plugins --json');
+            const { stdout } = await commandManager.execute('aio plugins --json');
             const plugins = parseJSON<{ name?: string; id?: string }[]>(stdout || '[]');
             if (!plugins) {
                 context.logger.warn('[Adobe Setup] Failed to parse plugins list');
@@ -180,7 +180,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
 
         // Step 2: Confirm project context is selected (best effort)
         try {
-            await commandManager.executeAdobeCLI('aio console projects get --json');
+            await commandManager.execute('aio console projects get --json');
         } catch (e) {
             context.debugLogger.debug('[Adobe Setup] Could not confirm project context (non-fatal)', { error: String(e) });
         }
@@ -189,7 +189,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
         // CLI variants differ; try a few options and infer permissions from errors
         // Preferred probe: get active mesh (succeeds only if API enabled; returns 404-style when none exists)
         try {
-            const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:get --active --json');
+            const { stdout } = await commandManager.execute('aio api-mesh:get --active --json');
             context.debugLogger.debug('[Adobe Setup] api-mesh:get --active output', { stdout });
             context.logger.info('[Adobe Setup] API Mesh access confirmed (active mesh or readable config)');
             return { success: true, data: { hasMesh: true } };
@@ -217,7 +217,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
 
         for (const cmd of probes) {
             try {
-                const { stdout } = await commandManager.executeAdobeCLI(cmd);
+                const { stdout } = await commandManager.execute(cmd);
                 context.debugLogger.debug('[Adobe Setup] Mesh probe success', { cmd, stdout });
                 // If any mesh command runs, assume access exists
                 context.logger.info('[Adobe Setup] API Mesh access confirmed');
