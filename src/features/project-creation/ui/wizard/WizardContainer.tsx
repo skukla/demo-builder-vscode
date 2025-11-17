@@ -151,6 +151,9 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     // Ref for step content area (to focus first element when step changes)
     const stepContentRef = useRef<HTMLDivElement>(null);
 
+    // Ref for tracking navigation transition timeout (to prevent race conditions)
+    const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
     // Store response from get-components-data handler (includes full component data with envVars)
     const [componentsData, setComponentsData] = useState<{
         success: boolean;
@@ -243,6 +246,16 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         return () => clearTimeout(timer);
     }, [state.currentStep]);
 
+    // Cleanup transition timer on unmount
+    useEffect(() => {
+        return () => {
+            if (transitionTimerRef.current) {
+                clearTimeout(transitionTimerRef.current);
+                transitionTimerRef.current = null;
+            }
+        };
+    }, []);
+
     // Note: We no longer auto-close the wizard on success
     // The ProjectCreationStep has Browse Files and Close buttons instead
 
@@ -310,8 +323,13 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             const workspaceIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-workspace');
             const projectIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-project');
 
+            // Clear any existing transition timer to prevent race conditions
+            if (transitionTimerRef.current) {
+                clearTimeout(transitionTimerRef.current);
+            }
+
             // Wait for fade-out to complete, then update state and fade in
-            setTimeout(() => {
+            transitionTimerRef.current = setTimeout(() => {
                 setState(prev => {
                     const newState = { ...prev, currentStep: step };
 
@@ -334,12 +352,19 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                     return newState;
                 });
                 setIsTransitioning(false);
+                transitionTimerRef.current = null;
             }, STEP_TRANSITION_DURATION_MS);
         } else {
+            // Clear any existing transition timer to prevent race conditions
+            if (transitionTimerRef.current) {
+                clearTimeout(transitionTimerRef.current);
+            }
+
             // For forward navigation, keep original behavior with delayed state update
-            setTimeout(() => {
+            transitionTimerRef.current = setTimeout(() => {
                 setState(prev => ({ ...prev, currentStep: step }));
                 setIsTransitioning(false);
+                transitionTimerRef.current = null;
             }, STEP_TRANSITION_DURATION_MS);
         }
     }, [WIZARD_STEPS]);
