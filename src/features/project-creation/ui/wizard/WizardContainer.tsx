@@ -20,7 +20,7 @@ import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
-import { useFocusTrap } from '@/core/ui/hooks';
+import { useFocusTrap, FOCUSABLE_SELECTOR } from '@/core/ui/hooks';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 interface WizardContainerProps {
@@ -218,23 +218,10 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         const timer = setTimeout(() => {
             if (!stepContentRef.current) return;
 
-            // Find first focusable element in step content (include Spectrum components via ARIA roles)
-            const focusableSelector =
-                'button:not([disabled]):not([tabindex="-1"]), ' +
-                'input:not([disabled]):not([tabindex="-1"]), ' +
-                'select:not([disabled]):not([tabindex="-1"]), ' +
-                'textarea:not([disabled]):not([tabindex="-1"]), ' +
-                '[role="button"]:not([aria-disabled="true"]):not([tabindex="-1"]), ' +
-                '[role="combobox"]:not([aria-disabled="true"]):not([tabindex="-1"]), ' +
-                '[role="textbox"]:not([aria-disabled="true"]):not([tabindex="-1"]), ' +
-                '[tabindex="0"]';
+            // Find first focusable element in step content (includes native elements and Spectrum ARIA roles)
+            const focusableElements = stepContentRef.current.querySelectorAll(FOCUSABLE_SELECTOR);
 
-            const focusableElements = stepContentRef.current.querySelectorAll(focusableSelector);
-
-            // Debug logging
-            console.log(`[WizardContainer] Step ${state.currentStep}: Found ${focusableElements.length} focusable elements`);
             if (focusableElements.length > 0) {
-                console.log('[WizardContainer] First element:', focusableElements[0]);
                 (focusableElements[0] as HTMLElement).focus();
             }
         }, TIMEOUTS.STEP_CONTENT_FOCUS);

@@ -11,12 +11,22 @@ interface UseFocusTrapOptions {
   containFocus?: boolean;
 }
 
-const DEFAULT_FOCUSABLE_SELECTOR =
+/**
+ * Enhanced focusable selector that includes native HTML elements and ARIA roles
+ * for custom components like Adobe Spectrum.
+ *
+ * This selector is used by both useFocusTrap and components that need to
+ * find focusable elements (e.g., auto-focus on step navigation).
+ */
+export const FOCUSABLE_SELECTOR =
   'button:not([disabled]):not([tabindex="-1"]), ' +
   'input:not([disabled]):not([tabindex="-1"]), ' +
   'select:not([disabled]):not([tabindex="-1"]), ' +
   'textarea:not([disabled]):not([tabindex="-1"]), ' +
-  '[tabindex]:not([tabindex="-1"])';
+  '[role="button"]:not([aria-disabled="true"]):not([tabindex="-1"]), ' +
+  '[role="combobox"]:not([aria-disabled="true"]):not([tabindex="-1"]), ' +
+  '[role="textbox"]:not([aria-disabled="true"]):not([tabindex="-1"]), ' +
+  '[tabindex="0"]';
 
 /**
  * Hook for trapping keyboard focus within a container
@@ -62,7 +72,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   const {
     enabled = true,
     autoFocus = false,
-    focusableSelector = DEFAULT_FOCUSABLE_SELECTOR,
+    focusableSelector = FOCUSABLE_SELECTOR,
     containFocus = true
   } = options;
 

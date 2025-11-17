@@ -16,7 +16,7 @@ export { useAsyncData } from './useAsyncData';
 // UI Interaction Hooks
 export { useAutoScroll } from './useAutoScroll';
 export { useSearchFilter } from './useSearchFilter';
-export { useFocusTrap } from './useFocusTrap';
+export { useFocusTrap, FOCUSABLE_SELECTOR } from './useFocusTrap';
 
 // General Purpose Hooks
 export { useSelectableDefault, useSelectableDefaultWhen } from './useSelectableDefault';
