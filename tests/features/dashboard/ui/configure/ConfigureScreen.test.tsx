@@ -8,6 +8,7 @@ import '@testing-library/jest-dom';
 // Mock the webview-ui utilities and hooks
 jest.mock('@/core/ui/hooks', () => ({
     useSelectableDefault: jest.fn(() => ({})),
+    useFocusTrap: jest.fn(() => ({ current: null })),
 }));
 
 jest.mock('@/core/ui/hooks/useSelectableDefault', () => ({
