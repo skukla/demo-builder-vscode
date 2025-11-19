@@ -3,40 +3,14 @@ import { renderWithProviders, screen } from "../../../../helpers/react-test-util
 import userEvent from '@testing-library/user-event';
 import {
     NavigationPanel,
-    NavigationSection,
-    NavigationField
+    NavigationSection
 } from '@/core/ui/components/navigation/NavigationPanel';
+import { createMockSections } from './NavigationPanel.testUtils';
 
-const mockFields: NavigationField[] = [
-    { key: 'field1', label: 'Field 1', isComplete: true },
-    { key: 'field2', label: 'Field 2', isComplete: false },
-    { key: 'field3', label: 'Field 3', isComplete: true }
-];
-
-const mockSections: NavigationSection[] = [
-    {
-        id: 'section1',
-        label: 'Adobe Commerce',
-        fields: mockFields,
-        isComplete: false,
-        completedCount: 2,
-        totalCount: 3
-    },
-    {
-        id: 'section2',
-        label: 'API Mesh',
-        fields: [
-            { key: 'mesh1', label: 'Mesh Field 1', isComplete: true }
-        ],
-        isComplete: true,
-        completedCount: 1,
-        totalCount: 1
-    }
-];
-
-describe('NavigationPanel', () => {
+describe('NavigationPanel - Display', () => {
     describe('Rendering', () => {
         it('renders all sections', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -53,6 +27,7 @@ describe('NavigationPanel', () => {
         });
 
         it('renders heading "Sections"', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -68,6 +43,7 @@ describe('NavigationPanel', () => {
         });
 
         it('renders section completion status', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -86,6 +62,7 @@ describe('NavigationPanel', () => {
 
     describe('Section Expansion', () => {
         it('does not show fields when section collapsed', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -101,6 +78,7 @@ describe('NavigationPanel', () => {
         });
 
         it('shows fields when section expanded', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -120,6 +98,7 @@ describe('NavigationPanel', () => {
         it('calls onToggleSection when section clicked', async () => {
             const user = userEvent.setup();
             const handleToggle = jest.fn();
+            const mockSections = createMockSections();
 
             renderWithProviders(
                 <NavigationPanel
@@ -140,6 +119,7 @@ describe('NavigationPanel', () => {
         });
 
         it('shows chevron right when collapsed', () => {
+            const mockSections = createMockSections();
             const { container } = renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -156,6 +136,7 @@ describe('NavigationPanel', () => {
         });
 
         it('shows chevron down when expanded', () => {
+            const mockSections = createMockSections();
             const { container } = renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -172,65 +153,9 @@ describe('NavigationPanel', () => {
         });
     });
 
-    describe('Field Navigation', () => {
-        it('calls onNavigateToField when field clicked', async () => {
-            const user = userEvent.setup();
-            const handleNavigate = jest.fn();
-
-            renderWithProviders(
-                <NavigationPanel
-                    sections={mockSections}
-                    activeSection={null}
-                    activeField={null}
-                    expandedSections={new Set(['section1'])}
-                    onToggleSection={jest.fn()}
-                    onNavigateToField={handleNavigate}
-                />
-            );
-
-            const fieldButton = screen.getByText('Field 1').closest('button');
-            if (fieldButton) {
-                await user.click(fieldButton);
-                expect(handleNavigate).toHaveBeenCalledWith('field1');
-            }
-        });
-
-        it('shows completed checkmark on completed fields', () => {
-            renderWithProviders(
-                <NavigationPanel
-                    sections={mockSections}
-                    activeSection={null}
-                    activeField={null}
-                    expandedSections={new Set(['section1'])}
-                    onToggleSection={jest.fn()}
-                    onNavigateToField={jest.fn()}
-                />
-            );
-
-            // Multiple checkmarks should exist (Field 1 and Field 3 are complete)
-            const checkmarks = screen.getAllByText('✓');
-            expect(checkmarks.length).toBeGreaterThan(0);
-        });
-
-        it('does not show checkmark on incomplete fields', () => {
-            renderWithProviders(
-                <NavigationPanel
-                    sections={mockSections}
-                    activeSection={null}
-                    activeField={null}
-                    expandedSections={new Set(['section1'])}
-                    onToggleSection={jest.fn()}
-                    onNavigateToField={jest.fn()}
-                />
-            );
-
-            // Field 2 should be visible but without checkmark
-            expect(screen.getByText('Field 2')).toBeInTheDocument();
-        });
-    });
-
     describe('Active States', () => {
         it('highlights active section', () => {
+            const mockSections = createMockSections();
             const { container } = renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -249,6 +174,7 @@ describe('NavigationPanel', () => {
         });
 
         it('highlights active field', () => {
+            const mockSections = createMockSections();
             const { container } = renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -267,6 +193,7 @@ describe('NavigationPanel', () => {
         });
 
         it('applies bold font to active section', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -283,6 +210,7 @@ describe('NavigationPanel', () => {
         });
 
         it('applies medium font to inactive section', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -301,6 +229,7 @@ describe('NavigationPanel', () => {
 
     describe('Section Completion', () => {
         it('shows completion checkmark for complete section', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -317,6 +246,7 @@ describe('NavigationPanel', () => {
         });
 
         it('shows progress fraction for incomplete section', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -358,6 +288,7 @@ describe('NavigationPanel', () => {
 
     describe('Layout', () => {
         it('has correct container styles', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -379,6 +310,7 @@ describe('NavigationPanel', () => {
         });
 
         it('has scrollable content area', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -399,6 +331,7 @@ describe('NavigationPanel', () => {
 
     describe('IDs', () => {
         it('assigns correct IDs to section buttons', () => {
+            const mockSections = createMockSections();
             const { container } = renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -415,6 +348,7 @@ describe('NavigationPanel', () => {
         });
 
         it('assigns correct IDs to field buttons', () => {
+            const mockSections = createMockSections();
             const { container } = renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -434,6 +368,7 @@ describe('NavigationPanel', () => {
 
     describe('Multiple Expanded Sections', () => {
         it('shows multiple expanded sections simultaneously', () => {
+            const mockSections = createMockSections();
             renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
@@ -512,68 +447,6 @@ describe('NavigationPanel', () => {
             );
 
             expect(screen.getByText('This is a very long section label that might wrap')).toBeInTheDocument();
-        });
-    });
-
-    describe('Accessibility', () => {
-        it('has heading for sections', () => {
-            renderWithProviders(
-                <NavigationPanel
-                    sections={mockSections}
-                    activeSection={null}
-                    activeField={null}
-                    expandedSections={new Set()}
-                    onToggleSection={jest.fn()}
-                    onNavigateToField={jest.fn()}
-                />
-            );
-
-            const heading = screen.getByText('Sections');
-            expect(heading.tagName).toBe('H3');
-        });
-
-        it('sections have tabIndex -1', () => {
-            renderWithProviders(
-                <NavigationPanel
-                    sections={mockSections}
-                    activeSection={null}
-                    activeField={null}
-                    expandedSections={new Set()}
-                    onToggleSection={jest.fn()}
-                    onNavigateToField={jest.fn()}
-                />
-            );
-
-            const sectionButton = screen.getByText('Adobe Commerce').closest('button');
-            expect(sectionButton).toHaveAttribute('tabIndex', '-1');
-        });
-
-        it('fields have tabIndex -1', () => {
-            renderWithProviders(
-                <NavigationPanel
-                    sections={mockSections}
-                    activeSection={null}
-                    activeField={null}
-                    expandedSections={new Set(['section1'])}
-                    onToggleSection={jest.fn()}
-                    onNavigateToField={jest.fn()}
-                />
-            );
-
-            const fieldButton = screen.getByText('Field 1').closest('button');
-            expect(fieldButton).toHaveAttribute('tabIndex', '-1');
-        });
-    });
-
-    describe('DisplayName', () => {
-        it('has display name set', () => {
-            expect(NavigationPanel.displayName).toBe('NavigationPanel');
-        });
-    });
-
-    describe('Memoization', () => {
-        it('is memoized component', () => {
-            expect(NavigationPanel).toHaveProperty('$$typeof');
         });
     });
 });
