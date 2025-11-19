@@ -154,9 +154,7 @@ export interface PresetDefinition {
  * - requiredEnvVars/optionalEnvVars directly in configuration (NOT nested)
  * - services remains as-is (no transformation needed)
  */
-export interface TransformedComponentDefinition extends RawComponentDefinition {
-    // Just extends RawComponentDefinition - no transformation needed
-}
+export type TransformedComponentDefinition = RawComponentDefinition;
 
 /**
  * ComponentRegistry - Transformed registry for runtime use

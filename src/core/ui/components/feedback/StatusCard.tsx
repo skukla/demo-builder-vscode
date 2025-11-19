@@ -67,6 +67,9 @@ export const StatusCard = React.memo<StatusCardProps>(({
         }
     };
 
+    // Format text as "Label: Status" for inline display
+    const displayText = label ? `${label}: ${status}` : status;
+
     return (
         <div
             style={{
@@ -77,28 +80,15 @@ export const StatusCard = React.memo<StatusCardProps>(({
             className={className}
         >
             <StatusDot variant={getVariant()} size={getSizeInPixels()} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {label && (
-                    <span
-                        style={{
-                            fontSize: '12px',
-                            color: 'var(--spectrum-global-color-gray-600)',
-                            fontWeight: 500
-                        }}
-                    >
-                        {label}
-                    </span>
-                )}
-                <span
-                    style={{
-                        fontSize: '14px',
-                        color: 'var(--spectrum-global-color-gray-800)',
-                        fontWeight: label ? 400 : 500
-                    }}
-                >
-                    {status}
-                </span>
-            </div>
+            <span
+                style={{
+                    fontSize: '14px',
+                    color: 'var(--spectrum-global-color-gray-800)',
+                    fontWeight: 400
+                }}
+            >
+                {displayText}
+            </span>
         </div>
     );
 });

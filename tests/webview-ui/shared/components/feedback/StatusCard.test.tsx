@@ -91,6 +91,34 @@ describe('StatusCard', () => {
             });
         });
 
+        it('renders with horizontal layout (flex-row), not stacked (flex-col)', () => {
+            // Given: StatusCard component rendered
+            renderWithProviders(
+                <StatusCard status="Running" color="green" />
+            );
+
+            // When: We find the status text (this verifies component renders)
+            const statusText = screen.getByText('Running');
+            expect(statusText).toBeInTheDocument();
+
+            // Then: Verify the wrapper div uses flex layout (horizontal by default)
+            // Navigate from text -> parent (span) -> grandparent (wrapper div)
+            const textSpan = statusText.closest('span');
+            expect(textSpan).toBeInTheDocument();
+
+            const wrapper = textSpan?.parentElement;
+            expect(wrapper).toBeInTheDocument();
+
+            // The wrapper should have display: flex with default flex-direction (row = horizontal)
+            // This verifies the bug fix: StatusCard bundle rebuilt with correct horizontal layout
+            expect(wrapper).toHaveStyle({ display: 'flex' });
+
+            // Key assertion: NOT vertical/stacked (flex-direction: column)
+            // Note: In jsdom, flexDirection defaults to empty string (which means 'row')
+            const computedStyle = window.getComputedStyle(wrapper as HTMLElement);
+            expect(computedStyle.flexDirection).not.toBe('column');
+        });
+
         it('shows label above status when provided', () => {
             const { container } = renderWithProviders(
                 <StatusCard label="Mesh Status" status="Deployed" color="green" />

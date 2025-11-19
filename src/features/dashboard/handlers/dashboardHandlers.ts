@@ -9,10 +9,10 @@ import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
 import { validateURL } from '@/core/validation';
-import { AuthenticationService } from '@/features/authentication';
 import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
+import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
-import { MessageHandler, HandlerResponse, HandlerContext } from '@/types/handlers';
+import { MessageHandler, HandlerContext } from '@/types/handlers';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -83,7 +83,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
             frontendConfigChanged,
             mesh: {
                 status: 'checking',
-                message: 'Verifying deployment status...',
+                message: MESH_STATUS_MESSAGES.CHECKING,
             },
         };
 
@@ -101,7 +101,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     }
 
     // For other cases (deploying, error, no mesh), continue with synchronous check
-    let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = 'not-deployed';
+    let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
 
     if (meshComponent) {
         if (meshComponent.status === 'deploying') {
@@ -157,8 +157,8 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                             context.logger.debug('[Project Dashboard] Background mesh verification failed', err);
                         });
                     } else if (meshChanges.unknownDeployedState) {
-                        meshStatus = 'not-deployed';
-                        context.logger.debug('[Dashboard] Could not verify mesh deployment status');
+                        meshStatus = 'checking';
+                        context.logger.debug('[Dashboard] Unable to verify mesh deployment status');
                     }
                 }
             } else {
@@ -320,6 +320,17 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
     let consoleUrl = 'https://developer.adobe.com/console';
 
     if (project?.adobe?.organization && project?.adobe?.projectId && project?.adobe?.workspace) {
+        // Validate Adobe IDs before URL construction (security: prevents URL injection)
+        try {
+            const { validateOrgId, validateProjectId, validateWorkspaceId } = await import('@/core/validation');
+            validateOrgId(project.adobe.organization);
+            validateProjectId(project.adobe.projectId);
+            validateWorkspaceId(project.adobe.workspace);
+        } catch (validationError) {
+            context.logger.error('[Dev Console] Adobe ID validation failed', validationError as Error);
+            return { success: false, error: 'Invalid Adobe resource ID' };
+        }
+
         // Direct link to workspace
         consoleUrl = `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/workspaces/${project.adobe.workspace}/details`;
         context.logger.info('[Dev Console] Opening workspace-specific URL', {
@@ -328,6 +339,16 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
             workspace: project.adobe.workspace,
         });
     } else if (project?.adobe?.organization && project?.adobe?.projectId) {
+        // Validate Adobe IDs before URL construction (security: prevents URL injection)
+        try {
+            const { validateOrgId, validateProjectId } = await import('@/core/validation');
+            validateOrgId(project.adobe.organization);
+            validateProjectId(project.adobe.projectId);
+        } catch (validationError) {
+            context.logger.error('[Dev Console] Adobe ID validation failed', validationError as Error);
+            return { success: false, error: 'Invalid Adobe resource ID' };
+        }
+
         // Fallback: project overview
         consoleUrl = `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/overview`;
         context.logger.info('[Dev Console] Opening project-specific URL (no workspace)');
@@ -335,7 +356,7 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
         context.logger.info('[Dev Console] Opening generic console URL (missing IDs)');
     }
 
-    // Validate URL before opening
+    // Validate final URL before opening (defense-in-depth)
     try {
         validateURL(consoleUrl);
     } catch (validationError) {
@@ -371,7 +392,7 @@ async function checkMeshStatusAsync(
     frontendConfigChanged: boolean,
 ): Promise<void> {
     try {
-        let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' = 'not-deployed';
+        let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
         let meshEndpoint: string | undefined;
         let meshMessage: string | undefined;
 
@@ -465,8 +486,9 @@ async function checkMeshStatusAsync(
                     context.logger.debug('[Project Dashboard] Background mesh verification failed', err);
                 });
             } else if (meshChanges.unknownDeployedState) {
-                meshStatus = 'not-deployed';
-                context.logger.debug('[Dashboard] Could not verify mesh deployment status');
+                meshStatus = 'checking';
+                meshMessage = MESH_STATUS_MESSAGES.UNKNOWN;
+                context.logger.debug('[Dashboard] Unable to verify mesh deployment status');
             }
         } else {
             context.logger.debug('[Dashboard] No component configs available for mesh status check');

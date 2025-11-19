@@ -10,7 +10,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { Logger } from '@/core/logging';
-import { getFrontendEnvVars, updateFrontendState } from '@/core/state';
+import { getFrontendEnvVars } from '@/core/state';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
 import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
@@ -248,29 +248,29 @@ export async function detectMeshChanges(
     
     if (!hasEnvVars) {
         logger.debug('[MeshStaleness] meshState.envVars is empty, attempting to fetch deployed config from Adobe I/O');
-        
+
         const deployedConfig = await fetchDeployedMeshConfig();
-        
+
         if (deployedConfig) {
             // Successfully fetched deployed config - use it as baseline
             logger.info('[MeshStaleness] Successfully fetched deployed config, populating meshState.envVars');
 
             project.meshState!.envVars = deployedConfig;
             didPopulateFromDeployedConfig = true;
-            
+
             // Now continue with normal comparison using the fetched baseline
             currentState.envVars = deployedConfig;
             // Fall through to regular comparison logic below
         } else {
             // Failed to fetch - can't verify deployed state
-            // Conservative approach: flag as changed to prompt redeployment
-            logger.warn('[MeshStaleness] Failed to fetch deployed config, flagging as changed to prompt redeployment');
+            // Conservative approach: Don't force redeployment, flag as unknown
+            logger.warn('[MeshStaleness] Failed to fetch deployed config, unable to verify deployment status');
             return {
-                hasChanges: true,
-                envVarsChanged: true,
+                hasChanges: false,        // Don't force redeployment
+                envVarsChanged: false,    // No changes detected
                 sourceFilesChanged: false,
-                changedEnvVars: ['UNKNOWN_DEPLOYED_STATE'],
-                unknownDeployedState: true,
+                changedEnvVars: [],
+                unknownDeployedState: true, // Flag as unknown
             };
         }
     }

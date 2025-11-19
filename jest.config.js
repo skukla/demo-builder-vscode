@@ -3,9 +3,10 @@ module.exports = {
   roots: ['<rootDir>/tests'],
 
   // Performance optimizations
+  // Note: Heap size configured via package.json test script (--max-old-space-size=4096)
   cache: true,
   cacheDirectory: '<rootDir>/.jest-cache',
-  maxWorkers: '75%',
+  maxWorkers: '50%',
 
   // Separate test environments for Node and React tests
   projects: [

@@ -169,6 +169,13 @@ export default tseslint.config(
             '@typescript-eslint/no-explicit-any': 'off',
             'no-console': 'off',
             'max-nested-callbacks': 'off',
+
+            // Enforce test file size limits (added Step 2: Infrastructure)
+            'max-lines': ['warn', {
+                max: 500,
+                skipBlankLines: true,
+                skipComments: true,
+            }],
         },
     },
     {
