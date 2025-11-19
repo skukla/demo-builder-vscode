@@ -93,11 +93,17 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const os = await import('os');
     context.logger.debug('[Project Creation] All dynamic imports completed');
 
-    // PRE-FLIGHT CHECK: Ensure clean slate
+    // PRE-FLIGHT CHECK: Clean up orphaned/invalid directories
+    // NOTE: Valid projects (with .demo-builder.json) are blocked by createHandler
+    // This only runs for:
+    //   1. Orphaned directories (missing manifest)
+    //   2. Corrupted project directories
+    //   3. Manual folders in .demo-builder/projects/
     const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
 
     if (await fs.access(projectPath).then(() => true).catch(() => false)) {
         context.logger.warn(`[Project Creation] Directory already exists: ${projectPath}`);
+        context.logger.info('[Project Creation] This should only happen for orphaned/invalid directories (valid projects are blocked earlier)');
 
         // Check if it has content
         const existingFiles = await fs.readdir(projectPath);
@@ -142,6 +148,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             integrations: typedConfig.components?.integrations || [],
             appBuilder: typedConfig.components?.appBuilderApps || [],
         },
+        componentConfigs: (typedConfig.componentConfigs || {}) as Record<string, Record<string, string | number | boolean | undefined>>,
     };
 
     // Save initial project state WITHOUT triggering events (to avoid crash)
@@ -288,6 +295,17 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 await updateMeshState(project);
                 context.logger.info('[Project Creation] Updated mesh state after successful deployment');
 
+                // Fetch deployed mesh config to populate meshState.envVars
+                // This ensures dashboard shows correct "Deployed" status immediately
+                const { fetchDeployedMeshConfig } = await import('@/features/mesh/services/stalenessDetector');
+                const deployedConfig = await fetchDeployedMeshConfig();
+
+                if (deployedConfig && Object.keys(deployedConfig).length > 0) {
+                    project.meshState!.envVars = deployedConfig;
+                    context.logger.info('[Project Creation] Populated meshState.envVars with deployed config');
+                    await context.stateManager.saveProject(project);
+                }
+
                 context.logger.info(`[Project Creation] ✅ Mesh configuration updated successfully${endpoint ? ': ' + endpoint : ''}`);
             } else {
                 throw new Error(meshDeployResult.error || 'Mesh deployment failed');
@@ -324,6 +342,17 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
         await updateMeshState(project);
         context.logger.info('[Project Creation] Updated mesh state for existing mesh');
+
+        // Fetch deployed mesh config to populate meshState.envVars
+        // This ensures dashboard shows correct "Deployed" status immediately
+        const { fetchDeployedMeshConfig } = await import('@/features/mesh/services/stalenessDetector');
+        const deployedConfig = await fetchDeployedMeshConfig();
+
+        if (deployedConfig && Object.keys(deployedConfig).length > 0) {
+            project.meshState!.envVars = deployedConfig;
+            context.logger.info('[Project Creation] Populated meshState.envVars with deployed config');
+            await context.stateManager.saveProject(project);
+        }
 
         context.logger.info('[Project Creation] API Mesh configured');
     }

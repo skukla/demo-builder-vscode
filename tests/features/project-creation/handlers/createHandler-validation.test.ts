@@ -93,6 +93,134 @@ describe('Project Creation - Create Handler - Validation', () => {
         });
     });
 
+    describe('duplicate project validation', () => {
+        it('should reject project with duplicate name', async () => {
+            // Mock getAllProjects to return existing project
+            (mockContext.stateManager.getAllProjects as jest.Mock).mockResolvedValue([
+                {
+                    name: 'existing-project',
+                    path: '/mock/home/.demo-builder/projects/existing-project',
+                    lastModified: new Date(),
+                },
+            ]);
+
+            const result = await handleCreateProject(mockContext, {
+                projectName: 'existing-project',
+            });
+
+            expect(result.success).toBe(true); // Handler doesn't fail
+            expect(executor.executeProjectCreation).not.toHaveBeenCalled();
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'creationFailed',
+                expect.objectContaining({
+                    error: 'Project "existing-project" already exists. Please choose a different name or delete the existing project first.',
+                })
+            );
+        });
+
+        it('should allow project with unique name', async () => {
+            // Mock getAllProjects to return different project
+            (mockContext.stateManager.getAllProjects as jest.Mock).mockResolvedValue([
+                {
+                    name: 'other-project',
+                    path: '/mock/home/.demo-builder/projects/other-project',
+                    lastModified: new Date(),
+                },
+            ]);
+
+            const result = await handleCreateProject(mockContext, {
+                projectName: 'new-project',
+            });
+
+            expect(result.success).toBe(true);
+            expect(executor.executeProjectCreation).toHaveBeenCalled();
+            expect(mockContext.sendMessage).not.toHaveBeenCalledWith(
+                'creationFailed',
+                expect.objectContaining({
+                    error: expect.stringContaining('already exists'),
+                })
+            );
+        });
+
+        it('should allow project when no existing projects', async () => {
+            // Mock getAllProjects to return empty array
+            (mockContext.stateManager.getAllProjects as jest.Mock).mockResolvedValue([]);
+
+            const result = await handleCreateProject(mockContext, {
+                projectName: 'first-project',
+            });
+
+            expect(result.success).toBe(true);
+            expect(executor.executeProjectCreation).toHaveBeenCalled();
+        });
+
+        it('should check case-sensitive duplicates correctly', async () => {
+            // Mock getAllProjects with lowercase project
+            (mockContext.stateManager.getAllProjects as jest.Mock).mockResolvedValue([
+                {
+                    name: 'my-project',
+                    path: '/mock/home/.demo-builder/projects/my-project',
+                    lastModified: new Date(),
+                },
+            ]);
+
+            // Try to create with exact match (should fail)
+            const result = await handleCreateProject(mockContext, {
+                projectName: 'my-project',
+            });
+
+            expect(result.success).toBe(true);
+            expect(executor.executeProjectCreation).not.toHaveBeenCalled();
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'creationFailed',
+                expect.objectContaining({
+                    error: expect.stringContaining('already exists'),
+                })
+            );
+        });
+
+        it('should log warning when duplicate detected', async () => {
+            (mockContext.stateManager.getAllProjects as jest.Mock).mockResolvedValue([
+                {
+                    name: 'duplicate',
+                    path: '/mock/home/.demo-builder/projects/duplicate',
+                    lastModified: new Date(),
+                },
+            ]);
+
+            await handleCreateProject(mockContext, {
+                projectName: 'duplicate',
+            });
+
+            expect(mockContext.logger.warn).toHaveBeenCalledWith(
+                expect.stringContaining('Project "duplicate" already exists at:')
+            );
+        });
+
+        it('should send progress message before error', async () => {
+            (mockContext.stateManager.getAllProjects as jest.Mock).mockResolvedValue([
+                {
+                    name: 'existing',
+                    path: '/mock/home/.demo-builder/projects/existing',
+                    lastModified: new Date(),
+                },
+            ]);
+
+            await handleCreateProject(mockContext, {
+                projectName: 'existing',
+            });
+
+            expect(mockContext.sendMessage).toHaveBeenCalledWith(
+                'creationProgress',
+                expect.objectContaining({
+                    currentOperation: 'Failed',
+                    progress: 0,
+                    error: 'Project "existing" already exists',
+                })
+            );
+        });
+    });
+
     describe('edge cases', () => {
         it('should handle missing projectName', async () => {
             await expect(

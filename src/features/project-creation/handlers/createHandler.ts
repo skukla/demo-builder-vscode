@@ -59,6 +59,32 @@ export async function handleCreateProject(
         return { success: true }; // Don't throw - handler completed
     }
 
+    // VALIDATION: Check for duplicate project name (prevents accidental overwrite)
+    // This checks for valid projects (with .demo-builder.json manifest)
+    // Orphaned/invalid directories will still be cleaned up by executor
+    const existingProjects = await context.stateManager.getAllProjects();
+    const duplicateProject = existingProjects.find(p => p.name === config.projectName);
+
+    if (duplicateProject) {
+        context.logger.warn(`[Project Creation] Project "${config.projectName}" already exists at: ${duplicateProject.path}`);
+
+        await context.sendMessage('creationProgress', {
+            currentOperation: 'Failed',
+            progress: 0,
+            message: '',
+            logs: [],
+            error: `Project "${config.projectName}" already exists`,
+        });
+
+        await context.sendMessage('creationFailed', {
+            error: `Project "${config.projectName}" already exists. Please choose a different name or delete the existing project first.`,
+            isTimeout: false,
+            elapsed: '0s',
+        });
+
+        return { success: true }; // Don't throw - handler completed
+    }
+
     const startTime = Date.now();
     const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', config.projectName);
 

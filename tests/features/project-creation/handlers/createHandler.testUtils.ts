@@ -37,6 +37,12 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
                 update: jest.fn().mockResolvedValue(undefined),
             },
         } as any,
+        stateManager: {
+            getAllProjects: jest.fn().mockResolvedValue([]) as jest.MockedFunction<any>,
+            getCurrentProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
+            saveProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
+            clearProject: jest.fn().mockResolvedValue(undefined) as jest.MockedFunction<any>,
+        } as any,
         sharedState: {
             projectCreationAbortController: undefined,
             meshCreatedForWorkspace: undefined,
