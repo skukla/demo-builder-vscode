@@ -107,7 +107,7 @@ export async function deployMeshComponent(
         }
 
         logger.info('[Deploy Mesh] ✅ Mesh verified and deployed successfully');
-        onProgress?.('✓ Deployment Complete', verificationResult.endpoint || 'Mesh deployed successfully');
+        onProgress?.('✓ Deployment Complete', 'Mesh deployed successfully');
 
         return {
             success: true,
