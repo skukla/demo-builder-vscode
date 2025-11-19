@@ -167,6 +167,47 @@ Some test directories contain only `README.md` files with no test files. These a
 
 ## Writing New Tests
 
+### Test File Size Guidelines
+
+**Maximum Recommended Size:** 500 lines per test file
+
+**Enforcement:**
+- ESLint warns at 500 lines (configurable in `.eslintrc.json`)
+- ESLint errors at 750 lines
+- CI/CD checks enforce 750-line hard limit
+
+**When to Split:** See [Test File Splitting Playbook](../docs/testing/test-file-splitting-playbook.md) for comprehensive guidelines.
+
+**Quick Reference:**
+
+| File Size | Action |
+|-----------|--------|
+| <300 lines | Keep as-is |
+| 300-500 lines | Monitor |
+| 500-750 lines | **Split recommended** |
+| >750 lines | **Split required** |
+
+**Why 500 lines?**
+- Industry standard (Google, Airbnb, Microsoft)
+- Reduces cognitive load (understandable in <5 minutes)
+- Improves test isolation and focus
+- Reduces memory usage during test execution (40-50% improvement measured)
+
+**Validation Tools:**
+```bash
+# Check test file sizes locally
+npm run validate:test-file-sizes
+
+# Shows warnings for files >500 lines
+# Exits with error for files >750 lines
+```
+
+**CI/CD Enforcement:**
+- GitHub Actions workflow automatically checks test file sizes on PRs
+- Workflow: `.github/workflows/test-file-size-check.yml`
+- Blocks merging if files exceed 750 lines
+- Exclusions can be added to `.testfilesizerc.json` (use sparingly)
+
 ### Test File Naming
 - **Pattern:** `[source-file-name].test.ts` or `.test.tsx`
 - **Example:** `src/core/shell/pollingService.ts` → `tests/core/shell/pollingService.test.ts`
