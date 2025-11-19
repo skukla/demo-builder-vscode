@@ -79,7 +79,6 @@ describe('Prerequisite Caching - End to End', () => {
 
         mockExecutor = {
             execute: jest.fn(),
-            execute: jest.fn(),
         } as any;
 
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockExecutor);

@@ -102,7 +102,6 @@ describe('npm --prefer-offline Fallback Logic', () => {
 
         mockExecutor = {
             execute: jest.fn(),
-            execute: jest.fn(),
         } as any;
 
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockExecutor);

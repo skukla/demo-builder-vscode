@@ -58,7 +58,6 @@ describe('Adobe AIO CLI Installation Performance (Integration)', () => {
 
         mockExecutor = {
             execute: jest.fn(),
-            execute: jest.fn(),
         } as any;
 
         (ServiceLocator.getCommandExecutor as jest.Mock).mockReturnValue(mockExecutor);
