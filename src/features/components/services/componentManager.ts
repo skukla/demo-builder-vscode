@@ -176,9 +176,16 @@ export class ComponentManager {
         
         this.logger.debug(`[ComponentManager] Clone completed for ${componentDef.name}`);
 
-        // Get current commit hash
-        const commitResult = await commandManager.execute(
-            'git rev-parse HEAD',
+        // Detect component version using hybrid approach:
+        // 1. Try git tag (most accurate for releases)
+        // 2. Fallback to package.json version
+        // 3. Final fallback to commit hash
+
+        let detectedVersion: string | null = null;
+
+        // Strategy 1: Try git describe for tagged commits
+        const tagResult = await commandManager.execute(
+            'git describe --tags --exact-match HEAD',
             {
                 cwd: componentPath,
                 enhancePath: true,
@@ -186,8 +193,50 @@ export class ComponentManager {
             },
         );
 
-        if (commitResult.code === 0) {
-            componentInstance.version = commitResult.stdout.trim().substring(0, 8); // Short hash
+        if (tagResult.code === 0 && tagResult.stdout.trim()) {
+            // On a tagged commit (e.g., "v1.0.0" or "1.0.0")
+            detectedVersion = tagResult.stdout.trim().replace(/^v/, ''); // Remove 'v' prefix
+            this.logger.debug(`[ComponentManager] Detected version from git tag: ${detectedVersion}`);
+        } else {
+            // Strategy 2: Try reading package.json version
+            const packageJsonPath = path.join(componentPath, 'package.json');
+            try {
+                await fs.access(packageJsonPath);
+                const packageJsonContent = await fs.readFile(packageJsonPath, 'utf-8');
+                const packageJson = JSON.parse(packageJsonContent);
+
+                if (packageJson.version) {
+                    detectedVersion = packageJson.version;
+                    this.logger.debug(`[ComponentManager] Detected version from package.json: ${detectedVersion}`);
+                }
+            } catch (error) {
+                this.logger.debug(`[ComponentManager] Could not read package.json version: ${(error as Error).message}`);
+            }
+        }
+
+        // Strategy 3: Final fallback to commit hash
+        if (!detectedVersion) {
+            const commitResult = await commandManager.execute(
+                'git rev-parse HEAD',
+                {
+                    cwd: componentPath,
+                    enhancePath: true,
+                    shell: DEFAULT_SHELL,
+                },
+            );
+
+            if (commitResult.code === 0) {
+                detectedVersion = commitResult.stdout.trim().substring(0, 8); // Short hash
+                this.logger.debug(`[ComponentManager] Using commit hash as version: ${detectedVersion}`);
+            }
+        }
+
+        // Set the detected version (or leave undefined if all strategies failed)
+        if (detectedVersion) {
+            componentInstance.version = detectedVersion;
+            this.logger.info(`[ComponentManager] ${componentDef.name} version: ${detectedVersion}`);
+        } else {
+            this.logger.warn(`[ComponentManager] Could not detect version for ${componentDef.name}`);
         }
 
         // Store Node version in metadata for runtime use
