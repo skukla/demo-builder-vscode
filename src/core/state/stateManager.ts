@@ -82,7 +82,7 @@ export class StateManager {
     private async saveState(): Promise<void> {
         try {
             this.state.lastUpdated = new Date();
-            
+
             const data = {
                 version: this.state.version,
                 currentProject: this.state.currentProject,
@@ -93,6 +93,7 @@ export class StateManager {
             await fs.writeFile(this.stateFile, JSON.stringify(data, null, 2));
         } catch (error) {
             console.error('Failed to save state:', error);
+            throw error;  // Re-throw so caller knows save failed
         }
     }
 
@@ -101,6 +102,19 @@ export class StateManager {
     }
 
     public async getCurrentProject(): Promise<Project | undefined> {
+        // If we have a cached project, reload it from disk to get latest data
+        // This ensures we always have the most up-to-date project state including componentVersions
+        if (this.state.currentProject?.path) {
+            try {
+                const freshProject = await this.loadProjectFromPath(this.state.currentProject.path);
+                // Update cache with fresh data (convert null to undefined)
+                this.state.currentProject = freshProject || undefined;
+                return freshProject || undefined;
+            } catch (error) {
+                console.warn('Failed to reload project from disk, using cached version:', error);
+                return this.state.currentProject;
+            }
+        }
         return this.state.currentProject;
     }
 
@@ -121,6 +135,7 @@ export class StateManager {
             await fs.mkdir(project.path, { recursive: true });
         } catch (error) {
             console.error('Failed to create project directory:', error);
+            throw error;  // Re-throw so caller knows directory creation failed
         }
 
         // Update .demo-builder.json manifest with latest state
@@ -140,6 +155,7 @@ export class StateManager {
                 componentSelections: project.componentSelections,
                 componentInstances: project.componentInstances,
                 componentConfigs: project.componentConfigs,
+                componentVersions: project.componentVersions,
                 meshState: project.meshState,
                 components: Object.keys(project.componentInstances || {}),
             };
@@ -147,6 +163,7 @@ export class StateManager {
             await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
         } catch (error) {
             console.error('Failed to update project manifest:', error);
+            throw error;  // Re-throw so caller knows manifest creation failed
         }
 
         // Create .env file
@@ -155,7 +172,7 @@ export class StateManager {
 
     private async createEnvFile(project: Project): Promise<void> {
         const envPath = path.join(project.path, '.env');
-        
+
         const envContent = [
             '# Demo Builder Configuration',
             `PROJECT_NAME=${project.name}`,
@@ -177,6 +194,7 @@ export class StateManager {
             await fs.writeFile(envPath, envContent);
         } catch (error) {
             console.error('Failed to create .env file:', error);
+            throw error;  // Re-throw so caller knows .env creation failed
         }
     }
 
@@ -332,6 +350,7 @@ export class StateManager {
                 componentInstances?: Project['componentInstances'];
                 componentSelections?: Project['componentSelections'];
                 componentConfigs?: Project['componentConfigs'];
+                componentVersions?: Project['componentVersions'];
                 meshState?: Project['meshState'];
             }>(manifestData);
             if (!manifest) {
@@ -379,6 +398,7 @@ export class StateManager {
                 componentInstances: manifest.componentInstances || componentInstances,
                 componentSelections: manifest.componentSelections,
                 componentConfigs: manifest.componentConfigs,
+                componentVersions: manifest.componentVersions || {},
                 meshState: manifest.meshState,
             };
             
@@ -425,38 +445,44 @@ export class StateManager {
     public async getAllProjects(): Promise<{ name: string; path: string; lastModified: Date }[]> {
         const projectsDir = path.join(os.homedir(), '.demo-builder', 'projects');
         const projects: { name: string; path: string; lastModified: Date }[] = [];
-        
+
         try {
             const entries = await fs.readdir(projectsDir, { withFileTypes: true });
-            
+
             for (const entry of entries) {
                 if (entry.isDirectory()) {
                     const projectPath = path.join(projectsDir, entry.name);
                     const manifestPath = path.join(projectPath, '.demo-builder.json');
-                    
+
                     // Check if it's a valid project (has manifest)
                     try {
                         await fs.access(manifestPath);
                         const stats = await fs.stat(manifestPath);
-                        
+
                         projects.push({
                             name: entry.name,
                             path: projectPath,
                             lastModified: stats.mtime,
                         });
                     } catch {
-                        // Not a valid project, skip
+                        // Not a valid project (missing .demo-builder.json), skip silently
+                        console.debug(`Skipping directory without manifest: ${entry.name}`);
                     }
                 }
             }
-            
+
             // Sort by last modified (newest first)
             projects.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
-        } catch {
-            // Projects directory might not exist yet
-            console.log('No projects directory found or error reading it');
+        } catch (error) {
+            // Distinguish between "doesn't exist yet" and "permission denied"
+            const nodeError = error as NodeJS.ErrnoException;
+            if (nodeError.code === 'ENOENT') {
+                console.debug('Projects directory does not exist yet');
+            } else {
+                console.error('Failed to read projects directory:', error);
+            }
         }
-        
+
         return projects;
     }
 
