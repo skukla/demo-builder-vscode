@@ -411,22 +411,23 @@ describe('StateManager - Utilities', () => {
 
             const project = createMockProject();
 
-            // Should not throw
-            await expect(stateManager.saveProject(project as Project)).resolves.not.toThrow();
+            // FIXED: Errors should now be propagated (not swallowed)
+            await expect(stateManager.saveProject(project as Project)).rejects.toThrow('Disk full');
         });
 
         it('should handle invalid project data gracefully', async () => {
             const { stateManager } = testMocks;
             await stateManager.initialize();
 
-            // Project with invalid data
+            // Project with invalid data (invalid date will cause RangeError during JSON.stringify)
             const invalidProject = {
                 name: null,
                 path: '',
                 status: 'invalid'
             } as unknown as Parameters<typeof stateManager.saveProject>[0];
 
-            await expect(stateManager.saveProject(invalidProject)).resolves.not.toThrow();
+            // FIXED: Errors should now be propagated (not swallowed)
+            await expect(stateManager.saveProject(invalidProject)).rejects.toThrow();
         });
 
         it('should handle race condition in process management', async () => {

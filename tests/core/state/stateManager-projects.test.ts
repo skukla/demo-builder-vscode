@@ -144,8 +144,8 @@ describe('StateManager - Project Management', () => {
 
             const project = createMockProject();
 
-            // Should not throw
-            await expect(stateManager.saveProject(project as Project)).resolves.not.toThrow();
+            // FIXED: Errors should now be propagated (not swallowed)
+            await expect(stateManager.saveProject(project as Project)).rejects.toThrow('Permission denied');
         });
 
         it('should update lastModified timestamp in manifest', async () => {
