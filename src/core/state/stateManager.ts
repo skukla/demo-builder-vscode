@@ -107,10 +107,18 @@ export class StateManager {
         if (this.state.currentProject?.path) {
             try {
                 const freshProject = await this.loadProjectFromPath(this.state.currentProject.path);
-                // Update cache with fresh data (convert null to undefined)
-                this.state.currentProject = freshProject || undefined;
-                return freshProject || undefined;
+
+                // Check if reload failed (returns null on error)
+                if (freshProject === null) {
+                    console.warn('Failed to reload project from disk, using cached version');
+                    return this.state.currentProject;
+                }
+
+                // Update cache with fresh data
+                this.state.currentProject = freshProject;
+                return freshProject;
             } catch (error) {
+                // Fallback for unexpected errors (loadProjectFromPath normally returns null, not throws)
                 console.warn('Failed to reload project from disk, using cached version:', error);
                 return this.state.currentProject;
             }
