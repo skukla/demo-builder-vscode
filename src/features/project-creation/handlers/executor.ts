@@ -400,10 +400,17 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         }
 
         for (const componentId of Object.keys(project.componentInstances || {})) {
+            const componentInstance = project.componentInstances?.[componentId];
+            const detectedVersion = componentInstance?.version || 'unknown';
+
             project.componentVersions[componentId] = {
-                version: 'unknown', // Will be set on first update
+                version: detectedVersion, // Use version detected during installation
                 lastUpdated: new Date().toISOString(),
             };
+
+            if (detectedVersion !== 'unknown') {
+                context.logger.info(`[Project Creation] ${componentId} version: ${detectedVersion}`);
+            }
         }
 
         await context.stateManager.saveProject(project);
