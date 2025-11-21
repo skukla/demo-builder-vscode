@@ -107,9 +107,9 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         if (meshComponent.status === 'deploying') {
             meshStatus = 'deploying';
         }
-        else if (meshComponent.status === 'error') {
-            meshStatus = 'error';
-        }
+        // Note: We still check for config changes even when status is 'error'
+        // This allows the user to fix config errors and see 'config-changed' status
+        // instead of being stuck on 'error' forever
         else {
             if (project.componentConfigs) {
                 context.logger.debug('[Dashboard] Checking mesh deployment status...');
@@ -153,7 +153,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                                 context.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');
                             }
                         } else {
-                            meshStatus = 'deployed';
+                            // No config changes detected
+                            // If previous deployment failed, keep showing error (encourages config investigation)
+                            // Otherwise the mesh is successfully deployed
+                            meshStatus = meshComponent.status === 'error' ? 'error' : 'deployed';
                         }
 
                         // Verify mesh still exists
@@ -161,7 +164,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                             context.logger.debug('[Project Dashboard] Background mesh verification failed', err);
                         });
                     } else if (meshChanges.unknownDeployedState) {
-                        meshStatus = 'checking';
+                        // Unable to determine if config changed
+                        // If previous deployment failed, show error (encourages investigation)
+                        // Otherwise show checking (unable to verify)
+                        meshStatus = meshComponent.status === 'error' ? 'error' : 'checking';
                         context.logger.debug('[Dashboard] Unable to verify mesh deployment status');
                     }
                 }
@@ -485,7 +491,10 @@ async function checkMeshStatusAsync(
                         context.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');
                     }
                 } else {
-                    meshStatus = 'deployed';
+                    // No config changes detected
+                    // If previous deployment failed, keep showing error (encourages config investigation)
+                    // Otherwise the mesh is successfully deployed
+                    meshStatus = meshComponent.status === 'error' ? 'error' : 'deployed';
                 }
 
                 meshEndpoint = meshComponent.endpoint;
@@ -494,7 +503,10 @@ async function checkMeshStatusAsync(
                     context.logger.debug('[Project Dashboard] Background mesh verification failed', err);
                 });
             } else if (meshChanges.unknownDeployedState) {
-                meshStatus = 'checking';
+                // Unable to determine if config changed
+                // If previous deployment failed, show error (encourages investigation)
+                // Otherwise show checking (unable to verify)
+                meshStatus = meshComponent.status === 'error' ? 'error' : 'checking';
                 meshMessage = MESH_STATUS_MESSAGES.UNKNOWN;
                 context.logger.debug('[Dashboard] Unable to verify mesh deployment status');
             }
