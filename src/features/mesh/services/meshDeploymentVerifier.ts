@@ -123,7 +123,9 @@ export async function waitForMeshDeployment(
                         meshDeployed = true;
                         break;
                     } else if (meshStatus === 'error' || meshStatus === 'failed') {
-                        const error = 'Mesh deployment failed with error status';
+                        const error = meshData.error
+                            ? `Mesh deployment failed: ${meshData.error}`
+                            : 'Mesh deployment failed with error status';
                         logger?.error(`[Mesh Verification] ${error}`);
                         return {
                             deployed: false,
