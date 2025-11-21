@@ -19,6 +19,9 @@ import { HandlerContext, SharedState } from '@/types/handlers';
 export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     private handlerRegistry: DashboardHandlerRegistry;
 
+    // Static reference to active instance for refreshStatus
+    private static activeInstance: ProjectDashboardWebviewCommand | null = null;
+
     constructor(
         context: vscode.ExtensionContext,
         stateManager: import('@/core/state').StateManager,
@@ -80,10 +83,15 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         });
     }
 
-    protected async getInitialData(): Promise<{ theme: string; project: { name: string; path: string } | null }> {
+    protected async getInitialData(): Promise<{
+        theme: string;
+        project: { name: string; path: string } | null;
+        hasMesh: boolean;
+    }> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
+        const hasMesh = !!project?.componentInstances?.['commerce-mesh'];
 
         return {
             theme,
@@ -91,6 +99,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
                 name: project.name,
                 path: project.path,
             } : null,
+            hasMesh,
         };
     }
 
@@ -159,12 +168,14 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
      * Public method to trigger a full status refresh (called after config changes)
      */
     public static async refreshStatus(): Promise<void> {
-        const activeComms = BaseWebviewCommand['activeCommunicationManagers'] as Map<string, WebviewCommunicationManager>;
-        const dashboardComm = activeComms.get('demoBuilder.projectDashboard');
-        if (dashboardComm) {
-            // Trigger requestStatus handler
-            await dashboardComm.sendMessage('refresh-status', {});
+        const instance = ProjectDashboardWebviewCommand.activeInstance;
+        if (!instance) {
+            return; // No active dashboard
         }
+
+        // Directly invoke the handler with proper context
+        const context = instance.createHandlerContext();
+        await instance.handlerRegistry.handle(context, 'requestStatus', {});
     }
 
     // ============================================================================
@@ -185,6 +196,9 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         if (project.status === 'running') {
             await this.initializeFileHashesForRunningDemo(project);
         }
+
+        // Store active instance for static refreshStatus calls
+        ProjectDashboardWebviewCommand.activeInstance = this;
 
         // Create or reveal panel and initialize communication
         await this.createOrRevealPanel();
