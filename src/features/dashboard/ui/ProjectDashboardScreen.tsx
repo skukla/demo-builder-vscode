@@ -45,9 +45,10 @@ interface ProjectDashboardScreenProps {
         name: string;
         path: string;
     };
+    hasMesh?: boolean;
 }
 
-export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScreenProps) {
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
     const [isRunning, setIsRunning] = useState(false);
 
@@ -143,7 +144,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                 return { color: 'blue' as const, text: 'Starting...' };
             case 'running':
                 if (frontendConfigChanged) {
-                    return { color: 'yellow' as const, text: 'Restart Needed' };
+                    return { color: 'yellow' as const, text: 'Restart needed' };
                 }
                 return { color: 'green' as const, text: `Running on port ${port}` };
             case 'stopping':
@@ -161,11 +162,19 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
     }, [status, frontendConfigChanged, port]);
 
     const meshStatusDisplay = useMemo(() => {
-        if (!meshStatus) return null;
+        // If no mesh status yet, show checking state until we have definitive info
+        if (!meshStatus) {
+            // If we know hasMesh, use it
+            if (hasMesh) return { color: 'blue' as const, text: 'Checking status...' };
+            // If projectStatus hasn't loaded yet, show checking (avoids flash)
+            if (!projectStatus) return { color: 'blue' as const, text: 'Checking status...' };
+            // projectStatus loaded and no mesh - hide the section
+            return null;
+        }
 
         switch (meshStatus) {
             case 'checking':
-                return { color: 'blue' as const, text: 'Checking...' };
+                return { color: 'blue' as const, text: 'Checking status...' };
             case 'needs-auth':
                 return { color: 'yellow' as const, text: 'Session expired' };
             case 'authenticating':
@@ -175,17 +184,17 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
             case 'deployed':
                 return { color: 'green' as const, text: 'Deployed' };
             case 'config-changed':
-                return { color: 'yellow' as const, text: 'Redeploy Needed' };
+                return { color: 'yellow' as const, text: 'Redeploy needed' };
             case 'update-declined':
-                return { color: 'orange' as const, text: 'Update Declined' };
+                return { color: 'orange' as const, text: 'Needs deployment' };
             case 'not-deployed':
-                return { color: 'gray' as const, text: 'Not Deployed' };
+                return { color: 'gray' as const, text: 'Not deployed' };
             case 'error':
-                return { color: 'red' as const, text: 'Deployment Error' };
+                return { color: 'red' as const, text: 'Deployment error' };
             default:
                 return { color: 'gray' as const, text: 'Unknown' };
         }
-    }, [meshStatus, meshMessage]);
+    }, [meshStatus, meshMessage, hasMesh, projectStatus]);
 
     return (
         <div
@@ -253,6 +262,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                         <ActionButton
                             onPress={handleStartDemo}
                             isQuiet
+                            isDisabled={meshStatus === 'deploying'}
                             UNSAFE_className="dashboard-action-button"
                         >
                             <PlayCircle size="L" />
@@ -296,6 +306,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                     <ActionButton
                         onPress={handleDeployMesh}
                         isQuiet
+                        isDisabled={meshStatus === 'deploying'}
                         UNSAFE_className="dashboard-action-button"
                         data-action="deploy-mesh"
                     >
@@ -307,6 +318,7 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                     <ActionButton
                         onPress={handleConfigure}
                         isQuiet
+                        isDisabled={meshStatus === 'deploying'}
                         UNSAFE_className="dashboard-action-button"
                     >
                         <Settings size="L" />

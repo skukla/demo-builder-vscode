@@ -18,7 +18,7 @@ const root = createRoot(container);
 root.render(
     <React.StrictMode>
         <WebviewApp>
-            {(data) => <ProjectDashboardScreen project={data?.project} />}
+            {(data) => <ProjectDashboardScreen project={data?.project} hasMesh={data?.hasMesh} />}
         </WebviewApp>
     </React.StrictMode>
 );
