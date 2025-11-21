@@ -679,7 +679,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                 isQuiet
                                 isDisabled={isSaving}
                             >
-                                Cancel
+                                Close
                             </Button>
                             <Button
                                 variant="accent"
