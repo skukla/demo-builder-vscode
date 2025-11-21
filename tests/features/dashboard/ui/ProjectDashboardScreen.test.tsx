@@ -62,7 +62,8 @@ describe('ProjectDashboardScreen', () => {
 
         it('should render Demo status card', () => {
             render(<ProjectDashboardScreen />);
-            expect(screen.getByText('Demo')).toBeInTheDocument();
+            // StatusCard renders "Demo: <status>" combined
+            expect(screen.getByText(/Demo:/i)).toBeInTheDocument();
         });
     });
 
@@ -77,7 +78,8 @@ describe('ProjectDashboardScreen', () => {
                 status: 'ready',
             });
 
-            expect(screen.getByText('Stopped')).toBeInTheDocument();
+            // StatusCard renders "Demo: Stopped" combined
+            expect(screen.getByText(/Stopped/i)).toBeInTheDocument();
         });
 
         it('should display "Running on port 3000" when running', async () => {
@@ -92,7 +94,7 @@ describe('ProjectDashboardScreen', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText(/Running on port 3000/)).toBeInTheDocument();
+                expect(screen.getByText(/Running on port 3000/i)).toBeInTheDocument();
             });
         });
 
@@ -106,11 +108,11 @@ describe('ProjectDashboardScreen', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText('Starting...')).toBeInTheDocument();
+                expect(screen.getByText(/Starting/i)).toBeInTheDocument();
             });
         });
 
-        it('should display "Restart Needed" when running with config changes', async () => {
+        it('should display "Restart needed" when running with config changes', async () => {
             render(<ProjectDashboardScreen />);
 
             triggerMessage('statusUpdate', {
@@ -122,7 +124,7 @@ describe('ProjectDashboardScreen', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText('Restart Needed')).toBeInTheDocument();
+                expect(screen.getByText(/Restart needed/i)).toBeInTheDocument();
             });
         });
 
@@ -136,7 +138,8 @@ describe('ProjectDashboardScreen', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText('Error')).toBeInTheDocument();
+                // StatusCard renders "Demo: Error" combined
+                expect(screen.getByText(/Error/i)).toBeInTheDocument();
             });
         });
     });
@@ -309,14 +312,38 @@ describe('ProjectDashboardScreen', () => {
     });
 
     describe('Mesh Status Display', () => {
-        it('should not display mesh status initially', () => {
+        it('should display "Checking status..." initially before projectStatus loads', () => {
             render(<ProjectDashboardScreen />);
-            expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
+            // Before projectStatus arrives, show checking state to avoid flash
+            // StatusCard renders "API Mesh: Checking status..." combined
+            expect(screen.getByText(/API Mesh.*Checking status/i)).toBeInTheDocument();
+        });
+
+        it('should display "Checking status..." when hasMesh is true', () => {
+            render(<ProjectDashboardScreen hasMesh={true} />);
+            expect(screen.getByText(/API Mesh.*Checking status/i)).toBeInTheDocument();
+        });
+
+        it('should hide mesh status after projectStatus confirms no mesh', async () => {
+            render(<ProjectDashboardScreen />);
+
+            // Initially shows checking
+            expect(screen.getByText(/Checking status/i)).toBeInTheDocument();
+
+            // Status update without mesh data
+            triggerMessage('statusUpdate', {
+                name: 'Test Project',
+                path: '/test/path',
+                status: 'ready',
+            });
+
+            await waitFor(() => {
+                expect(screen.queryByText(/API Mesh/i)).not.toBeInTheDocument();
+            });
         });
 
         it('should display mesh status when status update received', async () => {
             render(<ProjectDashboardScreen />);
-
 
             triggerMessage('statusUpdate', {
                 name: 'Test Project',
@@ -329,15 +356,14 @@ describe('ProjectDashboardScreen', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText('API Mesh')).toBeInTheDocument();
-                expect(screen.getByText('Deployed')).toBeInTheDocument();
+                // StatusCard renders "API Mesh: Deployed" combined
+                expect(screen.getByText(/API Mesh.*Deployed/i)).toBeInTheDocument();
             });
         });
 
-        it('should display "Not Deployed" for not-deployed status', async () => {
+        it('should display "Not deployed" for not-deployed status', async () => {
             render(<ProjectDashboardScreen />);
 
-            
             triggerMessage('statusUpdate', {
                 name: 'Test Project',
                 path: '/test/path',
@@ -347,12 +373,11 @@ describe('ProjectDashboardScreen', () => {
                 },
             });
 
-            await waitFor(() => expect(screen.getByText('Not Deployed')).toBeInTheDocument());
+            await waitFor(() => expect(screen.getByText(/API Mesh.*Not deployed/i)).toBeInTheDocument());
         });
 
         it('should display "Deploying..." with message', async () => {
             render(<ProjectDashboardScreen />);
-
 
             triggerMessage('statusUpdate', {
                 name: 'Test Project',
@@ -365,13 +390,13 @@ describe('ProjectDashboardScreen', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText('Building mesh configuration...')).toBeInTheDocument();
+                // Custom message replaces default status text
+                expect(screen.getByText(/Building mesh configuration/i)).toBeInTheDocument();
             });
         });
 
         it('should display "Session expired" with Sign in button for needs-auth', async () => {
             render(<ProjectDashboardScreen />);
-
 
             triggerMessage('statusUpdate', {
                 name: 'Test Project',
@@ -383,7 +408,7 @@ describe('ProjectDashboardScreen', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText('Session expired')).toBeInTheDocument();
+                expect(screen.getByText(/Session expired/i)).toBeInTheDocument();
                 expect(screen.getByText('Sign in')).toBeInTheDocument();
             });
         });
@@ -414,7 +439,6 @@ describe('ProjectDashboardScreen', () => {
             render(<ProjectDashboardScreen />);
 
             // Initial status with mesh
-
             triggerMessage('statusUpdate', {
                 name: 'Test Project',
                 path: '/test/path',
@@ -425,20 +449,18 @@ describe('ProjectDashboardScreen', () => {
             });
 
             // Update mesh status
-
             triggerMessage('meshStatusUpdate', {
                 status: 'deployed',
                 endpoint: 'https://mesh.endpoint.com',
             });
 
             await waitFor(() => {
-                expect(screen.getByText('Deployed')).toBeInTheDocument();
+                expect(screen.getByText(/Deployed/i)).toBeInTheDocument();
             });
         });
 
-        it('should display "Redeploy Needed" for config-changed status', async () => {
+        it('should display "Redeploy needed" for config-changed status', async () => {
             render(<ProjectDashboardScreen />);
-
 
             triggerMessage('statusUpdate', {
                 name: 'Test Project',
@@ -450,7 +472,7 @@ describe('ProjectDashboardScreen', () => {
             });
 
             await waitFor(() => {
-                expect(screen.getByText('Redeploy Needed')).toBeInTheDocument();
+                expect(screen.getByText(/Redeploy needed/i)).toBeInTheDocument();
             });
         });
     });
@@ -461,17 +483,21 @@ describe('ProjectDashboardScreen', () => {
             expect(screen.getByText('Demo Project')).toBeInTheDocument();
         });
 
-        it('should handle status update without mesh data', () => {
+        it('should hide mesh status after status update confirms no mesh', async () => {
             render(<ProjectDashboardScreen />);
 
-            
+            // Initially shows checking (before projectStatus loads)
+            expect(screen.getByText(/Checking status/i)).toBeInTheDocument();
+
             triggerMessage('statusUpdate', {
                 name: 'Test Project',
                 path: '/test/path',
                 status: 'ready',
             });
 
-            expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.queryByText(/API Mesh/i)).not.toBeInTheDocument();
+            });
         });
 
         it('should cleanup subscriptions on unmount', () => {
