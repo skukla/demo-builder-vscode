@@ -303,15 +303,25 @@ export class DeployMeshCommand extends BaseCommand {
                     await this.stateManager.saveProject(project);
                 }
                 
-                const { formatMeshDeploymentError } = await import('@/features/mesh/utils/errorFormatter');
-                
-                // Show error message (logs are already in Demo Builder: Logs channel)
-                vscode.window.showErrorMessage(formatMeshDeploymentError(error as Error));
+                // Show simple error with View Logs button (details are in Demo Builder: Logs channel)
+                const selection = await vscode.window.showErrorMessage(
+                    'Mesh deployment failed. Check logs for details.',
+                    'View Logs'
+                );
+                if (selection === 'View Logs') {
+                    vscode.commands.executeCommand('demoBuilder.showLogs');
+                }
             }
         } catch (error) {
             // Outer catch for any unexpected errors during validation/setup
             this.logger.error('[Deploy Mesh] Unexpected error', error as Error);
-            vscode.window.showErrorMessage(`Failed to deploy API Mesh: ${(error as Error).message}`);
+            const selection = await vscode.window.showErrorMessage(
+                'Failed to deploy API Mesh. Check logs for details.',
+                'View Logs'
+            );
+            if (selection === 'View Logs') {
+                vscode.commands.executeCommand('demoBuilder.showLogs');
+            }
         }
     }
 
