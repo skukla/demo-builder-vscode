@@ -175,15 +175,23 @@ describe('TwoColumnLayout', () => {
 
       // Parent container is flex for horizontal layout
       expect(flexContainer.style.display).toBe('flex');
+      // Parent takes remaining space in flex parent and allows shrinking
+      // Flex value may be '1' or '1 1 0%' depending on browser normalization
+      expect(flexContainer.style.flex).toMatch(/^1/);
+      expect(flexContainer.style.minHeight).toBe('0');
 
-      // Left column is plain block container (not flex) to match SingleColumnLayout
-      // This ensures consistent content spacing across all wizard steps
-      expect(leftColumn.style.display).toBe('');
-      expect(leftColumn.style.flexDirection).toBe('');
+      // Both columns have flex context for proper scrolling of children
+      // This enables children with flex: 1 + overflowY: auto to scroll correctly
+      expect(leftColumn.style.display).toBe('flex');
+      expect(leftColumn.style.flexDirection).toBe('column');
+      expect(leftColumn.style.overflow).toBe('hidden');
 
       // Right column is flexible to fill remaining space
       // Flex value may be '1' or '1 1 0%' depending on browser normalization
       expect(rightColumn.style.flex).toMatch(/^1/);
+      expect(rightColumn.style.display).toBe('flex');
+      expect(rightColumn.style.flexDirection).toBe('column');
+      expect(rightColumn.style.overflow).toBe('hidden');
     });
 
     it('should constrain left column with maxWidth', () => {

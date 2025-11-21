@@ -335,6 +335,9 @@ export async function updateMeshState(project: Project): Promise<void> {
         envVars,
         sourceHash,
         lastDeployed: new Date().toISOString(),
+        // Clear any previous decline state since mesh is now deployed
+        userDeclinedUpdate: undefined,
+        declinedAt: undefined,
     };
 }
 

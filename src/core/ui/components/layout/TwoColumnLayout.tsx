@@ -70,6 +70,8 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
                 display: 'flex',
                 height: '100%',
                 width: '100%',
+                flex: '1',      // Take remaining space when in flex parent
+                minHeight: 0,   // Allow shrinking below content size for proper scrolling
                 gap: translateSpectrumToken(gap),
                 alignItems: 'stretch' // Ensure both columns stretch to full height
             }}
@@ -81,7 +83,11 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
                     maxWidth: translateSpectrumToken(leftMaxWidth),
                     width: '100%',
                     padding: translateSpectrumToken(leftPadding),
-                    minWidth: 0 // Prevent flex shrinking issues
+                    minWidth: 0, // Prevent flex shrinking issues
+                    // Enable scrolling for children with flex: 1 + overflowY: auto
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
                 }}
             >
                 {leftContent}
@@ -95,7 +101,11 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
                     backgroundColor: rightBackgroundColor,
                     borderLeft: showBorder
                         ? '1px solid var(--spectrum-global-color-gray-200)'
-                        : undefined
+                        : undefined,
+                    // Enable scrolling for children with flex: 1 + overflowY: auto
+                    display: 'flex',
+                    flexDirection: 'column',
+                    overflow: 'hidden'
                 }}
             >
                 {rightContent}

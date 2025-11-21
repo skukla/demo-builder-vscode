@@ -101,7 +101,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     }
 
     // For other cases (deploying, error, no mesh), continue with synchronous check
-    let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
+    let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
 
     if (meshComponent) {
         if (meshComponent.status === 'deploying') {
@@ -138,18 +138,22 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                     if (meshChanges.shouldSaveProject) {
                         context.logger.debug('[Dashboard] Populated meshState.envVars from deployed config, saving project');
                         await context.stateManager.saveProject(project);
-                        meshStatus = 'deployed';
+                        // Note: Don't set meshStatus here - let the logic below handle it
+                        // based on whether there are actual changes to display
                     }
 
                     if (project.meshState && Object.keys(project.meshState.envVars || {}).length > 0) {
-                        meshStatus = 'deployed';
-
+                        // Default to deployed, then check for changes and user decline state
                         if (meshChanges.hasChanges) {
-                            meshStatus = 'config-changed';
+                            // User previously declined update → show 'update-declined' (orange badge)
+                            // Otherwise show 'config-changed' (yellow badge)
+                            meshStatus = project.meshState.userDeclinedUpdate ? 'update-declined' : 'config-changed';
 
                             if (meshChanges.unknownDeployedState) {
                                 context.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');
                             }
+                        } else {
+                            meshStatus = 'deployed';
                         }
 
                         // Verify mesh still exists
@@ -392,7 +396,7 @@ async function checkMeshStatusAsync(
     frontendConfigChanged: boolean,
 ): Promise<void> {
     try {
-        let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
+        let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
         let meshEndpoint: string | undefined;
         let meshMessage: string | undefined;
 
@@ -466,18 +470,22 @@ async function checkMeshStatusAsync(
             if (meshChanges.shouldSaveProject) {
                 context.logger.debug('[Dashboard] Populated meshState.envVars from deployed config, saving project');
                 await context.stateManager.saveProject(project);
-                meshStatus = 'deployed';
+                // Note: Don't set meshStatus here - let the logic below handle it
+                // based on whether there are actual changes to display
             }
 
             if (project.meshState && Object.keys(project.meshState.envVars || {}).length > 0) {
-                meshStatus = 'deployed';
-
+                // Default to deployed, then check for changes and user decline state
                 if (meshChanges.hasChanges) {
-                    meshStatus = 'config-changed';
+                    // User previously declined update → show 'update-declined' (orange badge)
+                    // Otherwise show 'config-changed' (yellow badge)
+                    meshStatus = project.meshState.userDeclinedUpdate ? 'update-declined' : 'config-changed';
 
                     if (meshChanges.unknownDeployedState) {
                         context.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');
                     }
+                } else {
+                    meshStatus = 'deployed';
                 }
 
                 meshEndpoint = meshComponent.endpoint;

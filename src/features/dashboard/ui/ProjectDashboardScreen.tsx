@@ -23,7 +23,7 @@ import { useFocusTrap } from '@/core/ui/hooks';
 import { StatusCard } from '@/core/ui/components/feedback';
 import { GridLayout } from '@/core/ui/components/layout';
 
-type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'error';
+type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'error';
 
 interface ProjectStatus {
     name: string;
@@ -176,6 +176,8 @@ export function ProjectDashboardScreen({ project }: ProjectDashboardScreenProps)
                 return { color: 'green' as const, text: 'Deployed' };
             case 'config-changed':
                 return { color: 'yellow' as const, text: 'Redeploy Needed' };
+            case 'update-declined':
+                return { color: 'orange' as const, text: 'Update Declined' };
             case 'not-deployed':
                 return { color: 'gray' as const, text: 'Not Deployed' };
             case 'error':

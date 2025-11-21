@@ -605,54 +605,54 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     rightPadding="size-300"
                     gap={0}
                     leftContent={
-                        <>
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                             <Heading level={2} marginBottom="size-300">Configuration Settings</Heading>
-                        <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
-                            Update the settings for your project components. Required fields are marked with an asterisk.
-                        </Text>
-
-                        {serviceGroups.length === 0 ? (
-                            <Text UNSAFE_className="text-gray-600">
-                                No components requiring configuration were found.
+                            <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
+                                Update the settings for your project components. Required fields are marked with an asterisk.
                             </Text>
-                        ) : (
-                            <Form UNSAFE_style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-                                {serviceGroups.map((group, index) => (
-                                    <ConfigSection
-                                        key={group.id}
-                                        id={group.id}
-                                        label={group.label}
-                                        showDivider={index > 0}
-                                    >
-                                        {group.fields.map(field => {
-                                            const value = getFieldValue(field);
-                                            const error = validationErrors[field.key];
-                                            const showError = error && touchedFields.has(field.key);
-                                            const hasDefault = value && field.default && value === field.default;
 
-                                            return (
-                                                <FormField
-                                                    key={field.key}
-                                                    fieldKey={field.key}
-                                                    label={field.label}
-                                                    type={field.type as any}
-                                                    value={value !== undefined && value !== null ? String(value) : ''}
-                                                    onChange={(val) => updateField(field, val)}
-                                                    placeholder={field.placeholder}
-                                                    description={field.description}
-                                                    required={field.required}
-                                                    error={error}
-                                                    showError={!!showError}
-                                                    options={field.options}
-                                                    selectableDefaultProps={hasDefault ? selectableDefaultProps : undefined}
-                                                />
-                                            );
-                                        })}
-                                    </ConfigSection>
-                                ))}
-                            </Form>
-                        )}
-                        </>
+                            {serviceGroups.length === 0 ? (
+                                <Text UNSAFE_className="text-gray-600">
+                                    No components requiring configuration were found.
+                                </Text>
+                            ) : (
+                                <Form UNSAFE_style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+                                    {serviceGroups.map((group, index) => (
+                                        <ConfigSection
+                                            key={group.id}
+                                            id={group.id}
+                                            label={group.label}
+                                            showDivider={index > 0}
+                                        >
+                                            {group.fields.map(field => {
+                                                const value = getFieldValue(field);
+                                                const error = validationErrors[field.key];
+                                                const showError = error && touchedFields.has(field.key);
+                                                const hasDefault = value && field.default && value === field.default;
+
+                                                return (
+                                                    <FormField
+                                                        key={field.key}
+                                                        fieldKey={field.key}
+                                                        label={field.label}
+                                                        type={field.type as any}
+                                                        value={value !== undefined && value !== null ? String(value) : ''}
+                                                        onChange={(val) => updateField(field, val)}
+                                                        placeholder={field.placeholder}
+                                                        description={field.description}
+                                                        required={field.required}
+                                                        error={error}
+                                                        showError={!!showError}
+                                                        options={field.options}
+                                                        selectableDefaultProps={hasDefault ? selectableDefaultProps : undefined}
+                                                    />
+                                                );
+                                            })}
+                                        </ConfigSection>
+                                    ))}
+                                </Form>
+                            )}
+                        </div>
                     }
                     rightContent={
                         <NavigationPanel

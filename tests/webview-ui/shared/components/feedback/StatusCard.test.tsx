@@ -55,6 +55,11 @@ describe('StatusCard', () => {
             renderWithProviders(<StatusCard status="Info" color="blue" />);
             expect(screen.getByText('Info')).toBeInTheDocument();
         });
+
+        it('renders with orange color', () => {
+            renderWithProviders(<StatusCard status="Update Declined" color="orange" />);
+            expect(screen.getByText('Update Declined')).toBeInTheDocument();
+        });
     });
 
     describe('Size', () => {

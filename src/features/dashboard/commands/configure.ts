@@ -207,9 +207,18 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 'API Mesh configuration changed. Redeploy mesh and restart demo to apply changes.',
                                 'Redeploy Mesh',
                                 'Later',
-                            ).then(selection => {
+                            ).then(async selection => {
                                 if (selection === 'Redeploy Mesh') {
                                     vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                } else if (selection === 'Later') {
+                                    // Track that user declined the update
+                                    if (project.meshState) {
+                                        project.meshState.userDeclinedUpdate = true;
+                                        project.meshState.declinedAt = new Date().toISOString();
+                                        await this.stateManager.saveProject(project);
+                                        // Refresh dashboard to show declined state
+                                        await ProjectDashboardWebviewCommand.refreshStatus();
+                                    }
                                 }
                             });
                         } else {
@@ -224,9 +233,18 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 'API Mesh configuration changed. Redeploy mesh to apply changes.',
                                 'Redeploy Mesh',
                                 'Later',
-                            ).then(selection => {
+                            ).then(async selection => {
                                 if (selection === 'Redeploy Mesh') {
                                     vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                } else if (selection === 'Later') {
+                                    // Track that user declined the update
+                                    if (project.meshState) {
+                                        project.meshState.userDeclinedUpdate = true;
+                                        project.meshState.declinedAt = new Date().toISOString();
+                                        await this.stateManager.saveProject(project);
+                                        // Refresh dashboard to show declined state
+                                        await ProjectDashboardWebviewCommand.refreshStatus();
+                                    }
                                 }
                             });
                         } else {

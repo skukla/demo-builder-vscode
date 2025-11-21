@@ -5,7 +5,7 @@ export interface StatusCardProps {
     /** Status text */
     status: string;
     /** Status color */
-    color: 'gray' | 'green' | 'yellow' | 'red' | 'blue';
+    color: 'gray' | 'green' | 'yellow' | 'red' | 'blue' | 'orange';
     /** Optional label */
     label?: string;
     /** Size of status dot */
@@ -44,6 +44,7 @@ export const StatusCard = React.memo<StatusCardProps>(({
             case 'red':
                 return 'error';
             case 'yellow':
+            case 'orange':
                 return 'warning';
             case 'blue':
                 return 'info';
