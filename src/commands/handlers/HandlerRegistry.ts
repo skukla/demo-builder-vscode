@@ -4,7 +4,7 @@
  * Maps message types to handler functions and provides centralized dispatch logic.
  */
 
-import { HandlerContext, MessageHandler } from './HandlerContext';
+import { HandlerContext, MessageHandler } from '@/commands/handlers/HandlerContext';
 import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
 

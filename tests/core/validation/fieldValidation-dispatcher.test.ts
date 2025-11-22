@@ -40,7 +40,7 @@ describe('validateFieldUI', () => {
         it('should return error for invalid URL', () => {
             const result = validateFieldUI('commerceUrl', 'not-a-url');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should accept empty commerce URL', () => {

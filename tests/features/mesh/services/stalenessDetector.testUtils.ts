@@ -177,20 +177,20 @@ export function setupMockFileSystem(
     if (resolverError) {
         (mockFs.readdir as jest.Mock).mockRejectedValueOnce(resolverError);
     } else {
-        (mockFs.readdir as jest.Mock).mockResolvedValueOnce(resolverFiles as any);
+        (mockFs.readdir as jest.Mock).mockResolvedValueOnce(resolverFiles);
     }
 
     if (schemaError) {
         (mockFs.readdir as jest.Mock).mockRejectedValueOnce(schemaError);
     } else {
-        (mockFs.readdir as jest.Mock).mockResolvedValueOnce(schemaFiles as any);
+        (mockFs.readdir as jest.Mock).mockResolvedValueOnce(schemaFiles);
     }
 
     const mockHash = {
         update: jest.fn().mockReturnThis(),
         digest: jest.fn().mockReturnValue('abc123'),
     };
-    (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash as any);
+    (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash);
 
     return { mockFs, mockCrypto, mockHash };
 }
@@ -203,13 +203,13 @@ export function setupMockFileSystemWithHash(
     const mockCrypto = crypto as jest.Mocked<typeof crypto>;
 
     (mockFs.readFile as jest.Mock).mockResolvedValue(fileContent);
-    (mockFs.readdir as jest.Mock).mockResolvedValue([] as any);
+    (mockFs.readdir as jest.Mock).mockResolvedValue([]);
 
     const mockHash = {
         update: jest.fn().mockReturnThis(),
         digest: jest.fn().mockReturnValue(hash),
     };
-    (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash as any);
+    (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash);
 
     return { mockFs, mockCrypto, mockHash };
 }

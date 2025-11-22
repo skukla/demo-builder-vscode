@@ -3,11 +3,11 @@ import { webviewClient as vscodeSingleton } from '../utils/WebviewClient';
 
 interface VSCodeContextValue {
     /** Post a message to the extension (fire-and-forget) */
-    postMessage: (type: string, payload?: any) => void;
+    postMessage: (type: string, payload?: unknown) => void;
     /** Send a request and wait for a response */
-    request: <T = any>(type: string, payload?: any, timeoutMs?: number) => Promise<T>;
+    request: <T = unknown>(type: string, payload?: unknown, timeoutMs?: number) => Promise<T>;
     /** Subscribe to messages from the extension */
-    onMessage: (type: string, handler: (data: any) => void) => () => void;
+    onMessage: (type: string, handler: (data: unknown) => void) => () => void;
     /** Wait for handshake to complete */
     ready: () => Promise<void>;
     /** Get persisted state */

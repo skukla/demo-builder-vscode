@@ -18,7 +18,7 @@ import { webviewClient } from '../utils/WebviewClient';
  * });
  * ```
  */
-export function useVSCodeMessage<T = any>(
+export function useVSCodeMessage<T = unknown>(
   type: string,
   callback: (data: T) => void,
   deps: DependencyList = []

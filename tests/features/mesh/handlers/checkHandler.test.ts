@@ -5,7 +5,7 @@
  */
 
 import { handleCheckApiMesh } from '@/features/mesh/handlers/checkHandler';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import * as vscode from 'vscode';
 

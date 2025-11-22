@@ -5,7 +5,7 @@
  */
 
 import { handleCreateApiMesh } from '@/features/mesh/handlers/createHandler';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 
 // Mock dependencies

@@ -12,7 +12,7 @@ import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React, { useEffect, useState, useRef } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { WizardState, PrerequisiteCheck } from '@/types/webview';
+import { WizardState, PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
 import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '@/core/ui/utils/classNames';
 
 interface PrerequisitesStepProps {
@@ -23,6 +23,45 @@ interface PrerequisitesStepProps {
     setCanProceed: (canProceed: boolean) => void;
     componentsData?: Record<string, unknown>;
     currentStep?: string;
+}
+
+interface PrerequisitesLoadedData {
+    prerequisites: Array<{
+        id: string;
+        name: string;
+        description: string;
+        optional?: boolean;
+        plugins?: Array<{
+            id: string;
+            name: string;
+            description?: string;
+            installed: boolean;
+            canInstall?: boolean;
+        }>;
+    }>;
+    nodeVersionMapping?: { [key: string]: string };
+    versionComponentMapping?: { [key: string]: string };
+}
+
+interface PrerequisiteStatusData {
+    index: number;
+    status: 'pending' | 'checking' | 'success' | 'error' | 'warning';
+    message: string;
+    version?: string;
+    plugins?: Array<{
+        id: string;
+        name: string;
+        description?: string;
+        installed: boolean;
+        canInstall?: boolean;
+    }>;
+    unifiedProgress?: UnifiedProgress;
+    nodeVersionStatus?: Array<{
+        version: string;
+        component: string;
+        installed: boolean;
+    }>;
+    canInstall?: boolean;
 }
 
 // This function is now deprecated - prerequisites come from the backend
@@ -53,8 +92,8 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
     useEffect(() => {
         // Listen for prerequisites loaded from backend
         const unsubscribeLoaded = webviewClient.onMessage('prerequisites-loaded', (data) => {
-            const prereqData = data as any;
-            const prerequisites = prereqData.prerequisites.map((p: Record<string, unknown>) => {
+            const prereqData = data as PrerequisitesLoadedData;
+            const prerequisites = prereqData.prerequisites.map((p) => {
                 return {
                     id: p.id,
                     name: p.name,
@@ -108,7 +147,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
 
         // Listen for feedback from extension
         const unsubscribe = webviewClient.onMessage('prerequisite-status', (data) => {
-            const typedData = data as any;
+            const typedData = data as PrerequisiteStatusData;
             const { index, status, message, version, plugins, unifiedProgress, nodeVersionStatus, canInstall } = typedData;
 
             // Auto-scroll within the container to the item being checked (skip first item as it's already visible)

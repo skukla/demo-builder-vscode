@@ -12,18 +12,24 @@ type FileSystemItem = ComponentFolder | FileItem | ProjectItem;
 export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystemItem> {
     private _onDidChangeTreeData = new vscode.EventEmitter<FileSystemItem | undefined | null | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
-    
+
     private stateManager: StateManager;
     private extensionPath: string;
+    private projectChangeSubscription: vscode.Disposable;
 
     constructor(stateManager: StateManager, extensionPath: string) {
         this.stateManager = stateManager;
         this.extensionPath = extensionPath;
-        
+
         // Refresh tree when project state changes
-        stateManager.onProjectChanged(() => {
+        this.projectChangeSubscription = stateManager.onProjectChanged(() => {
             this.refresh();
         });
+    }
+
+    dispose(): void {
+        this.projectChangeSubscription.dispose();
+        this._onDidChangeTreeData.dispose();
     }
 
     refresh(): void {

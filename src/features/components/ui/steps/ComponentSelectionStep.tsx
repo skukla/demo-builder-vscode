@@ -28,6 +28,19 @@ interface DependencyOption {
     required: boolean;
 }
 
+interface ComponentOption {
+    id: string;
+    name: string;
+    description: string;
+}
+
+interface ComponentsData {
+    frontends?: ComponentOption[];
+    backends?: ComponentOption[];
+    integrations?: ComponentOption[];
+    appBuilder?: ComponentOption[];
+}
+
 // Custom hook for debouncing values
 function useDebounce<T>(value: T, delay: number): T {
     const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -168,7 +181,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     }, []);
 
     // Use componentsData if available, otherwise fall back to hardcoded
-    const dataTyped = (componentsData || {}) as any;
+    const dataTyped = (componentsData || {}) as ComponentsData;
     const frontendOptions = dataTyped.frontends || [
         {
             id: 'citisignal-nextjs',
@@ -343,7 +356,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                             menuWidth="size-4600"
                             UNSAFE_className={cn('cursor-pointer')}
                         >
-                                {frontendOptions.map((option: any) => (
+                                {frontendOptions.map((option) => (
                                     <Item key={option.id} textValue={option.name}>
                                         <Text>{option.name}</Text>
                                         <Text slot="description">{option.description}</Text>
@@ -409,7 +422,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                             menuWidth="size-4600"
                             UNSAFE_className={cn('cursor-pointer')}
                         >
-                                {backendOptions.map((option: any) => (
+                                {backendOptions.map((option) => (
                                     <Item key={option.id} textValue={option.name}>
                                         <Text>{option.name}</Text>
                                         <Text slot="description">{option.description}</Text>
@@ -454,9 +467,9 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         External Systems
                     </Text>
-                    
+
                     <View UNSAFE_className={cn('border', 'rounded', 'bg-gray-50', 'p-3')}>
-                        {integrationsOptions.map((system: any) => (
+                        {integrationsOptions.map((system) => (
                             <Checkbox
                                 key={system.id}
                                 isSelected={selectedIntegrations.has(system.id)}
@@ -492,9 +505,9 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         App Builder Apps
                     </Text>
-                    
+
                     <View UNSAFE_className={cn('border', 'rounded', 'bg-gray-50', 'p-3')}>
-                        {appBuilderOptions.map((app: any) => (
+                        {appBuilderOptions.map((app) => (
                             <Checkbox
                                 key={app.id}
                                 isSelected={selectedAppBuilder.has(app.id)}

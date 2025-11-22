@@ -10,7 +10,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { executeProjectCreation } from './executor';
-import { HandlerContext } from './HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { OVERALL_TIMEOUT_MS } from './shared';
 import { ServiceLocator } from '@/core/di';
 import { withTimeout } from '@/core/utils/promiseUtils';

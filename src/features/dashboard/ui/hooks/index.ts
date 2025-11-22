@@ -2,4 +2,4 @@
  * Dashboard Feature - Hooks Exports
  */
 
-export { useDebouncedValue } from './useDebouncedValue';
+export { useDebouncedValue } from '@/core/ui/hooks/useDebouncedValue';

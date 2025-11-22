@@ -67,3 +67,6 @@ export {
 
 // Type guards - Import directly from './typeGuards' when needed to avoid circular dependency
 // export * from './typeGuards';
+
+// Status enums for type safety
+export { MeshStatus, ComponentStatusEnum } from './enums';

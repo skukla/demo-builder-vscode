@@ -5,7 +5,7 @@
  */
 
 import { ServiceLocator } from '@/core/di';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import {
     getSetupInstructions as getSetupInstructionsHelper,
     getEndpoint as getEndpointHelper,

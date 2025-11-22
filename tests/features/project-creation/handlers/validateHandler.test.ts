@@ -1,5 +1,5 @@
 import { handleValidate } from '@/features/project-creation/handlers/validateHandler';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import * as helpers from '@/features/project-creation/helpers';
 
 // Mock dependencies

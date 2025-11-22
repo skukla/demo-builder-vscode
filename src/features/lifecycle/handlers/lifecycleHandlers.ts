@@ -10,7 +10,7 @@
  */
 
 import { validateProjectPath, validateURL } from '@/core/validation';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { SimpleResult, DataResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 

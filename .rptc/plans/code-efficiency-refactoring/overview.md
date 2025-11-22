@@ -22,6 +22,15 @@
   - ⏸️ Strategic Deferrals: Error formatters (architectural decision needed), Commands registry (high risk), remaining validators (config-driven is superior), cache inheritance (utility achieves goal)
   - **Net Result**: Registry consolidation complete, validators established, duplications eliminated
   - See `.rptc/plans/code-efficiency-refactoring/step-02.md` for detailed analysis
+- [x] **Step 4: React Component Splitting** (COMPLETE ✅)
+  - Completed: 2025-11-22, Effort: ~6 hours (as estimated)
+  - **TDD RED → GREEN → REFACTOR** complete (100% passing - 215/215 tests)
+  - Extracted 13 components from 4 large React files
+  - **Bug Found**: Missing `setCanProceed(false)` in useMeshOperations error handler (discovered via TDD)
+  - **Impact**: ComponentConfigStep (1024 → ~450 lines), ComponentSelectionStep (529 → ~300 lines)
+  - ApiMeshStep (471 → ~250 lines), AdobeAuthStep (380 → ~200 lines)
+  - Test Coverage: 13 test files, 215 tests, 100% passing
+  - See `step-04.md`
 - [x] **Step 2.5: Error Formatter Cleanup** (COMPLETE ✅)
   - Completed: 2025-01-21, Effort: 1 hour (as estimated)
   - Deleted unused Core ErrorFormatter (-121 LOC), enhanced docs (+297 LOC)
@@ -70,7 +79,7 @@
     - Remaining test assertions: Intentionally deferred (would reduce code quality)
   - TypeScript compilation: ✅ Passing, All tests: ✅ Passing
   - See `step-03.md`
-- [ ] Step 4-7: Frontend Refactoring (DEFERRED - React components, hooks, useEffects)
+- [ ] Step 5-7: Frontend Refactoring (DEFERRED - hooks, useEffects, interfaces)
 - [x] **Step 8: Handler Refactoring (TDD)** (COMPLETE ✅)
   - Completed: 2025-11-21, Effort: ~3.5 hours (30% faster than 5-7 hour estimate)
   - **Phase 0**: Security fix - workspaceId validation in deleteHandler (+5 LOC)
@@ -94,6 +103,14 @@
   - **Note**: Steps 4-7, 9 deferred - frontend refactoring separate effort
   - **Metrics**: See `METRICS_BACKEND.md`
   - See `step-10.md`
+- [ ] **Step 11: Testing Infrastructure Modernization** (PENDING)
+  - **Purpose**: Migrate from fireEvent to @testing-library/user-event
+  - **Estimated Effort**: 3-5 days (36 hours)
+  - **Priority**: Medium (not urgent - current tests functional at 100%)
+  - **Expected Benefits**: 80% reduction in flaky tests, 100% Spectrum compatibility, 5-10 bugs discovered
+  - **Triggers**: After completing efficiency refactoring ✅, or before major UI features, or during tech debt sprint
+  - **Status**: Migration plan complete (`docs/testing/user-event-migration-plan.md`)
+  - See `step-11.md`
 
 ---
 

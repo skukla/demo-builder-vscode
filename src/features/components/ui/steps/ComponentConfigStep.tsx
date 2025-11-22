@@ -18,6 +18,9 @@ import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { ComponentEnvVar, ComponentConfigs, WizardState, WizardStep } from '@/types/webview';
 import { vscode } from '@/core/ui/utils/vscode-api';
 
+// Re-export types for test consumption
+export type { ComponentConfigs } from '@/types/webview';
+
 interface ComponentConfigStepProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
@@ -48,11 +51,11 @@ interface ComponentsData {
     envVars?: Record<string, ComponentEnvVar>;
 }
 
-interface UniqueField extends ComponentEnvVar {
+export interface UniqueField extends ComponentEnvVar {
     componentIds: string[]; // Which components need this field
 }
 
-interface ServiceGroup {
+export interface ServiceGroup {
     id: string;
     label: string;
     fields: UniqueField[];

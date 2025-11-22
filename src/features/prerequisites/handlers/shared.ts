@@ -7,7 +7,7 @@
 
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ComponentSelection } from '@/types/components';
 import { DEFAULT_SHELL } from '@/types/shell';
 

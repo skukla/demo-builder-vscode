@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useDebouncedLoading } from './useDebouncedLoading';
+import { useDebouncedLoading } from '@/core/ui/hooks/useDebouncedLoading';
 import { WizardState } from '@/types/webview';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 

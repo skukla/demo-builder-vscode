@@ -116,7 +116,7 @@ export function useAsyncData<T>(
       }
 
       // Transform data if transform function provided
-      const processedData = transform ? transform(receivedData) : receivedData;
+      const processedData = transform ? transform(receivedData) : (receivedData as T);
       setDataState(processedData);
 
       // Auto-select if only one item and array data
@@ -137,11 +137,11 @@ export function useAsyncData<T>(
   useEffect(() => {
     if (!errorMessageType) return;
 
-    const unsubscribe = useVSCodeMessage(errorMessageType, (errorData) => {
+    const unsubscribe = useVSCodeMessage<string | { error?: string }>(errorMessageType, (errorData) => {
       const errorMessage =
         typeof errorData === 'string'
           ? errorData
-          : errorData?.error || 'An error occurred';
+          : (errorData as { error?: string })?.error || 'An error occurred';
       setErrorState(errorMessage);
     });
 

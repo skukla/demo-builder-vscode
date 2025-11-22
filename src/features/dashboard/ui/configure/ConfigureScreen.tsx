@@ -17,7 +17,7 @@ import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
 import { NavigationPanel, NavigationSection, NavigationField } from '@/core/ui/components/navigation';
 
-interface ComponentsData {
+export interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];
@@ -54,6 +54,15 @@ interface ServiceGroup {
     id: string;
     label: string;
     fields: UniqueField[];
+}
+
+interface ComponentInstance {
+    type?: string;
+}
+
+interface SaveConfigurationResponse {
+    success: boolean;
+    error?: string;
 }
 
 export function ConfigureScreen({ project, componentsData, existingEnvValues }: ConfigureScreenProps) {
@@ -174,7 +183,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     const hasEnvVars = (componentDef.configuration?.requiredEnvVars?.length || 0) > 0 ||
                                        (componentDef.configuration?.optionalEnvVars?.length || 0) > 0;
                     if (hasEnvVars) {
-                        const instanceType = (instance as any)?.type;
+                        const instanceType = (instance as ComponentInstance)?.type;
                         components.push({
                             id: componentDef.id,
                             data: componentDef,
@@ -552,7 +561,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     const handleSave = useCallback(async () => {
         setIsSaving(true);
         try {
-            const result = await webviewClient.request('save-configuration', { componentConfigs }) as any;
+            const result = await webviewClient.request<SaveConfigurationResponse>('save-configuration', { componentConfigs });
             if (result.success) {
                 // Configuration saved successfully
             } else {
@@ -635,7 +644,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                                         key={field.key}
                                                         fieldKey={field.key}
                                                         label={field.label}
-                                                        type={field.type as any}
+                                                        type={field.type as 'text' | 'url' | 'password' | 'select' | 'number'}
                                                         value={value !== undefined && value !== null ? String(value) : ''}
                                                         onChange={(val) => updateField(field, val)}
                                                         placeholder={field.placeholder}

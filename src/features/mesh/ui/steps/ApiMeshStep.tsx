@@ -13,6 +13,27 @@ import { Modal } from '@/core/ui/components/ui/Modal';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
 import { WizardState, WizardStep } from '@/types/webview';
 
+interface CheckApiMeshResponse {
+    success: boolean;
+    apiEnabled?: boolean;
+    meshExists?: boolean;
+    meshId?: string;
+    meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error';
+    endpoint?: string;
+    error?: string;
+    setupInstructions?: { step: string; details: string; important?: boolean }[];
+}
+
+interface CreateApiMeshResponse {
+    success: boolean;
+    meshId?: string;
+    endpoint?: string;
+    meshExists?: boolean;
+    meshStatus?: 'deployed' | 'error';
+    message?: string;
+    error?: string;
+}
+
 interface ApiMeshStepProps {
     state: WizardState;
     updateState: (updates: Partial<WizardState>) => void;
@@ -80,10 +101,10 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
         }, 2000);
 
         try {
-            const result = await webviewClient.request('check-api-mesh', {
+            const result = await webviewClient.request<CheckApiMeshResponse>('check-api-mesh', {
                 workspaceId: state.adobeWorkspace?.id,
                 selectedComponents: [],
-            }) as any;
+            });
 
             if (result?.success && result.apiEnabled) {
                 // API is enabled
@@ -284,9 +305,9 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                                 setSubMessage('Submitting configuration to Adobe');
                                                 setHelperText('This could take up to 2 minutes');
                                                 
-                                                const result = await webviewClient.request('create-api-mesh', {
+                                                const result = await webviewClient.request<CreateApiMeshResponse>('create-api-mesh', {
                                                     workspaceId: state.adobeWorkspace?.id,
-                                                }) as any;
+                                                });
 
                                                 if (result?.success) {
                                                     // Success! Mesh was created and deployed
@@ -377,9 +398,9 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
 
                                     try {
                                         // Backend automatically specifies required timeout via __timeout_hint__
-                                        const result = await webviewClient.request('create-api-mesh', {
+                                        const result = await webviewClient.request<CreateApiMeshResponse>('create-api-mesh', {
                                             workspaceId: state.adobeWorkspace?.id,
-                                        }) as any;
+                                        });
 
                                         if (result?.success) {
                                             // Success! Mesh was created (and possibly deployed)

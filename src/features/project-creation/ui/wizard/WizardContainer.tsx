@@ -447,9 +447,9 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             case 'welcome':
                 return <WelcomeStep {...props} />;
             case 'component-selection':
-                return <ComponentSelectionStep {...props} componentsData={componentsData as unknown as Record<string, unknown> | undefined} />;
+                return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':
-                return <PrerequisitesStep {...props} componentsData={componentsData as unknown as Record<string, unknown> | undefined} currentStep={state.currentStep} />;
+                return <PrerequisitesStep {...props} componentsData={componentsData?.data as Record<string, unknown>} currentStep={state.currentStep} />;
             case 'adobe-auth':
                 return <AdobeAuthStep {...props} />;
             case 'adobe-project':
@@ -490,7 +490,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             height="100vh"
             UNSAFE_className={cn('flex', 'overflow-hidden')}
         >
-            <div ref={wizardContainerRef as any} style={{ display: 'flex', height: '100%', width: '100%' }}>
+            <div ref={wizardContainerRef} style={{ display: 'flex', height: '100%', width: '100%' }}>
                 {/* Timeline Navigation */}
                 <View 
                     width="size-3000" 

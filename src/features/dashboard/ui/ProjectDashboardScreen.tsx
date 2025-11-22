@@ -68,11 +68,11 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
         });
 
         const unsubscribeMesh = webviewClient.onMessage('meshStatusUpdate', (data: unknown) => {
-            const meshData = data as { status: string; message?: string; endpoint?: string };
+            const meshData = data as { status: MeshStatus; message?: string; endpoint?: string };
             setProjectStatus(prev => prev ? {
                 ...prev,
                 mesh: {
-                    status: meshData.status as any,
+                    status: meshData.status,
                     message: meshData.message,
                     endpoint: meshData.endpoint
                 }

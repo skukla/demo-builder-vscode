@@ -110,17 +110,17 @@ export class CommandExecutor {
                 finalOptions.shell = DEFAULT_SHELL;
             }
             if (options.configureTelemetry === undefined) {
-                (options as any).configureTelemetry = false;
+                options.configureTelemetry = false;
             }
             if (options.enhancePath === undefined) {
-                (options as any).enhancePath = true;
+                options.enhancePath = true;
             }
             if (options.useNodeVersion === undefined) {
-                (options as any).useNodeVersion = null;
+                options.useNodeVersion = null;
             }
             // Set retry strategy if not provided
             if (!options.retryStrategy) {
-                (options as any).retryStrategy = this.retryManager.getStrategy('adobe-cli');
+                options.retryStrategy = this.retryManager.getStrategy('adobe-cli');
             }
         }
 
