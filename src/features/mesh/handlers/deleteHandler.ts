@@ -5,9 +5,10 @@
  */
 
 import * as vscode from 'vscode';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { validateWorkspaceId } from '@/core/validation';
 import { toError } from '@/types/typeGuards';
 
 /**
@@ -23,6 +24,17 @@ export async function handleDeleteApiMesh(
     error?: string;
 }> {
     const { workspaceId } = payload;
+
+    // SECURITY: Validate workspaceId to prevent command injection
+    try {
+        validateWorkspaceId(workspaceId);
+    } catch (validationError) {
+        context.logger.error('[API Mesh] Invalid workspace ID provided', validationError as Error);
+        return {
+            success: false,
+            error: (validationError as Error).message,
+        };
+    }
 
     try {
         context.logger.info('[API Mesh] Deleting mesh for workspace', { workspaceId });

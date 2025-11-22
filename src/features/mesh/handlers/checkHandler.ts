@@ -10,10 +10,11 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { checkApiMeshEnabled, checkMeshExistence, fallbackMeshCheck } from './checkHandlerHelpers';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { validateWorkspaceId } from '@/core/validation';
 import { getSetupInstructions, getEndpoint } from '@/features/mesh/handlers/shared';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 import { parseJSON, toError } from '@/types/typeGuards';
 
 /**
@@ -117,22 +118,13 @@ export async function handleCheckApiMesh(
 
             context.debugLogger.debug('[API Mesh] Workspace services', { services });
 
-            // Use configuration for service detection with fallback to hardcoded values
-            const meshConfig = context.sharedState.apiServicesConfig?.services?.apiMesh;
-            const namePatterns = meshConfig?.detection?.namePatterns || ['API Mesh'];
-            const codes = meshConfig?.detection?.codes || ['MeshAPI'];
-            const codeNames = meshConfig?.detection?.codeNames || ['MeshAPI'];
-
-            const hasMeshApi = (services as { name?: string; code?: string; code_name?: string }[]).some((s) =>
-                namePatterns.some((pattern: string) => s.name?.includes(pattern)) ||
-                codes.some((code: string) => s.code === code) ||
-                codeNames.some((codeName: string) => s.code_name === codeName),
-            );
+            // Check if API Mesh service is enabled (extracted helper)
+            const { enabled: apiEnabled } = checkApiMeshEnabled(services, context.sharedState.apiServicesConfig);
 
             // Cleanup temp directory
             await fsPromises.rm(tempDir, { recursive: true, force: true });
 
-            if (!hasMeshApi) {
+            if (!apiEnabled) {
                 context.logger.warn('[API Mesh] API Mesh API not found in workspace services');
                 context.debugLogger.debug('[API Mesh] Available services', { serviceNames: (services as { name?: string; code?: string }[]).map((s) => s.name || s.code) });
                 return {
@@ -148,131 +140,73 @@ export async function handleCheckApiMesh(
             // LAYER 2: Now check if a mesh exists (API is already confirmed as enabled)
             context.logger.info('[API Mesh] Layer 2: Checking for existing mesh');
 
-            try {
-                // Use 'get' without --active to get JSON response with meshStatus
-                const { stdout, stderr, code } = await commandManager.execute('aio api-mesh get');
+            // Check mesh existence using extracted helper
+            const meshCheck = await checkMeshExistence(commandManager);
 
-                if (code !== 0) {
-                    // Command failed - check if it's because no mesh exists
-                    const combined = `${stdout}\n${stderr}`;
-                    const noMeshFound = /no mesh found|unable to get mesh config/i.test(combined);
-
-                    if (noMeshFound) {
-                        context.logger.info('[API Mesh] API enabled, no mesh exists yet');
-                        return {
-                            success: true,
-                            apiEnabled: true,
-                            meshExists: false,
-                        };
-                    }
-
-                    // Other error - treat as unknown state
-                    context.logger.warn('[API Mesh] Mesh check command failed with unexpected error');
-                    context.debugLogger.debug('[API Mesh] Error output:', combined);
-                    throw new Error(`Mesh check failed: ${stderr || stdout}`);
-                }
-
-                // Parse JSON response
-                const jsonMatch = /\{[\s\S]*\}/.exec(stdout);
-                if (!jsonMatch) {
-                    context.logger.warn('[API Mesh] Could not parse JSON from get response');
-                    context.debugLogger.debug('[API Mesh] Output:', stdout);
-                    // Assume no mesh if we can't parse
-                    return {
-                        success: true,
-                        apiEnabled: true,
-                        meshExists: false,
-                    };
-                }
-
-                const meshData = parseJSON<{ meshId?: string; meshStatus?: string; error?: string }>(jsonMatch[0]);
-                if (!meshData) {
-                    context.logger.warn('[API Mesh] Failed to parse mesh data');
-                    return {
-                        success: true,
-                        apiEnabled: true,
-                        meshExists: false,
-                    };
-                }
-                const meshStatus = meshData.meshStatus?.toLowerCase();
-                const meshId = meshData.meshId;
-
-                // Get endpoint using single source of truth (cached, describe, or construct)
-                const endpoint = meshId ? await getEndpoint(context, meshId) : undefined;
-
-                context.debugLogger.debug('[API Mesh] Parsed mesh data', { meshStatus, meshId, endpoint });
-
-                // Mesh exists - check its status
-                if (meshStatus === 'deployed' || meshStatus === 'success') {
-                    context.logger.info('[API Mesh] Existing mesh found and deployed', { meshId, endpoint });
-                    // Track that mesh existed before this session (prevent deletion on cancel)
-                    context.sharedState.meshExistedBeforeSession = workspaceId;
-                    return {
-                        success: true,
-                        apiEnabled: true,
-                        meshExists: true,
-                        meshId,
-                        meshStatus: 'deployed',
-                        endpoint,
-                    };
-                } else if (meshStatus === 'error' || meshStatus === 'failed') {
-                    context.logger.warn('[API Mesh] Mesh exists but is in error state');
-                    const errorMsg = meshData.error || 'Mesh deployment failed';
-                    context.debugLogger.debug('[API Mesh] Error details:', errorMsg.substring(0, 500));
-
-                    // Track that mesh existed (even in error state) to prevent deletion on cancel
-                    context.sharedState.meshExistedBeforeSession = workspaceId;
-
-                    return {
-                        success: true,
-                        apiEnabled: true,
-                        meshExists: true,
-                        meshId,
-                        meshStatus: 'error',
-                        endpoint,
-                        error: 'Mesh exists but deployment failed. Click "Recreate Mesh" to delete and redeploy it.',
-                    };
-                } else {
-                    // Status is pending/provisioning/building
-                    context.logger.info('[API Mesh] Mesh exists but is still provisioning', { meshStatus });
-                    // Track that mesh existed to prevent deletion on cancel
-                    context.sharedState.meshExistedBeforeSession = workspaceId;
-                    return {
-                        success: true,
-                        apiEnabled: true,
-                        meshExists: true,
-                        meshId,
-                        meshStatus: 'pending',
-                        endpoint,
-                        error: 'Mesh is currently being provisioned. This could take up to 2 minutes.',
-                    };
-                }
-
-            } catch (meshError) {
-                const err = meshError as { message?: string; stderr?: string; stdout?: string };
-                const combined = `${err.message || ''}\n${err.stderr || ''}\n${err.stdout || ''}`;
-                context.logger.warn('[API Mesh] Mesh check failed', meshError as Error);
-                context.debugLogger.debug('[API Mesh] Full error output:', combined);
-
-                // Check if it's "no mesh found"
-                const noMeshFound = /no mesh found|unable to get mesh config/i.test(combined);
-
-                if (noMeshFound) {
-                    context.logger.info('[API Mesh] API enabled, no mesh exists yet');
-                    return {
-                        success: true,
-                        apiEnabled: true,
-                        meshExists: false,
-                    };
-                }
-
-                // Other error - treat as unknown/error state
+            if (!meshCheck.meshExists) {
+                context.logger.info('[API Mesh] API enabled, no mesh exists yet');
                 return {
                     success: true,
                     apiEnabled: true,
                     meshExists: false,
-                    error: 'Unable to check mesh status. Try refreshing or check Adobe Console.',
                 };
+            }
+
+            // Mesh exists - fetch endpoint and track state
+            const endpoint = meshCheck.meshId ? await getEndpoint(context, meshCheck.meshId) : undefined;
+
+            // Track that mesh existed before this session (prevent deletion on cancel)
+            context.sharedState.meshExistedBeforeSession = workspaceId;
+
+            // Handle mesh status based on category
+            switch (meshCheck.meshStatus) {
+                case 'deployed':
+                    context.logger.info('[API Mesh] Existing mesh found and deployed', { meshId: meshCheck.meshId, endpoint });
+                    return {
+                        success: true,
+                        apiEnabled: true,
+                        meshExists: true,
+                        meshId: meshCheck.meshId,
+                        meshStatus: 'deployed',
+                        endpoint,
+                    };
+
+                case 'error':
+                    context.logger.warn('[API Mesh] Mesh exists but is in error state');
+                    if (meshCheck.error) {
+                        context.debugLogger.debug('[API Mesh] Error details:', meshCheck.error.substring(0, 500));
+                    }
+                    return {
+                        success: true,
+                        apiEnabled: true,
+                        meshExists: true,
+                        meshId: meshCheck.meshId,
+                        meshStatus: 'error',
+                        endpoint,
+                        error: 'Mesh exists but deployment failed. Click "Recreate Mesh" to delete and redeploy it.',
+                    };
+
+                case 'pending':
+                    context.logger.info('[API Mesh] Mesh exists but is still provisioning');
+                    return {
+                        success: true,
+                        apiEnabled: true,
+                        meshExists: true,
+                        meshId: meshCheck.meshId,
+                        meshStatus: 'pending',
+                        endpoint,
+                        error: 'Mesh is currently being provisioned. This could take up to 2 minutes.',
+                    };
+
+                default:
+                    // Fallback: meshExists but no status (shouldn't happen)
+                    context.logger.warn('[API Mesh] Mesh exists but status is unknown');
+                    return {
+                        success: true,
+                        apiEnabled: true,
+                        meshExists: false,
+                        error: 'Unable to determine mesh status. Try refreshing or check Adobe Console.',
+                    };
             }
 
         } catch (configError) {
@@ -288,25 +222,20 @@ export async function handleCheckApiMesh(
             context.logger.info('[API Mesh] Layer 2 (fallback): Checking API status and mesh');
 
             try {
-                const { stdout, stderr } = await commandManager.execute('aio api-mesh get --active');
-                const combined = `${stdout}\n${stderr}`;
+                // Use fallback helper to check API/mesh status
+                const fallbackResult = await fallbackMeshCheck(commandManager);
 
-                context.debugLogger.debug('[API Mesh] get --active output (fallback)', { stdout, stderr });
-
-                // "Unable to get mesh config" indicates API is NOT enabled
-                const unableToGet = /unable to get mesh config/i.test(combined);
-                if (unableToGet) {
-                    context.logger.warn('[API Mesh] API Mesh API not enabled (unable to get mesh config)');
+                if (!fallbackResult.apiEnabled) {
+                    context.logger.warn('[API Mesh] API Mesh API not enabled');
                     return {
                         success: true,
                         apiEnabled: false,
                         meshExists: false,
+                        setupInstructions: getSetupInstructions(context, selectedComponents),
                     };
                 }
 
-                // Check for "No mesh found" without "unable to get" (API enabled, no mesh exists)
-                const noMeshOnly = /no mesh found/i.test(combined) && !unableToGet;
-                if (noMeshOnly) {
+                if (!fallbackResult.meshExists) {
                     context.logger.info('[API Mesh] API enabled, no mesh exists yet (fallback check)');
                     return {
                         success: true,
@@ -315,60 +244,19 @@ export async function handleCheckApiMesh(
                     };
                 }
 
-                // If we got here without error, mesh exists
-                const meshIdMatch = /mesh[_-]?id[:\s]+([a-f0-9-]+)/i.exec(combined);
-                const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
-
-                context.logger.info('[API Mesh] Existing mesh found (fallback check)', { meshId });
-
+                // Mesh exists
+                context.logger.info('[API Mesh] Existing mesh found (fallback check)', { meshId: fallbackResult.meshId });
                 return {
                     success: true,
                     apiEnabled: true,
                     meshExists: true,
-                    meshId,
-                    meshStatus: 'deployed',
+                    meshId: fallbackResult.meshId,
+                    meshStatus: fallbackResult.meshStatus,
                     endpoint: undefined,
                 };
-
             } catch (meshError) {
-                const err = meshError as { message?: string; stderr?: string; stdout?: string };
-                const combined = `${err.message || ''}\n${err.stderr || ''}\n${err.stdout || ''}`;
-                context.debugLogger.debug('[API Mesh] Mesh get error (fallback)', { combined });
-
-                // Check for permission errors (API not enabled)
-                const forbidden = /403|forbidden|not authorized|not enabled|no access|missing permission/i.test(combined);
-                if (forbidden) {
-                    context.logger.warn('[API Mesh] API Mesh API not enabled (permission denied)');
-                    return {
-                        success: true,
-                        apiEnabled: false,
-                        meshExists: false,
-                    };
-                }
-
-                // "Unable to get mesh config" indicates API is NOT enabled
-                const unableToGet = /unable to get mesh config/i.test(combined);
-                if (unableToGet) {
-                    context.logger.warn('[API Mesh] API Mesh API not enabled (unable to get mesh config)');
-                    return {
-                        success: true,
-                        apiEnabled: false,
-                        meshExists: false,
-                    };
-                }
-
-                // Check for "No mesh found" (API enabled, just no mesh)
-                const noMesh = /no mesh found/i.test(combined);
-                if (noMesh) {
-                    context.logger.info('[API Mesh] API enabled, no mesh exists yet');
-                    return {
-                        success: true,
-                        apiEnabled: true,
-                        meshExists: false,
-                    };
-                }
-
-                // Unknown error
+                // Unknown error from fallback - log and continue to outer catch
+                context.logger.warn('[API Mesh] Fallback check failed with unknown error', meshError as Error);
                 throw meshError;
             }
         }
