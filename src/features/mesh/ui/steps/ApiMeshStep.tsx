@@ -311,17 +311,22 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
 
                                                 if (result?.success) {
                                                     // Success! Mesh was created and deployed
-                                                    updateState({ 
-                                                        apiMesh: { 
+                                                    updateState({
+                                                        apiMesh: {
                                                             isChecking: false,
                                                             apiEnabled: true,
                                                             meshExists: true,
                                                             meshId: result.meshId,
                                                             meshStatus: 'deployed',
                                                             endpoint: result.endpoint,
-                                                        }, 
+                                                        },
                                                     });
-                                                    setMeshData(null); // Clear error state
+                                                    // Update meshData to show deployed state (consistent with initial creation flow)
+                                                    setMeshData({
+                                                        meshId: result.meshId,
+                                                        status: 'deployed',
+                                                        endpoint: result.endpoint,
+                                                    });
                                                     setCanProceed(true);
                                                 } else if (result?.meshExists && result?.meshStatus === 'error') {
                                                     // Mesh was created but is in error state again

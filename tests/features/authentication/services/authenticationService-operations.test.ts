@@ -197,4 +197,77 @@ describe('AuthenticationService - Login/Logout Operations', () => {
             await expect(authService.logout()).rejects.toThrow('Logout failed');
         });
     });
+
+    describe('cache clearing after login', () => {
+        let clearAuthStatusCacheSpy: jest.SpyInstance;
+        let clearValidationCacheSpy: jest.SpyInstance;
+        let clearTokenInspectionCacheSpy: jest.SpyInstance;
+        let clearAllSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            // Spy on cache manager methods
+            const cacheManager = (authService as any).cacheManager;
+            clearAuthStatusCacheSpy = jest.spyOn(cacheManager, 'clearAuthStatusCache');
+            clearValidationCacheSpy = jest.spyOn(cacheManager, 'clearValidationCache');
+            clearTokenInspectionCacheSpy = jest.spyOn(cacheManager, 'clearTokenInspectionCache');
+            clearAllSpy = jest.spyOn(cacheManager, 'clearAll');
+        });
+
+        it('should clear token inspection cache after non-forced login', async () => {
+            // Given: Successful login without force flag
+            const token = 'x'.repeat(150);
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
+
+            // When: performing non-forced login
+            await authService.login(false);
+
+            // Then: should clear token inspection cache (fix for auth loop bug)
+            expect(clearTokenInspectionCacheSpy).toHaveBeenCalled();
+            expect(clearAuthStatusCacheSpy).toHaveBeenCalled();
+            expect(clearValidationCacheSpy).toHaveBeenCalled();
+        });
+
+        it('should NOT call clearAll for non-forced login', async () => {
+            // Given: Successful login without force flag
+            const token = 'x'.repeat(150);
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
+
+            // When: performing non-forced login
+            await authService.login(false);
+
+            // Then: should clear individual caches, not clearAll
+            expect(clearAllSpy).not.toHaveBeenCalled();
+            expect(clearAuthStatusCacheSpy).toHaveBeenCalled();
+            expect(clearValidationCacheSpy).toHaveBeenCalled();
+            expect(clearTokenInspectionCacheSpy).toHaveBeenCalled();
+        });
+
+        it('should call clearAll before forced login', async () => {
+            // Given: Successful forced login
+            const token = 'x'.repeat(150);
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
+
+            // When: performing forced login
+            await authService.login(true);
+
+            // Then: should call clearAll before login
+            expect(clearAllSpy).toHaveBeenCalled();
+        });
+
+        it('should clear all three caches to prevent stale token bug', async () => {
+            // Given: Successful login
+            const token = 'x'.repeat(150);
+            mockCommandExecutor.execute.mockResolvedValue(createSuccessResult(token));
+
+            // When: performing non-forced login
+            await authService.login(false);
+
+            // Then: all three caches should be cleared to prevent auth loop
+            // This test verifies the fix for the "Session expired" loop bug where
+            // token inspection cache was not cleared, causing next auth check to fail
+            expect(clearAuthStatusCacheSpy).toHaveBeenCalledTimes(1);
+            expect(clearValidationCacheSpy).toHaveBeenCalledTimes(1);
+            expect(clearTokenInspectionCacheSpy).toHaveBeenCalledTimes(1);
+        });
+    });
 });
