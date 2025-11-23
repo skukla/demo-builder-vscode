@@ -191,6 +191,132 @@ describe('CommandExecutor - Adobe CLI Integration', () => {
             expect(result2.stdout).toBe('plugin list\n');
             expect(spawn).toHaveBeenCalledTimes(1);
         });
+
+        it('should cache separately for different Node versions (Node 20 vs Node 24)', async () => {
+            // Setup mock fnm path
+            mockDependencies.mockEnvironmentSetup().findFnmPath.mockReturnValue('/usr/local/bin/fnm');
+
+            const mockChild1 = createMockChildProcess();
+            const mockChild2 = createMockChildProcess();
+
+            // First call with Node 20
+            (spawn as jest.Mock).mockReturnValueOnce(mockChild1);
+            const promise1 = commandExecutor.execute('aio --version', { useNodeVersion: '20' });
+
+            process.nextTick(() => {
+                mockChild1.stdout!.emit('data', Buffer.from('@adobe/aio-cli/11.0.0 darwin-arm64 node-v20.19.5\n'));
+                mockChild1.emit('close', 0);
+            });
+
+            const result1 = await promise1;
+
+            // Second call with Node 24 - should NOT use cache from Node 20
+            (spawn as jest.Mock).mockReturnValueOnce(mockChild2);
+            const promise2 = commandExecutor.execute('aio --version', { useNodeVersion: '24' });
+
+            process.nextTick(() => {
+                mockChild2.stdout!.emit('data', Buffer.from('@adobe/aio-cli/10.3.3 darwin-arm64 node-v24.11.1\n'));
+                mockChild2.emit('close', 0);
+            });
+
+            const result2 = await promise2;
+
+            // Both calls should have executed (not cached across different Node versions)
+            expect(spawn).toHaveBeenCalledTimes(2);
+            expect(result1.stdout).toBe('@adobe/aio-cli/11.0.0 darwin-arm64 node-v20.19.5\n');
+            expect(result2.stdout).toBe('@adobe/aio-cli/10.3.3 darwin-arm64 node-v24.11.1\n');
+        });
+
+        it('should use cache for same Node version (Node 20 twice)', async () => {
+            // Setup mock fnm path
+            mockDependencies.mockEnvironmentSetup().findFnmPath.mockReturnValue('/usr/local/bin/fnm');
+
+            const mockChild = createMockChildProcess();
+            (spawn as jest.Mock).mockReturnValue(mockChild);
+
+            // First call with Node 20
+            const promise1 = commandExecutor.execute('aio --version', { useNodeVersion: '20' });
+
+            process.nextTick(() => {
+                mockChild.stdout!.emit('data', Buffer.from('@adobe/aio-cli/11.0.0 darwin-arm64 node-v20.19.5\n'));
+                mockChild.emit('close', 0);
+            });
+
+            await promise1;
+
+            // Second call with Node 20 again - should use cache
+            const result2 = await commandExecutor.execute('aio --version', { useNodeVersion: '20' });
+
+            // Should only execute once (second call uses cache)
+            expect(spawn).toHaveBeenCalledTimes(1);
+            expect(result2.stdout).toBe('@adobe/aio-cli/11.0.0 darwin-arm64 node-v20.19.5\n');
+        });
+
+        it('should NOT cache across default and specified Node versions', async () => {
+            // Setup mock fnm path
+            mockDependencies.mockEnvironmentSetup().findFnmPath.mockReturnValue('/usr/local/bin/fnm');
+
+            const mockChild1 = createMockChildProcess();
+            const mockChild2 = createMockChildProcess();
+
+            // First call without Node version (default)
+            (spawn as jest.Mock).mockReturnValueOnce(mockChild1);
+            const promise1 = commandExecutor.execute('aio --version');
+
+            process.nextTick(() => {
+                mockChild1.stdout!.emit('data', Buffer.from('@adobe/aio-cli/9.4.0\n'));
+                mockChild1.emit('close', 0);
+            });
+
+            await promise1;
+
+            // Second call with explicit Node version - should NOT use cache
+            (spawn as jest.Mock).mockReturnValueOnce(mockChild2);
+            const promise2 = commandExecutor.execute('aio --version', { useNodeVersion: '20' });
+
+            process.nextTick(() => {
+                mockChild2.stdout!.emit('data', Buffer.from('@adobe/aio-cli/11.0.0 darwin-arm64 node-v20.19.5\n'));
+                mockChild2.emit('close', 0);
+            });
+
+            await promise2;
+
+            // Both should execute (different cache keys)
+            expect(spawn).toHaveBeenCalledTimes(2);
+        });
+
+        it('should cache separately for aio plugins with different Node versions', async () => {
+            // Setup mock fnm path
+            mockDependencies.mockEnvironmentSetup().findFnmPath.mockReturnValue('/usr/local/bin/fnm');
+
+            const mockChild1 = createMockChildProcess();
+            const mockChild2 = createMockChildProcess();
+
+            // First call with Node 20
+            (spawn as jest.Mock).mockReturnValueOnce(mockChild1);
+            const promise1 = commandExecutor.execute('aio plugins', { useNodeVersion: '20' });
+
+            process.nextTick(() => {
+                mockChild1.stdout!.emit('data', Buffer.from('@adobe/aio-cli-plugin-api-mesh 3.0.0\n'));
+                mockChild1.emit('close', 0);
+            });
+
+            await promise1;
+
+            // Second call with Node 24 - should NOT use cache
+            (spawn as jest.Mock).mockReturnValueOnce(mockChild2);
+            const promise2 = commandExecutor.execute('aio plugins', { useNodeVersion: '24' });
+
+            process.nextTick(() => {
+                mockChild2.stdout!.emit('data', Buffer.from('@adobe/aio-cli-plugin-api-mesh 2.5.0\n'));
+                mockChild2.emit('close', 0);
+            });
+
+            await promise2;
+
+            // Both should execute (different Node versions)
+            expect(spawn).toHaveBeenCalledTimes(2);
+        });
     });
 
     describe('Adobe CLI Node version management', () => {

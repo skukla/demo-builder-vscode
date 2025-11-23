@@ -28,9 +28,9 @@ export class CommandExecutor {
     private commandQueue: CommandRequest[] = [];
     private isProcessingQueue = false;
 
-    // Session caching for Adobe CLI
-    private adobeVersionCache: CommandResult | null = null;
-    private adobePluginsCache: CommandResult | null = null;
+    // Session caching for Adobe CLI (keyed by node version for multi-version support)
+    private adobeVersionCache: Map<string, CommandResult> = new Map();
+    private adobePluginsCache: Map<string, CommandResult> = new Map();
 
     constructor() {
         this.environmentSetup = new EnvironmentSetup();
@@ -90,14 +90,6 @@ export class CommandExecutor {
         // Developers can now safely use execute() for Adobe CLI without specifying options
         const isAdobeCLI = command.startsWith('aio ') || command.startsWith('aio-');
         if (isAdobeCLI) {
-            // Check cache for specific commands (performance optimization)
-            if (command === 'aio --version' && this.adobeVersionCache) {
-                return this.adobeVersionCache;
-            }
-            if (command === 'aio plugins' && this.adobePluginsCache) {
-                return this.adobePluginsCache;
-            }
-
             // Ensure Node version is set once per session
             const isVersionCheck = command.includes('--version') || command.includes('-v');
             if (!isVersionCheck) {
@@ -131,8 +123,10 @@ export class CommandExecutor {
             await this.environmentSetup.ensureAdobeCLIConfigured(this.execute.bind(this));
         }
 
-        // Step 2: Handle Node version management
+        // Step 2: Handle Node version management and resolve "auto" to actual version
         // Fix #7 (01b94d6): Use fnm exec for bulletproof isolation instead of fnm use
+        let effectiveNodeVersion: string | null = options.useNodeVersion ?? null;
+
         if (options.useNodeVersion !== null && options.useNodeVersion !== undefined) {
             // SECURITY FIX (CWE-77): Validate nodeVersion BEFORE resolving "auto"
             // Critical: nodeVersion is directly interpolated into shell command at line 113
@@ -143,6 +137,8 @@ export class CommandExecutor {
             const nodeVersion = options.useNodeVersion === 'auto'
                 ? await this.environmentSetup.findAdobeCLINodeVersion()
                 : options.useNodeVersion;
+
+            effectiveNodeVersion = nodeVersion;
 
             // SECURITY FIX (CWE-77): Defense-in-depth validation for resolved version
             // Protects against compromised findAdobeCLINodeVersion() or .aio config tampering
@@ -166,6 +162,24 @@ export class CommandExecutor {
                     finalCommand = `eval "$(fnm env)" && ${finalCommand}`;
                     // CRITICAL: fnm env also requires /bin/zsh shell
                     finalOptions.shell = '/bin/zsh';
+                }
+            }
+        }
+
+        // Step 2.5: Check cache for Adobe CLI commands (after Node version resolution)
+        // Cache is keyed by command + node version for correct multi-version support
+        if (isAdobeCLI) {
+            const cacheKey = `${command}##${effectiveNodeVersion || 'default'}`;
+
+            if (command === 'aio --version') {
+                const cachedResult = this.adobeVersionCache.get(cacheKey);
+                if (cachedResult) {
+                    return cachedResult;
+                }
+            } else if (command === 'aio plugins') {
+                const cachedResult = this.adobePluginsCache.get(cacheKey);
+                if (cachedResult) {
+                    return cachedResult;
                 }
             }
         }
@@ -198,12 +212,14 @@ export class CommandExecutor {
             command.substring(0, 50),
         );
 
-        // Cache Adobe CLI results for version and plugins commands
+        // Cache Adobe CLI results for version and plugins commands (keyed by node version)
         if (isAdobeCLI && result.code === 0) {
+            const cacheKey = `${command}##${effectiveNodeVersion || 'default'}`;
+
             if (command === 'aio --version') {
-                this.adobeVersionCache = result;
+                this.adobeVersionCache.set(cacheKey, result);
             } else if (command === 'aio plugins') {
-                this.adobePluginsCache = result;
+                this.adobePluginsCache.set(cacheKey, result);
             }
         }
 
