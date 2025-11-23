@@ -1,4 +1,4 @@
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import * as validation from '@/core/validation';
 import * as executor from '@/features/project-creation/handlers/executor';
 import * as promiseUtils from '@/core/utils/promiseUtils';

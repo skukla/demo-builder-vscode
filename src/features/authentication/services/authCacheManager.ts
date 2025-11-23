@@ -1,5 +1,6 @@
 import { getLogger } from '@/core/logging';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
+import { getCacheTTLWithJitter } from '@/core/cache/AbstractCacheManager';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -22,20 +23,6 @@ import type {
  */
 export class AuthCacheManager {
     private logger = getLogger();
-
-    /**
-     * Add random jitter to TTL to prevent timing-based cache enumeration attacks
-     * SECURITY: Randomizes cache expiry by ±10% to make timing attacks infeasible
-     *
-     * @param baseTTL - Base TTL in milliseconds
-     * @returns TTL with random jitter applied
-     */
-    private getCacheTTLWithJitter(baseTTL: number): number {
-        const jitter = 0.1; // ±10%
-        const min = Math.floor(baseTTL * (1 - jitter));
-        const max = Math.floor(baseTTL * (1 + jitter));
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
 
     // Session caching for current selections
     private cachedOrganization: AdobeOrg | undefined;
@@ -119,7 +106,7 @@ export class AuthCacheManager {
      */
     setCachedAuthStatus(isAuthenticated: boolean, ttlMs: number = CACHE_TTL.AUTH_STATUS): void {
         this.cachedAuthStatus = isAuthenticated;
-        const jitteredTTL = this.getCacheTTLWithJitter(ttlMs);
+        const jitteredTTL = getCacheTTLWithJitter(ttlMs);
         this.authCacheExpiry = Date.now() + jitteredTTL;
     }
 
@@ -153,7 +140,7 @@ export class AuthCacheManager {
      */
     setValidationCache(org: string, isValid: boolean): void {
         const now = Date.now();
-        const jitteredTTL = this.getCacheTTLWithJitter(CACHE_TTL.VALIDATION);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.VALIDATION);
         this.validationCache = {
             org,
             isValid,
@@ -190,7 +177,7 @@ export class AuthCacheManager {
      */
     setCachedOrgList(orgs: AdobeOrg[]): void {
         const now = Date.now();
-        const jitteredTTL = this.getCacheTTLWithJitter(CACHE_TTL.ORG_LIST);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.ORG_LIST);
         this.orgListCache = {
             data: orgs,
             expiry: now + jitteredTTL,
@@ -219,7 +206,7 @@ export class AuthCacheManager {
      */
     setCachedConsoleWhere(context: AdobeConsoleWhereResponse): void {
         const now = Date.now();
-        const jitteredTTL = this.getCacheTTLWithJitter(CACHE_TTL.CONSOLE_WHERE);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.CONSOLE_WHERE);
         this.consoleWhereCache = {
             data: context,
             expiry: now + jitteredTTL,
@@ -257,7 +244,7 @@ export class AuthCacheManager {
      */
     setCachedTokenInspection(result: { valid: boolean; expiresIn: number; token?: string }): void {
         const now = Date.now();
-        const jitteredTTL = this.getCacheTTLWithJitter(CACHE_TTL.TOKEN_INSPECTION);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.TOKEN_INSPECTION);
         this.tokenInspectionCache = {
             data: result,
             expiry: now + jitteredTTL,

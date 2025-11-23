@@ -6,7 +6,7 @@
  */
 
 import * as vscode from 'vscode';
-import { HandlerContext } from './HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ProgressTracker } from './shared';
 import { ServiceLocator } from '@/core/di';
 import {
@@ -15,6 +15,7 @@ import {
 } from '@/features/project-creation/helpers';
 import { AdobeConfig } from '@/types/base';
 import { parseJSON } from '@/types/typeGuards';
+import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 
 /**
@@ -267,13 +268,11 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                         });
 
                         if (describeResult.code === 0) {
-                            const jsonMatch = /\{[\s\S]*\}/.exec(describeResult.stdout);
-                            if (jsonMatch) {
-                                const meshData = parseJSON<{ meshId?: string; mesh_id?: string; meshEndpoint?: string; endpoint?: string }>(jsonMatch[0]);
-                                if (meshData) {
-                                    meshId = meshData.meshId || meshData.mesh_id;
-                                    endpoint = meshData.meshEndpoint || meshData.endpoint;
-                                }
+                            // Extract JSON from output using Step 2 helper (handles mixed CLI output)
+                            const meshData = extractAndParseJSON<{ meshId?: string; mesh_id?: string; meshEndpoint?: string; endpoint?: string }>(describeResult.stdout);
+                            if (meshData) {
+                                meshId = meshData.meshId || meshData.mesh_id;
+                                endpoint = meshData.meshEndpoint || meshData.endpoint;
                             }
                         }
                     } catch {

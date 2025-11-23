@@ -8,7 +8,7 @@
 
 import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
-import type { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import type { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 

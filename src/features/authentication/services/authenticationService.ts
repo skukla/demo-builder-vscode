@@ -298,13 +298,13 @@ export class AuthenticationService {
                     this.debugLogger.debug('[Auth] Cleared SDK client to force re-init with new token');
 
                     // Clear auth cache to force fresh check next time
-                    // Note: Token inspection cache cleared via cacheManager.clearAll() in other branches
                     // If forced login, clearAll() already cleared everything at line 233
-                    // Only clear specific caches for non-forced login
+                    // For non-forced login, clear specific caches including token inspection
                     if (!force) {
                         this.cacheManager.clearAuthStatusCache();
                         this.cacheManager.clearValidationCache();
-                        this.debugLogger.debug('[Auth] Cleared auth and validation caches after login');
+                        this.cacheManager.clearTokenInspectionCache(); // FIX: Clear token inspection cache to prevent stale cached tokens
+                        this.debugLogger.debug('[Auth] Cleared auth, validation, and token inspection caches after login');
                     } else {
                         this.debugLogger.debug('[Auth] Skipping cache clear - already cleared before forced login');
                     }

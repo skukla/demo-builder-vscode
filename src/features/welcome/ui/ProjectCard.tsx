@@ -97,8 +97,7 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
                     <ActionButton
                         flex
                         onPress={(e) => {
-                            const event = e as any;
-                            event.stopPropagation?.();
+                            (e as { stopPropagation?: () => void }).stopPropagation?.();
                             onOpen();
                         }}
                     >
@@ -107,8 +106,7 @@ export function ProjectCard({ project, onOpen, onDelete, isCurrent }: ProjectCar
                     <ActionButton
                         isQuiet
                         onPress={(e) => {
-                            const event = e as any;
-                            event.stopPropagation?.();
+                            (e as { stopPropagation?: () => void }).stopPropagation?.();
                             onDelete();
                         }}
                     >

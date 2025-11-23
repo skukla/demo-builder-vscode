@@ -13,11 +13,20 @@ import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { webviewClient } from '../utils/WebviewClient';
 import { ThemeMode } from '@/types/webview';
 
+export interface WebviewInitData {
+    theme?: ThemeMode;
+    [key: string]: unknown;
+}
+
+export interface ThemeChangeData {
+    theme: ThemeMode;
+}
+
 export interface WebviewAppProps {
     /** Child components to render, or render function that receives initialization data */
-    children: ReactNode | ((data: any) => ReactNode);
+    children: ReactNode | ((data: WebviewInitData | null) => ReactNode);
     /** Optional callback when initialization data is received from extension */
-    onInit?: (data: any) => void;
+    onInit?: (data: WebviewInitData) => void;
     /** Optional loading content while waiting for init */
     loadingContent?: ReactNode;
     /** Optional className for Provider */
@@ -71,7 +80,7 @@ export function WebviewApp({
 }: WebviewAppProps) {
     const [theme, setTheme] = useState<ThemeMode>('light');
     const [isReady, setIsReady] = useState(false);
-    const [initData, setInitData] = useState<any>(null);
+    const [initData, setInitData] = useState<WebviewInitData | null>(null);
 
     // Track whether we've sent ready message (prevent StrictMode double-send)
     const readySentRef = useRef(false);
@@ -86,7 +95,7 @@ export function WebviewApp({
         const unsubscribeInit = webviewClient.onMessage('init', (data) => {
             console.log('[WebviewApp] Received init message:', data);
 
-            const initData = data as any;
+            const initData = data as WebviewInitData;
             if (initData.theme) {
                 console.log('[WebviewApp] Setting theme:', initData.theme);
                 setTheme(initData.theme);
@@ -108,7 +117,7 @@ export function WebviewApp({
 
         // Listen for theme changes
         const unsubscribeTheme = webviewClient.onMessage('theme-changed', (data) => {
-            const themeData = data as any;
+            const themeData = data as ThemeChangeData;
             setTheme(themeData.theme);
             document.body.classList.remove('vscode-light', 'vscode-dark');
             document.body.classList.add(themeData.theme === 'dark' ? 'vscode-dark' : 'vscode-light');

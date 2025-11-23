@@ -15,7 +15,7 @@ import { AuthenticationService } from '@/features/authentication';
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 // Extracted helper functions
-import { HandlerContext, SharedState } from '@/features/project-creation/handlers/HandlerContext';
+import { HandlerContext, SharedState } from '@/commands/handlers/HandlerContext';
 import { HandlerRegistry } from '@/features/project-creation/handlers/HandlerRegistry';
 import {
     formatGroupName as formatGroupNameHelper,

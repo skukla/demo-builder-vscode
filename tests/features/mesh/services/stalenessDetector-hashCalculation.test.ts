@@ -50,14 +50,14 @@ describe('StalenessDetector - Hash Calculation', () => {
 
             // Mock directory listings
             (mockFs.readdir as jest.Mock)
-                .mockResolvedValueOnce(['resolver.js'] as any)      // build/resolvers/
-                .mockResolvedValueOnce(['schema.graphql'] as any);  // schema/
+                .mockResolvedValueOnce(['resolver.js'] as string[])      // build/resolvers/
+                .mockResolvedValueOnce(['schema.graphql'] as string[]);  // schema/
 
             const mockHash = {
                 update: jest.fn().mockReturnThis(),
                 digest: jest.fn().mockReturnValue('abc123'),
             };
-            (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash as any);
+            (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash);
 
             const result = await calculateMeshSourceHash('/path/to/mesh');
 
@@ -70,13 +70,13 @@ describe('StalenessDetector - Hash Calculation', () => {
             const mockCrypto = crypto as jest.Mocked<typeof crypto>;
 
             (mockFs.readFile as jest.Mock).mockRejectedValueOnce(new Error('ENOENT'));
-            (mockFs.readdir as jest.Mock).mockResolvedValue([] as any);
+            (mockFs.readdir as jest.Mock).mockResolvedValue([]);
 
             const mockHash = {
                 update: jest.fn().mockReturnThis(),
                 digest: jest.fn().mockReturnValue(null),
             };
-            (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash as any);
+            (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash);
 
             const result = await calculateMeshSourceHash('/path/to/mesh');
 
@@ -93,13 +93,13 @@ describe('StalenessDetector - Hash Calculation', () => {
             // Mock resolvers directory missing, schemas directory empty
             (mockFs.readdir as jest.Mock)
                 .mockRejectedValueOnce(new Error('ENOENT'))  // build/resolvers/ missing
-                .mockResolvedValueOnce([] as any);           // schema/ empty
+                .mockResolvedValueOnce([]);                  // schema/ empty
 
             const mockHash = {
                 update: jest.fn().mockReturnThis(),
                 digest: jest.fn().mockReturnValue('abc123'),
             };
-            (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash as any);
+            (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash);
 
             const result = await calculateMeshSourceHash('/path/to/mesh');
 
@@ -115,14 +115,14 @@ describe('StalenessDetector - Hash Calculation', () => {
 
             // Mock directory listings with unsorted files
             (mockFs.readdir as jest.Mock)
-                .mockResolvedValueOnce(['c.js', 'a.js', 'b.js'] as any)      // build/resolvers/
-                .mockResolvedValueOnce(['y.graphql', 'x.graphql'] as any);   // schema/
+                .mockResolvedValueOnce(['c.js', 'a.js', 'b.js'] as string[])      // build/resolvers/
+                .mockResolvedValueOnce(['y.graphql', 'x.graphql'] as string[]);   // schema/
 
             const mockHash = {
                 update: jest.fn().mockReturnThis(),
                 digest: jest.fn().mockReturnValue('abc123'),
             };
-            (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash as any);
+            (mockCrypto.createHash as jest.Mock).mockReturnValue(mockHash);
 
             await calculateMeshSourceHash('/path/to/mesh');
 

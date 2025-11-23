@@ -150,6 +150,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
                         meshId: 'error-mesh-123',
                     })
                 )
+                .mockResolvedValueOnce({ success: true }) // delete-api-mesh
                 .mockResolvedValueOnce(createMeshCreationResponse());
 
             const state = createBaseState();
@@ -166,6 +167,104 @@ describe('ApiMeshStep - Deployment Operations', () => {
                 expect(mockRequest).toHaveBeenCalledWith('create-api-mesh', {
                     workspaceId: 'workspace-123',
                 });
+            });
+        });
+
+        it('should display "API Mesh Deployed" after successful recreation', async () => {
+            mockRequest
+                .mockResolvedValueOnce(
+                    createMeshCheckResponse({
+                        meshStatus: 'error',
+                        meshId: 'error-mesh-123',
+                    })
+                )
+                .mockResolvedValueOnce({ success: true }) // delete-api-mesh
+                .mockResolvedValueOnce(
+                    createMeshCreationResponse({
+                        meshId: 'recreated-mesh-456',
+                        endpoint: 'https://mesh.adobe.io/recreated',
+                    })
+                );
+
+            const state = createBaseState();
+            renderApiMeshStep(state);
+
+            await waitFor(() => {
+                expect(screen.getByText('Recreate Mesh')).toBeInTheDocument();
+            });
+
+            const recreateButton = screen.getByText('Recreate Mesh');
+            fireEvent.click(recreateButton);
+
+            await waitFor(() => {
+                expect(screen.getByText('API Mesh Deployed')).toBeInTheDocument();
+            });
+        });
+
+        it('should update state after successful recreation', async () => {
+            mockRequest
+                .mockResolvedValueOnce(
+                    createMeshCheckResponse({
+                        meshStatus: 'error',
+                        meshId: 'error-mesh-123',
+                    })
+                )
+                .mockResolvedValueOnce({ success: true }) // delete-api-mesh
+                .mockResolvedValueOnce(
+                    createMeshCreationResponse({
+                        meshId: 'recreated-mesh-456',
+                        endpoint: 'https://mesh.adobe.io/recreated',
+                    })
+                );
+
+            const mockUpdateState = jest.fn();
+            const state = createBaseState();
+            renderApiMeshStep(state, mockUpdateState);
+
+            await waitFor(() => {
+                expect(screen.getByText('Recreate Mesh')).toBeInTheDocument();
+            });
+
+            const recreateButton = screen.getByText('Recreate Mesh');
+            fireEvent.click(recreateButton);
+
+            await waitFor(() => {
+                expect(mockUpdateState).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        apiMesh: expect.objectContaining({
+                            meshStatus: 'deployed',
+                            meshId: 'recreated-mesh-456',
+                            endpoint: 'https://mesh.adobe.io/recreated',
+                        }),
+                    })
+                );
+            });
+        });
+
+        it('should enable continue after successful recreation', async () => {
+            mockRequest
+                .mockResolvedValueOnce(
+                    createMeshCheckResponse({
+                        meshStatus: 'error',
+                        meshId: 'error-mesh-123',
+                    })
+                )
+                .mockResolvedValueOnce({ success: true }) // delete-api-mesh
+                .mockResolvedValueOnce(createMeshCreationResponse());
+
+            const mockSetCanProceed = jest.fn();
+            const state = createBaseState();
+            renderApiMeshStep(state, jest.fn(), mockSetCanProceed);
+
+            await waitFor(() => {
+                expect(screen.getByText('Recreate Mesh')).toBeInTheDocument();
+            });
+
+            const recreateButton = screen.getByText('Recreate Mesh');
+            fireEvent.click(recreateButton);
+
+            await waitFor(() => {
+                expect(mockSetCanProceed).toHaveBeenCalledWith(true);
             });
         });
     });

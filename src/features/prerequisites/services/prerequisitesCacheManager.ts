@@ -40,6 +40,7 @@
 import type { PrerequisiteStatus, CachedPrerequisiteResult } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
+import { getCacheTTLWithJitter } from '@/core/cache/AbstractCacheManager';
 
 /**
  * Separator for cache keys with Node version suffix
@@ -98,19 +99,6 @@ export class PrerequisitesCacheManager {
         return prereqId;
     }
 
-    /**
-     * Add random jitter to TTL to prevent timing-based cache enumeration attacks
-     * SECURITY: Randomizes cache expiry by ±10% to make timing attacks infeasible
-     *
-     * @param baseTTL - Base TTL in milliseconds
-     * @returns TTL with random jitter applied
-     */
-    private getCacheTTLWithJitter(baseTTL: number): number {
-        const jitter = 0.1; // ±10%
-        const min = Math.floor(baseTTL * (1 - jitter));
-        const max = Math.floor(baseTTL * (1 + jitter));
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
 
     /**
      * Get cached prerequisite result
@@ -156,7 +144,7 @@ export class PrerequisitesCacheManager {
         nodeVersion?: string,
     ): void {
         const key = this.getCacheKey(prereqId, nodeVersion);
-        const jitteredTTL = this.getCacheTTLWithJitter(ttlMs);
+        const jitteredTTL = getCacheTTLWithJitter(ttlMs);
         const now = Date.now();
 
         // LRU eviction: If cache is at max size and key doesn't exist, remove oldest entry

@@ -9,7 +9,7 @@
  */
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 
 describe('Cache Invalidation for Dependent Prerequisites', () => {

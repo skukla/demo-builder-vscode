@@ -28,10 +28,10 @@ export const DependencyItem: React.FC<DependencyItemProps> = ({
     impact,
     onToggle
 }) => {
-    const impactColors = {
-        minimal: 'green',
-        moderate: 'orange',
-        significant: 'red'
+    const impactColors: Record<'minimal' | 'moderate' | 'significant', 'positive' | 'info' | 'negative'> = {
+        minimal: 'positive',
+        moderate: 'info',
+        significant: 'negative'
     };
 
     return (
@@ -59,8 +59,8 @@ export const DependencyItem: React.FC<DependencyItemProps> = ({
                                 </Badge>
                             )}
                             {impact && (
-                                <Badge 
-                                    variant={impactColors[impact] as any}
+                                <Badge
+                                    variant={impactColors[impact]}
                                     UNSAFE_className="text-xs"
                                 >
                                     {impact} impact

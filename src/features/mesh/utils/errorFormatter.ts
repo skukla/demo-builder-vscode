@@ -1,8 +1,30 @@
 /**
- * Error Formatting Utilities
+ * Error Formatting for Adobe CLI Errors
  *
- * Provides consistent error message formatting across the extension,
- * particularly for Adobe CLI errors that use arrows (›) as separators.
+ * Adobe CLI uses arrow separators (›) which need conversion to newlines
+ * for better readability in VS Code UI. This module provides formatters
+ * specifically for Adobe I/O CLI errors (mesh deployment, project creation).
+ *
+ * **Use this formatter for:**
+ * - Adobe I/O CLI errors (mesh deployment, project creation)
+ * - Errors with arrow separators (›)
+ * - Simple string-based error display
+ *
+ * **Returns**: `string` with newlines for display
+ *
+ * **See also**: `@/features/authentication/services/authenticationErrorFormatter.ts`
+ * for structured authentication errors with categorization
+ *
+ * @example
+ * ```typescript
+ * // Mesh deployment error
+ * const formatted = formatMeshDeploymentError(error);
+ * // Output: "Failed to deploy Adobe Commerce API Mesh:\nError details here"
+ *
+ * // Generic Adobe CLI error
+ * const formatted = formatAdobeCliError(error);
+ * // Output: "Error: Config › missing › field" → "Error: Config\nmissing\nfield"
+ * ```
  */
 
 import { toError } from '@/types/typeGuards';

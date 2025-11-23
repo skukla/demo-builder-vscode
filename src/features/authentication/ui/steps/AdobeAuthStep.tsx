@@ -22,6 +22,24 @@ interface AdobeAuthStepProps {
     setCanProceed: (canProceed: boolean) => void;
 }
 
+interface AuthStatusData {
+    message?: string;
+    subMessage?: string;
+    error?: string;
+    isAuthenticated: boolean;
+    isChecking?: boolean;
+    email?: string;
+    requiresOrgSelection?: boolean;
+    orgLacksAccess?: boolean;
+    tokenExpiresIn?: number;
+    tokenExpiringSoon?: boolean;
+    organization?: {
+        id: string;
+        code: string;
+        name: string;
+    };
+}
+
 export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthStepProps) {
     const [authStatus, setAuthStatus] = useState<string>('');
     const [authSubMessage, setAuthSubMessage] = useState<string>('');
@@ -39,7 +57,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
 
         // Listen for auth status updates
         const unsubscribe = webviewClient.onMessage('auth-status', (data) => {
-            const authData = data as any;
+            const authData = data as AuthStatusData;
 
             // Debug logging to see what we're receiving
             console.log('Auth status received:', authData);

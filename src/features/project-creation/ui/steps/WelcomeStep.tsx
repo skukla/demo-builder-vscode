@@ -10,6 +10,7 @@ import React, { useEffect } from 'react';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { WizardState } from '@/types/webview';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
 
 interface WelcomeStepProps {
     state: WizardState;
@@ -24,13 +25,13 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
     const selectableDefaultProps = useSelectableDefault();
     
     const validateProjectName = (value: string): string | undefined => {
-        if (!value) return 'Project name is required';
-        if (!/^[a-z0-9-]+$/.test(value)) {
-            return 'Use lowercase letters, numbers, and hyphens only';
-        }
-        if (value.length < 3) return 'Name must be at least 3 characters';
-        if (value.length > 30) return 'Name must be less than 30 characters';
-        return undefined;
+        const validator = compose(
+            required('Project name is required'),
+            pattern(/^[a-z0-9-]+$/, 'Use lowercase letters, numbers, and hyphens only'),
+            minLength(3, 'Name must be at least 3 characters'),
+            maxLength(30, 'Name must be less than 30 characters')
+        );
+        return validator(value).error;
     };
 
     // Set default project name and manually focus + select on mount

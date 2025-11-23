@@ -84,37 +84,37 @@ describe('validateCommerceUrlUI', () => {
         it('should reject URLs without protocol', () => {
             const result = validateCommerceUrlUI('example.com');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should reject URLs with javascript protocol', () => {
             const result = validateCommerceUrlUI('javascript:alert(1)');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('URL must start with http:// or https://');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should reject URLs with file protocol', () => {
             const result = validateCommerceUrlUI('file:///etc/passwd');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('URL must start with http:// or https://');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should reject URLs with ftp protocol', () => {
             const result = validateCommerceUrlUI('ftp://example.com');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('URL must start with http:// or https://');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should reject URLs with data protocol', () => {
             const result = validateCommerceUrlUI('data:text/html,<script>alert(1)</script>');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('URL must start with http:// or https://');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should reject URLs with mailto protocol', () => {
             const result = validateCommerceUrlUI('mailto:test@example.com');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('URL must start with http:// or https://');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
     });
 
@@ -122,31 +122,31 @@ describe('validateCommerceUrlUI', () => {
         it('should reject completely invalid URLs', () => {
             const result = validateCommerceUrlUI('not a url');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should reject URLs with spaces', () => {
             const result = validateCommerceUrlUI('https://example .com');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should reject URLs with invalid characters', () => {
             const result = validateCommerceUrlUI('https://exam ple.com');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should reject URLs without domain', () => {
             const result = validateCommerceUrlUI('https://');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should reject partial URLs', () => {
             const result = validateCommerceUrlUI('http:/');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
     });
 
@@ -174,13 +174,13 @@ describe('validateCommerceUrlUI', () => {
         it('should reject script injection attempts', () => {
             const result = validateCommerceUrlUI('<script>alert("xss")</script>');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should reject javascript: in URL', () => {
             const result = validateCommerceUrlUI('javascript:void(0)');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('URL must start with http:// or https://');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
     });
 
@@ -223,7 +223,7 @@ describe('validateCommerceUrlUI', () => {
         it('should reject URL with typo in protocol', () => {
             const result = validateCommerceUrlUI('htps://example.com');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('URL must start with http:// or https://');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
 
         it('should reject URL with single slash', () => {
@@ -236,7 +236,7 @@ describe('validateCommerceUrlUI', () => {
         it('should reject URL with missing colon', () => {
             const result = validateCommerceUrlUI('https//example.com');
             expect(result.isValid).toBe(false);
-            expect(result.message).toBe('Invalid URL format');
+            expect(result.message).toBe('Invalid URL format. Must start with http:// or https://');
         });
     });
 });

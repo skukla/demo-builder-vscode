@@ -19,7 +19,7 @@ jest.mock('@/core/logging/debugLogger', () => ({
 }));
 
 import { handleInstallPrerequisite } from '@/features/prerequisites/handlers/installHandler';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import * as shared from '@/features/prerequisites/handlers/shared';
 import {
     mockAdobeCliPrereq,
