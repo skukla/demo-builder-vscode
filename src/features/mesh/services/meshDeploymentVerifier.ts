@@ -123,13 +123,11 @@ export async function waitForMeshDeployment(
                         meshDeployed = true;
                         break;
                     } else if (meshStatus === 'error' || meshStatus === 'failed') {
-                        const error = meshData.error
-                            ? `Mesh deployment failed: ${meshData.error}`
-                            : 'Mesh deployment failed with error status';
-                        logger?.error(`[Mesh Verification] ${error}`);
+                        // Return raw error - caller will format for display
+                        // Don't log here to avoid duplication
                         return {
                             deployed: false,
-                            error,
+                            error: meshData.error || 'Mesh deployment failed with error status',
                         };
                     }
                     // Otherwise continue polling (status is pending/building/etc)
