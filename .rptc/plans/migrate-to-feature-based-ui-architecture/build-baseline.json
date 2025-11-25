@@ -1,14 +1,15 @@
 {
-  "timestamp": "2025-11-22T17:50:54.513Z",
-  "fullBuildTime": 35339,
+  "timestamp": "2025-11-24T00:34:27.779Z",
+  "fullBuildTime": 9423,
   "configuration": "feature-based-entry-points",
   "step": 1,
   "description": "Initial build performance baseline after webpack configuration update",
   "bundleSizes": {
-    "wizard-bundle.js": 112706,
+    "wizard-bundle.js": 112757,
     "welcome-bundle.js": 4835,
     "dashboard-bundle.js": 13963,
     "configure-bundle.js": 22564
   },
-  "totalBundleSize": 154068
+  "totalBundleSize": 154119,
+  "incrementalBuildTime": 9476
 }

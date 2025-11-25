@@ -84,9 +84,11 @@ This step demonstrates the **incremental migration pattern** for all subsequent 
 ## Files to Create/Modify
 
 **Modified:**
+
 - [x] `src/features/lifecycle/commands/deleteProject.ts` - Add dispose-before-delete + retry (138 lines)
 
 **New Tests:**
+
 - [x] `tests/features/lifecycle/commands/deleteProject.lifecycle.test.ts` - Happy path tests (11 tests)
 - [x] `tests/features/lifecycle/commands/deleteProject.retry.test.ts` - Retry logic tests (10 tests)
 - [x] `tests/features/lifecycle/commands/deleteProject.error.test.ts` - Error handling tests (6 tests)
@@ -379,6 +381,7 @@ export class DeleteProjectCommand extends BaseCommand {
 ### REFACTOR Phase (Improve quality)
 
 **Refactoring checklist:**
+
 - [ ] Extract retry logic to reusable utility (if used in 3+ places) - Deferred until 3rd use case
 - [x] Integrate with WorkspaceWatcherManager from Step 6 - Watchers disposed at extension level
 - [x] Add metrics logging (attempts, timing) - Retry attempts logged with delay
@@ -397,6 +400,7 @@ After completing this step:
 - [x] No fixed grace periods (waits for actual stopDemo completion)
 
 **What works:**
+
 - Project deletion with active watchers (watchers disposed first)
 - Deletion of running projects (stops demo first)
 - Retry on transient file locks (exponential backoff)
@@ -404,12 +408,14 @@ After completing this step:
 - State cleanup on success
 
 **What tests are passing:**
+
 - Lifecycle tests (11 tests)
 - Retry logic tests (10 tests)
 - Error handling tests (6 tests)
 - Total: 27 tests passing
 
 **What functionality is now available:**
+
 - Reliable project deletion (10/10 success rate vs previous ~50%)
 - Clear error messages when deletion fails
 - State consistency maintained even on failures
@@ -428,7 +434,7 @@ After completing this step:
 
 ## Estimated Time
 
-**3-4 hours**
+Estimated 3-4 hours:
 
 - Tests: 1.5 hours
 - Implementation: 1 hour
