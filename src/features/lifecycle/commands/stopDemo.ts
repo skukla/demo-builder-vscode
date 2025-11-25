@@ -1,45 +1,98 @@
-import * as net from 'net';
+/**
+ * StopDemoCommand - Stop running demo with event-driven process cleanup
+ *
+ * Uses ProcessCleanup service for reliable process termination instead of
+ * polling-based port checking. This ensures processes actually exit before
+ * updating state.
+ *
+ * Flow:
+ * 1. Set status to 'stopping' immediately
+ * 2. Find process PID using lsof (by port)
+ * 3. Kill process tree using ProcessCleanup (SIGTERM with timeout fallback)
+ * 4. Dispose terminal after process killed
+ * 5. Update state to 'ready' only after process confirmed dead
+ */
+
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
+import { ServiceLocator } from '@/core/di';
+import { ProcessCleanup } from '@/core/shell/processCleanup';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 export class StopDemoCommand extends BaseCommand {
+    private _processCleanup: ProcessCleanup | null = null;
+
     /**
-     * Check if a port is available (not in use)
+     * Get ProcessCleanup instance (lazy initialization)
+     *
+     * Lazy initialization enables proper mocking in tests.
      */
-    private async isPortAvailable(port: number): Promise<boolean> {
-        return new Promise((resolve) => {
-            const server = net.createServer();
-            
-            server.once('error', () => {
-                resolve(false); // Port is in use
+    private get processCleanup(): ProcessCleanup {
+        if (!this._processCleanup) {
+            this._processCleanup = new ProcessCleanup({ gracefulTimeout: 5000 });
+        }
+        return this._processCleanup;
+    }
+
+    /**
+     * Find process PID listening on the specified port
+     *
+     * Uses lsof to discover which process is bound to the port.
+     * Security: Validates port number before executing shell command.
+     *
+     * @param port Port number to check (1-65535)
+     * @returns PID if found, null otherwise
+     */
+    private async findProcessByPort(port: number): Promise<number | null> {
+        // Security: Validate port number to prevent command injection
+        // Note: Number.isInteger() already handles NaN (returns false for NaN)
+        if (!Number.isInteger(port) || port < 1 || port > 65535) {
+            this.logger.warn(`[StopDemo] Invalid port number: ${port}`);
+            return null;
+        }
+
+        try {
+            const commandExecutor = ServiceLocator.getCommandExecutor();
+            const result = await commandExecutor.execute(`lsof -ti:${port}`, {
+                timeout: 5000,
+                configureTelemetry: false,
+                useNodeVersion: null,
+                enhancePath: false,
+                shell: DEFAULT_SHELL,
             });
-            
-            server.once('listening', () => {
-                server.close();
-                resolve(true); // Port is available
-            });
-            
-            server.listen(port);
+
+            if (result.code === 0 && result.stdout.trim()) {
+                // May return multiple PIDs (parent + children), use first (parent)
+                const firstPid = result.stdout.trim().split('\n')[0];
+                const pid = parseInt(firstPid, 10);
+
+                if (!isNaN(pid) && pid > 0) {
+                    return pid;
+                }
+            }
+        } catch (error) {
+            this.logger.debug(`[StopDemo] No process found on port ${port}:`, error as Error);
+        }
+
+        return null;
+    }
+
+    /**
+     * Dispose terminal by name
+     *
+     * Finds and disposes all terminals matching the given name.
+     * Safe to call even if terminal doesn't exist.
+     *
+     * @param terminalName Name of terminal to dispose
+     */
+    private disposeTerminal(terminalName: string): void {
+        vscode.window.terminals.forEach(terminal => {
+            if (terminal.name === terminalName) {
+                terminal.dispose();
+            }
         });
     }
-    
-    /**
-     * Wait for a port to become available (with timeout)
-     */
-    private async waitForPortToFree(port: number, timeoutMs = 10000): Promise<boolean> {
-        const startTime = Date.now();
-        const checkInterval = 500; // Check every 500ms
-        
-        while (Date.now() - startTime < timeoutMs) {
-            if (await this.isPortAvailable(port)) {
-                return true;
-            }
-            await new Promise(resolve => setTimeout(resolve, checkInterval));
-        }
-        
-        return false; // Timeout reached
-    }
-    
+
     public async execute(): Promise<void> {
         try {
             const project = await this.stateManager.getCurrentProject();
@@ -56,65 +109,78 @@ export class StopDemoCommand extends BaseCommand {
                 this.logger.debug('[StopDemo] No frontend component, nothing to stop');
                 return;
             }
-            
+
             if (project.status !== 'running' && project.status !== 'starting') {
                 this.logger.debug('[StopDemo] Demo already stopped');
                 return;
             }
 
             await this.withProgress('Stopping demo', async (progress) => {
-                // REMOVED (Package 4 - beta.67): Verbose progress message
-                // Dashboard indicators provide sufficient visual feedback
-
-                // Set status to 'stopping' immediately
+                // STEP 1: Set status to 'stopping' immediately
                 project.status = 'stopping';
                 frontendComponent.status = 'stopping';
                 await this.stateManager.saveProject(project);
                 this.statusBar.updateProject(project);
-                
-                // Find and close the project-specific terminal
-                const terminalName = `${project.name} - Frontend`;
-                vscode.window.terminals.forEach(terminal => {
-                    if (terminal.name === terminalName) {
-                        terminal.dispose();
-                    }
-                });
-                
-                // Wait for port to be freed (Node process shutdown takes time)
+
+                // Get port for process discovery
                 const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
                 const port = frontendComponent.port || defaultPort;
-                // REMOVED (Package 4 - beta.68): Verbose port release message
+                const terminalName = `${project.name} - Frontend`;
 
-                const portFreed = await this.waitForPortToFree(port, 10000);
-                if (!portFreed) {
-                    this.logger.warn(`Port ${port} still in use after 10 seconds, but marking as stopped`);
-                    vscode.window.showWarningMessage(
-                        `Port ${port} may still be in use. Wait a moment before restarting.`,
-                    );
+                // STEP 2: Find process by port
+                const pid = await this.findProcessByPort(port);
+
+                // STEP 3: Kill process tree if found
+                if (pid) {
+                    try {
+                        await this.processCleanup.killProcessTree(pid, 'SIGTERM');
+                        this.logger.debug(`[Stop Demo] Demo stopped on port ${port}`);
+                    } catch (error: any) {
+                        if (error.code === 'EPERM') {
+                            await this.showError(
+                                `Permission denied killing process ${pid}. Try running VS Code as administrator or stop the process manually.`
+                            );
+                            // Don't update state - process still running
+                            // Dispose terminal anyway (attempt cleanup)
+                            this.disposeTerminal(terminalName);
+                            return;
+                        }
+                        // Log error but continue - show error and don't update state
+                        this.logger.warn(`[StopDemo] Error killing process:`, error);
+                        await this.showError('Failed to stop demo process', error);
+                        // Dispose terminal anyway (attempt cleanup)
+                        this.disposeTerminal(terminalName);
+                        return;
+                    }
+                } else {
+                    this.logger.debug('[StopDemo] No process found on port, may have already exited');
                 }
-                
-                // Update project status to 'stopped'
+
+                // STEP 4: Dispose terminal (cleanup)
+                this.disposeTerminal(terminalName);
+
+                // STEP 5: Update project status to 'ready'
                 frontendComponent.status = 'stopped';
                 project.status = 'ready';
-                
+
                 // Clear frontend env state (config changes don't matter when stopped)
                 project.frontendEnvState = undefined;
-                
+
                 await this.stateManager.saveProject(project);
-                
+
                 // Notify extension to reset env change grace period
                 await vscode.commands.executeCommand('demoBuilder._internal.demoStopped');
-                
+
                 // Update status bar
                 this.statusBar.updateProject(project);
-                
+
                 progress.report({ message: 'Demo stopped successfully!' });
                 this.logger.info('Demo stopped');
             });
-            
+
             // Show auto-dismissing success notification
             this.showSuccessMessage('Demo stopped successfully');
-            
+
         } catch (error) {
             await this.showError('Failed to stop demo', error as Error);
         }

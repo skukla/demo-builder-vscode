@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
 import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication';
@@ -7,14 +8,48 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Base class for commands that use webviews with robust communication
- * 
- * Features:
- * - Standardized webview creation
- * - Automatic communication manager setup
- * - Loading state management
- * - Error recovery
- * - Consistent logging
- * - Singleton pattern per webview type (prevents duplicate panels)
+ *
+ * Extends BaseCommand with webview-specific capabilities:
+ * - Standardized webview creation with singleton pattern (prevents duplicate panels)
+ * - Automatic communication manager setup with handshake protocol
+ * - Loading state management and error recovery
+ * - Automatic resource disposal via inherited DisposableStore (LIFO order)
+ * - See handlePanelDisposal() and dispose() for disposal flow details
+ *
+ * @example Basic Webview Command
+ * ```typescript
+ * class MyWebviewCommand extends BaseWebviewCommand {
+ *     protected getWebviewId() { return 'my-webview'; }
+ *     protected getWebviewTitle() { return 'My Webview'; }
+ *
+ *     protected async getWebviewContent() {
+ *         return '<html><body>Content</body></html>';
+ *     }
+ *
+ *     protected initializeMessageHandlers(comm: WebviewCommunicationManager) {
+ *         comm.on('action', async (data) => {
+ *             return await this.handleAction(data);
+ *         });
+ *     }
+ * }
+ * ```
+ *
+ * @example Custom Resource Disposal
+ * ```typescript
+ * class MyWebviewCommand extends BaseWebviewCommand {
+ *     protected async initializeCommunication() {
+ *         await super.initializeCommunication();
+ *
+ *         // Add custom disposable - automatically cleaned up
+ *         const watcher = vscode.workspace.createFileSystemWatcher('**\/*.ts');
+ *         this.disposables.add(watcher);
+ *
+ *         // Add multiple resources - disposed in LIFO order
+ *         this.disposables.add(subscription1);
+ *         this.disposables.add(subscription2);
+ *     }
+ * }
+ * ```
  */
 export abstract class BaseWebviewCommand extends BaseCommand {
     // Singleton: Track active webview panels and their communication managers by ID to prevent duplicates
@@ -30,7 +65,6 @@ export abstract class BaseWebviewCommand extends BaseCommand {
 
     protected panel: vscode.WebviewPanel | undefined;
     protected communicationManager: WebviewCommunicationManager | undefined;
-    protected disposables: vscode.Disposable[] = [];
 
     /**
      * Set callback to be invoked when any webview disposes
@@ -185,7 +219,6 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         }
 
         // Create new panel
-        this.logger.debug(`[Webview] Creating new ${webviewId} panel`);
         this.panel = vscode.window.createWebviewPanel(
             webviewId,
             this.getWebviewTitle(),
@@ -203,12 +236,11 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         // Register in singleton map
         BaseWebviewCommand.activePanels.set(webviewId, this.panel);
 
-        // Set up disposal handling
-        this.panel.onDidDispose(
-            () => this.handlePanelDisposal(),
-            undefined,
-            this.disposables,
+        // Set up disposal handling - call dispose() to ensure full cleanup
+        const panelDisposalListener = this.panel.onDidDispose(
+            () => this.dispose(),
         );
+        this.disposables.add(panelDisposalListener);
 
         return this.panel;
     }
@@ -251,8 +283,6 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         const initialData = await this.getInitialData();
         await this.communicationManager.sendMessage('init', initialData as import('@/types/messages').MessagePayload | undefined);
 
-        this.logger.debug(`[${this.getWebviewTitle()}] Communication initialized`);
-
         return this.communicationManager;
     }
 
@@ -285,7 +315,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
             const themeMode = theme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
             this.communicationManager?.sendMessage('theme-changed', { theme: themeMode });
         });
-        this.disposables.push(themeListener);
+        this.disposables.add(themeListener);
 
         // State request handler
         this.communicationManager.on('get-state', async () => {
@@ -340,20 +370,24 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     }
 
     /**
-     * Handle panel disposal
+     * Handle panel disposal - webview-specific cleanup only
+     *
+     * Called by dispose() method during full disposal flow.
+     *
+     * Webview-specific cleanup:
+     * 1. Dispose communicationManager (webview message handler)
+     * 2. Clear singleton maps (activePanels, activeCommunicationManagers)
+     * 3. Clear panel reference (this.panel = undefined)
+     * 4. Trigger welcome reopen callback if configured
      */
     private handlePanelDisposal(): void {
         const webviewId = this.getWebviewId();
-        
+
         // Clean up communication manager
         if (this.communicationManager) {
             this.communicationManager.dispose();
             this.communicationManager = undefined;
         }
-
-        // Clean up disposables
-        this.disposables.forEach(d => d.dispose());
-        this.disposables = [];
 
         // Remove from singleton maps
         BaseWebviewCommand.activePanels.delete(webviewId);
@@ -361,7 +395,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
 
         // Clear panel reference
         this.panel = undefined;
-        
+
         // Notify about disposal if webview requested Welcome reopen
         if (this.shouldReopenWelcomeOnDispose() && BaseWebviewCommand.disposalCallback) {
             // Use setTimeout to ensure disposal is fully complete before callback
@@ -369,8 +403,6 @@ export abstract class BaseWebviewCommand extends BaseCommand {
                 BaseWebviewCommand.disposalCallback?.(webviewId);
             }, 100);
         }
-
-        this.logger.debug(`[${this.getWebviewTitle()}] Panel disposed (webviewId: ${webviewId})`);
     }
 
     /**
@@ -380,14 +412,31 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     protected getNonce(): string {
         // Use Node.js crypto for cryptographically secure random
         // Prevents CSP bypass attacks via nonce prediction
-        const crypto = require('crypto');
         return crypto.randomBytes(16).toString('base64');
     }
 
     /**
      * Clean up command resources
+     *
+     * Performs complete disposal of webview command resources with clean separation:
+     * 1. handlePanelDisposal() - Webview-specific cleanup only
+     *    - Disposes communicationManager
+     *    - Clears singleton maps (activePanels, activeCommunicationManagers)
+     *    - Clears panel reference
+     *    - Triggers welcome reopen callback if configured
+     * 2. super.dispose() - Inherited resource disposal
+     *    - Disposes all tracked resources via DisposableStore (LIFO order)
+     *    - Includes panel listeners, theme listeners, and any custom disposables
+     *
+     * This separation ensures single-responsibility:
+     * - handlePanelDisposal() knows about webview lifecycle
+     * - super.dispose() handles resource cleanup (inherited from BaseCommand)
+     *
+     * Safe to call multiple times (idempotent via DisposableStore).
+     * Automatically called when command is removed from context.subscriptions.
      */
-    public dispose(): void {
+    public override dispose(): void {
         this.handlePanelDisposal();
+        super.dispose();
     }
 }

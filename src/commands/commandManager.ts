@@ -6,6 +6,7 @@ import { ResetAllCommand } from './resetAll';
 import { ViewStatusCommand } from './viewStatus';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
@@ -40,8 +41,6 @@ export class CommandManager {
     }
 
     public registerCommands(): void {
-        // Move to debug logging - this is an implementation detail
-        this.logger.debug('Registering Demo Builder commands...');
 
         // Welcome Screen
         this.welcomeScreen = new WelcomeWebviewCommand(
@@ -112,7 +111,16 @@ export class CommandManager {
             const projects = await this.stateManager.getAllProjects();
             
             if (projects.length === 0) {
-                vscode.window.showInformationMessage('No existing projects found. Create a new project to get started!');
+                await vscode.window.withProgress(
+                    {
+                        location: vscode.ProgressLocation.Notification,
+                        title: 'No projects found',
+                        cancellable: false,
+                    },
+                    async () => {
+                        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_RESULT_DISPLAY));
+                    }
+                );
                 return;
             }
             

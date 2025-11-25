@@ -58,7 +58,10 @@ core/
 ├── validation/         # Validation barrel (re-exports from @/shared/validation)
 │   └── index.ts
 ├── vscode/             # VS Code API wrappers
-│   └── vscodeUtils.ts
+│   ├── StatusBarManager.ts
+│   ├── workspaceWatcherManager.ts
+│   ├── envFileWatcherService.ts
+│   └── index.ts
 └── constants.ts        # Shared constants
 ```
 
@@ -182,6 +185,7 @@ core/
 
 **Key Services:**
 - `CommandExecutor` - Command queuing and execution
+- `ProcessCleanup` - Event-driven process termination with tree killing
 - `ResourceLocker` - Mutual exclusion for resources
 - `FileWatcher` - File change detection
 - `RateLimiter` - Rate limiting for external APIs
@@ -194,6 +198,24 @@ core/
 - Output streaming and capture
 - Timeout handling
 - File system monitoring
+- Process tree termination (cross-platform)
+
+**ProcessCleanup Service:**
+- Event-driven process termination (no polling or grace periods)
+- Kills entire process tree (parent + children)
+- Cross-platform: macOS (pkill -P), Linux (pkill -P), Windows (taskkill /T)
+- Graceful shutdown with SIGTERM, fallback to SIGKILL
+- Used by stopDemo and startDemo (port conflict resolution)
+
+```typescript
+import { ProcessCleanup } from '@/core/shell/processCleanup';
+
+// Kill process and all children
+await ProcessCleanup.killProcessTree(pid);
+
+// Kill with custom timeout
+await ProcessCleanup.killProcessTree(pid, { timeoutMs: 10000 });
+```
 
 **Path Alias**: `@/core/shell`
 
@@ -242,6 +264,7 @@ core/
 **Purpose**: Core utility functions
 
 **Key Utilities:**
+- `DisposableStore` - VS Code-style disposable collection with LIFO ordering
 - `ProgressUnifier` - Unified progress tracking
 - `fileSystemUtils` - File operations
 - `loadingHTML` - Webview loading states
@@ -252,6 +275,22 @@ core/
 - Safe file operations
 - Webview loading HTML generation
 - Timeout configuration for Adobe CLI
+- Resource lifecycle management (DisposableStore)
+
+**DisposableStore Pattern:**
+- LIFO disposal ordering (Last In, First Out)
+- Prevents memory leaks from orphaned subscriptions
+- Used by BaseCommand and BaseWebviewCommand
+- Safe multiple dispose calls (idempotent)
+
+```typescript
+import { DisposableStore } from '@/core/utils/disposableStore';
+
+const store = new DisposableStore();
+store.add(vscode.workspace.createFileSystemWatcher('**/*.ts'));
+store.add(eventEmitter.event(handler));
+// Later: store.dispose() disposes all in reverse order
+```
 
 **Path Alias**: `@/core/utils`
 
@@ -273,10 +312,33 @@ core/
 
 **Purpose**: VS Code API wrappers and utilities
 
+**Key Services:**
+- `StatusBarManager` - Status bar integration
+- `WorkspaceWatcherManager` - Workspace-scoped file watcher management
+- `EnvFileWatcherService` - .env file change detection with hash-based validation
+
 **Responsibilities:**
 - VS Code API abstractions
 - UI helper functions
 - Extension context utilities
+- Workspace-scoped resource management
+- File watcher lifecycle management
+
+**WorkspaceWatcherManager:**
+- Creates file watchers scoped to workspace folders
+- Auto-disposes watchers when workspace folders removed
+- Prevents duplicate watchers (same folder + pattern)
+- Uses `registerWatcher()` for pre-configured watchers
+- LIFO disposal via DisposableStore
+
+**EnvFileWatcherService:**
+- Workspace-scoped .env file watchers (replaces global watcher)
+- Hash-based change detection (prevents false notifications)
+- Programmatic write suppression (Configure UI coordination)
+- Demo startup grace period (10-second anti-spam)
+- Show-once notification management
+- 10 internal commands for state coordination
+- Defense-in-depth path validation (Security Agent enhancement)
 
 **Path Alias**: `@/core/vscode`
 

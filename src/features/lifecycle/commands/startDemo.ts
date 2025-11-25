@@ -1,11 +1,115 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
+import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { updateFrontendState } from '@/core/state';
+import { validateNodeVersion } from '@/core/validation/securityValidation';
 import { DEFAULT_SHELL } from '@/types/shell';
 
+/**
+ * Command to start the demo frontend server
+ *
+ * Features:
+ * - Validates project and frontend component exist
+ * - Checks port availability before starting
+ * - Resolves port conflicts using ProcessCleanup (event-driven, no hardcoded delays)
+ * - Waits for demo to actually start (polls until port is in use)
+ * - Graceful timeout handling (30 seconds) with user warning
+ * - State updates reflect actual process state, not just "commands were sent"
+ */
 export class StartDemoCommand extends BaseCommand {
+    /** ProcessCleanup instance for event-driven process termination */
+    private _processCleanup: ProcessCleanup | null = null;
+
+    /** Maximum time to wait for demo to start (30 seconds) */
+    private readonly STARTUP_TIMEOUT = 30000;
+
+    /** Interval between port availability checks (1 second) */
+    private readonly PORT_CHECK_INTERVAL = 1000;
+
+    /**
+     * Get ProcessCleanup instance (lazy initialization)
+     */
+    private get processCleanup(): ProcessCleanup {
+        if (!this._processCleanup) {
+            this._processCleanup = new ProcessCleanup({ gracefulTimeout: 5000 });
+        }
+        return this._processCleanup;
+    }
+
+    /**
+     * Wait for port to be in use (demo started)
+     *
+     * Polls isPortAvailable until port is detected in use,
+     * indicating the demo server has started listening.
+     *
+     * @param port Port to check
+     * @param timeoutMs Maximum time to wait (default: STARTUP_TIMEOUT)
+     * @returns true if port is in use (demo started), false if timeout
+     */
+    private async waitForPortInUse(port: number, timeoutMs: number = this.STARTUP_TIMEOUT): Promise<boolean> {
+        const commandManager = ServiceLocator.getCommandExecutor();
+        const startTime = Date.now();
+
+        while (Date.now() - startTime < timeoutMs) {
+            const available = await commandManager.isPortAvailable(port);
+            if (!available) {
+                // Port is in use = demo started
+                this.logger.debug(`[Start Demo] Demo started on port ${port} after ${Date.now() - startTime}ms`);
+                return true;
+            }
+            await new Promise(resolve => setTimeout(resolve, this.PORT_CHECK_INTERVAL));
+        }
+
+        // Timeout - port never became in use
+        this.logger.warn(`[Start Demo] Timeout waiting for port ${port} to be in use after ${timeoutMs}ms`);
+        return false;
+    }
+
+    /**
+     * Kill process on port using ProcessCleanup (event-driven)
+     *
+     * Uses lsof to find the process PID, then ProcessCleanup.killProcessTree
+     * for reliable, event-driven process termination. No hardcoded delays.
+     *
+     * @param port Port number to find and kill process
+     * @returns true if process was found and killed, false otherwise
+     * @throws Error if ProcessCleanup fails (e.g., EPERM)
+     */
+    private async killProcessOnPort(port: number): Promise<boolean> {
+        const commandManager = ServiceLocator.getCommandExecutor();
+
+        // Find PID using lsof
+        const result = await commandManager.execute(`lsof -ti:${port}`, {
+            timeout: 5000,
+            configureTelemetry: false,
+            useNodeVersion: null,
+            enhancePath: false,
+            shell: DEFAULT_SHELL,
+        });
+
+        if (result.code !== 0 || !result.stdout.trim()) {
+            this.logger.debug(`[Start Demo] No process found on port ${port}`);
+            return false;
+        }
+
+        // Parse PID (first line if multiple)
+        const pid = parseInt(result.stdout.trim().split('\n')[0], 10);
+        if (isNaN(pid) || pid <= 0) {
+            this.logger.warn(`[Start Demo] Invalid PID from lsof: ${result.stdout}`);
+            return false;
+        }
+
+        this.logger.info(`[Start Demo] Killing process tree for PID ${pid} on port ${port}`);
+
+        // Kill with ProcessCleanup (event-driven, no hardcoded delay)
+        await this.processCleanup.killProcessTree(pid, 'SIGTERM');
+
+        this.logger.info(`[Start Demo] Process ${pid} terminated successfully`);
+        return true;
+    }
     public async execute(): Promise<void> {
         try {
             const project = await this.stateManager.getCurrentProject();
@@ -87,21 +191,10 @@ export class StartDemoCommand extends BaseCommand {
                     return;
                 }
                 
-                // Kill the process
+                // Kill the process using ProcessCleanup (event-driven, no hardcoded delay)
                 this.logger.info(`[Start Demo] Stopping process on port ${port}...`);
                 try {
-                    // SECURITY: port is validated above as a valid integer
-                    await commandManager.execute(`lsof -ti:${port} | xargs kill`, {
-                        timeout: 5000,
-                        configureTelemetry: false,
-                        useNodeVersion: null,
-                        enhancePath: false,
-                        shell: DEFAULT_SHELL,  // Required for pipes
-                    });
-                    
-                    // Wait a moment for port to be freed
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
+                    await this.killProcessOnPort(port);
                     this.logger.info('[Start Demo] Process stopped successfully');
                 } catch (error) {
                     this.logger.error('[Start Demo] Failed to stop process:', error as Error);
@@ -111,9 +204,6 @@ export class StartDemoCommand extends BaseCommand {
             }
 
             await this.withProgress('Starting demo', async (progress) => {
-                // REMOVED (Package 4 - beta.67): Verbose progress message
-                // Dashboard indicators provide sufficient visual feedback
-
                 // Validate frontend component
                 if (!frontendComponent?.path) {
                     const debugInfo = JSON.stringify({
@@ -127,8 +217,20 @@ export class StartDemoCommand extends BaseCommand {
                 }
                 
                 const frontendPath = frontendComponent.path;
-                const nodeVersion = frontendComponent.metadata?.nodeVersion || '20';
-                
+                // Extract nodeVersion from metadata with proper type coercion
+                const rawNodeVersion = frontendComponent.metadata?.nodeVersion;
+                const nodeVersion = typeof rawNodeVersion === 'string' ? rawNodeVersion : '20';
+
+                // SECURITY: Validate nodeVersion before using in terminal command
+                // Prevents command injection (CWE-77) if project state is corrupted
+                try {
+                    validateNodeVersion(nodeVersion);
+                } catch (error) {
+                    this.logger.error(`[Start Demo] Invalid Node version: ${nodeVersion}`);
+                    await this.showError(`Invalid Node version "${nodeVersion}". Must be a number like 18, 20, or semver like 20.11.0`);
+                    return;
+                }
+
                 this.logger.info(`[Start Demo] Starting demo in: ${frontendPath}`);
                 this.logger.info(`[Start Demo] Using Node ${nodeVersion}`);
                 
@@ -146,14 +248,25 @@ export class StartDemoCommand extends BaseCommand {
                 // Navigate to frontend directory and start
                 terminal.sendText(`cd "${frontendPath}"`);
                 terminal.sendText(`fnm use ${nodeVersion} && npm run dev`);
-                
-                // Update project status to 'running' after starting
+
+                // Wait for demo to actually start (poll until port is in use)
+                const started = await this.waitForPortInUse(port);
+
+                if (!started) {
+                    // Timeout - demo didn't start within expected time
+                    this.logger.warn('[Start Demo] Demo startup timed out - port not in use');
+                    await this.showWarning('Demo startup timed out. Check the terminal for errors.');
+                    // Status remains 'starting' - user can check terminal
+                    return;
+                }
+
+                // Demo started successfully - update status to 'running'
                 frontendComponent.status = 'running';
                 project.status = 'running';
-                
+
                 // Capture frontend env vars for change detection
                 updateFrontendState(project);
-                
+
                 await this.stateManager.saveProject(project);
                 
                 // Notify extension to suppress env change notifications during startup
@@ -171,17 +284,16 @@ export class StartDemoCommand extends BaseCommand {
                             const envPath = path.join(componentPath, '.env');
                             const envLocalPath = path.join(componentPath, '.env.local');
 
-                            // Check if files exist
-                            const fsPromises = (await import('fs')).promises;
+                            // Check if files exist using static fs import
                             try {
-                                await fsPromises.access(envPath);
+                                await fs.promises.access(envPath);
                                 envFiles.push(envPath);
                             } catch {
                                 // File doesn't exist
                             }
 
                             try {
-                                await fsPromises.access(envLocalPath);
+                                await fs.promises.access(envLocalPath);
                                 envFiles.push(envLocalPath);
                             } catch {
                                 // File doesn't exist
@@ -191,7 +303,6 @@ export class StartDemoCommand extends BaseCommand {
                 }
                 
                 if (envFiles.length > 0) {
-                    this.logger.debug(`[Start Demo] Initializing file hashes for ${envFiles.length} .env files`);
                     await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', envFiles);
                 }
                 

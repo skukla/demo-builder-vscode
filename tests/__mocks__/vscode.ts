@@ -11,6 +11,16 @@ export const workspace = {
         onDidDelete: jest.fn(),
         dispose: jest.fn(),
     })),
+    getConfiguration: jest.fn().mockReturnValue({
+        get: jest.fn().mockReturnValue(3000),
+    }),
+    workspaceFolders: [],
+};
+
+export const ProgressLocation = {
+    Notification: 15,
+    Window: 10,
+    SourceControl: 1,
 };
 
 export const Uri = {
@@ -60,6 +70,16 @@ export const window = {
     activeColorTheme: {
         kind: 1, // ColorThemeKind.Dark
     },
+    withProgress: jest.fn().mockImplementation(async (_options: any, task: any) => {
+        return await task({ report: jest.fn() });
+    }),
+    setStatusBarMessage: jest.fn(),
+    createTerminal: jest.fn(() => ({
+        name: '',
+        dispose: jest.fn(),
+        show: jest.fn(),
+        sendText: jest.fn(),
+    })),
 };
 
 export const FileType = {

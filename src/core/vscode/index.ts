@@ -5,3 +5,5 @@
  */
 
 export { StatusBarManager } from './StatusBarManager';
+export { WorkspaceWatcherManager } from './workspaceWatcherManager';
+export { EnvFileWatcherService } from './envFileWatcherService';

@@ -189,6 +189,25 @@ class MyWebviewCommand extends BaseWebviewCommand {
 - `getActivePanelCount()` - Get count of active panels
 - `setDisposalCallback(callback)` - Set disposal callback
 
+**Disposal Pattern** (Resource Lifecycle Management):
+- Uses inherited `this.disposables` from BaseCommand (DisposableStore)
+- Resources disposed in LIFO order (Last In, First Out)
+- Add custom disposables: `this.disposables.add(resource)`
+- Clean separation: `handlePanelDisposal()` → webview cleanup, `super.dispose()` → resources
+
+**Example - Custom Resource Disposal**:
+```typescript
+class MyWebviewCommand extends BaseWebviewCommand {
+    protected async initializeCommunication() {
+        await super.initializeCommunication();
+
+        // Add custom disposable - automatically cleaned up in LIFO order
+        const watcher = vscode.workspace.createFileSystemWatcher('**/*.ts');
+        this.disposables.add(watcher);
+    }
+}
+```
+
 **Example**:
 ```typescript
 import { BaseWebviewCommand } from '@/shared/base';
@@ -537,13 +556,16 @@ try {
 }
 
 // BaseWebviewCommand disposal handling
-panel.onDidDispose(() => {
-    // Automatic cleanup:
-    // - Dispose communication manager
-    // - Clear disposables
-    // - Remove from singleton map
-    // - Fire disposal callback if configured
-});
+// Disposal flow (automatic, LIFO order):
+// 1. User closes panel → panel.onDidDispose fires → dispose() called
+// 2. handlePanelDisposal() - webview-specific cleanup
+//    - Dispose communication manager
+//    - Clear singleton maps (activePanels, activeCommunicationManagers)
+//    - Clear panel reference
+// 3. super.dispose() - inherited resource disposal (via DisposableStore, LIFO)
+//    - Panel disposal listener
+//    - Theme change listener
+//    - Custom disposables (if added via this.disposables.add)
 ```
 
 ## Performance Considerations

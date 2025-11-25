@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import type { WebviewCommunicationManager } from '@/core/communication';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 export class WelcomeWebviewCommand extends BaseWebviewCommand {
 
@@ -21,7 +22,6 @@ export class WelcomeWebviewCommand extends BaseWebviewCommand {
         await this.createOrRevealPanel();
         if (!this.communicationManager) {
             await this.initializeCommunication();
-            this.logger.debug('Welcome webview initialized with handshake protocol');
         }
     }
 
@@ -135,7 +135,16 @@ export class WelcomeWebviewCommand extends BaseWebviewCommand {
         const projects = await this.stateManager.getAllProjects();
         
         if (projects.length === 0) {
-            vscode.window.showInformationMessage('No existing projects found. Create a new project to get started!');
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'No projects found',
+                    cancellable: false,
+                },
+                async () => {
+                    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_RESULT_DISPLAY));
+                }
+            );
             return;
         }
         

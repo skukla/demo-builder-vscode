@@ -244,31 +244,15 @@ export async function handleOpenAdobeConsole(
     try {
         let consoleUrl = 'https://developer.adobe.com/console';
 
-        context.logger.info('[Adobe Console] Received data from webview', {
-            data: payload,
-            hasOrgId: !!payload?.orgId,
-            hasProjectId: !!payload?.projectId,
-            hasWorkspaceId: !!payload?.workspaceId,
-        });
-
         // Construct direct link to workspace if IDs are provided
         if (payload?.orgId && payload?.projectId && payload?.workspaceId) {
             consoleUrl = `https://developer.adobe.com/console/projects/${payload.orgId}/${payload.projectId}/workspaces/${payload.workspaceId}/details`;
-            context.logger.info('[Adobe Console] Opening workspace-specific URL', {
-                url: consoleUrl,
-                orgId: payload.orgId,
-                projectId: payload.projectId,
-                workspaceId: payload.workspaceId,
-            });
+            context.logger.info('[Adobe Console] Opening workspace-specific URL');
         } else if (payload?.orgId && payload?.projectId) {
             consoleUrl = `https://developer.adobe.com/console/projects/${payload.orgId}/${payload.projectId}/overview`;
-            context.logger.info('[Adobe Console] Opening project-specific URL', {
-                url: consoleUrl,
-                orgId: payload.orgId,
-                projectId: payload.projectId,
-            });
+            context.logger.info('[Adobe Console] Opening project-specific URL');
         } else {
-            context.logger.info('[Adobe Console] Opening generic console URL (missing IDs)', { data: payload });
+            context.logger.info('[Adobe Console] Opening generic console URL');
         }
 
         // SECURITY: Validate URL before opening in browser

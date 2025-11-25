@@ -154,6 +154,7 @@
     "test:fast": "node --max-old-space-size=4096 node_modules/.bin/jest --maxWorkers=75%",
     "test:changed": "node --max-old-space-size=4096 node_modules/.bin/jest --onlyChanged",
     "test:file": "node --max-old-space-size=4096 node_modules/.bin/jest --maxWorkers=1",
+    "test:safe": "node --max-old-space-size=1024 node_modules/.bin/jest --maxWorkers=1 --forceExit",
     "test:no-compile": "node --max-old-space-size=4096 node_modules/.bin/jest",
     "test:watch": "node --max-old-space-size=4096 node_modules/.bin/jest --watch",
     "test:coverage": "node --max-old-space-size=4096 node_modules/.bin/jest --coverage",
