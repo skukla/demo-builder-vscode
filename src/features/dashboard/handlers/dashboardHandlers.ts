@@ -53,21 +53,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         return { success: false, error: 'No project available' };
     }
 
-    context.logger.debug('[Project Dashboard] Project data:', {
-        hasComponentInstances: !!project.componentInstances,
-        componentKeys: Object.keys(project.componentInstances || {}),
-        hasMeshState: !!project.meshState,
-        meshStateKeys: project.meshState ? Object.keys(project.meshState) : [],
-    });
-
     const meshComponent = project.componentInstances?.['commerce-mesh'];
-
-    context.logger.debug('[Project Dashboard] Mesh component data:', {
-        hasMeshComponent: !!meshComponent,
-        meshStatus: meshComponent?.status,
-        meshEndpoint: meshComponent?.endpoint,
-        meshPath: meshComponent?.path,
-    });
 
     const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
 
@@ -112,20 +98,16 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         // instead of being stuck on 'error' forever
         else {
             if (project.componentConfigs) {
-                context.logger.debug('[Dashboard] Checking mesh deployment status...');
-
                 // Pre-check: Verify auth before fetching
                 const authManager = ServiceLocator.getAuthenticationService();
 
                 const isAuthenticated = await authManager.isAuthenticated();
 
                 if (!isAuthenticated) {
-                    context.logger.debug('[Dashboard] Not authenticated, skipping mesh status fetch');
                     meshStatus = 'not-deployed';
                 } else {
                     // Initialize meshState if it doesn't exist
                     if (!project.meshState) {
-                        context.logger.debug('[Dashboard] No meshState found, initializing empty state');
                         project.meshState = {
                             envVars: {},
                             sourceHash: null,
@@ -343,11 +325,7 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
 
         // Direct link to workspace
         consoleUrl = `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/workspaces/${project.adobe.workspace}/details`;
-        context.logger.info('[Dev Console] Opening workspace-specific URL', {
-            org: project.adobe.organization,
-            project: project.adobe.projectId,
-            workspace: project.adobe.workspace,
-        });
+        context.logger.info('[Dev Console] Opening workspace-specific URL');
     } else if (project?.adobe?.organization && project?.adobe?.projectId) {
         // Validate Adobe IDs before URL construction (security: prevents URL injection)
         try {
@@ -407,14 +385,11 @@ async function checkMeshStatusAsync(
         let meshMessage: string | undefined;
 
         if (project.componentConfigs) {
-            context.logger.debug('[Dashboard] Checking mesh deployment status...');
-
             const authManager = ServiceLocator.getAuthenticationService();
 
             const isAuthenticated = await authManager.isAuthenticated();
 
             if (!isAuthenticated) {
-                context.logger.debug('[Dashboard] Not authenticated, showing auth prompt');
                 context.panel?.webview.postMessage({
                     type: 'statusUpdate',
                     payload: {
@@ -463,7 +438,6 @@ async function checkMeshStatusAsync(
 
             // Initialize meshState if needed
             if (!project.meshState) {
-                context.logger.debug('[Dashboard] No meshState found, initializing empty state');
                 project.meshState = {
                     envVars: {},
                     sourceHash: null,
@@ -613,8 +587,6 @@ async function sendDemoStatusUpdate(context: HandlerContext): Promise<void> {
 async function verifyMeshDeployment(context: HandlerContext, project: Project): Promise<void> {
     const { verifyMeshDeployment: verify, syncMeshStatus } = await import('@/features/mesh/services/meshVerifier');
 
-    context.logger.debug('[Project Dashboard] Verifying mesh deployment with Adobe I/O...');
-
     const verificationResult = await verify(project);
 
     if (!verificationResult.success || !verificationResult.data?.exists) {
@@ -637,10 +609,7 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
             });
         }
     } else {
-        context.logger.debug('[Project Dashboard] Mesh verified successfully', {
-            meshId: verificationResult.data.meshId,
-            endpoint: verificationResult.data.endpoint,
-        });
+        context.logger.debug(`[Project Dashboard] Mesh verified successfully (Mesh ID: ${verificationResult.data.meshId})`);
 
         await syncMeshStatus(project, verificationResult);
         await context.stateManager.saveProject(project);

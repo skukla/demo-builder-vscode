@@ -140,17 +140,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         // Load existing env values from component .env files
         const existingEnvValues = await this.loadExistingEnvValues(project);
 
-        // Debug: Log what we're sending
-        this.logger.info('[ConfigureProjectWebview] Sending data to webview:');
-        this.logger.info(`  - Frontends: ${componentsData.frontends?.length || 0}`);
-        this.logger.info(`  - Backends: ${componentsData.backends?.length || 0}`);
-        this.logger.info(`  - Dependencies: ${componentsData.dependencies?.length || 0}`);
-        this.logger.info(`  - App Builder: ${componentsData.appBuilder?.length || 0}`);
-        this.logger.info(`  - EnvVars keys: ${Object.keys(componentsData.envVars || {}).length}`);
-        this.logger.info(`  - Existing env values: ${Object.keys(existingEnvValues).length} components`);
-        this.logger.info(`  - Project componentSelections: ${JSON.stringify(project.componentSelections || 'none')}`);
-        this.logger.info(`  - Project componentInstances: ${project.componentInstances ? Object.keys(project.componentInstances).join(', ') : 'none'}`);
-
         // Get current theme
         const theme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
 
@@ -170,8 +159,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 if (!project) {
                     throw new Error('No project found');
                 }
-
-                this.logger.info('[Configure] Saving configuration...');
 
                 // Detect if mesh configuration changed BEFORE saving
                 const meshChanges = await detectMeshChanges(project, data.componentConfigs);
@@ -209,7 +196,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 'Later',
                             ).then(async selection => {
                                 if (selection === 'Redeploy Mesh') {
-                                    vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                    // deployMesh command handles its own errors
+                                    await vscode.commands.executeCommand('demoBuilder.deployMesh');
                                 } else if (selection === 'Later') {
                                     // Track that user declined the update
                                     if (project.meshState) {
@@ -235,7 +223,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 'Later',
                             ).then(async selection => {
                                 if (selection === 'Redeploy Mesh') {
-                                    vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                    // deployMesh command handles its own errors
+                                    await vscode.commands.executeCommand('demoBuilder.deployMesh');
                                 } else if (selection === 'Later') {
                                     // Track that user declined the update
                                     if (project.meshState) {
@@ -258,11 +247,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                             vscode.window.showInformationMessage(
                                 'Restart the demo to apply configuration changes.',
                                 'Restart Demo',
-                            ).then(selection => {
+                            ).then(async selection => {
                                 if (selection === 'Restart Demo') {
-                                    vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
-                                        vscode.commands.executeCommand('demoBuilder.startDemo');
-                                    });
+                                    try {
+                                        await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                                        await vscode.commands.executeCommand('demoBuilder.startDemo');
+                                    } catch (error) {
+                                        // Commands handle their own error display
+                                        this.logger.error('[Configure] Failed to restart demo:', error as Error);
+                                    }
                                 }
                             });
                         } else {
@@ -324,7 +317,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 try {
                     const envContent = await fs.readFile(envPath, 'utf-8');
                     envValues[componentId] = this.parseEnvFile(envContent);
-                    this.logger.info(`  - Loaded ${Object.keys(envValues[componentId]).length} env vars from ${componentId} (${path.basename(envPath)})`);
                     loaded = true;
                     break;  // Found it, stop looking
                 } catch {
@@ -333,7 +325,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             }
 
             if (!loaded) {
-                this.logger.info(`  - No .env file found for ${componentId} (will be created on save)`);
                 envValues[componentId] = {};
             }
         }
@@ -393,9 +384,8 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             }
         }
         
-        // Register all paths with file watcher
+        // Register all paths with file watcher (silent - internal coordination)
         await vscode.commands.executeCommand('demoBuilder._internal.registerProgrammaticWrites', filePaths);
-        this.logger.debug(`[Configure] Registered ${filePaths.length} programmatic writes`);
     }
 
     /**
@@ -403,6 +393,9 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
      */
     private async regenerateEnvFiles(project: Project, componentConfigs: ComponentConfigs): Promise<void> {
         try {
+            // Count files for summary log
+            let fileCount = 1;  // Project root .env
+
             // Regenerate project root .env file
             await this.generateProjectEnvFile(project, componentConfigs);
 
@@ -415,11 +408,12 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                             componentId,
                             componentConfigs[componentId],
                         );
+                        fileCount++;
                     }
                 }
             }
 
-            this.logger.info('[Configure] Successfully regenerated .env files');
+            this.logger.debug(`[Configure] Regenerated ${fileCount} .env files`);
         } catch (error) {
             this.logger.error('[Configure] Failed to regenerate .env files:', error as Error);
             throw error;
@@ -461,7 +455,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         });
 
         await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
-        this.logger.debug(`[Configure] Generated project .env at ${envPath}`);
     }
 
     /**
@@ -492,7 +485,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         });
 
         await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
-        this.logger.debug(`[Configure] Generated component ${envFileName} at ${envPath}`);
     }
 }
 

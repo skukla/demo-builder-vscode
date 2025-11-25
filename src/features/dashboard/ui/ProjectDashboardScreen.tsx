@@ -25,6 +25,10 @@ import { GridLayout } from '@/core/ui/components/layout';
 
 type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'error';
 
+/** Mesh statuses that indicate an operation is in progress */
+const isMeshBusy = (status: MeshStatus | undefined): boolean =>
+    status === 'deploying' || status === 'checking' || status === 'authenticating';
+
 interface ProjectStatus {
     name: string;
     path: string;
@@ -51,6 +55,7 @@ interface ProjectDashboardScreenProps {
 export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScreenProps) {
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
     const [isRunning, setIsRunning] = useState(false);
+    const [isTransitioning, setIsTransitioning] = useState(false); // Local state for immediate button disable
 
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
@@ -63,8 +68,17 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
 
         const unsubscribeStatus = webviewClient.onMessage('statusUpdate', (data: unknown) => {
             const projectData = data as ProjectStatus;
-            setProjectStatus(projectData);
+            // Merge status update, preserving mesh status if currently deploying
+            // This prevents update checks from resetting mesh button state mid-deployment
+            setProjectStatus(prev => ({
+                ...projectData,
+                mesh: isMeshBusy(prev?.mesh?.status) ? prev?.mesh : projectData.mesh
+            }));
             setIsRunning(projectData.status === 'running');
+            // Clear transitioning state when we receive a definitive status
+            if (projectData.status === 'running' || projectData.status === 'ready' || projectData.status === 'stopped') {
+                setIsTransitioning(false);
+            }
         });
 
         const unsubscribeMesh = webviewClient.onMessage('meshStatusUpdate', (data: unknown) => {
@@ -77,6 +91,10 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                     endpoint: meshData.endpoint
                 }
             } : prev);
+            // Clear transitioning state when mesh operation completes
+            if (!isMeshBusy(meshData.status)) {
+                setIsTransitioning(false);
+            }
         });
 
         return () => {
@@ -100,8 +118,14 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     }, []); // Only on mount
 
     // Action handlers with useCallback for performance
-    const handleStartDemo = useCallback(() => webviewClient.postMessage('startDemo'), []);
-    const handleStopDemo = useCallback(() => webviewClient.postMessage('stopDemo'), []);
+    const handleStartDemo = useCallback(() => {
+        setIsTransitioning(true);
+        webviewClient.postMessage('startDemo');
+    }, []);
+    const handleStopDemo = useCallback(() => {
+        setIsTransitioning(true);
+        webviewClient.postMessage('stopDemo');
+    }, []);
     const handleReAuthenticate = useCallback(() => webviewClient.postMessage('re-authenticate'), []);
 
     const handleViewLogs = useCallback(() => {
@@ -115,13 +139,8 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     }, []);
 
     const handleDeployMesh = useCallback(() => {
+        setIsTransitioning(true);
         webviewClient.postMessage('deployMesh');
-        setTimeout(() => {
-            const deployButton = document.querySelector('[data-action="deploy-mesh"]') as HTMLElement;
-            if (deployButton) {
-                deployButton.focus();
-            }
-        }, 50);
     }, []);
 
     const handleOpenBrowser = useCallback(() => webviewClient.postMessage('openBrowser'), []);
@@ -136,6 +155,11 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     const meshStatus = projectStatus?.mesh?.status;
     const meshEndpoint = projectStatus?.mesh?.endpoint;
     const meshMessage = projectStatus?.mesh?.message;
+
+    // Button disabled states
+    const isStartDisabled = isTransitioning || meshStatus === 'deploying' || status === 'starting' || status === 'stopping';
+    const isStopDisabled = isTransitioning || status === 'stopping';
+    const isMeshActionDisabled = isTransitioning || isMeshBusy(meshStatus);
 
     // Memoize status displays for performance
     const demoStatusDisplay = useMemo(() => {
@@ -262,7 +286,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         <ActionButton
                             onPress={handleStartDemo}
                             isQuiet
-                            isDisabled={meshStatus === 'deploying'}
+                            isDisabled={isStartDisabled}
                             UNSAFE_className="dashboard-action-button"
                         >
                             <PlayCircle size="L" />
@@ -273,6 +297,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         <ActionButton
                             onPress={handleStopDemo}
                             isQuiet
+                            isDisabled={isStopDisabled}
                             UNSAFE_className="dashboard-action-button"
                         >
                             <StopCircle size="L" />
@@ -306,7 +331,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                     <ActionButton
                         onPress={handleDeployMesh}
                         isQuiet
-                        isDisabled={meshStatus === 'deploying'}
+                        isDisabled={isMeshActionDisabled}
                         UNSAFE_className="dashboard-action-button"
                         data-action="deploy-mesh"
                     >
@@ -318,7 +343,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                     <ActionButton
                         onPress={handleConfigure}
                         isQuiet
-                        isDisabled={meshStatus === 'deploying'}
+                        isDisabled={isMeshActionDisabled}
                         UNSAFE_className="dashboard-action-button"
                     >
                         <Settings size="L" />

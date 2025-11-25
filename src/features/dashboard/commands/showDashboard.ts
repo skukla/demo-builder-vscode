@@ -204,9 +204,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         await this.createOrRevealPanel();
         if (!this.communicationManager) {
             await this.initializeCommunication();
-            this.logger.debug('Dashboard webview initialized with handshake protocol');
-        } else {
-            this.logger.debug('Dashboard webview already initialized, reusing existing communication');
         }
     }
 
@@ -253,8 +250,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     private async initializeFileHashesForRunningDemo(project: Project): Promise<void> {
         const envFiles: string[] = [];
 
-        this.logger.debug('[Project Dashboard] Initializing file hashes for running demo');
-
         // Collect .env files from all component instances
         if (project.componentInstances) {
             for (const componentInstance of Object.values(project.componentInstances)) {
@@ -284,7 +279,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         }
 
         if (envFiles.length > 0) {
-            this.logger.debug(`[Project Dashboard] Initializing file hashes for ${envFiles.length} .env files`);
             await vscode.commands.executeCommand('demoBuilder._internal.initializeFileHashes', envFiles);
         }
     }
