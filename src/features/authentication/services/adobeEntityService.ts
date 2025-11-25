@@ -361,7 +361,6 @@ export class AdobeEntityService {
                     context = parsedContext;
                     // Cache the result
                     this.cacheManager.setCachedConsoleWhere(context);
-                    this.debugLogger.debug('[Entity Service] Raw Adobe CLI response:', JSON.stringify(context));
                 } else {
                     return undefined;
                 }
@@ -372,7 +371,6 @@ export class AdobeEntityService {
                 let orgData;
                 if (typeof context.org === 'string') {
                     if (context.org.trim()) {
-                        this.debugLogger.debug(`[Entity Service] Current organization name: ${context.org}`);
 
                         // PERFORMANCE FIX: Always resolve full org object for SDK compatibility
                         // The SDK requires numeric org ID (e.g., "3397333"), not names or IMS org codes
@@ -492,7 +490,6 @@ export class AdobeEntityService {
                     }
                     context = parsedContext;
                     this.cacheManager.setCachedConsoleWhere(context);
-                    this.debugLogger.debug('[Entity Service] Raw Adobe CLI response:', JSON.stringify(context));
                 } else {
                     return undefined;
                 }
@@ -641,7 +638,6 @@ export class AdobeEntityService {
             validateOrgId(orgId);
 
             this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'organization' });
-            this.debugLogger.debug(`[Entity Service] Selecting organization ${orgId}`);
 
             const result = await this.commandManager.execute(
                 `aio console org select ${orgId}`,
@@ -650,8 +646,6 @@ export class AdobeEntityService {
                     timeout: TIMEOUTS.CONFIG_WRITE,
                 },
             );
-
-            this.debugLogger.debug(`[Entity Service] Organization select command completed with code: ${result.code}`);
 
             if (result.code === 0) {
                 this.stepLogger.logTemplate('adobe-setup', 'statuses.organization-selected', { name: orgId });
@@ -715,7 +709,6 @@ export class AdobeEntityService {
             validateProjectId(projectId);
 
             this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'project' });
-            this.debugLogger.debug(`[Entity Service] Selecting project ${projectId}`);
 
             const result = await this.commandManager.execute(
                 `aio console project select ${projectId}`,
@@ -724,8 +717,6 @@ export class AdobeEntityService {
                     timeout: TIMEOUTS.CONFIG_WRITE,
                 },
             );
-
-            this.debugLogger.debug(`[Entity Service] Project select command completed with code: ${result.code}`);
 
             if (result.code === 0) {
                 this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectId });
@@ -796,7 +787,6 @@ export class AdobeEntityService {
             validateWorkspaceId(workspaceId);
 
             this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'workspace' });
-            this.debugLogger.debug(`[Entity Service] Selecting workspace ${workspaceId}`);
 
             const result = await this.commandManager.execute(
                 `aio console workspace select ${workspaceId}`,
@@ -805,8 +795,6 @@ export class AdobeEntityService {
                     timeout: TIMEOUTS.CONFIG_WRITE,
                 },
             );
-
-            this.debugLogger.debug(`[Entity Service] Workspace select command completed with code: ${result.code}`);
 
             if (result.code === 0) {
                 this.stepLogger.logTemplate('adobe-setup', 'statuses.workspace-selected', { name: workspaceId });

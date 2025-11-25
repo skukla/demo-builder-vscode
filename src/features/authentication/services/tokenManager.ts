@@ -113,10 +113,6 @@ export class TokenManager {
                 const expiry = tokenData.expiry || 0;
                 const now = Date.now();
 
-                this.logger.debug(`[Token] Fetched token config (attempt ${attempt}/${maxRetries})`);
-                this.logger.debug(`[Token] Token length: ${token?.length || 0}`);
-                this.logger.debug(`[Token] Expiry: ${expiry}, Now: ${now}, Diff (min): ${Math.floor((expiry - now) / 1000 / 60)}`);
-
                 // CORRUPTION DETECTION (beta.42): expiry=0 indicates corrupted state
                 if (token && token.length > 100 && expiry === 0) {
                     this.logger.warn('[Token] CORRUPTION DETECTED: Token present but expiry=0');

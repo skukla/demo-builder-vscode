@@ -97,16 +97,18 @@ export class ConfigureCommand extends BaseCommand {
 
         const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
         if (frontendComponent?.status === 'running') {
-            await vscode.window.showInformationMessage(
+            const selection = await vscode.window.showInformationMessage(
                 'Restart the demo to apply changes',
                 'Restart Now',
-            ).then(selection => {
-                if (selection === 'Restart Now') {
-                    vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
-                        vscode.commands.executeCommand('demoBuilder.startDemo');
-                    });
+            );
+            if (selection === 'Restart Now') {
+                try {
+                    await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                    await vscode.commands.executeCommand('demoBuilder.startDemo');
+                } catch (error) {
+                    await this.showError(`Failed to restart demo: ${error instanceof Error ? error.message : 'Unknown error'}`);
                 }
-            });
+            }
         }
     }
 
@@ -146,16 +148,18 @@ export class ConfigureCommand extends BaseCommand {
             await this.showInfo(`Port changed to ${newPort}`);
 
             if (frontendComponent.status === 'running') {
-                await vscode.window.showInformationMessage(
+                const selection = await vscode.window.showInformationMessage(
                     'Restart the demo to apply the port change',
                     'Restart Now',
-                ).then(selection => {
-                    if (selection === 'Restart Now') {
-                        vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
-                            vscode.commands.executeCommand('demoBuilder.startDemo');
-                        });
+                );
+                if (selection === 'Restart Now') {
+                    try {
+                        await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                        await vscode.commands.executeCommand('demoBuilder.startDemo');
+                    } catch (error) {
+                        await this.showError(`Failed to restart demo: ${error instanceof Error ? error.message : 'Unknown error'}`);
                     }
-                });
+                }
             }
         }
     }

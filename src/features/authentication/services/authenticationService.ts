@@ -123,8 +123,6 @@ export class AuthenticationService {
         }
 
         try {
-            this.debugLogger.debug('[Auth] Quick authentication check (token only, no org validation)');
-
             const isValid = await this.tokenManager.isTokenValid();
 
             // Cache the result
@@ -223,7 +221,6 @@ export class AuthenticationService {
         try {
             const stepLogger = await this.ensureStepLogger();
             stepLogger.logTemplate('adobe-setup', 'operations.opening-browser', {});
-            this.debugLogger.debug(`[Auth] Initiating Adobe login${force ? ' (forced)' : ''}`);
 
             // If forced login, clear caches BEFORE login
             if (force) {

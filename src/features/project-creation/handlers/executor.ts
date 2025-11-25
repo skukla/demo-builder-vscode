@@ -84,15 +84,11 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     }
 
     // Import ComponentManager and other dependencies
-    context.logger.debug('[Project Creation] Starting dynamic imports...');
     const { ComponentManager } = await import('@/features/components/services/componentManager');
-    context.logger.debug('[Project Creation] ComponentManager imported');
     const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
-    context.logger.debug('[Project Creation] ComponentRegistryManager imported');
     const fs = await import('fs/promises');
     const path = await import('path');
     const os = await import('os');
-    context.logger.debug('[Project Creation] All dynamic imports completed');
 
     // PRE-FLIGHT CHECK: Clean up orphaned/invalid directories
     // NOTE: Valid projects (with .demo-builder.json) are blocked by createHandler

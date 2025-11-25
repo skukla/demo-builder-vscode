@@ -102,10 +102,6 @@ export class WebviewCommunicationManager {
      * Initialize communication with handshake protocol
      */
     async initialize(): Promise<void> {
-        if (this.config.enableLogging) {
-            this.logger.debug('[WebviewComm] Starting initialization');
-        }
-
         // Set up message listener
         this.panel.webview.onDidReceiveMessage(
             message => this.handleWebviewMessage(message),
@@ -137,10 +133,6 @@ export class WebviewCommunicationManager {
 
                 this.handshakeComplete = true;
                 clearTimeout(handshakeTimeout);
-
-                if (this.config.enableLogging) {
-                    this.logger.debug('[WebviewComm] Handshake complete');
-                }
 
                 // Flush queued messages
                 this.flushMessageQueue();
@@ -410,9 +402,6 @@ export class WebviewCommunicationManager {
     private async sendRawMessage(message: Message): Promise<void> {
         // Silently ignore if disposed (prevents error spam during webview transitions)
         if (this.isDisposed) {
-            if (this.config.enableLogging) {
-                this.logger.debug(`[WebviewComm] Ignoring message to disposed webview: ${message.type}`);
-            }
             return;
         }
 

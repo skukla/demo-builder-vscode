@@ -98,9 +98,7 @@ export class UpdateManager {
             const url = channel === 'stable'
                 ? `https://api.github.com/repos/${repo}/releases/latest`
                 : `https://api.github.com/repos/${repo}/releases?per_page=20`;
-      
-            this.logger.debug(`[Update] Fetching latest ${channel} release for ${repo}`);
-      
+
             // Create timeout controller
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), TIMEOUTS.UPDATE_CHECK);
@@ -134,8 +132,8 @@ export class UpdateManager {
 
                     // Sort by version using semver
                     release = nonDraftReleases.sort((a: GitHubRelease, b: GitHubRelease) => {
-                        const versionA = a.tag_name.replace(/^v/, '');
-                        const versionB = b.tag_name.replace(/^v/, '');
+                        const versionA = this.parseVersionFromTag(a.tag_name);
+                        const versionB = this.parseVersionFromTag(b.tag_name);
                         return semver.gt(versionA, versionB) ? -1 : 1;
                     })[0];
                 } else {
@@ -172,8 +170,11 @@ export class UpdateManager {
                     return null; // Treat as no update available if URL is invalid
                 }
 
+                const version = this.parseVersionFromTag(release.tag_name);
+                this.logger.debug(`[Update] Found ${channel} release v${version} for ${repo}`);
+
                 return {
-                    version: release.tag_name.replace(/^v/, ''),
+                    version,
                     downloadUrl,
                     releaseNotes: release.body || 'No release notes available',
                     publishedAt: release.published_at,
@@ -201,6 +202,13 @@ export class UpdateManager {
             this.logger.debug(`[Update] Version comparison failed: ${error}`);
             return false;
         }
+    }
+
+    /**
+     * Extract version string from Git tag (strips leading 'v')
+     */
+    private parseVersionFromTag(tagName: string): string {
+        return tagName.replace(/^v/, '');
     }
 }
 

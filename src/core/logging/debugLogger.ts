@@ -65,12 +65,20 @@ export class DebugLogger {
             this.logBuffer.push(errorLine);
         }
 
-        // Log full (unsanitized) error details to debug channel only
+        // Log error details to debug channel only (truncate if too long)
         if (error && this.debugEnabled) {
-            this.debug('Full error details:', {
-                message: error.message,
-                stack: error.stack,
+            // Truncate error message if it's excessively long (e.g., HTML response bodies)
+            const MAX_MESSAGE_LENGTH = 2000;
+            let truncatedMessage = error.message;
+            if (truncatedMessage && truncatedMessage.length > MAX_MESSAGE_LENGTH) {
+                truncatedMessage = truncatedMessage.substring(0, MAX_MESSAGE_LENGTH) + '\n... (truncated, full message was ' + error.message.length + ' chars)';
+            }
+
+            this.debug('Error details:', {
+                message: truncatedMessage,
                 name: error.name,
+                // Only include stack if it's useful (not just repeating the message)
+                ...(error.stack && error.stack !== error.message ? { stack: error.stack } : {}),
             });
         }
     }

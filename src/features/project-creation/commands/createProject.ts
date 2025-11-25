@@ -109,7 +109,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 const apiServicesConfig = parseJSON<Record<string, unknown>>(servicesContent);
                 if (apiServicesConfig) {
                     this.sharedState.apiServicesConfig = apiServicesConfig;
-                    this.logger.debug('Loaded API services configuration');
                 }
             }
         } catch (error) {
@@ -344,9 +343,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // (singleton pattern: panel might already exist with active communication)
             if (!this.communicationManager) {
                 await this.initializeCommunication();
-                this.logger.debug('Wizard webview initialized with handshake protocol');
-            } else {
-                this.logger.debug('Wizard webview already initialized, reusing existing communication');
             }
 
             // End webview transition (wizard successfully opened)

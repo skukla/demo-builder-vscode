@@ -143,7 +143,6 @@ export class ComponentManager {
         // Shallow clone (faster, smaller)
         if (componentDef.source.gitOptions?.shallow) {
             cloneFlags.push('--depth=1');
-            this.logger.debug(`[ComponentManager] Using shallow clone for ${componentDef.name}`);
         }
         
         // Recursive (submodules)
@@ -254,11 +253,9 @@ export class ComponentManager {
             try {
                 // Check if file already exists
                 await fs.access(nodeVersionFile);
-                this.logger.debug(`[ComponentManager] .node-version file already exists for ${componentDef.name}`);
             } catch {
                 // File doesn't exist, create it
                 await fs.writeFile(nodeVersionFile, `${configuredNodeVersion}\n`, 'utf-8');
-                this.logger.debug(`[ComponentManager] Created .node-version file with Node ${configuredNodeVersion} for ${componentDef.name}`);
             }
         }
 

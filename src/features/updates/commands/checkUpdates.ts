@@ -34,13 +34,11 @@ export class CheckUpdatesCommand extends BaseCommand {
                     const project = await this.stateManager.getCurrentProject();
 
                     // Check extension updates
-                    this.logger.info('[Updates] Checking for extension updates');
                     const extensionUpdate = await updateManager.checkExtensionUpdate();
 
                     // Check component updates (if project loaded)
                     let componentUpdates: Map<string, UpdateCheckResult> = new Map();
                     if (project) {
-                        this.logger.info('[Updates] Checking for component updates');
                         componentUpdates = await updateManager.checkComponentUpdates(project);
                     }
 
