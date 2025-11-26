@@ -143,7 +143,10 @@ export async function activate(context: vscode.ExtensionContext) {
         // (VSCode validates commands exist when assigned to status bar items)
         context.subscriptions.push(
             vscode.commands.registerCommand('demoBuilder.showLogs', () => {
-                debugLogger.toggle();
+                debugLogger.show(false); // Show Logs channel, take focus
+            }),
+            vscode.commands.registerCommand('demoBuilder.showDebugLogs', () => {
+                debugLogger.showDebug(false); // Show Debug channel, take focus
             }),
         );
 
