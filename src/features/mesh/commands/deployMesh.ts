@@ -279,7 +279,7 @@ export class DeployMeshCommand extends BaseCommand {
                     await this.stateManager.saveProject(project);
                 }
                 
-                // Show simple error with View Logs button (details are in Demo Builder: Logs channel)
+                // Show simple error with View Logs button (details are in Demo Builder: User Logs channel)
                 const selection = await vscode.window.showErrorMessage(
                     'Mesh deployment failed. Check logs for details.',
                     'View Logs'

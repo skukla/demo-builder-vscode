@@ -281,10 +281,18 @@ export const handleOpenBrowser: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'viewLogs' message - Show logs output channel
+ * Handle 'viewLogs' message - Show Logs output channel (user-facing)
  */
 export const handleViewLogs: MessageHandler = async () => {
     await vscode.commands.executeCommand('demoBuilder.showLogs');
+    return { success: true };
+};
+
+/**
+ * Handle 'viewDebugLogs' message - Show Debug output channel (technical diagnostics)
+ */
+export const handleViewDebugLogs: MessageHandler = async () => {
+    await vscode.commands.executeCommand('demoBuilder.showDebugLogs');
     return { success: true };
 };
 

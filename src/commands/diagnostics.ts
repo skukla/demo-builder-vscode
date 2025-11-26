@@ -116,10 +116,10 @@ export class DiagnosticsCommand {
 
     public async execute(): Promise<void> {
         this.logger.info('Running Demo Builder diagnostics...');
-        this.logger.showDebug(true);
-        
-        // Clear debug channel for fresh diagnostics
-        this.logger.clearDebug();
+        this.logger.show(false); // Show log channel and take focus
+
+        // Clear channel for fresh diagnostics
+        this.logger.clear();
         
         const report: DiagnosticsReport = {
             timestamp: new Date().toISOString(),
@@ -164,13 +164,13 @@ export class DiagnosticsCommand {
             
             // Offer to export
             const action = await vscode.window.showInformationMessage(
-                'Diagnostics complete. Check the Debug output for details.',
-                'Show Debug Output',
+                'Diagnostics complete. Check the output for details.',
+                'Show Logs',
                 'Export Log',
             );
-            
-            if (action === 'Show Debug Output') {
-                this.logger.showDebug(false);
+
+            if (action === 'Show Logs') {
+                this.logger.show(false);
             } else if (action === 'Export Log') {
                 await this.logger.exportDebugLog();
             }
@@ -509,6 +509,6 @@ export class DiagnosticsCommand {
         this.logger.info(`  File System Access: ${report.tests.fileSystem.canWrite ? 'OK' : 'Failed'}`);
 
         this.logger.info('');
-        this.logger.info('Full details available in Demo Builder - Debug output channel');
+        this.logger.info('Use VS Code\'s "Set Log Level..." command to see debug/trace details');
     }
 }

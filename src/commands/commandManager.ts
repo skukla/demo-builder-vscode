@@ -119,7 +119,7 @@ export class CommandManager {
                     },
                     async () => {
                         await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_RESULT_DISPLAY));
-                    }
+                    },
                 );
                 return;
             }

@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "publisher": "adobe-demo-team",
   "engines": {
-    "vscode": "^1.74.0"
+    "vscode": "^1.84.0"
   },
   "categories": [
     "Other"
