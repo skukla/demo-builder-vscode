@@ -27,7 +27,6 @@
   },
   "author": "Steve Kukla",
   "activationEvents": [
-    "onStartupFinished",
     "workspaceContains:.demo-builder"
   ],
   "main": "./dist/extension.js",
