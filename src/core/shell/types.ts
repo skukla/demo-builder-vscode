@@ -56,6 +56,9 @@ export interface ExecuteOptions extends Omit<ExecOptions, 'shell'> {
     retryStrategy?: RetryStrategy;             // Custom retry logic
     timeout?: number;                          // Command timeout in ms (default: 30000)
 
+    // Cancellation (execa integration)
+    signal?: AbortSignal;                      // AbortController signal for cancellation
+
     // Output handling
     onOutput?: (data: string) => void;         // Callback for streaming output
 }

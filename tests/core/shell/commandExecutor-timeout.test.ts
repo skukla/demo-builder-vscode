@@ -1,9 +1,10 @@
 import { CommandExecutor } from '@/core/shell/commandExecutor';
-import { createMockChildProcess, setupMockDependencies } from './commandExecutor.testUtils';
-import { spawn } from 'child_process';
+import { createMockExecaSubprocess, setupMockDependencies } from './commandExecutor.testUtils';
 
-// Mock all dependencies at top level
-jest.mock('child_process');
+// Mock execa
+jest.mock('execa');
+import execa from 'execa';
+
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),
@@ -23,6 +24,7 @@ jest.mock('@/core/shell/retryStrategyManager');
 describe('CommandExecutor - Timeout Handling', () => {
     let commandExecutor: CommandExecutor;
     let mockDependencies: ReturnType<typeof setupMockDependencies>;
+    const mockExeca = execa as jest.MockedFunction<typeof execa>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -35,61 +37,96 @@ describe('CommandExecutor - Timeout Handling', () => {
     });
 
     describe('timeout handling', () => {
-        it('should timeout long-running commands', async () => {
-            jest.useFakeTimers();
+        it('should handle execa timeout errors', async () => {
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
-            const mockChild = createMockChildProcess();
-            (spawn as jest.Mock).mockReturnValue(mockChild);
+            // Use streaming mode for cleaner timeout testing (bypasses retry)
+            const promise = commandExecutor.execute('sleep 100', {
+                timeout: 1000,
+                streaming: true,
+                onOutput: () => {}
+            });
 
-            // Mock kill to not throw
-            mockChild.kill = jest.fn().mockReturnValue(true);
-
-            const promise = commandExecutor.execute('sleep 100', { timeout: 1000 });
-
-            // Advance past timeout
-            jest.advanceTimersByTime(1000);
-
-            // Emit close after kill (in next tick)
-            process.nextTick(() => {
-                mockChild.emit('close', null);
+            // Simulate execa timeout error
+            setImmediate(() => {
+                const timeoutError = new Error('Command timed out') as any;
+                timeoutError.timedOut = true;
+                mockSubprocess._reject(timeoutError);
             });
 
             await expect(promise).rejects.toThrow('Command timed out after 1000ms');
-            expect(mockChild.kill).toHaveBeenCalledWith('SIGTERM');
-
-            jest.useRealTimers();
         });
 
-        it('should force kill if SIGTERM fails', async () => {
-            jest.useFakeTimers();
+        it('should pass timeout option to execa', async () => {
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
-            const mockChild = createMockChildProcess();
-            // Re-define with writable=true for test modification
-            Object.defineProperty(mockChild, 'killed', { value: false, writable: true });
-            Object.defineProperty(mockChild, 'exitCode', { value: null, writable: true });
-            (spawn as jest.Mock).mockReturnValue(mockChild);
+            const promise = commandExecutor.execute('echo test', {
+                timeout: 5000,
+                streaming: true,
+                onOutput: () => {}
+            });
 
-            const killMock = jest.fn().mockReturnValue(true);
-            mockChild.kill = killMock;
+            // Complete successfully
+            setImmediate(() => {
+                mockSubprocess.stdout.emit('data', Buffer.from('test\n'));
+                mockSubprocess._resolve({ exitCode: 0 });
+            });
 
-            const promise = commandExecutor.execute('sleep 100', { timeout: 1000 });
+            await promise;
 
-            // Advance to timeout
-            jest.advanceTimersByTime(1000);
+            // Verify execa was called with timeout option
+            expect(mockExeca).toHaveBeenCalledWith(
+                expect.any(String),
+                expect.objectContaining({
+                    timeout: 5000
+                })
+            );
+        });
 
-            // Advance to force kill timeout
-            jest.advanceTimersByTime(2000);
+        it('should handle canceled commands', async () => {
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
-            // Emit close
-            mockChild.emit('close', null);
+            const promise = commandExecutor.execute('long-command', {
+                streaming: true,
+                onOutput: () => {}
+            });
 
-            await expect(promise).rejects.toThrow('Command timed out after 1000ms');
+            // Simulate execa canceled error
+            setImmediate(() => {
+                const canceledError = new Error('Command was canceled') as any;
+                canceledError.isCanceled = true;
+                mockSubprocess._reject(canceledError);
+            });
 
-            // Should call kill twice: SIGTERM then SIGKILL
-            expect(killMock).toHaveBeenCalledWith('SIGTERM');
-            expect(killMock).toHaveBeenCalledWith('SIGKILL');
+            await expect(promise).rejects.toThrow('Command was canceled');
+        });
 
-            jest.useRealTimers();
+        it('should handle killed commands', async () => {
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
+
+            const promise = commandExecutor.execute('long-command', {
+                streaming: true,
+                onOutput: () => {}
+            });
+
+            // Simulate execa killed error
+            setImmediate(() => {
+                const killedError = new Error('Command was killed') as any;
+                killedError.killed = true;
+                mockSubprocess._reject(killedError);
+            });
+
+            await expect(promise).rejects.toThrow('Command was killed');
+        });
+
+        it('should reject timeout below minimum threshold', async () => {
+            await expect(
+                commandExecutor.execute('echo test', { timeout: 500 })
+            ).rejects.toThrow('Timeout must be at least 1000ms');
         });
     });
 });

@@ -3,8 +3,9 @@ import { CommandSequencer } from '@/core/shell/commandSequencer';
 import { PollingService } from '@/core/shell/pollingService';
 import { setupMockDependencies } from './commandExecutor.testUtils';
 
-// Mock all dependencies at top level
-jest.mock('child_process');
+// Mock execa (no actual subprocess calls needed for delegation tests)
+jest.mock('execa');
+
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),

@@ -1,9 +1,10 @@
 import { CommandExecutor } from '@/core/shell/commandExecutor';
-import { createMockChildProcess, setupMockDependencies } from './commandExecutor.testUtils';
-import { spawn } from 'child_process';
+import { createMockExecaSubprocess, setupMockDependencies, simulateSubprocessComplete } from './commandExecutor.testUtils';
 
-// Mock all dependencies at top level
-jest.mock('child_process');
+// Mock execa - must be before importing CommandExecutor
+jest.mock('execa');
+import execa from 'execa';
+
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),
@@ -23,6 +24,7 @@ jest.mock('@/core/shell/retryStrategyManager');
 describe('CommandExecutor - Basic Execution', () => {
     let commandExecutor: CommandExecutor;
     let mockDependencies: ReturnType<typeof setupMockDependencies>;
+    const mockExeca = execa as jest.MockedFunction<typeof execa>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -36,14 +38,13 @@ describe('CommandExecutor - Basic Execution', () => {
 
     describe('execute', () => {
         it('should execute a basic command successfully', async () => {
-            const mockChild = createMockChildProcess();
-            (spawn as jest.Mock).mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const promise = commandExecutor.execute('echo hello');
 
-            // Simulate stdout data
-            mockChild.stdout!.emit('data', Buffer.from('hello\n'));
-            mockChild.emit('close', 0);
+            // Simulate subprocess completion
+            simulateSubprocessComplete(mockSubprocess, 'hello\n', '', 0);
 
             const result = await promise;
 
@@ -54,13 +55,13 @@ describe('CommandExecutor - Basic Execution', () => {
         });
 
         it('should handle command with non-zero exit code', async () => {
-            const mockChild = createMockChildProcess();
-            (spawn as jest.Mock).mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const promise = commandExecutor.execute('false');
 
-            mockChild.stderr!.emit('data', Buffer.from('error message\n'));
-            mockChild.emit('close', 1);
+            // Simulate non-zero exit
+            simulateSubprocessComplete(mockSubprocess, '', 'error message\n', 1);
 
             const result = await promise;
 
@@ -68,20 +69,29 @@ describe('CommandExecutor - Basic Execution', () => {
             expect(result.stderr).toBe('error message\n');
         });
 
-        it('should handle command errors', async () => {
-            const mockChild = createMockChildProcess();
-            (spawn as jest.Mock).mockReturnValue(mockChild);
+        it('should handle command errors (timeout)', async () => {
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
-            const promise = commandExecutor.execute('invalid-command');
+            // Use streaming mode to bypass retry mechanism for cleaner timeout testing
+            const promise = commandExecutor.execute('slow-command', {
+                streaming: true,
+                onOutput: () => {}
+            });
 
-            mockChild.emit('error', new Error('Command not found'));
+            // Simulate timeout error from execa
+            setImmediate(() => {
+                const timeoutError = new Error('Command timed out') as any;
+                timeoutError.timedOut = true;
+                mockSubprocess._reject(timeoutError);
+            });
 
-            await expect(promise).rejects.toThrow('Command not found');
+            await expect(promise).rejects.toThrow('Command timed out');
         });
 
         it('should handle streaming output with onOutput callback', async () => {
-            const mockChild = createMockChildProcess();
-            (spawn as jest.Mock).mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const outputLines: string[] = [];
             const promise = commandExecutor.execute('echo test', {
@@ -89,9 +99,10 @@ describe('CommandExecutor - Basic Execution', () => {
                 onOutput: (data) => outputLines.push(data)
             });
 
-            mockChild.stdout!.emit('data', Buffer.from('line1\n'));
-            mockChild.stdout!.emit('data', Buffer.from('line2\n'));
-            mockChild.emit('close', 0);
+            // Simulate streaming output
+            mockSubprocess.stdout.emit('data', Buffer.from('line1\n'));
+            mockSubprocess.stdout.emit('data', Buffer.from('line2\n'));
+            mockSubprocess._resolve({ exitCode: 0 });
 
             await promise;
 
@@ -105,15 +116,15 @@ describe('CommandExecutor - Basic Execution', () => {
         });
 
         it('should use exclusive execution when exclusive option is set', async () => {
-            const mockChild = createMockChildProcess();
-            (spawn as jest.Mock).mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const promise = commandExecutor.execute('echo test', {
                 exclusive: 'test-resource'
             });
 
-            mockChild.stdout!.emit('data', Buffer.from('test\n'));
-            mockChild.emit('close', 0);
+            // Simulate completion
+            simulateSubprocessComplete(mockSubprocess, 'test\n', '', 0);
 
             await promise;
 
@@ -129,17 +140,17 @@ describe('CommandExecutor - Basic Execution', () => {
             const result = await commandExecutor.commandExists('rm -rf /');
 
             expect(result).toBe(false);
-            expect(spawn).not.toHaveBeenCalled();
+            expect(mockExeca).not.toHaveBeenCalled();
         });
 
         it('should allow valid command names', async () => {
-            const mockChild = createMockChildProcess();
-            (spawn as jest.Mock).mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const promise = commandExecutor.commandExists('node');
 
-            mockChild.stdout!.emit('data', Buffer.from('/usr/local/bin/node\n'));
-            mockChild.emit('close', 0);
+            // Simulate which command finding node
+            simulateSubprocessComplete(mockSubprocess, '/usr/local/bin/node\n', '', 0);
 
             const result = await promise;
 
@@ -147,14 +158,14 @@ describe('CommandExecutor - Basic Execution', () => {
         });
 
         it('should return false for non-existent commands', async () => {
-            const mockChild = createMockChildProcess();
-            (spawn as jest.Mock).mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const promise = commandExecutor.commandExists('nonexistent');
 
-            // Emit error - commandExists catches this and returns false
+            // Simulate which command not finding the command
             process.nextTick(() => {
-                mockChild.emit('error', new Error('Command not found'));
+                simulateSubprocessComplete(mockSubprocess, '', 'nonexistent not found', 1);
             });
 
             const result = await promise;
@@ -174,15 +185,14 @@ describe('CommandExecutor - Basic Execution', () => {
 
     describe('queueCommand', () => {
         it('should queue and execute commands', async () => {
-            const mockChild = createMockChildProcess();
-            (spawn as jest.Mock).mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const promise = commandExecutor.queueCommand('echo test');
 
             // Use nextTick to allow queue processing to start
             process.nextTick(() => {
-                mockChild.stdout!.emit('data', Buffer.from('test\n'));
-                mockChild.emit('close', 0);
+                simulateSubprocessComplete(mockSubprocess, 'test\n', '', 0);
             });
 
             const result = await promise;
@@ -194,19 +204,18 @@ describe('CommandExecutor - Basic Execution', () => {
             const executionOrder: number[] = [];
             let callCount = 0;
 
-            // Mock spawn to track execution order
-            (spawn as jest.Mock).mockImplementation(() => {
-                const mockChild = createMockChildProcess();
+            // Mock execa to track execution order
+            mockExeca.mockImplementation(() => {
+                const mockSubprocess = createMockExecaSubprocess();
                 const currentCall = ++callCount;
 
                 // Use setImmediate to give each command time to complete before next starts
                 setImmediate(() => {
                     executionOrder.push(currentCall);
-                    mockChild.stdout!.emit('data', Buffer.from(`output${currentCall}\n`));
-                    mockChild.emit('close', 0);
+                    simulateSubprocessComplete(mockSubprocess, `output${currentCall}\n`, '', 0);
                 });
 
-                return mockChild;
+                return mockSubprocess as any;
             });
 
             const promise1 = commandExecutor.queueCommand('echo 1');

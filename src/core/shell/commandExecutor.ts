@@ -1,4 +1,5 @@
-import { spawn, type ExecOptions } from 'child_process';
+import type { ExecOptions } from 'child_process';
+import execa, { type ExecaError, type ExecaChildProcess } from 'execa';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
@@ -201,13 +202,13 @@ export class CommandExecutor {
 
         // Step 5: Handle streaming vs regular execution
         if (options.streaming && options.onOutput) {
-            return this.executeStreamingInternal(finalCommand, finalOptions, options.onOutput);
+            return this.executeStreamingInternal(finalCommand, finalOptions, options.onOutput, options.signal);
         }
 
         // Step 6: Execute with retry logic
         const retryStrategy = options.retryStrategy || this.retryManager.getDefaultStrategy();
         const result = await this.retryManager.executeWithRetry(
-            () => this.executeStreamingInternal(finalCommand, finalOptions, () => {}),
+            () => this.executeStreamingInternal(finalCommand, finalOptions, () => {}, options.signal),
             retryStrategy,
             command.substring(0, 50),
         );
@@ -227,7 +228,7 @@ export class CommandExecutor {
     }
 
     /**
-     * Execute command with streaming output
+     * Execute command with streaming output using execa
      *
      * SECURITY NOTE: shell option
      *
@@ -280,103 +281,99 @@ export class CommandExecutor {
         command: string,
         options: ExecOptions,
         onOutput: (data: string) => void,
+        signal?: AbortSignal,
     ): Promise<CommandResult> {
-        return new Promise((resolve, reject) => {
-            const startTime = Date.now();
-            let stdout = '';
-            let stderr = '';
+        const startTime = Date.now();
+        let stdout = '';
+        let stderr = '';
 
-            // SECURITY FIX: Remove shell: true default
-            // Only use shell if explicitly requested OR if fnm environment setup set it
-            const child = spawn(command, [], {
-                shell: options.shell || false,  // Changed from true to false
-                cwd: options.cwd,
-                env: options.env!,
-            });
-
-            child.stdout?.on('data', (data) => {
-                const output = data.toString();
-                stdout += output;
-
-                // Auto-handle Adobe CLI telemetry prompt
-                if (output.includes('Would you like to allow @adobe/aio-cli to collect anonymous usage data?')) {
-                    this.logger.debug('[Command Executor] Auto-answered aio-cli telemetry prompt');
-                    child.stdin?.write('n\n');
-                    child.stdin?.end();
-                }
-
-                onOutput(output);
-            });
-
-            child.stderr?.on('data', (data) => {
-                const output = data.toString();
-                stderr += output;
-                onOutput(output);
-            });
-
-            child.on('error', (error) => {
-                this.logger.error(`[Command Executor] Process error: ${error.message}`);
-                reject(error);
-            });
-
-            child.on('close', (code) => {
-                // Only log non-zero exit codes
-                if (code && code !== 0) {
-                    this.logger.warn(`[Command Executor] Process exited with code ${code} after ${Date.now() - startTime}ms`);
-                }
-                const duration = Date.now() - startTime;
-                resolve({
-                    stdout,
-                    stderr,
-                    code: code || 0,
-                    duration,
-                });
-            });
-
-            // Handle timeout
-            if (options.timeout) {
-                let forceKillTimeoutId: NodeJS.Timeout | undefined;
-                const timeoutId = setTimeout(() => {
-                    this.logger.warn(`[Command Executor] Command timed out after ${options.timeout}ms (PID: ${child.pid})`);
-
-                    if (!child.killed) {
-                        child.kill('SIGTERM');
-
-                        // Force kill after 2 seconds
-                        forceKillTimeoutId = setTimeout(() => {
-                            if (!child.killed && child.exitCode === null) {
-                                this.logger.warn(`[Command Executor] Force killing process ${child.pid} (SIGKILL)`);
-                                child.kill('SIGKILL');
-                            }
-                        }, 2000).unref(); // Don't keep process alive for force kill timeout
-                    }
-
-                    reject(new Error(`Command timed out after ${options.timeout}ms`));
-                }, options.timeout).unref(); // Don't keep process alive for command timeout
-
-                // Clear both timeouts when process completes
-                child.on('close', () => {
-                    clearTimeout(timeoutId);
-                    if (forceKillTimeoutId) {
-                        clearTimeout(forceKillTimeoutId);
-                    }
-                });
-            }
+        // Build execa options
+        // Note: execa handles timeout internally with automatic cleanup (SIGTERM → SIGKILL after 5s)
+        const shellOption = options.shell || false;
+        const subprocess: ExecaChildProcess = execa(command, {
+            shell: shellOption,
+            cwd: options.cwd as string | undefined,
+            env: options.env as NodeJS.ProcessEnv | undefined,
+            timeout: options.timeout,
+            reject: false,    // Don't throw on non-zero exit - we handle it
+            stdin: 'pipe',    // Enable stdin for Adobe CLI telemetry prompt handling
         });
-    }
 
-    /**
-     * Get current fnm version
-     */
-    private async getCurrentFnmVersion(): Promise<string | null> {
+        // Manual AbortController support (execa v5 doesn't have native signal option)
+        if (signal) {
+            const abortHandler = () => {
+                subprocess.kill();  // execa handles SIGTERM → SIGKILL automatically
+            };
+            signal.addEventListener('abort', abortHandler);
+            // Clean up listener when process completes
+            subprocess.finally(() => {
+                signal.removeEventListener('abort', abortHandler);
+            });
+        }
+
+        // Stream stdout and handle Adobe CLI telemetry prompt
+        subprocess.stdout?.on('data', (data: Buffer) => {
+            const output = data.toString();
+            stdout += output;
+
+            // Auto-handle Adobe CLI telemetry prompt
+            if (output.includes('Would you like to allow @adobe/aio-cli to collect anonymous usage data?')) {
+                this.logger.debug('[Command Executor] Auto-answered aio-cli telemetry prompt');
+                subprocess.stdin?.write('n\n');
+                subprocess.stdin?.end();
+            }
+
+            onOutput(output);
+        });
+
+        // Stream stderr
+        subprocess.stderr?.on('data', (data: Buffer) => {
+            const output = data.toString();
+            stderr += output;
+            onOutput(output);
+        });
+
         try {
-            const result = await this.execute('fnm current', { timeout: 2000 });
-            return result.stdout?.trim() || null;
-        } catch {
-            return null;
+            // Wait for process to complete
+            const result = await subprocess;
+            const duration = Date.now() - startTime;
+
+            // Log non-zero exit codes
+            if (result.exitCode && result.exitCode !== 0) {
+                this.logger.warn(`[Command Executor] Process exited with code ${result.exitCode} after ${duration}ms`);
+            }
+
+            return {
+                stdout,
+                stderr,
+                code: result.exitCode,
+                duration,
+            };
+        } catch (error) {
+            const execaError = error as ExecaError;
+            const duration = Date.now() - startTime;
+
+            // Handle execa-specific error types
+            if (execaError.timedOut) {
+                this.logger.warn(`[Command Executor] Command timed out after ${options.timeout}ms`);
+                throw new Error(`Command timed out after ${options.timeout}ms`);
+            }
+
+            if (execaError.isCanceled) {
+                this.logger.debug('[Command Executor] Command was canceled via AbortController');
+                throw new Error('Command was canceled');
+            }
+
+            if (execaError.killed) {
+                this.logger.debug('[Command Executor] Command was killed');
+                throw new Error('Command was killed');
+            }
+
+            // For other errors, log and re-throw
+            this.logger.error(`[Command Executor] Process error: ${execaError.message}`);
+            throw error;
         }
     }
-
 
     /**
      * Execute command with exclusive access to a resource
