@@ -34,9 +34,9 @@ jest.mock('@/core/logging/debugLogger', () => ({
         warn: jest.fn(),
         error: jest.fn(),
         debug: jest.fn(),
+        trace: jest.fn(),
         logCommand: jest.fn(),
         show: jest.fn(),
-        showDebug: jest.fn(),
     }),
     initializeLogger: jest.fn(),
 }));

