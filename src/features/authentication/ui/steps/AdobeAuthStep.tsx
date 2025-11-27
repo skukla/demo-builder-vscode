@@ -10,11 +10,11 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
-import React, { useEffect, useState, useRef } from 'react';
+import React from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { WizardState } from '@/types/webview';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { useAuthStatus } from '../hooks/useAuthStatus';
 
 interface AdobeAuthStepProps {
     state: WizardState;
@@ -22,168 +22,17 @@ interface AdobeAuthStepProps {
     setCanProceed: (canProceed: boolean) => void;
 }
 
-interface AuthStatusData {
-    message?: string;
-    subMessage?: string;
-    error?: string;
-    isAuthenticated: boolean;
-    isChecking?: boolean;
-    email?: string;
-    requiresOrgSelection?: boolean;
-    orgLacksAccess?: boolean;
-    tokenExpiresIn?: number;
-    tokenExpiringSoon?: boolean;
-    organization?: {
-        id: string;
-        code: string;
-        name: string;
-    };
-}
-
 export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthStepProps) {
-    const [authStatus, setAuthStatus] = useState<string>('');
-    const [authSubMessage, setAuthSubMessage] = useState<string>('');
-    const [authTimeout, setAuthTimeout] = useState(false);
-    const isSwitchingRef = useRef(false);
-    const authTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const {
+        authStatus,
+        authSubMessage,
+        authTimeout,
+        showLoadingSpinner,
+        checkAuthentication,
+        handleLogin,
+    } = useAuthStatus({ state, updateState, setCanProceed });
 
-    // Use loading state directly
-    const showLoadingSpinner = state.adobeAuth.isChecking;
-
-    useEffect(() => {
-        // Always check authentication on mount to validate token and auto-skip if valid
-        // This provides better UX for returning users with valid tokens
-        checkAuthentication();
-
-        // Listen for auth status updates
-        const unsubscribe = webviewClient.onMessage('auth-status', (data) => {
-            const authData = data as AuthStatusData;
-
-            // Debug logging to see what we're receiving
-            console.log('Auth status received:', authData);
-            console.log('Message:', authData.message);
-            console.log('SubMessage:', authData.subMessage);
-
-            // Clear timeout on any auth status update
-            if (authTimeoutRef.current) {
-                clearTimeout(authTimeoutRef.current);
-                authTimeoutRef.current = null;
-            }
-
-            // Check if this is a timeout error
-            if (authData.error === 'timeout') {
-                setAuthTimeout(true);
-                updateState({
-                    adobeAuth: {
-                        ...state.adobeAuth,
-                        isChecking: false,
-                        error: 'timeout',
-                    },
-                });
-                setAuthStatus(authData.message || '');
-                setAuthSubMessage(authData.subMessage || '');
-                return;
-            }
-
-            // Reset the switching flag when authentication completes
-            if (authData.isAuthenticated && isSwitchingRef.current) {
-                isSwitchingRef.current = false;
-            }
-
-            // Clear timeout state on successful auth OR when starting a new check
-            if (authData.isAuthenticated || authData.isChecking) {
-                setAuthTimeout(false);
-            }
-
-            updateState({
-                adobeAuth: {
-                    isAuthenticated: authData.isAuthenticated,
-                    isChecking: authData.isChecking !== undefined ? authData.isChecking : false,
-                    email: authData.email,
-                    error: authData.error,
-                    requiresOrgSelection: authData.requiresOrgSelection,
-                    orgLacksAccess: authData.orgLacksAccess,
-                    tokenExpiresIn: authData.tokenExpiresIn,
-                    tokenExpiringSoon: authData.tokenExpiringSoon,
-                },
-                // Always update org - set to undefined when null/undefined
-                adobeOrg: authData.organization ? {
-                    id: authData.organization.id,
-                    code: authData.organization.code,
-                    name: authData.organization.name,
-                } : undefined,
-            });
-            setAuthStatus(authData.message || '');
-            setAuthSubMessage(authData.subMessage || '');
-        });
-
-        return unsubscribe;
-    }, []);
-
-    useEffect(() => {
-        // Can only proceed if authenticated AND has organization selected AND token is not expiring soon
-        setCanProceed(
-            state.adobeAuth.isAuthenticated &&
-            !!state.adobeOrg?.name &&
-            !state.adobeAuth.tokenExpiringSoon
-        );
-    }, [state.adobeAuth.isAuthenticated, state.adobeAuth.tokenExpiringSoon, state.adobeOrg, setCanProceed]);
-
-    const checkAuthentication = () => {
-        // Don't check if we're already in the process of switching organizations
-        // Use ref for immediate check, not waiting for state updates
-        if (isSwitchingRef.current || state.adobeAuth.isChecking) {
-            console.log('Skipping auth check - switching org or already checking');
-            return;
-        }
-        setAuthStatus('Checking Adobe authentication...');
-        updateState({
-            adobeAuth: { ...state.adobeAuth, isChecking: true },
-        });
-        webviewClient.postMessage('check-auth');
-    };
-
-    const handleLogin = (force: boolean = false) => {
-        // Clear any existing timeout
-        if (authTimeoutRef.current) {
-            clearTimeout(authTimeoutRef.current);
-            authTimeoutRef.current = null;
-        }
-
-        // Reset timeout state and clear old messages to let backend send accurate first message
-        setAuthTimeout(false);
-        setAuthStatus('');
-        setAuthSubMessage('');
-
-        // Immediately set the ref when switching orgs to prevent race conditions
-        if (force) {
-            isSwitchingRef.current = true;
-        }
-
-        // Update all state in a single call to prevent UI blips
-        updateState({
-            adobeAuth: {
-                ...state.adobeAuth,
-                isChecking: true,
-                error: undefined,
-                // Keep isAuthenticated as-is - we're switching orgs, not logging out
-                // The checking state will show appropriate loading UI
-            },
-            // Clear organization-related state when switching
-            ...(force && {
-                adobeOrg: undefined,
-                adobeProject: undefined,
-                adobeWorkspace: undefined,
-            }),
-        });
-        // Backend sends auth-status message immediately - will override our initial message
-
-        // NOTE: No frontend timeout - backend handles timeout detection
-        // Backend will send auth-status with error='timeout' if authentication times out
-        // This prevents race conditions where frontend timeout fires before backend completes post-login work
-
-        webviewClient.requestAuth(force);
-    };
+    const { adobeAuth, adobeOrg } = state;
 
     return (
         <SingleColumnLayout>
@@ -195,10 +44,10 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 We need to authenticate with Adobe to deploy your API Mesh and access Adobe services.
             </Text>
 
-            {/* Authentication Status - Checking (or not yet checked) */}
-            {(showLoadingSpinner || state.adobeAuth.isAuthenticated === undefined) && !authTimeout && (
+            {/* Loading state */}
+            {(showLoadingSpinner || adobeAuth.isAuthenticated === undefined) && !authTimeout && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                    <LoadingDisplay 
+                    <LoadingDisplay
                         size="L"
                         helperText="This could take up to 1 minute"
                         message={authStatus || 'Connecting to Adobe services...'}
@@ -207,24 +56,18 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 </Flex>
             )}
 
-            {/* Token expiring soon - warning state */}
-            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && state.adobeAuth.tokenExpiringSoon && (
+            {/* Token expiring soon */}
+            {!adobeAuth.isChecking && adobeAuth.isAuthenticated && adobeAuth.tokenExpiringSoon && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Alert UNSAFE_className="text-orange-500" size="L" />
                         <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-xl font-medium">
-                                Session Expiring Soon
-                            </Text>
+                            <Text UNSAFE_className="text-xl font-medium">Session Expiring Soon</Text>
                             <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                Your Adobe session expires in {state.adobeAuth.tokenExpiresIn || 0} {state.adobeAuth.tokenExpiresIn === 1 ? 'minute' : 'minutes'}. Please re-authenticate to avoid interruption during project setup.
+                                Your Adobe session expires in {adobeAuth.tokenExpiresIn || 0} {adobeAuth.tokenExpiresIn === 1 ? 'minute' : 'minutes'}. Please re-authenticate to avoid interruption during project setup.
                             </Text>
                         </Flex>
-                        <Button
-                            variant="accent"
-                            onPress={() => handleLogin(true)}
-                            marginTop="size-300"
-                        >
+                        <Button variant="accent" onPress={() => handleLogin(true)} marginTop="size-300">
                             <Login size="S" marginEnd="size-100" />
                             Re-authenticate Now
                         </Button>
@@ -233,23 +76,15 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Authenticated with valid organization */}
-            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && state.adobeOrg && !state.adobeAuth.tokenExpiringSoon && (
+            {!adobeAuth.isChecking && adobeAuth.isAuthenticated && adobeOrg && !adobeAuth.tokenExpiringSoon && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <CheckmarkCircle UNSAFE_className="text-green-600" size="L" />
                         <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-lg font-medium">
-                                Connected
-                            </Text>
-                            <Text UNSAFE_className="text-sm text-gray-600">
-                                {state.adobeOrg.name}
-                            </Text>
+                            <Text UNSAFE_className="text-lg font-medium">Connected</Text>
+                            <Text UNSAFE_className="text-sm text-gray-600">{adobeOrg.name}</Text>
                         </Flex>
-                        <Button
-                            variant="secondary"
-                            onPress={() => handleLogin(true)}
-                            marginTop="size-200"
-                        >
+                        <Button variant="secondary" onPress={() => handleLogin(true)} marginTop="size-200">
                             Switch Organizations
                         </Button>
                     </Flex>
@@ -257,37 +92,23 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
             )}
 
             {/* Authenticated but organization selection required */}
-            {!state.adobeAuth.isChecking && state.adobeAuth.isAuthenticated && !state.adobeOrg && (
+            {!adobeAuth.isChecking && adobeAuth.isAuthenticated && !adobeOrg && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <AlertCircle UNSAFE_className="text-orange-500" size="L" />
                         <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-xl font-medium">
-                                Select Your Organization
-                            </Text>
+                            <Text UNSAFE_className="text-xl font-medium">Select Your Organization</Text>
                             <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                {state.adobeAuth.orgLacksAccess ? (
-                                    <>
-                                        No organizations are currently accessible. If you just selected an organization, it may lack App Builder access, or there may be a temporary authentication issue.
-                                        <br />
-                                        Please choose an organization with App Builder enabled.
-                                    </>
-                                ) : state.adobeAuth.requiresOrgSelection ? (
-                                    "Your previous organization is no longer accessible. Please select a new organization to continue with your project."
+                                {adobeAuth.orgLacksAccess ? (
+                                    <>No organizations are currently accessible. Please choose an organization with App Builder enabled.</>
+                                ) : adobeAuth.requiresOrgSelection ? (
+                                    "Your previous organization is no longer accessible. Please select a new organization."
                                 ) : (
-                                    <>
-                                        You're signed in to Adobe, but haven't selected an organization yet.
-                                        <br />
-                                        Choose your organization to access App Builder projects.
-                                    </>
+                                    <>You're signed in to Adobe, but haven't selected an organization yet.</>
                                 )}
                             </Text>
                         </Flex>
-                        <Button
-                            variant="accent"
-                            onPress={() => handleLogin(true)}
-                            marginTop="size-300"
-                        >
+                        <Button variant="accent" onPress={() => handleLogin(true)} marginTop="size-300">
                             <Key size="S" marginEnd="size-100" />
                             Select Organization
                         </Button>
@@ -295,24 +116,18 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 </Flex>
             )}
 
-            {/* Not authenticated - normal state */}
-            {!state.adobeAuth.isChecking && !authTimeout && state.adobeAuth.isAuthenticated === false && !state.adobeAuth.error && (
+            {/* Not authenticated */}
+            {!adobeAuth.isChecking && !authTimeout && adobeAuth.isAuthenticated === false && !adobeAuth.error && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Key UNSAFE_className="text-gray-500" size="L" />
                         <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-xl font-medium">
-                                {authStatus || 'Sign in to Adobe'}
-                            </Text>
+                            <Text UNSAFE_className="text-xl font-medium">{authStatus || 'Sign in to Adobe'}</Text>
                             <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                {authSubMessage || "Connect your Adobe account to create and deploy App Builder applications. You'll be redirected to sign in through your browser."}
+                                {authSubMessage || "Connect your Adobe account to create and deploy App Builder applications."}
                             </Text>
                         </Flex>
-                        <Button
-                            variant="accent"
-                            onPress={() => handleLogin(false)}
-                            marginTop="size-300"
-                        >
+                        <Button variant="accent" onPress={() => handleLogin(false)} marginTop="size-300">
                             <Login size="S" marginEnd="size-100" />
                             Sign In with Adobe
                         </Button>
@@ -320,34 +135,32 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 </Flex>
             )}
 
-            {/* Error state with helpful guidance */}
-            {!state.adobeAuth.isChecking && state.adobeAuth.error && !authTimeout && (
+            {/* Error state */}
+            {!adobeAuth.isChecking && adobeAuth.error && !authTimeout && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
-                        {state.adobeAuth.error === 'no_app_builder_access' ? (
+                        {adobeAuth.error === 'no_app_builder_access' ? (
                             <AlertCircle UNSAFE_className="text-orange-500" size="L" />
                         ) : (
                             <Alert UNSAFE_className="text-red-500" size="L" />
                         )}
                         <Flex direction="column" gap="size-100" alignItems="center">
                             <Text UNSAFE_className="text-xl font-medium">
-                                {state.adobeAuth.error === 'no_app_builder_access' ? 'Insufficient Privileges' : 'Connection Issue'}
+                                {adobeAuth.error === 'no_app_builder_access' ? 'Insufficient Privileges' : 'Connection Issue'}
                             </Text>
                             <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                {authSubMessage || (state.adobeAuth.error === 'no_app_builder_access'
-                                    ? "You need Developer or System Admin role in an Adobe organization with App Builder access. Please contact your administrator to request the appropriate permissions."
-                                    : "We couldn't connect to Adobe services. Please check your internet connection and try again.")}
+                                {authSubMessage || (adobeAuth.error === 'no_app_builder_access'
+                                    ? "You need Developer or System Admin role in an Adobe organization with App Builder access."
+                                    : "We couldn't connect to Adobe services. Please check your internet connection.")}
                             </Text>
                         </Flex>
                         <Flex direction="row" gap="size-200" marginTop="size-300">
-                            {state.adobeAuth.error === 'no_app_builder_access' ? (
-                                // For permission errors, force fresh login to select different org
+                            {adobeAuth.error === 'no_app_builder_access' ? (
                                 <Button variant="accent" onPress={() => handleLogin(true)}>
                                     <Login size="S" marginEnd="size-100" />
                                     Sign In Again
                                 </Button>
                             ) : (
-                                // For connection errors, show both retry and sign in options
                                 <>
                                     <Button variant="secondary" onPress={() => checkAuthentication()}>
                                         <Refresh size="S" marginEnd="size-100" />
@@ -364,24 +177,18 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 </Flex>
             )}
 
-            {/* Timeout state - similar to error but with specific messaging */}
-            {authTimeout && !state.adobeAuth.isChecking && !state.adobeAuth.isAuthenticated && (
+            {/* Timeout state */}
+            {authTimeout && !adobeAuth.isChecking && !adobeAuth.isAuthenticated && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Alert UNSAFE_className="text-red-500" size="L" />
                         <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-xl font-medium">
-                                Authentication Timed Out
-                            </Text>
+                            <Text UNSAFE_className="text-xl font-medium">Authentication Timed Out</Text>
                             <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                The browser authentication window may have been closed or the session expired. You can try again.
+                                The browser authentication window may have been closed or the session expired.
                             </Text>
                         </Flex>
-                        <Button variant="accent" onPress={() => {
-                            // Clear timeout immediately to prevent flash during state transition
-                            setAuthTimeout(false);
-                            handleLogin(false);
-                        }} marginTop="size-300">
+                        <Button variant="accent" onPress={() => handleLogin(false)} marginTop="size-300">
                             <Login size="S" marginEnd="size-100" />
                             Retry Login
                         </Button>
@@ -389,11 +196,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthSt
                 </Flex>
             )}
 
-            <style>{`
-                .text-center {
-                    text-align: center;
-                }
-            `}</style>
+            <style>{`.text-center { text-align: center; }`}</style>
         </SingleColumnLayout>
     );
 }
