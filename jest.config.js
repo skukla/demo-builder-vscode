@@ -60,6 +60,7 @@ module.exports = {
         '**/tests/webview-ui/**/*.test.ts',
         '**/tests/webview-ui/**/*.test.tsx',
         '**/tests/features/**/*.test.tsx',
+        '**/tests/core/ui/**/*.test.tsx',
         '**/src/features/**/*.test.tsx'
       ],
       transform: {
