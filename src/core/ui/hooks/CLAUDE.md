@@ -18,15 +18,19 @@ hooks/
 ├── State Management Hooks
 │   ├── useLoadingState.ts      # Loading/error/data state
 │   ├── useSelection.ts         # Single-item selection
-│   └── useAsyncData.ts         # Async data fetching pattern
+│   ├── useAsyncData.ts         # Async data fetching pattern
+│   └── useAsyncOperation.ts    # Async operation state management
 │
 ├── UI Interaction Hooks
 │   ├── useAutoScroll.ts        # Auto-scroll container logic
 │   ├── useSearchFilter.ts      # Search/filter arrays
-│   └── useFocusTrap.ts         # Focus trap for accessibility
+│   ├── useFocusTrap.ts         # Focus trap for accessibility
+│   └── useFocusOnMount.ts      # Focus element on mount
 │
 ├── Utility Hooks
-│   └── useDebouncedValue.ts    # Debounce any value
+│   ├── useDebouncedValue.ts    # Debounce any value
+│   ├── useIsMounted.ts         # Track mount state (unmount safety)
+│   └── useSetToggle.ts         # Set with toggle functionality
 │
 └── General-Purpose Hooks
     ├── useDebouncedLoading.ts  # Debounce loading state
@@ -180,6 +184,45 @@ return (
 - Data transformation
 - Refresh support
 
+#### useAsyncOperation
+Manage async operation state with messages, callbacks, and unmount safety.
+
+**Example:**
+```tsx
+const checkOperation = useAsyncOperation<CheckResult>({
+    onSuccess: (result) => console.log('Success:', result),
+    onError: (error) => console.error('Failed:', error),
+    initialMessage: 'Checking...',
+});
+
+const handleCheck = async () => {
+    checkOperation.setMessage('Verifying configuration...');
+    await checkOperation.execute(async () => {
+        return await api.check();
+    });
+};
+
+return (
+    <div>
+        {checkOperation.isExecuting && <Spinner />}
+        {checkOperation.message && <Text>{checkOperation.message}</Text>}
+        {checkOperation.error && <Error>{checkOperation.error.message}</Error>}
+    </div>
+);
+```
+
+**Features:**
+- `isExecuting` state tracking
+- `message`/`subMessage` management for status display
+- `error` handling with callbacks (onSuccess, onError)
+- Unmount safety (prevents state updates after unmount)
+- `reset()` function to restore initial state
+- Non-Error throws converted to Error objects
+
+**Comparison with useAsyncData:**
+- `useAsyncData`: For fetching data that listens to VS Code messages
+- `useAsyncOperation`: For executing operations that don't need message integration
+
 ### UI Interaction Hooks
 
 #### useAutoScroll
@@ -264,6 +307,36 @@ return (
 
 **Exported Constants:**
 - `FOCUSABLE_SELECTOR` - Standard selector string for finding focusable elements (includes native elements and ARIA roles for Spectrum components)
+
+#### useFocusOnMount
+Focus an element on mount using a simple 3-tier strategy.
+
+**Example:**
+```tsx
+const containerRef = useRef<HTMLDivElement>(null);
+useFocusOnMount(containerRef, { selector: 'button' });
+
+return (
+  <div ref={containerRef}>
+    <Picker placeholder="Select option">...</Picker>
+  </div>
+);
+```
+
+**Features:**
+- 3-tier focus strategy: immediate → RAF → timeout fallback
+- Custom selector for finding focus target
+- Configurable fallback delay
+- Disable option for conditional focus
+- Automatic cleanup on unmount
+
+**Strategy:**
+1. **Immediate**: Try focusing synchronously (for pre-rendered content)
+2. **RAF**: Try after animation frame (for async Spectrum components)
+3. **Timeout**: Final fallback for slow rendering (default: 1000ms)
+
+**Why not MutationObserver?**
+MutationObserver adds overhead and is unreliable with React's rendering cycle. The RAF + timeout approach is simpler, more predictable, and covers 99% of cases.
 
 ### Utility Hooks
 
@@ -503,6 +576,59 @@ test('useSelection selects and clears items', () => {
 });
 ```
 
+### Utility Hooks (Additional)
+
+#### useIsMounted
+Track whether a component is mounted to prevent state updates after unmount.
+
+**Example:**
+```tsx
+const isMounted = useIsMounted();
+
+const loadData = async () => {
+  const result = await fetchData();
+  if (isMounted.current) {
+    setData(result); // Safe - won't update unmounted component
+  }
+};
+```
+
+**Features:**
+- Returns a ref that tracks mount state
+- Automatically updates on unmount
+- Prevents "setState on unmounted component" warnings
+- Zero runtime overhead (ref-based)
+
+**Used By:**
+- `useAsyncOperation` - Prevents state updates after unmount
+
+#### useSetToggle
+Manages a Set with toggle functionality for multi-select UIs.
+
+**Example:**
+```tsx
+const [selectedItems, toggleItem, setSelectedItems] = useSetToggle<string>(['initial']);
+
+// Toggle items
+toggleItem('item-1', true);  // Add
+toggleItem('item-1', false); // Remove
+
+// Check selection
+selectedItems.has('item-1');
+
+// Reset
+setSelectedItems(new Set());
+```
+
+**Features:**
+- Generic type support
+- Accepts initial Set or array
+- Returns [set, toggle, setSet] tuple
+- Memoized toggle function
+
+**Used By:**
+- `useComponentSelection` - Manages 4 multi-select Sets (dependencies, services, integrations, appBuilderApps)
+
 ## Future Enhancements
 
 Potential hooks to add:
@@ -515,5 +641,5 @@ Potential hooks to add:
 
 ---
 
-**Last Updated:** 2025-10-12
-**Phase:** 2 - React Hooks Extraction
+**Last Updated:** 2025-11-27
+**Phase:** 3 - Hook Efficiency Refactoring

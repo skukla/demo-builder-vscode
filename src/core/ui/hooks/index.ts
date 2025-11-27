@@ -12,11 +12,14 @@ export { useVSCodeRequest } from './useVSCodeRequest';
 export { useLoadingState } from './useLoadingState';
 export { useSelection } from './useSelection';
 export { useAsyncData } from './useAsyncData';
+export { useAsyncOperation } from './useAsyncOperation';
+export type { UseAsyncOperationOptions, UseAsyncOperationReturn } from './useAsyncOperation';
 
 // UI Interaction Hooks
 export { useAutoScroll } from './useAutoScroll';
 export { useSearchFilter } from './useSearchFilter';
 export { useFocusTrap, FOCUSABLE_SELECTOR } from './useFocusTrap';
+export { useFocusOnMount } from './useFocusOnMount';
 
 // General Purpose Hooks
 export { useSelectableDefault, useSelectableDefaultWhen } from './useSelectableDefault';
@@ -25,3 +28,5 @@ export { useSelectableDefault, useSelectableDefaultWhen } from './useSelectableD
 export { useDebouncedLoading } from './useDebouncedLoading';
 export { useDebouncedValue } from './useDebouncedValue';
 export { useMinimumLoadingTime } from './useMinimumLoadingTime';
+export { useIsMounted } from './useIsMounted';
+export { useSetToggle } from './useSetToggle';
