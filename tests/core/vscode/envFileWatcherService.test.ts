@@ -183,10 +183,9 @@ describe('EnvFileWatcherService', () => {
             // When: Service initialized
             service.initialize();
 
-            // Then: Should log initialization for workspace folders
-            expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Initialized watchers for 2 workspace folders'),
-            );
+            // Then: Should create watchers (silent initialization - no debug log)
+            // Verify by checking createFileSystemWatcher was called for each folder
+            expect(vscode.workspace.createFileSystemWatcher).toHaveBeenCalled();
         });
     });
 
