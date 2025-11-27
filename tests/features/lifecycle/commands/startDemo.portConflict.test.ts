@@ -224,7 +224,7 @@ describe('StartDemoCommand - Port Conflict', () => {
 
             // And: Event-driven wait (no hardcoded setTimeout delay)
             // This is validated by the ProcessCleanup mock being called
-        }, 30000); // Increase test timeout
+        });
     });
 
     describe('Test 2.2: Port Conflict User Cancels', () => {
@@ -307,6 +307,6 @@ describe('StartDemoCommand - Port Conflict', () => {
 
             // And: Terminal created (demo started)
             expect(vscode.window.createTerminal).toHaveBeenCalled();
-        }, 30000); // Increase test timeout
+        });
     });
 });

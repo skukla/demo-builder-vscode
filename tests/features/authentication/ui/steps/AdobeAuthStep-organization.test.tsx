@@ -7,6 +7,7 @@ import {
     mockRequestAuth,
     baseState,
     resetMocks,
+    cleanupTests,
 } from './AdobeAuthStep.testUtils';
 
 // Mock WebviewClient
@@ -44,6 +45,10 @@ describe('AdobeAuthStep - Organization Selection', () => {
 
     beforeEach(() => {
         resetMocks();
+    });
+
+    afterEach(() => {
+        cleanupTests();
     });
 
     describe('Organization Selection', () => {

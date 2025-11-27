@@ -10,8 +10,10 @@ import * as path from 'path';
 import { setupMocks, mockStateFile, createMockProject, type TestMocks } from './stateManager.testUtils';
 import type { Project } from '@/types';
 
-// Re-declare mocks to ensure proper typing
+// Re-declare mocks to ensure proper typing and hoisting
+jest.mock('vscode');
 jest.mock('fs/promises');
+jest.mock('os');
 
 describe('StateManager - Project Management', () => {
     let testMocks: TestMocks;

@@ -1,11 +1,19 @@
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di';
 import * as vscode from 'vscode';
+import * as fs from 'fs/promises';
 
 // Mock dependencies
 jest.mock('vscode');
 jest.mock('@/core/di');
 jest.mock('fs/promises');
+
+// Mock validatePathSafety since it uses dynamic import
+const mockValidatePathSafety = jest.fn();
+jest.mock('@/core/validation/securityValidation', () => ({
+    ...jest.requireActual('@/core/validation/securityValidation'),
+    validatePathSafety: (...args: any[]) => mockValidatePathSafety(...args),
+}));
 
 describe('ResetAllCommand - Adobe CLI cleanup', () => {
     let command: ResetAllCommand;
@@ -67,7 +75,7 @@ describe('ResetAllCommand - Adobe CLI cleanup', () => {
         (vscode.workspace.workspaceFolders as any) = [];
         (vscode.workspace.updateWorkspaceFolders as jest.Mock) = jest.fn();
 
-        // Mock fs/promises for path validation
+        // Mock fs/promises for file operations
         const fs = require('fs/promises');
         fs.lstat = jest.fn().mockResolvedValue({
             isSymbolicLink: () => false,
@@ -75,6 +83,9 @@ describe('ResetAllCommand - Adobe CLI cleanup', () => {
             isFile: () => false,
         });
         fs.rm = jest.fn().mockResolvedValue(undefined);
+
+        // Default mock for validatePathSafety - safe path
+        mockValidatePathSafety.mockResolvedValue({ safe: true });
 
         // Create command instance
         command = new ResetAllCommand(mockContext, mockStateManager, mockStatusBar, mockLogger);
@@ -161,8 +172,8 @@ describe('ResetAllCommand - Adobe CLI cleanup', () => {
                 callOrder.push('statusBarReset');
             });
 
-            const fs = require('fs/promises');
-            fs.rm = jest.fn().mockImplementation(() => {
+            // Use module-level fs import for consistent mock reference
+            (fs.rm as jest.Mock).mockImplementation(() => {
                 callOrder.push('fileDelete');
                 return Promise.resolve();
             });

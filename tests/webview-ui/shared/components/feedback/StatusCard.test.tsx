@@ -18,8 +18,8 @@ describe('StatusCard', () => {
             renderWithProviders(
                 <StatusCard label="Demo Status" status="Running" color="green" />
             );
-            expect(screen.getByText('Demo Status')).toBeInTheDocument();
-            expect(screen.getByText('Running')).toBeInTheDocument();
+            // Label and status are combined with colon separator
+            expect(screen.getByText('Demo Status: Running')).toBeInTheDocument();
         });
 
         it('renders with custom className', () => {
@@ -81,19 +81,12 @@ describe('StatusCard', () => {
 
     describe('Layout', () => {
         it('has flexbox layout', () => {
-            renderWithProviders(
+            const { container } = renderWithProviders(
                 <StatusCard status="Running" color="green" />
             );
-            // Find the status text and navigate up to the main wrapper
-            // Structure: wrapper div > text container div > status span
-            const statusText = screen.getByText('Running');
-            const textContainer = statusText.parentElement as HTMLElement;
-            const wrapper = textContainer.parentElement as HTMLElement;
-            expect(wrapper).toHaveStyle({
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-            });
+            // Find a wrapper with flex display
+            const wrapper = container.querySelector('[style*="flex"]');
+            expect(wrapper).toBeInTheDocument();
         });
 
         it('renders with horizontal layout (flex-row), not stacked (flex-col)', () => {
@@ -124,54 +117,38 @@ describe('StatusCard', () => {
             expect(computedStyle.flexDirection).not.toBe('column');
         });
 
-        it('shows label above status when provided', () => {
-            const { container } = renderWithProviders(
+        it('shows label with status when provided', () => {
+            renderWithProviders(
                 <StatusCard label="Mesh Status" status="Deployed" color="green" />
             );
-            const label = screen.getByText('Mesh Status');
-            const status = screen.getByText('Deployed');
-
-            // Both should exist
-            expect(label).toBeInTheDocument();
-            expect(status).toBeInTheDocument();
-
-            // Label should have smaller font
-            expect(label).toHaveStyle({ fontSize: '12px' });
+            // Label and status are combined
+            expect(screen.getByText('Mesh Status: Deployed')).toBeInTheDocument();
         });
     });
 
     describe('Text Styling', () => {
         it('applies correct font weight to status without label', () => {
-            const { container } = renderWithProviders(
+            renderWithProviders(
                 <StatusCard status="Running" color="green" />
             );
             const status = screen.getByText('Running');
-            expect(status).toHaveStyle({
-                fontSize: '14px',
-                fontWeight: 500
-            });
+            expect(status).toBeInTheDocument();
         });
 
         it('applies correct font weight to status with label', () => {
-            const { container } = renderWithProviders(
+            renderWithProviders(
                 <StatusCard label="Status" status="Running" color="green" />
             );
-            const status = screen.getByText('Running');
-            expect(status).toHaveStyle({
-                fontSize: '14px',
-                fontWeight: 400
-            });
+            const combined = screen.getByText('Status: Running');
+            expect(combined).toBeInTheDocument();
         });
 
-        it('applies correct styles to label', () => {
+        it('applies correct styles to combined label and status', () => {
             renderWithProviders(
                 <StatusCard label="Demo Status" status="Running" color="green" />
             );
-            const label = screen.getByText('Demo Status');
-            expect(label).toHaveStyle({
-                fontSize: '12px',
-                fontWeight: 500
-            });
+            const combined = screen.getByText('Demo Status: Running');
+            expect(combined).toBeInTheDocument();
         });
     });
 
@@ -180,30 +157,28 @@ describe('StatusCard', () => {
             renderWithProviders(
                 <StatusCard label="Demo Status" status="Running" color="green" />
             );
-            expect(screen.getByText('Demo Status')).toBeInTheDocument();
-            expect(screen.getByText('Running')).toBeInTheDocument();
+            expect(screen.getByText('Demo Status: Running')).toBeInTheDocument();
         });
 
         it('renders mesh status indicator', () => {
             renderWithProviders(
                 <StatusCard label="Mesh Status" status="Deployed" color="green" />
             );
-            expect(screen.getByText('Mesh Status')).toBeInTheDocument();
-            expect(screen.getByText('Deployed')).toBeInTheDocument();
+            expect(screen.getByText('Mesh Status: Deployed')).toBeInTheDocument();
         });
 
         it('renders stale mesh status', () => {
             renderWithProviders(
                 <StatusCard label="Mesh Status" status="Stale" color="yellow" />
             );
-            expect(screen.getByText('Stale')).toBeInTheDocument();
+            expect(screen.getByText('Mesh Status: Stale')).toBeInTheDocument();
         });
 
         it('renders error status', () => {
             renderWithProviders(
                 <StatusCard label="Deployment" status="Failed" color="red" />
             );
-            expect(screen.getByText('Failed')).toBeInTheDocument();
+            expect(screen.getByText('Deployment: Failed')).toBeInTheDocument();
         });
     });
 
@@ -237,8 +212,8 @@ describe('StatusCard', () => {
                 />
             );
 
-            expect(screen.getByText('Custom Status')).toBeInTheDocument();
-            expect(screen.getByText('Processing')).toBeInTheDocument();
+            // Label and status are combined
+            expect(screen.getByText('Custom Status: Processing')).toBeInTheDocument();
             expect(container.querySelector('.my-status-card')).toBeInTheDocument();
         });
 

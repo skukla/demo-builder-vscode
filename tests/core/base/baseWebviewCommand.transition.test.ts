@@ -11,10 +11,16 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 describe('Webview Transition Timeout Safety', () => {
     beforeEach(() => {
+        jest.useFakeTimers();
         // Reset static state between tests
         BaseWebviewCommand['webviewTransitionInProgress'] = false;
         BaseWebviewCommand['transitionTimeout'] = undefined;
         jest.clearAllTimers();
+    });
+
+    afterEach(() => {
+        jest.clearAllTimers();
+        jest.useRealTimers();
     });
 
     describe('Timeout Creation', () => {
@@ -61,8 +67,6 @@ describe('Webview Transition Timeout Safety', () => {
 
     describe('Auto-Cleanup on Timeout', () => {
         it('should auto-clear transition after 3 seconds', () => {
-            jest.useFakeTimers();
-
             BaseWebviewCommand.startWebviewTransition();
             expect(BaseWebviewCommand['webviewTransitionInProgress']).toBe(true);
 
@@ -70,13 +74,9 @@ describe('Webview Transition Timeout Safety', () => {
 
             expect(BaseWebviewCommand['webviewTransitionInProgress']).toBe(false);
             expect(BaseWebviewCommand['transitionTimeout']).toBeUndefined();
-
-            jest.useRealTimers();
         });
 
         it('should handle manual end after timeout fired (race condition)', () => {
-            jest.useFakeTimers();
-
             BaseWebviewCommand.startWebviewTransition();
             jest.advanceTimersByTime(TIMEOUTS.WEBVIEW_TRANSITION);
 
@@ -84,8 +84,6 @@ describe('Webview Transition Timeout Safety', () => {
             expect(() => {
                 BaseWebviewCommand.endWebviewTransition();
             }).not.toThrow();
-
-            jest.useRealTimers();
         });
     });
 

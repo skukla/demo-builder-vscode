@@ -9,6 +9,7 @@ import {
     baseState,
     setupAuthStatusMock,
     resetMocks,
+    cleanupTests,
 } from './AdobeAuthStep.testUtils';
 
 // Mock WebviewClient
@@ -47,6 +48,10 @@ describe('AdobeAuthStep - Error Handling', () => {
 
     beforeEach(() => {
         resetMocks();
+    });
+
+    afterEach(() => {
+        cleanupTests();
     });
 
     describe('Error Handling', () => {

@@ -87,7 +87,7 @@ export function setupDefaultMocks(): MockCommandExecutor {
 
     // Mock vscode
     (vscode.window.showInformationMessage as jest.Mock).mockResolvedValue(undefined);
-    (vscode.workspace as any) = { isTrusted: true };
+    (vscode.workspace as any).isTrusted = true;
 
     // Mock fs
     (fs.existsSync as jest.Mock).mockReturnValue(false);

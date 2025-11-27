@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act, waitFor, cleanup } from '@testing-library/react';
 import { useMeshOperations } from '@/features/mesh/ui/steps/hooks/useMeshOperations';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
@@ -22,6 +22,16 @@ describe('useMeshOperations', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        // Restore timers FIRST so cleanup() can work properly
+        jest.runOnlyPendingTimers();
+        jest.useRealTimers();
+        // Then cleanup React components and mocks
+        cleanup();
+        jest.resetAllMocks();
     });
 
     describe('checkMesh operation', () => {

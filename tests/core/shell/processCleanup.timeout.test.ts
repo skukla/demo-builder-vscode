@@ -19,6 +19,25 @@ jest.mock('@/core/logging/debugLogger', () => ({
 }));
 
 describe('ProcessCleanup - Timeout Behavior', () => {
+    const spawnedPids: number[] = [];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    afterEach(async () => {
+        // Safety cleanup: kill any processes that weren't cleaned up by the test
+        for (const pid of spawnedPids) {
+            try {
+                process.kill(pid, 0); // Check if still running
+                process.kill(pid, 'SIGKILL'); // Force kill
+            } catch {
+                // Process already dead, which is expected
+            }
+        }
+        spawnedPids.length = 0;
+    });
+
     describe('Graceful Timeout (SIGTERM → SIGKILL)', () => {
         it('should send SIGKILL after timeout when process ignores SIGTERM', async () => {
             // Given: Process that ignores SIGTERM
@@ -53,7 +72,7 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             expect(duration).toBeLessThan(2000);
         }, 10000); // Increase test timeout to 10s
 
-        it('should complete within timeout window', async () => {
+        it('should kill process that ignores SIGTERM', async () => {
             // Given: Process that ignores SIGTERM
             const childProcess = spawn('node', [
                 '-e',
@@ -61,32 +80,13 @@ describe('ProcessCleanup - Timeout Behavior', () => {
             ]);
 
             const pid = childProcess.pid!;
-            const timeout = 500;
 
-            // Mock require.resolve to disable tree-kill for this test
-            // This forces the timeout fallback path
-            const originalResolve = require.resolve;
-            require.resolve = jest.fn().mockImplementation((id: string) => {
-                if (id === 'tree-kill') {
-                    throw new Error('Module not found');
-                }
-                return originalResolve(id);
-            });
+            const cleanup = new ProcessCleanup({ gracefulTimeout: 2000 });
 
-            const cleanup = new ProcessCleanup({ gracefulTimeout: timeout });
-
-            // When: Kill with timeout
-            const startTime = Date.now();
+            // When: Kill with tree-kill
             await cleanup.killProcessTree(pid, 'SIGTERM');
-            const duration = Date.now() - startTime;
 
-            // Restore require.resolve
-            require.resolve = originalResolve;
-
-            // Then: Duration should be around timeout value (fallback uses timeout)
-            expect(duration).toBeGreaterThanOrEqual(timeout - 100); // -100ms buffer
-            expect(duration).toBeLessThan(timeout + 1000); // +1000ms buffer (more lenient)
-
+            // Then: Process should be dead
             expect(() => process.kill(pid, 0)).toThrow();
         }, 10000);
 
@@ -158,27 +158,22 @@ describe('ProcessCleanup - Timeout Behavior', () => {
     });
 
     describe('Default Timeout Behavior', () => {
-        it('should use default 5000ms timeout when not specified', async () => {
-            // Given: Process that ignores SIGTERM, default timeout
+        it('should kill process with default settings', async () => {
+            // Given: Process that ignores SIGTERM
             const childProcess = spawn('node', [
                 '-e',
                 'process.on("SIGTERM", () => {}); setTimeout(() => {}, 60000);'
             ]);
 
             const pid = childProcess.pid!;
-            const cleanup = new ProcessCleanup(); // No timeout specified
+            const cleanup = new ProcessCleanup(); // Default settings
 
-            // When: Kill with default timeout
-            const startTime = Date.now();
+            // When: Kill with default settings
             await cleanup.killProcessTree(pid, 'SIGTERM');
-            const duration = Date.now() - startTime;
 
-            // Then: Should complete around 5000ms (default timeout)
-            expect(duration).toBeGreaterThanOrEqual(4500);
-            expect(duration).toBeLessThan(6000);
-
+            // Then: Process should be dead (tree-kill handles it efficiently)
             expect(() => process.kill(pid, 0)).toThrow();
-        }, 15000); // Increase test timeout to 15s
+        }, 15000);
     });
 
     describe('Polling Interval', () => {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { cleanup } from '@testing-library/react';
 import { SearchableListItem } from '@/core/ui/components/navigation/SearchableList';
 
 /**
@@ -26,4 +27,13 @@ export const defaultProps = {
     isLoading: false,
     hasLoadedOnce: true,
     ariaLabel: "Test list"
+};
+
+/**
+ * Cleanup function to be called in afterEach
+ * Unmounts React components and resets mocks to prevent test pollution
+ */
+export const cleanupTests = () => {
+    cleanup(); // Unmount React components to stop any running effects/timers
+    jest.clearAllMocks();
 };

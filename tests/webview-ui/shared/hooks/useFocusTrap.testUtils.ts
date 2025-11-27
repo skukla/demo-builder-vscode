@@ -1,12 +1,14 @@
+import { cleanup } from '@testing-library/react';
+
 /**
  * Shared test utilities for useFocusTrap hook tests
  */
 
 /**
  * Helper to wait for effect execution (useLayoutEffect runs synchronously, but this provides safety margin)
- * Note: Previously used for polling-based implementation; now used as safety delay for async test execution
+ * Uses microtask queue flushing rather than real timers for reliability
  */
-export const waitForEffectExecution = () => new Promise(resolve => setTimeout(resolve, 20));
+export const waitForEffectExecution = () => Promise.resolve().then(() => Promise.resolve());
 
 /**
  * Factory to create a test container with focusable elements
@@ -69,4 +71,12 @@ export function cleanupExternalButton(button: HTMLButtonElement) {
   if (button.parentElement) {
     document.body.removeChild(button);
   }
+}
+
+/**
+ * Full cleanup function for afterEach
+ */
+export function cleanupTests() {
+  cleanup(); // React Testing Library cleanup
+  jest.clearAllMocks();
 }

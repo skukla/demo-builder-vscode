@@ -58,7 +58,9 @@ describe('WebviewCommunicationManager - Handshake & Lifecycle', () => {
     });
 
     afterEach(() => {
+        jest.clearAllTimers();
         jest.useRealTimers();
+        jest.restoreAllMocks();
     });
 
     describe('initialization and handshake', () => {

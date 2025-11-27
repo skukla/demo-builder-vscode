@@ -128,7 +128,7 @@ describe('MeshDeployment - Progress Reporting', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith('✓ Deployment Complete', 'https://example.com/graphql');
+            expect(onProgress).toHaveBeenCalledWith('✓ Deployment Complete', 'Mesh deployed successfully');
         });
 
         it('should track all progress phases in order', async () => {

@@ -20,6 +20,7 @@ jest.mock('@/features/mesh/services/meshVerifier', () => ({
 
 import { handleRequestStatus } from '@/features/dashboard/handlers/dashboardHandlers';
 import { setupMocks } from './dashboardHandlers.testUtils';
+import { flushPromises } from '../../../testUtils/async';
 
 describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handling', () => {
     beforeEach(() => {
@@ -92,7 +93,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         });
 
         // Wait for async check to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await flushPromises();
 
         // Then: Async update sends "checking" status (not "not-deployed")
         expect(mockContext.panel?.webview.postMessage).toHaveBeenCalledWith(
@@ -163,7 +164,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         await handleRequestStatus(mockContext);
 
         // Wait for async check to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await flushPromises();
 
         // Then: Async operation completes without crashing
         // Note: Actual async status depends on handler's change detection logic
@@ -235,7 +236,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         });
 
         // Wait for async check to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await flushPromises();
 
         // Then: Async operation completes without crashing
         // Note: Actual async status depends on handler's change detection logic
@@ -301,7 +302,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         expect(result.success).toBe(true);
 
         // Wait for async check to complete
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await flushPromises();
 
         // Then: Async operation completes without crashing
         // Note: Actual async status depends on handler's change detection logic

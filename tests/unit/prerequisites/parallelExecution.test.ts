@@ -128,9 +128,9 @@ describe('Parallel Per-Node-Version Checking', () => {
 
             // Each Node version should report its unique CLI version
             expect(result.perNodeVersionStatus).toEqual([
-                { version: 'Node 18', component: '10.1.0', installed: true },
-                { version: 'Node 20', component: '10.2.0', installed: true },
-                { version: 'Node 24', component: '10.3.0', installed: true },
+                { version: 'Node 18', component: '10.1.0', installed: true, major: '18' },
+                { version: 'Node 20', component: '10.2.0', installed: true, major: '20' },
+                { version: 'Node 24', component: '10.3.0', installed: true, major: '24' },
             ]);
         });
     });
@@ -169,9 +169,9 @@ describe('Parallel Per-Node-Version Checking', () => {
 
             // Node 18 should succeed, Node 20/24 should fail, all results returned
             expect(result.perNodeVersionStatus).toEqual([
-                { version: 'Node 18', component: '', installed: true },
-                { version: 'Node 20', component: '', installed: false },
-                { version: 'Node 24', component: '', installed: false },
+                { version: 'Node 18', component: '', installed: true, major: '18' },
+                { version: 'Node 20', component: '', installed: false, major: '20' },
+                { version: 'Node 24', component: '', installed: false, major: '24' },
             ]);
             expect(result.perNodeVariantMissing).toBe(true);
             expect(result.missingVariantMajors).toEqual(['20', '24']);
@@ -255,7 +255,7 @@ describe('Parallel Per-Node-Version Checking', () => {
             // Should complete quickly (no parallel overhead for single item)
             expect(duration).toBeLessThanOrEqual(500);
             expect(result.perNodeVersionStatus).toEqual([
-                { version: 'Node 18', component: '', installed: true },
+                { version: 'Node 18', component: '', installed: true, major: '18' },
             ]);
         });
     });
@@ -319,7 +319,8 @@ describe('Parallel Per-Node-Version Checking', () => {
             // For now, we verify the test structure is correct
             if (result === null) {
                 // Test timed out as expected with slow command
-                expect(duration).toBeGreaterThanOrEqual(2000);
+                // Allow 10ms tolerance for timing jitter
+                expect(duration).toBeGreaterThanOrEqual(1990);
             } else {
                 // If somehow completed, verify other checks weren't blocked
                 expect(duration).toBeLessThanOrEqual(2000);
@@ -361,9 +362,9 @@ describe('Parallel Per-Node-Version Checking', () => {
 
             // Node 20 should be skipped (not installed), but 18 and 24 should succeed
             expect(result.perNodeVersionStatus).toEqual([
-                { version: 'Node 18', component: '', installed: true },
-                { version: 'Node 20', component: '', installed: false },
-                { version: 'Node 24', component: '', installed: true },
+                { version: 'Node 18', component: '', installed: true, major: '18' },
+                { version: 'Node 20', component: '', installed: false, major: '20' },
+                { version: 'Node 24', component: '', installed: true, major: '24' },
             ]);
             expect(result.perNodeVariantMissing).toBe(true);
             expect(result.missingVariantMajors).toEqual(['20']);

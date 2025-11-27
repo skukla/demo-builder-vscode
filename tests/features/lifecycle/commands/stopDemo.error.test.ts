@@ -163,10 +163,8 @@ describe('StopDemoCommand - Error Handling', () => {
         it('should handle graceful timeout with force-kill fallback', async () => {
             // Given: Process ignores SIGTERM but ProcessCleanup handles timeout internally
             // ProcessCleanup configured with timeout (internal) - it still resolves eventually
-            mockProcessCleanup.killProcessTree.mockImplementation(async () => {
-                // Simulate timeout + force-kill (still resolves)
-                await new Promise(resolve => setTimeout(resolve, 50));
-            });
+            // ProcessCleanup handles timeout internally and always resolves
+            mockProcessCleanup.killProcessTree.mockResolvedValue(undefined);
 
             // When: stopDemo called
             await command.execute();

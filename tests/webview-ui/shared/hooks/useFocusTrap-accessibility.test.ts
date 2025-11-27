@@ -4,7 +4,8 @@ import {
   createTestContainer,
   cleanupTestContainer,
   waitForEffectExecution,
-  createTabEvent
+  createTabEvent,
+  cleanupTests
 } from './useFocusTrap.testUtils';
 
 /**
@@ -23,6 +24,7 @@ describe('useFocusTrap - Accessibility', () => {
 
   afterEach(() => {
     cleanupTestContainer(container);
+    cleanupTests();
   });
 
   describe('focusable elements', () => {

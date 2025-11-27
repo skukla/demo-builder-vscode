@@ -2,13 +2,17 @@ import React from 'react';
 import { renderWithProviders, screen } from "../../../../helpers/react-test-utils";
 import { Item, Text } from '@adobe/react-spectrum';
 import { SearchableList } from '@/core/ui/components/navigation/SearchableList';
-import { mockItems, defaultProps, TestItem } from './SearchableList.testUtils';
+import { mockItems, defaultProps, TestItem, cleanupTests } from './SearchableList.testUtils';
 
 /**
  * SearchableList component tests - Display customization and edge cases
  * Tests item count display, autofocus behavior, custom renderers, and edge cases
  */
 describe('SearchableList - Display Customization', () => {
+    afterEach(() => {
+        cleanupTests();
+    });
+
     describe('Item Count Display', () => {
         it('shows item count when loaded', () => {
             renderWithProviders(

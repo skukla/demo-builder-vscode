@@ -288,10 +288,8 @@ describe('AdobeEntityService - Organizations - Edge Cases', () => {
                     (parseJSON as jest.Mock).mockReturnValue([]);
                     return { stdout: '[]', stderr: '', code: 0, duration: 1000 };
                 }
-                // Config delete calls - track timing
+                // Config delete calls - track timing (parallel calls have same/close timestamps)
                 callTimestamps.push(Date.now());
-                // Add small delay to verify parallelism
-                await new Promise(resolve => setTimeout(resolve, 10));
                 return { stdout: '', stderr: '', code: 0, duration: 10 };
             });
 

@@ -134,3 +134,11 @@ export function setupStandardMocks() {
     (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({});
     (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
 }
+
+/**
+ * Cleanup function to be called in afterEach
+ */
+export function cleanupTests() {
+    jest.clearAllMocks();
+    jest.restoreAllMocks();
+}

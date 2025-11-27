@@ -9,8 +9,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { setupMocks, mockStateFile, createMockProject, type TestMocks } from './stateManager.testUtils';
 
-// Re-declare mocks to ensure proper typing
+// Re-declare mocks to ensure proper typing and hoisting
+jest.mock('vscode');
 jest.mock('fs/promises');
+jest.mock('os');
 
 describe('StateManager - Basic Operations', () => {
     let testMocks: TestMocks;
@@ -116,7 +118,26 @@ describe('StateManager - Basic Operations', () => {
                 lastUpdated: new Date().toISOString()
             };
 
-            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockState));
+            // Mock manifest data for project path
+            const mockManifest = {
+                name: project.name,
+                created: project.created?.toISOString(),
+                lastModified: project.lastModified?.toISOString()
+            };
+
+            // Mock fs.readFile to return correct data based on file path
+            (fs.readFile as jest.Mock).mockImplementation((filepath: string) => {
+                if (filepath.includes('state.json')) {
+                    return Promise.resolve(JSON.stringify(mockState));
+                }
+                if (filepath.includes('.demo-builder.json')) {
+                    return Promise.resolve(JSON.stringify(mockManifest));
+                }
+                if (filepath.includes('recent-projects.json')) {
+                    return Promise.resolve('[]');
+                }
+                return Promise.reject(new Error('File not found'));
+            });
 
             await stateManager.initialize();
             const result = await stateManager.getCurrentProject();

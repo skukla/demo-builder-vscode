@@ -7,11 +7,16 @@ import {
     createErrorResponse,
     renderApiMeshStep,
     setupMocks,
+    cleanupTests,
 } from './ApiMeshStep.testUtils';
 
 describe('ApiMeshStep - Error Handling & Edge Cases', () => {
     beforeEach(() => {
         setupMocks();
+    });
+
+    afterEach(() => {
+        cleanupTests();
     });
 
     describe('API Not Enabled Errors', () => {

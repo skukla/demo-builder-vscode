@@ -6,11 +6,16 @@ import {
     createMeshCheckResponse,
     renderApiMeshStep,
     setupMocks,
+    cleanupTests,
 } from './ApiMeshStep.testUtils';
 
 describe('ApiMeshStep - Configuration & Status Checking', () => {
     beforeEach(() => {
         setupMocks();
+    });
+
+    afterEach(() => {
+        cleanupTests();
     });
 
     describe('Initial Check', () => {

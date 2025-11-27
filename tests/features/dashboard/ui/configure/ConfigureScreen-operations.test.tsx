@@ -185,8 +185,8 @@ describe('ConfigureScreen - Operations', () => {
         });
     });
 
-    describe('Cancel Functionality', () => {
-        it('should send cancel message when Cancel clicked', async () => {
+    describe('Close Functionality', () => {
+        it('should send cancel message when Close clicked', async () => {
             const user = userEvent.setup();
             renderWithProvider(
                 <ConfigureScreen
@@ -195,8 +195,8 @@ describe('ConfigureScreen - Operations', () => {
                 />
             );
 
-            const cancelButton = screen.getByText('Cancel');
-            await user.click(cancelButton);
+            const closeButton = screen.getByText('Close');
+            await user.click(closeButton);
 
             expect(mockPostMessage).toHaveBeenCalledWith('cancel');
         });

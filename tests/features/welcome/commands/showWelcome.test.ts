@@ -292,25 +292,16 @@ describe('WelcomeWebviewCommand - Bundle Loading', () => {
     });
 
     describe('Helper Function Usage', () => {
-        it('should use getWebviewHTMLWithBundles helper for consistency', async () => {
-            // Spy on the helper function
-            const helperSpy = jest.spyOn(webviewHelpers, 'getWebviewHTMLWithBundles');
-
+        it('should generate webview HTML with correct bundles', async () => {
             // Set up panel so getWebviewContent can access it
             (command as any).panel = mockPanel;
-            await (command as any).getWebviewContent();
+            const html = await (command as any).getWebviewContent();
 
-            // Verify helper was called
-            expect(helperSpy).toHaveBeenCalledTimes(1);
-
-            // Verify it was called with correct bundle names
-            const callArgs = helperSpy.mock.calls[0][0];
-            expect(callArgs.bundleUris.runtime.toString()).toContain('runtime-bundle.js');
-            expect(callArgs.bundleUris.vendors.toString()).toContain('vendors-bundle.js');
-            expect(callArgs.bundleUris.common.toString()).toContain('common-bundle.js');
-            expect(callArgs.bundleUris.feature.toString()).toContain('welcome-bundle.js');
-
-            helperSpy.mockRestore();
+            // Verify HTML contains expected bundle references
+            expect(html).toContain('runtime-bundle.js');
+            expect(html).toContain('vendors-bundle.js');
+            expect(html).toContain('common-bundle.js');
+            expect(html).toContain('welcome-bundle.js');
         });
     });
 });

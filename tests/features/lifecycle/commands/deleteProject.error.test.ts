@@ -29,8 +29,14 @@ jest.mock('vscode', () => ({
     },
 }));
 
-// Mock fs/promises
-jest.mock('fs/promises');
+// Mock fs/promises with explicit exports
+jest.mock('fs/promises', () => ({
+    rm: jest.fn().mockResolvedValue(undefined),
+    access: jest.fn().mockRejectedValue({ code: 'ENOENT' }),
+}));
+import * as fs from 'fs/promises';
+const mockRm = fs.rm as jest.Mock;
+const mockAccess = fs.access as jest.Mock;
 
 // Mock logging
 jest.mock('@/core/logging', () => ({
@@ -57,7 +63,6 @@ describe('DeleteProjectCommand - Error Handling', () => {
     let mockStateManager: jest.Mocked<StateManager>;
     let mockStatusBar: jest.Mocked<StatusBarManager>;
     let mockLogger: jest.Mocked<Logger>;
-    let mockFs: any;
     const testProjectPath = '/tmp/test-project-error';
 
     // Store original setTimeout
@@ -66,10 +71,11 @@ describe('DeleteProjectCommand - Error Handling', () => {
     beforeEach(() => {
         jest.clearAllMocks();
 
-        // Set up fs mocks using require pattern
-        mockFs = require('fs/promises');
-        mockFs.rm = jest.fn().mockResolvedValue(undefined);
-        mockFs.access = jest.fn().mockRejectedValue({ code: 'ENOENT' });
+        // Reset fs mocks
+        mockRm.mockClear();
+        mockAccess.mockClear();
+        mockRm.mockResolvedValue(undefined);
+        mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
         // Mock extension context
         mockContext = {
@@ -131,14 +137,15 @@ describe('DeleteProjectCommand - Error Handling', () => {
 
     afterEach(() => {
         global.setTimeout = originalSetTimeout;
+        jest.clearAllTimers();
         jest.restoreAllMocks();
     });
 
     describe('Test 4: All retries exhausted', () => {
         it('should fail gracefully after 5 retries', async () => {
             // Given: File locked persistently (all attempts fail)
-            mockFs.rm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
-            mockFs.access.mockResolvedValue(undefined); // Directory still exists
+            mockRm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
+            mockAccess.mockResolvedValue(undefined); // Directory still exists
 
             // Mock setTimeout to execute immediately
             global.setTimeout = jest.fn((fn: () => void) => {
@@ -149,7 +156,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
             await command.execute();
 
             // Then: All 5 retries should be attempted
-            expect(mockFs.rm).toHaveBeenCalledTimes(5);
+            expect(mockRm).toHaveBeenCalledTimes(5);
 
             // And: Error message should be shown to user
             expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
@@ -160,7 +167,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
 
         it('should not clear state if deletion fails', async () => {
             // Given: Deletion always fails
-            mockFs.rm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
+            mockRm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
 
             global.setTimeout = jest.fn((fn: () => void) => {
                 return originalSetTimeout(fn, 0);
@@ -176,7 +183,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
 
         it('should not clear status bar if deletion fails', async () => {
             // Given: Deletion always fails
-            mockFs.rm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
+            mockRm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
 
             global.setTimeout = jest.fn((fn: () => void) => {
                 return originalSetTimeout(fn, 0);
@@ -191,7 +198,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
 
         it('should log all retry attempts', async () => {
             // Given: Deletion always fails
-            mockFs.rm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
+            mockRm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
 
             global.setTimeout = jest.fn((fn: () => void) => {
                 return originalSetTimeout(fn, 0);
@@ -201,17 +208,17 @@ describe('DeleteProjectCommand - Error Handling', () => {
             await command.execute();
 
             // Then: Should have logged retry attempts (4 retries after first failure)
-            // First attempt fails, then 4 more retries = 4 warn logs
-            const warnCalls = (mockLogger.warn as jest.Mock).mock.calls;
-            const retryCalls = warnCalls.filter((call: any[]) =>
-                call[0] && call[0].includes('retrying')
+            // First attempt fails, then 4 more retries = 4 debug logs with "Waiting for files to be released"
+            const debugCalls = (mockLogger.debug as jest.Mock).mock.calls;
+            const retryCalls = debugCalls.filter((call: any[]) =>
+                call[0] && call[0].includes('Waiting for files to be released')
             );
             expect(retryCalls.length).toBe(4);
         });
 
         it('should show clear error message with attempt count', async () => {
             // Given: Deletion always fails
-            mockFs.rm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
+            mockRm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
 
             global.setTimeout = jest.fn((fn: () => void) => {
                 return originalSetTimeout(fn, 0);
@@ -237,28 +244,40 @@ describe('DeleteProjectCommand - Error Handling', () => {
 
     describe('Non-retryable errors', () => {
         it('should fail immediately on permission denied error', async () => {
-            // Given: Permission denied error (not retryable)
-            mockFs.rm.mockRejectedValue(new Error('EACCES: permission denied'));
+            // Given: Directory exists and permission denied error (not retryable)
+            mockAccess.mockResolvedValue(undefined);
+            mockRm.mockRejectedValue(new Error('EACCES: permission denied'));
+
+            // Mock setTimeout to execute immediately (for any retry logic)
+            global.setTimeout = jest.fn((fn: () => void) => {
+                return originalSetTimeout(fn, 0);
+            }) as any;
 
             // When: Deletion attempted
             await command.execute();
 
             // Then: Should NOT retry (only 1 attempt)
-            expect(mockFs.rm).toHaveBeenCalledTimes(1);
+            expect(mockRm).toHaveBeenCalledTimes(1);
 
             // And: Error message should be shown
             expect(vscode.window.showErrorMessage).toHaveBeenCalled();
         });
 
         it('should fail immediately on unknown error', async () => {
-            // Given: Unknown error
-            mockFs.rm.mockRejectedValue(new Error('Unknown filesystem error'));
+            // Given: Directory exists and unknown error
+            mockAccess.mockResolvedValue(undefined);
+            mockRm.mockRejectedValue(new Error('Unknown filesystem error'));
+
+            // Mock setTimeout to execute immediately (for any retry logic)
+            global.setTimeout = jest.fn((fn: () => void) => {
+                return originalSetTimeout(fn, 0);
+            }) as any;
 
             // When: Deletion attempted
             await command.execute();
 
             // Then: Should NOT retry
-            expect(mockFs.rm).toHaveBeenCalledTimes(1);
+            expect(mockRm).toHaveBeenCalledTimes(1);
 
             // And: State should remain consistent
             expect(mockStateManager.clearProject).not.toHaveBeenCalled();
@@ -268,7 +287,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
     describe('State consistency on errors', () => {
         it('should not open welcome screen on failure', async () => {
             // Given: Deletion fails
-            mockFs.rm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
+            mockRm.mockRejectedValue(new Error('ENOTEMPTY: directory not empty'));
 
             global.setTimeout = jest.fn((fn: () => void) => {
                 return originalSetTimeout(fn, 0);
@@ -284,7 +303,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
         it('should log final failure with error details', async () => {
             // Given: Deletion fails persistently
             const errorMessage = 'ENOTEMPTY: directory not empty, some/path';
-            mockFs.rm.mockRejectedValue(new Error(errorMessage));
+            mockRm.mockRejectedValue(new Error(errorMessage));
 
             global.setTimeout = jest.fn((fn: () => void) => {
                 return originalSetTimeout(fn, 0);

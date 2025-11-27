@@ -16,6 +16,13 @@ jest.mock('@/core/logging/debugLogger', () => ({
 jest.mock('@/core/config/ConfigurationLoader');
 jest.mock('@/core/di');
 
+// Mock the shared module's checkPerNodeVersionStatus function
+const mockCheckPerNodeVersionStatus = jest.fn();
+jest.mock('@/features/prerequisites/handlers/shared', () => ({
+    ...jest.requireActual('@/features/prerequisites/handlers/shared'),
+    checkPerNodeVersionStatus: mockCheckPerNodeVersionStatus,
+}));
+
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import {
     setupMocks,
@@ -36,17 +43,9 @@ describe('PrerequisitesManager - Edge Cases and Errors', () => {
     });
 
     describe('checkPrerequisite - perNodeVersion detection consistency (Step 2)', () => {
-        // Mock the shared module's checkPerNodeVersionStatus function
-        let checkPerNodeVersionStatusSpy: jest.SpyInstance;
-
-        beforeEach(async () => {
-            // Dynamic import and spy on checkPerNodeVersionStatus
-            const shared = await import('@/features/prerequisites/handlers/shared');
-            checkPerNodeVersionStatusSpy = jest.spyOn(shared, 'checkPerNodeVersionStatus');
-        });
-
-        afterEach(() => {
-            checkPerNodeVersionStatusSpy?.mockRestore();
+        beforeEach(() => {
+            // Clear the mock before each test
+            mockCheckPerNodeVersionStatus.mockClear();
         });
 
         it('should detect installed per-node prerequisite using fnm-aware logic', async () => {
@@ -76,7 +75,7 @@ describe('PrerequisitesManager - Edge Cases and Errors', () => {
             });
 
             // Mock checkPerNodeVersionStatus to return installed status
-            checkPerNodeVersionStatusSpy.mockResolvedValue({
+            mockCheckPerNodeVersionStatus.mockResolvedValue({
                 perNodeVersionStatus: [
                     { version: 'Node 20', component: '10.0.0', installed: true },
                     { version: 'Node 24', component: '10.0.0', installed: true },
@@ -95,7 +94,7 @@ describe('PrerequisitesManager - Edge Cases and Errors', () => {
             expect(result.version).toBe('10.0.0');
 
             // And: Should have called checkPerNodeVersionStatus
-            expect(checkPerNodeVersionStatusSpy).toHaveBeenCalledWith(
+            expect(mockCheckPerNodeVersionStatus).toHaveBeenCalledWith(
                 aioCliPrereq,
                 expect.any(Array), // nodeVersions array
                 expect.any(Object) // context-like object
@@ -115,7 +114,7 @@ describe('PrerequisitesManager - Edge Cases and Errors', () => {
             });
 
             // Mock checkPerNodeVersionStatus
-            checkPerNodeVersionStatusSpy.mockResolvedValue({
+            mockCheckPerNodeVersionStatus.mockResolvedValue({
                 perNodeVersionStatus: [
                     { version: 'Node 20', component: '10.0.0', installed: true },
                 ],
@@ -127,7 +126,7 @@ describe('PrerequisitesManager - Edge Cases and Errors', () => {
             await manager.checkPrerequisite(prereq);
 
             // Then: Should call checkPerNodeVersionStatus (fnm-aware)
-            expect(checkPerNodeVersionStatusSpy).toHaveBeenCalled();
+            expect(mockCheckPerNodeVersionStatus).toHaveBeenCalled();
 
             // And: Should NOT directly call deprecated methods or plain execute
             // (This is implicitly tested - if we didn't call checkPerNodeVersionStatus,
@@ -154,7 +153,7 @@ describe('PrerequisitesManager - Edge Cases and Errors', () => {
             expect(result.version).toBe('2.39.0');
 
             // And: Should NOT call checkPerNodeVersionStatus
-            expect(checkPerNodeVersionStatusSpy).not.toHaveBeenCalled();
+            expect(mockCheckPerNodeVersionStatus).not.toHaveBeenCalled();
 
             // And: Should call execute directly
             expect(mocks.executor.execute).toHaveBeenCalledWith(
@@ -182,7 +181,7 @@ describe('PrerequisitesManager - Edge Cases and Errors', () => {
             });
 
             // Mock checkPerNodeVersionStatus to return not installed
-            checkPerNodeVersionStatusSpy.mockResolvedValue({
+            mockCheckPerNodeVersionStatus.mockResolvedValue({
                 perNodeVersionStatus: [
                     { version: 'Node 20', component: '', installed: false },
                     { version: 'Node 24', component: '', installed: false },
@@ -198,7 +197,7 @@ describe('PrerequisitesManager - Edge Cases and Errors', () => {
             expect(result.installed).toBe(false);
 
             // And: Should have called checkPerNodeVersionStatus
-            expect(checkPerNodeVersionStatusSpy).toHaveBeenCalled();
+            expect(mockCheckPerNodeVersionStatus).toHaveBeenCalled();
         });
     });
 });

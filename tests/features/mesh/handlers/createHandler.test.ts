@@ -26,6 +26,8 @@ describe('createHandler - Security Tests (Step 2)', () => {
     let mockAuthService: any;
 
     beforeEach(() => {
+        // Use fake timers to avoid real delays in polling
+        jest.useFakeTimers();
         // Reset all mocks
         jest.clearAllMocks();
 
@@ -75,28 +77,38 @@ describe('createHandler - Security Tests (Step 2)', () => {
         } as any;
     });
 
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
     describe('WorkspaceId Validation (SECURITY)', () => {
         it('should accept valid UUID workspaceId', async () => {
             const validWorkspaceId = '12345678-1234-1234-1234-123456789abc';
 
-            const result = await handleCreateApiMesh(mockContext, {
+            // Start async operation and advance timers concurrently
+            const resultPromise = handleCreateApiMesh(mockContext, {
                 workspaceId: validWorkspaceId,
             });
+            await jest.advanceTimersByTimeAsync(60000); // Advance past polling
+            const result = await resultPromise;
 
             // Should not throw validation error
             expect(result.success).toBeDefined();
-        }, 30000); // 30 second timeout for integration test
+        });
 
         it('should accept alphanumeric workspaceId with hyphens and underscores', async () => {
             const validWorkspaceId = 'workspace_123-abc';
 
-            const result = await handleCreateApiMesh(mockContext, {
+            // Start async operation and advance timers concurrently
+            const resultPromise = handleCreateApiMesh(mockContext, {
                 workspaceId: validWorkspaceId,
             });
+            await jest.advanceTimersByTimeAsync(60000); // Advance past polling
+            const result = await resultPromise;
 
             // Should not throw validation error
             expect(result.success).toBeDefined();
-        }, 30000); // 30 second timeout for integration test
+        });
 
         it('should reject empty workspaceId', async () => {
             const result = await handleCreateApiMesh(mockContext, {
@@ -189,9 +201,12 @@ describe('createHandler - Security Tests (Step 2)', () => {
         it('should use shell parameter when executing mesh create command', async () => {
             const validWorkspaceId = 'workspace-123';
 
-            await handleCreateApiMesh(mockContext, {
+            // Start async operation and advance timers concurrently
+            const resultPromise = handleCreateApiMesh(mockContext, {
                 workspaceId: validWorkspaceId,
             });
+            await jest.advanceTimersByTimeAsync(60000);
+            await resultPromise;
 
             // Check that execute() was called
             expect(mockCommandExecutor.execute).toHaveBeenCalled();
@@ -199,7 +214,7 @@ describe('createHandler - Security Tests (Step 2)', () => {
             // Verify options include proper shell configuration
             const callOptions = mockCommandExecutor.execute.mock.calls[0][1];
             expect(callOptions).toBeDefined();
-        }, 30000); // 30 second timeout for integration test
+        });
 
         it('should validate workspaceId before executing mesh update command', async () => {
             // This test verifies security without running the full handler flow
@@ -255,13 +270,16 @@ describe('createHandler - Security Tests (Step 2)', () => {
         it('should properly quote meshConfigPath to prevent injection', async () => {
             const validWorkspaceId = 'workspace-123';
 
-            await handleCreateApiMesh(mockContext, {
+            // Start async operation and advance timers concurrently
+            const resultPromise = handleCreateApiMesh(mockContext, {
                 workspaceId: validWorkspaceId,
             });
+            await jest.advanceTimersByTimeAsync(60000);
+            await resultPromise;
 
             // Check that command uses quoted path
             const commandString = mockCommandExecutor.execute.mock.calls[0][0];
             expect(commandString).toMatch(/"[^"]+mesh-config[^"]+\.json"/);
-        }, 30000); // 30 second timeout for integration test
+        });
     });
 });

@@ -2,13 +2,17 @@ import React from 'react';
 import { renderWithProviders, screen } from "../../../../helpers/react-test-utils";
 import userEvent from '@testing-library/user-event';
 import { SearchableList } from '@/core/ui/components/navigation/SearchableList';
-import { mockItems, defaultProps } from './SearchableList.testUtils';
+import { mockItems, defaultProps, cleanupTests } from './SearchableList.testUtils';
 
 /**
  * SearchableList component tests - Selection and Loading states
  * Tests item selection, loading states, and refresh functionality
  */
 describe('SearchableList - Selection and Loading', () => {
+    afterEach(() => {
+        cleanupTests();
+    });
+
     describe('Selection', () => {
         it('calls onSelectionChange when item selected', async () => {
             const user = userEvent.setup();

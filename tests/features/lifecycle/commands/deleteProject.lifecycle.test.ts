@@ -29,8 +29,14 @@ jest.mock('vscode', () => ({
     },
 }));
 
-// Mock fs/promises
-jest.mock('fs/promises');
+// Mock fs/promises with explicit exports
+jest.mock('fs/promises', () => ({
+    rm: jest.fn().mockResolvedValue(undefined),
+    access: jest.fn().mockRejectedValue({ code: 'ENOENT' }),
+}));
+import * as fs from 'fs/promises';
+const mockRm = fs.rm as jest.Mock;
+const mockAccess = fs.access as jest.Mock;
 
 // Mock logging
 jest.mock('@/core/logging', () => ({
@@ -57,16 +63,16 @@ describe('DeleteProjectCommand - Lifecycle', () => {
     let mockStateManager: jest.Mocked<StateManager>;
     let mockStatusBar: jest.Mocked<StatusBarManager>;
     let mockLogger: jest.Mocked<Logger>;
-    let mockFs: any;
     const testProjectPath = '/tmp/test-project-delete';
 
     beforeEach(() => {
         jest.clearAllMocks();
 
-        // Set up fs mocks using require pattern
-        mockFs = require('fs/promises');
-        mockFs.rm = jest.fn().mockResolvedValue(undefined);
-        mockFs.access = jest.fn().mockRejectedValue({ code: 'ENOENT' });
+        // Reset fs mocks
+        mockRm.mockClear();
+        mockAccess.mockClear();
+        mockRm.mockResolvedValue(undefined);
+        mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
         // Mock extension context
         mockContext = {
@@ -125,6 +131,7 @@ describe('DeleteProjectCommand - Lifecycle', () => {
 
     afterEach(() => {
         jest.restoreAllMocks();
+        jest.useRealTimers();
     });
 
     describe('Test 1: Delete project with active watcher', () => {
@@ -136,10 +143,10 @@ describe('DeleteProjectCommand - Lifecycle', () => {
             const startTime = Date.now();
             let deleteTime = 0;
 
-            mockFs.rm.mockImplementation(async () => {
+            mockRm.mockImplementation(async () => {
                 deleteTime = Date.now();
             });
-            mockFs.access.mockRejectedValue({ code: 'ENOENT' });
+            mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
             // When: User executes deleteProject command
             await command.execute();
@@ -156,7 +163,7 @@ describe('DeleteProjectCommand - Lifecycle', () => {
             await command.execute();
 
             // Then: Directory should be deleted with recursive and force options
-            expect(mockFs.rm).toHaveBeenCalledWith(testProjectPath, { recursive: true, force: true });
+            expect(mockRm).toHaveBeenCalledWith(testProjectPath, { recursive: true, force: true });
 
             // And: State should be cleaned up
             expect(mockStateManager.clearProject).toHaveBeenCalled();
@@ -189,7 +196,7 @@ describe('DeleteProjectCommand - Lifecycle', () => {
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.stopDemo');
 
             // And: Deletion should happen after stopDemo
-            expect(mockFs.rm).toHaveBeenCalledWith(testProjectPath, { recursive: true, force: true });
+            expect(mockRm).toHaveBeenCalledWith(testProjectPath, { recursive: true, force: true });
         });
 
         it('should not call stopDemo if project is already stopped', async () => {
@@ -258,7 +265,7 @@ describe('DeleteProjectCommand - Lifecycle', () => {
             await command.execute();
 
             // Then: No deletion should occur
-            expect(mockFs.rm).not.toHaveBeenCalled();
+            expect(mockRm).not.toHaveBeenCalled();
             expect(mockStateManager.clearProject).not.toHaveBeenCalled();
         });
 
@@ -270,7 +277,7 @@ describe('DeleteProjectCommand - Lifecycle', () => {
             await command.execute();
 
             // Then: Should show warning and not attempt deletion
-            expect(mockFs.rm).not.toHaveBeenCalled();
+            expect(mockRm).not.toHaveBeenCalled();
         });
     });
 });

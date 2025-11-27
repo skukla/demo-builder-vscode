@@ -3,7 +3,8 @@ import { useFocusTrap } from '@/core/ui/hooks/useFocusTrap';
 import {
   createTestContainer,
   cleanupTestContainer,
-  waitForEffectExecution
+  waitForEffectExecution,
+  cleanupTests
 } from './useFocusTrap.testUtils';
 
 /**
@@ -27,6 +28,7 @@ describe('useFocusTrap - Focus Management', () => {
 
   afterEach(() => {
     cleanupTestContainer(container);
+    cleanupTests();
   });
 
   describe('initialization', () => {

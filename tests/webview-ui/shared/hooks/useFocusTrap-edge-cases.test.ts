@@ -4,7 +4,8 @@ import {
   createTestContainer,
   cleanupTestContainer,
   waitForEffectExecution,
-  createTabEvent
+  createTabEvent,
+  cleanupTests
 } from './useFocusTrap.testUtils';
 
 /**
@@ -25,6 +26,7 @@ describe('useFocusTrap - Edge Cases', () => {
 
   afterEach(() => {
     cleanupTestContainer(container);
+    cleanupTests();
   });
 
   describe('edge cases', () => {

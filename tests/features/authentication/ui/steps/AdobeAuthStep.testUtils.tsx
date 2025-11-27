@@ -1,5 +1,13 @@
 import React from 'react';
+import { cleanup } from '@testing-library/react';
 import { WizardState } from '@/types/webview';
+
+// Cleanup function that should be called in afterEach
+export function cleanupTests() {
+    cleanup(); // Unmount React components to stop any running effects/timers
+    jest.clearAllMocks();
+    jest.useRealTimers(); // Ensure real timers are restored
+}
 
 // Shared mock functions (exported for test files to import)
 // Note: Each test file must call jest.mock() at the top level before imports

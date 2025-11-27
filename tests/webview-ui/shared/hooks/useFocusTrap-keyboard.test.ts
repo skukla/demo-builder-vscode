@@ -6,7 +6,8 @@ import {
   waitForEffectExecution,
   createTabEvent,
   createExternalButton,
-  cleanupExternalButton
+  cleanupExternalButton,
+  cleanupTests
 } from './useFocusTrap.testUtils';
 
 /**
@@ -29,6 +30,7 @@ describe('useFocusTrap - Keyboard Handling', () => {
 
   afterEach(() => {
     cleanupTestContainer(container);
+    cleanupTests();
   });
 
   describe('tab navigation', () => {

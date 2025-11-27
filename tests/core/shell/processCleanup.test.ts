@@ -20,9 +20,24 @@ jest.mock('@/core/logging/debugLogger', () => ({
 
 describe('ProcessCleanup - Basic Operations', () => {
     let processCleanup: ProcessCleanup;
+    const spawnedPids: number[] = [];
 
     beforeEach(() => {
+        jest.clearAllMocks();
         processCleanup = new ProcessCleanup();
+    });
+
+    afterEach(async () => {
+        // Safety cleanup: kill any processes that weren't cleaned up by the test
+        for (const pid of spawnedPids) {
+            try {
+                process.kill(pid, 0); // Check if still running
+                process.kill(pid, 'SIGKILL'); // Force kill
+            } catch {
+                // Process already dead, which is expected
+            }
+        }
+        spawnedPids.length = 0;
     });
 
     describe('Graceful Shutdown (SIGTERM)', () => {

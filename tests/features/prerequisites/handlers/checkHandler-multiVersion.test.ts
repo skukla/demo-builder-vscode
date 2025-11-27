@@ -8,6 +8,7 @@ import {
     createMockContext,
     createComponentSelection,
     setupStandardMocks,
+    cleanupTests,
 } from './checkHandler.testUtils';
 
 /**
@@ -38,7 +39,13 @@ jest.mock('@/types/typeGuards', () => ({
 describe('Prerequisites Check Handler - Multi-Version Node.js Support', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // Ensure real timers are active (in case another test left fake timers)
+        jest.useRealTimers();
         setupStandardMocks();
+    });
+
+    afterEach(() => {
+        cleanupTests();
     });
 
     it('should detect Node multi-version requirements from component selection', async () => {

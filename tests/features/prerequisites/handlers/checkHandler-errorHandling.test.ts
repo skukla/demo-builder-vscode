@@ -7,6 +7,7 @@ import {
     createMockContext,
     createComponentSelection,
     setupStandardMocks,
+    cleanupTests,
 } from './checkHandler.testUtils';
 
 /**
@@ -43,6 +44,10 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         setupStandardMocks();
+    });
+
+    afterEach(() => {
+        cleanupTests();
     });
 
     describe('error handling', () => {

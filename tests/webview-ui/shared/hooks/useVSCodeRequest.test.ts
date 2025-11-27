@@ -25,12 +25,15 @@ describe('useVSCodeRequest', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.useFakeTimers();
     // Get fresh reference to the mocked function
     requestSpy = webviewClient.request as jest.Mock;
     requestSpy.mockReset();
   });
 
   afterEach(() => {
+    // Restore real timers FIRST so cleanup() and other teardown can work properly
+    jest.useRealTimers();
     cleanup();
     jest.clearAllMocks();
     jest.restoreAllMocks();
@@ -321,12 +324,8 @@ describe('useVSCodeRequest', () => {
 
   describe('concurrent requests', () => {
     it('handles concurrent requests correctly', async () => {
-      requestSpy
-        .mockImplementation((type, payload) => {
-          return new Promise(resolve => {
-            setTimeout(() => resolve({ id: payload.id }), 100);
-          });
-        });
+      // Use immediate resolution for concurrent request test to avoid timer issues
+      requestSpy.mockImplementation((type, payload) => Promise.resolve({ id: payload.id }));
 
       const { result } = renderHook(() => useVSCodeRequest('test-request'));
 

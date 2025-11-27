@@ -323,6 +323,8 @@ describe('authenticationHandlers - Message Patterns', () => {
                     subMessage: `Signed in as ${maliciousOrg.name}`,
                     requiresOrgSelection: false,
                     orgLacksAccess: false,
+                    tokenExpiresIn: undefined,
+                    tokenExpiringSoon: false,
                 });
             });
 
@@ -401,6 +403,8 @@ describe('authenticationHandlers - Message Patterns', () => {
                     subMessage: expect.any(String),
                     requiresOrgSelection: false,
                     orgLacksAccess: false,
+                    tokenExpiresIn: undefined,
+                    tokenExpiringSoon: false,
                 });
             });
 

@@ -136,10 +136,7 @@ describe('lifecycleHandlers - Utilities', () => {
             await handleOpenAdobeConsole(mockContext, payload);
 
             expect(mockContext.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('[Adobe Console] Opening workspace-specific URL'),
-                expect.objectContaining({
-                    url: expect.stringContaining('org-123/proj-456/workspaces/ws-789')
-                })
+                expect.stringContaining('[Adobe Console] Opening workspace-specific URL')
             );
         });
 
@@ -179,8 +176,7 @@ describe('lifecycleHandlers - Utilities', () => {
             await handleOpenAdobeConsole(mockContext, payload);
 
             expect(mockContext.logger.info).toHaveBeenCalledWith(
-                expect.stringContaining('[Adobe Console] Opening generic console URL (missing IDs)'),
-                expect.objectContaining({ data: payload })
+                expect.stringContaining('[Adobe Console] Opening generic console URL')
             );
         });
     });

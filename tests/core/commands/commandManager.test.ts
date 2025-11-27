@@ -148,7 +148,7 @@ describe('CommandManager', () => {
             commandManager.registerCommands();
 
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                'Registering Demo Builder commands...'
+                expect.stringMatching(/^Registered \d+ commands:/)
             );
         });
     });

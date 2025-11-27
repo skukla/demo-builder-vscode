@@ -27,7 +27,13 @@ describe('PrerequisitesCacheManager - Invalidation & TTL', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        // Ensure real timers are used since wait() relies on actual setTimeout
+        jest.useRealTimers();
         cacheManager = new PrerequisitesCacheManager();
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
     });
 
     describe('TTL Expiry', () => {

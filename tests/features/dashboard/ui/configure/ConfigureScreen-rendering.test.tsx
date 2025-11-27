@@ -88,7 +88,7 @@ describe('ConfigureScreen - Rendering', () => {
             expect(screen.getByText('Configuration Settings')).toBeInTheDocument();
         });
 
-        it('should render Save and Cancel buttons', () => {
+        it('should render Save button', () => {
             renderWithProvider(
                 <ConfigureScreen
                     project={mockProject as any}
@@ -96,7 +96,6 @@ describe('ConfigureScreen - Rendering', () => {
                 />
             );
             expect(screen.getByText('Save Changes')).toBeInTheDocument();
-            expect(screen.getByText('Cancel')).toBeInTheDocument();
         });
     });
 

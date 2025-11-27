@@ -28,8 +28,14 @@ jest.mock('vscode', () => ({
     },
 }));
 
-// Mock fs/promises
-jest.mock('fs/promises');
+// Mock fs/promises with explicit exports
+jest.mock('fs/promises', () => ({
+    rm: jest.fn().mockResolvedValue(undefined),
+    access: jest.fn().mockRejectedValue({ code: 'ENOENT' }),
+}));
+import * as fs from 'fs/promises';
+const mockRm = fs.rm as jest.Mock;
+const mockAccess = fs.access as jest.Mock;
 
 // Mock logging
 jest.mock('@/core/logging', () => ({
@@ -56,21 +62,18 @@ describe('DeleteProjectCommand - Retry Logic', () => {
     let mockStateManager: jest.Mocked<StateManager>;
     let mockStatusBar: jest.Mocked<StatusBarManager>;
     let mockLogger: jest.Mocked<Logger>;
-    let mockFs: any;
     const testProjectPath = '/tmp/test-project-retry';
-
-    // Store original setTimeout
-    const originalSetTimeout = global.setTimeout;
-    let capturedDelays: number[] = [];
 
     beforeEach(() => {
         jest.clearAllMocks();
-        capturedDelays = [];
+        // Ensure we're using real timers for setup
+        jest.useRealTimers();
 
-        // Set up fs mocks using require pattern
-        mockFs = require('fs/promises');
-        mockFs.rm = jest.fn().mockResolvedValue(undefined);
-        mockFs.access = jest.fn().mockRejectedValue({ code: 'ENOENT' });
+        // Reset fs mocks
+        mockRm.mockClear();
+        mockAccess.mockClear();
+        mockRm.mockResolvedValue(undefined);
+        mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
         // Mock extension context
         mockContext = {
@@ -128,16 +131,19 @@ describe('DeleteProjectCommand - Retry Logic', () => {
     });
 
     afterEach(() => {
-        // Restore original setTimeout
-        global.setTimeout = originalSetTimeout;
+        // Ensure timers are restored
+        jest.useRealTimers();
         jest.restoreAllMocks();
     });
 
     describe('Test 3: Retry on ENOTEMPTY error', () => {
         it('should retry when first attempt fails with ENOTEMPTY', async () => {
+            // Use fake timers for this test
+            jest.useFakeTimers();
+
             // Given: File locked on first attempt, available on second
             let attemptCount = 0;
-            mockFs.rm.mockImplementation(async () => {
+            mockRm.mockImplementation(async () => {
                 attemptCount++;
                 if (attemptCount === 1) {
                     const error = new Error('ENOTEMPTY: directory not empty');
@@ -145,58 +151,62 @@ describe('DeleteProjectCommand - Retry Logic', () => {
                 }
                 // Second attempt succeeds
             });
-            mockFs.access.mockRejectedValue({ code: 'ENOENT' });
-
-            // Mock setTimeout to capture delays but execute immediately
-            global.setTimeout = jest.fn((fn: () => void, delay?: number) => {
-                if (delay && delay > 50) { // Ignore small delays from other sources
-                    capturedDelays.push(delay);
-                }
-                return originalSetTimeout(fn, 0); // Execute immediately for test speed
-            }) as any;
+            mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
             // When: Deletion attempted
-            await command.execute();
+            const executePromise = command.execute();
+
+            // Advance timers to allow retries
+            await jest.runAllTimersAsync();
+
+            await executePromise;
 
             // Then: Should have retried
-            expect(mockFs.rm).toHaveBeenCalledTimes(2);
+            expect(mockRm).toHaveBeenCalledTimes(2);
 
             // And: Should have succeeded after retry
             expect(mockStateManager.clearProject).toHaveBeenCalled();
+
+            jest.useRealTimers();
         });
 
         it('should retry when first attempt fails with EBUSY', async () => {
+            // Use fake timers for this test
+            jest.useFakeTimers();
+
             // Given: File busy on first attempt
             let attemptCount = 0;
-            mockFs.rm.mockImplementation(async () => {
+            mockRm.mockImplementation(async () => {
                 attemptCount++;
                 if (attemptCount === 1) {
                     const error = new Error('EBUSY: resource busy or locked');
                     throw error;
                 }
             });
-            mockFs.access.mockRejectedValue({ code: 'ENOENT' });
-
-            // Mock setTimeout
-            global.setTimeout = jest.fn((fn: () => void, delay?: number) => {
-                if (delay && delay > 50) {
-                    capturedDelays.push(delay);
-                }
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
             // When: Deletion attempted
-            await command.execute();
+            const executePromise = command.execute();
+
+            // Advance timers to allow retries
+            await jest.runAllTimersAsync();
+
+            await executePromise;
 
             // Then: Should have retried and succeeded
-            expect(mockFs.rm).toHaveBeenCalledTimes(2);
+            expect(mockRm).toHaveBeenCalledTimes(2);
             expect(mockStateManager.clearProject).toHaveBeenCalled();
+
+            jest.useRealTimers();
         });
 
         it('should succeed after multiple retries', async () => {
+            // Use fake timers for this test
+            jest.useFakeTimers();
+
             // Given: File locked for 3 attempts, then succeeds
             let attemptCount = 0;
-            mockFs.rm.mockImplementation(async () => {
+            mockRm.mockImplementation(async () => {
                 attemptCount++;
                 if (attemptCount <= 3) {
                     const error = new Error('ENOTEMPTY: directory not empty');
@@ -204,107 +214,126 @@ describe('DeleteProjectCommand - Retry Logic', () => {
                 }
                 // Fourth attempt succeeds
             });
-            mockFs.access.mockRejectedValue({ code: 'ENOENT' });
-
-            // Mock setTimeout
-            global.setTimeout = jest.fn((fn: () => void, delay?: number) => {
-                if (delay && delay > 50) {
-                    capturedDelays.push(delay);
-                }
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
             // When: Deletion attempted
-            await command.execute();
+            const executePromise = command.execute();
+
+            // Advance timers to allow retries
+            await jest.runAllTimersAsync();
+
+            await executePromise;
 
             // Then: Should have tried 4 times (3 failures + 1 success)
-            expect(mockFs.rm).toHaveBeenCalledTimes(4);
+            expect(mockRm).toHaveBeenCalledTimes(4);
             expect(mockStateManager.clearProject).toHaveBeenCalled();
+
+            jest.useRealTimers();
         });
     });
 
     describe('Test: Exponential backoff timing', () => {
         it('should use exponential backoff delays (100, 200, 400, 800, 1600ms)', async () => {
+            // Use fake timers for this test
+            jest.useFakeTimers();
+
             // Given: File locked for 4 attempts, then succeeds on 5th
             let attemptCount = 0;
-            let startCapturing = false; // Skip initial 100ms wait for handle release
+            const attemptTimes: number[] = [];
 
-            mockFs.rm.mockImplementation(async () => {
-                startCapturing = true; // Start capturing after first rm call
+            mockRm.mockImplementation(async () => {
+                attemptTimes.push(Date.now());
                 attemptCount++;
                 if (attemptCount <= 4) {
                     const error = new Error('ENOTEMPTY: directory not empty');
                     throw error;
                 }
             });
-            mockFs.access.mockRejectedValue({ code: 'ENOENT' });
-
-            // Mock setTimeout to capture retry delays only (100-1600ms range for exponential backoff)
-            // Skip: initial 100ms wait (before rm is called) and 2000ms from showSuccessMessage
-            global.setTimeout = jest.fn((fn: () => void, delay?: number) => {
-                if (startCapturing && delay && delay >= 100 && delay <= 1600) {
-                    capturedDelays.push(delay);
-                }
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
             // When: Deletion attempted
-            await command.execute();
+            const executePromise = command.execute();
 
-            // Then: Should have captured exponential backoff delays for 4 retries
-            // Attempts: 100ms (1st retry), 200ms (2nd retry), 400ms (3rd retry), 800ms (4th retry)
-            expect(capturedDelays).toEqual([100, 200, 400, 800]);
+            // Advance timers to allow all retries
+            await jest.runAllTimersAsync();
+
+            await executePromise;
+
+            // Then: Should have made 5 attempts (4 failures + 1 success)
+            expect(attemptCount).toBe(5);
+
+            // Verify the time between attempts follows exponential backoff
+            // First delay after first failure should be 100ms, then 200, 400, 800
+            const delays: number[] = [];
+            for (let i = 1; i < attemptTimes.length; i++) {
+                delays.push(attemptTimes[i] - attemptTimes[i - 1]);
+            }
+            expect(delays).toEqual([100, 200, 400, 800]);
+
+            jest.useRealTimers();
         });
 
         it('should log retry attempts with delay information', async () => {
+            // Use fake timers for this test
+            jest.useFakeTimers();
+
             // Given: First attempt fails
             let attemptCount = 0;
-            mockFs.rm.mockImplementation(async () => {
+            mockRm.mockImplementation(async () => {
                 attemptCount++;
                 if (attemptCount === 1) {
                     const error = new Error('ENOTEMPTY: directory not empty');
                     throw error;
                 }
             });
-            mockFs.access.mockRejectedValue({ code: 'ENOENT' });
-
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
+            mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
             // When: Deletion attempted
-            await command.execute();
+            const executePromise = command.execute();
 
-            // Then: Logger should have been called with retry information
-            expect(mockLogger.warn).toHaveBeenCalledWith(
-                expect.stringContaining('retrying')
+            // Advance timers to allow retries
+            await jest.runAllTimersAsync();
+
+            await executePromise;
+
+            // Then: Logger should have been called with waiting message
+            expect(mockLogger.debug).toHaveBeenCalledWith(
+                expect.stringContaining('Waiting for files')
             );
+
+            jest.useRealTimers();
         });
     });
 
     describe('Verification after deletion', () => {
         it('should verify directory is deleted by checking ENOENT', async () => {
+            // Ensure real timers for this test (no fake timer needed)
+            jest.useRealTimers();
+
             // Given: fs.rm succeeds
-            mockFs.rm.mockResolvedValue(undefined);
+            mockRm.mockResolvedValue(undefined);
 
             // And: fs.access throws ENOENT (directory gone)
-            mockFs.access.mockRejectedValue({ code: 'ENOENT' });
+            mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
             // When: Deletion attempted
             await command.execute();
 
             // Then: Should verify deletion by calling fs.access
-            expect(mockFs.access).toHaveBeenCalledWith(testProjectPath);
+            expect(mockAccess).toHaveBeenCalledWith(testProjectPath);
 
             // And: Should have succeeded
             expect(mockStateManager.clearProject).toHaveBeenCalled();
         });
 
         it('should retry if directory still exists after rm', async () => {
+            // Use fake timers for this test
+            jest.useFakeTimers();
+
             // Given: rm succeeds but access shows directory still exists
             let accessCount = 0;
-            mockFs.rm.mockResolvedValue(undefined);
-            mockFs.access.mockImplementation(async () => {
+            mockRm.mockResolvedValue(undefined);
+            mockAccess.mockImplementation(async () => {
                 accessCount++;
                 if (accessCount === 1) {
                     // First check: directory still exists (access succeeds)
@@ -314,15 +343,18 @@ describe('DeleteProjectCommand - Retry Logic', () => {
                 throw { code: 'ENOENT' };
             });
 
-            global.setTimeout = jest.fn((fn: () => void) => {
-                return originalSetTimeout(fn, 0);
-            }) as any;
-
             // When: Deletion attempted
-            await command.execute();
+            const executePromise = command.execute();
+
+            // Advance timers to allow retries
+            await jest.runAllTimersAsync();
+
+            await executePromise;
 
             // Then: Should have retried
-            expect(mockFs.rm).toHaveBeenCalledTimes(2);
+            expect(mockRm).toHaveBeenCalledTimes(2);
+
+            jest.useRealTimers();
         });
     });
 });

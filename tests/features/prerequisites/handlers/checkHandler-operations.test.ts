@@ -6,6 +6,7 @@ import {
     mockNpmResult,
     createMockContext,
     setupStandardMocks,
+    cleanupTests,
 } from './checkHandler.testUtils';
 
 /**
@@ -38,6 +39,10 @@ describe('Prerequisites Check Handler - Core Operations', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         setupStandardMocks();
+    });
+
+    afterEach(() => {
+        cleanupTests();
     });
 
     it('should load prerequisites config and send to UI', async () => {

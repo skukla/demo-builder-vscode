@@ -7,6 +7,7 @@ import {
     mockRequestAuth,
     baseState,
     resetMocks,
+    cleanupTests,
 } from './AdobeAuthStep.testUtils';
 
 // Mock WebviewClient
@@ -45,6 +46,10 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
 
     beforeEach(() => {
         resetMocks();
+    });
+
+    afterEach(() => {
+        cleanupTests();
     });
 
     describe('Edge Cases', () => {

@@ -2,13 +2,17 @@ import React from 'react';
 import { renderWithProviders, screen } from "../../../../helpers/react-test-utils";
 import userEvent from '@testing-library/user-event';
 import { SearchableList } from '@/core/ui/components/navigation/SearchableList';
-import { mockItems, defaultProps } from './SearchableList.testUtils';
+import { mockItems, defaultProps, cleanupTests } from './SearchableList.testUtils';
 
 /**
  * SearchableList component tests - Rendering and Search functionality
  * Tests basic rendering, search field behavior, and filtered results display
  */
 describe('SearchableList - Rendering and Search', () => {
+    afterEach(() => {
+        cleanupTests();
+    });
+
     describe('Rendering', () => {
         it('renders all items initially', () => {
             renderWithProviders(

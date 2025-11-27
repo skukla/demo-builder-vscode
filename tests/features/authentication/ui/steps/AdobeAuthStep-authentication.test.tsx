@@ -10,6 +10,7 @@ import {
     baseState,
     setupAuthStatusMock,
     resetMocks,
+    cleanupTests,
 } from './AdobeAuthStep.testUtils';
 
 // Mock WebviewClient
@@ -48,6 +49,10 @@ describe('AdobeAuthStep - Authentication Flow', () => {
 
     beforeEach(() => {
         resetMocks();
+    });
+
+    afterEach(() => {
+        cleanupTests();
     });
 
     describe('Happy Path - Authentication Flow', () => {

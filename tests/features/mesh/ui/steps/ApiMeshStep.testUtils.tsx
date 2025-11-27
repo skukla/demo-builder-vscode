@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, cleanup } from '@testing-library/react';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { ApiMeshStep } from '@/features/mesh/ui/steps/ApiMeshStep';
@@ -138,4 +138,14 @@ export const setupMocks = () => {
     jest.clearAllMocks();
     mockOnMessage.mockReturnValue(jest.fn());
     mockRequest.mockResolvedValue({ success: false });
+};
+
+/**
+ * Cleanup function to be called in afterEach
+ * Unmounts React components and resets mocks to prevent test pollution
+ */
+export const cleanupTests = () => {
+    cleanup(); // Unmount React components to stop any running effects/timers
+    jest.clearAllMocks();
+    jest.useRealTimers(); // Ensure real timers are restored
 };

@@ -9,8 +9,10 @@ import * as fs from 'fs/promises';
 import { setupMocks, type TestMocks } from './stateManager.testUtils';
 import type { ProcessInfo } from '@/types';
 
-// Re-declare mocks to ensure proper typing
+// Re-declare mocks to ensure proper typing and hoisting
+jest.mock('vscode');
 jest.mock('fs/promises');
+jest.mock('os');
 
 describe('StateManager - Process Management', () => {
     let testMocks: TestMocks;

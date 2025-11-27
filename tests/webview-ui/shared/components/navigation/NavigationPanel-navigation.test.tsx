@@ -1,10 +1,19 @@
 import React from 'react';
-import { renderWithProviders, screen } from "../../../../helpers/react-test-utils";
+import { renderWithProviders, screen, cleanup } from "../../../../helpers/react-test-utils";
 import userEvent from '@testing-library/user-event';
 import { NavigationPanel } from '@/core/ui/components/navigation/NavigationPanel';
 import { createMockSections } from './NavigationPanel.testUtils';
 
 describe('NavigationPanel - Navigation', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    afterEach(() => {
+        cleanup();
+        jest.clearAllMocks();
+    });
+
     describe('Field Navigation', () => {
         it('calls onNavigateToField when field clicked', async () => {
             const user = userEvent.setup();

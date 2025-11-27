@@ -7,11 +7,16 @@ import {
     createMeshCreationResponse,
     renderApiMeshStep,
     setupMocks,
+    cleanupTests,
 } from './ApiMeshStep.testUtils';
 
 describe('ApiMeshStep - Deployment Operations', () => {
     beforeEach(() => {
         setupMocks();
+    });
+
+    afterEach(() => {
+        cleanupTests();
     });
 
     describe('Mesh Creation Flow', () => {

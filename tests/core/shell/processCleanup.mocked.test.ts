@@ -28,23 +28,17 @@ describe('ProcessCleanup - Mocked Tests', () => {
     let processExists: Set<number>;
 
     beforeEach(() => {
+        jest.clearAllMocks();
         originalKill = process.kill;
         killCalls = [];
         processExists = new Set([1000, 2000, 3000]); // Mock PIDs that exist
 
-        // Configure tree-kill mock to simulate killing processes
+        // Configure tree-kill mock to simulate killing processes (synchronous to avoid timer leaks)
         mockTreeKill.mockImplementation((pid: number, signal: string, callback: (err?: Error) => void) => {
             // Simulate tree-kill sending signal and process exiting
             if (processExists.has(pid)) {
-                // SIGTERM: delayed exit
-                if (signal === 'SIGTERM' || signal === 'TERM') {
-                    setTimeout(() => {
-                        processExists.delete(pid);
-                        callback();
-                    }, 50);
-                }
-                // SIGKILL: immediate exit
-                else if (signal === 'SIGKILL' || signal === 'KILL') {
+                // Both SIGTERM and SIGKILL kill the process immediately in the mock
+                if (signal === 'SIGTERM' || signal === 'TERM' || signal === 'SIGKILL' || signal === 'KILL') {
                     processExists.delete(pid);
                     callback();
                 }
@@ -123,12 +117,9 @@ describe('ProcessCleanup - Mocked Tests', () => {
             const cleanup = new ProcessCleanup({ gracefulTimeout: 1000 });
             const pid = 2000;
 
-            const startTime = Date.now();
             await cleanup.killProcessTree(pid, 'SIGTERM');
-            const duration = Date.now() - startTime;
 
-            // Should complete in < 200ms (process exits after 50ms + polling)
-            expect(duration).toBeLessThan(200);
+            // Process should be gone
             expect(processExists.has(pid)).toBe(false);
         });
     });

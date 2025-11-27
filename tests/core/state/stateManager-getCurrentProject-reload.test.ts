@@ -14,7 +14,10 @@ import * as fs from 'fs/promises';
 import { setupMocks, createMockProject, type TestMocks } from './stateManager.testUtils';
 import type { Project } from '@/types';
 
+// Re-declare mocks to ensure proper typing and hoisting
+jest.mock('vscode');
 jest.mock('fs/promises');
+jest.mock('os');
 
 describe('StateManager - getCurrentProject Reload Behavior', () => {
     let testMocks: TestMocks;

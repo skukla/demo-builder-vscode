@@ -11,8 +11,10 @@ import * as path from 'path';
 import { setupMocks, mockHomedir, mockStateFile, createMockProject, type TestMocks } from './stateManager.testUtils';
 import type { Project } from '@/types';
 
-// Re-declare mocks to ensure proper typing
+// Re-declare mocks to ensure proper typing and hoisting
+jest.mock('vscode');
 jest.mock('fs/promises');
+jest.mock('os');
 
 describe('StateManager - Utilities', () => {
     let testMocks: TestMocks;
@@ -322,22 +324,43 @@ describe('StateManager - Utilities', () => {
     describe('reload', () => {
         it('should reload state from file', async () => {
             const { stateManager } = testMocks;
+            const mockProject = createMockProject('reloaded-project');
             const mockState = {
                 version: 1,
-                currentProject: createMockProject('reloaded-project'),
+                currentProject: mockProject,
                 processes: {},
                 lastUpdated: new Date().toISOString()
             };
 
+            // Mock manifest data for project path
+            const mockManifest = {
+                name: mockProject.name,
+                created: mockProject.created?.toISOString(),
+                lastModified: mockProject.lastModified?.toISOString()
+            };
+
             await stateManager.initialize();
 
-            // Change the mock to return different state
-            (fs.readFile as jest.Mock).mockResolvedValue(JSON.stringify(mockState));
+            // Mock fs.readFile to return correct data based on file path
+            (fs.readFile as jest.Mock).mockImplementation((filepath: string) => {
+                if (filepath.includes('state.json')) {
+                    return Promise.resolve(JSON.stringify(mockState));
+                }
+                if (filepath.includes('.demo-builder.json')) {
+                    return Promise.resolve(JSON.stringify(mockManifest));
+                }
+                if (filepath.includes('recent-projects.json')) {
+                    return Promise.resolve('[]');
+                }
+                return Promise.reject(new Error('File not found'));
+            });
+            // Also mock fs.access to pass path validation
+            (fs.access as jest.Mock).mockResolvedValue(undefined);
 
             await stateManager.reload();
 
             const project = await stateManager.getCurrentProject();
-            expect(project?.name).toBe('Test Project');
+            expect(project?.name).toBe(mockProject.name);
         });
 
         it('should handle missing state file on reload', async () => {
