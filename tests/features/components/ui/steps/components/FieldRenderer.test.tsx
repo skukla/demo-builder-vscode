@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider as SpectrumProvider, defaultTheme } from '@adobe/react-spectrum';
 import { FieldRenderer } from '@/features/components/ui/steps/components/FieldRenderer';
 import { UniqueField } from '@/features/components/ui/steps/ComponentConfigStep';
@@ -201,7 +202,8 @@ describe('FieldRenderer', () => {
             expect(mockOnChange).toHaveBeenCalledWith(field, 'new-api-key');
         });
 
-        it('calls onChange when Checkbox is toggled', () => {
+        it('calls onChange when Checkbox is toggled', async () => {
+            const user = userEvent.setup();
             const field: UniqueField = {
                 key: 'ENABLED',
                 label: 'Enabled',
@@ -221,7 +223,7 @@ describe('FieldRenderer', () => {
             );
 
             const checkbox = screen.getByRole('checkbox');
-            fireEvent.click(checkbox);
+            await user.click(checkbox);
 
             expect(mockOnChange).toHaveBeenCalledWith(field, true);
         });

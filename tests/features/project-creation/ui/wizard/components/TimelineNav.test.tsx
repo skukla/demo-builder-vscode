@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { TimelineNav } from '@/features/project-creation/ui/wizard/TimelineNav';
 import { WizardStep } from '@/types/webview';
@@ -85,7 +86,8 @@ describe('TimelineNav', () => {
     });
 
     describe('Happy Path - Step Navigation', () => {
-        it('should call onStepClick when clicking on current or previous step', () => {
+        it('should call onStepClick when clicking on current or previous step', async () => {
+            const user = userEvent.setup();
             render(
                 <TimelineNav
                     steps={mockSteps}
@@ -98,12 +100,13 @@ describe('TimelineNav', () => {
 
             // Click on previous completed step
             const welcomeStep = screen.getByText('Welcome');
-            fireEvent.click(welcomeStep);
+            await user.click(welcomeStep);
 
             expect(mockOnStepClick).toHaveBeenCalledWith('welcome');
         });
 
-        it('should call onStepClick when clicking on current step', () => {
+        it('should call onStepClick when clicking on current step', async () => {
+            const user = userEvent.setup();
             render(
                 <TimelineNav
                     steps={mockSteps}
@@ -115,12 +118,13 @@ describe('TimelineNav', () => {
             );
 
             const currentStep = screen.getByText('Adobe Authentication');
-            fireEvent.click(currentStep);
+            await user.click(currentStep);
 
             expect(mockOnStepClick).toHaveBeenCalledWith('adobe-auth');
         });
 
-        it('should not call onStepClick when clicking on future steps', () => {
+        it('should not call onStepClick when clicking on future steps', async () => {
+            const user = userEvent.setup();
             render(
                 <TimelineNav
                     steps={mockSteps}
@@ -133,7 +137,7 @@ describe('TimelineNav', () => {
 
             // Click on future step (should be ignored)
             const futureStep = screen.getByText('Review');
-            fireEvent.click(futureStep);
+            await user.click(futureStep);
 
             expect(mockOnStepClick).not.toHaveBeenCalled();
         });
@@ -208,7 +212,8 @@ describe('TimelineNav', () => {
     });
 
     describe('Edge Cases - Navigation Constraints', () => {
-        it('should not allow navigation to steps beyond current', () => {
+        it('should not allow navigation to steps beyond current', async () => {
+            const user = userEvent.setup();
             render(
                 <TimelineNav
                     steps={mockSteps}
@@ -221,13 +226,14 @@ describe('TimelineNav', () => {
 
             // Try to click on future step (index > currentStepIndex)
             const reviewStep = screen.getByText('Review');
-            fireEvent.click(reviewStep);
+            await user.click(reviewStep);
 
             // onStepClick should not be called
             expect(mockOnStepClick).not.toHaveBeenCalled();
         });
 
-        it('should allow navigation to first step from anywhere', () => {
+        it('should allow navigation to first step from anywhere', async () => {
+            const user = userEvent.setup();
             render(
                 <TimelineNav
                     steps={mockSteps}
@@ -239,7 +245,7 @@ describe('TimelineNav', () => {
             );
 
             const welcomeStep = screen.getByText('Welcome');
-            fireEvent.click(welcomeStep);
+            await user.click(welcomeStep);
 
             expect(mockOnStepClick).toHaveBeenCalledWith('welcome');
         });
@@ -261,7 +267,8 @@ describe('TimelineNav', () => {
             expect(screen.getByText('Setup Progress')).toBeInTheDocument();
         });
 
-        it('should handle missing onStepClick gracefully', () => {
+        it('should handle missing onStepClick gracefully', async () => {
+            const user = userEvent.setup();
             render(
                 <TimelineNav
                     steps={mockSteps}
@@ -273,7 +280,7 @@ describe('TimelineNav', () => {
 
             // Click step (should not crash without onStepClick)
             const step = screen.getByText('Welcome');
-            fireEvent.click(step);
+            await user.click(step);
 
             // No error should occur
             expect(step).toBeInTheDocument();

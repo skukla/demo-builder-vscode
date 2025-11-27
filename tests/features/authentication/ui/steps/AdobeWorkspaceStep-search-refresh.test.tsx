@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
@@ -122,7 +123,7 @@ describe('AdobeWorkspaceStep - Search and Refresh', () => {
             expect(refreshButton).toBeInTheDocument();
         });
 
-        it('should call refresh when refresh button is clicked', () => {
+        it('should call refresh when refresh button is clicked', async () => {
             const mockRefresh = jest.fn();
             mockUseSelectionStep.mockReturnValue(
                 createMockUseSelectionStepReturn({
@@ -140,8 +141,9 @@ describe('AdobeWorkspaceStep - Search and Refresh', () => {
                 </Provider>
             );
 
+            const user = userEvent.setup();
             const refreshButton = screen.getByLabelText('Refresh workspaces');
-            fireEvent.click(refreshButton);
+            await user.click(refreshButton);
 
             expect(mockRefresh).toHaveBeenCalled();
         });

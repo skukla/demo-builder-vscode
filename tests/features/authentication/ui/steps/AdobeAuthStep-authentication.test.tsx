@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { WizardState } from '@/types/webview';
@@ -74,7 +75,8 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             expect(screen.getByText('Sign In with Adobe')).toBeInTheDocument();
         });
 
-        it('should trigger authentication when Sign In button is clicked', () => {
+        it('should trigger authentication when Sign In button is clicked', async () => {
+            const user = userEvent.setup();
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: false, isChecking: false },
@@ -89,7 +91,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             );
 
             const signInButton = screen.getByText('Sign In with Adobe');
-            fireEvent.click(signInButton);
+            await user.click(signInButton);
 
             expect(mockRequestAuth).toHaveBeenCalledWith(false);
         });
@@ -319,7 +321,8 @@ describe('AdobeAuthStep - Authentication Flow', () => {
     });
 
     describe('UX Message Flash Fix - handleLogin() Message Behavior', () => {
-        it('should set authStatus to empty string when Sign In clicked, not optimistic message', () => {
+        it('should set authStatus to empty string when Sign In clicked, not optimistic message', async () => {
+            const user = userEvent.setup();
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: false, isChecking: false },
@@ -334,7 +337,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             );
 
             const signInButton = screen.getByText('Sign In with Adobe');
-            fireEvent.click(signInButton);
+            await user.click(signInButton);
 
             // Verify authStatus is cleared (empty string), NOT set to optimistic message
             // The optimistic message should NEVER appear after clicking Sign In
@@ -370,8 +373,9 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             });
 
             // Click Sign In - should clear messages
+            const user = userEvent.setup();
             const signInButton = screen.getByText('Sign In with Adobe');
-            fireEvent.click(signInButton);
+            await user.click(signInButton);
 
             // Sub-message should be cleared
             expect(screen.queryByText('Previous sub-message')).not.toBeInTheDocument();
@@ -394,8 +398,9 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             );
 
             // Click Sign In
+            const user = userEvent.setup();
             const signInButton = screen.getByText('Sign In with Adobe');
-            fireEvent.click(signInButton);
+            await user.click(signInButton);
 
             // Simulate backend sending accurate first message
             messageCallback({
@@ -411,7 +416,8 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             });
         });
 
-        it('should not display "Opening browser..." at any point during login flow', () => {
+        it('should not display "Opening browser..." at any point during login flow', async () => {
+            const user = userEvent.setup();
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: false, isChecking: false },
@@ -426,7 +432,7 @@ describe('AdobeAuthStep - Authentication Flow', () => {
             );
 
             const signInButton = screen.getByText('Sign In with Adobe');
-            fireEvent.click(signInButton);
+            await user.click(signInButton);
 
             // The optimistic message should NEVER appear
             expect(screen.queryByText('Opening browser for Adobe authentication...')).not.toBeInTheDocument();

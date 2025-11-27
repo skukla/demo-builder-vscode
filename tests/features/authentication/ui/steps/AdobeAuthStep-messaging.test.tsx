@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { WizardState } from '@/types/webview';
@@ -73,7 +74,8 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
             expect(screen.queryByTestId('loading-display')).not.toBeInTheDocument();
         });
 
-        it('should prevent race conditions during org switching', () => {
+        it('should prevent race conditions during org switching', async () => {
+            const user = userEvent.setup();
             const state = {
                 ...baseState,
                 adobeAuth: { isAuthenticated: true, isChecking: false },
@@ -91,9 +93,9 @@ describe('AdobeAuthStep - Messaging and Edge Cases', () => {
             const switchButton = screen.getByText('Switch Organizations');
 
             // Click switch button multiple times rapidly
-            fireEvent.click(switchButton);
-            fireEvent.click(switchButton);
-            fireEvent.click(switchButton);
+            await user.click(switchButton);
+            await user.click(switchButton);
+            await user.click(switchButton);
 
             // Should only trigger auth once (first call) if ref protection works
             // However, the component doesn't prevent multiple clicks in the current implementation

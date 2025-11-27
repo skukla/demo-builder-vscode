@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider as SpectrumProvider, defaultTheme } from '@adobe/react-spectrum';
 import { ConfigNavigationPanel } from '@/features/components/ui/steps/components/ConfigNavigationPanel';
 import { ServiceGroup } from '@/features/components/ui/steps/ComponentConfigStep';
@@ -148,7 +149,8 @@ describe('ConfigNavigationPanel', () => {
             expect(screen.queryByText('Admin Username')).not.toBeInTheDocument();
         });
 
-        it('calls onToggleNavSection when section header is clicked', () => {
+        it('calls onToggleNavSection when section header is clicked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <ConfigNavigationPanel
                     serviceGroups={sampleServiceGroups}
@@ -163,7 +165,7 @@ describe('ConfigNavigationPanel', () => {
             );
 
             const commerceSection = screen.getByText('Adobe Commerce').closest('button');
-            fireEvent.click(commerceSection!);
+            await user.click(commerceSection!);
 
             expect(mockToggleNavSection).toHaveBeenCalledWith('adobe-commerce');
         });
@@ -282,7 +284,8 @@ describe('ConfigNavigationPanel', () => {
     });
 
     describe('Field navigation', () => {
-        it('calls onNavigateToField when field is clicked', () => {
+        it('calls onNavigateToField when field is clicked', async () => {
+            const user = userEvent.setup();
             const expandedSections = new Set(['adobe-commerce']);
 
             renderWithSpectrum(
@@ -299,7 +302,7 @@ describe('ConfigNavigationPanel', () => {
             );
 
             const urlField = screen.getByText('Commerce URL').closest('button');
-            fireEvent.click(urlField!);
+            await user.click(urlField!);
 
             expect(mockNavigateToField).toHaveBeenCalledWith('ADOBE_COMMERCE_URL');
         });

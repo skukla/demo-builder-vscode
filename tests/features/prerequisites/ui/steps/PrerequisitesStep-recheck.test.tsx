@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
@@ -62,7 +63,8 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
         expect(screen.getByText('Recheck')).toBeInTheDocument();
     });
 
-    it('should trigger recheck when button clicked', () => {
+    it('should trigger recheck when button clicked', async () => {
+        const user = userEvent.setup();
         render(
             <Provider theme={defaultTheme}>
                 <PrerequisitesStep
@@ -77,7 +79,7 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
         );
 
         const recheckButton = screen.getByText('Recheck');
-        fireEvent.click(recheckButton);
+        await user.click(recheckButton);
 
         // Should trigger at least 2 checks (initial + recheck)
         expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites');

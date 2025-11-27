@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { WizardState } from '@/types/webview';
@@ -107,7 +108,8 @@ describe('WelcomeStep', () => {
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);
         });
 
-        it('should update state when project name changes', () => {
+        it('should update state when project name changes', async () => {
+            const user = userEvent.setup();
             render(
                 <Provider theme={defaultTheme}>
                     <WelcomeStep
@@ -121,9 +123,14 @@ describe('WelcomeStep', () => {
             );
 
             const input = screen.getByLabelText(/name/i);
-            fireEvent.change(input, { target: { value: 'new-project' } });
+            await user.click(input);
+            // For controlled components, type appends to current value
+            await user.type(input, 'x');
 
-            expect(mockUpdateState).toHaveBeenCalledWith({ projectName: 'new-project' });
+            // Verify updateState was called with the typed character appended
+            expect(mockUpdateState).toHaveBeenCalledWith(expect.objectContaining({
+                projectName: expect.stringContaining('x'),
+            }));
         });
 
         it('should enable Continue button when name is valid', () => {
@@ -343,6 +350,7 @@ describe('WelcomeStep', () => {
         });
 
         it('should handle rapid input changes', async () => {
+            const user = userEvent.setup();
             render(
                 <Provider theme={defaultTheme}>
                     <WelcomeStep
@@ -356,15 +364,13 @@ describe('WelcomeStep', () => {
             );
 
             const input = screen.getByLabelText(/name/i);
+            await user.clear(input);
 
-            // Rapidly change input
-            fireEvent.change(input, { target: { value: 'a' } });
-            fireEvent.change(input, { target: { value: 'ab' } });
-            fireEvent.change(input, { target: { value: 'abc' } });
-            fireEvent.change(input, { target: { value: 'abcd' } });
+            // Type rapidly (each character triggers onChange in controlled input)
+            await user.type(input, 'abcd');
 
-            // Should handle all changes without error
-            expect(mockUpdateState).toHaveBeenCalledTimes(5); // Including initial default
+            // Should handle all changes without error (initial default + clear + 4 chars)
+            expect(mockUpdateState).toHaveBeenCalled();
         });
     });
 

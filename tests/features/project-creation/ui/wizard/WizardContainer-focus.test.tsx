@@ -1,7 +1,8 @@
 // Import mocks FIRST - before any component imports
 import './WizardContainer.mocks';
 
-import { screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { screen, waitFor, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { WizardContainer } from '@/features/project-creation/ui/wizard/WizardContainer';
 import '@testing-library/jest-dom';
@@ -27,6 +28,7 @@ describe('WizardContainer - Focus Management', () => {
 
     describe('Self-Managed Steps - Skip Auto-Focus', () => {
         it('should skip auto-focus for component-selection step', async () => {
+            const user = userEvent.setup();
             const focusSpy = jest.spyOn(HTMLElement.prototype, 'focus');
 
             renderWithTheme(
@@ -43,25 +45,25 @@ describe('WizardContainer - Focus Management', () => {
             const continueButton = screen.getByRole('button', { name: /continue/i });
 
             // welcome → adobe-auth
-            fireEvent.click(continueButton);
+            await user.click(continueButton);
             await waitFor(() => {
                 expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
             // adobe-auth → adobe-project
-            fireEvent.click(continueButton);
+            await user.click(continueButton);
             await waitFor(() => {
                 expect(screen.getByTestId('adobe-project-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
             // adobe-project → adobe-workspace
-            fireEvent.click(continueButton);
+            await user.click(continueButton);
             await waitFor(() => {
                 expect(screen.getByTestId('adobe-workspace-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
             // adobe-workspace → component-selection
-            fireEvent.click(continueButton);
+            await user.click(continueButton);
             await waitFor(() => {
                 expect(screen.getByTestId('component-selection-step')).toBeInTheDocument();
             }, { timeout: 500 });

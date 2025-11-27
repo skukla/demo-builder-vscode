@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider as SpectrumProvider, defaultTheme } from '@adobe/react-spectrum';
 import { FrontendSelector } from '@/features/components/ui/steps/components/FrontendSelector';
 
@@ -206,7 +207,8 @@ describe('FrontendSelector', () => {
     });
 
     describe('Dependency toggling', () => {
-        it('calls onDependencyToggle when optional dependency is checked', () => {
+        it('calls onDependencyToggle when optional dependency is checked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <FrontendSelector
                     frontendOptions={frontendOptions}
@@ -219,12 +221,13 @@ describe('FrontendSelector', () => {
             );
 
             const inspectorCheckbox = screen.getByLabelText('Demo Inspector');
-            fireEvent.click(inspectorCheckbox);
+            await user.click(inspectorCheckbox);
 
             expect(mockOnDependencyToggle).toHaveBeenCalledWith('demo-inspector', true);
         });
 
-        it('calls onDependencyToggle when optional dependency is unchecked', () => {
+        it('calls onDependencyToggle when optional dependency is unchecked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <FrontendSelector
                     frontendOptions={frontendOptions}
@@ -237,12 +240,13 @@ describe('FrontendSelector', () => {
             );
 
             const inspectorCheckbox = screen.getByLabelText('Demo Inspector');
-            fireEvent.click(inspectorCheckbox);
+            await user.click(inspectorCheckbox);
 
             expect(mockOnDependencyToggle).toHaveBeenCalledWith('demo-inspector', false);
         });
 
-        it('does not call onDependencyToggle for required dependencies', () => {
+        it('does not call onDependencyToggle for required dependencies', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <FrontendSelector
                     frontendOptions={frontendOptions}
@@ -255,7 +259,7 @@ describe('FrontendSelector', () => {
             );
 
             const meshCheckbox = screen.getByLabelText('API Mesh');
-            fireEvent.click(meshCheckbox); // Click should have no effect
+            await user.click(meshCheckbox); // Click should have no effect
 
             expect(mockOnDependencyToggle).not.toHaveBeenCalled();
         });

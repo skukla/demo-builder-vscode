@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider as SpectrumProvider, defaultTheme } from '@adobe/react-spectrum';
 import { BackendSelector } from '@/features/components/ui/steps/components/BackendSelector';
 
@@ -215,7 +216,8 @@ describe('BackendSelector', () => {
     });
 
     describe('Service toggling', () => {
-        it('calls onServiceToggle when optional service is checked', () => {
+        it('calls onServiceToggle when optional service is checked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <BackendSelector
                     backendOptions={backendOptions}
@@ -228,12 +230,13 @@ describe('BackendSelector', () => {
             );
 
             const recoCheckbox = screen.getByLabelText('Product Recommendations');
-            fireEvent.click(recoCheckbox);
+            await user.click(recoCheckbox);
 
             expect(mockOnServiceToggle).toHaveBeenCalledWith('product-recommendations', true);
         });
 
-        it('calls onServiceToggle when optional service is unchecked', () => {
+        it('calls onServiceToggle when optional service is unchecked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <BackendSelector
                     backendOptions={backendOptions}
@@ -246,12 +249,13 @@ describe('BackendSelector', () => {
             );
 
             const recoCheckbox = screen.getByLabelText('Product Recommendations');
-            fireEvent.click(recoCheckbox);
+            await user.click(recoCheckbox);
 
             expect(mockOnServiceToggle).toHaveBeenCalledWith('product-recommendations', false);
         });
 
-        it('does not call onServiceToggle for required services', () => {
+        it('does not call onServiceToggle for required services', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <BackendSelector
                     backendOptions={backendOptions}
@@ -264,7 +268,7 @@ describe('BackendSelector', () => {
             );
 
             const catalogCheckbox = screen.getByLabelText('Catalog Service');
-            fireEvent.click(catalogCheckbox); // Click should have no effect
+            await user.click(catalogCheckbox); // Click should have no effect
 
             expect(mockOnServiceToggle).not.toHaveBeenCalled();
         });

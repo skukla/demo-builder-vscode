@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { WizardState } from '@/types/webview';
@@ -199,7 +200,8 @@ describe('ProjectCreationStep', () => {
             expect(screen.queryByRole('button', { name: /Close/i })).not.toBeInTheDocument();
         });
 
-        it('should send openProject message when Open Project is clicked', () => {
+        it('should send openProject message when Open Project is clicked', async () => {
+            const user = userEvent.setup();
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -210,7 +212,7 @@ describe('ProjectCreationStep', () => {
             );
 
             const openButton = screen.getByRole('button', { name: /Open Project/i });
-            fireEvent.click(openButton);
+            await user.click(openButton);
 
             // After clicking, button is replaced with loading state ("Opening your project...")
             expect(screen.getByText('Opening your project...')).toBeInTheDocument();

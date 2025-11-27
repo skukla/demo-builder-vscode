@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider as SpectrumProvider, defaultTheme } from '@adobe/react-spectrum';
 import { MeshErrorDialog } from '@/features/mesh/ui/steps/components/MeshErrorDialog';
 
@@ -89,7 +90,8 @@ describe('MeshErrorDialog', () => {
             expect(screen.getByText('Back')).toBeInTheDocument();
         });
 
-        it('calls onRetry when Retry button is clicked', () => {
+        it('calls onRetry when Retry button is clicked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -101,12 +103,13 @@ describe('MeshErrorDialog', () => {
             );
 
             const retryButton = screen.getByText('Retry');
-            fireEvent.click(retryButton);
+            await user.click(retryButton);
 
             expect(mockOnRetry).toHaveBeenCalledTimes(1);
         });
 
-        it('calls onBack when Back button is clicked', () => {
+        it('calls onBack when Back button is clicked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -118,7 +121,7 @@ describe('MeshErrorDialog', () => {
             );
 
             const backButton = screen.getByText('Back');
-            fireEvent.click(backButton);
+            await user.click(backButton);
 
             expect(mockOnBack).toHaveBeenCalledTimes(1);
         });
@@ -154,7 +157,8 @@ describe('MeshErrorDialog', () => {
             expect(screen.queryByText('View Setup Instructions')).not.toBeInTheDocument();
         });
 
-        it('opens modal when View Setup Instructions is clicked', () => {
+        it('opens modal when View Setup Instructions is clicked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -166,13 +170,14 @@ describe('MeshErrorDialog', () => {
             );
 
             const viewInstructionsButton = screen.getByText('View Setup Instructions');
-            fireEvent.click(viewInstructionsButton);
+            await user.click(viewInstructionsButton);
 
             // Modal should now be visible
             expect(screen.getByText('API Mesh Setup Guide')).toBeInTheDocument();
         });
 
-        it('renders numbered instructions in modal', () => {
+        it('renders numbered instructions in modal', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -184,7 +189,7 @@ describe('MeshErrorDialog', () => {
             );
 
             const viewInstructionsButton = screen.getByText('View Setup Instructions');
-            fireEvent.click(viewInstructionsButton);
+            await user.click(viewInstructionsButton);
 
             // Check that instruction steps are rendered
             expect(screen.getByText(/navigate to the services tab/i)).toBeInTheDocument();
@@ -192,7 +197,8 @@ describe('MeshErrorDialog', () => {
             expect(screen.getByText(/wait for activation/i)).toBeInTheDocument();
         });
 
-        it('highlights important instructions', () => {
+        it('highlights important instructions', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -204,14 +210,15 @@ describe('MeshErrorDialog', () => {
             );
 
             const viewInstructionsButton = screen.getByText('View Setup Instructions');
-            fireEvent.click(viewInstructionsButton);
+            await user.click(viewInstructionsButton);
 
             // Important step should be marked (e.g., with special styling or indicator)
             const importantStep = screen.getByText(/enable api mesh api/i);
             expect(importantStep).toBeInTheDocument();
         });
 
-        it('renders Open Workspace in Console button in modal', () => {
+        it('renders Open Workspace in Console button in modal', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -223,12 +230,13 @@ describe('MeshErrorDialog', () => {
             );
 
             const viewInstructionsButton = screen.getByText('View Setup Instructions');
-            fireEvent.click(viewInstructionsButton);
+            await user.click(viewInstructionsButton);
 
             expect(screen.getByText('Open Workspace in Console')).toBeInTheDocument();
         });
 
-        it('calls onOpenConsole when Open Workspace button is clicked', () => {
+        it('calls onOpenConsole when Open Workspace button is clicked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <MeshErrorDialog
                     error="API Mesh API is not enabled"
@@ -240,10 +248,10 @@ describe('MeshErrorDialog', () => {
             );
 
             const viewInstructionsButton = screen.getByText('View Setup Instructions');
-            fireEvent.click(viewInstructionsButton);
+            await user.click(viewInstructionsButton);
 
             const openConsoleButton = screen.getByText('Open Workspace in Console');
-            fireEvent.click(openConsoleButton);
+            await user.click(openConsoleButton);
 
             expect(mockOnOpenConsole).toHaveBeenCalledTimes(1);
         });

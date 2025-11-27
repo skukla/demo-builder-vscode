@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { WizardState } from '@/types/webview';
@@ -100,7 +101,8 @@ describe('AdobeAuthStep - Error Handling', () => {
             expect(screen.getByText(/You need Developer or System Admin role/)).toBeInTheDocument();
         });
 
-        it('should allow retry on error', () => {
+        it('should allow retry on error', async () => {
+            const user = userEvent.setup();
             const state = {
                 ...baseState,
                 adobeAuth: {
@@ -119,7 +121,7 @@ describe('AdobeAuthStep - Error Handling', () => {
             );
 
             const tryAgainButton = screen.getByText('Try Again');
-            fireEvent.click(tryAgainButton);
+            await user.click(tryAgainButton);
 
             expect(mockPostMessage).toHaveBeenCalledWith('check-auth');
         });
@@ -188,8 +190,9 @@ describe('AdobeAuthStep - Error Handling', () => {
                 expect(screen.getByText('Retry Login')).toBeInTheDocument();
             });
 
+            const user = userEvent.setup();
             const retryButton = screen.getByText('Retry Login');
-            fireEvent.click(retryButton);
+            await user.click(retryButton);
 
             expect(mockRequestAuth).toHaveBeenCalledWith(false);
         });

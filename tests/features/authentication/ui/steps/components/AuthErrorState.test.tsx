@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider as SpectrumProvider, defaultTheme } from '@adobe/react-spectrum';
 import { AuthErrorState } from '@/features/authentication/ui/steps/components/AuthErrorState';
 
@@ -77,7 +78,8 @@ describe('AuthErrorState', () => {
             expect(screen.getByText('Back')).toBeInTheDocument();
         });
 
-        it('calls onRetry when Retry button is clicked', () => {
+        it('calls onRetry when Retry button is clicked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <AuthErrorState
                     error="Authentication failed"
@@ -87,12 +89,13 @@ describe('AuthErrorState', () => {
             );
 
             const retryButton = screen.getByText('Retry');
-            fireEvent.click(retryButton);
+            await user.click(retryButton);
 
             expect(mockOnRetry).toHaveBeenCalledTimes(1);
         });
 
-        it('calls onBack when Back button is clicked', () => {
+        it('calls onBack when Back button is clicked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <AuthErrorState
                     error="Authentication failed"
@@ -102,7 +105,7 @@ describe('AuthErrorState', () => {
             );
 
             const backButton = screen.getByText('Back');
-            fireEvent.click(backButton);
+            await user.click(backButton);
 
             expect(mockOnBack).toHaveBeenCalledTimes(1);
         });

@@ -1,4 +1,5 @@
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import {
     mockRequest,
@@ -79,6 +80,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
         });
 
         it('should trigger recheck when retry clicked', async () => {
+            const user = userEvent.setup();
             mockRequest.mockResolvedValue(createErrorResponse('Connection failed'));
 
             const state = createBaseState();
@@ -89,13 +91,14 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
             });
 
             const retryButton = screen.getByText('Retry');
-            fireEvent.click(retryButton);
+            await user.click(retryButton);
 
             // Initial check + retry = 2 calls
             expect(mockRequest).toHaveBeenCalledTimes(2);
         });
 
         it('should clear previous error on retry', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(createErrorResponse('Connection failed'))
                 .mockResolvedValueOnce(createMeshCheckResponse());
@@ -108,7 +111,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
             });
 
             const retryButton = screen.getByText('Retry');
-            fireEvent.click(retryButton);
+            await user.click(retryButton);
 
             await waitFor(() => {
                 expect(screen.getByText('API Mesh Deployed')).toBeInTheDocument();
@@ -118,6 +121,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
 
     describe('Mesh Creation Errors', () => {
         it('should handle mesh creation failure', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -137,7 +141,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
             });
 
             const createButton = screen.getByText('Create Mesh');
-            fireEvent.click(createButton);
+            await user.click(createButton);
 
             await waitFor(() => {
                 expect(screen.getByText('Failed to create mesh')).toBeInTheDocument();
@@ -145,6 +149,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
         });
 
         it('should disable proceed after mesh creation failure', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -165,7 +170,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
             });
 
             const createButton = screen.getByText('Create Mesh');
-            fireEvent.click(createButton);
+            await user.click(createButton);
 
             await waitFor(() => {
                 expect(mockSetCanProceed).toHaveBeenCalledWith(false);
@@ -173,6 +178,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
         });
 
         it('should update state with creation error', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -193,7 +199,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
             });
 
             const createButton = screen.getByText('Create Mesh');
-            fireEvent.click(createButton);
+            await user.click(createButton);
 
             await waitFor(() => {
                 expect(mockUpdateState).toHaveBeenCalledWith(
@@ -290,6 +296,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
         });
 
         it('should allow back navigation on any error', async () => {
+            const user = userEvent.setup();
             mockRequest.mockResolvedValue(createErrorResponse('Generic error'));
 
             const mockOnBack = jest.fn();
@@ -301,7 +308,7 @@ describe('ApiMeshStep - Error Handling & Edge Cases', () => {
             });
 
             const backButton = screen.getByText('Back');
-            fireEvent.click(backButton);
+            await user.click(backButton);
 
             expect(mockOnBack).toHaveBeenCalled();
         });

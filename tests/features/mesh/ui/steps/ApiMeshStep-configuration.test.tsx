@@ -1,4 +1,5 @@
-import { waitFor, fireEvent } from '@testing-library/react';
+import { waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import {
     mockRequest,
@@ -189,8 +190,9 @@ describe('ApiMeshStep - Configuration & Status Checking', () => {
                 expect(retryButton).toHaveTextContent('Retry');
             });
 
+            const user = userEvent.setup();
             const retryButton = document.querySelector('button') as HTMLButtonElement;
-            fireEvent.click(retryButton);
+            await user.click(retryButton);
 
             // Initial check + retry = 2 calls
             expect(mockRequest).toHaveBeenCalledTimes(2);

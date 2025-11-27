@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider as SpectrumProvider, defaultTheme } from '@adobe/react-spectrum';
 import { MeshStatusDisplay } from '@/features/mesh/ui/steps/components/MeshStatusDisplay';
 
@@ -158,7 +159,8 @@ describe('MeshStatusDisplay', () => {
             expect(screen.getByText('Back')).toBeInTheDocument();
         });
 
-        it('calls onRecreateMesh when Recreate Mesh button is clicked', () => {
+        it('calls onRecreateMesh when Recreate Mesh button is clicked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <MeshStatusDisplay
                     meshData={{
@@ -172,12 +174,13 @@ describe('MeshStatusDisplay', () => {
             );
 
             const recreateButton = screen.getByText('Recreate Mesh');
-            fireEvent.click(recreateButton);
+            await user.click(recreateButton);
 
             expect(mockOnRecreateMesh).toHaveBeenCalledTimes(1);
         });
 
-        it('calls onBack when Back button is clicked', () => {
+        it('calls onBack when Back button is clicked', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <MeshStatusDisplay
                     meshData={{
@@ -191,7 +194,7 @@ describe('MeshStatusDisplay', () => {
             );
 
             const backButton = screen.getByText('Back');
-            fireEvent.click(backButton);
+            await user.click(backButton);
 
             expect(mockOnBack).toHaveBeenCalledTimes(1);
         });

@@ -1,5 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Provider as SpectrumProvider, defaultTheme } from '@adobe/react-spectrum';
 import { DependencySelector } from '@/features/components/ui/steps/components/DependencySelector';
 
@@ -102,7 +103,8 @@ describe('DependencySelector', () => {
     });
 
     describe('Integration selection', () => {
-        it('calls onIntegrationsChange when integration is selected', () => {
+        it('calls onIntegrationsChange when integration is selected', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <DependencySelector
                     integrationsOptions={integrationsOptions}
@@ -115,12 +117,13 @@ describe('DependencySelector', () => {
             );
 
             const expPlatformCheckbox = screen.getByLabelText('Experience Platform');
-            fireEvent.click(expPlatformCheckbox);
+            await user.click(expPlatformCheckbox);
 
             expect(mockOnIntegrationsChange).toHaveBeenCalledWith('experience-platform', true);
         });
 
-        it('calls onIntegrationsChange when integration is deselected', () => {
+        it('calls onIntegrationsChange when integration is deselected', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <DependencySelector
                     integrationsOptions={integrationsOptions}
@@ -133,7 +136,7 @@ describe('DependencySelector', () => {
             );
 
             const expPlatformCheckbox = screen.getByLabelText('Experience Platform');
-            fireEvent.click(expPlatformCheckbox);
+            await user.click(expPlatformCheckbox);
 
             expect(mockOnIntegrationsChange).toHaveBeenCalledWith('experience-platform', false);
         });
@@ -178,7 +181,8 @@ describe('DependencySelector', () => {
     });
 
     describe('App Builder selection', () => {
-        it('calls onAppBuilderChange when app is selected', () => {
+        it('calls onAppBuilderChange when app is selected', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <DependencySelector
                     integrationsOptions={integrationsOptions}
@@ -191,12 +195,13 @@ describe('DependencySelector', () => {
             );
 
             const integrationServiceCheckbox = screen.getByLabelText('Integration Service');
-            fireEvent.click(integrationServiceCheckbox);
+            await user.click(integrationServiceCheckbox);
 
             expect(mockOnAppBuilderChange).toHaveBeenCalledWith('integration-service', true);
         });
 
-        it('calls onAppBuilderChange when app is deselected', () => {
+        it('calls onAppBuilderChange when app is deselected', async () => {
+            const user = userEvent.setup();
             renderWithSpectrum(
                 <DependencySelector
                     integrationsOptions={integrationsOptions}
@@ -209,7 +214,7 @@ describe('DependencySelector', () => {
             );
 
             const integrationServiceCheckbox = screen.getByLabelText('Integration Service');
-            fireEvent.click(integrationServiceCheckbox);
+            await user.click(integrationServiceCheckbox);
 
             expect(mockOnAppBuilderChange).toHaveBeenCalledWith('integration-service', false);
         });

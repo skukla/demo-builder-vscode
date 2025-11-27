@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
@@ -130,7 +131,7 @@ describe('AdobeWorkspaceStep - Loading and Errors', () => {
             expect(screen.getByText('Failed to load workspaces')).toBeInTheDocument();
         });
 
-        it('should provide retry button on error', () => {
+        it('should provide retry button on error', async () => {
             const mockLoad = jest.fn();
             mockUseSelectionStep.mockReturnValue(
                 createMockUseSelectionStepReturn({
@@ -152,8 +153,9 @@ describe('AdobeWorkspaceStep - Loading and Errors', () => {
                 </Provider>
             );
 
+            const user = userEvent.setup();
             const retryButton = screen.getByText('Try Again');
-            fireEvent.click(retryButton);
+            await user.click(retryButton);
 
             expect(mockLoad).toHaveBeenCalled();
         });

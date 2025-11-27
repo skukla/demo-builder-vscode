@@ -1,7 +1,8 @@
 // Import mocks FIRST - before any component imports
 import './WizardContainer.mocks';
 
-import { screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { screen, waitFor, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { WizardContainer } from '@/features/project-creation/ui/wizard/WizardContainer';
 import '@testing-library/jest-dom';
@@ -26,6 +27,7 @@ describe('WizardContainer - State Management', () => {
 
     describe('Edge Cases - State Clearing', () => {
         it('should clear dependent state when navigating backward past selection steps', async () => {
+            const user = userEvent.setup();
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -38,13 +40,13 @@ describe('WizardContainer - State Management', () => {
 
             // Welcome -> Adobe Auth -> Adobe Project -> Adobe Workspace
             for (let i = 0; i < 3; i++) {
-                fireEvent.click(continueButton);
+                await user.click(continueButton);
                 await waitFor(() => {}, { timeout: 400 });
             }
 
             // Now navigate back to Welcome (should clear project and workspace state)
             const welcomeTimelineButton = screen.getByTestId('timeline-step-welcome');
-            fireEvent.click(welcomeTimelineButton);
+            await user.click(welcomeTimelineButton);
 
             await waitFor(() => {
                 expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
@@ -56,6 +58,7 @@ describe('WizardContainer - State Management', () => {
 
     describe('Error Conditions - Backend Failures', () => {
         it('should handle backend failure when selecting project', async () => {
+            const user = userEvent.setup();
             mockRequest.mockResolvedValueOnce({ success: false, error: 'Failed to select project' });
 
             renderWithTheme(
@@ -68,14 +71,14 @@ describe('WizardContainer - State Management', () => {
             // Navigate to adobe-project step
             const continueButton = screen.getByRole('button', { name: /continue/i });
 
-            fireEvent.click(continueButton);
+            await user.click(continueButton);
             await waitFor(() => screen.getByTestId('adobe-auth-step'), { timeout: 500 });
 
-            fireEvent.click(continueButton);
+            await user.click(continueButton);
             await waitFor(() => screen.getByTestId('adobe-project-step'), { timeout: 500 });
 
             // Click Continue (should trigger backend error)
-            fireEvent.click(continueButton);
+            await user.click(continueButton);
 
             // Should not advance to next step due to error
             await waitFor(() => {
@@ -100,6 +103,7 @@ describe('WizardContainer - State Management', () => {
         });
 
         it('should show loading overlay during backend calls', async () => {
+            const user = userEvent.setup();
             // Reset and mock slow backend call
             mockRequest.mockReset();
             mockRequest.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ success: true }), 200)));
@@ -115,15 +119,15 @@ describe('WizardContainer - State Management', () => {
             const getButton = () => screen.getByRole('button', { name: /continue/i });
 
             // Click to navigate from welcome to adobe-auth
-            fireEvent.click(getButton());
+            await user.click(getButton());
             await screen.findByTestId('adobe-auth-step', {}, { timeout: 1000 });
 
             // Click to navigate from adobe-auth to adobe-project
-            fireEvent.click(getButton());
+            await user.click(getButton());
             await screen.findByTestId('adobe-project-step', {}, { timeout: 1000 });
 
             // Click Continue (should show loading overlay during backend call)
-            fireEvent.click(getButton());
+            await user.click(getButton());
 
             // Loading overlay should appear briefly
             // (Visual verification through isConfirmingSelection state)

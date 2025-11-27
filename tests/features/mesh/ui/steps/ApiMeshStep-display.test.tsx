@@ -1,4 +1,5 @@
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import {
     mockRequest,
@@ -80,8 +81,9 @@ describe('ApiMeshStep - Display & Layout', () => {
                 expect(screen.getByText('Create Mesh')).toBeInTheDocument();
             });
 
+            const user = userEvent.setup();
             const createButton = screen.getByText('Create Mesh');
-            fireEvent.click(createButton);
+            await user.click(createButton);
 
             await waitFor(() => {
                 expect(screen.getByText('Creating API Mesh...')).toBeInTheDocument();
@@ -203,8 +205,9 @@ describe('ApiMeshStep - Display & Layout', () => {
                 expect(screen.getByText('Back')).toBeInTheDocument();
             });
 
+            const user = userEvent.setup();
             const backButton = screen.getByText('Back');
-            fireEvent.click(backButton);
+            await user.click(backButton);
 
             expect(mockOnBack).toHaveBeenCalled();
         });

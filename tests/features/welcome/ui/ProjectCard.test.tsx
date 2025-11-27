@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { ProjectCard } from '@/features/welcome/ui/ProjectCard';
 import '@testing-library/jest-dom';
@@ -92,7 +93,8 @@ describe('ProjectCard', () => {
         expect(screen.queryByText('Current')).not.toBeInTheDocument();
     });
 
-    it('should call onOpen when Open button is clicked', () => {
+    it('should call onOpen when Open button is clicked', async () => {
+        const user = userEvent.setup();
         render(
             <ProjectCard
                 project={mockProject}
@@ -102,13 +104,14 @@ describe('ProjectCard', () => {
         );
 
         const openButton = screen.getByText('Open');
-        fireEvent.click(openButton);
+        await user.click(openButton);
 
         expect(mockOnOpen).toHaveBeenCalledTimes(1);
         expect(mockOnDelete).not.toHaveBeenCalled();
     });
 
-    it('should call onDelete when delete button is clicked', () => {
+    it('should call onDelete when delete button is clicked', async () => {
+        const user = userEvent.setup();
         render(
             <ProjectCard
                 project={mockProject}
@@ -122,7 +125,7 @@ describe('ProjectCard', () => {
         const deleteButton = buttons.find(btn => btn.textContent === '' && !btn.textContent?.includes('Open'));
 
         if (deleteButton) {
-            fireEvent.click(deleteButton);
+            await user.click(deleteButton);
             expect(mockOnDelete).toHaveBeenCalledTimes(1);
             expect(mockOnOpen).not.toHaveBeenCalled();
         } else {

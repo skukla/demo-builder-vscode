@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { EmptyState } from '@/features/welcome/ui/EmptyState';
 import '@testing-library/jest-dom';
@@ -34,11 +35,12 @@ describe('EmptyState', () => {
         ).toBeInTheDocument();
     });
 
-    it('should call onImport when Import button is clicked', () => {
+    it('should call onImport when Import button is clicked', async () => {
+        const user = userEvent.setup();
         render(<EmptyState onImport={mockOnImport} />);
 
         const importButton = screen.getByText('Import from Console');
-        fireEvent.click(importButton);
+        await user.click(importButton);
 
         expect(mockOnImport).toHaveBeenCalledTimes(1);
     });

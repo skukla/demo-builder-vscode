@@ -1,4 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
@@ -89,6 +90,7 @@ describe('PrerequisitesStep - Installation Flow', () => {
     });
 
     it('should trigger installation when Install button clicked', async () => {
+        const user = userEvent.setup();
         let loadedCallback: (data: any) => void = () => {};
         let statusCallback: (data: any) => void = () => {};
 
@@ -131,7 +133,7 @@ describe('PrerequisitesStep - Installation Flow', () => {
         });
 
         const installButton = screen.getByText('Install');
-        fireEvent.click(installButton);
+        await user.click(installButton);
 
         // Component sends check-prerequisites on mount, then install-prerequisite when button clicked
         expect(mockPostMessage).toHaveBeenCalledWith('install-prerequisite', {

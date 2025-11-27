@@ -1,4 +1,5 @@
-import { screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 import {
     mockRequest,
@@ -21,6 +22,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
 
     describe('Mesh Creation Flow', () => {
         it('should trigger mesh creation when Create Mesh clicked', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -37,7 +39,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
             });
 
             const createButton = screen.getByText('Create Mesh');
-            fireEvent.click(createButton);
+            await user.click(createButton);
 
             await waitFor(() => {
                 expect(mockRequest).toHaveBeenCalledWith('create-api-mesh', {
@@ -47,6 +49,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should show loading during mesh creation', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -76,7 +79,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
             });
 
             const createButton = screen.getByText('Create Mesh');
-            fireEvent.click(createButton);
+            await user.click(createButton);
 
             await waitFor(() => {
                 expect(screen.getByText('Creating API Mesh...')).toBeInTheDocument();
@@ -84,6 +87,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should enable continue after successful mesh creation', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -101,7 +105,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
             });
 
             const createButton = screen.getByText('Create Mesh');
-            fireEvent.click(createButton);
+            await user.click(createButton);
 
             await waitFor(() => {
                 expect(mockSetCanProceed).toHaveBeenCalledWith(true);
@@ -109,6 +113,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should update state after successful mesh creation', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -131,7 +136,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
             });
 
             const createButton = screen.getByText('Create Mesh');
-            fireEvent.click(createButton);
+            await user.click(createButton);
 
             await waitFor(() => {
                 expect(mockUpdateState).toHaveBeenCalledWith(
@@ -148,6 +153,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
 
     describe('Mesh Recreation', () => {
         it('should trigger mesh recreation for error mesh', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -166,7 +172,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
             });
 
             const recreateButton = screen.getByText('Recreate Mesh');
-            fireEvent.click(recreateButton);
+            await user.click(recreateButton);
 
             await waitFor(() => {
                 expect(mockRequest).toHaveBeenCalledWith('create-api-mesh', {
@@ -176,6 +182,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should display "API Mesh Deployed" after successful recreation', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -199,7 +206,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
             });
 
             const recreateButton = screen.getByText('Recreate Mesh');
-            fireEvent.click(recreateButton);
+            await user.click(recreateButton);
 
             await waitFor(() => {
                 expect(screen.getByText('API Mesh Deployed')).toBeInTheDocument();
@@ -207,6 +214,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should update state after successful recreation', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -231,7 +239,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
             });
 
             const recreateButton = screen.getByText('Recreate Mesh');
-            fireEvent.click(recreateButton);
+            await user.click(recreateButton);
 
             await waitFor(() => {
                 expect(mockUpdateState).toHaveBeenCalledWith(
@@ -247,6 +255,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should enable continue after successful recreation', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -266,7 +275,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
             });
 
             const recreateButton = screen.getByText('Recreate Mesh');
-            fireEvent.click(recreateButton);
+            await user.click(recreateButton);
 
             await waitFor(() => {
                 expect(mockSetCanProceed).toHaveBeenCalledWith(true);
@@ -298,6 +307,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should handle partial deployment response', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -319,7 +329,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
             });
 
             const createButton = screen.getByText('Create Mesh');
-            fireEvent.click(createButton);
+            await user.click(createButton);
 
             await waitFor(() => {
                 expect(mockUpdateState).toHaveBeenCalledWith(
@@ -335,6 +345,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
 
     describe('Timeout Handling', () => {
         it('should handle timeout during mesh creation', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -355,7 +366,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
             });
 
             const createButton = screen.getByText('Create Mesh');
-            fireEvent.click(createButton);
+            await user.click(createButton);
 
             await waitFor(() => {
                 expect(mockSetCanProceed).toHaveBeenCalledWith(true);
@@ -363,6 +374,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
         });
 
         it('should allow proceeding after timeout', async () => {
+            const user = userEvent.setup();
             mockRequest
                 .mockResolvedValueOnce(
                     createMeshCheckResponse({
@@ -383,7 +395,7 @@ describe('ApiMeshStep - Deployment Operations', () => {
             });
 
             const createButton = screen.getByText('Create Mesh');
-            fireEvent.click(createButton);
+            await user.click(createButton);
 
             await waitFor(() => {
                 expect(mockSetCanProceed).toHaveBeenCalledWith(true);

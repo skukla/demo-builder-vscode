@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
@@ -158,7 +159,7 @@ describe('AdobeProjectStep - Search and Refresh', () => {
             expect(refreshButton).toBeInTheDocument();
         });
 
-        it('should call refresh when refresh button is clicked', () => {
+        it('should call refresh when refresh button is clicked', async () => {
             const mockRefresh = jest.fn();
             mockUseSelectionStep.mockReturnValue(
                 createMockSelectionStep({
@@ -179,8 +180,9 @@ describe('AdobeProjectStep - Search and Refresh', () => {
                 </Provider>
             );
 
+            const user = userEvent.setup();
             const refreshButton = screen.getByLabelText('Refresh projects');
-            fireEvent.click(refreshButton);
+            await user.click(refreshButton);
 
             expect(mockRefresh).toHaveBeenCalled();
         });

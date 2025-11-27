@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { WizardState } from '@/types/webview';
@@ -119,7 +120,8 @@ describe('AdobeAuthStep - Organization Selection', () => {
             expect(screen.getByText(/Your previous organization is no longer accessible/)).toBeInTheDocument();
         });
 
-        it('should trigger org selection when Select Organization is clicked', () => {
+        it('should trigger org selection when Select Organization is clicked', async () => {
+            const user = userEvent.setup();
             const state = {
                 ...baseState,
                 adobeAuth: {
@@ -138,12 +140,13 @@ describe('AdobeAuthStep - Organization Selection', () => {
             );
 
             const selectOrgButton = screen.getByText('Select Organization');
-            fireEvent.click(selectOrgButton);
+            await user.click(selectOrgButton);
 
             expect(mockRequestAuth).toHaveBeenCalledWith(true); // force = true
         });
 
-        it('should clear dependent state when switching organizations', () => {
+        it('should clear dependent state when switching organizations', async () => {
+            const user = userEvent.setup();
             const mockUpdate = jest.fn();
             const state = {
                 ...baseState,
@@ -160,7 +163,7 @@ describe('AdobeAuthStep - Organization Selection', () => {
             );
 
             const switchButton = screen.getByText('Switch Organizations');
-            fireEvent.click(switchButton);
+            await user.click(switchButton);
 
             expect(mockUpdate).toHaveBeenCalledWith(
                 expect.objectContaining({
