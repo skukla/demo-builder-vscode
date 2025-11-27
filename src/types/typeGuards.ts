@@ -260,16 +260,38 @@ export function toError(error: unknown): Error {
     return new Error('Unknown error occurred');
 }
 
+// =============================================================================
+// Object Utility Functions
+// =============================================================================
+// These extract common inline Object.keys/values/entries patterns
+// per SOP code-patterns.md §4 (Inline Object Operations)
+
 /**
- * isTimeoutError - Check if error is a timeout error
+ * Check if object has any entries (type guard)
+ *
+ * Replaces inline: `Object.keys(obj).length > 0`
+ * Acts as a type guard to narrow out null/undefined.
+ *
+ * @param obj - Object to check (can be undefined/null)
+ * @returns true if object has at least one enumerable property
  */
-export function isTimeoutError(error: unknown): boolean {
-    const err = toError(error);
-    const message = err.message.toLowerCase();
-    return (
-        message.includes('timeout') ||
-        message.includes('timed out') ||
-        message.includes('etimedout') ||
-        (isRecord(error) && error.code === 'ETIMEDOUT')
-    );
+export function hasEntries<T extends Record<string, unknown>>(
+    obj: T | undefined | null,
+): obj is T {
+    if (!obj) return false;
+    return Object.keys(obj).length > 0;
 }
+
+/**
+ * Get count of entries in object
+ *
+ * Replaces inline: `Object.keys(obj).length`
+ *
+ * @param obj - Object to count (can be undefined/null)
+ * @returns Number of enumerable properties, 0 if null/undefined
+ */
+export function getEntryCount(obj: Record<string, unknown> | undefined | null): number {
+    if (!obj) return 0;
+    return Object.keys(obj).length;
+}
+

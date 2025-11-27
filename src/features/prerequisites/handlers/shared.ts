@@ -10,6 +10,78 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ComponentSelection } from '@/types/components';
 import { DEFAULT_SHELL } from '@/types/shell';
+import { toError } from '@/types/typeGuards';
+import { isTimeout, toAppError } from '@/types/errors';
+import type { PrerequisiteDefinition } from '../services/PrerequisitesManager';
+
+/**
+ * Type alias for Node version mapping (major version → component name)
+ */
+export type NodeVersionMapping = Record<string, string>;
+
+/**
+ * Check if node version mapping has any entries
+ *
+ * Extracts the common pattern `Object.keys(nodeVersionMapping).length > 0`
+ * to a semantic helper for better readability and consistency.
+ *
+ * @param mapping - Node version mapping object
+ * @returns true if the mapping has at least one entry
+ */
+export function hasNodeVersions(mapping: NodeVersionMapping): boolean {
+    return Object.keys(mapping).length > 0;
+}
+
+/**
+ * Get sorted array of Node major versions from mapping
+ *
+ * @param mapping - Node version mapping object
+ * @returns Array of major version strings, sorted ascending (e.g., ['18', '20', '24'])
+ */
+export function getNodeVersionKeys(mapping: NodeVersionMapping): string[] {
+    return Object.keys(mapping).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+}
+
+/**
+ * Determine prerequisite status based on installation state
+ *
+ * @param installed - Whether the prerequisite is installed
+ * @param optional - Whether the prerequisite is optional
+ * @returns Status: 'success' if installed, 'warning' if optional and missing, 'error' if required and missing
+ */
+export function determinePrerequisiteStatus(
+    installed: boolean,
+    optional: boolean,
+): 'success' | 'error' | 'warning' {
+    if (installed) return 'success';
+    return optional ? 'warning' : 'error';
+}
+
+/**
+ * Generate user-friendly status message for a prerequisite
+ *
+ * @param prereqName - Name of the prerequisite
+ * @param installed - Whether the prerequisite is installed
+ * @param version - Detected version (if any)
+ * @param perNodeVariantMissing - Whether a per-node-version variant is missing
+ * @param missingVariantMajors - Array of Node major versions where the tool is missing
+ * @returns User-friendly status message
+ */
+export function getPrerequisiteStatusMessage(
+    prereqName: string,
+    installed: boolean,
+    version?: string,
+    perNodeVariantMissing?: boolean,
+    missingVariantMajors?: string[],
+): string {
+    if (perNodeVariantMissing && missingVariantMajors && missingVariantMajors.length > 0) {
+        return `${prereqName} is missing in Node ${missingVariantMajors.join(', ')}`;
+    }
+    if (installed) {
+        return version ? `${prereqName} is installed: ${version}` : `${prereqName} is installed`;
+    }
+    return `${prereqName} is not installed`;
+}
 
 /**
  * Helper to extract component selection parameters for registry manager calls
@@ -55,6 +127,10 @@ export async function getNodeVersionMapping(
         const params = getComponentSelectionParams(context.sharedState.currentComponentSelection);
         return await registryManager.getNodeVersionToComponentMapping(...params);
     } catch (error) {
+        // INTENTIONALLY RETURNS EMPTY: If component registry fails to load,
+        // prerequisites check proceeds without Node version mapping. This is
+        // acceptable because Node versions will still be detected via system
+        // check - we just lose the component-to-version association display.
         context.logger.warn('Failed to get Node version mapping:', error as Error);
         return {};
     }
@@ -94,6 +170,9 @@ export async function getRequiredNodeVersions(context: HandlerContext): Promise<
 
         return sortedVersions;
     } catch {
+        // INTENTIONALLY RETURNS EMPTY: Same graceful degradation as getNodeVersionMapping.
+        // If we can't determine required versions, prerequisites check falls back to
+        // default behavior (checking system Node only).
         return [];
     }
 }
@@ -284,4 +363,61 @@ export async function checkPerNodeVersionStatus(
         perNodeVariantMissing: missingVariantMajors.length > 0,
         missingVariantMajors,
     };
+}
+
+/**
+ * Handle prerequisite check errors with consistent logging and UI updates
+ *
+ * Extracts the common error handling pattern from checkHandler and continueHandler.
+ * Handles both timeout errors and general check failures with appropriate logging
+ * to all channels (logger, stepLogger, debugLogger) and sends status to UI.
+ *
+ * @param context - Handler context with logging and messaging capabilities
+ * @param prereq - The prerequisite that failed to check
+ * @param index - Index of the prerequisite in the list (for UI updates)
+ * @param error - The error that occurred during checking
+ * @param isRecheck - Whether this is a recheck (affects log messages)
+ */
+export async function handlePrerequisiteCheckError(
+    context: HandlerContext,
+    prereq: PrerequisiteDefinition,
+    index: number,
+    error: unknown,
+    isRecheck = false,
+): Promise<void> {
+    const errorMessage = toError(error).message;
+    const isTimeoutErr = isTimeout(toAppError(error));
+    const checkType = isRecheck ? 're-check' : 'check';
+
+    // Log to all appropriate channels
+    if (isTimeoutErr) {
+        context.logger.warn(`[Prerequisites] ${prereq.name} ${checkType} timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
+        context.stepLogger?.log('prerequisites', `⏱️ ${prereq.name} ${checkType} timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`, 'warn');
+        context.debugLogger.debug(`[Prerequisites] ${isRecheck ? 'Re-check' : 'Check'} timeout details:`, {
+            prereq: prereq.id,
+            timeout: TIMEOUTS.PREREQUISITE_CHECK,
+            error: errorMessage,
+        });
+    } else {
+        context.logger.error(`[Prerequisites] Failed to ${checkType} ${prereq.name}:`, error as Error);
+        context.stepLogger?.log('prerequisites', `✗ ${prereq.name} ${checkType} failed: ${errorMessage}`, 'error');
+        context.debugLogger.debug(`[Prerequisites] ${isRecheck ? 'Re-check' : 'Check'} failure details:`, {
+            prereq: prereq.id,
+            error,
+        });
+    }
+
+    // Send error status to UI
+    await context.sendMessage('prerequisite-status', {
+        index,
+        name: prereq.name,
+        status: 'error',
+        description: prereq.description,
+        required: !prereq.optional,
+        installed: false,
+        message: isTimeoutErr
+            ? `Check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds. Click Recheck to try again.`
+            : `Failed to check: ${errorMessage}`,
+        canInstall: false,
+    });
 }
