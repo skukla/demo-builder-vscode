@@ -4,10 +4,12 @@
 - [x] Planned
 - [x] In Progress
 - [x] **Backend Complete** (Steps 1-3, 8, 10)
-- [ ] Frontend Pending (Steps 4-7, 9)
+- [x] **Frontend Complete** (Steps 4-7)
+- [x] **Test Coverage Complete** (Steps 9, 11)
+- [ ] **Error Handling Consolidation** (Step 12) ← CURRENT
 
 **Created:** 2025-01-21
-**Last Updated:** 2025-11-21
+**Last Updated:** 2025-11-27
 **Research:** `.rptc/research/code-efficiency-analysis/research.md`
 **Branch:** `refactor/core-architecture-wip`
 
@@ -79,7 +81,13 @@
     - Remaining test assertions: Intentionally deferred (would reduce code quality)
   - TypeScript compilation: ✅ Passing, All tests: ✅ Passing
   - See `step-03.md`
-- [ ] Step 5-7: Frontend Refactoring (DEFERRED - hooks, useEffects, interfaces)
+- [x] **Step 5-7: Frontend Refactoring** (COMPLETE ✅)
+  - Completed: 2025-11-27
+  - **Step 5.1**: Created `useAsyncOperation` hook for async operation state management (17 tests)
+  - **Step 5.2-5.4**: Evaluated and determined not needed (existing hooks already provide functionality)
+  - **Step 6**: Created `useFocusOnMount` hook (3-tier focus strategy, 10 tests)
+  - **Step 7**: Consolidated BaseStepProps interface (9 components migrated, ~45 lines removed)
+  - See `step-05-hooks-extraction.md`, `step-06-useeffect-refactoring.md`, `step-07-interface-consolidation.md`
 - [x] **Step 8: Handler Refactoring (TDD)** (COMPLETE ✅)
   - Completed: 2025-11-21, Effort: ~3.5 hours (30% faster than 5-7 hour estimate)
   - **Phase 0**: Security fix - workspaceId validation in deleteHandler (+5 LOC)
@@ -91,7 +99,13 @@
   - **Agent Reviews**: 4/4 unanimous approval (Master Efficiency Agent)
   - **Metrics**: See `METRICS_BACKEND.md`
   - See `step-08.md`
-- [ ] Step 9: Test Updates (DEFERRED - depends on Steps 4-7 frontend work)
+- [x] **Step 9: Test Coverage Improvements** (COMPLETE ✅)
+  - Completed: 2025-11-27, Effort: ~4 hours
+  - **Phase 1**: Critical infrastructure tests (54 tests)
+  - **Phase 2**: Hook unit tests - useAuthStatus (20 tests), useConfigNavigation (23 tests)
+  - **Phase 3**: Component gap tests - ConfigFieldRenderer (25 tests), ConfigurationSummary (24 tests)
+  - **Total**: 146 new tests across 7 test files
+  - All tests passing, TypeScript compilation clean
 - [x] **Step 10: Backend Verification** (COMPLETE ✅)
   - Completed: 2025-11-21, Scope: Backend refactoring only (Steps 1-3, 8)
   - ✅ All tests passing (mesh handlers: 2 suites, 29 tests, helpers: 68 tests)
@@ -103,14 +117,21 @@
   - **Note**: Steps 4-7, 9 deferred - frontend refactoring separate effort
   - **Metrics**: See `METRICS_BACKEND.md`
   - See `step-10.md`
-- [ ] **Step 11: Testing Infrastructure Modernization** (PENDING)
-  - **Purpose**: Migrate from fireEvent to @testing-library/user-event
-  - **Estimated Effort**: 3-5 days (36 hours)
-  - **Priority**: Medium (not urgent - current tests functional at 100%)
-  - **Expected Benefits**: 80% reduction in flaky tests, 100% Spectrum compatibility, 5-10 bugs discovered
-  - **Triggers**: After completing efficiency refactoring ✅, or before major UI features, or during tech debt sprint
-  - **Status**: Migration plan complete (`docs/testing/user-event-migration-plan.md`)
+- [x] **Step 11: Testing Infrastructure Modernization** (COMPLETE ✅)
+  - Completed: 2025-11-26, Effort: ~8 hours
+  - **Migration**: 31 test files migrated from fireEvent to @testing-library/user-event
+  - **Tests Updated**: 481 tests affected
+  - **Benefits Achieved**: Realistic user interaction simulation, Spectrum component compatibility
+  - **Commit**: 1d4dac4 "test: migrate to userEvent for realistic user interactions"
   - See `step-11.md`
+- [ ] **Step 12: Error Handling Consolidation** (IN PROGRESS)
+  - Started: 2025-11-27, Estimated Effort: 8-12 hours
+  - **Analysis Complete**: 4 parallel agents analyzed error handling patterns across codebase
+  - **Findings**: 3 different error payload formats, ErrorBoundary underutilized (1/5), silent catch blocks
+  - **Phase A**: Quick Wins - ErrorBoundary wrappers, silent catch audit, documentation (2-3 hours)
+  - **Phase B**: Inline Logic Abstraction continuation - jscpd scan, remaining extractions (2-3 hours)
+  - **Phase C**: Systematic Overhaul (optional) - custom error classes, unified payload format (4-6 hours)
+  - See `step-12-error-handling-consolidation.md`
 
 ---
 
@@ -141,13 +162,15 @@
 
 ## Acceptance Criteria
 
-- [ ] All 10 steps completed with tests passing
+- [ ] All 12 steps completed with tests passing
 - [ ] Coverage >= 85% overall
 - [ ] No cognitive complexity > 15 in any function
 - [ ] All webview messages properly typed
 - [ ] No `as any` casts in new/modified code
 - [ ] ESLint rules passing (complexity, explicit-any)
 - [ ] Improvement metrics documented per step
+- [ ] ErrorBoundary coverage: 5/5 wizard steps protected
+- [ ] No silent error swallowing (all user-relevant errors displayed)
 
 ---
 
@@ -213,5 +236,10 @@ Track after each step:
 - Step 8: Depends on step 2 (helper extractions)
 - Step 9: After all refactoring complete
 - Step 10: Final verification
+- Step 11: Testing infrastructure (independent)
+- Step 12: Error handling consolidation (depends on 1-11 complete)
+  - Phase A (Quick Wins): Independent, start immediately
+  - Phase B (Inline Logic): Independent, can parallel with A
+  - Phase C (Systematic Overhaul): Decision gate after A+B
 
-**Critical Path:** 1 → 2 → 8 → 9 → 10
+**Critical Path:** 1 → 2 → 8 → 9 → 10 → 12A → 12B → [Decision Gate] → 12C (optional)
