@@ -14,7 +14,17 @@
  */
 
 // Mock all dependencies (MUST be at top before imports)
-jest.mock('@/features/prerequisites/handlers/shared');
+jest.mock('@/features/prerequisites/handlers/shared', () => {
+    const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
+    return {
+        ...actual,
+        getRequiredNodeVersions: jest.fn(),
+        getNodeVersionMapping: jest.fn(),
+        checkPerNodeVersionStatus: jest.fn(),
+        hasNodeVersions: jest.fn(),
+        getNodeVersionKeys: jest.fn(),
+    };
+});
 jest.mock('@/core/di');
 jest.mock('vscode', () => ({
     env: {

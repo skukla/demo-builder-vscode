@@ -27,12 +27,18 @@ import {
  * Total tests: 11
  */
 
-// Mock shared utilities
-jest.mock('@/features/prerequisites/handlers/shared', () => ({
-    getNodeVersionMapping: jest.fn(),
-    checkPerNodeVersionStatus: jest.fn(),
-    areDependenciesInstalled: jest.fn(),
-}));
+// Mock shared utilities - but keep handlePrerequisiteCheckError real
+jest.mock('@/features/prerequisites/handlers/shared', () => {
+    const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
+    return {
+        ...actual,
+        getNodeVersionMapping: jest.fn(),
+        checkPerNodeVersionStatus: jest.fn(),
+        areDependenciesInstalled: jest.fn(),
+        hasNodeVersions: jest.fn(),
+        getNodeVersionKeys: jest.fn(),
+    };
+});
 
 // Mock timeout utilities
 jest.mock('@/types/typeGuards', () => ({

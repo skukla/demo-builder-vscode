@@ -176,6 +176,13 @@ export function setupSharedUtilityMocks() {
         perNodeVariantMissing: false,
         missingVariantMajors: [],
     });
+    // Object utility helpers (used for Object.keys patterns)
+    (shared.hasNodeVersions as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
+        return mapping && Object.keys(mapping).length > 0;
+    });
+    (shared.getNodeVersionKeys as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
+        return Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+    });
 }
 
 /**

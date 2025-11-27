@@ -8,6 +8,8 @@
  *     getNodeVersionMapping: jest.fn(),
  *     checkPerNodeVersionStatus: jest.fn(),
  *     areDependenciesInstalled: jest.fn(),
+ *     hasNodeVersions: jest.fn(),
+ *     getNodeVersionKeys: jest.fn(),
  * }));
  *
  * // Mock timeout utilities
@@ -133,6 +135,13 @@ export function setupStandardMocks() {
     const shared = require('@/features/prerequisites/handlers/shared');
     (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({});
     (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
+    // Object utility helpers (used for Object.keys patterns)
+    (shared.hasNodeVersions as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
+        return mapping && Object.keys(mapping).length > 0;
+    });
+    (shared.getNodeVersionKeys as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
+        return Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+    });
 }
 
 /**

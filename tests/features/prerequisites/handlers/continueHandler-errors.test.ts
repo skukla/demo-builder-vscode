@@ -7,8 +7,18 @@ import {
     mockAdobeCliPrereq,
 } from './continueHandler.testUtils';
 
-// Mock all dependencies
-jest.mock('@/features/prerequisites/handlers/shared');
+// Mock dependencies - but keep handlePrerequisiteCheckError real
+jest.mock('@/features/prerequisites/handlers/shared', () => {
+    const actual = jest.requireActual('@/features/prerequisites/handlers/shared');
+    return {
+        ...actual,
+        getNodeVersionMapping: jest.fn(),
+        areDependenciesInstalled: jest.fn(),
+        hasNodeVersions: jest.fn(),
+        getNodeVersionKeys: jest.fn(),
+        // Keep handlePrerequisiteCheckError as the real implementation
+    };
+});
 jest.mock('@/core/di');
 
 describe('Prerequisites Continue Handler - Error Handling', () => {
@@ -30,6 +40,13 @@ describe('Prerequisites Continue Handler - Error Handling', () => {
             '20': 'Node Backend',
         });
         (shared.areDependenciesInstalled as jest.Mock).mockReturnValue(true);
+        // Object utility helpers (used for Object.keys patterns)
+        (shared.hasNodeVersions as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
+            return mapping && Object.keys(mapping).length > 0;
+        });
+        (shared.getNodeVersionKeys as jest.Mock).mockImplementation((mapping: Record<string, string>) => {
+            return Object.keys(mapping || {}).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+        });
 
         // Create mock context
         mockContext = createMockContext();

@@ -34,6 +34,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 jest.mock('@/types/typeGuards', () => ({
     parseJSON: jest.fn(),
+    hasEntries: jest.fn((obj) => obj && Object.keys(obj).length > 0),
 }));
 
 describe('detectMeshChanges - Timeout Handling', () => {
