@@ -1,5 +1,4 @@
 module.exports = {
-  preset: 'ts-jest',
   roots: ['<rootDir>/tests'],
 
   // Performance optimizations
@@ -7,6 +6,10 @@ module.exports = {
   cache: true,
   cacheDirectory: '<rootDir>/.jest-cache',
   maxWorkers: '50%',
+
+  // Memory management - recycle workers when they exceed 512MB
+  // Critical for preventing memory crashes during large test runs
+  workerIdleMemoryLimit: '512MB',
 
   // Separate test environments for Node and React tests
   projects: [
@@ -19,11 +22,20 @@ module.exports = {
         '!**/tests/webview-ui/**/*.test.tsx'
       ],
       transform: {
-        '^.+\\.ts$': ['ts-jest', {
-          tsconfig: {
-            esModuleInterop: true,
-            allowSyntheticDefaultImports: true,
+        '^.+\\.ts$': ['@swc/jest', {
+          jsc: {
+            parser: {
+              syntax: 'typescript',
+              tsx: false,
+              decorators: true,
+            },
+            target: 'es2021',
+            keepClassNames: true,
           },
+          module: {
+            type: 'commonjs',
+          },
+          sourceMaps: true,
         }],
       },
       moduleFileExtensions: ['ts', 'js', 'json'],
@@ -39,6 +51,7 @@ module.exports = {
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
       },
+      setupFilesAfterEnv: ['<rootDir>/tests/setup/node.ts'],
     },
     {
       displayName: 'react',
@@ -50,13 +63,25 @@ module.exports = {
         '**/src/features/**/*.test.tsx'
       ],
       transform: {
-        '^.+\\.(ts|tsx)$': ['ts-jest', {
-          tsconfig: {
-            jsx: 'react',
-            esModuleInterop: true,
-            allowSyntheticDefaultImports: true,
-            types: ['@testing-library/jest-dom', 'jest', 'node'],
+        '^.+\\.(ts|tsx)$': ['@swc/jest', {
+          jsc: {
+            parser: {
+              syntax: 'typescript',
+              tsx: true,
+              decorators: true,
+            },
+            transform: {
+              react: {
+                runtime: 'automatic',
+              },
+            },
+            target: 'es2021',
+            keepClassNames: true,
           },
+          module: {
+            type: 'commonjs',
+          },
+          sourceMaps: true,
         }],
       },
       setupFilesAfterEnv: ['<rootDir>/tests/setup/react.ts'],
