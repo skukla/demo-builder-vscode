@@ -8,17 +8,14 @@ import {
     Divider,
 } from '@adobe/react-spectrum';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
-import React, { useEffect, useRef } from 'react';
-import { WizardState } from '@/types/webview';
+import React, { useRef } from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { useFocusOnMount } from '@/core/ui/hooks';
+import { BaseStepProps } from '@/types/wizard';
 import { useComponentSelection } from '../hooks/useComponentSelection';
 
-interface ComponentSelectionStepProps {
-    state: WizardState;
-    updateState: (updates: Partial<WizardState>) => void;
-    setCanProceed: (canProceed: boolean) => void;
+interface ComponentSelectionStepProps extends BaseStepProps {
     componentsData?: Record<string, unknown>;
 }
 
@@ -78,6 +75,9 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
 }) => {
     const frontendPickerRef = useRef<HTMLDivElement>(null);
 
+    // Focus management: focus the frontend picker button on mount
+    useFocusOnMount(frontendPickerRef, { selector: 'button' });
+
     const {
         selectedFrontend,
         setSelectedFrontend,
@@ -98,37 +98,6 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         frontendDependencies: FRONTEND_DEPENDENCIES,
         backendServices: BACKEND_SERVICES,
     });
-
-    // Focus management for frontend picker
-    useEffect(() => {
-        const container = frontendPickerRef.current;
-        if (!container) return;
-
-        let focused = false;
-        const tryFocus = () => {
-            if (focused) return;
-            const button = container.querySelector('button');
-            if (button) {
-                button.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
-                button.focus();
-                focused = true;
-            }
-        };
-
-        const observer = new MutationObserver(tryFocus);
-        observer.observe(container, { childList: true, subtree: true, attributes: true });
-        tryFocus();
-
-        const fallback = setTimeout(() => {
-            tryFocus();
-            observer.disconnect();
-        }, TIMEOUTS.FOCUS_FALLBACK);
-
-        return () => {
-            observer.disconnect();
-            clearTimeout(fallback);
-        };
-    }, []);
 
     // Get options from data or use defaults
     const dataTyped = (componentsData || {}) as ComponentsData;

@@ -44,6 +44,7 @@ interface UseComponentConfigProps {
 interface UseComponentConfigReturn {
     componentConfigs: ComponentConfigs;
     isLoading: boolean;
+    loadError: string | null;
     serviceGroups: ServiceGroup[];
     validationErrors: Record<string, string>;
     touchedFields: Set<string>;
@@ -73,6 +74,7 @@ export function useComponentConfig({
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     // Load components data
     useEffect(() => {
@@ -84,6 +86,7 @@ export function useComponentConfig({
                 setIsLoading(false);
             } catch (error) {
                 console.error('[ComponentConfigStep] Failed to load components:', error);
+                setLoadError('Failed to load component configuration. Please try again.');
                 setIsLoading(false);
             }
         };
@@ -341,6 +344,7 @@ export function useComponentConfig({
     return {
         componentConfigs,
         isLoading,
+        loadError,
         serviceGroups,
         validationErrors,
         touchedFields,

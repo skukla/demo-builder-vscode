@@ -16,11 +16,12 @@
 
 import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus } from '@/features/prerequisites/handlers/shared';
+import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { SimpleResult } from '@/types/results';
-import { toError, isTimeoutError } from '@/types/typeGuards';
+import { toError } from '@/types/typeGuards';
+import { isTimeout, toAppError } from '@/types/errors';
 
 /**
  * Determine which Node versions to pass to getInstallSteps
@@ -99,12 +100,12 @@ export async function handleInstallPrerequisite(
             // Determine missing majors from mapping
             const mapping = await getNodeVersionMapping(context);
             context.debugLogger.debug(`[Prerequisites] Node version mapping: ${JSON.stringify(mapping)}`);
-            const nodeStatus = Object.keys(mapping).length > 0
+            const nodeStatus = hasNodeVersions(mapping)
                 ? await context.prereqManager?.checkMultipleNodeVersions(mapping)
                 : undefined;
             context.debugLogger.debug(`[Prerequisites] Node status check results: ${JSON.stringify(nodeStatus)}`);
             const missingMajors = nodeStatus
-                ? Object.keys(mapping).filter(m => !nodeStatus.some(s => s.version.startsWith(`Node ${m}`) && s.installed))
+                ? getNodeVersionKeys(mapping).filter(m => !nodeStatus.some(s => s.version.startsWith(`Node ${m}`) && s.installed))
                 : [];
             context.debugLogger.debug(`[Prerequisites] Missing major versions: ${JSON.stringify(missingMajors)}`);
             // Sort versions in ascending order (18, 20, 24) for predictable installation order
@@ -261,10 +262,10 @@ export async function handleInstallPrerequisite(
         } catch (error) {
             // Handle timeout or other check errors during verification
             const errorMessage = toError(error).message;
-            const isTimeout = isTimeoutError(error);
+            const isTimeoutErr = isTimeout(toAppError(error));
 
             // Log to all appropriate channels
-            if (isTimeout) {
+            if (isTimeoutErr) {
                 context.logger.warn(`[Prerequisites] ${prereq.name} verification timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
                 context.stepLogger?.log('prerequisites', `⏱️ ${prereq.name} verification timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s) - installation may have succeeded`, 'warn');
                 context.debugLogger.debug('[Prerequisites] Verification timeout details:', { prereq: prereq.id, timeout: TIMEOUTS.PREREQUISITE_CHECK, error: errorMessage });
@@ -288,7 +289,7 @@ export async function handleInstallPrerequisite(
                 description: prereq.description,
                 required: !prereq.optional,
                 installed: false,
-                message: isTimeout
+                message: isTimeoutErr
                     ? `Installation completed but verification timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds. Click Recheck to verify.`
                     : `Installation completed but verification failed: ${errorMessage}. Click Recheck to verify.`,
                 canInstall: false,
@@ -306,13 +307,13 @@ export async function handleInstallPrerequisite(
         if (prereq.id === 'node') {
             // Build mapping and check installed status per required major
             const mapping = await getNodeVersionMapping(context);
-            if (Object.keys(mapping).length > 0) {
+            if (hasNodeVersions(mapping)) {
                 finalNodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(mapping);
             }
         } else if (prereq.perNodeVersion) {
             // For per-node-version prerequisites (e.g., Adobe I/O CLI), re-check under each required Node major
             const mapping = await getNodeVersionMapping(context);
-            const requiredMajors = Object.keys(mapping);
+            const requiredMajors = getNodeVersionKeys(mapping);
             if (requiredMajors.length > 0) {
                 // Use shared utility to check which Node versions have the prerequisite installed
                 const postCheckStatus = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
@@ -373,7 +374,7 @@ export async function handleInstallPrerequisite(
         await context.sendMessage('prerequisite-status', {
             index: prereqId,
             name: prereq.name,
-            status: overallInstalled ? 'success' : (!prereq.optional ? 'error' : 'warning'),
+            status: determinePrerequisiteStatus(overallInstalled, !!prereq.optional),
             description: prereq.description,
             required: !prereq.optional,
             installed: overallInstalled,

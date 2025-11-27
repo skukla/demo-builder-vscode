@@ -12,15 +12,11 @@ import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React, { useEffect, useState, useRef } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { WizardState, PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
+import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
+import { NavigableStepProps } from '@/types/wizard';
 import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '@/core/ui/utils/classNames';
 
-interface PrerequisitesStepProps {
-    state: WizardState;
-    updateState: (updates: Partial<WizardState>) => void;
-    onNext: () => void;
-    onBack: () => void;
-    setCanProceed: (canProceed: boolean) => void;
+interface PrerequisitesStepProps extends NavigableStepProps {
     componentsData?: Record<string, unknown>;
     currentStep?: string;
 }
@@ -125,12 +121,14 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         };
     }, []);
 
+    // Register message listeners ONCE on mount (prevents memory leaks from re-registration)
+    // All state updates use functional form to avoid stale closures
     useEffect(() => {
         // Listen for installation complete events
         const unsubscribeInstallComplete = webviewClient.onMessage('prerequisite-install-complete', (data) => {
             const typedData = data as { index: number; continueChecking: boolean };
             const { index, continueChecking } = typedData;
-            
+
             if (continueChecking) {
                 // Continue checking from the next prerequisite, not from the beginning
                 setTimeout(() => {
@@ -138,7 +136,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 }, 500);
             }
         });
-        
+
         // Listen for check stopped events
         const unsubscribeCheckStopped = webviewClient.onMessage('prerequisite-check-stopped', (_data) => {
             // Data contains stoppedAt and reason, but we only need to update checking state
@@ -150,53 +148,13 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
             const typedData = data as PrerequisiteStatusData;
             const { index, status, message, version, plugins, unifiedProgress, nodeVersionStatus, canInstall } = typedData;
 
-            // Auto-scroll within the container to the item being checked (skip first item as it's already visible)
-            if (status === 'checking' && itemRefs.current[index] && scrollContainerRef.current && index > 0) {
-                // Use setTimeout to ensure DOM is updated before scrolling
-                setTimeout(() => {
-                    if (itemRefs.current[index] && scrollContainerRef.current) {
-                        const container = scrollContainerRef.current;
-                        const item = itemRefs.current[index];
-                        
-                        // Calculate position relative to container
-                        const itemTop = item.offsetTop;
-                        const itemHeight = item.offsetHeight;
-                        const containerHeight = container.clientHeight;
-                        const containerScrollTop = container.scrollTop;
-                        
-                        // Check if item is already visible
-                        const isVisible = itemTop >= containerScrollTop && 
-                                        (itemTop + itemHeight) <= (containerScrollTop + containerHeight);
-                        
-                        // Only scroll if not already visible
-                        if (!isVisible) {
-                            // If item is below visible area, scroll just enough to show it at bottom
-                            if (itemTop + itemHeight > containerScrollTop + containerHeight) {
-                                const scrollTo = itemTop + itemHeight - containerHeight + 10; // 10px padding from bottom
-                                container.scrollTo({
-                                    top: Math.max(0, scrollTo),
-                                    behavior: 'smooth',
-                                });
-                            }
-                            // If item is above visible area (shouldn't happen), scroll to show it at top
-                            else if (itemTop < containerScrollTop) {
-                                container.scrollTo({
-                                    top: Math.max(0, itemTop - 10), // 10px padding from top
-                                    behavior: 'smooth',
-                                });
-                            }
-                        }
-                    }
-                }, 100);
-            }
-
             setChecks(prev => {
                 const newChecks = [...prev];
                 if (newChecks[index]) {
                     // For Node.js, the backend sends a detailed message with all the info we need
                     // Just use the message as-is from the backend
                     const enhancedMessage = message;
-                    
+
                     newChecks[index] = {
                         ...newChecks[index],
                         status,
@@ -209,27 +167,29 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                         nodeVersionStatus: typeof nodeVersionStatus !== 'undefined' ? nodeVersionStatus : newChecks[index].nodeVersionStatus,
                     };
                 }
-                
+
                 // Check if all prerequisites are done checking
-                const allDone = newChecks.every(check => 
-                    check.status === 'success' || 
-                    check.status === 'error' || 
+                const allDone = newChecks.every(check =>
+                    check.status === 'success' ||
+                    check.status === 'error' ||
                     check.status === 'warning' ||
                     check.status === 'pending',
                 );
-                
+
                 if (allDone) {
                     setIsChecking(false);
                 }
-                
+
                 return newChecks;
             });
 
-            // If installation complete, clear installing index
-            if (status === 'success' && installingIndex === index) {
-                setInstallingIndex(null);
-                // The backend will automatically continue checking
-            }
+            // Use functional update to check installingIndex without stale closure
+            setInstallingIndex(prev => {
+                if (status === 'success' && prev === index) {
+                    return null; // Clear installing index
+                }
+                return prev; // Keep current value
+            });
         });
 
         // Listen for prerequisites complete message
@@ -244,7 +204,48 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
             unsubscribeInstallComplete();
             unsubscribeCheckStopped();
         };
-    }, [checks, versionComponentMapping]);
+    }, []); // Empty deps - register listeners ONCE to prevent memory leaks
+
+    // Auto-scroll when prerequisite status changes to 'checking' (reactive effect)
+    useEffect(() => {
+        // Find the currently checking item
+        const checkingIndex = checks.findIndex(c => c.status === 'checking');
+
+        // Only scroll if there's a checking item and it's not the first one
+        if (checkingIndex > 0 && itemRefs.current[checkingIndex] && scrollContainerRef.current) {
+            const container = scrollContainerRef.current;
+            const item = itemRefs.current[checkingIndex];
+
+            // Calculate position relative to container
+            const itemTop = item.offsetTop;
+            const itemHeight = item.offsetHeight;
+            const containerHeight = container.clientHeight;
+            const containerScrollTop = container.scrollTop;
+
+            // Check if item is already visible
+            const isVisible = itemTop >= containerScrollTop &&
+                            (itemTop + itemHeight) <= (containerScrollTop + containerHeight);
+
+            // Only scroll if not already visible
+            if (!isVisible) {
+                // If item is below visible area, scroll just enough to show it at bottom
+                if (itemTop + itemHeight > containerScrollTop + containerHeight) {
+                    const scrollTo = itemTop + itemHeight - containerHeight + 10; // 10px padding from bottom
+                    container.scrollTo({
+                        top: Math.max(0, scrollTo),
+                        behavior: 'smooth',
+                    });
+                }
+                // If item is above visible area (shouldn't happen), scroll to show it at top
+                else if (itemTop < containerScrollTop) {
+                    container.scrollTo({
+                        top: Math.max(0, itemTop - 10), // 10px padding from top
+                        behavior: 'smooth',
+                    });
+                }
+            }
+        }
+    }, [checks]); // React to checks changes for auto-scroll
 
     useEffect(() => {
         // Check if all required prerequisites are met

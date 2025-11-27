@@ -70,3 +70,29 @@ export {
 
 // Status enums for type safety
 export { MeshStatus, ComponentStatusEnum } from './enums';
+
+// Error codes for programmatic error handling
+export {
+    ErrorCode,
+    ErrorCategory,
+    getErrorCategory,
+    isRecoverableError,
+    getErrorTitle,
+} from './errorCodes';
+
+// Custom error classes
+export {
+    AppError,
+    TimeoutError,
+    NetworkError,
+    AuthError,
+    ValidationError,
+    PrerequisiteError,
+    MeshError,
+    isAppError,
+    isTimeout,
+    isNetwork,
+    isAuth,
+    hasErrorCode,
+    toAppError,
+} from './errors';

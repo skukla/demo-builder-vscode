@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WizardState } from '@/types/webview';
 
@@ -47,6 +47,70 @@ interface UseMeshOperationsReturn {
     recreateMesh: () => Promise<void>;
 }
 
+/**
+ * Handle mesh creation result - shared logic between createMesh and recreateMesh
+ *
+ * Handles the success, error-state, and failure cases for mesh creation operations.
+ * Returns true if mesh was successfully created/deployed, false otherwise.
+ */
+function handleMeshCreationResult(
+    result: CreateApiMeshResponse | undefined,
+    updateState: (updates: Partial<WizardState>) => void,
+    setMeshData: (data: MeshData | null) => void,
+    setCanProceed: (canProceed: boolean) => void,
+): { success: boolean; meshId?: string; endpoint?: string; message?: string } {
+    if (result?.success) {
+        const isDeployed = !!result.meshId;
+        updateState({
+            apiMesh: {
+                isChecking: false,
+                apiEnabled: true,
+                meshExists: true,
+                meshId: result.meshId,
+                meshStatus: isDeployed ? 'deployed' : 'pending',
+                endpoint: result.endpoint,
+                message: result.message,
+            },
+        });
+
+        if (isDeployed) {
+            setMeshData({
+                meshId: result.meshId,
+                status: 'deployed',
+                endpoint: result.endpoint,
+            });
+        } else {
+            setMeshData(null);
+        }
+
+        setCanProceed(true);
+        return { success: true, meshId: result.meshId, endpoint: result.endpoint, message: result.message };
+    }
+
+    if (result?.meshExists && result?.meshStatus === 'error') {
+        setMeshData({
+            meshId: result.meshId,
+            status: 'error',
+            endpoint: undefined,
+        });
+        updateState({
+            apiMesh: {
+                isChecking: false,
+                apiEnabled: true,
+                meshExists: true,
+                meshId: result.meshId,
+                meshStatus: 'error',
+                error: result.error,
+            },
+        });
+        setCanProceed(false);
+        return { success: false };
+    }
+
+    // Neither success nor error-state - throw for caller to handle
+    throw new Error(result?.error || 'Failed to create mesh');
+}
+
 export function useMeshOperations({
     state,
     updateState,
@@ -58,6 +122,17 @@ export function useMeshOperations({
     const [isChecking, setIsChecking] = useState<boolean>(false);
     const [error, setError] = useState<string | undefined>(undefined);
     const [meshData, setMeshData] = useState<MeshData | null>(null);
+
+    // Track timeouts for cleanup on unmount
+    const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
+
+    // Cleanup timeouts on unmount
+    useEffect(() => {
+        return () => {
+            timeoutsRef.current.forEach(clearTimeout);
+            timeoutsRef.current = [];
+        };
+    }, []);
 
     // Listen for progress updates during mesh creation
     useEffect(() => {
@@ -91,14 +166,16 @@ export function useMeshOperations({
             },
         });
 
-        // Progress indicators
+        // Progress indicators - tracked for cleanup
         const timeout1 = setTimeout(() => {
             if (isChecking) setSubMessage('Verifying API availability');
         }, 1000);
+        timeoutsRef.current.push(timeout1);
 
         const timeout2 = setTimeout(() => {
             if (isChecking) setSubMessage('Checking for existing mesh');
         }, 2000);
+        timeoutsRef.current.push(timeout2);
 
         try {
             const result = await webviewClient.request<CheckApiMeshResponse>('check-api-mesh', {
@@ -106,8 +183,10 @@ export function useMeshOperations({
                 selectedComponents: [],
             });
 
+            // Clear these specific timeouts (they may have already fired)
             clearTimeout(timeout1);
             clearTimeout(timeout2);
+            timeoutsRef.current = timeoutsRef.current.filter(t => t !== timeout1 && t !== timeout2);
 
             if (result?.success && result.apiEnabled) {
                 if (result.meshExists) {
@@ -156,8 +235,10 @@ export function useMeshOperations({
                 setCanProceed(false);
             }
         } catch (e) {
+            // Clear these specific timeouts (they may have already fired)
             clearTimeout(timeout1);
             clearTimeout(timeout2);
+            timeoutsRef.current = timeoutsRef.current.filter(t => t !== timeout1 && t !== timeout2);
             const err = e instanceof Error ? e.message : 'Failed to verify API Mesh availability';
             setError(err);
             updateState({
@@ -192,55 +273,12 @@ export function useMeshOperations({
                 workspaceId: state.adobeWorkspace?.id,
             });
 
-            if (result?.success) {
-                const isDeployed = !!result.meshId;
-                updateState({
-                    apiMesh: {
-                        isChecking: false,
-                        apiEnabled: true,
-                        meshExists: true,
-                        meshId: result.meshId,
-                        meshStatus: isDeployed ? 'deployed' : 'pending',
-                        endpoint: result.endpoint,
-                        message: result.message,
-                    },
-                });
+            const outcome = handleMeshCreationResult(result, updateState, setMeshData, setCanProceed);
 
-                if (isDeployed) {
-                    setMeshData({
-                        meshId: result.meshId,
-                        status: 'deployed',
-                        endpoint: result.endpoint,
-                    });
-                } else {
-                    setMeshData(null);
-                }
-
-                setCanProceed(true);
-
-                if (result.message && !isDeployed) {
-                    setMessage('✓ Mesh Submitted');
-                    setSubMessage(result.message);
-                }
-            } else if (result?.meshExists && result?.meshStatus === 'error') {
-                setMeshData({
-                    meshId: result.meshId,
-                    status: 'error',
-                    endpoint: undefined,
-                });
-                updateState({
-                    apiMesh: {
-                        isChecking: false,
-                        apiEnabled: true,
-                        meshExists: true,
-                        meshId: result.meshId,
-                        meshStatus: 'error',
-                        error: result.error,
-                    },
-                });
-                setCanProceed(false);
-            } else {
-                throw new Error(result?.error || 'Failed to create mesh');
+            // Show pending message if mesh was submitted but not yet deployed
+            if (outcome.success && outcome.message && !outcome.meshId) {
+                setMessage('✓ Mesh Submitted');
+                setSubMessage(outcome.message);
             }
         } catch (e) {
             const err = e instanceof Error ? e.message : 'Failed to create mesh';
@@ -277,43 +315,7 @@ export function useMeshOperations({
                 workspaceId: state.adobeWorkspace?.id,
             });
 
-            if (result?.success) {
-                updateState({
-                    apiMesh: {
-                        isChecking: false,
-                        apiEnabled: true,
-                        meshExists: true,
-                        meshId: result.meshId,
-                        meshStatus: 'deployed',
-                        endpoint: result.endpoint,
-                    },
-                });
-                setMeshData({
-                    meshId: result.meshId,
-                    status: 'deployed',
-                    endpoint: result.endpoint,
-                });
-                setCanProceed(true);
-            } else if (result?.meshExists && result?.meshStatus === 'error') {
-                setMeshData({
-                    meshId: result.meshId,
-                    status: 'error',
-                    endpoint: undefined,
-                });
-                updateState({
-                    apiMesh: {
-                        isChecking: false,
-                        apiEnabled: true,
-                        meshExists: true,
-                        meshId: result.meshId,
-                        meshStatus: 'error',
-                        error: result.error,
-                    },
-                });
-                setCanProceed(false);
-            } else {
-                throw new Error(result?.error || 'Failed to create mesh');
-            }
+            handleMeshCreationResult(result, updateState, setMeshData, setCanProceed);
         } catch (e) {
             const err = e instanceof Error ? e.message : 'Failed to recreate mesh';
             setError(err);

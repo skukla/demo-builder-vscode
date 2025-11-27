@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { useDebounce } from '@/core/ui/hooks/useDebounce';
+import { useDebouncedValue, useSetToggle } from '@/core/ui/hooks';
 import { WizardState } from '@/types/webview';
 
 interface DependencyOption {
@@ -42,29 +42,31 @@ export function useComponentSelection({
     // Initialize from state (includes defaults from init)
     const [selectedFrontend, setSelectedFrontend] = useState<string>(state.components?.frontend || '');
     const [selectedBackend, setSelectedBackend] = useState<string>(state.components?.backend || '');
-    const [selectedDependencies, setSelectedDependencies] = useState<Set<string>>(
-        new Set(state.components?.dependencies || [])
+
+    // Use useSetToggle for multi-select state - provides Set + toggle handler in one
+    const [selectedDependencies, handleDependencyToggle, setSelectedDependencies] = useSetToggle<string>(
+        state.components?.dependencies || []
     );
-    const [selectedServices, setSelectedServices] = useState<Set<string>>(
-        new Set(state.components?.services || [])
+    const [selectedServices, handleServiceToggle, setSelectedServices] = useSetToggle<string>(
+        state.components?.services || []
     );
-    const [selectedIntegrations, setSelectedIntegrations] = useState<Set<string>>(
-        new Set(state.components?.integrations || [])
+    const [selectedIntegrations, handleIntegrationToggle] = useSetToggle<string>(
+        state.components?.integrations || []
     );
-    const [selectedAppBuilder, setSelectedAppBuilder] = useState<Set<string>>(
-        new Set(state.components?.appBuilderApps || [])
+    const [selectedAppBuilder, handleAppBuilderToggle] = useSetToggle<string>(
+        state.components?.appBuilderApps || []
     );
 
     // Track last sent selection to prevent duplicate messages
     const lastSentSelectionRef = useRef<string>('');
 
     // Create debounced versions (wait 500ms after last change)
-    const debouncedFrontend = useDebounce(selectedFrontend, 500);
-    const debouncedBackend = useDebounce(selectedBackend, 500);
-    const debouncedDependencies = useDebounce(selectedDependencies, 500);
-    const debouncedServices = useDebounce(selectedServices, 500);
-    const debouncedIntegrations = useDebounce(selectedIntegrations, 500);
-    const debouncedAppBuilder = useDebounce(selectedAppBuilder, 500);
+    const debouncedFrontend = useDebouncedValue(selectedFrontend, 500);
+    const debouncedBackend = useDebouncedValue(selectedBackend, 500);
+    const debouncedDependencies = useDebouncedValue(selectedDependencies, 500);
+    const debouncedServices = useDebouncedValue(selectedServices, 500);
+    const debouncedIntegrations = useDebouncedValue(selectedIntegrations, 500);
+    const debouncedAppBuilder = useDebouncedValue(selectedAppBuilder, 500);
 
     // Initialize required dependencies when frontend changes
     useEffect(() => {
@@ -118,41 +120,7 @@ export function useComponentSelection({
         }
     }, [debouncedFrontend, debouncedBackend, debouncedDependencies, debouncedServices, debouncedIntegrations, debouncedAppBuilder, setCanProceed, updateState]);
 
-    const handleDependencyToggle = useCallback((id: string, selected: boolean) => {
-        setSelectedDependencies(prev => {
-            const newSet = new Set(prev);
-            if (selected) newSet.add(id);
-            else newSet.delete(id);
-            return newSet;
-        });
-    }, []);
-
-    const handleServiceToggle = useCallback((id: string, selected: boolean) => {
-        setSelectedServices(prev => {
-            const newSet = new Set(prev);
-            if (selected) newSet.add(id);
-            else newSet.delete(id);
-            return newSet;
-        });
-    }, []);
-
-    const handleIntegrationToggle = useCallback((id: string, selected: boolean) => {
-        setSelectedIntegrations(prev => {
-            const newSet = new Set(prev);
-            if (selected) newSet.add(id);
-            else newSet.delete(id);
-            return newSet;
-        });
-    }, []);
-
-    const handleAppBuilderToggle = useCallback((id: string, selected: boolean) => {
-        setSelectedAppBuilder(prev => {
-            const newSet = new Set(prev);
-            if (selected) newSet.add(id);
-            else newSet.delete(id);
-            return newSet;
-        });
-    }, []);
+    // Toggle handlers are now provided by useSetToggle above
 
     return {
         selectedFrontend,

@@ -156,8 +156,8 @@ export async function handleCreateApiMesh(
         onProgress?.('Waiting for mesh deployment...', 'Mesh is being provisioned (typically takes 60-90 seconds)');
 
         const maxRetries = 10; // 10 attempts with strategic timing = ~2 minutes max
-        const pollInterval = 10000; // 10 seconds between checks
-        const initialWait = 20000; // 20 seconds before first check (avoid premature polling)
+        const pollInterval = TIMEOUTS.MESH_VERIFY_POLL_INTERVAL;
+        const initialWait = TIMEOUTS.MESH_VERIFY_INITIAL_WAIT;
         let attempt = 0;
         let meshDeployed = false;
         let deployedMeshId: string | undefined;

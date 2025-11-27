@@ -8,19 +8,11 @@ import {
 } from '@adobe/react-spectrum';
 import React, { useEffect } from 'react';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
-import { WizardState } from '@/types/webview';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { BaseStepProps } from '@/types/wizard';
 import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
 
-interface WelcomeStepProps {
-    state: WizardState;
-    updateState: (updates: Partial<WizardState>) => void;
-    onNext: () => void;
-    onBack: () => void;
-    setCanProceed: (canProceed: boolean) => void;
-}
-
-export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepProps) {
+export function WelcomeStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
     

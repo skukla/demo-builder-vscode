@@ -29,6 +29,14 @@ export abstract class BaseHandlerRegistry {
     }
 
     /**
+     * Check if a handler is registered for a message type
+     * @param messageType Message type to check
+     */
+    hasHandler(messageType: string): boolean {
+        return this.handlers.has(messageType);
+    }
+
+    /**
      * Handle a message by dispatching to the registered handler
      * @param context Handler context containing dependencies
      * @param messageType The type of message to handle

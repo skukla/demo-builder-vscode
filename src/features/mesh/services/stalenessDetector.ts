@@ -13,7 +13,7 @@ import { Logger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
 import { Project } from '@/types';
-import { parseJSON } from '@/types/typeGuards';
+import { parseJSON, hasEntries } from '@/types/typeGuards';
 
 export type { MeshState, MeshChanges };
 
@@ -61,6 +61,7 @@ export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record
 export async function fetchDeployedMeshConfig(): Promise<Record<string, string> | null> {
     try {
         const { ServiceLocator } = await import('@/core/di');
+        const { TIMEOUTS } = await import('@/core/utils/timeoutConfig');
         const commandManager = ServiceLocator.getCommandExecutor();
 
         logger.debug('[MeshStaleness] Fetching deployed mesh config from Adobe I/O...');
@@ -68,9 +69,8 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         // Pre-check: Verify authentication status without triggering browser auth
         // Use a fast command that doesn't trigger interactive login
         try {
-            const { TIMEOUTS } = await import('@/core/utils/timeoutConfig');
             const authCheckResult = await commandManager.execute('aio console where --json', {
-                timeout: TIMEOUTS.API_CALL, // Use existing timeout constant
+                timeout: TIMEOUTS.API_CALL,
             });
 
             if (authCheckResult.code !== 0) {
@@ -81,10 +81,10 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
             logger.debug('[MeshStaleness] Auth check failed, skipping mesh fetch:', authError);
             return null;
         }
-        
+
         // Query the deployed mesh configuration
         const result = await commandManager.execute('aio api-mesh:get --active --json', {
-            timeout: 30000,
+            timeout: TIMEOUTS.MESH_DESCRIBE,
         });
 
         // Parse the JSON response
@@ -243,10 +243,10 @@ export async function detectMeshChanges(
     
     // If envVars is empty, it means meshState exists but env vars were never captured
     // Try to fetch the deployed config from Adobe I/O to establish baseline
-    const hasEnvVars = Object.keys(currentState.envVars).length > 0;
+    const envVarsExist = hasEntries(currentState.envVars);
     let didPopulateFromDeployedConfig = false;
-    
-    if (!hasEnvVars) {
+
+    if (!envVarsExist) {
         logger.debug('[MeshStaleness] meshState.envVars is empty, attempting to fetch deployed config from Adobe I/O');
 
         const deployedConfig = await fetchDeployedMeshConfig();

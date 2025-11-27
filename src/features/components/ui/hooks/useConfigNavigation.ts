@@ -29,6 +29,17 @@ export function useConfigNavigation({
     const lastFocusedSectionRef = useRef<string | null>(null);
     const fieldCountInSectionRef = useRef<number>(0);
 
+    // Track timeouts for cleanup on unmount
+    const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
+
+    // Cleanup timeouts on unmount
+    useEffect(() => {
+        return () => {
+            timeoutsRef.current.forEach(clearTimeout);
+            timeoutsRef.current = [];
+        };
+    }, []);
+
     // Handle field focus to scroll section header into view when entering new section
     useEffect(() => {
         if (isLoading || serviceGroups.length === 0) return;
@@ -107,12 +118,13 @@ export function useConfigNavigation({
                 }
 
                 // Scroll the navigation field node into view
-                setTimeout(() => {
+                const navScrollTimeout = setTimeout(() => {
                     const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
                     if (navFieldElement) {
                         navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
                 }, 150);
+                timeoutsRef.current.push(navScrollTimeout);
             } else {
                 // Within same section, only update navigation highlighting (no scroll)
                 const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
@@ -144,16 +156,25 @@ export function useConfigNavigation({
             .flatMap(group => group.fields)
             .find(field => field.key !== 'MESH_ENDPOINT');
 
+        let focusTimeout: NodeJS.Timeout | undefined;
         if (firstEditableField) {
             // Wait for DOM to be ready, then focus the first field
-            setTimeout(() => {
+            focusTimeout = setTimeout(() => {
                 const firstFieldElement = document.querySelector(`#field-${firstEditableField.key} input, #field-${firstEditableField.key} select`);
                 if (firstFieldElement instanceof HTMLElement) {
                     // Prevent scroll on initial focus to keep page at top
                     firstFieldElement.focus({ preventScroll: true });
                 }
             }, 100);
+            timeoutsRef.current.push(focusTimeout);
         }
+
+        return () => {
+            if (focusTimeout) {
+                clearTimeout(focusTimeout);
+                timeoutsRef.current = timeoutsRef.current.filter(t => t !== focusTimeout);
+            }
+        };
     }, [isLoading, serviceGroups]);
 
     const navigateToSection = useCallback((sectionId: string) => {
@@ -186,7 +207,8 @@ export function useConfigNavigation({
 
             // Only scroll to section when EXPANDING, not when collapsing
             if (!wasExpanded) {
-                setTimeout(() => navigateToSection(sectionId), 0);
+                const scrollTimeout = setTimeout(() => navigateToSection(sectionId), 0);
+                timeoutsRef.current.push(scrollTimeout);
             }
 
             return newSet;

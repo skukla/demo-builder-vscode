@@ -18,6 +18,7 @@
 import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
 import { ComponentSelection } from '@/types/components';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
+import { getEntryCount } from '@/types/typeGuards';
 
 /**
  * Get or create ComponentRegistryManager from context
@@ -187,14 +188,15 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             envVars: registry.envVars || {},
         };
 
+        const envVarKeys = Object.keys(registry.envVars || {});
         context.logger.debug('[componentHandlers] Sending components-data:', {
             frontendsCount: frontends.length,
             backendsCount: backends.length,
             dependenciesCount: dependencies.length,
             integrationsCount: integrations.length,
             appBuilderCount: appBuilder.length,
-            envVarsCount: Object.keys(registry.envVars || {}).length,
-            envVarsSample: Object.keys(registry.envVars || {}).slice(0, 5),
+            envVarsCount: getEntryCount(registry.envVars),
+            envVarsSample: envVarKeys.slice(0, 5),
             sampleFrontendConfig: frontends[0]?.configuration,
         });
 

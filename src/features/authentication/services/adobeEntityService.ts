@@ -71,6 +71,43 @@ export class AdobeEntityService {
     }
 
     /**
+     * Get console.where context with caching
+     *
+     * Fetches the current Adobe console context (org, project, workspace) from CLI
+     * and caches the result. Used by getCurrentOrganization, getCurrentProject,
+     * and getCurrentWorkspace to avoid redundant CLI calls.
+     *
+     * @returns The console context or undefined if fetch fails
+     */
+    private async getConsoleWhereContext(): Promise<AdobeConsoleWhereResponse | undefined> {
+        // Check console.where cache first
+        let context = this.cacheManager.getCachedConsoleWhere();
+
+        if (!context) {
+            this.debugLogger.debug('[Entity Service] Fetching context from Adobe CLI');
+            const result = await this.commandManager.execute(
+                'aio console where --json',
+                { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
+            );
+
+            if (result.code === 0 && result.stdout) {
+                // SECURITY: Use parseJSON for type-safe parsing
+                const parsedContext = parseJSON<AdobeConsoleWhereResponse>(result.stdout);
+                if (!parsedContext) {
+                    this.debugLogger.warn('[Entity Service] Failed to parse console.where response');
+                    return undefined;
+                }
+                context = parsedContext;
+                this.cacheManager.setCachedConsoleWhere(context);
+            } else {
+                return undefined;
+            }
+        }
+
+        return context;
+    }
+
+    /**
      * Get list of organizations (SDK with CLI fallback)
      */
     async getOrganizations(): Promise<AdobeOrg[]> {
@@ -342,31 +379,12 @@ export class AdobeEntityService {
                 return cachedOrg;
             }
 
-            // Check console.where cache first
-            let context = this.cacheManager.getCachedConsoleWhere();
-
+            const context = await this.getConsoleWhereContext();
             if (!context) {
-                const result = await this.commandManager.execute(
-                    'aio console where --json',
-                    { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
-                );
-
-                if (result.code === 0 && result.stdout) {
-                    // SECURITY: Use parseJSON for type-safe parsing
-                    const parsedContext = parseJSON<AdobeConsoleWhereResponse>(result.stdout);
-                    if (!parsedContext) {
-                        this.debugLogger.warn('[Entity Service] Failed to parse console.where response');
-                        return undefined;
-                    }
-                    context = parsedContext;
-                    // Cache the result
-                    this.cacheManager.setCachedConsoleWhere(context);
-                } else {
-                    return undefined;
-                }
+                return undefined;
             }
 
-            if (context?.org) {
+            if (context.org) {
                 // Handle both string and object formats
                 let orgData;
                 if (typeof context.org === 'string') {
@@ -471,31 +489,12 @@ export class AdobeEntityService {
                 return cachedProject;
             }
 
-            // Check console.where cache first
-            let context = this.cacheManager.getCachedConsoleWhere();
-
+            const context = await this.getConsoleWhereContext();
             if (!context) {
-                this.debugLogger.debug('[Entity Service] Fetching project data from Adobe CLI');
-                const result = await this.commandManager.execute(
-                    'aio console where --json',
-                    { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
-                );
-
-                if (result.code === 0 && result.stdout) {
-                    // SECURITY: Use parseJSON for type-safe parsing
-                    const parsedContext = parseJSON<AdobeConsoleWhereResponse>(result.stdout);
-                    if (!parsedContext) {
-                        this.debugLogger.warn('[Entity Service] Failed to parse console.where response');
-                        return undefined;
-                    }
-                    context = parsedContext;
-                    this.cacheManager.setCachedConsoleWhere(context);
-                } else {
-                    return undefined;
-                }
+                return undefined;
             }
 
-            if (context?.project) {
+            if (context.project) {
                 let projectData;
 
                 if (typeof context.project === 'string') {
@@ -560,31 +559,12 @@ export class AdobeEntityService {
                 return cachedWorkspace;
             }
 
-            // Check console.where cache first
-            let context = this.cacheManager.getCachedConsoleWhere();
-
+            const context = await this.getConsoleWhereContext();
             if (!context) {
-                this.debugLogger.debug('[Entity Service] Fetching workspace data from Adobe CLI');
-                const result = await this.commandManager.execute(
-                    'aio console where --json',
-                    { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
-                );
-
-                if (result.code === 0 && result.stdout) {
-                    // SECURITY: Use parseJSON for type-safe parsing
-                    const parsedContext = parseJSON<AdobeConsoleWhereResponse>(result.stdout);
-                    if (!parsedContext) {
-                        this.debugLogger.warn('[Entity Service] Failed to parse console.where response');
-                        return undefined;
-                    }
-                    context = parsedContext;
-                    this.cacheManager.setCachedConsoleWhere(context);
-                } else {
-                    return undefined;
-                }
+                return undefined;
             }
 
-            if (context?.workspace) {
+            if (context.workspace) {
                 // Type guard - workspace can be string or object
                 if (typeof context.workspace === 'object') {
                     this.debugLogger.debug(`[Entity Service] Current workspace: ${context.workspace.name}`);

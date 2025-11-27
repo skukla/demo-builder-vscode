@@ -6,7 +6,7 @@ import {
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useEffect } from 'react';
-import { WizardState } from '@/types/webview';
+import { BaseStepProps } from '@/types/wizard';
 
 export interface ComponentData {
     id: string;
@@ -30,10 +30,7 @@ export interface ComponentsData {
     appBuilder?: ComponentData[];
 }
 
-interface ReviewStepProps {
-    state: WizardState;
-    updateState: (updates: Partial<WizardState>) => void;
-    setCanProceed: (canProceed: boolean) => void;
+interface ReviewStepProps extends BaseStepProps {
     componentsData?: ComponentsData;
 }
 

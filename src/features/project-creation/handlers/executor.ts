@@ -9,12 +9,13 @@ import * as vscode from 'vscode';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ProgressTracker } from './shared';
 import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     generateComponentEnvFile as generateEnvFile,
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
 import { AdobeConfig } from '@/types/base';
-import { parseJSON } from '@/types/typeGuards';
+import { parseJSON, hasEntries, getEntryCount } from '@/types/typeGuards';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 
@@ -77,7 +78,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             await vscode.commands.executeCommand('demoBuilder.stopDemo');
 
             // Wait for clean stop and port release
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
         } else {
             context.logger.debug(`[Project Creation] Running demo on different port (${runningPort}), no conflict`);
         }
@@ -257,7 +258,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     try {
                         const commandManager = ServiceLocator.getCommandExecutor();
                         const describeResult = await commandManager.execute('aio api-mesh:describe', {
-                            timeout: 30000,
+                            timeout: TIMEOUTS.MESH_DESCRIBE,
                             configureTelemetry: false,
                             useNodeVersion: getMeshNodeVersion(),
                             enhancePath: true,
@@ -295,7 +296,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 const { fetchDeployedMeshConfig } = await import('@/features/mesh/services/stalenessDetector');
                 const deployedConfig = await fetchDeployedMeshConfig();
 
-                if (deployedConfig && Object.keys(deployedConfig).length > 0) {
+                if (hasEntries(deployedConfig)) {
                     project.meshState!.envVars = deployedConfig;
                     context.logger.info('[Project Creation] Populated meshState.envVars with deployed config');
                     await context.stateManager.saveProject(project);
@@ -343,7 +344,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         const { fetchDeployedMeshConfig } = await import('@/features/mesh/services/stalenessDetector');
         const deployedConfig = await fetchDeployedMeshConfig();
 
-        if (deployedConfig && Object.keys(deployedConfig).length > 0) {
+        if (hasEntries(deployedConfig)) {
             project.meshState!.envVars = deployedConfig;
             context.logger.info('[Project Creation] Populated meshState.envVars with deployed config');
             await context.stateManager.saveProject(project);
@@ -383,7 +384,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     context.logger.debug('[Project Creation] Project object:', JSON.stringify({
         name: project.name,
         status: 'ready',
-        componentCount: Object.keys(project.componentInstances || {}).length,
+        componentCount: getEntryCount(project.componentInstances),
     }));
 
     try {
@@ -446,7 +447,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             context.panel.dispose();
             context.logger.info('[Project Creation] Webview panel closed automatically (timeout - user did not click Open Project)');
         }
-    }, 120000); // 2 minutes
+    }, TIMEOUTS.WEBVIEW_AUTO_CLOSE);
 
     context.logger.info('[Project Creation] ===== PROJECT CREATION WORKFLOW COMPLETE =====');
 }

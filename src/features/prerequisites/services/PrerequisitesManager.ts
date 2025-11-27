@@ -17,7 +17,8 @@ import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
-import { toError, isTimeoutError } from '@/types/typeGuards';
+import { toError } from '@/types/typeGuards';
+import { isTimeout, toAppError } from '@/types/errors';
 
 export type {
     PrerequisiteCheck,
@@ -253,9 +254,9 @@ export class PrerequisitesManager {
             // Check if this is a timeout error
             const errorMessage = toError(error).message;
             const errorObj = error as NodeJS.ErrnoException & { killed?: boolean; signal?: string };
-            const isTimeout = isTimeoutError(error) || (errorObj.killed && errorObj.signal === 'SIGTERM');
+            const isTimeoutErr = isTimeout(toAppError(error)) || (errorObj.killed && errorObj.signal === 'SIGTERM');
 
-            if (isTimeout) {
+            if (isTimeoutErr) {
                 // Re-throw timeout errors so they can be handled at the command level
                 // Step 1: Reduced timeout from 60s to 10s for faster failure feedback
                 this.logger.warn(`${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK}ms`);

@@ -4,6 +4,7 @@
  */
 
 import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { MeshVerificationResult } from '@/features/mesh/services/types';
 import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
@@ -40,7 +41,7 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
         const result = await commandManager.execute(
             'aio api-mesh:describe',
             {
-                timeout: 30000,
+                timeout: TIMEOUTS.MESH_DESCRIBE,
                 configureTelemetry: false,
                 useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,

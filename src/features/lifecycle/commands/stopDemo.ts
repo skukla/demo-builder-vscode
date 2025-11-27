@@ -17,6 +17,7 @@ import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DEFAULT_SHELL } from '@/types/shell';
 
 export class StopDemoCommand extends BaseCommand {
@@ -54,7 +55,7 @@ export class StopDemoCommand extends BaseCommand {
         try {
             const commandExecutor = ServiceLocator.getCommandExecutor();
             const result = await commandExecutor.execute(`lsof -ti:${port}`, {
-                timeout: 5000,
+                timeout: TIMEOUTS.PORT_CHECK,
                 configureTelemetry: false,
                 useNodeVersion: null,
                 enhancePath: false,

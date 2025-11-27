@@ -18,6 +18,35 @@ import { getSetupInstructions, getEndpoint } from '@/features/mesh/handlers/shar
 import { parseJSON, toError } from '@/types/typeGuards';
 
 /**
+ * Type for workspace configuration structure
+ */
+type WorkspaceConfig = {
+    project?: {
+        workspace?: {
+            details?: {
+                services?: unknown[];
+            };
+        };
+    };
+};
+
+/**
+ * Extract services array from workspace config
+ *
+ * Simplifies deep optional chaining: config.project?.workspace?.details?.services
+ * Returns empty array if any level is missing.
+ *
+ * @param config - Parsed workspace configuration
+ * @returns Array of services or empty array
+ */
+function getWorkspaceServices(config: WorkspaceConfig | null): unknown[] {
+    if (!config?.project?.workspace?.details?.services) {
+        return [];
+    }
+    return config.project.workspace.details.services;
+}
+
+/**
  * Handler: check-api-mesh
  *
  * Check if API Mesh exists for workspace
@@ -110,11 +139,11 @@ export async function handleCheckApiMesh(
             );
 
             const configContent = await fsPromises.readFile(configPath, 'utf-8');
-            const config = parseJSON<{ project?: { workspace?: { details?: { services?: unknown[] } } } }>(configContent);
+            const config = parseJSON<WorkspaceConfig>(configContent);
             if (!config) {
                 throw new Error('Failed to parse workspace configuration');
             }
-            const services = config.project?.workspace?.details?.services || [];
+            const services = getWorkspaceServices(config);
 
             context.debugLogger.debug('[API Mesh] Workspace services', { services });
 

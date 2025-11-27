@@ -8,11 +8,13 @@
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
 import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
+import { hasEntries } from '@/types/typeGuards';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -57,21 +59,12 @@ export const handleRequestStatus: MessageHandler = async (context) => {
 
     const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
 
-    if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.status !== 'error') {
+    if (meshComponent && shouldAsyncCheckMesh(meshComponent)) {
         // Send initial status with 'checking' for mesh
-        const initialStatusData = {
-            name: project.name,
-            path: project.path,
-            status: project.status || 'ready',
-            port: project.componentInstances?.['citisignal-nextjs']?.port,
-            adobeOrg: project.adobe?.organization,
-            adobeProject: project.adobe?.projectName,
-            frontendConfigChanged,
-            mesh: {
-                status: 'checking',
-                message: MESH_STATUS_MESSAGES.CHECKING,
-            },
-        };
+        const initialStatusData = buildStatusPayload(project, frontendConfigChanged, {
+            status: 'checking',
+            message: MESH_STATUS_MESSAGES.CHECKING,
+        });
 
         context.panel.webview.postMessage({
             type: 'statusUpdate',
@@ -124,21 +117,11 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                         // based on whether there are actual changes to display
                     }
 
-                    if (project.meshState && Object.keys(project.meshState.envVars || {}).length > 0) {
-                        // Default to deployed, then check for changes and user decline state
-                        if (meshChanges.hasChanges) {
-                            // User previously declined update → show 'update-declined' (orange badge)
-                            // Otherwise show 'config-changed' (yellow badge)
-                            meshStatus = project.meshState.userDeclinedUpdate ? 'update-declined' : 'config-changed';
+                    if (hasMeshDeploymentRecord(project)) {
+                        meshStatus = determineMeshStatus(meshChanges, meshComponent, project);
 
-                            if (meshChanges.unknownDeployedState) {
-                                context.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');
-                            }
-                        } else {
-                            // No config changes detected
-                            // If previous deployment failed, keep showing error (encourages config investigation)
-                            // Otherwise the mesh is successfully deployed
-                            meshStatus = meshComponent.status === 'error' ? 'error' : 'deployed';
+                        if (meshChanges.hasChanges && meshChanges.unknownDeployedState) {
+                            context.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');
                         }
 
                         // Verify mesh still exists
@@ -159,20 +142,11 @@ export const handleRequestStatus: MessageHandler = async (context) => {
         }
     }
 
-    const statusData = {
-        name: project.name,
-        path: project.path,
-        status: project.status || 'ready',
-        port: project.componentInstances?.['citisignal-nextjs']?.port,
-        adobeOrg: project.adobe?.organization,
-        adobeProject: project.adobe?.projectName,
+    const statusData = buildStatusPayload(
+        project,
         frontendConfigChanged,
-        mesh: meshComponent ? {
-            status: meshStatus,
-            endpoint: meshComponent.endpoint,
-            message: undefined,
-        } : undefined,
-    };
+        meshComponent ? { status: meshStatus, endpoint: meshComponent.endpoint } : undefined,
+    );
 
     context.panel.webview.postMessage({
         type: 'statusUpdate',
@@ -250,7 +224,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
 export const handleStartDemo: MessageHandler = async (context) => {
     await vscode.commands.executeCommand('demoBuilder.startDemo');
     // Update demo status only (don't re-check mesh)
-    setTimeout(() => sendDemoStatusUpdate(context), 1000);
+    setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
     return { success: true };
 };
 
@@ -260,7 +234,7 @@ export const handleStartDemo: MessageHandler = async (context) => {
 export const handleStopDemo: MessageHandler = async (context) => {
     await vscode.commands.executeCommand('demoBuilder.stopDemo');
     // Update demo status only (don't re-check mesh)
-    setTimeout(() => sendDemoStatusUpdate(context), 1000);
+    setTimeout(() => sendDemoStatusUpdate(context), TIMEOUTS.DEMO_STATUS_UPDATE_DELAY);
     return { success: true };
 };
 
@@ -379,6 +353,73 @@ export const handleDeleteProject: MessageHandler = async (context) => {
 // ============================================================================
 
 /**
+ * Build the standard status payload for dashboard updates
+ */
+interface MeshStatusInfo {
+    status: string;
+    endpoint?: string;
+    message?: string;
+}
+
+function buildStatusPayload(
+    project: Project,
+    frontendConfigChanged: boolean,
+    mesh?: MeshStatusInfo,
+): {
+    name: string;
+    path: string;
+    status: string;
+    port: number | undefined;
+    adobeOrg: string | undefined;
+    adobeProject: string | undefined;
+    frontendConfigChanged: boolean;
+    mesh?: MeshStatusInfo;
+} {
+    return {
+        name: project.name,
+        path: project.path,
+        status: project.status || 'ready',
+        port: project.componentInstances?.['citisignal-nextjs']?.port,
+        adobeOrg: project.adobe?.organization,
+        adobeProject: project.adobe?.projectName,
+        frontendConfigChanged,
+        mesh,
+    };
+}
+
+/**
+ * Check if mesh has been deployed (has env vars recorded from previous deployment)
+ */
+function hasMeshDeploymentRecord(project: Project): boolean {
+    return Boolean(project.meshState && hasEntries(project.meshState.envVars));
+}
+
+/**
+ * Determine mesh status based on changes and component state
+ */
+function determineMeshStatus(
+    meshChanges: { hasChanges: boolean; unknownDeployedState?: boolean },
+    meshComponent: ComponentInstance,
+    project: Project,
+): 'deployed' | 'config-changed' | 'update-declined' | 'error' | 'checking' {
+    if (meshChanges.hasChanges) {
+        // User previously declined update → 'update-declined' (orange badge)
+        // Otherwise → 'config-changed' (yellow badge)
+        return project.meshState?.userDeclinedUpdate ? 'update-declined' : 'config-changed';
+    }
+    // No config changes: show error if previous deployment failed, otherwise deployed
+    return meshComponent.status === 'error' ? 'error' : 'deployed';
+}
+
+/**
+ * Check if we should perform async mesh status check
+ * (mesh exists, not currently deploying, and not in error state)
+ */
+function shouldAsyncCheckMesh(meshComponent: ComponentInstance | undefined): boolean {
+    return Boolean(meshComponent && meshComponent.status !== 'deploying' && meshComponent.status !== 'error');
+}
+
+/**
  * Check mesh status asynchronously and update UI when complete
  */
 async function checkMeshStatusAsync(
@@ -400,19 +441,10 @@ async function checkMeshStatusAsync(
             if (!isAuthenticated) {
                 context.panel?.webview.postMessage({
                     type: 'statusUpdate',
-                    payload: {
-                        name: project.name,
-                        path: project.path,
-                        status: project.status || 'ready',
-                        port: project.componentInstances?.['citisignal-nextjs']?.port,
-                        adobeOrg: project.adobe?.organization,
-                        adobeProject: project.adobe?.projectName,
-                        frontendConfigChanged,
-                        mesh: {
-                            status: 'needs-auth',
-                            message: 'Sign in to verify mesh status',
-                        },
-                    },
+                    payload: buildStatusPayload(project, frontendConfigChanged, {
+                        status: 'needs-auth',
+                        message: 'Sign in to verify mesh status',
+                    }),
                 });
                 return;
             }
@@ -426,19 +458,10 @@ async function checkMeshStatusAsync(
                     context.logger.warn('[Dashboard] User lost access to project organization');
                     context.panel?.webview.postMessage({
                         type: 'statusUpdate',
-                        payload: {
-                            name: project.name,
-                            path: project.path,
-                            status: project.status || 'ready',
-                            port: project.componentInstances?.['citisignal-nextjs']?.port,
-                            adobeOrg: project.adobe?.organization,
-                            adobeProject: project.adobe?.projectName,
-                            frontendConfigChanged,
-                            mesh: {
-                                status: 'error',
-                                message: 'Organization access lost',
-                            },
-                        },
+                        payload: buildStatusPayload(project, frontendConfigChanged, {
+                            status: 'error',
+                            message: 'Organization access lost',
+                        }),
                     });
                     return;
                 }
@@ -462,21 +485,11 @@ async function checkMeshStatusAsync(
                 // based on whether there are actual changes to display
             }
 
-            if (project.meshState && Object.keys(project.meshState.envVars || {}).length > 0) {
-                // Default to deployed, then check for changes and user decline state
-                if (meshChanges.hasChanges) {
-                    // User previously declined update → show 'update-declined' (orange badge)
-                    // Otherwise show 'config-changed' (yellow badge)
-                    meshStatus = project.meshState.userDeclinedUpdate ? 'update-declined' : 'config-changed';
+            if (hasMeshDeploymentRecord(project)) {
+                meshStatus = determineMeshStatus(meshChanges, meshComponent, project);
 
-                    if (meshChanges.unknownDeployedState) {
-                        context.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');
-                    }
-                } else {
-                    // No config changes detected
-                    // If previous deployment failed, keep showing error (encourages config investigation)
-                    // Otherwise the mesh is successfully deployed
-                    meshStatus = meshComponent.status === 'error' ? 'error' : 'deployed';
+                if (meshChanges.hasChanges && meshChanges.unknownDeployedState) {
+                    context.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');
                 }
 
                 meshEndpoint = meshComponent.endpoint;
@@ -500,20 +513,11 @@ async function checkMeshStatusAsync(
         if (context.panel) {
             context.panel.webview.postMessage({
                 type: 'statusUpdate',
-                payload: {
-                    name: project.name,
-                    path: project.path,
-                    status: project.status || 'ready',
-                    port: project.componentInstances?.['citisignal-nextjs']?.port,
-                    adobeOrg: project.adobe?.organization,
-                    adobeProject: project.adobe?.projectName,
-                    frontendConfigChanged,
-                    mesh: {
-                        status: meshStatus,
-                        endpoint: meshEndpoint,
-                        message: meshMessage,
-                    },
-                },
+                payload: buildStatusPayload(project, frontendConfigChanged, {
+                    status: meshStatus,
+                    endpoint: meshEndpoint,
+                    message: meshMessage,
+                }),
             });
         }
     } catch (error) {
@@ -522,19 +526,10 @@ async function checkMeshStatusAsync(
         if (context.panel) {
             context.panel.webview.postMessage({
                 type: 'statusUpdate',
-                payload: {
-                    name: project.name,
-                    path: project.path,
-                    status: project.status || 'ready',
-                    port: project.componentInstances?.['citisignal-nextjs']?.port,
-                    adobeOrg: project.adobe?.organization,
-                    adobeProject: project.adobe?.projectName,
-                    frontendConfigChanged,
-                    mesh: {
-                        status: 'error',
-                        message: 'Failed to check deployment status',
-                    },
-                },
+                payload: buildStatusPayload(project, frontendConfigChanged, {
+                    status: 'error',
+                    message: 'Failed to check deployment status',
+                }),
             });
         }
     }
@@ -559,7 +554,7 @@ async function sendDemoStatusUpdate(context: HandlerContext): Promise<void> {
             meshStatus = { status: 'deploying', message: 'Deploying...' };
         } else if (meshComponent.status === 'error') {
             meshStatus = { status: 'error', message: 'Deployment error' };
-        } else if (project.meshState && Object.keys(project.meshState.envVars || {}).length > 0) {
+        } else if (hasMeshDeploymentRecord(project)) {
             if (project.componentConfigs) {
                 const meshChanges = await detectMeshChanges(project, project.componentConfigs);
                 meshStatus = {
@@ -576,16 +571,7 @@ async function sendDemoStatusUpdate(context: HandlerContext): Promise<void> {
 
     context.panel.webview.postMessage({
         type: 'statusUpdate',
-        payload: {
-            name: project.name,
-            path: project.path,
-            status: project.status || 'ready',
-            port: project.componentInstances?.['citisignal-nextjs']?.port,
-            adobeOrg: project.adobe?.organization,
-            adobeProject: project.adobe?.projectName,
-            frontendConfigChanged,
-            mesh: meshStatus,
-        },
+        payload: buildStatusPayload(project, frontendConfigChanged, meshStatus),
     });
 }
 

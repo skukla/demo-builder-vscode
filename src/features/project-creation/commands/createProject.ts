@@ -245,7 +245,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 const stepsConfig = parseJSON<{ steps: WizardStep[] }>(stepsContent);
                 if (stepsConfig) {
                     wizardSteps = stepsConfig.steps;
-                    this.logger.debug(`Loaded ${wizardSteps?.length || 0} wizard steps: ${wizardSteps?.slice(0, 3).map((s) => s.id).join(', ')}${wizardSteps?.length > 3 ? ` ... (and ${wizardSteps.length - 3} more)` : ''}`);
+                    // Extract step IDs for logging (show first 3 + count of remaining)
+                    const stepCount = wizardSteps?.length ?? 0;
+                    const stepPreview = wizardSteps?.slice(0, 3).map((s) => s.id).join(', ') ?? '';
+                    const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';
+                    this.logger.debug(`Loaded ${stepCount} wizard steps: ${stepPreview}${remainingCount}`);
                 }
             }
         } catch (error) {

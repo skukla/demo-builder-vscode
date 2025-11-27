@@ -10,6 +10,7 @@
  */
 
 import { validateProjectPath, validateURL } from '@/core/validation';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { SimpleResult, DataResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
@@ -152,7 +153,7 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
 
         // Open dashboard directly (no workspace manipulation)
         context.logger.info('[Project Creation] Opening project dashboard...');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DASHBOARD_OPEN_DELAY));
         await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
 
     } catch (error) {

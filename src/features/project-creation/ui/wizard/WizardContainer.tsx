@@ -21,6 +21,7 @@ import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { useFocusTrap, FOCUSABLE_SELECTOR } from '@/core/ui/hooks';
+import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 interface WizardContainerProps {
@@ -162,33 +163,34 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     } | null>(null);
 
     // Listen for feedback messages from extension
+    // Register ONCE on mount - check conditions inside functional update to avoid stale closures
     useEffect(() => {
         const unsubscribe = vscode.onMessage('feedback', (message: FeedbackMessage) => {
-            // Update creation progress if in project-creation step
-            if (state.currentStep === 'project-creation' && state.creationProgress) {
-                setState(prev => {
-                    const currentProgress = prev.creationProgress;
-                    if (!currentProgress) return prev;
+            // Use functional update to check conditions with current state (no stale closures)
+            setState(prev => {
+                // Only update if in project-creation step with active progress
+                if (prev.currentStep !== 'project-creation' || !prev.creationProgress) {
+                    return prev; // No change
+                }
 
-                    return {
-                        ...prev,
-                        creationProgress: {
-                            ...currentProgress,
-                            currentOperation: message.primary,
-                            progress: message.progress || currentProgress.progress,
-                            message: message.secondary || currentProgress.message,
-                            logs: message.log
-                                ? [...currentProgress.logs, message.log]
-                                : currentProgress.logs,
-                            error: message.error,
-                        },
-                    };
-                });
-            }
+                return {
+                    ...prev,
+                    creationProgress: {
+                        ...prev.creationProgress,
+                        currentOperation: message.primary,
+                        progress: message.progress || prev.creationProgress.progress,
+                        message: message.secondary || prev.creationProgress.message,
+                        logs: message.log
+                            ? [...prev.creationProgress.logs, message.log]
+                            : prev.creationProgress.logs,
+                        error: message.error,
+                    },
+                };
+            });
         });
 
         return unsubscribe;
-    }, [state.currentStep, state.creationProgress]);
+    }, []); // Empty deps - register listener ONCE to prevent re-registration
 
     // Listen for creationProgress messages from extension
     useEffect(() => {
@@ -535,7 +537,12 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                                 'transition-all',
                             )}
                         >
-                            {renderStep()}
+                            <ErrorBoundary
+                                key={state.currentStep}
+                                onError={(error) => console.error('[WizardContainer] Step error:', error.message)}
+                            >
+                                {renderStep()}
+                            </ErrorBoundary>
                         </div>
 
                         {/* Confirmation overlay during backend calls */}

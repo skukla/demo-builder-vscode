@@ -8,25 +8,21 @@ import {
 import React from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
-import { ComponentConfigs, WizardState, WizardStep } from '@/types/webview';
+import { ComponentConfigs } from '@/types/webview';
+import { BaseStepProps } from '@/types/wizard';
 import { useComponentConfig } from '../hooks/useComponentConfig';
 import { useConfigNavigation } from '../hooks/useConfigNavigation';
 import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
 
-// Re-export types for test consumption
+// Re-export types for component consumption
 export type { ComponentConfigs } from '@/types/webview';
+export type { ServiceGroup, UniqueField } from '../hooks/useComponentConfig';
 
-interface ComponentConfigStepProps {
-    state: WizardState;
-    updateState: (updates: Partial<WizardState>) => void;
-    setCanProceed: (canProceed: boolean) => void;
-    completedSteps?: WizardStep[];
-}
-
-export function ComponentConfigStep({ state, updateState, setCanProceed }: ComponentConfigStepProps) {
+export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const {
         isLoading,
+        loadError,
         serviceGroups,
         validationErrors,
         touchedFields,
@@ -53,7 +49,13 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: Compo
                         Configure the settings for your selected components. Required fields are marked with an asterisk.
                     </Text>
 
-                    {isLoading ? (
+                    {loadError ? (
+                        <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+                            <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-700)' }}>
+                                {loadError}
+                            </Text>
+                        </Flex>
+                    ) : isLoading ? (
                         <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                             <LoadingDisplay
                                 size="L"

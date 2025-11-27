@@ -184,6 +184,10 @@ export class UpdateManager {
                 clearTimeout(timeout);
             }
         } catch (error) {
+            // INTENTIONALLY SILENT: Network/API errors should not alarm users.
+            // Graceful degradation: returning null means "no update available" which
+            // is better UX than showing "update check failed" errors for transient
+            // network issues, rate limits, or GitHub outages.
             this.logger.debug(`[Update] Failed to fetch release for ${repo}:`, error);
             return null;
         }

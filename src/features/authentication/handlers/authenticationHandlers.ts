@@ -13,6 +13,22 @@ import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 
 /**
+ * Generate user-friendly sub-message for authentication status
+ */
+function getAuthSubMessage(
+    orgLacksAccess: boolean,
+    currentOrg: AdobeOrg | undefined,
+): string {
+    if (orgLacksAccess) {
+        return 'Organization no longer accessible or lacks App Builder access';
+    }
+    if (currentOrg) {
+        return `Connected to ${currentOrg.name || 'your organization'}`;
+    }
+    return 'Please complete authentication to continue';
+}
+
+/**
  * Check if current token is valid
  * Returns true if valid, false if expired/invalid
  * Logs errors and continues gracefully if check fails
@@ -251,9 +267,7 @@ export async function handleAuthenticate(
                     organization: currentOrg,
                     project: currentProject,
                     message: orgLacksAccess ? 'Organization selection required' : 'Already signed in',
-                    subMessage: orgLacksAccess
-                        ? 'Organization no longer accessible or lacks App Builder access'
-                        : currentOrg ? `Connected to ${currentOrg?.name || 'your organization'}` : 'Please complete authentication to continue',
+                    subMessage: getAuthSubMessage(!!orgLacksAccess, currentOrg),
                     requiresOrgSelection: !currentOrg,
                     orgLacksAccess,
                 });

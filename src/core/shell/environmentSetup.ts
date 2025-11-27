@@ -344,7 +344,7 @@ export class EnvironmentSetup {
     private async checkFnmAvailable(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<boolean> {
         try {
             await executeCommand('fnm --version', {
-                timeout: 2000,
+                timeout: TIMEOUTS.QUICK_SHELL,
                 shell: DEFAULT_SHELL  // Fixes ENOENT in Dock-launched VS Code
             });
             return true;
@@ -359,7 +359,7 @@ export class EnvironmentSetup {
     private async getCurrentFnmVersion(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<string | null> {
         try {
             const result = await executeCommand('fnm current', {
-                timeout: 2000,
+                timeout: TIMEOUTS.QUICK_SHELL,
                 shell: DEFAULT_SHELL  // Fixes ENOENT in Dock-launched VS Code
             });
             return result.stdout?.trim() || null;
@@ -388,7 +388,7 @@ export class EnvironmentSetup {
                 {
                     configureTelemetry: false,  // Don't check telemetry for telemetry commands
                     encoding: 'utf8',
-                    timeout: 5000,
+                    timeout: TIMEOUTS.PORT_CHECK,  // Same timeout as quick operations
                 },
             );
 

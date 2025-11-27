@@ -5,6 +5,7 @@ import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { updateFrontendState } from '@/core/state';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation/securityValidation';
 import { DEFAULT_SHELL } from '@/types/shell';
 
@@ -83,7 +84,7 @@ export class StartDemoCommand extends BaseCommand {
 
         // Find PID using lsof
         const result = await commandManager.execute(`lsof -ti:${port}`, {
-            timeout: 5000,
+            timeout: TIMEOUTS.PORT_CHECK,
             configureTelemetry: false,
             useNodeVersion: null,
             enhancePath: false,
@@ -155,7 +156,7 @@ export class StartDemoCommand extends BaseCommand {
                 try {
                     // SECURITY: port is validated above as a valid integer
                     const result = await commandManager.execute(`lsof -i:${port}`, {
-                        timeout: 5000,
+                        timeout: TIMEOUTS.PORT_CHECK,
                         configureTelemetry: false,
                         useNodeVersion: null,
                         enhancePath: false,

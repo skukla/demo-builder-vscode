@@ -13,16 +13,10 @@ import Refresh from '@spectrum-icons/workflow/Refresh';
 import React from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
-import { WizardState } from '@/types/webview';
+import { BaseStepProps } from '@/types/wizard';
 import { useAuthStatus } from '../hooks/useAuthStatus';
 
-interface AdobeAuthStepProps {
-    state: WizardState;
-    updateState: (updates: Partial<WizardState>) => void;
-    setCanProceed: (canProceed: boolean) => void;
-}
-
-export function AdobeAuthStep({ state, updateState, setCanProceed }: AdobeAuthStepProps) {
+export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const {
         authStatus,
         authSubMessage,

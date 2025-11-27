@@ -36,9 +36,6 @@ export type { CompactOptionProps } from './CompactOption';
 export { ComponentCard } from './ComponentCard';
 export type { ComponentCardProps } from './ComponentCard';
 
-export { ConfigurationSummary } from './ConfigurationSummary';
-export type { ConfigurationSummaryProps } from './ConfigurationSummary';
-
 export { DependencyItem } from './DependencyItem';
 export type { DependencyItemProps } from './DependencyItem';
 

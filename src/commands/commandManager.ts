@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
-import { DeleteProjectCommand } from './deleteProject';
 import { DiagnosticsCommand } from './diagnostics';
-import { ResetAllCommand } from './resetAll';
-import { ViewStatusCommand } from './viewStatus';
+import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
+import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
+import { ViewStatusCommand } from '@/features/lifecycle/commands/viewStatus';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

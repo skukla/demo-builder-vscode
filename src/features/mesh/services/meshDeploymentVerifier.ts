@@ -42,8 +42,8 @@ export interface VerificationOptions {
 export async function waitForMeshDeployment(
     options: VerificationOptions = {},
 ): Promise<MeshDeploymentVerificationResult> {
-    const pollInterval = options.pollInterval ?? 10000;     // 10 seconds between attempts
-    const initialWait = options.initialWait ?? 20000;       // 20 seconds initial wait
+    const pollInterval = options.pollInterval ?? TIMEOUTS.MESH_VERIFY_POLL_INTERVAL;
+    const initialWait = options.initialWait ?? TIMEOUTS.MESH_VERIFY_INITIAL_WAIT;
     
     // Calculate maxRetries from configured timeout if not provided
     // Formula: (totalTimeout - initialWait) / pollInterval
@@ -87,7 +87,7 @@ export async function waitForMeshDeployment(
             const verifyResult = await commandManager.execute(
                 'aio api-mesh get',
                 {
-                    timeout: 30000,
+                    timeout: TIMEOUTS.MESH_DESCRIBE,
                     configureTelemetry: false,
                     useNodeVersion: null,
                     enhancePath: true,
@@ -167,7 +167,7 @@ async function getEndpoint(meshId: string, logger?: Logger): Promise<string | un
         const result = await commandManager.execute(
             'aio api-mesh:describe',
             {
-                timeout: 30000,
+                timeout: TIMEOUTS.MESH_DESCRIBE,
                 configureTelemetry: false,
                 useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,

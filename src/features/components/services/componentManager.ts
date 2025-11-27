@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { ComponentInstallOptions, ComponentInstallResult } from '@/features/components/services/types';
 import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '@/types';
 import type { Logger } from '@/types/logger';
@@ -155,7 +156,7 @@ export class ComponentManager {
         this.logger.debug(`[ComponentManager] Executing: ${cloneCommand}`);
 
         // Use configurable timeout or default
-        const cloneTimeout = componentDef.source.timeouts?.clone || 120000; // Default 2 minutes
+        const cloneTimeout = componentDef.source.timeouts?.clone || TIMEOUTS.COMPONENT_CLONE;
 
         // SECURITY: shell is safe here because:
         // - URL comes from validated component registry (templates/components.json)
@@ -277,7 +278,7 @@ export class ComponentManager {
                 this.logger.debug(`[ComponentManager] Running: ${installCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
 
                 // Use configurable timeout or default
-                const installTimeout = componentDef.source.timeouts?.install || 300000; // Default 5 minutes
+                const installTimeout = componentDef.source.timeouts?.install || TIMEOUTS.COMPONENT_INSTALL;
 
                 const installResult = await commandManager.execute(installCommand, {
                     cwd: componentPath,  // Run from component directory
@@ -303,7 +304,7 @@ export class ComponentManager {
                     
                     this.logger.debug(`[ComponentManager] Running: ${buildCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
                     
-                    const buildTimeout = 180000; // 3 minutes for build
+                    const buildTimeout = TIMEOUTS.COMPONENT_BUILD;
                     
                     const buildResult = await commandManager.execute(buildCommand, {
                         cwd: componentPath,  // Run from component directory

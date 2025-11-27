@@ -28,6 +28,10 @@
  * // }
  * ```
  */
+
+import { toAppError } from '@/types/errors';
+import { ErrorCode, getErrorTitle, getErrorCategory } from '@/types/errorCodes';
+
 export class AuthenticationErrorFormatter {
     /**
      * Format error with categorization and structured output
@@ -48,33 +52,48 @@ export class AuthenticationErrorFormatter {
         title: string;
         message: string;
         technical: string;
+        code: ErrorCode;
     } {
+        // Convert to typed AppError for consistent handling
+        const appError = toAppError(error);
         const err = error as { message?: string; stack?: string };
-        const errorMessage = err?.message || String(error);
+        const errorMessage = appError.message;
 
-        let title = 'Authentication Error';
-        let message = errorMessage;
+        // Use error code for categorization (no string matching!)
+        const code = appError.code;
+        const category = getErrorCategory(code);
 
-        // Detect timeout errors
-        if (errorMessage.toLowerCase().includes('timeout') || errorMessage.toLowerCase().includes('timed out')) {
-            title = 'Operation Timed Out';
-            message = `${context.operation} timed out after ${context.timeout}ms. Please try again.`;
+        let title: string;
+        let message: string;
+
+        // Customize message based on error category
+        switch (category) {
+            case 'general':
+                if (code === ErrorCode.TIMEOUT) {
+                    title = getErrorTitle(code);
+                    message = `${context.operation} timed out after ${context.timeout}ms. Please try again.`;
+                } else if (code === ErrorCode.NETWORK) {
+                    title = getErrorTitle(code);
+                    message = 'No internet connection. Please check your network and try again.';
+                } else {
+                    title = getErrorTitle(code);
+                    message = appError.userMessage;
+                }
+                break;
+
+            case 'auth':
+                title = getErrorTitle(code);
+                message = 'Authentication failed. Please try logging in again.';
+                break;
+
+            default:
+                // Use the AppError's built-in user message
+                title = getErrorTitle(code);
+                message = appError.userMessage;
         }
 
-        // Detect network errors
-        else if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('enotfound')) {
-            title = 'Network Error';
-            message = 'No internet connection. Please check your network and try again.';
-        }
+        const technical = `Operation: ${context.operation}\nCode: ${code}\nError: ${errorMessage}\nStack: ${err?.stack || 'N/A'}`;
 
-        // Detect auth errors
-        else if (errorMessage.toLowerCase().includes('auth') || errorMessage.toLowerCase().includes('unauthorized')) {
-            title = 'Authentication Failed';
-            message = 'Authentication failed. Please try logging in again.';
-        }
-
-        const technical = `Operation: ${context.operation}\nError: ${errorMessage}\nStack: ${err?.stack || 'N/A'}`;
-
-        return { title, message, technical };
+        return { title, message, technical, code };
     }
 }
