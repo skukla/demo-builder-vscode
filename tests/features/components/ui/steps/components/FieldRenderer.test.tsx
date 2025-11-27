@@ -177,7 +177,8 @@ describe('FieldRenderer', () => {
     });
 
     describe('Field interactions', () => {
-        it('calls onChange when TextField value changes', () => {
+        it('calls onChange when TextField value changes', async () => {
+            const user = userEvent.setup();
             const field: UniqueField = {
                 key: 'API_KEY',
                 label: 'API Key',
@@ -197,9 +198,11 @@ describe('FieldRenderer', () => {
             );
 
             const input = screen.getByRole('textbox');
-            fireEvent.change(input, { target: { value: 'new-api-key' } });
+            await user.type(input, 'x');
 
-            expect(mockOnChange).toHaveBeenCalledWith(field, 'new-api-key');
+            // With controlled component (value=""), each keystroke triggers onChange with that character
+            // Verify onChange was called with the field and the typed character
+            expect(mockOnChange).toHaveBeenCalledWith(field, 'x');
         });
 
         it('calls onChange when Checkbox is toggled', async () => {

@@ -245,6 +245,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                 key={system.id}
                                 isSelected={selectedIntegrations.has(system.id)}
                                 onChange={(sel) => handleIntegrationToggle(system.id, sel)}
+                                aria-label={system.name}
                                 UNSAFE_className="mb-2"
                             >
                                 <Flex direction="column" gap="size-50">
@@ -267,6 +268,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                 key={app.id}
                                 isSelected={selectedAppBuilder.has(app.id)}
                                 onChange={(sel) => handleAppBuilderToggle(app.id, sel)}
+                                aria-label={app.name}
                                 UNSAFE_className="mb-2"
                             >
                                 <Flex direction="column" gap="size-50">

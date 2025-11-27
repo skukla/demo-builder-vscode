@@ -119,12 +119,11 @@ describe('ComponentSelectionStep - Display', () => {
             );
 
             // Verify keyboard event was dispatched before focus
+            // Component dispatches KeyboardEvent('keydown', { key: 'Tab', bubbles: true })
             expect(dispatchEventSpy).toHaveBeenCalledWith(
                 expect.objectContaining({
                     type: 'keydown',
                     key: 'Tab',
-                    code: 'Tab',
-                    keyCode: 9
                 })
             );
 
