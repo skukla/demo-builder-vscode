@@ -26,6 +26,9 @@ export class FileWatcher {
         this.logger.debug(`[File Watcher] Waiting for file system change: ${path}`);
 
         return new Promise((resolve, reject) => {
+            // Declare watcher at top to avoid temporal dead zone in timeout callback
+            let watcher: vscode.FileSystemWatcher | undefined;
+
             const timeoutHandle = setTimeout(() => {
                 if (watcher) {
                     watcher.dispose();
@@ -48,11 +51,11 @@ export class FileWatcher {
             }
 
             // Otherwise, wait for any change
-            const watcher = vscode.workspace.createFileSystemWatcher(path);
+            watcher = vscode.workspace.createFileSystemWatcher(path);
 
             const handleChange = () => {
                 clearTimeout(timeoutHandle);
-                watcher.dispose();
+                watcher!.dispose();
                 this.logger.debug(`[File Watcher] File system change detected: ${path}`);
                 resolve();
             };
