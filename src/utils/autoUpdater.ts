@@ -5,6 +5,7 @@ import axios from 'axios';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { Logger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { UpdateInfo } from '@/types';
 
 export class AutoUpdater {
@@ -40,7 +41,7 @@ export class AutoUpdater {
                 headers: {
                     'Accept': 'application/vnd.github.v3+json',
                 },
-                timeout: 10000,
+                timeout: TIMEOUTS.UPDATE_CHECK,
             });
 
             const latestVersion = response.data.tag_name.replace('v', '');
@@ -100,7 +101,7 @@ export class AutoUpdater {
             
             const response = await axios.get(updateInfo.downloadUrl, {
                 responseType: 'arraybuffer',
-                timeout: 60000,
+                timeout: TIMEOUTS.UPDATE_DOWNLOAD,
                 onDownloadProgress: (progressEvent) => {
                     const percentCompleted = progressEvent.total 
                         ? Math.round((progressEvent.loaded * 100) / progressEvent.total)

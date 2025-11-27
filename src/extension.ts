@@ -5,6 +5,7 @@ import { ServiceLocator } from '@/core/di';
 import { initializeLogger, Logger } from '@/core/logging';
 import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StatusBarManager, WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
 import { AuthenticationService } from '@/features/authentication';
@@ -120,7 +121,7 @@ export async function activate(context: vscode.ExtensionContext) {
         // 2. When a webview closes, ensure user isn't left with no webviews
         BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
             // Small delay to let disposal complete before checking
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI_UPDATE_DELAY));
 
             // Check if any webviews are still open using the singleton map
             const activeWebviewCount = BaseWebviewCommand.getActivePanelCount();
@@ -154,7 +155,7 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand('demoBuilder.restartDemo', async () => {
                 await vscode.commands.executeCommand('demoBuilder.stopDemo');
                 // Small delay to ensure clean stop
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STATUS_UPDATE_DELAY));
                 await vscode.commands.executeCommand('demoBuilder.startDemo');
             }),
         );

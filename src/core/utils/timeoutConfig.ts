@@ -18,6 +18,9 @@ export const TIMEOUTS = {
     BROWSER_AUTH: 60000,            // Browser-based authentication flow (1 minute)
     API_MESH_CREATE: 120000,        // API Mesh creation (2 minutes)
     API_MESH_UPDATE: 120000,        // API Mesh update/deployment (2 minutes)
+    MESH_DESCRIBE: 30000,           // Fetching mesh info via describe command (30 seconds)
+    MESH_VERIFY_INITIAL_WAIT: 20000, // Initial wait before first verification poll (20 seconds)
+    MESH_VERIFY_POLL_INTERVAL: 10000, // Interval between verification polls (10 seconds)
     
     // Adobe SDK operations
     SDK_INIT: 5000,                 // Adobe SDK initialization (fail fast, non-critical background operation)
@@ -33,6 +36,11 @@ export const TIMEOUTS = {
     PREREQUISITE_CHECK: 10000,      // 10 seconds - checking if prerequisite exists (fail fast, Step 1 optimization)
     PREREQUISITE_INSTALL: 180000,   // 3 minutes - installing prerequisites (downloads, npm installs)
 
+    // Component installation timeouts
+    COMPONENT_CLONE: 120000,        // Cloning git repository (2 minutes)
+    COMPONENT_INSTALL: 300000,      // Installing npm dependencies (5 minutes)
+    COMPONENT_BUILD: 180000,        // Running build scripts (3 minutes)
+
     // Update system timeouts
     UPDATE_CHECK: 10000,            // GitHub API calls to check releases
     UPDATE_DOWNLOAD: 60000,         // Downloading VSIX or component archives (1 minute)
@@ -42,15 +50,23 @@ export const TIMEOUTS = {
 
     // Demo lifecycle timeouts
     DEMO_STOP_WAIT: 2000,           // Wait time after stopping demo before cleanup (2 seconds)
+    DEMO_STATUS_UPDATE_DELAY: 1000, // Delay before refreshing dashboard status after start/stop (1 second)
 
     // Webview lifecycle timeouts
     WEBVIEW_TRANSITION: 3000,       // 3 seconds - webview transition tracking (prevents race conditions)
+    WEBVIEW_AUTO_CLOSE: 120000,     // Auto-close wizard after project creation if user doesn't click Open Project (2 minutes)
 
     // UI timing delays
     STEP_TRANSITION: 300,           // Step transition animation duration (matches CSS)
     STEP_CONTENT_FOCUS: 300,        // Delay before focusing step content (allows Spectrum components to mount)
     SCROLL_ANIMATION: 150,          // Scroll animation delay for UI smoothness
     FOCUS_FALLBACK: 1000,           // Fallback timeout for MutationObserver-based focus management
+    DASHBOARD_OPEN_DELAY: 500,      // Delay before opening dashboard after project creation
+    UI_UPDATE_DELAY: 100,           // Small delay for UI updates before subsequent operations
+
+    // Shell and system operations
+    QUICK_SHELL: 2000,              // Quick shell commands (fnm --version, fnm current)
+    PORT_CHECK: 5000,               // Port checking operations (lsof)
 
     // Default fallbacks
     COMMAND_DEFAULT: 30000,         // Default command timeout
