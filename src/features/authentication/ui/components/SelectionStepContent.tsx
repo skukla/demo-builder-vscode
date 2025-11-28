@@ -15,17 +15,16 @@ import {
     Item,
     Text,
     SearchField,
-    Button,
-    Well,
     Flex,
     ActionButton,
-    ProgressCircle,
 } from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import React from 'react';
-import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
+import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
+import { ErrorDisplay } from '@/core/ui/components/feedback/ErrorDisplay';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
+import { Spinner } from '@/core/ui/components/ui/Spinner';
 
 /**
  * Props for a selectable item (must have id and display text)
@@ -149,23 +148,11 @@ export function SelectionStepContent<T extends SelectableItem>({
             <>
                 <Heading level={2} marginBottom="size-300">{labels.heading}</Heading>
                 <FadeTransition show={true}>
-                    <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                        <Flex direction="column" gap="size-200" alignItems="center">
-                            <AlertCircle UNSAFE_className="text-red-600" size="L" />
-                            <Flex direction="column" gap="size-100" alignItems="center">
-                                <Text UNSAFE_className="text-xl font-medium">
-                                    {labels.errorTitle}
-                                </Text>
-                                <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                    {error}
-                                </Text>
-                            </Flex>
-                            <Button variant="accent" onPress={onLoad} marginTop="size-300">
-                                <Refresh size="S" marginEnd="size-100" />
-                                Try Again
-                            </Button>
-                        </Flex>
-                    </Flex>
+                    <ErrorDisplay
+                        title={labels.errorTitle}
+                        message={error}
+                        onRetry={onLoad}
+                    />
                 </FadeTransition>
             </>
         );
@@ -176,17 +163,10 @@ export function SelectionStepContent<T extends SelectableItem>({
         return (
             <>
                 <Heading level={2} marginBottom="size-300">{labels.heading}</Heading>
-                <Flex justifyContent="center" alignItems="center" height="350px">
-                    <Well>
-                        <Flex gap="size-200" alignItems="center">
-                            <AlertCircle UNSAFE_className="text-yellow-600" />
-                            <Flex direction="column" gap="size-50">
-                                <Text><strong>{labels.emptyTitle}</strong></Text>
-                                <Text UNSAFE_className="text-sm">{labels.emptyMessage}</Text>
-                            </Flex>
-                        </Flex>
-                    </Well>
-                </Flex>
+                <EmptyState
+                    title={labels.emptyTitle}
+                    description={labels.emptyMessage}
+                />
             </>
         );
     }
@@ -297,7 +277,7 @@ function RefreshButton({
             isDisabled={isLoading}
             UNSAFE_style={{ cursor: 'pointer' }}
         >
-            {isLoading ? <ProgressCircle size="S" isIndeterminate /> : <Refresh />}
+            {isLoading ? <Spinner size="S" aria-label="Loading" /> : <Refresh />}
         </ActionButton>
     );
 }

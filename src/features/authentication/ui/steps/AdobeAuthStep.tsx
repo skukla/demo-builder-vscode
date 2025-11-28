@@ -11,8 +11,8 @@ import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import React from 'react';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { AuthLoadingState } from './components/AuthLoadingState';
 import { ErrorCode } from '@/types/errorCodes';
 import { BaseStepProps } from '@/types/wizard';
 import { useAuthStatus } from '../hooks/useAuthStatus';
@@ -50,14 +50,11 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
 
             {/* Loading state */}
             {(showLoadingSpinner || adobeAuth.isAuthenticated === undefined) && !authTimeout && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                    <LoadingDisplay
-                        size="L"
-                        helperText="This could take up to 1 minute"
-                        message={authStatus || 'Connecting to Adobe services...'}
-                        subMessage={authSubMessage}
-                    />
-                </Flex>
+                <AuthLoadingState
+                    message={authStatus || 'Connecting to Adobe services...'}
+                    subMessage={authSubMessage}
+                    helperText="This could take up to 1 minute"
+                />
             )}
 
             {/* Token expiring soon */}

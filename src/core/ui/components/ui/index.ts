@@ -38,6 +38,3 @@ export type { ComponentCardProps } from './ComponentCard';
 
 export { DependencyItem } from './DependencyItem';
 export type { DependencyItemProps } from './DependencyItem';
-
-export { SelectionSummary } from './SelectionSummary';
-export type { SelectionSummaryProps, SelectionItem } from './SelectionSummary';
