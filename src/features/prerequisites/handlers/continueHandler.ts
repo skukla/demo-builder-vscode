@@ -11,6 +11,7 @@ import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getNodeVersionMapping, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
 import { DEFAULT_SHELL } from '@/types/shell';
 
@@ -26,7 +27,7 @@ export async function handleContinuePrerequisites(
 ): Promise<SimpleResult> {
     try {
         if (!context.sharedState.currentPrerequisites || !context.sharedState.currentPrerequisiteStates) {
-            return { success: false };
+            return { success: false, error: 'No prerequisites state found', code: ErrorCode.PREREQ_CHECK_FAILED };
         }
 
         const start = typeof payload?.fromIndex === 'number' ? payload.fromIndex : 0;
@@ -189,6 +190,6 @@ export async function handleContinuePrerequisites(
         return { success: true };
     } catch (error) {
         context.logger.error('Failed to continue prerequisites:', error as Error);
-        return { success: false };
+        return { success: false, error: 'Failed to continue prerequisites check', code: ErrorCode.UNKNOWN };
     }
 }

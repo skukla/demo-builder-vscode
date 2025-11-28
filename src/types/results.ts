@@ -4,13 +4,20 @@
  * Common result patterns for operations that may succeed or fail.
  */
 
+import type { ErrorCode } from './errorCodes';
+
 /**
  * SimpleResult - Basic success/failure result
+ *
+ * The `code` field provides programmatic error identification for frontend handling.
+ * Use ErrorCode enum values for consistent error categorization.
  */
 export interface SimpleResult<T = unknown> {
     success: boolean;
     data?: T;
     error?: string;
+    /** Programmatic error code for frontend handling */
+    code?: ErrorCode;
 }
 
 /**

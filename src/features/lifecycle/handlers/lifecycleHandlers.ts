@@ -12,6 +12,7 @@
 import { validateProjectPath, validateURL } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult, DataResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 
@@ -55,7 +56,7 @@ export async function handleCancelProjectCreation(
         context.sharedState.projectCreationAbortController.abort();
         return { success: true, data: { message: 'Project creation cancelled' } };
     }
-    return { success: false, data: { message: 'No active project creation to cancel' } };
+    return { success: false, data: { message: 'No active project creation to cancel' }, code: ErrorCode.PROJECT_NOT_FOUND };
 }
 
 /**
@@ -77,6 +78,7 @@ export async function handleCancelMeshCreation(
         return {
             success: false,
             error: toError(error).message,
+            code: ErrorCode.UNKNOWN,
         };
     }
 }
@@ -187,6 +189,7 @@ export async function handleBrowseFiles(
                 return {
                     success: false,
                     error: `Access denied: ${toError(validationError).message}`,
+                    code: ErrorCode.CONFIG_INVALID,
                 };
             }
 
@@ -197,7 +200,7 @@ export async function handleBrowseFiles(
         return { success: true };
     } catch (error) {
         context.logger.error('[Project Creation] Failed to open Explorer', error as Error);
-        return { success: false, error: 'Failed to open file browser' };
+        return { success: false, error: 'Failed to open file browser', code: ErrorCode.UNKNOWN };
     }
 }
 
@@ -262,14 +265,14 @@ export async function handleOpenAdobeConsole(
             validateURL(consoleUrl);
         } catch (validationError) {
             context.logger.error('[Adobe Console] URL validation failed', validationError as Error);
-            return { success: false };
+            return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
         }
 
         await vscode.env.openExternal(vscode.Uri.parse(consoleUrl));
         return { success: true };
     } catch (error) {
         context.logger.error('[Adobe Console] Failed to open URL', error as Error);
-        return { success: false };
+        return { success: false, error: 'Failed to open Adobe Console', code: ErrorCode.UNKNOWN };
     }
 }
 

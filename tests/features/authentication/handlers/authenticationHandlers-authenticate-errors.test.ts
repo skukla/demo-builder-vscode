@@ -50,6 +50,7 @@ describe('authenticationHandlers - handleAuthenticate - Error Handling', () => {
 				isAuthenticated: false,
 				isChecking: false,
 				error: 'timeout',
+				code: 'TIMEOUT',
 				message: 'Sign-in timed out',
 				subMessage: 'The browser window may have been closed. Please try again.',
 			});
@@ -78,6 +79,7 @@ describe('authenticationHandlers - handleAuthenticate - Error Handling', () => {
 
 			expect(mockContext.sendMessage).toHaveBeenLastCalledWith('authError', {
 				error: 'Authentication failed',
+				code: 'UNKNOWN',
 			});
 		});
 

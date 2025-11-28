@@ -115,6 +115,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         expect(result).toEqual({
             success: false,
             error: 'No project available',
+            code: 'PROJECT_NOT_FOUND',
         });
 
         // Verify sendMessage was NOT called
@@ -133,6 +134,7 @@ describe('dashboardHandlers - handleRequestStatus', () => {
         expect(result).toEqual({
             success: false,
             error: 'No panel available',
+            code: 'PROJECT_NOT_FOUND',
         });
     });
 

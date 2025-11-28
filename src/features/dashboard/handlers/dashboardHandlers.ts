@@ -13,6 +13,7 @@ import { validateURL } from '@/core/validation';
 import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
+import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { hasEntries } from '@/types/typeGuards';
 
@@ -22,7 +23,7 @@ import { hasEntries } from '@/types/typeGuards';
 export const handleReady: MessageHandler = async (context) => {
     const project = await context.stateManager.getCurrentProject();
     if (!project || !context.panel) {
-        return { success: false, error: 'No project or panel available' };
+        return { success: false, error: 'No project or panel available', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
     const themeKind = vscode.window.activeColorTheme.kind;
@@ -47,12 +48,12 @@ export const handleReady: MessageHandler = async (context) => {
  */
 export const handleRequestStatus: MessageHandler = async (context) => {
     if (!context.panel) {
-        return { success: false, error: 'No panel available' };
+        return { success: false, error: 'No panel available', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
     const project = await context.stateManager.getCurrentProject();
     if (!project) {
-        return { success: false, error: 'No project available' };
+        return { success: false, error: 'No project available', code: ErrorCode.PROJECT_NOT_FOUND };
     }
 
     const meshComponent = project.componentInstances?.['commerce-mesh'];
@@ -164,7 +165,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
         const project = await context.stateManager.getCurrentProject();
         if (!project) {
             context.logger.error('[Dashboard] No current project for re-authentication');
-            return { success: false, error: 'No project found' };
+            return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
         }
 
         // Update UI to 'authenticating' state
@@ -214,7 +215,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
             },
         });
 
-        return { success: false, error: 'Authentication failed' };
+        return { success: false, error: 'Authentication failed', code: ErrorCode.AUTH_REQUIRED };
     }
 };
 
@@ -302,7 +303,7 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
             validateWorkspaceId(project.adobe.workspace);
         } catch (validationError) {
             context.logger.error('[Dev Console] Adobe ID validation failed', validationError as Error);
-            return { success: false, error: 'Invalid Adobe resource ID' };
+            return { success: false, error: 'Invalid Adobe resource ID', code: ErrorCode.CONFIG_INVALID };
         }
 
         // Direct link to workspace
@@ -316,7 +317,7 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
             validateProjectId(project.adobe.projectId);
         } catch (validationError) {
             context.logger.error('[Dev Console] Adobe ID validation failed', validationError as Error);
-            return { success: false, error: 'Invalid Adobe resource ID' };
+            return { success: false, error: 'Invalid Adobe resource ID', code: ErrorCode.CONFIG_INVALID };
         }
 
         // Fallback: project overview
@@ -331,7 +332,7 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
         validateURL(consoleUrl);
     } catch (validationError) {
         context.logger.error('[Dev Console] URL validation failed', validationError as Error);
-        return { success: false, error: 'Invalid URL' };
+        return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
     }
 
     await vscode.env.openExternal(vscode.Uri.parse(consoleUrl));

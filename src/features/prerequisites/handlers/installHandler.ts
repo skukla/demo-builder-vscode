@@ -19,6 +19,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 import { isTimeout, toAppError } from '@/types/errors';
@@ -299,7 +300,7 @@ export async function handleInstallPrerequisite(
 
         if (!installResult) {
             context.logger.error(`[Prerequisites] Installation verification failed - no result returned for ${prereq.name}`);
-            return { success: false };
+            return { success: false, error: 'Installation verification failed', code: ErrorCode.UNKNOWN };
         }
 
         let finalNodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
@@ -404,6 +405,6 @@ export async function handleInstallPrerequisite(
             status: 'error',
             message: toError(error).message,
         });
-        return { success: false };
+        return { success: false, error: toError(error).message, code: ErrorCode.UNKNOWN };
     }
 }

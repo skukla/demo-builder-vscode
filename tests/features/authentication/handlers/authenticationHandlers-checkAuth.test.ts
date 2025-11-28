@@ -236,6 +236,7 @@ describe('authenticationHandlers - handleCheckAuth', () => {
                 isAuthenticated: false,
                 isChecking: false,
                 error: true,
+                code: 'NETWORK',
                 message: 'Connection problem',
                 subMessage: 'Can\'t reach Adobe services. Check your internet connection and try again.',
             });

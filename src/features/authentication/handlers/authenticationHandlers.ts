@@ -9,6 +9,7 @@
 import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
 import type { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 
@@ -198,11 +199,12 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
             isAuthenticated: false,
             isChecking: false,
             error: true,
+            code: ErrorCode.NETWORK,
             message: 'Connection problem',
             subMessage: 'Can\'t reach Adobe services. Check your internet connection and try again.',
         });
 
-        return { success: false };
+        return { success: false, code: ErrorCode.NETWORK };
     }
 }
 
@@ -222,7 +224,7 @@ export async function handleAuthenticate(
 
     if (context.sharedState.isAuthenticating) {
         context.logger.warn('[Auth] Authentication already in progress, ignoring duplicate request');
-        return { success: false };
+        return { success: false, code: ErrorCode.CANCELLED };
     }
 
     const authStartTime = Date.now();
@@ -316,13 +318,14 @@ export async function handleAuthenticate(
                         authenticated: false,
                         isAuthenticated: false,
                         isChecking: false,
+                        code: ErrorCode.AUTH_REQUIRED,
                         message: 'Session expired',
                         subMessage: 'Please sign in again to continue',
                         requiresOrgSelection: true,
                         orgLacksAccess: false,
                     });
 
-                    return { success: false };
+                    return { success: false, code: ErrorCode.AUTH_REQUIRED };
                 }
 
                 // Token is valid (or inspection failed but we continue) - proceed with org fetch
@@ -427,11 +430,12 @@ export async function handleAuthenticate(
                 isAuthenticated: false,
                 isChecking: false,
                 error: 'timeout',
+                code: ErrorCode.TIMEOUT,
                 message: 'Sign-in timed out',
                 subMessage: 'The browser window may have been closed. Please try again.',
             });
 
-            return { success: false };
+            return { success: false, code: ErrorCode.TIMEOUT };
         }
 
     } catch (error) {
@@ -443,8 +447,9 @@ export async function handleAuthenticate(
         // SECURITY: Never expose internal state details to UI - use generic message
         await context.sendMessage('authError', {
             error: 'Authentication failed',
+            code: ErrorCode.UNKNOWN,
         });
 
-        return { success: false };
+        return { success: false, code: ErrorCode.UNKNOWN };
     }
 }

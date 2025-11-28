@@ -10,6 +10,7 @@
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
 
@@ -247,6 +248,6 @@ export async function handleCheckPrerequisites(
             message: 'Failed to check prerequisites',
             details: toError(error).message,
         });
-        return { success: false };
+        return { success: false, error: 'Failed to check prerequisites', code: ErrorCode.UNKNOWN };
     }
 }

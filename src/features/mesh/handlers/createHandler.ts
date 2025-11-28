@@ -14,6 +14,7 @@ import { validateWorkspaceId } from '@/core/validation';
 import { createProgressCallback, handleMeshAlreadyExists } from '@/features/mesh/handlers/createHandlerHelpers';
 import { getEndpoint } from '@/features/mesh/handlers/shared';
 import { getMeshStatusCategory, extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
+import { ErrorCode } from '@/types/errorCodes';
 import { parseJSON, toError } from '@/types/typeGuards';
 
 /**
@@ -44,6 +45,7 @@ export async function handleCreateApiMesh(
     meshStatus?: 'deployed' | 'error';
     message?: string;
     error?: string;
+    code?: ErrorCode;
 }> {
     const { workspaceId, onProgress } = payload;
 
@@ -55,6 +57,7 @@ export async function handleCreateApiMesh(
         return {
             success: false,
             error: `Invalid workspace ID: ${(validationError as Error).message}`,
+            code: ErrorCode.MESH_CONFIG_INVALID,
         };
     }
 
@@ -80,6 +83,7 @@ export async function handleCreateApiMesh(
         return {
             success: false,
             error: 'Adobe authentication required. Please sign in via the Project Dashboard.',
+            code: ErrorCode.AUTH_REQUIRED,
         };
     }
 
@@ -235,6 +239,7 @@ export async function handleCreateApiMesh(
                                     meshExists: true,
                                     meshStatus: 'error',
                                     error: 'Mesh deployment failed. Click "Recreate Mesh" to delete and try again.',
+                                    code: ErrorCode.UNKNOWN,
                                 };
                             }
 
@@ -293,6 +298,7 @@ export async function handleCreateApiMesh(
         return {
             success: false,
             error: toError(error).message,
+            code: ErrorCode.UNKNOWN,
         };
     } finally {
         // Clean up temporary mesh config file

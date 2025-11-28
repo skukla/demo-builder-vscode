@@ -15,6 +15,7 @@ import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { validateWorkspaceId } from '@/core/validation';
 import { getSetupInstructions, getEndpoint } from '@/features/mesh/handlers/shared';
+import { ErrorCode } from '@/types/errorCodes';
 import { parseJSON, toError } from '@/types/typeGuards';
 
 /**
@@ -73,6 +74,7 @@ export async function handleCheckApiMesh(
     meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error';
     endpoint?: string;
     error?: string;
+    code?: ErrorCode;
     setupInstructions?: { step: string; details: string; important?: boolean }[];
 }> {
     const { workspaceId, selectedComponents = [] } = payload;
@@ -87,6 +89,7 @@ export async function handleCheckApiMesh(
             apiEnabled: false,
             meshExists: false,
             error: `Invalid workspace ID: ${(validationError as Error).message}`,
+            code: ErrorCode.MESH_CONFIG_INVALID,
         };
     }
 
@@ -115,6 +118,7 @@ export async function handleCheckApiMesh(
             apiEnabled: false,
             meshExists: false,
             error: 'Adobe authentication required. Please sign in via the Project Dashboard.',
+            code: ErrorCode.AUTH_REQUIRED,
         };
     }
 
@@ -297,6 +301,7 @@ export async function handleCheckApiMesh(
             apiEnabled: false,
             meshExists: false,
             error: toError(error).message,
+            code: ErrorCode.UNKNOWN,
         };
     }
 }

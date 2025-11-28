@@ -9,6 +9,7 @@ import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation';
+import { ErrorCode } from '@/types/errorCodes';
 import { toError } from '@/types/typeGuards';
 
 /**
@@ -22,6 +23,7 @@ export async function handleDeleteApiMesh(
 ): Promise<{
     success: boolean;
     error?: string;
+    code?: ErrorCode;
 }> {
     const { workspaceId } = payload;
 
@@ -33,6 +35,7 @@ export async function handleDeleteApiMesh(
         return {
             success: false,
             error: (validationError as Error).message,
+            code: ErrorCode.MESH_CONFIG_INVALID,
         };
     }
 
@@ -59,6 +62,7 @@ export async function handleDeleteApiMesh(
             return {
                 success: false,
                 error: 'Adobe authentication required. Please sign in via the Project Dashboard.',
+                code: ErrorCode.AUTH_REQUIRED,
             };
         }
 
@@ -90,6 +94,7 @@ export async function handleDeleteApiMesh(
         return {
             success: false,
             error: toError(error).message,
+            code: ErrorCode.UNKNOWN,
         };
     }
 }

@@ -252,6 +252,7 @@ describe('authenticationHandlers - Message Patterns', () => {
                     isAuthenticated: false,
                     isChecking: false,
                     error: 'timeout',
+                    code: 'TIMEOUT',
                     message: 'Sign-in timed out',
                     subMessage: 'The browser window may have been closed. Please try again.',
                 });
@@ -269,6 +270,7 @@ describe('authenticationHandlers - Message Patterns', () => {
                     isAuthenticated: false,
                     isChecking: false,
                     error: true,
+                    code: 'NETWORK',
                     message: 'Connection problem',
                     subMessage: 'Can\'t reach Adobe services. Check your internet connection and try again.',
                 });
@@ -288,6 +290,7 @@ describe('authenticationHandlers - Message Patterns', () => {
                     isAuthenticated: false,
                     isChecking: false,
                     error: true,
+                    code: 'NETWORK',
                     message: 'Connection problem',
                     subMessage: 'Can\'t reach Adobe services. Check your internet connection and try again.',
                 });
@@ -338,6 +341,7 @@ describe('authenticationHandlers - Message Patterns', () => {
                 // Should not expose internal state details
                 expect(mockContext.sendMessage).toHaveBeenCalledWith('authError', {
                     error: 'Authentication failed',
+                    code: 'UNKNOWN',
                 });
 
                 // Detailed error goes to logs only
@@ -357,6 +361,7 @@ describe('authenticationHandlers - Message Patterns', () => {
                     isAuthenticated: false,
                     isChecking: false,
                     error: true,
+                    code: 'NETWORK',
                     message: 'Connection problem',
                     subMessage: 'Can\'t reach Adobe services. Check your internet connection and try again.',
                 });

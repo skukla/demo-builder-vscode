@@ -77,6 +77,7 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
         expect(result).toEqual({
             success: false,
             error: 'No project found',
+            code: 'PROJECT_NOT_FOUND',
         });
 
         // Verify logger was called
@@ -104,6 +105,7 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
         expect(result).toEqual({
             success: false,
             error: 'Authentication failed',
+            code: 'AUTH_REQUIRED',
         });
 
         // Verify error was logged
