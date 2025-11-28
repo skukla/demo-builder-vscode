@@ -89,6 +89,31 @@ export const TIMEOUTS = {
 
     // Default fallbacks
     COMMAND_DEFAULT: 30000,         // Default command timeout
+
+    // SOP §1 Compliance - Round 3: Centralized timeout constants
+    // Webview communication
+    WEBVIEW_HANDSHAKE: 10000,       // Handshake protocol timeout (10 seconds)
+    WEBVIEW_RETRY_DELAY: 1000,      // Retry delay for failed messages (1 second)
+    LOADING_MIN_DISPLAY: 1500,      // Minimum spinner display time (1.5 seconds)
+
+    // API Mesh specific
+    API_MESH_CHECK: 60000,          // Check mesh status - workspace download + describe (60 seconds)
+
+    // Polling service defaults
+    POLL_INITIAL_DELAY: 500,        // Initial poll delay (500ms)
+    POLL_MAX_DELAY: 5000,           // Maximum poll delay with backoff (5 seconds)
+
+    // Lifecycle management
+    DEMO_STARTUP_TIMEOUT: 30000,    // Wait for demo server to start (30 seconds)
+    PORT_CHECK_INTERVAL: 1000,      // Interval between port checks (1 second)
+    PROCESS_GRACEFUL_SHUTDOWN: 5000, // Graceful shutdown timeout (5 seconds)
+
+    // File operations
+    FILE_DELETE_RETRY_BASE: 100,    // Base delay for delete retry backoff (100ms)
+    FILE_HANDLE_RELEASE: 100,       // Wait for OS to release file handles (100ms)
+
+    // Authentication retry
+    TOKEN_RETRY_BASE: 500,          // Base delay for token retry backoff (500ms)
 } as const;
 
 /**
