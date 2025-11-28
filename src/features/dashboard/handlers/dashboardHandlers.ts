@@ -15,7 +15,7 @@ import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
-import { hasEntries } from '@/types/typeGuards';
+import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -244,7 +244,7 @@ export const handleStopDemo: MessageHandler = async (context) => {
  */
 export const handleOpenBrowser: MessageHandler = async (context) => {
     const currentProject = await context.stateManager.getCurrentProject();
-    const frontendPort = currentProject?.componentInstances?.['citisignal-nextjs']?.port;
+    const frontendPort = getProjectFrontendPort(currentProject);
 
     if (frontendPort) {
         const url = `http://localhost:${frontendPort}`;

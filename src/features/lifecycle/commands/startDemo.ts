@@ -8,6 +8,7 @@ import { updateFrontendState } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation/securityValidation';
 import { DEFAULT_SHELL } from '@/types/shell';
+import { getComponentIds } from '@/types/typeGuards';
 
 /**
  * Command to start the demo frontend server
@@ -24,18 +25,18 @@ export class StartDemoCommand extends BaseCommand {
     /** ProcessCleanup instance for event-driven process termination */
     private _processCleanup: ProcessCleanup | null = null;
 
-    /** Maximum time to wait for demo to start (30 seconds) */
-    private readonly STARTUP_TIMEOUT = 30000;
+    /** Maximum time to wait for demo to start */
+    private readonly STARTUP_TIMEOUT = TIMEOUTS.DEMO_STARTUP_TIMEOUT;
 
-    /** Interval between port availability checks (1 second) */
-    private readonly PORT_CHECK_INTERVAL = 1000;
+    /** Interval between port availability checks */
+    private readonly PORT_CHECK_INTERVAL = TIMEOUTS.PORT_CHECK_INTERVAL;
 
     /**
      * Get ProcessCleanup instance (lazy initialization)
      */
     private get processCleanup(): ProcessCleanup {
         if (!this._processCleanup) {
-            this._processCleanup = new ProcessCleanup({ gracefulTimeout: 5000 });
+            this._processCleanup = new ProcessCleanup({ gracefulTimeout: TIMEOUTS.PROCESS_GRACEFUL_SHUTDOWN });
         }
         return this._processCleanup;
     }
@@ -209,7 +210,7 @@ export class StartDemoCommand extends BaseCommand {
                 if (!frontendComponent?.path) {
                     const debugInfo = JSON.stringify({
                         hasComponentInstances: !!project.componentInstances,
-                        componentKeys: project.componentInstances ? Object.keys(project.componentInstances) : [],
+                        componentKeys: getComponentIds(project.componentInstances),
                         frontendComponent: frontendComponent,
                     });
                     this.logger.error(`[Start Demo] Frontend component not found: ${debugInfo}`);

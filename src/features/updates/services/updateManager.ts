@@ -4,6 +4,7 @@ import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset 
 import { Logger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project } from '@/types';
+import { getComponentIds } from '@/types/typeGuards';
 
 export type { UpdateCheckResult };
 
@@ -55,8 +56,8 @@ export class UpdateManager {
         const channel = this.getUpdateChannel();
     
         if (!project.componentInstances) return results;
-    
-        for (const componentId of Object.keys(project.componentInstances)) {
+
+        for (const componentId of getComponentIds(project.componentInstances)) {
             const repoPath = this.COMPONENT_REPOS[componentId];
             if (!repoPath) continue; // Skip components without repos
       

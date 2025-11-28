@@ -15,7 +15,7 @@ import {
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
 import { AdobeConfig } from '@/types/base';
-import { parseJSON, hasEntries, getEntryCount } from '@/types/typeGuards';
+import { parseJSON, hasEntries, getEntryCount, getComponentIds } from '@/types/typeGuards';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 
@@ -367,7 +367,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         componentConfigs: project.componentConfigs,
         meshState: project.meshState,
         commerce: project.commerce,
-        components: Object.keys(project.componentInstances || {}), // Keep for backward compatibility
+        components: getComponentIds(project.componentInstances), // Keep for backward compatibility
     };
 
     await fs.writeFile(
@@ -395,7 +395,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             project.componentVersions = {};
         }
 
-        for (const componentId of Object.keys(project.componentInstances || {})) {
+        for (const componentId of getComponentIds(project.componentInstances)) {
             const componentInstance = project.componentInstances?.[componentId];
             const detectedVersion = componentInstance?.version || 'unknown';
 

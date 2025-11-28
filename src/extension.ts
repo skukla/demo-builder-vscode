@@ -9,7 +9,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StatusBarManager, WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
 import { AuthenticationService } from '@/features/authentication';
-import { parseJSON } from '@/types/typeGuards';
+import { parseJSON, getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
 
 let logger: Logger;
@@ -163,7 +163,7 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(
             vscode.commands.registerCommand('demoBuilder.openBrowser', async () => {
                 const project = await stateManager.getCurrentProject();
-                const port = project?.componentInstances?.['citisignal-nextjs']?.port;
+                const port = getProjectFrontendPort(project);
                 if (port) {
                     const url = `http://localhost:${port}`;
                     await vscode.env.openExternal(vscode.Uri.parse(url));

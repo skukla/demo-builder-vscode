@@ -3,7 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Project, StateData, ProcessInfo } from '@/types';
-import { parseJSON } from '@/types/typeGuards';
+import { parseJSON, getComponentIds } from '@/types/typeGuards';
 import { Logger } from '@/core/logging';
 
 interface RecentProject {
@@ -167,7 +167,7 @@ export class StateManager {
                 componentConfigs: project.componentConfigs,
                 componentVersions: project.componentVersions,
                 meshState: project.meshState,
-                components: Object.keys(project.componentInstances || {}),
+                components: getComponentIds(project.componentInstances),
             };
 
             await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
