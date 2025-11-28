@@ -481,18 +481,23 @@ await executor.execute('aio auth:login', {
 
 ## Error Handling
 
-Command executor provides detailed error information:
+Command executor provides detailed error information with typed error detection:
 
 ```typescript
+import { toAppError, isTimeout, isNetwork } from '@/types/errors';
+
 try {
     const result = await executor.execute('risky-command');
 } catch (error) {
-    if (error.message.includes('timeout')) {
+    const appError = toAppError(error);
+
+    if (isTimeout(appError)) {
         // Command timed out
-    } else if (error.message.includes('ENOENT')) {
-        // Command not found
+    } else if (isNetwork(appError)) {
+        // Network error (ENOTFOUND, ECONNREFUSED, etc.)
     } else {
-        // Other error
+        // Other error - use appError.userMessage for user-friendly message
+        console.error(appError.userMessage);
     }
 }
 

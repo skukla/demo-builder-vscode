@@ -432,12 +432,14 @@ const result = await deployMeshComponent(
 );
 
 if (!result.success) {
-    // User-friendly error messages
-    if (result.error?.includes('not authenticated')) {
+    // User-friendly error messages using typed error detection
+    // Note: Handlers now return structured errors with error codes
+    // The result.code field contains ErrorCode for typed detection
+    if (result.code === ErrorCode.AUTH_REQUIRED) {
         showError('Please authenticate with Adobe I/O before deploying mesh');
-    } else if (result.error?.includes('timeout')) {
+    } else if (result.code === ErrorCode.TIMEOUT) {
         showError('Deployment timed out. Check your network connection and try again.');
-    } else if (result.error?.includes('invalid mesh')) {
+    } else if (result.code === ErrorCode.MESH_CONFIG_INVALID) {
         showError('Mesh configuration is invalid. Check mesh.json for errors.');
     } else {
         showError(`Deployment failed: ${result.error}`);
@@ -474,9 +476,10 @@ import { verifyMeshDeployment } from '@/features/mesh';
 const verification = await verifyMeshDeployment(project);
 
 if (!verification.exists) {
-    if (verification.error?.includes('not authenticated')) {
+    // Use typed error codes for reliable error detection
+    if (verification.code === ErrorCode.AUTH_REQUIRED) {
         showError('Please authenticate to verify mesh deployment');
-    } else if (verification.error?.includes('timeout')) {
+    } else if (verification.code === ErrorCode.TIMEOUT) {
         showWarning('Mesh verification timed out - status unknown');
     } else {
         showWarning('Mesh not found in Adobe I/O - may have been deleted');

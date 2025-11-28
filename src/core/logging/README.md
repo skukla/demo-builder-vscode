@@ -215,6 +215,38 @@ logger.debug('Debug info');
 
 **Note**: New code should use `getLogger()` instead of creating new `Logger()` instances.
 
+### webviewLogger (Browser Context)
+
+**Purpose**: Lightweight logging for webview (browser) context
+
+**Location**: `@/core/ui/utils/webviewLogger`
+
+Since webviews run in a browser context and cannot access VS Code's Logger infrastructure, use `webviewLogger` for frontend components:
+
+**Usage**:
+```typescript
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+
+// Create a logger for your component
+const log = webviewLogger('MyComponent');
+
+log.info('Component mounted');
+log.debug('State updated', { count: 5 });
+log.warn('Deprecated prop used');
+log.error('Failed to load data', error);
+```
+
+**Key Features**:
+- Dev-only logging: `info`, `debug`, `warn` only log in development mode
+- Errors always log (even in production) for critical debugging
+- Consistent `[Context]` prefix format matching backend Logger
+- Simple API designed for React components and hooks
+
+**Best Practice**:
+- Create one logger per component/hook at module level
+- Use descriptive context names: `webviewLogger('useAuthStatus')`
+- Errors should include the original error object when available
+
 ## Types
 
 ### CommandResultWithContext

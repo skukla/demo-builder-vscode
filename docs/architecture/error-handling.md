@@ -2,11 +2,52 @@
 
 > **Status:** Interim Documentation
 > **Last Updated:** 2025-11-27
-> **Related Plan:** `.rptc/plans/code-efficiency-refactoring/step-12-error-handling-consolidation.md`
+> **Related Plan:** `.rptc/plans/error-handling-standardization/overview.md`
 
 ## Overview
 
 This document describes the current error handling patterns in the Adobe Demo Builder extension. The codebase currently uses **3 different error payload formats** across features, which creates friction for UI error handling.
+
+## Logging Infrastructure
+
+The extension uses a two-tier logging system:
+
+### Backend (Extension Host)
+
+Use `Logger` from `@/core/logging`:
+
+```typescript
+import { Logger } from '@/core/logging';
+
+class MyService {
+    private logger = new Logger('MyService');
+
+    async process() {
+        this.logger.info('Processing started');
+        this.logger.debug('Debug details', { data });
+        this.logger.error('Operation failed', error);
+    }
+}
+```
+
+### Frontend (Webview/Browser)
+
+Use `webviewLogger` from `@/core/ui/utils/webviewLogger`:
+
+```typescript
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+
+const log = webviewLogger('MyComponent');
+
+log.info('Component mounted');
+log.debug('State updated', { count: 5 });
+log.error('Failed to load data', error);  // Always logs, even in production
+```
+
+**Key Differences:**
+- Backend Logger writes to VS Code output channels
+- Frontend webviewLogger uses browser console (dev-only, except errors)
+- Both provide consistent `[Context]` prefix formatting
 
 ## Current State: Three Error Payload Formats
 

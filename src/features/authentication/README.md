@@ -508,18 +508,22 @@ cacheManager.setCachedAuthStatus(isAuth);
 
 ### Error Recovery
 ```typescript
+import { toAppError, isTimeout, isNetwork } from '@/types/errors';
+
 try {
     await authService.login();
 } catch (error) {
-    if (error.message.includes('timeout')) {
+    const appError = toAppError(error);
+
+    if (isTimeout(appError)) {
         // User closed browser or session expired
         showMessage('Authentication timed out. Please try again.');
-    } else if (error.message.includes('ENETUNREACH')) {
+    } else if (isNetwork(appError)) {
         // Network error
         showMessage('Network error. Check your internet connection.');
     } else {
-        // Generic error
-        showMessage(`Authentication failed: ${error.message}`);
+        // Generic error - use user-friendly message from typed error
+        showMessage(`Authentication failed: ${appError.userMessage}`);
     }
 }
 ```

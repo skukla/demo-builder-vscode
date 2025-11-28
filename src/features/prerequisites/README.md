@@ -416,10 +416,14 @@ for (const prereq of orderedPrereqs) {
 
 ### Timeout Errors
 ```typescript
+import { toAppError, isTimeout } from '@/types/errors';
+
 try {
     const status = await prereqManager.checkPrerequisite(prereq);
 } catch (error) {
-    if (error.message.includes('timed out')) {
+    const appError = toAppError(error);
+
+    if (isTimeout(appError)) {
         // Prerequisite check took > 15 seconds
         console.error(`${prereq.name} check timed out - may be unresponsive`);
         // Show user-friendly message with troubleshooting steps
