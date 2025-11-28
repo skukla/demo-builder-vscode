@@ -9,6 +9,32 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 
 /**
+ * Component configuration structure for type safety
+ */
+interface ComponentsData {
+    components?: {
+        'commerce-mesh'?: {
+            configuration?: {
+                nodeVersion?: string | number;
+            };
+        };
+    };
+}
+
+/**
+ * Extract mesh component Node version from components data
+ *
+ * Extracts the deep optional chain: componentsData?.components?.['commerce-mesh']?.configuration?.nodeVersion
+ * Returns undefined if any level is missing.
+ *
+ * @param data - Parsed components.json data
+ * @returns Node version or undefined
+ */
+function getMeshComponentNodeVersion(data: ComponentsData | null): string | number | undefined {
+    return data?.components?.['commerce-mesh']?.configuration?.nodeVersion;
+}
+
+/**
  * Get the Node version required for mesh operations
  *
  * Reads from commerce-mesh component configuration in components.json.
@@ -37,8 +63,8 @@ export function getMeshNodeVersion(): string {
             return '20'; // Fallback to known default
         }
 
-        const componentsData = JSON.parse(fs.readFileSync(componentsPath, 'utf8'));
-        const meshNodeVersion = componentsData?.components?.['commerce-mesh']?.configuration?.nodeVersion;
+        const componentsData: ComponentsData = JSON.parse(fs.readFileSync(componentsPath, 'utf8'));
+        const meshNodeVersion = getMeshComponentNodeVersion(componentsData);
 
         return meshNodeVersion ? String(meshNodeVersion) : '20'; // Fallback to known default
     } catch {

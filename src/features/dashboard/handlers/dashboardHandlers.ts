@@ -294,7 +294,7 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
     const project = await context.stateManager.getCurrentProject();
     let consoleUrl = 'https://developer.adobe.com/console';
 
-    if (project?.adobe?.organization && project?.adobe?.projectId && project?.adobe?.workspace) {
+    if (hasAdobeWorkspaceContext(project)) {
         // Validate Adobe IDs before URL construction (security: prevents URL injection)
         try {
             const { validateOrgId, validateProjectId, validateWorkspaceId } = await import('@/core/validation');
@@ -309,7 +309,7 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
         // Direct link to workspace
         consoleUrl = `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/workspaces/${project.adobe.workspace}/details`;
         context.logger.info('[Dev Console] Opening workspace-specific URL');
-    } else if (project?.adobe?.organization && project?.adobe?.projectId) {
+    } else if (hasAdobeProjectContext(project)) {
         // Validate Adobe IDs before URL construction (security: prevents URL injection)
         try {
             const { validateOrgId, validateProjectId } = await import('@/core/validation');
@@ -393,6 +393,49 @@ function buildStatusPayload(
  */
 function hasMeshDeploymentRecord(project: Project): boolean {
     return Boolean(project.meshState && hasEntries(project.meshState.envVars));
+}
+
+/**
+ * Type for project with guaranteed Adobe workspace context
+ */
+type ProjectWithAdobeWorkspace = Project & {
+    adobe: NonNullable<Project['adobe']> & {
+        organization: string;
+        projectId: string;
+        workspace: string;
+    };
+};
+
+/**
+ * Type for project with guaranteed Adobe project context (no workspace required)
+ */
+type ProjectWithAdobeProject = Project & {
+    adobe: NonNullable<Project['adobe']> & {
+        organization: string;
+        projectId: string;
+    };
+};
+
+/**
+ * Type guard: Check if project has full Adobe workspace context (org + project + workspace)
+ *
+ * Extracts 3-level optional chain: project?.adobe?.organization && project?.adobe?.projectId && project?.adobe?.workspace
+ */
+function hasAdobeWorkspaceContext(project: Project | null | undefined): project is ProjectWithAdobeWorkspace {
+    if (!project?.adobe) return false;
+    const { organization, projectId, workspace } = project.adobe;
+    return Boolean(organization && projectId && workspace);
+}
+
+/**
+ * Type guard: Check if project has Adobe project context (org + project, no workspace required)
+ *
+ * Extracts 3-level optional chain: project?.adobe?.organization && project?.adobe?.projectId
+ */
+function hasAdobeProjectContext(project: Project | null | undefined): project is ProjectWithAdobeProject {
+    if (!project?.adobe) return false;
+    const { organization, projectId } = project.adobe;
+    return Boolean(organization && projectId);
 }
 
 /**

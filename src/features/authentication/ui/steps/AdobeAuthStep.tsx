@@ -13,8 +13,17 @@ import Refresh from '@spectrum-icons/workflow/Refresh';
 import React from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { ErrorCode } from '@/types/errorCodes';
 import { BaseStepProps } from '@/types/wizard';
 import { useAuthStatus } from '../hooks/useAuthStatus';
+import {
+    isTokenExpiringSoon,
+    isAuthenticatedWithOrg,
+    needsOrgSelection,
+    isNotAuthenticated,
+    hasAuthError,
+    hasAuthTimeout,
+} from './authPredicates';
 
 export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const {
@@ -51,7 +60,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
             )}
 
             {/* Token expiring soon */}
-            {!adobeAuth.isChecking && adobeAuth.isAuthenticated && adobeAuth.tokenExpiringSoon && (
+            {isTokenExpiringSoon(adobeAuth) && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Alert UNSAFE_className="text-orange-500" size="L" />
@@ -70,7 +79,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
             )}
 
             {/* Authenticated with valid organization */}
-            {!adobeAuth.isChecking && adobeAuth.isAuthenticated && adobeOrg && !adobeAuth.tokenExpiringSoon && (
+            {isAuthenticatedWithOrg(adobeAuth, adobeOrg) && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <CheckmarkCircle UNSAFE_className="text-green-600" size="L" />
@@ -86,7 +95,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
             )}
 
             {/* Authenticated but organization selection required */}
-            {!adobeAuth.isChecking && adobeAuth.isAuthenticated && !adobeOrg && (
+            {needsOrgSelection(adobeAuth, adobeOrg) && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <AlertCircle UNSAFE_className="text-orange-500" size="L" />
@@ -111,7 +120,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
             )}
 
             {/* Not authenticated */}
-            {!adobeAuth.isChecking && !authTimeout && adobeAuth.isAuthenticated === false && !adobeAuth.error && (
+            {isNotAuthenticated(adobeAuth, authTimeout) && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Key UNSAFE_className="text-gray-500" size="L" />
@@ -130,26 +139,26 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
             )}
 
             {/* Error state */}
-            {!adobeAuth.isChecking && adobeAuth.error && !authTimeout && (
+            {hasAuthError(adobeAuth, authTimeout) && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
-                        {adobeAuth.error === 'no_app_builder_access' ? (
+                        {adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? (
                             <AlertCircle UNSAFE_className="text-orange-500" size="L" />
                         ) : (
                             <Alert UNSAFE_className="text-red-500" size="L" />
                         )}
                         <Flex direction="column" gap="size-100" alignItems="center">
                             <Text UNSAFE_className="text-xl font-medium">
-                                {adobeAuth.error === 'no_app_builder_access' ? 'Insufficient Privileges' : 'Connection Issue'}
+                                {adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? 'Insufficient Privileges' : 'Connection Issue'}
                             </Text>
                             <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                {authSubMessage || (adobeAuth.error === 'no_app_builder_access'
+                                {authSubMessage || (adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
                                     ? "You need Developer or System Admin role in an Adobe organization with App Builder access."
                                     : "We couldn't connect to Adobe services. Please check your internet connection.")}
                             </Text>
                         </Flex>
                         <Flex direction="row" gap="size-200" marginTop="size-300">
-                            {adobeAuth.error === 'no_app_builder_access' ? (
+                            {adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? (
                                 <Button variant="accent" onPress={() => handleLogin(true)}>
                                     <Login size="S" marginEnd="size-100" />
                                     Sign In Again
@@ -172,7 +181,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
             )}
 
             {/* Timeout state */}
-            {authTimeout && !adobeAuth.isChecking && !adobeAuth.isAuthenticated && (
+            {hasAuthTimeout(adobeAuth, authTimeout) && (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                     <Flex direction="column" gap="size-200" alignItems="center">
                         <Alert UNSAFE_className="text-red-500" size="L" />

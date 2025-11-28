@@ -25,6 +25,32 @@ import { toError } from '@/types/typeGuards';
 import { isTimeout, toAppError } from '@/types/errors';
 
 /**
+ * Get target Node versions for installation (SOP §3 compliance)
+ *
+ * Extracts nested ternary: `sortedMissing.length > 0 ? sortedMissing : (version ? [version] : undefined)`
+ * to explicit helper with clear fallback logic.
+ *
+ * @param sortedMissingMajors - Sorted array of missing major version numbers
+ * @param fallbackVersion - Optional single version to use if no missing majors
+ * @returns Array of versions to install, or undefined if none needed
+ */
+function getTargetNodeVersions(
+    sortedMissingMajors: string[],
+    fallbackVersion?: string,
+): string[] | undefined {
+    // Primary: Install missing versions if any
+    if (sortedMissingMajors.length > 0) {
+        return sortedMissingMajors;
+    }
+    // Fallback: Use explicit version if provided
+    if (fallbackVersion) {
+        return [fallbackVersion];
+    }
+    // No versions to install
+    return undefined;
+}
+
+/**
  * Determine which Node versions to pass to getInstallSteps
  *
  * Logic:
@@ -112,7 +138,7 @@ export async function handleInstallPrerequisite(
             // Sort versions in ascending order (18, 20, 24) for predictable installation order
             const sortedMissingMajors = missingMajors.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
             context.debugLogger.debug(`[Prerequisites] Sorted missing majors for installation: ${JSON.stringify(sortedMissingMajors)}`);
-            targetVersions = sortedMissingMajors.length > 0 ? sortedMissingMajors : (version ? [version] : undefined);
+            targetVersions = getTargetNodeVersions(sortedMissingMajors, version);
 
             // If no versions need installation, we're done
             if (!targetVersions || targetVersions.length === 0) {

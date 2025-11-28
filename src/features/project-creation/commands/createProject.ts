@@ -28,7 +28,21 @@ import { parseJSON } from '@/types/typeGuards';
 // Type definitions for createProjectWebview
 interface WizardStep {
     id: string;
+    name: string;
     [key: string]: unknown;
+}
+
+/**
+ * Type guard for WizardStep (SOP §10 compliance)
+ *
+ * Extracts inline 6-condition validation chain to explicit type guard
+ * with early returns for readability.
+ */
+function isWizardStep(value: unknown): value is WizardStep {
+    if (typeof value !== 'object' || value === null) return false;
+    if (!('id' in value) || typeof value.id !== 'string') return false;
+    if (!('name' in value) || typeof value.name !== 'string') return false;
+    return true;
 }
 
 interface ComponentDefaults {
@@ -140,13 +154,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     const stepsContent = fs.readFileSync(stepsPath, 'utf8');
                     const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
                     if (stepsConfig && Array.isArray(stepsConfig.steps)) {
-                        // Type guard: ensure each step has required properties
-                        const isWizardStepArray = stepsConfig.steps.every(
-                            (s): s is { id: string; name: string; [key: string]: unknown } =>
-                                typeof s === 'object' && s !== null && 'id' in s && typeof s.id === 'string' && 'name' in s && typeof s.name === 'string',
-                        );
-                        if (isWizardStepArray) {
-                            wizardSteps = stepsConfig.steps as { id: string; name: string; [key: string]: unknown }[];
+                        // Validate all steps have required properties using type guard
+                        if (stepsConfig.steps.every(isWizardStep)) {
+                            wizardSteps = stepsConfig.steps;
                         }
                     }
                 }
