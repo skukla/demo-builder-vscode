@@ -55,27 +55,23 @@ export function NumberedInstructions({ description, instructions }: NumberedInst
         <Flex direction="column" gap="size-200">
             {description && <Text>{description}</Text>}
             {instructions.map((instruction, index) => (
-                <Flex 
-                    key={index} 
-                    direction="row" 
-                    gap="size-150" 
-                    UNSAFE_style={{ 
-                        padding: '16px',
-                        backgroundColor: 'var(--spectrum-global-color-gray-100)',
-                        borderRadius: '6px'
-                    }}
+                <Flex
+                    key={index}
+                    direction="row"
+                    gap="size-150"
+                    UNSAFE_className="instruction-card"
                 >
                     {/* Circular number badge */}
                     <div className="number-badge">
                         {index + 1}
                     </div>
-                    
+
                     {/* Content */}
                     <Flex direction="column" gap="size-75" flex={1}>
-                        <Text UNSAFE_className="font-semibold" UNSAFE_style={{ fontSize: '15px' }}>
+                        <Text UNSAFE_className="font-semibold instruction-title">
                             {instruction.step}
                         </Text>
-                        <Text UNSAFE_className="text-sm text-gray-600" UNSAFE_style={{ lineHeight: '2.0' }}>
+                        <Text UNSAFE_className="text-sm text-gray-600 instruction-details">
                             {renderInstructionText(instruction.details)}
                         </Text>
                     </Flex>

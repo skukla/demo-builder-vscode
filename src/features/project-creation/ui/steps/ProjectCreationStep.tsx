@@ -41,9 +41,9 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
     const showOpenButton = isReadyToShowOpenButton(isCompleted, progress, isOpeningProject);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+        <div className="flex-column h-full w-full">
             {/* Main content area */}
-            <div style={{ flex: 1, display: 'flex', width: '100%' }}>
+            <div className="flex-1 flex w-full">
                 <SingleColumnLayout>
                     <Heading level={2} marginBottom="size-300">
                         Creating Your Demo Project
@@ -130,14 +130,8 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
             {/* Footer - matches WizardContainer footer pattern */}
             {/* Show Cancel during active creation */}
             {isActive && (
-                <div
-                    style={{
-                        padding: '16px',
-                        borderTop: '1px solid var(--vscode-panel-border)',
-                        backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                    }}
-                >
-                    <div style={{ maxWidth: '800px', width: '100%' }}>
+                <div className="footer-bar">
+                    <div className="max-w-800 w-full">
                         <Flex justifyContent="start" width="100%">
                             <Button
                                 variant="secondary"
@@ -154,14 +148,8 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
             
             {/* Show Open Project button on success */}
             {showOpenButton && (
-                <div
-                    style={{
-                        padding: '16px',
-                        borderTop: '1px solid var(--vscode-panel-border)',
-                        backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                    }}
-                >
-                    <div style={{ maxWidth: '800px', width: '100%' }}>
+                <div className="footer-bar">
+                    <div className="max-w-800 w-full">
                         <Flex justifyContent="end" width="100%">
                             <Button
                                 variant="cta"

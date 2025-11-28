@@ -44,19 +44,9 @@ export const ConfigSection = React.memo<ConfigSectionProps>(({
 
             <div
                 id={`section-${id}`}
-                style={{
-                    scrollMarginTop: '-16px',
-                    paddingTop: showDivider ? '4px' : '0',
-                    paddingBottom: '4px'
-                }}
+                className={showDivider ? 'config-section-with-padding' : 'config-section'}
             >
-                <div
-                    style={{
-                        paddingBottom: '4px',
-                        marginBottom: '12px',
-                        borderBottom: '1px solid var(--spectrum-global-color-gray-200)'
-                    }}
-                >
+                <div className="config-section-header">
                     <Heading level={3}>{label}</Heading>
                 </div>
 

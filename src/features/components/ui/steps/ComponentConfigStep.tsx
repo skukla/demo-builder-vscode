@@ -47,7 +47,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         if (loadError) {
             return (
                 <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                    <Text UNSAFE_style={{ color: 'var(--spectrum-global-color-red-700)' }}>
+                    <Text UNSAFE_className="text-red-700">
                         {loadError}
                     </Text>
                 </Flex>
@@ -74,7 +74,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
         }
 
         return (
-            <Form UNSAFE_style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+            <Form UNSAFE_className="container-form">
                 {serviceGroups.map((group, index) => (
                     <React.Fragment key={group.id}>
                         {index > 0 && (
@@ -85,17 +85,9 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
                             />
                         )}
 
-                        <div id={`section-${group.id}`} style={{
-                            scrollMarginTop: '-16px',
-                            paddingTop: index > 0 ? '4px' : '0',
-                            paddingBottom: '4px',
-                        }}>
+                        <div id={`section-${group.id}`} className={index > 0 ? 'config-section-with-padding' : 'config-section'}>
                             {/* Section Header */}
-                            <div style={{
-                                paddingBottom: '4px',
-                                marginBottom: '12px',
-                                borderBottom: '1px solid var(--spectrum-global-color-gray-200)',
-                            }}>
+                            <div className="config-section-header">
                                 <Heading level={3}>{group.label}</Heading>
                             </div>
 
@@ -122,7 +114,7 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
     return (
         <TwoColumnLayout
             leftContent={
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                <div className="flex-column h-full">
                     <Heading level={2} marginBottom="size-300">Settings Collection</Heading>
                     <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
                         Configure the settings for your selected components. Required fields are marked with an asterisk.

@@ -85,8 +85,9 @@ describe('SearchableList - Selection and Loading', () => {
                 />
             );
 
-            const listContainer = container.querySelector('[style*="opacity"]');
-            expect(listContainer).toHaveStyle({ opacity: 0.5 });
+            // CSS class-based styling (§11 SOP compliance)
+            const listContainer = container.querySelector('.list-refresh-container');
+            expect(listContainer).toHaveClass('refreshing');
         });
     });
 

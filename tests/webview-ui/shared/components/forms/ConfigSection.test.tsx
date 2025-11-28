@@ -85,8 +85,9 @@ describe('ConfigSection', () => {
                     <div>Content</div>
                 </ConfigSection>
             );
+            // CSS class-based styling (§11 SOP compliance)
             const section = container.querySelector('#section-test');
-            expect(section).toHaveStyle({ scrollMarginTop: '-16px' });
+            expect(section).toHaveClass('config-section');
         });
     });
 
@@ -97,30 +98,34 @@ describe('ConfigSection', () => {
                     <div>Content</div>
                 </ConfigSection>
             );
-            const headingContainer = container.querySelector('[style*="border-bottom"]');
+            // CSS class-based styling (§11 SOP compliance)
+            const headingContainer = container.querySelector('.config-section-header');
             expect(headingContainer).toBeInTheDocument();
         });
     });
 
     describe('Padding', () => {
-        it('applies correct padding without divider', () => {
+        it('applies correct class without divider', () => {
             const { container } = renderWithProviders(
                 <ConfigSection id="test" label="Test" showDivider={false}>
                     <div>Content</div>
                 </ConfigSection>
             );
+            // CSS class-based styling (§11 SOP compliance)
             const section = container.querySelector('#section-test');
-            expect(section).toHaveStyle({ paddingTop: '0' });
+            expect(section).toHaveClass('config-section');
+            expect(section).not.toHaveClass('config-section-with-padding');
         });
 
-        it('applies correct padding with divider', () => {
+        it('applies correct class with divider', () => {
             const { container } = renderWithProviders(
                 <ConfigSection id="test" label="Test" showDivider={true}>
                     <div>Content</div>
                 </ConfigSection>
             );
+            // CSS class-based styling (§11 SOP compliance)
             const section = container.querySelector('#section-test');
-            expect(section).toHaveStyle({ paddingTop: '4px' });
+            expect(section).toHaveClass('config-section-with-padding');
         });
     });
 

@@ -375,7 +375,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
             case 'pending':
                 return <Pending size="S" />;
             default:
-                return <div style={{ width: '20px', height: '20px' }} />;
+                return <div className="placeholder-icon" />;
         }
     };
 
@@ -516,7 +516,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
     const hasErrors = checks.some(check => check.status === 'error');
 
     return (
-        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+        <div className="container-wizard">
             <Text marginBottom="size-200" UNSAFE_className={cn('text-gray-700', 'text-md')}>
                 Checking required tools. Missing tools can be installed automatically.
             </Text>
@@ -538,8 +538,8 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                 <View flex UNSAFE_className={cn('prerequisite-content')}>
                                             <Text UNSAFE_className={cn('prerequisite-title')}>
                                                 {check.name}
-                                                {check.isOptional && <span style={{ fontWeight: 400, opacity: 0.7 }}> (Optional)</span>}
-                                                {check.status === 'pending' && <span style={{ fontWeight: 400, opacity: 0.7 }}> (Waiting)</span>}
+                                                {check.isOptional && <span className="text-muted-label"> (Optional)</span>}
+                                                {check.status === 'pending' && <span className="text-muted-label"> (Waiting)</span>}
                                             </Text>
                                             <Text UNSAFE_className={cn('prerequisite-description')}>
                                                 {check.description}

@@ -28,7 +28,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate }
             : (field.description || 'This will be set automatically after Mesh deployment.');
 
         return (
-            <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
+            <div key={field.key} id={`field-${field.key}`} className="config-field">
                 <TextField
                     label={field.label}
                     value={value as string}
@@ -53,7 +53,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate }
         case 'text':
         case 'url':
             return (
-                <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
+                <div key={field.key} id={`field-${field.key}`} className="config-field">
                     <TextField
                         label={field.label}
                         value={value as string}
@@ -72,7 +72,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate }
 
         case 'password':
             return (
-                <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
+                <div key={field.key} id={`field-${field.key}`} className="config-field">
                     <TextField
                         label={field.label}
                         type="password"
@@ -92,7 +92,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate }
 
         case 'select':
             return (
-                <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
+                <div key={field.key} id={`field-${field.key}`} className="config-field">
                     <Picker
                         label={field.label}
                         selectedKey={value as string}
@@ -110,7 +110,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate }
 
         case 'boolean':
             return (
-                <div key={field.key} id={`field-${field.key}`} style={{ scrollMarginTop: '24px' }}>
+                <div key={field.key} id={`field-${field.key}`} className="config-field">
                     <Checkbox
                         isSelected={value as boolean}
                         onChange={(val) => onUpdate(field, val)}

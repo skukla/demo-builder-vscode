@@ -49,19 +49,15 @@ export function Tip({ children, icon = '💡', variant = 'default' }: TipProps) 
         >
             <Flex gap="size-100" alignItems="start">
                 {typeof icon === 'string' ? (
-                    <Text UNSAFE_style={{ fontSize: '16px', lineHeight: '20px', flexShrink: 0 }}>
+                    <Text UNSAFE_className="tip-icon">
                         {icon}
                     </Text>
                 ) : (
-                    <div style={{ flexShrink: 0, paddingTop: '2px' }}>
+                    <div className="tip-icon-container">
                         {icon}
                     </div>
                 )}
-                <Text UNSAFE_style={{ 
-                    fontSize: '14px', 
-                    color: 'var(--spectrum-global-color-gray-700)',
-                    lineHeight: '20px'
-                }}>
+                <Text UNSAFE_className="tip-text">
                     {children}
                 </Text>
             </Flex>

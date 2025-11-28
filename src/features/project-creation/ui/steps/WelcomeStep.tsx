@@ -64,7 +64,7 @@ export function WelcomeStep({ state, updateState, setCanProceed }: BaseStepProps
     }, [state.projectName, setCanProceed]);
 
     return (
-        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+        <div className="container-wizard">
             <Flex direction="column" gap="size-400">
                 <View>
                     <Heading level={2} marginBottom="size-200">

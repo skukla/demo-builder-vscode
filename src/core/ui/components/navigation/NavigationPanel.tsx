@@ -110,28 +110,18 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
     }, [onNavigateToField]);
 
     return (
-        <div
-            style={{
-                flex: '1',
-                padding: '24px',
-                backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                borderLeft: '1px solid var(--spectrum-global-color-gray-200)',
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden'
-            }}
-        >
+        <div className="nav-panel-container">
             <Heading level={3} marginBottom="size-200">
                 Sections
             </Heading>
 
-            <Flex direction="column" gap="size-150" UNSAFE_style={{ overflowY: 'auto', flex: 1 }}>
+            <Flex direction="column" gap="size-150" UNSAFE_className="nav-panel-scroll">
                 {sections.map((section) => {
                     const isExpanded = expandedSections.has(section.id);
                     const isActive = activeSection === section.id;
 
                     return (
-                        <div key={section.id} style={{ width: '100%' }}>
+                        <div key={section.id} className="w-full">
                             <button
                                 id={`nav-${section.id}`}
                                 onClick={() => handleToggleSection(section.id)}
@@ -161,17 +151,11 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                         </Text>
                                     </Flex>
                                     {section.isComplete ? (
-                                        <Text
-                                            UNSAFE_className="text-green-600"
-                                            UNSAFE_style={{ fontSize: '16px', lineHeight: '16px' }}
-                                        >
+                                        <Text UNSAFE_className="text-green-600 status-icon-md">
                                             ✓
                                         </Text>
                                     ) : (
-                                        <Text
-                                            UNSAFE_className="text-gray-600"
-                                            UNSAFE_style={{ fontSize: '14px', lineHeight: '14px' }}
-                                        >
+                                        <Text UNSAFE_className="text-gray-600 status-icon-sm">
                                             {section.totalCount === 0
                                                 ? 'Optional'
                                                 : `${section.completedCount}/${section.totalCount}`}
@@ -181,14 +165,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                             </button>
 
                             {isExpanded && (
-                                <div
-                                    style={{
-                                        marginTop: '4px',
-                                        marginLeft: '12px',
-                                        paddingLeft: '12px',
-                                        borderLeft: '2px solid var(--spectrum-global-color-gray-300)'
-                                    }}
-                                >
+                                <div className="nav-section-fields">
                                     {section.fields.map((field) => {
                                         const isActiveField = activeField === field.key;
 
@@ -221,10 +198,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                                     {field.label}
                                                 </Text>
                                                 {field.isComplete && (
-                                                    <Text
-                                                        UNSAFE_className="text-green-600"
-                                                        UNSAFE_style={{ fontSize: '14px', lineHeight: '14px' }}
-                                                    >
+                                                    <Text UNSAFE_className="text-green-600 status-icon-sm">
                                                         ✓
                                                     </Text>
                                                 )}

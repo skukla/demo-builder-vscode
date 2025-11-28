@@ -28,7 +28,7 @@ export function MeshStatusDisplay({ meshData, onRecreateMesh, onBack }: MeshStat
                             <AlertCircle size="L" UNSAFE_className="text-orange-600" />
                             <Flex direction="column" gap="size-100" alignItems="center">
                                 <Text UNSAFE_className="text-xl font-medium">Mesh in Error State</Text>
-                                <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '500px' }}>
+                                <Text UNSAFE_className="text-sm text-gray-600 text-center-max-500">
                                     An API Mesh exists but is not functioning properly.
                                     Click "Recreate Mesh" below to delete and redeploy it.
                                 </Text>

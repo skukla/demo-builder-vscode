@@ -673,16 +673,10 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     return (
         <div
             ref={containerRef}
-            style={{
-                backgroundColor: 'var(--spectrum-global-color-gray-50)',
-                width: '100%',
-                height: '100vh',
-                display: 'flex',
-                overflow: 'hidden'
-            }}
+            className="container-configure"
         >
             <View width="100%" height="100%">
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+            <div className="content-area">
                 {/* Header */}
                 <View
                     padding="size-400"
@@ -703,7 +697,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     rightPadding="size-300"
                     gap={0}
                     leftContent={
-                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                        <div className="flex-column h-full">
                             <Heading level={2} marginBottom="size-300">Configuration Settings</Heading>
                             <Text marginBottom="size-300" UNSAFE_className="text-gray-700">
                                 Update the settings for your project components. Required fields are marked with an asterisk.
@@ -714,7 +708,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                     No components requiring configuration were found.
                                 </Text>
                             ) : (
-                                <Form UNSAFE_style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+                                <Form UNSAFE_className="container-form">
                                     {serviceGroups.map((group, index) => (
                                         <ConfigSection
                                             key={group.id}
@@ -754,7 +748,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     padding="size-400"
                     UNSAFE_className={cn('border-t', 'bg-gray-75')}
                 >
-                    <div style={{ maxWidth: '800px', width: '100%' }}>
+                    <div className="max-w-800 w-full">
                         <Flex justifyContent="space-between" width="100%">
                             <Button
                                 variant="secondary"

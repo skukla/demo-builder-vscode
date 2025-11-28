@@ -303,10 +303,8 @@ describe('NavigationPanel - Display', () => {
             // Find heading and get its parent container
             const heading = screen.getByText('Sections');
             const panel = heading.parentElement as HTMLElement;
-            expect(panel).toHaveStyle({
-                flex: '1',
-                padding: '24px'
-            });
+            // CSS class-based styling (§11 SOP compliance)
+            expect(panel).toHaveClass('nav-panel-container');
         });
 
         it('has scrollable content area', () => {

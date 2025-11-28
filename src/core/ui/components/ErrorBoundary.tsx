@@ -89,7 +89,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     </Text>
                     {this.state.errorInfo && (
                         <View marginTop="size-200">
-                            <Text UNSAFE_style={{ fontSize: '12px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                            <Text UNSAFE_className="text-sm font-mono whitespace-pre-wrap">
                                 {this.state.errorInfo.componentStack}
                             </Text>
                         </View>

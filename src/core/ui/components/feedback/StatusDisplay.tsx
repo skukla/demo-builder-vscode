@@ -153,7 +153,7 @@ export function StatusDisplay({
                                     onPress={action.onPress}
                                 >
                                     {action.icon && (
-                                        <span style={{ marginRight: '8px', display: 'inline-flex', alignItems: 'center' }}>
+                                        <span className="button-icon-wrapper">
                                             {action.icon}
                                         </span>
                                     )}

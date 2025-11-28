@@ -90,7 +90,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                 <Info size="L" UNSAFE_className="text-blue-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
                                     <Text UNSAFE_className="text-xl font-medium">Ready for Mesh Creation</Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600" UNSAFE_style={{ textAlign: 'center', maxWidth: '450px' }}>
+                                    <Text UNSAFE_className="text-sm text-gray-600 text-center-max-450">
                                         API Mesh API is enabled. Click below to create a new mesh.
                                     </Text>
                                 </Flex>

@@ -224,21 +224,13 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     return (
         <div
             ref={containerRef}
-            style={{
-                padding: 'var(--spectrum-global-dimension-size-400)',
-                height: '100vh',
-                maxWidth: '500px',
-                margin: '0 auto',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-            }}
+            className="container-dashboard"
         >
         <View>
-            <Flex direction="column" gap="size-200" UNSAFE_style={{ width: '100%' }}>
+            <Flex direction="column" gap="size-200" UNSAFE_className="w-full">
                 {/* Project Header */}
                 <View marginBottom="size-200">
-                    <Heading level={1} marginBottom="size-50" UNSAFE_style={{ fontSize: '20px', fontWeight: 600 }}>
+                    <Heading level={1} marginBottom="size-50" UNSAFE_className="text-xl font-semibold">
                         {displayName}
                     </Heading>
 
@@ -264,7 +256,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                                 <ActionButton
                                     isQuiet
                                     onPress={handleReAuthenticate}
-                                    UNSAFE_style={{ marginLeft: '4px' }}
+                                    UNSAFE_className="ml-1"
                                 >
                                     <Login size="XS" />
                                     <Text>Sign in</Text>
@@ -272,7 +264,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                             )}
 
                             {meshStatus === 'authenticating' && (
-                                <ProgressCircle size="S" isIndeterminate UNSAFE_style={{ width: '16px', height: '16px' }} />
+                                <ProgressCircle size="S" isIndeterminate UNSAFE_className="w-4 h-4" />
                             )}
                         </Flex>
                     )}
@@ -291,7 +283,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                             UNSAFE_className="dashboard-action-button"
                         >
                             <PlayCircle size="L" />
-                            <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Start</Text>
+                            <Text UNSAFE_className="icon-label">Start</Text>
                         </ActionButton>
                     )}
                     {isRunning && (
@@ -302,7 +294,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                             UNSAFE_className="dashboard-action-button"
                         >
                             <StopCircle size="L" />
-                            <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Stop</Text>
+                            <Text UNSAFE_className="icon-label">Stop</Text>
                         </ActionButton>
                     )}
 
@@ -314,7 +306,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         UNSAFE_className="dashboard-action-button"
                     >
                         <Globe size="L" />
-                        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Open</Text>
+                        <Text UNSAFE_className="icon-label">Open</Text>
                     </ActionButton>
 
                     {/* Logs */}
@@ -325,7 +317,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         data-action="logs"
                     >
                         <ViewList size="L" />
-                        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Logs</Text>
+                        <Text UNSAFE_className="icon-label">Logs</Text>
                     </ActionButton>
 
                     {/* Deploy Mesh */}
@@ -337,7 +329,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         data-action="deploy-mesh"
                     >
                         <Refresh size="L" />
-                        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Deploy Mesh</Text>
+                        <Text UNSAFE_className="icon-label">Deploy Mesh</Text>
                     </ActionButton>
 
                     {/* Configure */}
@@ -348,7 +340,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         UNSAFE_className="dashboard-action-button"
                     >
                         <Settings size="L" />
-                        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Configure</Text>
+                        <Text UNSAFE_className="icon-label">Configure</Text>
                     </ActionButton>
 
                     {/* Developer Console */}
@@ -358,7 +350,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         UNSAFE_className="dashboard-action-button"
                     >
                         <Globe size="L" />
-                        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Dev Console</Text>
+                        <Text UNSAFE_className="icon-label">Dev Console</Text>
                     </ActionButton>
 
                     {/* Mesh Designer (Coming Soon) */}
@@ -368,7 +360,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         UNSAFE_className="dashboard-action-button"
                     >
                         <DataMapping size="L" />
-                        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Mesh Designer</Text>
+                        <Text UNSAFE_className="icon-label">Mesh Designer</Text>
                     </ActionButton>
 
                     {/* Data Manager (Coming Soon) */}
@@ -378,7 +370,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         UNSAFE_className="dashboard-action-button"
                     >
                         <Data size="L" />
-                        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Data Manager</Text>
+                        <Text UNSAFE_className="icon-label">Data Manager</Text>
                     </ActionButton>
 
                     {/* Delete Project */}
@@ -388,7 +380,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         UNSAFE_className="dashboard-action-button"
                     >
                         <Delete size="L" />
-                        <Text UNSAFE_style={{ fontSize: '12px', marginTop: '4px' }}>Delete</Text>
+                        <Text UNSAFE_className="icon-label">Delete</Text>
                     </ActionButton>
                 </GridLayout>
             </Flex>

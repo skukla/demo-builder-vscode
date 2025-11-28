@@ -124,8 +124,7 @@ export function SearchableList<T extends SearchableListItem>({
                         width="100%"
                         isQuiet
                         autoFocus={autoFocus && !selectedKeys.length}
-                        UNSAFE_className="search-field-custom"
-                        UNSAFE_style={{ flex: 1 }}
+                        UNSAFE_className="search-field-custom flex-1"
                     />
                     {onRefresh && (
                         <ActionButton
@@ -133,7 +132,7 @@ export function SearchableList<T extends SearchableListItem>({
                             onPress={onRefresh}
                             aria-label="Refresh list"
                             isDisabled={isLoading}
-                            UNSAFE_style={{ cursor: 'pointer' }}
+                            UNSAFE_className="cursor-pointer"
                         >
                             {isLoading ? (
                                 <Spinner size="S" />
@@ -169,7 +168,7 @@ export function SearchableList<T extends SearchableListItem>({
                             onPress={onRefresh}
                             aria-label="Refresh list"
                             isDisabled={isLoading}
-                            UNSAFE_style={{ cursor: 'pointer' }}
+                            UNSAFE_className="cursor-pointer"
                         >
                             {isLoading ? (
                                 <Spinner size="S" />
@@ -183,12 +182,7 @@ export function SearchableList<T extends SearchableListItem>({
 
             {/* List Container (with refresh opacity) */}
             <div
-                style={{
-                    flex: 1,
-                    transition: 'opacity 200ms ease-in-out',
-                    opacity: isRefreshing ? 0.5 : 1,
-                    pointerEvents: isRefreshing ? 'none' : 'auto'
-                }}
+                className={`list-refresh-container ${isRefreshing ? 'refreshing' : ''}`}
             >
                 <ListView
                     items={filteredItems}
@@ -197,7 +191,7 @@ export function SearchableList<T extends SearchableListItem>({
                     onSelectionChange={onSelectionChange as (keys: 'all' | Set<React.Key>) => void}
                     aria-label={ariaLabel}
                     height="100%"
-                    UNSAFE_style={{ flex: 1 }}
+                    UNSAFE_className="flex-1"
                 >
                     {filteredItems.map(itemRenderer)}
                 </ListView>
