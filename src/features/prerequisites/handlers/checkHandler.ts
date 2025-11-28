@@ -8,7 +8,7 @@
  */
 
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteStatusMessage, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
@@ -203,11 +203,15 @@ export async function handleCheckPrerequisites(
                 installed: (prereq.perNodeVersion && perNodeVariantMissing) ? false : checkResult.installed,
                 version: checkResult.version,
                 // Special message for per-node-version display, otherwise use standard status message
-                message: (prereq.perNodeVersion && perNodeVersionStatus && perNodeVersionStatus.length > 0)
-                    ? 'Installed for versions:'
-                    : (prereq.perNodeVersion && perNodeVariantMissing)
-                        ? `${prereq.name} is missing in Node ${missingVariantMajors.join(', ')}. Plugin status will be checked after CLI is installed.`
-                        : getPrerequisiteStatusMessage(prereq.name, checkResult.installed, checkResult.version),
+                message: getPrerequisiteDisplayMessage(
+                    prereq.name,
+                    !!prereq.perNodeVersion,
+                    perNodeVersionStatus,
+                    perNodeVariantMissing,
+                    missingVariantMajors,
+                    checkResult.installed,
+                    checkResult.version,
+                ),
                 // Enable install only when dependencies are satisfied AND this prerequisite is incomplete
                 // Node: missing majors; perNodeVersion: missing any variant; Otherwise: not installed
                 canInstall: depsInstalled && (

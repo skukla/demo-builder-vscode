@@ -84,6 +84,51 @@ export function getPrerequisiteStatusMessage(
 }
 
 /**
+ * Per-node-version status entry
+ */
+export interface PerNodeVersionStatusEntry {
+    version: string;
+    major: string;
+    component: string;
+    installed: boolean;
+}
+
+/**
+ * Get display message for prerequisite based on installation state
+ *
+ * SOP §3: Extracted nested ternary to named helper
+ *
+ * @param prereqName - Name of the prerequisite
+ * @param isPerNodeVersion - Whether this is a per-node-version prerequisite
+ * @param perNodeVersionStatus - Array of per-node version status entries
+ * @param perNodeVariantMissing - Whether a per-node-version variant is missing
+ * @param missingVariantMajors - Array of Node major versions where the tool is missing
+ * @param installed - Whether the prerequisite is installed
+ * @param version - Detected version (if any)
+ * @returns User-friendly display message
+ */
+export function getPrerequisiteDisplayMessage(
+    prereqName: string,
+    isPerNodeVersion: boolean,
+    perNodeVersionStatus: PerNodeVersionStatusEntry[],
+    perNodeVariantMissing: boolean,
+    missingVariantMajors: string[],
+    installed: boolean,
+    version?: string,
+): string {
+    // Per-node-version with installed versions: show "Installed for versions:"
+    if (isPerNodeVersion && perNodeVersionStatus && perNodeVersionStatus.length > 0) {
+        return 'Installed for versions:';
+    }
+    // Per-node-version with missing variants: show detailed missing message
+    if (isPerNodeVersion && perNodeVariantMissing) {
+        return `${prereqName} is missing in Node ${missingVariantMajors.join(', ')}. Plugin status will be checked after CLI is installed.`;
+    }
+    // Standard case: use status message
+    return getPrerequisiteStatusMessage(prereqName, installed, version);
+}
+
+/**
  * Helper to extract component selection parameters for registry manager calls
  */
 function getComponentSelectionParams(

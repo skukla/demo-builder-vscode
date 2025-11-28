@@ -8,6 +8,29 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
+ * Components data structure from components.json
+ */
+interface ComponentsData {
+    infrastructure?: Record<string, { nodeVersion?: string }>;
+}
+
+/**
+ * Get infrastructure node version from components data
+ *
+ * SOP §4: Extracted deep optional chain to named helper
+ *
+ * @param componentsData - Parsed components.json data
+ * @param component - Infrastructure component ID (e.g., 'adobe-cli')
+ * @returns Node version string or undefined
+ */
+function getInfrastructureNodeVersion(
+    componentsData: ComponentsData | undefined,
+    component: string,
+): string | undefined {
+    return componentsData?.infrastructure?.[component]?.nodeVersion;
+}
+
+/**
  * Manages environment setup for command execution
  * Handles Node version management, PATH enhancement, and Adobe CLI telemetry
  */
@@ -174,8 +197,8 @@ export class EnvironmentSetup {
                 return null;
             }
 
-            const componentsData = JSON.parse(fsSync.readFileSync(componentsPath, 'utf8'));
-            const nodeVersion = componentsData?.infrastructure?.[component]?.nodeVersion;
+            const componentsData: ComponentsData = JSON.parse(fsSync.readFileSync(componentsPath, 'utf8'));
+            const nodeVersion = getInfrastructureNodeVersion(componentsData, component);
 
             if (nodeVersion) {
                 this.logger.debug(`[Env Setup] Infrastructure Node version for ${component}: ${nodeVersion}`);
