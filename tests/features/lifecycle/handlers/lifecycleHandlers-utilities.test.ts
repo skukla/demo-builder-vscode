@@ -63,7 +63,7 @@ describe('lifecycleHandlers - Utilities', () => {
             });
 
             expect(result.success).toBe(true);
-            expect(mockContext.logger.info).toHaveBeenCalledWith('[Webview] Test info message');
+            expect(mockContext.logger.debug).toHaveBeenCalledWith('[Webview] Test info message');
         });
 
         it('should handle unknown log levels as info', async () => {
@@ -73,7 +73,7 @@ describe('lifecycleHandlers - Utilities', () => {
             });
 
             expect(result.success).toBe(true);
-            expect(mockContext.logger.info).toHaveBeenCalledWith('[Webview] Unknown level message');
+            expect(mockContext.logger.debug).toHaveBeenCalledWith('[Webview] Unknown level message');
         });
     });
 
@@ -135,7 +135,7 @@ describe('lifecycleHandlers - Utilities', () => {
 
             await handleOpenAdobeConsole(mockContext, payload);
 
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('[Adobe Console] Opening workspace-specific URL')
             );
         });
@@ -175,7 +175,7 @@ describe('lifecycleHandlers - Utilities', () => {
 
             await handleOpenAdobeConsole(mockContext, payload);
 
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('[Adobe Console] Opening generic console URL')
             );
         });

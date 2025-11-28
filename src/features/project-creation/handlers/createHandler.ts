@@ -93,7 +93,7 @@ export async function handleCreateProject(
     // FIRST: Check workspace trust and offer one-time tip
     const hasShownTrustTip = context.context.globalState.get('demoBuilder.trustTipShown', false);
     if (!hasShownTrustTip && !vscode.workspace.isTrusted) {
-        context.logger.info('[Project Creation] Showing one-time workspace trust tip');
+        context.logger.debug('[Project Creation] Showing one-time workspace trust tip');
         await context.context.globalState.update('demoBuilder.trustTipShown', true);
 
         const choice = await vscode.window.showInformationMessage(
@@ -117,8 +117,8 @@ export async function handleCreateProject(
     context.sharedState.projectCreationAbortController = new AbortController();
 
     try {
-        context.logger.info('[Project Creation] Starting with config:', config);
-        context.logger.info(`[Project Creation] Overall timeout: ${OVERALL_TIMEOUT_MS / 1000 / 60} minutes`);
+        context.logger.debug('[Project Creation] Starting with config:', config);
+        context.logger.debug(`[Project Creation] Overall timeout: ${OVERALL_TIMEOUT_MS / 1000 / 60} minutes`);
 
         // Send initial status with progress
         await context.sendMessage('creationProgress', {
@@ -153,16 +153,16 @@ export async function handleCreateProject(
         // Cleanup partial project directory on failure
         try {
             if (fs.existsSync(projectPath)) {
-                context.logger.info(`[Project Creation] Cleaning up partial project at ${projectPath}`);
+                context.logger.debug(`[Project Creation] Cleaning up partial project at ${projectPath}`);
                 await fsPromises.rm(projectPath, { recursive: true, force: true });
-                context.logger.info('[Project Creation] Cleanup complete');
+                context.logger.debug('[Project Creation] Cleanup complete');
             }
 
             // Cleanup API Mesh if it was created during this session
             // IMPORTANT: Only delete if we created it AND it didn't exist before
             // This prevents deleting pre-existing production meshes on cancel/failure
             if (context.sharedState.meshCreatedForWorkspace && !context.sharedState.meshExistedBeforeSession) {
-                context.logger.info(`[Project Creation] Cleaning up orphaned API Mesh for workspace ${context.sharedState.meshCreatedForWorkspace}`);
+                context.logger.debug(`[Project Creation] Cleaning up orphaned API Mesh for workspace ${context.sharedState.meshCreatedForWorkspace}`);
                 context.logger.debug('[Project Creation] Mesh was created in this session and did not exist before - safe to delete');
                 try {
                     const commandManager = ServiceLocator.getCommandExecutor();
@@ -173,7 +173,7 @@ export async function handleCreateProject(
                     });
 
                     if (deleteResult.code === 0) {
-                        context.logger.info('[Project Creation] Successfully deleted orphaned mesh');
+                        context.logger.debug('[Project Creation] Successfully deleted orphaned mesh');
                     } else {
                         context.logger.warn(`[Project Creation] Failed to delete orphaned mesh: ${deleteResult.stderr}`);
                     }
@@ -181,7 +181,7 @@ export async function handleCreateProject(
                     context.logger.warn('[Project Creation] Error during mesh cleanup', meshCleanupError as Error);
                 }
             } else if (context.sharedState.meshCreatedForWorkspace && context.sharedState.meshExistedBeforeSession) {
-                context.logger.info('[Project Creation] Mesh existed before session - preserving it (not deleting on cancel/failure)');
+                context.logger.debug('[Project Creation] Mesh existed before session - preserving it (not deleting on cancel/failure)');
                 context.logger.debug(`[Project Creation] Pre-existing mesh preserved for workspace ${context.sharedState.meshExistedBeforeSession}`);
             }
         } catch (cleanupError) {

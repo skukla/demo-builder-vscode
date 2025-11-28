@@ -122,7 +122,7 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
             }
         }
         
-        logger.info('[MeshStaleness] Successfully fetched deployed mesh config', {
+        logger.debug('[MeshStaleness] Successfully fetched deployed mesh config', {
             keysFound: Object.keys(deployedEnvVars),
         });
         
@@ -253,7 +253,7 @@ export async function detectMeshChanges(
 
         if (deployedConfig) {
             // Successfully fetched deployed config - use it as baseline
-            logger.info('[MeshStaleness] Successfully fetched deployed config, populating meshState.envVars');
+            logger.debug('[MeshStaleness] Successfully fetched deployed config, populating meshState.envVars');
 
             project.meshState!.envVars = deployedConfig;
             didPopulateFromDeployedConfig = true;
@@ -294,7 +294,7 @@ export async function detectMeshChanges(
     const envVarsChanged = changedEnvVars.length > 0;
 
     if (envVarsChanged) {
-        logger.info(`[MeshStaleness] Detected ${changedEnvVars.length} changed env vars:`, changedEnvVars);
+        logger.debug(`[MeshStaleness] Detected ${changedEnvVars.length} changed env vars:`, changedEnvVars);
     }
     
     // Check source files changes

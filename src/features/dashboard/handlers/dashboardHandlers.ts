@@ -177,7 +177,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
             },
         });
 
-        context.logger.info('[Dashboard] Starting re-authentication flow');
+        context.logger.debug('[Dashboard] Starting re-authentication flow');
 
         const authManager = ServiceLocator.getAuthenticationService();
 
@@ -188,7 +188,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
 
         // Auto-select project's organization if available
         if (project.adobe?.organization) {
-            context.logger.info(`[Dashboard] Auto-selecting project org: ${project.adobe.organization}`);
+            context.logger.debug(`[Dashboard] Auto-selecting project org: ${project.adobe.organization}`);
 
             try {
                 await authManager.selectOrganization(project.adobe.organization);
@@ -199,7 +199,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
         }
 
         // Re-check mesh status with fresh authentication
-        context.logger.info('[Dashboard] Re-checking mesh status after authentication');
+        context.logger.debug('[Dashboard] Re-checking mesh status after authentication');
         await handleRequestStatus(context);
 
         return { success: true };
@@ -249,7 +249,7 @@ export const handleOpenBrowser: MessageHandler = async (context) => {
     if (frontendPort) {
         const url = `http://localhost:${frontendPort}`;
         await vscode.env.openExternal(vscode.Uri.parse(url));
-        context.logger.info(`[Project Dashboard] Opening browser: ${url}`);
+        context.logger.debug(`[Project Dashboard] Opening browser: ${url}`);
     }
 
     return { success: true };
@@ -308,7 +308,7 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
 
         // Direct link to workspace
         consoleUrl = `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/workspaces/${project.adobe.workspace}/details`;
-        context.logger.info('[Dev Console] Opening workspace-specific URL');
+        context.logger.debug('[Dev Console] Opening workspace-specific URL');
     } else if (hasAdobeProjectContext(project)) {
         // Validate Adobe IDs before URL construction (security: prevents URL injection)
         try {
@@ -322,9 +322,9 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
 
         // Fallback: project overview
         consoleUrl = `https://developer.adobe.com/console/projects/${project.adobe.organization}/${project.adobe.projectId}/overview`;
-        context.logger.info('[Dev Console] Opening project-specific URL (no workspace)');
+        context.logger.debug('[Dev Console] Opening project-specific URL (no workspace)');
     } else {
-        context.logger.info('[Dev Console] Opening generic console URL (missing IDs)');
+        context.logger.debug('[Dev Console] Opening generic console URL (missing IDs)');
     }
 
     // Validate final URL before opening (defense-in-depth)

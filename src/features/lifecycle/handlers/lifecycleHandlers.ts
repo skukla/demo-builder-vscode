@@ -52,7 +52,7 @@ export async function handleCancelProjectCreation(
     context: HandlerContext,
 ): Promise<DataResult<{ message: string }>> {
     if (context.sharedState.projectCreationAbortController) {
-        context.logger.info('[Project Creation] Cancellation requested by user');
+        context.logger.debug('[Project Creation] Cancellation requested by user');
         context.sharedState.projectCreationAbortController.abort();
         return { success: true, data: { message: 'Project creation cancelled' } };
     }
@@ -69,7 +69,7 @@ export async function handleCancelMeshCreation(
     context: HandlerContext,
 ): Promise<DataResult<{ cancelled: boolean }>> {
     try {
-        context.logger.info('[API Mesh] User cancelled mesh creation');
+        context.logger.debug('[API Mesh] User cancelled mesh creation');
         // Set cancellation flag if needed (for future implementation)
         // For now, just acknowledge the cancellation
         return { success: true, data: { cancelled: true } };
@@ -92,7 +92,7 @@ export async function handleCancelMeshCreation(
 export async function handleCancelAuthPolling(context: HandlerContext): Promise<SimpleResult> {
     // Polling is now handled internally by authManager.login()
     context.sharedState.isAuthenticating = false;
-    context.logger.info('[Auth] Cancelled authentication request');
+    context.logger.debug('[Auth] Cancelled authentication request');
     return { success: true };
 }
 
@@ -145,7 +145,7 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
 
         // Dispose this panel
         context.panel?.dispose();
-        context.logger.info('[Project Creation] Wizard closed');
+        context.logger.debug('[Project Creation] Wizard closed');
 
         // REMOVED (Package 4 - beta.64): No longer add workspace folder
         // Previously added workspace folder, which caused terminal directory issues.
@@ -154,7 +154,7 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
         // const added = vscode.workspace.updateWorkspaceFolders(0, 0, workspaceFolder);
 
         // Open dashboard directly (no workspace manipulation)
-        context.logger.info('[Project Creation] Opening project dashboard...');
+        context.logger.debug('[Project Creation] Opening project dashboard...');
         await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DASHBOARD_OPEN_DELAY));
         await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
 
@@ -195,7 +195,7 @@ export async function handleBrowseFiles(
 
             await vscode.commands.executeCommand('workbench.view.explorer');
             await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(projectPath));
-            context.logger.info('[Project Creation] Opened project in Explorer');
+            context.logger.debug('[Project Creation] Opened project in Explorer');
         }
         return { success: true };
     } catch (error) {
@@ -225,7 +225,7 @@ export async function handleLog(
             context.logger.debug(`[Webview] ${message}`);
             break;
         default:
-            context.logger.info(`[Webview] ${message}`);
+            context.logger.debug(`[Webview] ${message}`);
     }
     return { success: true };
 }
@@ -251,12 +251,12 @@ export async function handleOpenAdobeConsole(
         // Construct direct link to workspace if IDs are provided
         if (payload?.orgId && payload?.projectId && payload?.workspaceId) {
             consoleUrl = `https://developer.adobe.com/console/projects/${payload.orgId}/${payload.projectId}/workspaces/${payload.workspaceId}/details`;
-            context.logger.info('[Adobe Console] Opening workspace-specific URL');
+            context.logger.debug('[Adobe Console] Opening workspace-specific URL');
         } else if (payload?.orgId && payload?.projectId) {
             consoleUrl = `https://developer.adobe.com/console/projects/${payload.orgId}/${payload.projectId}/overview`;
-            context.logger.info('[Adobe Console] Opening project-specific URL');
+            context.logger.debug('[Adobe Console] Opening project-specific URL');
         } else {
-            context.logger.info('[Adobe Console] Opening generic console URL');
+            context.logger.debug('[Adobe Console] Opening generic console URL');
         }
 
         // SECURITY: Validate URL before opening in browser

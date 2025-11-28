@@ -348,7 +348,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     public async execute(): Promise<void> {
         try {
-            this.logger.info('[Project Creation] Initializing wizard interface...');
+            this.logger.debug('[Project Creation] Initializing wizard interface...');
 
             // Create or reveal panel
             await this.createOrRevealPanel();

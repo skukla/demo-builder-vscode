@@ -53,7 +53,7 @@ export async function deployMeshComponent(
         onProgress?.('Deploying API Mesh...', 'Updating mesh configuration');
 
         // Always use 'update' during project creation since mesh was already created in wizard
-        logger.info('[Deploy Mesh] Updating mesh with configuration from commerce-mesh component');
+        logger.debug('[Deploy Mesh] Updating mesh with configuration from commerce-mesh component');
         const deployResult = await commandManager.execute(
             `aio api-mesh:update "${meshConfigPath}" --autoConfirmAction`,
             {
@@ -85,7 +85,7 @@ export async function deployMeshComponent(
             throw new Error(formatAdobeCliError(errorMsg));
         }
 
-        logger.info('[Deploy Mesh] Update command completed, verifying deployment...');
+        logger.debug('[Deploy Mesh] Update command completed, verifying deployment...');
 
         // Use shared verification utility (same as manual deploy command)
         const { waitForMeshDeployment } = await import('./meshDeploymentVerifier');

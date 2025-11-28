@@ -85,7 +85,7 @@ describe('ComponentManager - Version Detection', () => {
 
             expect(result.success).toBe(true);
             expect(result.component?.version).toBe('1.0.0'); // v prefix removed
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            expect(mockLogger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('version: 1.0.0')
             );
         });
@@ -390,7 +390,7 @@ describe('ComponentManager - Version Detection', () => {
             expect(mockLogger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('Detected version from git tag: 5.0.0')
             );
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            expect(mockLogger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('Test Component version: 5.0.0')
             );
         });

@@ -57,7 +57,7 @@ describe('lifecycleHandlers - Cancellation', () => {
             expect(result.success).toBe(true);
             expect(result.data!.message).toBe('Project creation cancelled');
             expect(abortSpy).toHaveBeenCalled();
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('[Project Creation] Cancellation requested by user')
             );
         });
@@ -89,14 +89,14 @@ describe('lifecycleHandlers - Cancellation', () => {
 
             expect(result.success).toBe(true);
             expect(result.data!.cancelled).toBe(true);
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 '[API Mesh] User cancelled mesh creation'
             );
         });
 
         it('should handle errors during cancellation', async () => {
             // Force an error by making logger throw
-            mockContext.logger.info = jest.fn().mockImplementation(() => {
+            mockContext.logger.debug = jest.fn().mockImplementation(() => {
                 throw new Error('Logger failed');
             });
 
@@ -115,7 +115,7 @@ describe('lifecycleHandlers - Cancellation', () => {
 
             expect(result.success).toBe(true);
             expect(mockContext.sharedState.isAuthenticating).toBe(false);
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 '[Auth] Cancelled authentication request'
             );
         });
@@ -147,7 +147,7 @@ describe('lifecycleHandlers - Cancellation', () => {
 
             await handleCancelProjectCreation(mockContext);
 
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('[Project Creation] Cancellation requested by user')
             );
         });

@@ -132,7 +132,7 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
             await handleCheckAuth(mockContext);
 
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringMatching(/Token-only authentication check completed in \d+ms/)
             );
         });
@@ -145,7 +145,7 @@ describe('authenticationHandlers - handleCheckAuth', () => {
 
             await handleCheckAuth(mockContext);
 
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringMatching(/\[Auth\] Authentication verified - Signed in as Test Organization/)
             );
         });
@@ -277,7 +277,7 @@ describe('authenticationHandlers - handleCheckAuth', () => {
             });
 
             // Should log that it retrieved from CLI
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringMatching(/Retrieved persisted organization from Adobe CLI: Test Organization/)
             );
         });

@@ -316,7 +316,7 @@ export class AuthenticationService {
 
                 // If we didn't get a valid token and force wasn't used, retry with force
                 if (!force) {
-                    this.debugLogger.info('[Auth] Retrying with force flag to ensure fresh authentication');
+                    this.debugLogger.debug('[Auth] Retrying with force flag to ensure fresh authentication');
                     stepLogger.logTemplate('adobe-setup', 'operations.retrying', { item: 'authentication with fresh login' });
                     this.performanceTracker.endTiming('login');
                     return await this.login(true);

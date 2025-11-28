@@ -110,7 +110,7 @@ describe('envFileGenerator - Basic Generation', () => {
 
             const [[, content]] = (fsPromises.writeFile as jest.Mock).mock.calls;
             expect(content).toContain('# Test Component - Environment Configuration');
-            expect(mockLogger.info).toHaveBeenCalled();
+            expect(mockLogger.debug).toHaveBeenCalled();
         });
     });
 
@@ -139,7 +139,7 @@ describe('envFileGenerator - Basic Generation', () => {
                 path.join(TEST_COMPONENT_PATH, '.env.local'),
                 expect.any(String),
             );
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            expect(mockLogger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('.env.local'),
             );
         });

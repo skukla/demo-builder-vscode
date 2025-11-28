@@ -126,5 +126,5 @@ export async function generateComponentEnvFile(
     // Write the file
     await fsPromises.writeFile(envFilePath, lines.join('\n'));
 
-    logger.info(`[Project Creation] Created ${envFileName} for ${componentDef.name}`);
+    logger.debug(`[Project Creation] Created ${envFileName} for ${componentDef.name}`);
 }

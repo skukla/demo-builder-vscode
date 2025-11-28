@@ -98,8 +98,8 @@ export async function handleInstallPrerequisite(
         }
 
         const { prereq } = state;
-        // High-level log (user-facing Logs channel)
-        context.logger.info(`[Prerequisites] User initiated install for: ${prereq.name}`);
+        // Technical flow log (Debug channel)
+        context.logger.debug(`[Prerequisites] User initiated install for: ${prereq.name}`);
         // Debug channel detail
         context.debugLogger.debug('[Prerequisites] install-prerequisite payload', { id: prereqId, name: prereq.name, version });
 
@@ -116,7 +116,7 @@ export async function handleInstallPrerequisite(
                 context.debugLogger.debug(`[Prerequisites] Checking if Node ${version}.x is already satisfied`);
                 const satisfied = await context.prereqManager?.checkVersionSatisfaction(version);
                 if (satisfied) {
-                    context.logger.info(`[Prerequisites] Node ${version}.x already installed, skipping installation`);
+                    context.logger.debug(`[Prerequisites] Node ${version}.x already installed, skipping installation`);
                     context.debugLogger.debug(`[Prerequisites] Version satisfaction check passed - no installation needed for Node ${version}`);
                     await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
                     return { success: true };
@@ -142,7 +142,7 @@ export async function handleInstallPrerequisite(
 
             // If no versions need installation, we're done
             if (!targetVersions || targetVersions.length === 0) {
-                context.logger.info(`[Prerequisites] All required Node versions already installed`);
+                context.logger.debug(`[Prerequisites] All required Node versions already installed`);
                 await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
                 return { success: true };
             }
@@ -189,7 +189,7 @@ export async function handleInstallPrerequisite(
 
             // If no versions need installation, return early
             if (!targetVersions || targetVersions.length === 0) {
-                context.logger.info(`[Prerequisites] ${prereq.name} already installed for all required Node versions or no Node versions available`);
+                context.logger.debug(`[Prerequisites] ${prereq.name} already installed for all required Node versions or no Node versions available`);
                 await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
                 return { success: true };
             }

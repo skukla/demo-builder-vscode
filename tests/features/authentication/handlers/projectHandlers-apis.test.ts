@@ -64,7 +64,7 @@ describe('projectHandlers - API Verification', () => {
 
             expect(result.success).toBe(true);
             expect(result.data!.hasMesh).toBe(true);
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('[Adobe Setup] API Mesh access confirmed')
             );
         });
@@ -137,7 +137,7 @@ describe('projectHandlers - API Verification', () => {
 
             expect(result.success).toBe(true);
             expect(result.data!.hasMesh).toBe(true);
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('[Adobe Setup] API Mesh enabled; no active mesh found')
             );
         });

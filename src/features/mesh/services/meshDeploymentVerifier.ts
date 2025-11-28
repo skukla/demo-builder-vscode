@@ -194,7 +194,7 @@ async function getEndpoint(meshId: string, logger?: Logger): Promise<string | un
 
         // Fallback: construct endpoint from mesh ID
         if (meshId) {
-            logger?.info('[Mesh Verification] Constructing endpoint from mesh ID');
+            logger?.debug('[Mesh Verification] Constructing endpoint from mesh ID');
             return `https://graph.adobe.io/api/${meshId}/graphql`;
         }
 

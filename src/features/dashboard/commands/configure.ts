@@ -73,7 +73,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 await this.initializeCommunication();
             }
 
-            this.logger.info(`[Configure] Opened configuration for project: ${project.name}`);
+            this.logger.debug(`[Configure] Opened configuration for project: ${project.name}`);
         } catch (error) {
             await this.showError('Failed to open configuration', error as Error);
         }

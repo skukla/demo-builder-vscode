@@ -191,7 +191,7 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             return;
         }
 
-        this.logger.info(`[Project Dashboard] Showing dashboard for project: ${project.name}`);
+        this.logger.debug(`[Project Dashboard] Showing dashboard for project: ${project.name}`);
 
         // If demo is already running, initialize file hashes for change detection
         if (project.status === 'running') {

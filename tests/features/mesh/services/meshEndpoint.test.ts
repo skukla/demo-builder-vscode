@@ -148,7 +148,7 @@ describe('meshEndpoint', () => {
             );
 
             expect(result).toBe(describeEndpoint);
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            expect(mockLogger.debug).toHaveBeenCalledWith(
                 '[API Mesh] Retrieved endpoint from describe:',
                 describeEndpoint,
             );
@@ -196,7 +196,7 @@ describe('meshEndpoint', () => {
             );
 
             expect(result).toBe(`https://edge-sandbox-graph.adobe.io/api/${meshId}/graphql`);
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            expect(mockLogger.debug).toHaveBeenCalledWith(
                 '[API Mesh] Using constructed endpoint (fallback)',
             );
         });

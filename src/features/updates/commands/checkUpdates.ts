@@ -78,8 +78,8 @@ export class CheckUpdatesCommand extends BaseCommand {
             }
 
             // Log available updates
-            this.logger.info(`[Updates] Found ${updates.length} update(s):`);
-            updates.forEach(update => this.logger.info(`[Updates]   - ${update}`));
+            this.logger.debug(`[Updates] Found ${updates.length} update(s):`);
+            updates.forEach(update => this.logger.debug(`[Updates]   - ${update}`));
       
             // Show update prompt (simplified - no "View Details" button)
             const message = `Updates available:\n${updates.join('\n')}`;
@@ -118,12 +118,12 @@ export class CheckUpdatesCommand extends BaseCommand {
             );
       
             if (stop !== 'Stop & Update') {
-                this.logger.info('[Updates] User cancelled update (demo still running)');
+                this.logger.debug('[Updates] User cancelled update (demo still running)');
                 return;
             }
       
             // Stop demo
-            this.logger.info('[Updates] Stopping demo before component updates');
+            this.logger.debug('[Updates] Stopping demo before component updates');
             await vscode.commands.executeCommand('demoBuilder.stopDemo');
 
             // Wait for clean shutdown

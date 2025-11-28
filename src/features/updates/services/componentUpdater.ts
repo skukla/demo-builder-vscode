@@ -46,14 +46,14 @@ export class ComponentUpdater {
         this.updatingComponents.add(componentId);
 
         try {
-            this.logger.info(`[Update] Updating ${componentId} to ${newVersion}`);
+            this.logger.debug(`[Update] Updating ${componentId} to ${newVersion}`);
 
             // CRITICAL: Always create snapshot for rollback
             const snapshotPath = `${component.path}.snapshot-${Date.now()}`;
-      
+
             try {
                 // 1. Create pre-update snapshot (full directory backup)
-                this.logger.info(`[Update] Creating snapshot at ${snapshotPath}`);
+                this.logger.debug(`[Update] Creating snapshot at ${snapshotPath}`);
                 await fs.cp(component.path, snapshotPath, { recursive: true });
 
                 // 2. Preserve .env file(s) for merge
@@ -339,9 +339,9 @@ export class ComponentUpdater {
       
             const addedKeys = Array.from(templateVars.keys()).filter(k => !oldVars.has(k));
             if (addedKeys.length > 0) {
-                this.logger.info(`[Update] Merged ${filename}: added ${addedKeys.length} new variables (${addedKeys.join(', ')})`);
+                this.logger.debug(`[Update] Merged ${filename}: added ${addedKeys.length} new variables (${addedKeys.join(', ')})`);
             } else {
-                this.logger.info(`[Update] Merged ${filename}: preserved user config, no new variables`);
+                this.logger.debug(`[Update] Merged ${filename}: preserved user config, no new variables`);
             }
         }
     }

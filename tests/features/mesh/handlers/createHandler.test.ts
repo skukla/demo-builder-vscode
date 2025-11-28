@@ -69,6 +69,7 @@ describe('createHandler - Security Tests (Step 2)', () => {
                 info: jest.fn(),
                 warn: jest.fn(),
                 error: jest.fn(),
+                debug: jest.fn(),
             } as any,
             debugLogger: {
                 debug: jest.fn(),

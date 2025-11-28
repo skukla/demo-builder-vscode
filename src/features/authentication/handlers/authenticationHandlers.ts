@@ -62,7 +62,7 @@ async function checkTokenExpiry(context: HandlerContext): Promise<boolean> {
 export async function handleCheckAuth(context: HandlerContext): Promise<SimpleResult> {
     const checkStartTime = Date.now();
     context.logger.debug('[Auth] Starting authentication check (quick mode for wizard)');
-    context.logger.info('[Auth] User initiated authentication check');
+    context.logger.debug('[Auth] User initiated authentication check');
 
     // Step 1: Initial check with user-friendly message
     await context.sendMessage('auth-status', {
@@ -77,7 +77,7 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
         const isAuthenticated = await context.authManager?.isAuthenticated();
         const checkDuration = Date.now() - checkStartTime;
 
-        context.logger.info(`[Auth] Token-only authentication check completed in ${checkDuration}ms: ${isAuthenticated}`);
+        context.logger.debug(`[Auth] Token-only authentication check completed in ${checkDuration}ms: ${isAuthenticated}`);
 
         // Check token expiry to warn user if token is about to expire
         let tokenExpiresIn: number | undefined;
@@ -120,7 +120,7 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
                 currentProject = await context.authManager?.getCurrentProject();
 
                 if (currentOrg) {
-                    context.logger.info(`[Auth] Retrieved persisted organization from Adobe CLI: ${currentOrg.name}`);
+                    context.logger.debug(`[Auth] Retrieved persisted organization from Adobe CLI: ${currentOrg.name}`);
                 } else {
                     context.logger.debug('[Auth] No persisted organization found in Adobe CLI');
                 }
@@ -173,7 +173,7 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
         }
 
         // Log the final status message
-        context.logger.info(`[Auth] ${message}${subMessage ? ' - ' + subMessage : ''}`);
+        context.logger.debug(`[Auth] ${message}${subMessage ? ' - ' + subMessage : ''}`);
 
         await context.sendMessage('auth-status', {
             authenticated: isAuthenticated,
@@ -239,7 +239,7 @@ export async function handleAuthenticate(
             const isAlreadyAuth = await context.authManager?.isAuthenticated();
 
             if (isAlreadyAuth) {
-                context.logger.info('[Auth] Already authenticated, skipping login');
+                context.logger.debug('[Auth] Already authenticated, skipping login');
 
                 // Send loading message while we verify credentials and initialize SDK
                 await context.sendMessage('auth-status', {
@@ -277,7 +277,7 @@ export async function handleAuthenticate(
             }
         }
 
-        context.logger.info(`[Auth] Starting Adobe authentication process${force ? ' (forced)' : ''} - opening browser...`);
+        context.logger.debug(`[Auth] Starting Adobe authentication process${force ? ' (forced)' : ''} - opening browser...`);
 
         // Start authentication - pass force flag to authManager
         context.logger.debug(`[Auth] Initiating browser-based login${force ? ' with force flag' : ''}`);
@@ -329,7 +329,7 @@ export async function handleAuthenticate(
                 }
 
                 // Token is valid (or inspection failed but we continue) - proceed with org fetch
-                context.logger.info('[Auth] Fetching organizations after login');
+                context.logger.debug('[Auth] Fetching organizations after login');
 
                 // Initialize SDK for faster operations (token stable after login)
                 await context.authManager?.ensureSDKInitialized();
@@ -342,11 +342,11 @@ export async function handleAuthenticate(
 
                 // Fetch organization list (uses SDK if available, falls back to CLI)
                 const orgs = await context.authManager?.getOrganizations();
-                context.logger.info(`[Auth] Found ${orgs?.length ?? 0} organization(s) accessible to user`);
+                context.logger.debug(`[Auth] Found ${orgs?.length ?? 0} organization(s) accessible to user`);
 
                 if (orgs?.length === 1) {
                     // Auto-select single org
-                    context.logger.info(`[Auth] Single organization available: ${orgs?.[0].name}, auto-selecting`);
+                    context.logger.debug(`[Auth] Single organization available: ${orgs?.[0].name}, auto-selecting`);
                     await context.sendMessage('auth-status', {
                         isChecking: true,
                         message: AUTH_LOADING_MESSAGE,
@@ -365,7 +365,7 @@ export async function handleAuthenticate(
                         requiresOrgSelection = true;
                     }
                 } else if (orgs && orgs.length > 1) {
-                    context.logger.info(`[Auth] ${orgs?.length} organizations available, user must select`);
+                    context.logger.debug(`[Auth] ${orgs?.length} organizations available, user must select`);
                     requiresOrgSelection = true;
                 } else {
                     context.logger.warn('[Auth] No organizations accessible for this user');
@@ -379,7 +379,7 @@ export async function handleAuthenticate(
 
             // Log total post-login setup time
             const totalSetupTime = Date.now() - setupStart;
-            context.logger.info(`[Auth] Post-login setup completed in ${totalSetupTime}ms`);
+            context.logger.debug(`[Auth] Post-login setup completed in ${totalSetupTime}ms`);
 
             // Send appropriate status message based on org selection outcome
             if (orgLacksAccess) {

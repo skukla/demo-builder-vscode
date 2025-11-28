@@ -16,7 +16,7 @@ export class ExtensionUpdater {
    * Download and install extension update via VSIX
    */
     async updateExtension(downloadUrl: string, newVersion: string): Promise<void> {
-        this.logger.info(`[Update] Starting extension update to v${newVersion}`);
+        this.logger.debug(`[Update] Starting extension update to v${newVersion}`);
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -29,7 +29,7 @@ export class ExtensionUpdater {
       
             // Install via VS Code command
             progress.report({ message: 'Installing...' });
-            this.logger.info(`[Update] Installing extension from ${vsixPath}`);
+            this.logger.debug(`[Update] Installing extension from ${vsixPath}`);
             await vscode.commands.executeCommand(
                 'workbench.extensions.installExtension',
                 vscode.Uri.file(vsixPath),
@@ -51,10 +51,10 @@ export class ExtensionUpdater {
             );
 
             if (reload === 'Reload Now') {
-                this.logger.info('[Update] Reloading window to apply extension update');
+                this.logger.debug('[Update] Reloading window to apply extension update');
                 await vscode.commands.executeCommand('workbench.action.reloadWindow');
             } else {
-                this.logger.info('[Update] User chose to reload later');
+                this.logger.debug('[Update] User chose to reload later');
             }
         });
     }
@@ -87,7 +87,7 @@ export class ExtensionUpdater {
 
             await fs.writeFile(vsixPath, Buffer.from(buffer));
 
-            this.logger.info(`[Update] Downloaded VSIX to ${vsixPath}`);
+            this.logger.debug(`[Update] Downloaded VSIX to ${vsixPath}`);
             return vsixPath;
         } finally {
             clearTimeout(timeout);

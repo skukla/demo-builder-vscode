@@ -104,7 +104,7 @@ export class StartDemoCommand extends BaseCommand {
             return false;
         }
 
-        this.logger.info(`[Start Demo] Killing process tree for PID ${pid} on port ${port}`);
+        this.logger.debug(`[Start Demo] Killing process tree for PID ${pid} on port ${port}`);
 
         // Kill with ProcessCleanup (event-driven, no hardcoded delay)
         await this.processCleanup.killProcessTree(pid, 'SIGTERM');
@@ -189,12 +189,12 @@ export class StartDemoCommand extends BaseCommand {
                 );
                 
                 if (action !== 'Stop & Start') {
-                    this.logger.info('[Start Demo] User cancelled demo start due to port conflict');
+                    this.logger.debug('[Start Demo] User cancelled demo start due to port conflict');
                     return;
                 }
-                
+
                 // Kill the process using ProcessCleanup (event-driven, no hardcoded delay)
-                this.logger.info(`[Start Demo] Stopping process on port ${port}...`);
+                this.logger.debug(`[Start Demo] Stopping process on port ${port}...`);
                 try {
                     await this.killProcessOnPort(port);
                     this.logger.info('[Start Demo] Process stopped successfully');
@@ -233,8 +233,8 @@ export class StartDemoCommand extends BaseCommand {
                     return;
                 }
 
-                this.logger.info(`[Start Demo] Starting demo in: ${frontendPath}`);
-                this.logger.info(`[Start Demo] Using Node ${nodeVersion}`);
+                this.logger.debug(`[Start Demo] Starting demo in: ${frontendPath}`);
+                this.logger.debug(`[Start Demo] Using Node ${nodeVersion}`);
                 
                 // Set status to 'starting' immediately
                 project.status = 'starting';

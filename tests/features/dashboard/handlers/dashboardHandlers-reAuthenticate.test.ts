@@ -132,7 +132,7 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
 
         // Assert: Verify organization selection
         expect(mockAuthManager.selectOrganization).toHaveBeenCalledWith('org123');
-        expect(mockContext.logger.info).toHaveBeenCalledWith(
+        expect(mockContext.logger.debug).toHaveBeenCalledWith(
             expect.stringContaining('Auto-selecting project org: org123')
         );
     });

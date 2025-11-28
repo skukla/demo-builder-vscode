@@ -89,7 +89,7 @@ describe('Project Creation - Create Handler - Cancellation', () => {
                 'aio api-mesh:delete --autoConfirmAction',
                 expect.any(Object)
             );
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('Cleaning up orphaned API Mesh')
             );
         });
@@ -104,7 +104,7 @@ describe('Project Creation - Create Handler - Cancellation', () => {
                 expect.stringContaining('api-mesh:delete'),
                 expect.any(Object)
             );
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('Mesh existed before session - preserving it')
             );
         });

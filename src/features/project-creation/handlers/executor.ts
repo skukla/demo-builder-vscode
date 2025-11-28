@@ -67,7 +67,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         const targetPort = typedConfig.componentConfigs?.['citisignal-nextjs']?.PORT || defaultPort;
 
         if (runningPort === targetPort) {
-            context.logger.info(`[Project Creation] Stopping running demo on port ${runningPort} before creating new project`);
+            context.logger.debug(`[Project Creation] Stopping running demo on port ${runningPort} before creating new project`);
 
             // Show notification that we're auto-stopping the demo
             // SOP §1: Using TIMEOUTS constant instead of magic number
@@ -102,17 +102,17 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     if (await fs.access(projectPath).then(() => true).catch(() => false)) {
         context.logger.warn(`[Project Creation] Directory already exists: ${projectPath}`);
-        context.logger.info('[Project Creation] This should only happen for orphaned/invalid directories (valid projects are blocked earlier)');
+        context.logger.debug('[Project Creation] This should only happen for orphaned/invalid directories (valid projects are blocked earlier)');
 
         // Check if it has content
         const existingFiles = await fs.readdir(projectPath);
         if (existingFiles.length > 0) {
-            context.logger.info(`[Project Creation] Found ${existingFiles.length} existing files/folders, cleaning up...`);
+            context.logger.debug(`[Project Creation] Found ${existingFiles.length} existing files/folders, cleaning up...`);
             progressTracker('Preparing Project', 5, 'Removing existing project data...');
 
             // Clean it up before proceeding
             await fs.rm(projectPath, { recursive: true, force: true });
-            context.logger.info('[Project Creation] Existing directory cleaned');
+            context.logger.debug('[Project Creation] Existing directory cleaned');
         } else {
             // Empty directory is fine, just remove it to be safe
             await fs.rmdir(projectPath);
@@ -127,7 +127,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     await fs.mkdir(componentsDir, { recursive: true });
     await fs.mkdir(path.join(projectPath, 'logs'), { recursive: true });
 
-    context.logger.info(`[Project Creation] Created directory: ${projectPath}`);
+    context.logger.debug(`[Project Creation] Created directory: ${projectPath}`);
 
     // Step 2: Initialize project (15%)
     progressTracker('Setting Up Project', 15, 'Initializing project configuration...');
@@ -152,7 +152,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     // Save initial project state WITHOUT triggering events (to avoid crash)
     // We'll save again after components are installed
-    context.logger.info('[Project Creation] Deferring project state save and workspace addition until after installation');
+    context.logger.debug('[Project Creation] Deferring project state save and workspace addition until after installation');
 
     // Step 3: Load component definitions (20%)
     progressTracker('Loading Components', 20, 'Preparing component definitions...');
@@ -194,13 +194,13 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         }
 
         progressTracker(`Installing ${componentDef.name}`, currentProgress, 'Cloning repository and installing dependencies...');
-        context.logger.info(`[Project Creation] Installing component: ${componentDef.name}`);
+        context.logger.debug(`[Project Creation] Installing component: ${componentDef.name}`);
 
         const result = await componentManager.installComponent(project, componentDef);
 
         if (result.success && result.component) {
             project.componentInstances![comp.id] = result.component;
-            context.logger.info(`[Project Creation] Successfully installed ${componentDef.name}`);
+            context.logger.debug(`[Project Creation] Successfully installed ${componentDef.name}`);
 
             // Generate component-specific .env file (only for components with a path)
             if (result.component.path) {
@@ -232,7 +232,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const meshComponent = project.componentInstances?.['commerce-mesh'];
     if (meshComponent?.path) {
         progressTracker('Deploying API Mesh', 80, 'Deploying mesh configuration to Adobe I/O...');
-        context.logger.info(`[Project Creation] Deploying mesh from ${meshComponent.path}`);
+        context.logger.debug(`[Project Creation] Deploying mesh from ${meshComponent.path}`);
 
         try {
             const commandManager = ServiceLocator.getCommandExecutor();
@@ -290,7 +290,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 // Update meshState to track deployment (required for status detection)
                 const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
                 await updateMeshState(project);
-                context.logger.info('[Project Creation] Updated mesh state after successful deployment');
+                context.logger.debug('[Project Creation] Updated mesh state after successful deployment');
 
                 // Fetch deployed mesh config to populate meshState.envVars
                 // This ensures dashboard shows correct "Deployed" status immediately
@@ -299,7 +299,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
                 if (hasEntries(deployedConfig)) {
                     project.meshState!.envVars = deployedConfig;
-                    context.logger.info('[Project Creation] Populated meshState.envVars with deployed config');
+                    context.logger.debug('[Project Creation] Populated meshState.envVars with deployed config');
                     await context.stateManager.saveProject(project);
                 }
 
@@ -338,7 +338,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         // Update meshState to track deployment (required for status detection)
         const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
         await updateMeshState(project);
-        context.logger.info('[Project Creation] Updated mesh state for existing mesh');
+        context.logger.debug('[Project Creation] Updated mesh state for existing mesh');
 
         // Fetch deployed mesh config to populate meshState.envVars
         // This ensures dashboard shows correct "Deployed" status immediately
@@ -347,11 +347,11 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
         if (hasEntries(deployedConfig)) {
             project.meshState!.envVars = deployedConfig;
-            context.logger.info('[Project Creation] Populated meshState.envVars with deployed config');
+            context.logger.debug('[Project Creation] Populated meshState.envVars with deployed config');
             await context.stateManager.saveProject(project);
         }
 
-        context.logger.info('[Project Creation] API Mesh configured');
+        context.logger.debug('[Project Creation] API Mesh configured');
     }
 
     // Step 6: Create project manifest (90%)
@@ -376,12 +376,12 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         JSON.stringify(manifest, null, 2),
     );
 
-    context.logger.info('[Project Creation] Project manifest created');
+    context.logger.debug('[Project Creation] Project manifest created');
 
     // Step 8: Save project state (95%)
     progressTracker('Finalizing Project', 95, 'Saving project state...');
 
-    context.logger.info('[Project Creation] About to save project state...');
+    context.logger.debug('[Project Creation] About to save project state...');
     context.logger.debug('[Project Creation] Project object:', JSON.stringify({
         name: project.name,
         status: 'ready',
@@ -406,7 +406,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             };
 
             if (detectedVersion !== 'unknown') {
-                context.logger.info(`[Project Creation] ${componentId} version: ${detectedVersion}`);
+                context.logger.debug(`[Project Creation] ${componentId} version: ${detectedVersion}`);
             }
         }
 
@@ -436,7 +436,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             success: true,
             message: 'Your demo is ready to start',
         });
-        context.logger.info('[Project Creation] ✅ Completion message sent');
+        context.logger.debug('[Project Creation] ✅ Completion message sent');
     } catch (messageError) {
         context.logger.error('[Project Creation] ❌ Failed to send completion message', messageError instanceof Error ? messageError : undefined);
     }
@@ -446,9 +446,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     setTimeout(() => {
         if (context.panel) {
             context.panel.dispose();
-            context.logger.info('[Project Creation] Webview panel closed automatically (timeout - user did not click Open Project)');
+            context.logger.debug('[Project Creation] Webview panel closed automatically (timeout - user did not click Open Project)');
         }
     }, TIMEOUTS.WEBVIEW_AUTO_CLOSE);
 
-    context.logger.info('[Project Creation] ===== PROJECT CREATION WORKFLOW COMPLETE =====');
+    context.logger.debug('[Project Creation] ===== PROJECT CREATION WORKFLOW COMPLETE =====');
 }

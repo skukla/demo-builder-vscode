@@ -101,7 +101,7 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
 
             await handleCreateProject(mockContext, mockConfig);
 
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('Cleaning up partial project')
             );
             expect(fsPromises.rm).toHaveBeenCalled();
@@ -181,7 +181,7 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
 
             await handleCreateProject(mockContext, mockConfig);
 
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 '[Project Creation] Successfully deleted orphaned mesh'
             );
         });

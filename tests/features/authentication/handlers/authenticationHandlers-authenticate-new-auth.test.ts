@@ -112,12 +112,12 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 
 			await handleAuthenticate(mockContext);
 
-			// Auth completed metric
+			// Auth completed metric (milestone - stays as info)
 			expect(mockContext.logger.info).toHaveBeenCalledWith(
 				expect.stringMatching(/Authentication completed successfully after \d+ms/)
 			);
-			// Post-login setup metric
-			expect(mockContext.logger.info).toHaveBeenCalledWith(
+			// Post-login setup metric (technical - changed to debug)
+			expect(mockContext.logger.debug).toHaveBeenCalledWith(
 				expect.stringMatching(/Post-login setup completed in \d+ms/)
 			);
 		});
@@ -258,8 +258,8 @@ describe('authenticationHandlers - handleAuthenticate - New Authentication', () 
 
 			await handleAuthenticate(mockContext);
 
-			// Log should show post-login setup
-			expect(mockContext.logger.info).toHaveBeenCalledWith(
+			// Log should show post-login setup (technical - changed to debug)
+			expect(mockContext.logger.debug).toHaveBeenCalledWith(
 				expect.stringMatching(/Post-login setup completed in \d+ms/)
 			);
 		});

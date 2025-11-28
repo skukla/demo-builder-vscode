@@ -29,6 +29,7 @@ describe('handleMeshAlreadyExists', () => {
                 info: jest.fn(),
                 error: jest.fn(),
                 warn: jest.fn(),
+                debug: jest.fn(),
             },
             debugLogger: {
                 debug: jest.fn(),
@@ -184,7 +185,7 @@ describe('handleMeshAlreadyExists', () => {
             );
 
             // Then: Should log "updating with new configuration"
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 '[API Mesh] Mesh already exists, updating with new configuration'
             );
         });
@@ -205,7 +206,7 @@ describe('handleMeshAlreadyExists', () => {
             );
 
             // Then: Should log "attempting update to redeploy"
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 '[API Mesh] Mesh created but deployment failed, attempting update to redeploy'
             );
         });

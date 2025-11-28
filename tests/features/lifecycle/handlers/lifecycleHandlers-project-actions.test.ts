@@ -123,7 +123,7 @@ describe('lifecycleHandlers - Project Actions', () => {
             expect(mockVSCode.commands.executeCommand).toHaveBeenCalledTimes(2);
             const calls = mockVSCode.commands.executeCommand.mock.calls;
             expect(calls[1][0]).toBe('revealInExplorer');
-            expect(mockContext.logger.info).toHaveBeenCalledWith(
+            expect(mockContext.logger.debug).toHaveBeenCalledWith(
                 '[Project Creation] Opened project in Explorer'
             );
         });

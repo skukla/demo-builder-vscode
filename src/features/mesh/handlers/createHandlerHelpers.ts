@@ -107,10 +107,10 @@ export async function handleMeshAlreadyExists(
 
     // Determine which scenario we're in and log appropriately
     if (meshCreatedButFailed) {
-        context.logger.info('[API Mesh] Mesh created but deployment failed, attempting update to redeploy');
+        context.logger.debug('[API Mesh] Mesh created but deployment failed, attempting update to redeploy');
         onProgress?.('Completing API Mesh Setup...', 'Detected partial creation, now deploying mesh');
     } else {
-        context.logger.info('[API Mesh] Mesh already exists, updating with new configuration');
+        context.logger.debug('[API Mesh] Mesh already exists, updating with new configuration');
         onProgress?.('Updating Existing Mesh...', 'Found existing mesh, updating configuration');
     }
 

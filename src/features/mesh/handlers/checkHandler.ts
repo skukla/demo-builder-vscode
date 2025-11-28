@@ -93,7 +93,7 @@ export async function handleCheckApiMesh(
         };
     }
 
-    context.logger.info('[API Mesh] Checking API Mesh availability for workspace', { workspaceId });
+    context.logger.debug('[API Mesh] Checking API Mesh availability for workspace', { workspaceId });
     context.debugLogger.debug('[API Mesh] Starting multi-layer check');
 
     // PRE-FLIGHT: Check authentication before any Adobe CLI operations
@@ -126,7 +126,7 @@ export async function handleCheckApiMesh(
 
     try {
         // LAYER 1: Download workspace configuration (most reliable)
-        context.logger.info('[API Mesh] Layer 1: Downloading workspace configuration');
+        context.logger.debug('[API Mesh] Layer 1: Downloading workspace configuration');
 
         // Use extension's global storage instead of OS temp for better control and isolation
         const extensionTempPath = path.join(context.context.globalStorageUri.fsPath, 'temp');
@@ -168,16 +168,16 @@ export async function handleCheckApiMesh(
                 };
             }
 
-            context.logger.info('[API Mesh] API Mesh API is enabled (confirmed via workspace config)');
+            context.logger.debug('[API Mesh] API Mesh API is enabled (confirmed via workspace config)');
 
             // LAYER 2: Now check if a mesh exists (API is already confirmed as enabled)
-            context.logger.info('[API Mesh] Layer 2: Checking for existing mesh');
+            context.logger.debug('[API Mesh] Layer 2: Checking for existing mesh');
 
             // Check mesh existence using extracted helper
             const meshCheck = await checkMeshExistence(commandManager);
 
             if (!meshCheck.meshExists) {
-                context.logger.info('[API Mesh] API enabled, no mesh exists yet');
+                context.logger.debug('[API Mesh] API enabled, no mesh exists yet');
                 return {
                     success: true,
                     apiEnabled: true,
@@ -194,7 +194,7 @@ export async function handleCheckApiMesh(
             // Handle mesh status based on category
             switch (meshCheck.meshStatus) {
                 case 'deployed':
-                    context.logger.info('[API Mesh] Existing mesh found and deployed', { meshId: meshCheck.meshId, endpoint });
+                    context.logger.debug('[API Mesh] Existing mesh found and deployed', { meshId: meshCheck.meshId, endpoint });
                     return {
                         success: true,
                         apiEnabled: true,
@@ -220,7 +220,7 @@ export async function handleCheckApiMesh(
                     };
 
                 case 'pending':
-                    context.logger.info('[API Mesh] Mesh exists but is still provisioning');
+                    context.logger.debug('[API Mesh] Mesh exists but is still provisioning');
                     return {
                         success: true,
                         apiEnabled: true,
@@ -252,7 +252,7 @@ export async function handleCheckApiMesh(
             }
 
             // FALLBACK: Layer 1 failed, use Layer 2 to check both API status and mesh existence
-            context.logger.info('[API Mesh] Layer 2 (fallback): Checking API status and mesh');
+            context.logger.debug('[API Mesh] Layer 2 (fallback): Checking API status and mesh');
 
             try {
                 // Use fallback helper to check API/mesh status
@@ -269,7 +269,7 @@ export async function handleCheckApiMesh(
                 }
 
                 if (!fallbackResult.meshExists) {
-                    context.logger.info('[API Mesh] API enabled, no mesh exists yet (fallback check)');
+                    context.logger.debug('[API Mesh] API enabled, no mesh exists yet (fallback check)');
                     return {
                         success: true,
                         apiEnabled: true,
@@ -278,7 +278,7 @@ export async function handleCheckApiMesh(
                 }
 
                 // Mesh exists
-                context.logger.info('[API Mesh] Existing mesh found (fallback check)', { meshId: fallbackResult.meshId });
+                context.logger.debug('[API Mesh] Existing mesh found (fallback check)', { meshId: fallbackResult.meshId });
                 return {
                     success: true,
                     apiEnabled: true,

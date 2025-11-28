@@ -61,7 +61,7 @@ export async function handleCreateApiMesh(
         };
     }
 
-    context.logger.info('[API Mesh] Creating new mesh for workspace', { workspaceId });
+    context.logger.debug('[API Mesh] Creating new mesh for workspace', { workspaceId });
 
     // PRE-FLIGHT: Check authentication before any Adobe CLI operations
     const authManager = ServiceLocator.getAuthenticationService();
@@ -108,7 +108,7 @@ export async function handleCreateApiMesh(
         meshConfigPath = path.join(storagePath, `mesh-config-${Date.now()}.json`);
         await fsPromises.writeFile(meshConfigPath, JSON.stringify(minimalMeshConfig, null, 2), 'utf-8');
 
-        context.logger.info('[API Mesh] Created minimal mesh configuration from template', {
+        context.logger.debug('[API Mesh] Created minimal mesh configuration from template', {
             templatePath,
             outputPath: meshConfigPath,
         });
@@ -156,7 +156,7 @@ export async function handleCreateApiMesh(
 
         // Mesh creation is asynchronous - poll until it's deployed
         // Typical deployment time: 60-90 seconds, with 2 minute buffer for safety
-        context.logger.info('[API Mesh] Starting deployment verification polling...');
+        context.logger.debug('[API Mesh] Starting deployment verification polling...');
         onProgress?.('Waiting for mesh deployment...', 'Mesh is being provisioned (typically takes 60-90 seconds)');
 
         const maxRetries = 10; // 10 attempts with strategic timing = ~2 minutes max
@@ -186,7 +186,7 @@ export async function handleCreateApiMesh(
                 await new Promise(resolve => setTimeout(resolve, pollInterval));
             }
 
-            context.logger.info(`[API Mesh] Verification attempt ${attempt}/${maxRetries}`);
+            context.logger.debug(`[API Mesh] Verification attempt ${attempt}/${maxRetries}`);
 
             try {
                 // Use 'get' without --active flag to get JSON response with meshStatus
@@ -245,7 +245,7 @@ export async function handleCreateApiMesh(
 
                             case 'pending':
                                 // Status is pending/provisioning/building - continue polling
-                                context.logger.info(`[API Mesh] Mesh status: ${rawMeshStatus || 'unknown'} (attempt ${attempt}/${maxRetries})`);
+                                context.logger.debug(`[API Mesh] Mesh status: ${rawMeshStatus || 'unknown'} (attempt ${attempt}/${maxRetries})`);
                                 break;
                         }
                     } catch (parseError) {
@@ -271,7 +271,7 @@ export async function handleCreateApiMesh(
         if (!meshDeployed) {
             const totalWaitTime = Math.floor((initialWait + maxRetries * pollInterval) / 1000);
             context.logger.warn(`[API Mesh] Mesh deployment verification timed out after ${maxRetries} attempts (~${totalWaitTime}s)`);
-            context.logger.info('[API Mesh] Mesh is still provisioning but taking longer than expected');
+            context.logger.debug('[API Mesh] Mesh is still provisioning but taking longer than expected');
             onProgress?.('Mesh still provisioning', 'Deployment is taking longer than usual');
 
             // TIMEOUT is not an ERROR - mesh is likely still being deployed
@@ -305,7 +305,7 @@ export async function handleCreateApiMesh(
         if (meshConfigPath) {
             try {
                 await fsPromises.rm(meshConfigPath, { force: true });
-                context.logger.info('[API Mesh] Cleaned up temporary mesh config file');
+                context.logger.debug('[API Mesh] Cleaned up temporary mesh config file');
             } catch (cleanupError) {
                 context.logger.warn('[API Mesh] Failed to clean up mesh config file', cleanupError as Error);
             }

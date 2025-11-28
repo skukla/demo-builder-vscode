@@ -235,7 +235,7 @@ export class ComponentManager {
         // Set the detected version (or leave undefined if all strategies failed)
         if (detectedVersion) {
             componentInstance.version = detectedVersion;
-            this.logger.info(`[ComponentManager] ${componentDef.name} version: ${detectedVersion}`);
+            this.logger.debug(`[ComponentManager] ${componentDef.name} version: ${detectedVersion}`);
         } else {
             this.logger.warn(`[ComponentManager] Could not detect version for ${componentDef.name}`);
         }

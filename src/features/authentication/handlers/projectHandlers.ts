@@ -157,7 +157,7 @@ export async function handleSelectProject(
  * the Adobe CLI api-mesh commands.
  */
 export async function handleCheckProjectApis(context: HandlerContext): Promise<DataResult<{ hasMesh: boolean }>> {
-    context.logger.info('[Adobe Setup] Checking required APIs for selected project');
+    context.logger.debug('[Adobe Setup] Checking required APIs for selected project');
     context.debugLogger.debug('[Adobe Setup] handleCheckProjectApis invoked');
     try {
         const commandManager = ServiceLocator.getCommandExecutor();
@@ -194,7 +194,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
         try {
             const { stdout } = await commandManager.execute('aio api-mesh:get --active --json');
             context.debugLogger.debug('[Adobe Setup] api-mesh:get --active output', { stdout });
-            context.logger.info('[Adobe Setup] API Mesh access confirmed (active mesh or readable config)');
+            context.logger.debug('[Adobe Setup] API Mesh access confirmed (active mesh or readable config)');
             return { success: true, data: { hasMesh: true } };
         } catch (cliError) {
             const err = cliError as { message?: string; stderr?: string; stdout?: string };
@@ -208,7 +208,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
             // If error indicates no active mesh or not found, treat as enabled but empty
             const noActive = /no active|not found|404/i.test(combined);
             if (noActive) {
-                context.logger.info('[Adobe Setup] API Mesh enabled; no active mesh found');
+                context.logger.debug('[Adobe Setup] API Mesh enabled; no active mesh found');
                 return { success: true, data: { hasMesh: true } };
             }
         }
@@ -223,7 +223,7 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
                 const { stdout } = await commandManager.execute(cmd);
                 context.debugLogger.debug('[Adobe Setup] Mesh probe success', { cmd, stdout });
                 // If any mesh command runs, assume access exists
-                context.logger.info('[Adobe Setup] API Mesh access confirmed');
+                context.logger.debug('[Adobe Setup] API Mesh access confirmed');
                 return { success: true, data: { hasMesh: true } };
             } catch (cliError) {
                 const err = cliError as { message?: string; stderr?: string; stdout?: string };

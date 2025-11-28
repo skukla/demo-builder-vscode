@@ -31,7 +31,7 @@ describe('authenticationHandlers - handleAuthenticate - Edge Cases', () => {
 
 			// Org list is fetched after login
 			expect(mockContext.authManager!.getOrganizations).toHaveBeenCalled();
-			expect(mockContext.logger.info).toHaveBeenCalledWith(
+			expect(mockContext.logger.debug).toHaveBeenCalledWith(
 				expect.stringMatching(/\d+ organizations available, user must select/)
 			);
 		});

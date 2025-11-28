@@ -85,7 +85,7 @@ describe('ExtensionUpdater', () => {
 
             await updater.updateExtension(downloadUrl, newVersion);
 
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            expect(mockLogger.debug).toHaveBeenCalledWith(
                 `[Update] Starting extension update to v${newVersion}`,
             );
             expect(global.fetch).toHaveBeenCalledWith(
@@ -188,7 +188,7 @@ describe('ExtensionUpdater', () => {
             expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
                 'workbench.action.reloadWindow',
             );
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            expect(mockLogger.debug).toHaveBeenCalledWith(
                 '[Update] Reloading window to apply extension update',
             );
         });
@@ -201,7 +201,7 @@ describe('ExtensionUpdater', () => {
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
                 'workbench.action.reloadWindow',
             );
-            expect(mockLogger.info).toHaveBeenCalledWith('[Update] User chose to reload later');
+            expect(mockLogger.debug).toHaveBeenCalledWith('[Update] User chose to reload later');
         });
 
         it('should write VSIX to temp directory', async () => {

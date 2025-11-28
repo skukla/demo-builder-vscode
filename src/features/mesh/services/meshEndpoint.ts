@@ -97,7 +97,7 @@ export async function getEndpoint(
                     } else {
                         const endpoint = meshData.meshEndpoint || meshData.endpoint;
                         if (endpoint) {
-                            logger.info('[API Mesh] Retrieved endpoint from describe:', endpoint);
+                            logger.debug('[API Mesh] Retrieved endpoint from describe:', endpoint);
                             return endpoint;
                         }
                     }
@@ -112,6 +112,6 @@ export async function getEndpoint(
 
     // Construct as reliable fallback
     const endpoint = `https://edge-sandbox-graph.adobe.io/api/${meshId}/graphql`;
-    logger.info('[API Mesh] Using constructed endpoint (fallback)');
+    logger.debug('[API Mesh] Using constructed endpoint (fallback)');
     return endpoint;
 }

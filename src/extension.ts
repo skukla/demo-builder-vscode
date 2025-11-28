@@ -49,7 +49,7 @@ export async function activate(context: vscode.ExtensionContext) {
     
     logger = new Logger('Demo Builder');
     const version = context.extension.packageJSON.version || '1.0.0';
-    logger.info(`[Extension] Adobe Demo Builder v${version} starting...`);
+    logger.debug(`[Extension] Adobe Demo Builder v${version} starting...`);
 
     try {
         // Initialize state manager
@@ -133,7 +133,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
             // If no webviews are open, show Welcome to prevent user being stuck
             if (activeWebviewCount === 0) {
-                logger.info('[Extension] No webviews open after disposal - opening Welcome');
+                logger.debug('[Extension] No webviews open after disposal - opening Welcome');
                 await vscode.commands.executeCommand('demoBuilder.showWelcome');
             }
         });
@@ -212,7 +212,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 // Remove flag immediately
                 await fs.unlink(flagFile).catch(() => {});
                 
-                logger.info(`[Extension] Opening Project Dashboard after restart for: ${projectName}`);
+                logger.debug(`[Extension] Opening Project Dashboard after restart for: ${projectName}`);
                 
                 // Ensure project is loaded
                 const project = await stateManager.getCurrentProject();
@@ -245,7 +245,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 const project = await stateManager.getCurrentProject();
                 if (project) {
                     statusBar.updateProject(project);
-                    logger.info(`[Extension] Loaded existing project: ${project.name}`);
+                    logger.debug(`[Extension] Loaded existing project: ${project.name}`);
                 }
             }
             

@@ -17,7 +17,7 @@ export class WelcomeWebviewCommand extends BaseWebviewCommand {
     }
 
     public async execute(): Promise<void> {
-        this.logger.info('[UI] Showing Demo Builder Welcome screen...');
+        this.logger.debug('[UI] Showing Demo Builder Welcome screen...');
 
         await this.createOrRevealPanel();
         if (!this.communicationManager) {
@@ -123,7 +123,7 @@ export class WelcomeWebviewCommand extends BaseWebviewCommand {
                 // Open project dashboard (dashboard will initialize file hashes if demo is running)
                 await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
                 
-                this.logger.info(`[Welcome] Opened project dashboard for: ${project.name}`);
+                this.logger.debug(`[Welcome] Opened project dashboard for: ${project.name}`);
             }
         } catch (error) {
             await this.showError('Failed to open project', error as Error);

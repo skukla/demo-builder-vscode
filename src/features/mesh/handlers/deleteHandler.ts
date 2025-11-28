@@ -40,7 +40,7 @@ export async function handleDeleteApiMesh(
     }
 
     try {
-        context.logger.info('[API Mesh] Deleting mesh for workspace', { workspaceId });
+        context.logger.debug('[API Mesh] Deleting mesh for workspace', { workspaceId });
 
         // PRE-FLIGHT: Check authentication before any Adobe CLI operations
         const authManager = ServiceLocator.getAuthenticationService();
