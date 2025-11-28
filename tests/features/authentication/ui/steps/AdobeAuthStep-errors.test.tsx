@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { WizardState } from '@/types/webview';
+import { ErrorCode } from '@/types/errorCodes';
 import '@testing-library/jest-dom';
 import {
     mockPostMessage,
@@ -86,6 +87,7 @@ describe('AdobeAuthStep - Error Handling', () => {
                     isAuthenticated: false,
                     isChecking: false,
                     error: 'no_app_builder_access',
+                    code: ErrorCode.AUTH_NO_APP_BUILDER, // Use typed error code
                 },
             };
 
@@ -135,6 +137,7 @@ describe('AdobeAuthStep - Error Handling', () => {
                     isAuthenticated: false,
                     isChecking: false,
                     error: 'timeout',
+                    code: ErrorCode.TIMEOUT,
                 },
             };
 
@@ -149,6 +152,7 @@ describe('AdobeAuthStep - Error Handling', () => {
             // Simulate timeout message from backend
             messageCallback({
                 error: 'timeout',
+                code: ErrorCode.TIMEOUT,
                 isAuthenticated: false,
                 isChecking: false,
             });
@@ -168,6 +172,7 @@ describe('AdobeAuthStep - Error Handling', () => {
                     isAuthenticated: false,
                     isChecking: false,
                     error: 'timeout',
+                    code: ErrorCode.TIMEOUT,
                 },
             };
 
@@ -182,6 +187,7 @@ describe('AdobeAuthStep - Error Handling', () => {
             // Simulate timeout message from backend
             messageCallback({
                 error: 'timeout',
+                code: ErrorCode.TIMEOUT,
                 isAuthenticated: false,
                 isChecking: false,
             });

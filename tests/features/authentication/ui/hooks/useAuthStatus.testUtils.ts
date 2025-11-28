@@ -3,6 +3,7 @@
  */
 
 import { WizardState } from '@/types/webview';
+import { ErrorCode } from '@/types/errorCodes';
 import '@testing-library/jest-dom';
 
 // Mock WebviewClient
@@ -65,6 +66,7 @@ export interface AuthStatusData {
     message?: string;
     subMessage?: string;
     error?: string;
+    code?: ErrorCode;  // Typed error code for programmatic handling
     isAuthenticated: boolean;
     isChecking?: boolean;
     email?: string;
@@ -96,6 +98,7 @@ export const timeoutAuthData: AuthStatusData = {
     message: 'Authentication timed out',
     subMessage: 'Please try again',
     error: 'timeout',
+    code: ErrorCode.TIMEOUT,  // Typed error code
     isAuthenticated: false,
     isChecking: false,
 };

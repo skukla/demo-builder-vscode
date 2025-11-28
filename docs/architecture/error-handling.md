@@ -2,7 +2,7 @@
 
 > **Status:** Active Documentation
 > **Last Updated:** 2025-11-28
-> **Phase:** D - Status Quo with Documentation
+> **Phase:** D Complete (Backend) - Frontend Migration Pending
 
 ## Overview
 
@@ -313,8 +313,9 @@ await context.sendMessage('feature-status', {
 
 1. **Inconsistent error field types**: `error` can be `boolean`, `string`, or `undefined`
 2. **Multiple message types**: Authentication uses both `'auth-status'` and `'authError'`
-3. **No standard error codes**: Errors identified by string matching, not enumerated codes
+3. ~~**No standard error codes**: Errors identified by string matching, not enumerated codes~~ ✅ RESOLVED - All handlers now include `code` field
 4. **Missing unified interface**: No `ErrorPayload` type defined
+5. **Frontend ignores error codes**: Frontend still uses string-based error handling (see Phase E below)
 
 ---
 
@@ -404,23 +405,132 @@ This is **not required** for current development. The `code` field provides suff
 
 ---
 
+## Phase E: Frontend Migration (PENDING)
+
+**Status:** Not started
+**Goal:** Enable frontend to use `code` field for programmatic error handling
+
+### Current State (Anti-Pattern)
+
+Frontend currently uses **string-based error detection**:
+
+```typescript
+// ❌ Current: String matching (brittle)
+if (authData.error === 'timeout') {
+    setAuthTimeout(true);
+}
+
+if (adobeAuth.error === 'no_app_builder_access') {
+    // Show specific UI
+}
+```
+
+### Target State
+
+Frontend should use **ErrorCode enum** for programmatic handling:
+
+```typescript
+// ✅ Target: Type-safe code checking
+import { ErrorCode } from '@/types/errorCodes';
+
+if (response.code === ErrorCode.TIMEOUT) {
+    setAuthTimeout(true);
+}
+
+if (response.code === ErrorCode.AUTH_NO_APP_BUILDER) {
+    // Show specific UI
+}
+```
+
+### Migration Steps
+
+1. **Update type definitions** - Add `code?: ErrorCode` to all response interfaces
+2. **Update hooks** - Extract and store `code` field from responses
+3. **Update components** - Accept `code` prop alongside `error` string
+4. **Replace string checks** - Convert `error === 'timeout'` to `code === ErrorCode.TIMEOUT`
+5. **Add code-based rendering** - Different UI for different error codes
+
+### Files Requiring Updates
+
+**Hooks (extract code from responses):**
+- `src/features/authentication/ui/hooks/useAuthStatus.ts`
+- `src/features/mesh/ui/hooks/useMeshOperations.ts`
+
+**Components (accept code prop):**
+- `src/features/authentication/ui/steps/AdobeAuthStep.tsx`
+- `src/features/authentication/ui/steps/components/AuthErrorState.tsx`
+- `src/features/authentication/ui/components/SelectionStepContent.tsx`
+- `src/features/mesh/ui/steps/components/MeshErrorDialog.tsx`
+
+**String checks to replace:**
+- `authData.error === 'timeout'` → `response.code === ErrorCode.TIMEOUT`
+- `adobeAuth.error === 'no_app_builder_access'` → `response.code === ErrorCode.AUTH_NO_APP_BUILDER`
+
+### Benefits of Frontend Migration
+
+1. **Type safety** - TypeScript validates error codes
+2. **Refactoring safety** - Renaming codes caught at compile time
+3. **Consistency** - Same error codes used in backend and frontend
+4. **Smart UX** - Different error handling per error type (retry for network, redirect for auth)
+
+---
+
 ## Quick Reference
 
 | Feature | Format | Error Type | Message Pattern | Has `code`? |
 |---------|--------|------------|-----------------|-------------|
 | Components | A | `string` | `{ error, message, code }` | ✅ Yes |
 | Project/Workspace | B | `string` | `{ error, code }` | ✅ Yes |
-| Mesh | B | `string` | `{ error }` | ❌ Not yet |
-| Authentication | C | `boolean \| string` | `{ error, message, subMessage }` | ❌ Not yet |
+| Mesh | B | `string` | `{ error, code }` | ✅ Yes |
+| Authentication | C | `boolean \| string` | `{ error, message, subMessage, code }` | ✅ Yes |
+| Dashboard | B | `string` | `{ error, code }` | ✅ Yes |
+| Lifecycle | B | `string` | `{ error, code }` | ✅ Yes |
+| Prerequisites | B | `string` | `{ error, code }` | ✅ Yes |
 
 ### Handlers with `code` Field (Migrated)
 
-- `handleGetProjects` - `code: 'TIMEOUT' | 'UNKNOWN'`
-- `handleGetWorkspaces` - `code: 'TIMEOUT' | 'UNKNOWN'`
+**Authentication handlers:**
+- `handleCheckAuth` - `code: ErrorCode.NETWORK`
+- `handleAuthenticate` - `code: ErrorCode.AUTH_REQUIRED | ErrorCode.TIMEOUT | ErrorCode.UNKNOWN`
+- `handleGetProjects` - `code: ErrorCode.TIMEOUT | ErrorCode.UNKNOWN`
+- `handleGetWorkspaces` - `code: ErrorCode.TIMEOUT | ErrorCode.UNKNOWN`
+
+**Mesh handlers:**
+- `handleCheckApiMesh` - `code: ErrorCode.MESH_CONFIG_INVALID | ErrorCode.AUTH_REQUIRED | ErrorCode.UNKNOWN`
+- `handleCreateApiMesh` - `code: ErrorCode.MESH_CONFIG_INVALID | ErrorCode.AUTH_REQUIRED | ErrorCode.UNKNOWN`
+- `handleDeleteApiMesh` - `code: ErrorCode.UNKNOWN`
+
+**Dashboard handlers:**
+- `handleRequestStatus` - `code: ErrorCode.PROJECT_NOT_FOUND`
+- `handleReAuthenticate` - `code: ErrorCode.PROJECT_NOT_FOUND | ErrorCode.AUTH_REQUIRED`
+- `handleOpenAdobeConsole` - `code: ErrorCode.CONFIG_INVALID`
+
+**Lifecycle handlers:**
+- `handleDeleteProject` - `code: ErrorCode.PROJECT_NOT_FOUND | ErrorCode.CONFIG_INVALID | ErrorCode.UNKNOWN`
+- `handleViewStatus` - `code: ErrorCode.PROJECT_NOT_FOUND`
+
+**Prerequisites handlers:**
+- `handleCheckPrerequisites` - `code: ErrorCode.PREREQ_CHECK_FAILED | ErrorCode.UNKNOWN`
+- `handleContinue` - `code: ErrorCode.UNKNOWN`
+- `handleInstall` - `code: ErrorCode.UNKNOWN`
+
+**Component handlers:**
 - `handleLoadComponents` - `code: ErrorCode`
 - `handleGetComponentsData` - `code: ErrorCode`
 - `handleCheckCompatibility` - `code: ErrorCode`
-- `createHandler` (project creation) - `code: 'TIMEOUT' | 'UNKNOWN'`
+- `handleLoadDependencies` - `code: ErrorCode`
+- `handleLoadPreset` - `code: ErrorCode`
+- `handleValidateSelection` - `code: ErrorCode`
+
+**Project creation:**
+- `createHandler` - `code: ErrorCode.TIMEOUT | ErrorCode.UNKNOWN`
+
+**Services:**
+- `MeshDeployer.deploy()` - `code: ErrorCode.MESH_DEPLOY_FAILED | ErrorCode`
+- `MeshDeployer.update()` - `code: ErrorCode.MESH_DEPLOY_FAILED | ErrorCode`
+
+**Commands:**
+- `ConfigureProjectWebviewCommand` (save) - `code: ErrorCode.CONFIG_INVALID`
 
 ---
 

@@ -14,6 +14,7 @@
 
 import { MeshDeployer } from '@/features/mesh/services/meshDeployer';
 import { ServiceLocator } from '@/core/di/serviceLocator';
+import { ErrorCode } from '@/types/errorCodes';
 import * as fs from 'fs/promises';
 import {
     createMockProject,
@@ -60,9 +61,9 @@ describe('MeshDeployer - Error Handling', () => {
             // When: Deploying mesh
             const result = await meshDeployer.deploy(mockProject);
 
-            // Then: Should fail with timeout error
+            // Then: Should fail with timeout error code
             expect(result.success).toBe(false);
-            expect(result.error).toContain('timed out');
+            expect(result.code).toBe(ErrorCode.TIMEOUT);
         });
 
         it('should handle network errors', async () => {

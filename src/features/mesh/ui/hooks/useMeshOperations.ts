@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WizardState } from '@/types/webview';
+import { ErrorCode } from '@/types/errorCodes';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 interface CheckApiMeshResponse {
     success: boolean;
@@ -10,6 +12,7 @@ interface CheckApiMeshResponse {
     meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error';
     endpoint?: string;
     error?: string;
+    code?: ErrorCode;
     setupInstructions?: { step: string; details: string; important?: boolean }[];
 }
 
@@ -21,6 +24,7 @@ interface CreateApiMeshResponse {
     meshStatus?: 'deployed' | 'error';
     message?: string;
     error?: string;
+    code?: ErrorCode;
 }
 
 interface MeshData {
@@ -41,6 +45,7 @@ interface UseMeshOperationsReturn {
     helperText: string | undefined;
     isChecking: boolean;
     error: string | undefined;
+    errorCode: ErrorCode | undefined;
     meshData: MeshData | null;
     runCheck: () => Promise<void>;
     createMesh: () => Promise<void>;
@@ -121,6 +126,7 @@ export function useMeshOperations({
     const [helperText, setHelperText] = useState<string | undefined>(undefined);
     const [isChecking, setIsChecking] = useState<boolean>(false);
     const [error, setError] = useState<string | undefined>(undefined);
+    const [errorCode, setErrorCode] = useState<ErrorCode | undefined>(undefined);
     const [meshData, setMeshData] = useState<MeshData | null>(null);
 
     // Track timeouts for cleanup on unmount
@@ -152,6 +158,7 @@ export function useMeshOperations({
     const runCheck = useCallback(async () => {
         setIsChecking(true);
         setError(undefined);
+        setErrorCode(undefined);
         setCanProceed(false);
         setMessage('Checking API Mesh API...');
         setSubMessage('Downloading workspace configuration');
@@ -169,12 +176,12 @@ export function useMeshOperations({
         // Progress indicators - tracked for cleanup
         const timeout1 = setTimeout(() => {
             if (isChecking) setSubMessage('Verifying API availability');
-        }, 1000);
+        }, TIMEOUTS.PROGRESS_MESSAGE_DELAY);
         timeoutsRef.current.push(timeout1);
 
         const timeout2 = setTimeout(() => {
             if (isChecking) setSubMessage('Checking for existing mesh');
-        }, 2000);
+        }, TIMEOUTS.PROGRESS_MESSAGE_DELAY_LONG);
         timeoutsRef.current.push(timeout2);
 
         try {
@@ -222,12 +229,14 @@ export function useMeshOperations({
             } else {
                 const err = result?.error || 'API Mesh API is not enabled for this workspace.';
                 setError(err);
+                setErrorCode(result?.code);
                 updateState({
                     apiMesh: {
                         isChecking: false,
                         apiEnabled: false,
                         meshExists: false,
                         error: err,
+                        code: result?.code,
                         setupInstructions: result?.setupInstructions,
                     },
                 });
@@ -343,6 +352,7 @@ export function useMeshOperations({
         helperText,
         isChecking,
         error,
+        errorCode,
         meshData,
         runCheck,
         createMesh,

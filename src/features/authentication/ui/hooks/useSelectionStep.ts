@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDebouncedLoading } from '@/core/ui/hooks/useDebouncedLoading';
 import { WizardState } from '@/types/webview';
+import { ErrorCode } from '@/types/errorCodes';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /**
@@ -75,6 +76,9 @@ export interface UseSelectionStepResult<T extends { id: string }> {
 
   /** Error message, if any */
   error: string | null;
+
+  /** Typed error code for programmatic error handling */
+  errorCode: ErrorCode | null;
 
   /** Current search query */
   searchQuery: string;
@@ -164,6 +168,7 @@ export function useSelectionStep<T extends { id: string }>(
   const [hasLoadedOnce, setHasLoadedOnce] = useState(!!state[cacheKey]); // Track if we've ever loaded data
   const [loadRequested, setLoadRequested] = useState(!!state[cacheKey]); // Prevent StrictMode double-load
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<ErrorCode | null>(null);
   const [searchQuery, setSearchQuery] = useState(
     searchFilterKey && typeof state[searchFilterKey] === 'string'
       ? (state[searchFilterKey] as string)
@@ -178,6 +183,7 @@ export function useSelectionStep<T extends { id: string }>(
   const load = useCallback(() => {
     setIsLoading(true);
     setError(null);
+    setErrorCode(null);
 
     // Run validation if provided
     if (validateBeforeLoad) {
@@ -224,6 +230,7 @@ export function useSelectionStep<T extends { id: string }>(
         setIsRefreshing(false);
         setHasLoadedOnce(true);
         setError(null);
+        setErrorCode(null);
 
         // Auto-select if only one item
         if (autoSelectSingle && data.length === 1 && !selectedItem?.id) {
@@ -242,15 +249,18 @@ export function useSelectionStep<T extends { id: string }>(
         }
       } else if (data && typeof data === 'object' && 'error' in data) {
         // Backend sends structured error (including timeout)
-        setError((data as { error: string }).error);
+        const errorData = data as { error: string; code?: ErrorCode };
+        setError(errorData.error);
+        setErrorCode(errorData.code ?? null);
         setIsLoading(false);
         setIsRefreshing(false);
       }
     });
 
     const unsubscribeError = webviewClient.onMessage(errorMessageType, (data) => {
-      const errorData = data as { error?: string };
+      const errorData = data as { error?: string; code?: ErrorCode };
       setError(errorData.error || 'Failed to load items');
+      setErrorCode(errorData.code ?? null);
       setIsLoading(false);
       setIsRefreshing(false);
     });
@@ -303,6 +313,7 @@ export function useSelectionStep<T extends { id: string }>(
     isRefreshing,
     hasLoadedOnce,
     error,
+    errorCode,
     searchQuery,
     setSearchQuery,
     load,

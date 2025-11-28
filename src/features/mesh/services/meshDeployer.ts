@@ -4,6 +4,8 @@ import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
 import { validateMeshId } from '@/core/validation';
 import { Project } from '@/types';
+import { ErrorCode } from '@/types/errorCodes';
+import { toAppError } from '@/types/errors';
 import { DataResult, SimpleResult } from '@/types/results';
 
 export class MeshDeployer {
@@ -39,10 +41,11 @@ export class MeshDeployer {
                 return { success: true, data: { endpoint } };
             }
 
-            return { success: false, error: 'No endpoint found in deployment output' };
+            return { success: false, error: 'No endpoint found in deployment output', code: ErrorCode.MESH_DEPLOY_FAILED };
         } catch (error) {
+            const appError = toAppError(error);
             this.logger.error('Mesh deployment failed', error as Error);
-            return { success: false, error: (error as Error).message };
+            return { success: false, error: appError.userMessage, code: appError.code };
         }
     }
 
@@ -118,10 +121,11 @@ export class MeshDeployer {
                 return { success: true, data: { endpoint } };
             }
 
-            return { success: false, error: 'No endpoint found in update output' };
+            return { success: false, error: 'No endpoint found in update output', code: ErrorCode.MESH_DEPLOY_FAILED };
         } catch (error) {
+            const appError = toAppError(error);
             this.logger.error('Mesh update failed', error as Error);
-            return { success: false, error: (error as Error).message };
+            return { success: false, error: appError.userMessage, code: appError.code };
         }
     }
 

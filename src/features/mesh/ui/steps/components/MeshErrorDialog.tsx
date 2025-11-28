@@ -4,6 +4,7 @@ import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
+import { ErrorCode } from '@/types/errorCodes';
 
 interface SetupInstruction {
     step: string;
@@ -13,13 +14,15 @@ interface SetupInstruction {
 
 interface MeshErrorDialogProps {
     error: string;
+    /** Typed error code for programmatic error handling */
+    code?: ErrorCode;
     setupInstructions?: SetupInstruction[];
     onRetry: () => void;
     onBack: () => void;
     onOpenConsole: () => void;
 }
 
-export function MeshErrorDialog({ error, setupInstructions = [], onRetry, onBack, onOpenConsole }: MeshErrorDialogProps) {
+export function MeshErrorDialog({ error, code, setupInstructions = [], onRetry, onBack, onOpenConsole }: MeshErrorDialogProps) {
     return (
         <StatusDisplay
             variant="error"

@@ -8,6 +8,7 @@ import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundle
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { Project } from '@/types';
+import { ErrorCode } from '@/types/errorCodes';
 import { parseJSON } from '@/types/typeGuards';
 
 // Component configuration type (key-value pairs for environment variables)
@@ -268,7 +269,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             } catch (error) {
                 this.logger.error('[Configure] Failed to save configuration:', error as Error);
                 await vscode.window.showErrorMessage(`Failed to save configuration: ${(error as Error).message}`);
-                return { success: false, error: (error as Error).message };
+                return { success: false, error: (error as Error).message, code: ErrorCode.CONFIG_INVALID };
             }
         });
 

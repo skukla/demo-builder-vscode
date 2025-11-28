@@ -61,7 +61,7 @@ export async function handleGetWorkspaces(
             error: errorMessage,
             code: appError.code,
         });
-        return { success: false, error: errorMessage };
+        return { success: false, error: errorMessage, code: appError.code };
     }
 }
 

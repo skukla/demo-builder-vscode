@@ -1,5 +1,7 @@
 // Shared types for the webview application
 
+import { ErrorCode } from './errorCodes';
+
 export type ThemeMode = 'light' | 'dark';
 
 // Re-export types needed from extension (avoiding circular dependency)
@@ -47,6 +49,7 @@ export interface WizardState {
         subMessage?: string;
         hasMesh?: boolean;
         error?: string;
+        code?: ErrorCode;  // Typed error code for programmatic handling
     };
     apiMesh?: {
         isChecking: boolean;
@@ -58,6 +61,7 @@ export interface WizardState {
         meshStatus?: 'deployed' | 'not-deployed' | 'pending' | 'error';
         endpoint?: string;
         error?: string;
+        code?: ErrorCode;  // Typed error code for programmatic handling
         setupInstructions?: Array<{ step: string; details: string; important?: boolean }>;
     };
 }
@@ -67,6 +71,7 @@ export interface AdobeAuthState {
     isChecking: boolean;
     email?: string;
     error?: string;
+    code?: ErrorCode;  // Typed error code for programmatic handling
     requiresOrgSelection?: boolean;
     orgLacksAccess?: boolean;  // Selected organization doesn't have App Builder access
     tokenExpiresIn?: number;  // Minutes until token expires

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { WizardState } from '@/types/webview';
+import { ErrorCode } from '@/types/errorCodes';
 
 const log = webviewLogger('useAuthStatus');
 
@@ -9,6 +10,7 @@ interface AuthStatusData {
     message?: string;
     subMessage?: string;
     error?: string;
+    code?: ErrorCode;  // Typed error code for programmatic handling
     isAuthenticated: boolean;
     isChecking?: boolean;
     email?: string;
@@ -107,13 +109,15 @@ export function useAuthStatus({
                 authTimeoutRef.current = null;
             }
 
-            if (authData.error === 'timeout') {
+            // Check for timeout using typed error code
+            if (authData.code === ErrorCode.TIMEOUT) {
                 setAuthTimeout(true);
                 updateState({
                     adobeAuth: {
                         ...state.adobeAuth,
                         isChecking: false,
-                        error: 'timeout',
+                        error: authData.error || 'timeout',
+                        code: authData.code,
                     },
                 });
                 setAuthStatus(authData.message || '');
@@ -135,6 +139,7 @@ export function useAuthStatus({
                     isChecking: authData.isChecking !== undefined ? authData.isChecking : false,
                     email: authData.email,
                     error: authData.error,
+                    code: authData.code,  // Pass through typed error code
                     requiresOrgSelection: authData.requiresOrgSelection,
                     orgLacksAccess: authData.orgLacksAccess,
                     tokenExpiresIn: authData.tokenExpiresIn,

@@ -86,7 +86,7 @@ export async function handleGetProjects(
             error: errorMessage,
             code: appError.code,
         });
-        return { success: false, error: errorMessage };
+        return { success: false, error: errorMessage, code: appError.code };
     }
 }
 
