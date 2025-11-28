@@ -4,6 +4,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { Project, StateData, ProcessInfo } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
+import { Logger } from '@/core/logging';
 
 interface RecentProject {
     path: string;
@@ -20,6 +21,7 @@ export class StateManager {
     private recentProjects: RecentProject[] = [];
     private _onProjectChanged = new vscode.EventEmitter<Project | undefined>();
     readonly onProjectChanged = this._onProjectChanged.event;
+    private logger = new Logger('StateManager');
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
@@ -39,7 +41,7 @@ export class StateManager {
         try {
             await fs.mkdir(dir, { recursive: true });
         } catch (error) {
-            console.error('Failed to create state directory:', error);
+            this.logger.error('Failed to create state directory', error instanceof Error ? error : undefined);
         }
 
         // Load existing state
@@ -51,7 +53,7 @@ export class StateManager {
             const data = await fs.readFile(this.stateFile, 'utf-8');
             const parsed = parseJSON<{ version?: number; currentProject?: Project; processes?: Record<string, ProcessInfo>; lastUpdated?: string }>(data);
             if (!parsed) {
-                console.warn('Failed to parse state file, using defaults');
+                this.logger.warn('Failed to parse state file, using defaults');
                 return;
             }
 
@@ -62,7 +64,7 @@ export class StateManager {
                     await fs.access(validProject.path);
                 } catch {
                     // Project path doesn't exist, clear it
-                    console.warn(`Project path ${validProject.path} does not exist, clearing project`);
+                    this.logger.warn(`Project path ${validProject.path} does not exist, clearing project`);
                     validProject = undefined;
                 }
             }
@@ -75,7 +77,7 @@ export class StateManager {
             };
         } catch {
             // State file doesn't exist or is invalid, use defaults
-            console.log('No existing state found, using defaults');
+            this.logger.info('No existing state found, using defaults');
         }
     }
 
@@ -92,7 +94,7 @@ export class StateManager {
 
             await fs.writeFile(this.stateFile, JSON.stringify(data, null, 2));
         } catch (error) {
-            console.error('Failed to save state:', error);
+            this.logger.error('Failed to save state', error instanceof Error ? error : undefined);
             throw error;  // Re-throw so caller knows save failed
         }
     }
@@ -110,7 +112,7 @@ export class StateManager {
 
                 // Check if reload failed (returns null on error)
                 if (freshProject === null) {
-                    console.warn('Failed to reload project from disk, using cached version');
+                    this.logger.warn('Failed to reload project from disk, using cached version');
                     return this.state.currentProject;
                 }
 
@@ -119,7 +121,7 @@ export class StateManager {
                 return freshProject;
             } catch (error) {
                 // Fallback for unexpected errors (loadProjectFromPath normally returns null, not throws)
-                console.warn('Failed to reload project from disk, using cached version:', error);
+                this.logger.warn('Failed to reload project from disk, using cached version');
                 return this.state.currentProject;
             }
         }
@@ -142,7 +144,7 @@ export class StateManager {
         try {
             await fs.mkdir(project.path, { recursive: true });
         } catch (error) {
-            console.error('Failed to create project directory:', error);
+            this.logger.error('Failed to create project directory', error instanceof Error ? error : undefined);
             throw error;  // Re-throw so caller knows directory creation failed
         }
 
@@ -170,7 +172,7 @@ export class StateManager {
 
             await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
         } catch (error) {
-            console.error('Failed to update project manifest:', error);
+            this.logger.error('Failed to update project manifest', error instanceof Error ? error : undefined);
             throw error;  // Re-throw so caller knows manifest creation failed
         }
 
@@ -201,7 +203,7 @@ export class StateManager {
         try {
             await fs.writeFile(envPath, envContent);
         } catch (error) {
-            console.error('Failed to create .env file:', error);
+            this.logger.error('Failed to create .env file', error instanceof Error ? error : undefined);
             throw error;  // Re-throw so caller knows .env creation failed
         }
     }
@@ -261,7 +263,7 @@ export class StateManager {
             const data = await fs.readFile(this.recentProjectsFile, 'utf-8');
             const parsed = parseJSON<RecentProject[]>(data);
             if (!parsed) {
-                console.warn('Failed to parse recent projects file, using empty list');
+                this.logger.warn('Failed to parse recent projects file, using empty list');
                 this.recentProjects = [];
                 return;
             }
@@ -295,7 +297,7 @@ export class StateManager {
                 'utf-8',
             );
         } catch (error) {
-            console.error('Failed to save recent projects:', error);
+            this.logger.error('Failed to save recent projects', error instanceof Error ? error : undefined);
         }
     }
 
@@ -392,7 +394,7 @@ export class StateManager {
                 }
             } catch {
                 // No components directory or error reading it
-                console.log('No components directory found or error reading it');
+                this.logger.debug('No components directory found or error reading it');
             }
             
             const project: Project = {
@@ -423,14 +425,14 @@ export class StateManager {
                         // This project's demo is running, update status
                         project.status = 'running';
                         frontendComponent.status = 'running';
-                        console.log(`[StateManager] Detected running demo for ${project.name} (terminal: ${projectTerminalName})`);
+                        this.logger.info(`Detected running demo for ${project.name} (terminal: ${projectTerminalName})`);
                     } else {
                         // No terminal for this project, ensure status is stopped
                         project.status = 'stopped';
                         frontendComponent.status = 'ready';
                     }
                 } catch (error) {
-                    console.error('[StateManager] Error detecting demo status:', error);
+                    this.logger.error('Error detecting demo status', error instanceof Error ? error : undefined);
                 }
             }
             
@@ -442,7 +444,7 @@ export class StateManager {
             
             return project;
         } catch (error) {
-            console.error(`Failed to load project from ${projectPath}:`, error);
+            this.logger.error(`Failed to load project from ${projectPath}`, error instanceof Error ? error : undefined);
             return null;
         }
     }
@@ -474,7 +476,7 @@ export class StateManager {
                         });
                     } catch {
                         // Not a valid project (missing .demo-builder.json), skip silently
-                        console.debug(`Skipping directory without manifest: ${entry.name}`);
+                        this.logger.debug(`Skipping directory without manifest: ${entry.name}`);
                     }
                 }
             }
@@ -485,9 +487,9 @@ export class StateManager {
             // Distinguish between "doesn't exist yet" and "permission denied"
             const nodeError = error as NodeJS.ErrnoException;
             if (nodeError.code === 'ENOENT') {
-                console.debug('Projects directory does not exist yet');
+                this.logger.debug('Projects directory does not exist yet');
             } else {
-                console.error('Failed to read projects directory:', error);
+                this.logger.error('Failed to read projects directory', error instanceof Error ? error : undefined);
             }
         }
 
