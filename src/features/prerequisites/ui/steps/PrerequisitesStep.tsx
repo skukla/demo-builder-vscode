@@ -3,7 +3,6 @@ import {
     Flex,
     Text,
     Button,
-    ProgressCircle,
     ProgressBar,
 } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
@@ -11,6 +10,7 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
 import React, { useEffect, useState, useRef } from 'react';
+import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
 import { NavigableStepProps } from '@/types/wizard';
@@ -352,7 +352,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
             case 'warning':
                 return <AlertCircle size="S" UNSAFE_className="text-yellow-600" />;
             case 'checking':
-                return <ProgressCircle size="S" isIndeterminate />;
+                return <Spinner size="S" />;
             case 'pending':
                 return <Pending size="S" />;
             default:

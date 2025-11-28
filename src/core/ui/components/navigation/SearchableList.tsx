@@ -4,11 +4,11 @@ import {
     Text,
     SearchField,
     ActionButton,
-    ProgressCircle,
     ListView,
     Item
 } from '@adobe/react-spectrum';
 import Refresh from '@spectrum-icons/workflow/Refresh';
+import { Spinner } from '../ui/Spinner';
 
 export interface SearchableListItem {
     id: string;
@@ -136,7 +136,7 @@ export function SearchableList<T extends SearchableListItem>({
                             UNSAFE_style={{ cursor: 'pointer' }}
                         >
                             {isLoading ? (
-                                <ProgressCircle size="S" isIndeterminate />
+                                <Spinner size="S" />
                             ) : (
                                 <Refresh />
                             )}
@@ -172,7 +172,7 @@ export function SearchableList<T extends SearchableListItem>({
                             UNSAFE_style={{ cursor: 'pointer' }}
                         >
                             {isLoading ? (
-                                <ProgressCircle size="S" isIndeterminate />
+                                <Spinner size="S" />
                             ) : (
                                 <Refresh />
                             )}
