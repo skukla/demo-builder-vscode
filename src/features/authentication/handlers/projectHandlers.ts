@@ -13,6 +13,7 @@ import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectId } from '@/core/validation';
 import type { AdobeProject } from '@/features/authentication/services/types';
+import { toAppError, isTimeout } from '@/types/errors';
 import { HandlerContext } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
 import { parseJSON, toError } from '@/types/typeGuards';
@@ -75,13 +76,15 @@ export async function handleGetProjects(
         await context.sendMessage('get-projects', projects);
         return { success: true, data: projects };
     } catch (error) {
-        const errorMessage = error instanceof Error && error.message.includes('timed out')
-            ? error.message
+        const appError = toAppError(error);
+        const errorMessage = isTimeout(appError)
+            ? appError.userMessage
             : 'Failed to load projects. Please try again.';
 
-        context.logger.error('Failed to get projects:', error as Error);
+        context.logger.error('Failed to get projects:', appError);
         await context.sendMessage('get-projects', {
             error: errorMessage,
+            code: appError.code,
         });
         return { success: false, error: errorMessage };
     }

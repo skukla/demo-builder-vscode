@@ -16,6 +16,8 @@ import { ServiceLocator } from '@/core/di';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
+import { toAppError, isTimeout } from '@/types/errors';
+import { ErrorCode } from '@/types/errorCodes';
 import { toError } from '@/types/typeGuards';
 
 /**
@@ -187,10 +189,12 @@ export async function handleCreateProject(
             // Don't throw - we still want to report the original error
         }
 
-        // Determine error type
-        const errorMessage = toError(error).message;
-        const isCancelled = errorMessage.includes('cancelled by user');
-        const isTimeout = errorMessage.includes('timed out');
+        // Determine error type using typed errors
+        const appError = toAppError(error);
+        const errorMessage = appError.userMessage;
+        const isCancelled = appError.code === ErrorCode.CANCELLED ||
+            (appError.cause?.message?.includes('cancelled by user') ?? false);
+        const isTimeoutError = isTimeout(appError);
 
         await context.sendMessage('creationProgress', {
             currentOperation: isCancelled ? 'Cancelled' : 'Failed',
@@ -209,7 +213,7 @@ export async function handleCreateProject(
         } else {
             await context.sendMessage('creationFailed', {
                 error: errorMessage,
-                isTimeout,
+                isTimeout: isTimeoutError,
                 elapsed: `${elapsedMin}m ${elapsedSec}s`,
             });
         }

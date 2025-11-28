@@ -17,6 +17,7 @@
 
 import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
 import { ComponentSelection } from '@/types/components';
+import { toAppError } from '@/types/errors';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { getEntryCount } from '@/types/typeGuards';
 
@@ -123,10 +124,12 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
             data: componentsData,
         };
     } catch (error) {
-        context.logger.error('Failed to load components:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to load components:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to load components',
         };
     }
@@ -206,10 +209,12 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             data: componentsData,
         };
     } catch (error) {
-        context.logger.error('Failed to load component configurations:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to load component configurations:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to load component configurations',
         };
     }
@@ -236,10 +241,12 @@ export const handleCheckCompatibility: MessageHandler = async (
             data: { compatible },
         };
     } catch (error) {
-        context.logger.error('Failed to check compatibility:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to check compatibility:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to check compatibility',
         };
     }
@@ -283,10 +290,12 @@ export const handleLoadDependencies: MessageHandler = async (
             data: { dependencies },
         };
     } catch (error) {
-        context.logger.error('Failed to load dependencies:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to load dependencies:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to load dependencies',
         };
     }
@@ -322,10 +331,12 @@ export const handleLoadPreset: MessageHandler = async (
             },
         };
     } catch (error) {
-        context.logger.error('Failed to load preset:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to load preset:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to load preset',
         };
     }
@@ -362,10 +373,12 @@ export const handleValidateSelection: MessageHandler = async (
             data: validation,
         };
     } catch (error) {
-        context.logger.error('Failed to validate selection:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to validate selection:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to validate selection',
         };
     }
