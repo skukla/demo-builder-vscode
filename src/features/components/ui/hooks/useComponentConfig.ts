@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+import { toServiceGroupWithSortedFields, ServiceGroupDef } from '@/features/components/services/serviceGroupTransforms';
 
 const log = webviewLogger('useComponentConfig');
 
@@ -57,7 +58,7 @@ interface UseComponentConfigReturn {
 }
 
 // Service group definitions with order
-const SERVICE_GROUP_DEFS = [
+const SERVICE_GROUP_DEFS: ServiceGroupDef[] = [
     { id: 'adobe-commerce', label: 'Adobe Commerce', order: 1, fieldOrder: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT', 'ADOBE_COMMERCE_WEBSITE_CODE', 'ADOBE_COMMERCE_STORE_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', 'ADOBE_COMMERCE_CUSTOMER_GROUP', 'ADOBE_COMMERCE_ADMIN_USERNAME', 'ADOBE_COMMERCE_ADMIN_PASSWORD'] },
     { id: 'catalog-service', label: 'Catalog Service', order: 2, fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_API_KEY'] },
     { id: 'mesh', label: 'API Mesh', order: 3 },
@@ -206,17 +207,7 @@ export function useComponentConfig({
         });
 
         return SERVICE_GROUP_DEFS
-            .map(def => {
-                const fields = groups[def.id] || [];
-                const sortedFields = def.fieldOrder
-                    ? fields.sort((a, b) => {
-                        const aIndex = def.fieldOrder!.indexOf(a.key);
-                        const bIndex = def.fieldOrder!.indexOf(b.key);
-                        return (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
-                    })
-                    : fields;
-                return { id: def.id, label: def.label, fields: sortedFields };
-            })
+            .map(def => toServiceGroupWithSortedFields(def, groups) as ServiceGroup)
             .filter(group => group.fields.length > 0)
             .sort((a, b) => {
                 const aOrder = SERVICE_GROUP_DEFS.find(d => d.id === a.id)?.order || 99;

@@ -2,6 +2,17 @@ import type { CommandResult, CommandConfig } from './types';
 import { getLogger } from '@/core/logging';
 
 /**
+ * Extract error code from NodeJS.ErrnoException (SOP §3 compliance)
+ *
+ * Handles cases where err.code may be string (ENOENT) or number.
+ */
+export function getNumericErrorCode(err: NodeJS.ErrnoException): number {
+    if (err.code === undefined || err.code === null) return 1;
+    if (typeof err.code === 'number') return err.code;
+    return 1;
+}
+
+/**
  * Manages sequential and parallel command execution
  * Provides orchestration for complex multi-command operations
  */
@@ -81,7 +92,7 @@ export class CommandSequencer {
                 return {
                     stdout: '',
                     stderr: (error instanceof Error ? error.message : String(error)) || `Command failed: ${config.command}`,
-                    code: err.code ? (typeof err.code === 'number' ? err.code : 1) : 1,
+                    code: getNumericErrorCode(err),
                     duration,
                 } as CommandResult;
             }

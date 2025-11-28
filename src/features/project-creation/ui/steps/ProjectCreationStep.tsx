@@ -4,8 +4,10 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState } from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WizardState } from '@/types/webview';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import { isProgressActive } from './projectCreationPredicates';
 
 interface ProjectCreationStepProps {
     state: WizardState;
@@ -24,17 +26,17 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
 
     const handleOpenProject = () => {
         setIsOpeningProject(true);
-        
-        // Wait 1.5 seconds to show transition message, then trigger reload
+
+        // Show transition message, then trigger reload
         setTimeout(() => {
             vscode.postMessage('openProject');
-        }, 1500);
+        }, TIMEOUTS.PROJECT_OPEN_TRANSITION);
     };
 
     const isCancelled = progress?.currentOperation === 'Cancelled';
     const isFailed = progress?.currentOperation === 'Failed';
     const isCompleted = progress?.currentOperation === 'Project Created';
-    const isActive = progress && !progress.error && !isCancelled && !isFailed && !isCompleted;
+    const isActive = isProgressActive(progress, isCancelled, isFailed, isCompleted);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>

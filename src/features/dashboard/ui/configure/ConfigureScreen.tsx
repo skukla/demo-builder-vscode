@@ -17,6 +17,7 @@ import { cn } from '@/core/ui/utils/classNames';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
 import { NavigationPanel, NavigationSection, NavigationField } from '@/core/ui/components/navigation';
+import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
 
 export interface ComponentsData {
     frontends?: ComponentData[];
@@ -287,25 +288,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         ];
 
         const orderedGroups: ServiceGroup[] = serviceGroupDefs
-            .map(def => {
-                const fields = groups[def.id] || [];
-
-                const sortedFields = def.fieldOrder
-                    ? fields.sort((a, b) => {
-                        const aIndex = def.fieldOrder!.indexOf(a.key);
-                        const bIndex = def.fieldOrder!.indexOf(b.key);
-                        const aPos = aIndex === -1 ? 999 : aIndex;
-                        const bPos = bIndex === -1 ? 999 : bIndex;
-                        return aPos - bPos;
-                    })
-                    : fields;
-
-                return {
-                    id: def.id,
-                    label: def.label,
-                    fields: sortedFields
-                };
-            })
+            .map(def => toServiceGroupWithSortedFields(def, groups) as ServiceGroup)
             .filter(group => group.fields.length > 0)
             .sort((a, b) => {
                 const aOrder = serviceGroupDefs.find(d => d.id === a.id)?.order || 99;

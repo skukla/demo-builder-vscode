@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { DisposableStore } from '@/core/utils/disposableStore';
 
@@ -129,12 +130,12 @@ export abstract class BaseCommand implements vscode.Disposable {
      * Shows a notification popup that auto-dismisses after 2 seconds
      * and a status bar message that persists for 5 seconds
      * @param message Success message to display
-     * @param timeout Milliseconds to show in status bar (default 5000)
+     * @param timeout Milliseconds to show in status bar (default STATUS_BAR_SUCCESS)
      */
-    protected async showSuccessMessage(message: string, timeout = 5000): Promise<void> {
+    protected async showSuccessMessage(message: string, timeout = TIMEOUTS.STATUS_BAR_SUCCESS): Promise<void> {
         this.logger.info(message);
-        // Show auto-dismissing notification popup (2 seconds)
-        await this.showProgressNotification(message, 2000);
+        // Show auto-dismissing notification popup
+        await this.showProgressNotification(message, TIMEOUTS.NOTIFICATION_AUTO_DISMISS);
         // Also show in status bar as secondary indicator
         vscode.window.setStatusBarMessage(`✅ ${message}`, timeout);
     }
@@ -143,9 +144,9 @@ export abstract class BaseCommand implements vscode.Disposable {
      * Show an auto-dismissing progress notification
      * Use for informational messages that should disappear automatically
      * @param message Message to display
-     * @param duration Duration in milliseconds (default 2000)
+     * @param duration Duration in milliseconds (default NOTIFICATION_AUTO_DISMISS)
      */
-    protected async showProgressNotification(message: string, duration = 2000): Promise<void> {
+    protected async showProgressNotification(message: string, duration = TIMEOUTS.NOTIFICATION_AUTO_DISMISS): Promise<void> {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
@@ -161,10 +162,10 @@ export abstract class BaseCommand implements vscode.Disposable {
     /**
      * Show a temporary info message in status bar (auto-dismissing)
      * Use for non-critical informational messages
-     * @param message Info message to display  
-     * @param timeout Milliseconds to show (default 3000)
+     * @param message Info message to display
+     * @param timeout Milliseconds to show (default STATUS_BAR_INFO)
      */
-    protected showStatusMessage(message: string, timeout = 3000): void {
+    protected showStatusMessage(message: string, timeout = TIMEOUTS.STATUS_BAR_INFO): void {
         this.logger.info(message);
         vscode.window.setStatusBarMessage(`ℹ️  ${message}`, timeout);
     }

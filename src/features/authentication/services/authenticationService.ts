@@ -10,6 +10,7 @@ import { OrganizationValidator } from '@/features/authentication/services/organi
 import { PerformanceTracker } from '@/features/authentication/services/performanceTracker';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation } from '@/features/authentication/services/types';
+import { isValidTokenResponse } from './authPredicates';
 
 /**
  * Main authentication service - orchestrates all authentication operations
@@ -279,7 +280,7 @@ export class AuthenticationService {
                 const token = result.stdout?.trim();
 
                 // Check if we got a valid token (JWT tokens are typically >100 chars)
-                if (token && token.length > 50 && !token.includes('Error') && !token.includes('error')) {
+                if (isValidTokenResponse(token)) {
                     this.debugLogger.debug('[Auth] Received access token from login command');
 
                     // TRUST ADOBE CLI: If 'aio auth login' returns exit code 0 with valid token,

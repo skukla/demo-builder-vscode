@@ -280,7 +280,7 @@ export async function activate(context: vscode.ExtensionContext) {
                         logger.debug('[Updates] Background check failed:', err);
                     },
                 );
-            }, 10000); // 10 second delay
+            }, TIMEOUTS.STARTUP_UPDATE_CHECK_DELAY);
         }
 
         logger.info('[Extension] Ready');

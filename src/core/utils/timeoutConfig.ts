@@ -67,6 +67,22 @@ export const TIMEOUTS = {
     PROGRESS_MESSAGE_DELAY: 1000,   // First progress message update timing (SOP §1)
     PROGRESS_MESSAGE_DELAY_LONG: 2000, // Second progress message update timing (SOP §1)
 
+    // UI notification timing (SOP §1 compliance - Round 2)
+    STATUS_BAR_SUCCESS: 5000,       // Success message duration in status bar
+    STATUS_BAR_INFO: 3000,          // Info message duration in status bar
+    STATUS_BAR_UPDATE_INTERVAL: 5000, // Status bar polling interval
+    NOTIFICATION_AUTO_DISMISS: 2000,  // Progress notification auto-dismiss
+
+    // Auto-update system (SOP §1 compliance - Round 2)
+    AUTO_UPDATE_CHECK_INTERVAL: 4 * 60 * 60 * 1000, // 4 hours - periodic update check
+    STARTUP_UPDATE_CHECK_DELAY: 10000,  // 10 seconds - delay at activation
+
+    // File watcher (SOP §1 compliance - Round 2)
+    PROGRAMMATIC_WRITE_CLEANUP: 5000,  // Auto-cleanup tracking timeout
+
+    // Project creation (SOP §1 compliance - Round 2)
+    PROJECT_OPEN_TRANSITION: 1500,     // Transition delay before open project
+
     // Shell and system operations
     QUICK_SHELL: 2000,              // Quick shell commands (fnm --version, fnm current)
     PORT_CHECK: 5000,               // Port checking operations (lsof)

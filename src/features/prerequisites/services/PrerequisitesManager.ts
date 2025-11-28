@@ -50,6 +50,32 @@ export type {
  * // - mesh: needs Node 24
  * // Result: All three Node versions installed, tools adapt to each
  */
+
+/**
+ * Transform template step to versioned install step (SOP §6 compliance)
+ *
+ * Replaces {version} placeholder in string properties and applies defaults.
+ */
+function toVersionedInstallStep(
+    templateStep: Partial<InstallStep>,
+    version: string
+): InstallStep {
+    const replaceVersion = (str: string | undefined): string | undefined =>
+        str?.replace(/{version}/g, version);
+
+    return {
+        name: replaceVersion(templateStep.name) || `Install Node.js ${version}`,
+        message: replaceVersion(templateStep.message) || `Installing Node.js ${version}`,
+        commandTemplate: replaceVersion(templateStep.commandTemplate),
+        commands: templateStep.commands,
+        progressStrategy: templateStep.progressStrategy || 'synthetic',
+        progressParser: templateStep.progressParser,
+        estimatedDuration: templateStep.estimatedDuration || 30000,
+        milestones: templateStep.milestones,
+        continueOnError: templateStep.continueOnError,
+    };
+}
+
 export class PrerequisitesManager {
     private configLoader: ConfigurationLoader<PrerequisitesConfig>;
     private logger: Logger;
@@ -343,17 +369,7 @@ export class PrerequisitesManager {
             const templateSteps = prereq.install.steps;
             // Create a step for each version and each template step
             const steps: InstallStep[] = versions.flatMap(version =>
-                templateSteps.map(templateStep => ({
-                    name: templateStep.name?.replace(/{version}/g, version) || `Install Node.js ${version}`,
-                    message: templateStep.message?.replace(/{version}/g, version) || `Installing Node.js ${version}`,
-                    commandTemplate: templateStep.commandTemplate?.replace(/{version}/g, version),
-                    commands: templateStep.commands,
-                    progressStrategy: templateStep.progressStrategy || ('synthetic' as const),
-                    progressParser: templateStep.progressParser,
-                    estimatedDuration: templateStep.estimatedDuration || 30000,
-                    milestones: templateStep.milestones,
-                    continueOnError: templateStep.continueOnError,
-                }))
+                templateSteps.map(templateStep => toVersionedInstallStep(templateStep, version))
             );
             return { steps };
         }

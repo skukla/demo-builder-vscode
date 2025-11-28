@@ -34,6 +34,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { WorkspaceWatcherManager } from './workspaceWatcherManager';
 import { DisposableStore } from '@/core/utils/disposableStore';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Service for managing workspace-scoped .env file watchers
@@ -302,11 +303,11 @@ export class EnvFileWatcherService implements vscode.Disposable {
                         this.logger.debug(`[Env Watcher] Registered ${validatedPaths.length} programmatic writes to ignore`);
                     }
 
-                    // Auto-cleanup after 5 seconds in case watcher events are delayed
+                    // Auto-cleanup in case watcher events are delayed
                     const timeoutId = setTimeout(() => {
                         validatedPaths.forEach(fp => this.programmaticWrites.delete(fp));
                         this.activeTimeouts.delete(timeoutId);
-                    }, 5000);
+                    }, TIMEOUTS.PROGRAMMATIC_WRITE_CLEANUP);
                     this.activeTimeouts.add(timeoutId);
                 },
             ),

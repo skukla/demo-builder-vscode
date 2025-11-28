@@ -24,6 +24,7 @@ import {
     hasAuthError,
     hasAuthTimeout,
 } from './authPredicates';
+import { getOrgSelectionMessage } from './authHelpers';
 
 export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const {
@@ -102,13 +103,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
                         <Flex direction="column" gap="size-100" alignItems="center">
                             <Text UNSAFE_className="text-xl font-medium">Select Your Organization</Text>
                             <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                {adobeAuth.orgLacksAccess ? (
-                                    <>No organizations are currently accessible. Please choose an organization with App Builder enabled.</>
-                                ) : adobeAuth.requiresOrgSelection ? (
-                                    "Your previous organization is no longer accessible. Please select a new organization."
-                                ) : (
-                                    <>You're signed in to Adobe, but haven't selected an organization yet.</>
-                                )}
+                                {getOrgSelectionMessage(adobeAuth)}
                             </Text>
                         </Flex>
                         <Button variant="accent" onPress={() => handleLogin(true)} marginTop="size-300">

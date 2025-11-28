@@ -22,6 +22,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { StatusCard } from '@/core/ui/components/feedback';
 import { GridLayout } from '@/core/ui/components/layout';
+import { isStartActionDisabled } from './dashboardPredicates';
 
 type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'error';
 
@@ -157,7 +158,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     const meshMessage = projectStatus?.mesh?.message;
 
     // Button disabled states
-    const isStartDisabled = isTransitioning || meshStatus === 'deploying' || status === 'starting' || status === 'stopping';
+    const isStartDisabled = isStartActionDisabled(isTransitioning, meshStatus, status);
     const isStopDisabled = isTransitioning || status === 'stopping';
     const isMeshActionDisabled = isTransitioning || isMeshBusy(meshStatus);
 

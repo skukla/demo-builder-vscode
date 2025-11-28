@@ -7,6 +7,7 @@ import {
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useEffect } from 'react';
 import { BaseStepProps } from '@/types/wizard';
+import { hasRequiredReviewData } from './reviewPredicates';
 
 export interface ComponentData {
     id: string;
@@ -37,12 +38,7 @@ interface ReviewStepProps extends BaseStepProps {
 export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepProps) {
     useEffect(() => {
         // Can proceed if we have all required data
-        const canProceed = !!(
-            state.projectName &&
-            state.adobeOrg?.id &&
-            state.adobeProject?.id &&
-            state.adobeWorkspace?.id
-        );
+        const canProceed = hasRequiredReviewData(state);
         setCanProceed(canProceed);
     }, [state, setCanProceed]);
 

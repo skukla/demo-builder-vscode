@@ -7,6 +7,7 @@ import {
 } from '@adobe/react-spectrum';
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { TimelineNav } from './TimelineNav';
+import { getNextButtonText } from './wizardHelpers';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
@@ -588,10 +589,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                                             onPress={goNext}
                                             isDisabled={!canProceed || isConfirmingSelection}
                                         >
-                                            {isConfirmingSelection
-                                                ? 'Continue'
-                                                : (currentStepIndex === WIZARD_STEPS.length - 2 ? 'Create Project' : 'Continue')
-                                            }
+                                            {getNextButtonText(isConfirmingSelection, currentStepIndex, WIZARD_STEPS.length)}
                                         </Button>
                                     </Flex>
                                 </Flex>

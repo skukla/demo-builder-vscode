@@ -23,7 +23,7 @@ export class AutoUpdater {
             this.checkForUpdates().catch(err => {
                 this.logger.warn('Auto-update check failed:', err.message);
             });
-        }, 4 * 60 * 60 * 1000);
+        }, TIMEOUTS.AUTO_UPDATE_CHECK_INTERVAL);
     }
 
     public async checkForUpdates(): Promise<UpdateInfo | undefined> {

@@ -164,4 +164,45 @@ describe('Timeout Configuration', () => {
             expect(TIMEOUTS.PROGRESS_MESSAGE_DELAY_LONG).toBeLessThanOrEqual(3000);
         });
     });
+
+    // SOP Remediation Round 2 - Step 1: Magic Timeout Constants (§1)
+    describe('UI notification timeouts (SOP §1 compliance)', () => {
+        it('should have STATUS_BAR_SUCCESS timeout', () => {
+            expect(TIMEOUTS.STATUS_BAR_SUCCESS).toBe(5000);
+        });
+
+        it('should have STATUS_BAR_INFO timeout', () => {
+            expect(TIMEOUTS.STATUS_BAR_INFO).toBe(3000);
+        });
+
+        it('should have NOTIFICATION_AUTO_DISMISS timeout', () => {
+            expect(TIMEOUTS.NOTIFICATION_AUTO_DISMISS).toBe(2000);
+        });
+
+        it('should have STATUS_BAR_UPDATE_INTERVAL timeout', () => {
+            expect(TIMEOUTS.STATUS_BAR_UPDATE_INTERVAL).toBe(5000);
+        });
+    });
+
+    describe('Auto-update timeouts (SOP §1 compliance)', () => {
+        it('should have AUTO_UPDATE_CHECK_INTERVAL (4 hours)', () => {
+            expect(TIMEOUTS.AUTO_UPDATE_CHECK_INTERVAL).toBe(4 * 60 * 60 * 1000);
+        });
+
+        it('should have STARTUP_UPDATE_CHECK_DELAY timeout', () => {
+            expect(TIMEOUTS.STARTUP_UPDATE_CHECK_DELAY).toBe(10000);
+        });
+    });
+
+    describe('File watcher timeouts (SOP §1 compliance)', () => {
+        it('should have PROGRAMMATIC_WRITE_CLEANUP timeout', () => {
+            expect(TIMEOUTS.PROGRAMMATIC_WRITE_CLEANUP).toBe(5000);
+        });
+    });
+
+    describe('Project creation timeouts (SOP §1 compliance)', () => {
+        it('should have PROJECT_OPEN_TRANSITION timeout', () => {
+            expect(TIMEOUTS.PROJECT_OPEN_TRANSITION).toBe(1500);
+        });
+    });
 });

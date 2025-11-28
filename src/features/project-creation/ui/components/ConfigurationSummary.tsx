@@ -5,6 +5,7 @@ import Clock from '@spectrum-icons/workflow/Clock';
 import React from 'react';
 import { WizardState, WizardStep } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
+import { getStepStatus, renderApiMeshStatus } from './configurationSummaryHelpers';
 
 interface ConfigurationSummaryProps {
     state: WizardState;
@@ -139,7 +140,7 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                 label="Project"
                 value={state.adobeProject?.title || state.adobeProject?.name}
                 description={state.adobeProject?.description}
-                status={state.adobeProject ? (isStepCompleted('adobe-project') ? 'completed' : 'pending') : 'empty'}
+                status={getStepStatus(!!state.adobeProject, isStepCompleted('adobe-project'))}
             />
 
             <Divider size="S" />
@@ -148,7 +149,7 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
             <StatusSection
                 label="Workspace"
                 value={state.adobeWorkspace?.title || state.adobeWorkspace?.name}
-                status={state.adobeWorkspace ? (isStepCompleted('adobe-workspace') ? 'completed' : 'pending') : 'empty'}
+                status={getStepStatus(!!state.adobeWorkspace, isStepCompleted('adobe-workspace'))}
             />
 
             <Divider size="S" />
@@ -159,57 +160,13 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                     API Mesh
                 </Text>
                 <View marginTop="size-100">
-                    {!state.adobeWorkspace ? (
-                        <Text UNSAFE_className="text-sm text-gray-600">Not selected</Text>
-                    ) : getCurrentStepIndex() < stepOrder.indexOf('api-mesh') && !completedSteps.includes('api-mesh') ? (
-                        // Never been to api-mesh step yet - show "Not selected"
-                        <Text UNSAFE_className="text-sm text-gray-600">Not selected</Text>
-                    ) : getCurrentStepIndex() < stepOrder.indexOf('api-mesh') && completedSteps.includes('api-mesh') ? (
-                        // We've been there before, but now we're before it - show "Waiting"
-                        <Flex gap="size-100" alignItems="center">
-                            <Clock size="S" UNSAFE_className="text-blue-600" />
-                            <Text UNSAFE_className="text-sm text-gray-600">Waiting</Text>
-                        </Flex>
-                    ) : state.apiMesh?.isChecking ? (
-                        <Flex gap="size-100" alignItems="center">
-                            <Clock size="S" UNSAFE_className="text-blue-600" />
-                            <Text UNSAFE_className="text-sm text-gray-600">Checking...</Text>
-                        </Flex>
-                    ) : state.apiMesh?.apiEnabled && state.apiMesh?.meshExists ? (
-                        <Flex gap="size-100" alignItems="center">
-                            {state.apiMesh?.meshStatus === 'deployed' ? (
-                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                            ) : state.apiMesh?.meshStatus === 'error' ? (
-                                <AlertCircle size="S" UNSAFE_className="text-red-600" />
-                            ) : (
-                                <Clock size="S" UNSAFE_className="text-blue-600" />
-                            )}
-                            <Text UNSAFE_className="text-sm">
-                                {state.apiMesh?.meshStatus === 'deployed' ? 'Mesh Deployed' :
-                                 state.apiMesh?.meshStatus === 'error' ? 'Mesh Error' :
-                                 'Mesh Pending'}
-                            </Text>
-                        </Flex>
-                    ) : state.apiMesh?.apiEnabled && !state.apiMesh?.meshExists ? (
-                        <Flex gap="size-100" alignItems="center">
-                            {isStepCompleted('api-mesh') ? (
-                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                            ) : (
-                                <Clock size="S" UNSAFE_className="text-blue-600" />
-                            )}
-                            <Text UNSAFE_className="text-sm text-gray-600">Ready for creation</Text>
-                        </Flex>
-                    ) : state.apiMesh?.apiEnabled === false ? (
-                        <Flex gap="size-100" alignItems="center">
-                            <AlertCircle size="S" UNSAFE_className="text-red-600" />
-                            <Text UNSAFE_className="text-sm text-red-600">Not enabled</Text>
-                        </Flex>
-                    ) : (
-                        <Flex gap="size-100" alignItems="center">
-                            <Clock size="S" UNSAFE_className="text-blue-600" />
-                            <Text UNSAFE_className="text-sm text-gray-600">Pending</Text>
-                        </Flex>
-                    )}
+                    {renderApiMeshStatus({
+                        state,
+                        currentStepIndex: getCurrentStepIndex(),
+                        stepOrder,
+                        completedSteps,
+                        isStepCompleted,
+                    })}
                 </View>
             </View>
 
