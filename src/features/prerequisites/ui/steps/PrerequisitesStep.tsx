@@ -360,6 +360,140 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         }
     };
 
+    /**
+     * Render plugin status icon based on check status and plugin installation state
+     * Extracts nested ternary per SOP §3/§5
+     */
+    const renderPluginStatusIcon = (
+        checkStatus: PrerequisiteCheck['status'],
+        pluginInstalled: boolean | undefined,
+    ): React.ReactNode => {
+        if (checkStatus === 'checking' && pluginInstalled === undefined) {
+            return <Pending size="XS" marginStart="size-50" />;
+        }
+        if (pluginInstalled) {
+            return <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />;
+        }
+        return <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />;
+    };
+
+    /**
+     * Calculate progress bar value based on unified progress state
+     * Extracts nested ternary per SOP §3
+     */
+    const getProgressValue = (unifiedProgress: UnifiedProgress): number => {
+        // For multi-step operations, show overall percent for continuous progress
+        if (unifiedProgress.overall.totalSteps > 1) {
+            return unifiedProgress.overall.percent;
+        }
+        // For single-step with determinate command, show command percent for granular feedback
+        if (unifiedProgress.command?.type === 'determinate' && unifiedProgress.command?.percent != null) {
+            return unifiedProgress.command.percent;
+        }
+        // Default to overall percent
+        return unifiedProgress.overall.percent;
+    };
+
+    /**
+     * Render Node.js success message as version items with checkmarks
+     * Parses "20.19.4 (Adobe Commerce API Mesh), 18.20.0 (Commerce)" format
+     */
+    const renderNodeVersionSuccess = (message: string): React.ReactNode => {
+        return message.split(',').map((versionInfo, idx) => {
+            // Parse "20.19.4 (Adobe Commerce API Mesh)" format
+            const match = versionInfo.trim().match(/^([\d.]+)\s*(?:\((.+)\))?$/);
+            const version = match?.[1] || versionInfo.trim();
+            const component = match?.[2] || '';
+
+            return (
+                <Flex key={idx} alignItems="center" marginBottom="size-50">
+                    <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>
+                        {version}
+                        {component && ` (${component})`}
+                    </Text>
+                    <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
+                </Flex>
+            );
+        });
+    };
+
+    /**
+     * Render Adobe I/O CLI error with Node versions as failed items
+     * Parses "missing in Node 24" format from error messages
+     */
+    const renderAioCliErrorVersions = (message: string): React.ReactNode => {
+        const nodes = (message.match(/Node\s+([\d.]+)/g) || []).map(s => s.replace('Node ', 'Node '));
+        if (nodes.length) {
+            return nodes.map((n, idx) => (
+                <Flex key={idx} alignItems="center" marginBottom="size-50">
+                    <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>{n}</Text>
+                    <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
+                </Flex>
+            ));
+        }
+        return null;
+    };
+
+    /**
+     * Render prerequisite message content based on check state
+     * Extracts complex 3-level nested conditional per SOP §3
+     */
+    const renderPrerequisiteMessage = (check: PrerequisiteCheck): React.ReactNode => {
+        // Case 1: nodeVersionStatus exists - render structured version items
+        if (check.nodeVersionStatus) {
+            return (
+                <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
+                    {check.nodeVersionStatus.map((item, idx) => (
+                        <Flex key={idx} alignItems="center" marginBottom="size-50">
+                            <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>
+                                {item.version}
+                                {item.component ? ` – ${item.component}` : ''}
+                            </Text>
+                            {item.installed ? (
+                                <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
+                            ) : (
+                                <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
+                            )}
+                        </Flex>
+                    ))}
+                </View>
+            );
+        }
+
+        // Case 2: Node.js success with comma-separated versions
+        if (check.name === 'Node.js' && check.status === 'success' && check.message?.includes(',')) {
+            return (
+                <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
+                    {renderNodeVersionSuccess(check.message)}
+                </View>
+            );
+        }
+
+        // Case 3: Adobe I/O CLI error with Node version info
+        if (check.name === 'Adobe I/O CLI' && check.status === 'error' && check.message?.includes('Node')) {
+            const versionItems = renderAioCliErrorVersions(check.message);
+            if (versionItems) {
+                return (
+                    <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
+                        {versionItems}
+                    </View>
+                );
+            }
+            // Fall through to default message if no version items parsed
+        }
+
+        // Case 4: Default - show message text if no plugins or not success
+        if (!check.plugins || check.plugins.length === 0 || check.status !== 'success') {
+            return (
+                <Text UNSAFE_className={cn(getPrerequisiteMessageClasses(check.status), 'animate-fade-in')}>
+                    {check.message || 'Waiting...'}
+                </Text>
+            );
+        }
+
+        return null;
+    };
+
     const hasErrors = checks.some(check => check.status === 'error');
 
     return (
@@ -391,75 +525,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                             <Text UNSAFE_className={cn('prerequisite-description')}>
                                                 {check.description}
                                             </Text>
-                                            {check.nodeVersionStatus ? (
-                                                <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
-                                                    {check.nodeVersionStatus.map((item, idx) => (
-                                                        <Flex key={idx} alignItems="center" marginBottom="size-50">
-                                                            <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>
-                                                                {item.version}
-                                                                {item.component ? ` – ${item.component}` : ''}
-                                                            </Text>
-                                                            {item.installed ? (
-                                                                <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
-                                                            ) : (
-                                                                <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
-                                                            )}
-                                                        </Flex>
-                                                    ))}
-                                                </View>
-                                            ) : (
-                                                <View>
-                                                    {/* Convert Node.js success message to nodeVersionStatus format */}
-                                                    {check.name === 'Node.js' && check.status === 'success' && check.message?.includes(',') ? (
-                                                        <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
-                                                            {check.message.split(',').map((versionInfo, idx) => {
-                                                                // Parse "20.19.4 (Adobe Commerce API Mesh)" format
-                                                                const match = versionInfo.trim().match(/^([\d.]+)\s*(?:\((.+)\))?$/);
-                                                                const version = match?.[1] || versionInfo.trim();
-                                                                const component = match?.[2] || '';
-                                                                
-                                                                return (
-                                                                    <Flex key={idx} alignItems="center" marginBottom="size-50">
-                                                                        <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>
-                                                                            {version}
-                                                                            {component && ` (${component})`}
-                                                                        </Text>
-                                                                        <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
-                                                                    </Flex>
-                                                                );
-                                                            })}
-                                                        </View>
-                                                    ) : check.name === 'Adobe I/O CLI' && check.status === 'error' && check.message?.includes('Node') ? (
-                                                        // Parse and display Adobe I/O CLI error versions as sub-items
-                                                        <View UNSAFE_className={cn('prerequisite-message', 'animate-fade-in')}>
-                                                            {(() => {
-                                                                // Extract version info from error message like "missing in Node 24"
-                                                                const nodes = (check.message.match(/Node\s+([\d.]+)/g) || []).map(s => s.replace('Node ', 'Node '));
-                                                                if (nodes.length) {
-                                                                    return nodes.map((n, idx) => (
-                                                                        <Flex key={idx} alignItems="center" marginBottom="size-50">
-                                                                            <Text UNSAFE_className={cn('animate-fade-in', 'text-sm')}>{n}</Text>
-                                                                            <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
-                                                                        </Flex>
-                                                                    ));
-                                                                }
-                                                                return (
-                                                                    <Text UNSAFE_className={cn(getPrerequisiteMessageClasses(check.status), 'animate-fade-in')}>
-                                                                        {check.message}
-                                                                    </Text>
-                                                                );
-                                                            })()}
-                                                        </View>
-                                                    ) : (
-                                                        // Only show the main message if there are no plugins or if status is not success
-                                                        (!check.plugins || check.plugins.length === 0 || check.status !== 'success') && (
-                                                            <Text UNSAFE_className={cn(getPrerequisiteMessageClasses(check.status), 'animate-fade-in')}>
-                                                                {check.message || 'Waiting...'}
-                                                            </Text>
-                                                        )
-                                                    )}
-                                                </View>
-                                            )}
+                                            {renderPrerequisiteMessage(check)}
                                             {check.status === 'checking' && check.unifiedProgress && (
                                                 <View marginTop="size-100" UNSAFE_className="animate-fade-in">
                                                     <ProgressBar
@@ -471,17 +537,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                                                 check.unifiedProgress.command?.detail ? ` - ${check.unifiedProgress.command.detail}` : ''
                                                             }`
                                                         }
-                                                        value={
-                                                            // For multi-step operations (e.g., installing for multiple Node versions),
-                                                            // show overall percent to maintain continuous progress across all steps.
-                                                            // For single-step operations, show command percent for granular feedback.
-                                                            check.unifiedProgress.overall.totalSteps > 1
-                                                                ? check.unifiedProgress.overall.percent
-                                                                : (check.unifiedProgress.command?.type === 'determinate' &&
-                                                                   check.unifiedProgress.command?.percent != null
-                                                                    ? check.unifiedProgress.command.percent
-                                                                    : check.unifiedProgress.overall.percent)
-                                                        }
+                                                        value={getProgressValue(check.unifiedProgress)}
                                                         maxValue={100}
                                                         size="S"
                                                         UNSAFE_className="mb-2 progress-bar-small-label progress-bar-full-width"
@@ -506,13 +562,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                                                         {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
                                                                         {versions ? ` (${versions})` : ''}
                                                                     </Text>
-                                                                    {check.status === 'checking' && plugin.installed === undefined ? (
-                                                                        <Pending size="XS" marginStart="size-50" />
-                                                                    ) : plugin.installed ? (
-                                                                        <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
-                                                                    ) : (
-                                                                        <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
-                                                                    )}
+                                                                    {renderPluginStatusIcon(check.status, plugin.installed)}
                                                                 </Flex>
                                                             );
                                                         }
@@ -524,13 +574,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                                                         <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : 'prerequisite-plugin-item')}>
                                                                             {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
                                                                         </Text>
-                                                                        {check.status === 'checking' && plugin.installed === undefined ? (
-                                                                            <Pending size="XS" marginStart="size-50" />
-                                                                        ) : plugin.installed ? (
-                                                                            <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" marginStart="size-50" />
-                                                                        ) : (
-                                                                            <CloseCircle size="XS" UNSAFE_className="text-red-600" marginStart="size-50" />
-                                                                        )}
+                                                                        {renderPluginStatusIcon(check.status, plugin.installed)}
                                                                     </Flex>
                                                                 ))}
                                                             </>

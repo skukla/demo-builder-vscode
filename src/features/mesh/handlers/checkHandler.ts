@@ -34,17 +34,17 @@ type WorkspaceConfig = {
 /**
  * Extract services array from workspace config
  *
- * Simplifies deep optional chaining: config.project?.workspace?.details?.services
+ * Uses early returns to avoid deep optional chaining per SOP §4.
  * Returns empty array if any level is missing.
  *
  * @param config - Parsed workspace configuration
  * @returns Array of services or empty array
  */
 function getWorkspaceServices(config: WorkspaceConfig | null): unknown[] {
-    if (!config?.project?.workspace?.details?.services) {
-        return [];
-    }
-    return config.project.workspace.details.services;
+    if (!config?.project) return [];
+    if (!config.project.workspace) return [];
+    if (!config.project.workspace.details) return [];
+    return config.project.workspace.details.services ?? [];
 }
 
 /**
