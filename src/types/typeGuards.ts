@@ -330,3 +330,72 @@ export function getComponentIds(
     return Object.keys(componentInstances);
 }
 
+/**
+ * Get component instance entries from a record
+ *
+ * Replaces inline: `Object.entries(componentInstances || {})`
+ * SOP §4: Extracted inline object operation to named helper
+ *
+ * Use this when you already have componentInstances extracted from a project.
+ * For operations on Project objects directly, use getComponentInstanceEntries().
+ *
+ * @param componentInstances - Component instances record (can be undefined/null)
+ * @returns Array of [id, instance] tuples
+ */
+export function getInstanceEntriesFromRecord(
+    componentInstances: Record<string, ComponentInstance> | undefined | null,
+): Array<[string, ComponentInstance]> {
+    if (!componentInstances) return [];
+    return Object.entries(componentInstances);
+}
+
+/**
+ * Get component instance entries from project
+ *
+ * Replaces inline: `Object.entries(project.componentInstances || {})`
+ * SOP §4: Extracted inline object operation to named helper
+ *
+ * @param project - Project to extract entries from
+ * @returns Array of [id, instance] tuples
+ */
+export function getComponentInstanceEntries(
+    project: Project | undefined | null,
+): Array<[string, ComponentInstance]> {
+    if (!project?.componentInstances) return [];
+    return Object.entries(project.componentInstances);
+}
+
+/**
+ * Get component instance values from project
+ *
+ * Replaces inline: `Object.values(project.componentInstances || {})`
+ * SOP §4: Extracted inline object operation to named helper
+ *
+ * @param project - Project to extract values from
+ * @returns Array of ComponentInstance
+ */
+export function getComponentInstanceValues(
+    project: Project | undefined | null,
+): ComponentInstance[] {
+    if (!project?.componentInstances) return [];
+    return Object.values(project.componentInstances);
+}
+
+/**
+ * Get component instances by type
+ *
+ * Replaces inline: `Object.values(componentInstances).filter(c => c.type === type)`
+ * SOP §4: Extracted inline object operation with filter to named helper
+ *
+ * @param project - Project to search
+ * @param type - Component type to filter by (returns empty if undefined)
+ * @returns Array of matching ComponentInstance
+ */
+export function getComponentInstancesByType(
+    project: Project | undefined | null,
+    type: string | undefined,
+): ComponentInstance[] {
+    if (!project?.componentInstances || type === undefined) return [];
+    return Object.values(project.componentInstances).filter(c => c.type === type);
+}
+
