@@ -16,6 +16,7 @@
  */
 
 import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
+import { toComponentDataArray, toDependencyData } from './componentTransforms';
 import { ComponentSelection } from '@/types/components';
 import { toAppError } from '@/types/errors';
 import { HandlerContext, MessageHandler } from '@/types/handlers';
@@ -83,38 +84,11 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
         const presets = await registryManager.getPresets();
 
         const componentsData = {
-            frontends: frontends.map(f => ({
-                id: f.id,
-                name: f.name,
-                description: f.description,
-                features: f.features,
-                configuration: f.configuration,
-                recommended: f.id === 'citisignal-nextjs',
-            })),
-            backends: backends.map(b => ({
-                id: b.id,
-                name: b.name,
-                description: b.description,
-                configuration: b.configuration,
-            })),
-            integrations: integrations.map(e => ({
-                id: e.id,
-                name: e.name,
-                description: e.description,
-                configuration: e.configuration,
-            })),
-            appBuilder: appBuilder.map(a => ({
-                id: a.id,
-                name: a.name,
-                description: a.description,
-                configuration: a.configuration,
-            })),
-            dependencies: dependencies.map(d => ({
-                id: d.id,
-                name: d.name,
-                description: d.description,
-                configuration: d.configuration,
-            })),
+            frontends: toComponentDataArray(frontends, { recommendedId: 'citisignal-nextjs', includeFeatures: true }),
+            backends: toComponentDataArray(backends),
+            integrations: toComponentDataArray(integrations),
+            appBuilder: toComponentDataArray(appBuilder),
+            dependencies: toComponentDataArray(dependencies),
             presets,
         };
 
@@ -153,41 +127,11 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
         const registry = await registryManager.loadRegistry();
 
         const componentsData = {
-            frontends: frontends.map(f => ({
-                id: f.id,
-                name: f.name,
-                description: f.description,
-                dependencies: f.dependencies,
-                configuration: f.configuration,
-            })),
-            backends: backends.map(b => ({
-                id: b.id,
-                name: b.name,
-                description: b.description,
-                dependencies: b.dependencies,
-                configuration: b.configuration,
-            })),
-            integrations: integrations.map(e => ({
-                id: e.id,
-                name: e.name,
-                description: e.description,
-                dependencies: e.dependencies,
-                configuration: e.configuration,
-            })),
-            appBuilder: appBuilder.map(a => ({
-                id: a.id,
-                name: a.name,
-                description: a.description,
-                dependencies: a.dependencies,
-                configuration: a.configuration,
-            })),
-            dependencies: dependencies.map(d => ({
-                id: d.id,
-                name: d.name,
-                description: d.description,
-                dependencies: d.dependencies,
-                configuration: d.configuration,
-            })),
+            frontends: toComponentDataArray(frontends, { includeDependencies: true }),
+            backends: toComponentDataArray(backends, { includeDependencies: true }),
+            integrations: toComponentDataArray(integrations, { includeDependencies: true }),
+            appBuilder: toComponentDataArray(appBuilder, { includeDependencies: true }),
+            dependencies: toComponentDataArray(dependencies, { includeDependencies: true }),
             envVars: registry.envVars || {},
         };
 
@@ -268,20 +212,8 @@ export const handleLoadDependencies: MessageHandler = async (
         const resolved = await dependencyResolver.resolveDependencies(frontend, backend);
 
         const dependencies = [
-            ...resolved.required.map(d => ({
-                id: d.id,
-                name: d.name,
-                description: d.description,
-                required: true,
-                impact: d.configuration?.impact,
-            })),
-            ...resolved.optional.map(d => ({
-                id: d.id,
-                name: d.name,
-                description: d.description,
-                required: false,
-                impact: d.configuration?.impact,
-            })),
+            ...resolved.required.map(d => toDependencyData(d, true)),
+            ...resolved.optional.map(d => toDependencyData(d, false)),
         ];
 
         return {
