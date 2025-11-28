@@ -15,6 +15,9 @@
 import React, { Component, ReactNode, ErrorInfo } from 'react';
 import { View, Text, Heading } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
+import { webviewLogger } from '../utils/webviewLogger';
+
+const log = webviewLogger('ErrorBoundary');
 
 interface Props {
     children: ReactNode;
@@ -39,7 +42,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     static getDerivedStateFromError(error: Error): Partial<State> {
-        console.error('[ErrorBoundary] Error caught:', error);
+        log.error('Error caught:', error);
         return {
             hasError: true,
             error,
@@ -47,7 +50,7 @@ export class ErrorBoundary extends Component<Props, State> {
     }
 
     componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-        console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack);
+        log.error('Component stack:', errorInfo.componentStack as unknown as Error);
 
         this.setState({
             errorInfo,

@@ -1,4 +1,7 @@
 import { useLayoutEffect, useRef, RefObject } from 'react';
+import { webviewLogger } from '../utils/webviewLogger';
+
+const log = webviewLogger('useFocusTrap');
 
 interface UseFocusTrapOptions {
   /** Enable/disable the focus trap */
@@ -94,9 +97,9 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
     const updateCache = () => {
       focusableElementsCacheRef.current = getFocusableElements();
 
-      // Development warning
-      if (process.env.NODE_ENV === 'development' && focusableElementsCacheRef.current.length === 0) {
-        console.warn('[useFocusTrap] No focusable elements found in container');
+      // Development warning (webviewLogger already handles dev-only logging)
+      if (focusableElementsCacheRef.current.length === 0) {
+        log.warn('No focusable elements found in container');
       }
     };
 

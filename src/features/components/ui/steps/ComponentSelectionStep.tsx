@@ -10,10 +10,13 @@ import {
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
 import React, { useRef } from 'react';
 import { cn } from '@/core/ui/utils/classNames';
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { useFocusOnMount } from '@/core/ui/hooks';
 import { BaseStepProps } from '@/types/wizard';
 import { useComponentSelection } from '../hooks/useComponentSelection';
+
+const log = webviewLogger('ComponentSelectionStep');
 
 interface ComponentSelectionStepProps extends BaseStepProps {
     componentsData?: Record<string, unknown>;
@@ -116,7 +119,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                         <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                             Frontend
                         </Text>
-                        <ErrorBoundary onError={console.error}>
+                        <ErrorBoundary onError={(error) => log.error('Picker error:', error)}>
                             <Picker
                                 width="100%"
                                 selectedKey={selectedFrontend}
@@ -160,7 +163,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         Backend
                     </Text>
-                    <ErrorBoundary onError={console.error}>
+                    <ErrorBoundary onError={(error) => log.error('Picker error:', error)}>
                         <Picker
                             width="100%"
                             selectedKey={selectedBackend}

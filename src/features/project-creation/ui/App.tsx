@@ -3,6 +3,9 @@ import React, { useEffect, useState } from 'react';
 import { WizardContainer } from './wizard/WizardContainer';
 import { ThemeMode, ComponentSelection } from '@/types/webview';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+
+const log = webviewLogger('App');
 
 interface WizardStepConfig {
     id: string;
@@ -27,15 +30,15 @@ export function App() {
     const [wizardSteps, setWizardSteps] = useState<WizardStepConfig[] | null>(null);
 
     useEffect(() => {
-        console.log('App mounted, setting up message listeners');
-        
+        log.debug('App mounted, setting up message listeners');
+
         // Apply VSCode theme class to body
         document.body.classList.add('vscode-dark');
-        
+
         // Listen for initialization from extension
         const unsubscribe = vscode.onMessage('init', (data: unknown) => {
             const initData = data as InitMessageData;
-            console.log('Received init message:', initData);
+            log.debug('Received init message:', initData);
             if (initData.theme) {
                 setTheme(initData.theme);
                 // Update body class based on theme
@@ -47,7 +50,7 @@ export function App() {
             }
             if (initData.wizardSteps) {
                 setWizardSteps(initData.wizardSteps);
-                console.log('Loaded wizard steps from configuration:', initData.wizardSteps);
+                log.debug('Loaded wizard steps from configuration:', initData.wizardSteps);
             }
             setIsReady(true);
         });
@@ -55,7 +58,7 @@ export function App() {
         // Listen for theme changes
         const unsubscribeTheme = vscode.onMessage('theme-changed', (data: unknown) => {
             const themeData = data as ThemeChangedMessageData;
-            console.log('Received theme change:', themeData);
+            log.debug('Received theme change:', themeData);
             setTheme(themeData.theme);
             // Update body class based on theme
             document.body.classList.remove('vscode-light', 'vscode-dark');
@@ -63,7 +66,7 @@ export function App() {
         });
 
         // Request initialization
-        console.log('Sending ready message to extension');
+        log.debug('Sending ready message to extension');
         vscode.postMessage('ready');
 
         return () => {

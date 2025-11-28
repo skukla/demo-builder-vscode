@@ -20,9 +20,12 @@ import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { useFocusTrap, FOCUSABLE_SELECTOR } from '@/core/ui/hooks';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+
+const log = webviewLogger('WizardContainer');
 
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;
@@ -278,7 +281,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
                 setComponentsData(response);
             } catch (error) {
-                console.error('[WizardContainer] Failed to load components data:', error);
+                log.error('Failed to load components data', error instanceof Error ? error : undefined);
             }
         };
 
@@ -409,7 +412,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 navigateToStep(nextStep.id, currentIndex + 1, currentIndex);
 
             } catch (error) {
-                console.error('Failed to proceed to next step:', error);
+                log.error('Failed to proceed to next step', error instanceof Error ? error : undefined);
                 // Error display handled by backend via creationProgress feedback messages
                 setIsConfirmingSelection(false);
             }
@@ -539,7 +542,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                         >
                             <ErrorBoundary
                                 key={state.currentStep}
-                                onError={(error) => console.error('[WizardContainer] Step error:', error.message)}
+                                onError={(error) => log.error('Step error:', error)}
                             >
                                 {renderStep()}
                             </ErrorBoundary>

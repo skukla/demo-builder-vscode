@@ -1,6 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { WizardState } from '@/types/webview';
+
+const log = webviewLogger('useAuthStatus');
 
 interface AuthStatusData {
     message?: string;
@@ -50,7 +53,7 @@ export function useAuthStatus({
 
     const checkAuthentication = useCallback(() => {
         if (isSwitchingRef.current || state.adobeAuth.isChecking) {
-            console.log('Skipping auth check - switching org or already checking');
+            log.debug('Skipping auth check - switching org or already checking');
             return;
         }
         setAuthStatus('Checking Adobe authentication...');
@@ -97,7 +100,7 @@ export function useAuthStatus({
         const unsubscribe = webviewClient.onMessage('auth-status', (data) => {
             const authData = data as AuthStatusData;
 
-            console.log('Auth status received:', authData);
+            log.debug('Auth status received:', authData);
 
             if (authTimeoutRef.current) {
                 clearTimeout(authTimeoutRef.current);

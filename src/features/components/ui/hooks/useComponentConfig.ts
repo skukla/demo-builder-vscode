@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+
+const log = webviewLogger('useComponentConfig');
 
 interface ComponentData {
     id: string;
@@ -85,7 +88,7 @@ export function useComponentConfig({
                 setComponentsData(data);
                 setIsLoading(false);
             } catch (error) {
-                console.error('[ComponentConfigStep] Failed to load components:', error);
+                log.error('Failed to load components:', error);
                 setLoadError('Failed to load component configuration. Please try again.');
                 setIsLoading(false);
             }

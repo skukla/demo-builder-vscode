@@ -11,7 +11,10 @@
 import React, { useEffect, useState, useRef, ReactNode } from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { webviewClient } from '../utils/WebviewClient';
+import { webviewLogger } from '../utils/webviewLogger';
 import { ThemeMode } from '@/types/webview';
+
+const log = webviewLogger('WebviewApp');
 
 export interface WebviewInitData {
     theme?: ThemeMode;
@@ -86,18 +89,18 @@ export function WebviewApp({
     const readySentRef = useRef(false);
 
     useEffect(() => {
-        console.log('[WebviewApp] Component mounted');
+        log.debug('Component mounted');
 
         // Apply VSCode theme class to body
         document.body.classList.add('vscode-dark');
 
         // Listen for initialization from extension (set up listener BEFORE sending ready)
         const unsubscribeInit = webviewClient.onMessage('init', (data) => {
-            console.log('[WebviewApp] Received init message:', data);
+            log.debug('Received init message:', data);
 
             const initData = data as WebviewInitData;
             if (initData.theme) {
-                console.log('[WebviewApp] Setting theme:', initData.theme);
+                log.debug('Setting theme:', initData.theme);
                 setTheme(initData.theme);
                 document.body.classList.remove('vscode-light', 'vscode-dark');
                 document.body.classList.add(initData.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
@@ -111,7 +114,7 @@ export function WebviewApp({
                 onInit(initData);
             }
 
-            console.log('[WebviewApp] Setting isReady = true');
+            log.debug('Setting isReady = true');
             setIsReady(true);
         });
 
@@ -124,14 +127,14 @@ export function WebviewApp({
         });
 
         // Wait for handshake, then send ready message to trigger init (guard prevents StrictMode double-send)
-        console.log('[WebviewApp] Waiting for handshake completion');
+        log.debug('Waiting for handshake completion');
         webviewClient.ready().then(() => {
             if (!readySentRef.current) {
                 readySentRef.current = true;
-                console.log('[WebviewApp] Handshake complete, sending ready message');
+                log.debug('Handshake complete, sending ready message');
                 webviewClient.postMessage('ready');
             } else {
-                console.log('[WebviewApp] Handshake complete, but ready already sent (StrictMode remount)');
+                log.debug('Handshake complete, but ready already sent (StrictMode remount)');
             }
         });
 
@@ -142,16 +145,16 @@ export function WebviewApp({
     }, [onInit]);
 
     if (!isReady) {
-        console.log('[WebviewApp] Not ready yet, showing loading content');
+        log.debug('Not ready yet, showing loading content');
         return loadingContent;
     }
 
-    console.log('[WebviewApp] Ready! Rendering Provider with theme:', theme);
+    log.debug('Ready! Rendering Provider with theme:', theme);
 
     // Support render props pattern
     const content: ReactNode = typeof children === 'function' ? children(initData) : children;
 
-    console.log('[Provider] About to render content');
+    log.debug('About to render content');
 
     return (
         <Provider
