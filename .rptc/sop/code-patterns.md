@@ -1,7 +1,7 @@
 # Code Patterns - Project-Specific SOP
 
-**Version**: 2.0.0
-**Last Updated**: 2025-01-27
+**Version**: 2.1.0
+**Last Updated**: 2025-11-28
 **Priority**: Project-specific (overrides plugin default)
 
 ---
@@ -655,7 +655,281 @@ function isValidInput(value: unknown): value is string {
 
 ---
 
-## 11. AI Anti-Patterns (Code Patterns)
+## 11. Minimize Inline Styles
+
+**REQUIREMENT**: Prefer Tailwind CSS classes or external stylesheets over inline styles. Inline styles should only be used for truly dynamic values.
+
+### The Pattern
+
+```typescript
+// ✅ CORRECT: Tailwind CSS classes
+<div className="w-full p-4 bg-gray-100 border border-gray-300 rounded-lg">
+    <Text className="text-sm font-semibold text-blue-600">
+        {label}
+    </Text>
+</div>
+
+// ✅ CORRECT: Style object extracted (when inline is necessary)
+const BUTTON_STYLES: React.CSSProperties = {
+    padding: '12px',
+    backgroundColor: 'var(--spectrum-global-color-gray-200)',
+    borderRadius: '4px',
+};
+
+<button style={BUTTON_STYLES}>{label}</button>
+```
+
+```typescript
+// ❌ WRONG: Inline style object in JSX
+<div style={{
+    width: '100%',
+    padding: '12px',
+    backgroundColor: 'var(--spectrum-global-color-gray-200)',
+    border: '1px solid var(--spectrum-global-color-gray-300)',
+    borderRadius: '4px',
+}}>
+    {content}
+</div>
+```
+
+### Problems with Inline Styles
+
+| Problem | Description |
+|---------|-------------|
+| **No pseudo-selectors** | Cannot use `:hover`, `:focus`, `:active` states |
+| **No media queries** | Cannot do responsive design |
+| **Recreated every render** | Objects created on each render hurt performance |
+| **No caching** | Browser cannot cache/optimize style objects |
+| **Larger bundle size** | Repeated style objects bloat component code |
+| **Harder to maintain** | Styles scattered across components |
+
+### When Inline Styles ARE Acceptable
+
+```typescript
+// ✅ OK: Truly dynamic values computed at runtime
+<div style={{ width: `${percentage}%` }}>
+    <ProgressBar />
+</div>
+
+// ✅ OK: Position values from calculations
+<div style={{
+    transform: `translateX(${offset}px)`,
+    top: `${scrollPosition}px`
+}}>
+    {content}
+</div>
+
+// ✅ OK: User-customizable values
+<div style={{ backgroundColor: userSelectedColor }}>
+    {content}
+</div>
+```
+
+### VS Code Webview Constraints
+
+In VS Code webviews, external CSS has limitations due to Content Security Policy (CSP). Acceptable alternatives:
+
+1. **Tailwind classes** (compiled at build time)
+2. **Spectrum design tokens** via CSS variables
+3. **Extracted style objects** (defined once, reused)
+4. **CSS-in-JS** with static extraction
+
+### Refactoring Inline Styles
+
+When you encounter inline styles:
+
+```typescript
+// Before: Inline style object
+<button
+    style={{
+        width: '100%',
+        padding: '12px',
+        background: isActive ? 'var(--blue)' : 'transparent',
+    }}
+>
+
+// After: Extracted helper function (for dynamic styles)
+function getButtonStyles(isActive: boolean): React.CSSProperties {
+    return {
+        width: '100%',
+        padding: '12px',
+        background: isActive ? 'var(--blue)' : 'transparent',
+    };
+}
+
+<button style={getButtonStyles(isActive)}>
+
+// Better: Tailwind classes (when possible)
+<button className={`w-full p-3 ${isActive ? 'bg-blue-500' : 'bg-transparent'}`}>
+```
+
+### Why This Pattern Matters
+
+- **Performance**: Tailwind generates optimized CSS at build time
+- **Maintainability**: Styles are consistent and discoverable
+- **Functionality**: CSS classes support hover/focus/media queries
+- **Bundle size**: Shared classes reduce overall CSS size
+
+---
+
+## 12. Minimize Over-Engineering
+
+**REQUIREMENT**: Follow KISS (Keep It Simple, Stupid) and YAGNI (You Aren't Gonna Need It) principles. Prefer simple, direct solutions over abstractions.
+
+### The Pattern
+
+```typescript
+// ✅ CORRECT: Simple, direct solution
+async function getUser(id: string): Promise<User> {
+    const result = await db.query('SELECT * FROM users WHERE id = $1', [id]);
+    return result.rows[0];
+}
+
+// Usage
+const user = await getUser(userId);
+```
+
+```typescript
+// ❌ WRONG: Over-engineered with unnecessary abstractions
+interface IUserRepository {
+    findById(id: string): Promise<User>;
+}
+
+abstract class BaseRepository<T> {
+    protected abstract tableName: string;
+
+    async findById(id: string): Promise<T> {
+        return this.executeQuery(`SELECT * FROM ${this.tableName} WHERE id = $1`, [id]);
+    }
+
+    protected abstract executeQuery(sql: string, params: unknown[]): Promise<T>;
+}
+
+class UserRepository extends BaseRepository<User> implements IUserRepository {
+    protected tableName = 'users';
+
+    protected async executeQuery(sql: string, params: unknown[]): Promise<User> {
+        const result = await db.query(sql, params);
+        return this.mapToUser(result.rows[0]);
+    }
+
+    private mapToUser(row: unknown): User {
+        // Mapping logic
+    }
+}
+
+class UserService {
+    constructor(private userRepo: IUserRepository) {}
+
+    async getUser(id: string): Promise<User> {
+        return this.userRepo.findById(id);
+    }
+}
+
+// Usage
+const userService = new UserService(new UserRepository());
+const user = await userService.getUser(userId);
+```
+
+### KISS Principle
+
+| Guideline | Description |
+|-----------|-------------|
+| **Prefer functions over classes** | Use classes only when you need state + methods |
+| **Prefer composition over inheritance** | Inheritance creates tight coupling |
+| **Prefer explicit over clever** | Code golf is fun, but maintenance isn't |
+| **Prefer duplication over abstraction** | 2-3 copies is fine; abstract at 4+ |
+
+### YAGNI Principle
+
+| Guideline | Description |
+|-----------|-------------|
+| **No speculative generalization** | Don't build for hypothetical future needs |
+| **No unused parameters** | Don't add "options" objects "just in case" |
+| **No premature abstraction** | Wait for 3+ actual use cases before extracting |
+| **No interface with 1 implementation** | Interfaces without multiple impls add noise |
+
+### Over-Engineering Red Flags
+
+```typescript
+// 🚩 Factory pattern for single object type
+class UserFactory {
+    create(): User { return new User(); }
+}
+
+// 🚩 Interface with single implementation
+interface IEmailService { send(email: Email): Promise<void>; }
+class EmailService implements IEmailService { /* only impl */ }
+
+// 🚩 Abstract base class with one child
+abstract class BaseHandler { abstract handle(): void; }
+class OnlyHandler extends BaseHandler { handle() {} }
+
+// 🚩 Generic with single type usage
+class Service<T> { process(item: T): T { return item; } }
+const userService = new Service<User>(); // Only ever User
+
+// 🚩 Manager/Provider/Handler suffix proliferation
+class UserManager { }
+class UserProvider { }
+class UserHandler { }
+// Pick ONE name that describes what it does
+```
+
+### Simple Solutions Checklist
+
+Before implementing, ask:
+
+- [ ] **Could this be a function instead of a class?**
+- [ ] **Could this be inline instead of extracted?**
+- [ ] **Do I need this abstraction RIGHT NOW (not "someday")?**
+- [ ] **Would a junior developer understand this in 5 minutes?**
+- [ ] **Am I solving an actual problem or a hypothetical one?**
+
+### The Rule of Three
+
+```typescript
+// 1st occurrence: Write it inline
+const formattedDate1 = new Date(date1).toISOString().split('T')[0];
+
+// 2nd occurrence: Still inline (duplication is OK)
+const formattedDate2 = new Date(date2).toISOString().split('T')[0];
+
+// 3rd occurrence: NOW consider extraction
+function formatDateForAPI(date: Date): string {
+    return date.toISOString().split('T')[0];
+}
+```
+
+### Acceptable Abstractions
+
+Abstractions are justified when:
+
+1. **3+ actual (not hypothetical) use cases exist**
+2. **DRY violation is causing bugs** (not just "looks repetitive")
+3. **Testing requires isolation** (but prefer integration tests)
+4. **External contract demands it** (API boundaries, plugins)
+
+```typescript
+// ✅ OK: Multiple implementations exist NOW
+interface PaymentProcessor {
+    charge(amount: number): Promise<PaymentResult>;
+}
+class StripeProcessor implements PaymentProcessor { }
+class PayPalProcessor implements PaymentProcessor { }
+class SquareProcessor implements PaymentProcessor { }
+```
+
+### Why This Pattern Matters
+
+- **Readability**: Simple code is easier to understand
+- **Maintainability**: Less code = fewer bugs = easier updates
+- **Velocity**: Ship features faster without abstraction ceremonies
+- **Onboarding**: New team members productive sooner
+
+---
+
+## 13. AI Anti-Patterns (Code Patterns)
 
 ### Magic Number Anti-Pattern
 
@@ -729,7 +1003,7 @@ const valid = a && b && c && d && e && f;
 
 ---
 
-## 12. RPTC Workflow Integration
+## 14. RPTC Workflow Integration
 
 ### Master Efficiency Agent
 
@@ -766,7 +1040,7 @@ When implementing features via `/rptc:tdd`:
 
 ---
 
-## 13. Quick Reference for AI Agents
+## 15. Quick Reference for AI Agents
 
 ### Before Writing Code
 
@@ -812,7 +1086,7 @@ grep -E "&&.*&&.*&&.*&&" src/features/my-feature/
 
 ---
 
-## 14. Summary
+## 16. Summary
 
 | # | Pattern | Rule | Threshold |
 |---|---------|------|-----------|
@@ -826,6 +1100,8 @@ grep -E "&&.*&&.*&&.*&&" src/features/my-feature/
 | 8 | Object Building | Use explicit builders | >2 conditional spreads |
 | 9 | Error Messages | Use message builders | >2 conditional parts |
 | 10 | Validation Chains | Use type guard functions | >3 conditions |
+| 11 | Inline Styles | Prefer Tailwind/CSS classes | Any static style object |
+| 12 | Over-Engineering | KISS & YAGNI principles | <3 actual use cases |
 
 **Golden Rule**: If a human needs context to understand the code, the code needs refactoring.
 
