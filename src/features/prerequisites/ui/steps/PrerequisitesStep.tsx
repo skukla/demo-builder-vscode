@@ -60,23 +60,58 @@ interface PrerequisiteStatusData {
     canInstall?: boolean;
 }
 
-// This function is now deprecated - prerequisites come from the backend
-const getDefaultPrerequisites = (): PrerequisiteCheck[] => {
-    return [
-        {
-            id: 'loading',
-            name: 'Loading prerequisites...',
-            description: 'Fetching prerequisite configuration',
-            status: 'checking',
-            canInstall: false,
-            isOptional: false,
-            message: 'Initializing...',
-        },
-    ];
-};
+/**
+ * Check if a prerequisite check has reached a terminal state
+ *
+ * SOP §10: Extracted 4-condition OR chain to named predicate
+ *
+ * @param status - The status to check
+ * @returns true if the status represents a terminal state
+ */
+function isTerminalStatus(status: PrerequisiteCheck['status']): boolean {
+    return status === 'success' ||
+           status === 'error' ||
+           status === 'warning' ||
+           status === 'pending';
+}
+
+/**
+ * Transform prerequisite data to initial check state
+ *
+ * SOP §6: Extracted 8-property callback to named transformation
+ *
+ * @param p - Prerequisite data from backend
+ * @returns Initial PrerequisiteCheck state for UI
+ */
+function toPrerequisiteCheckState(p: PrerequisitesLoadedData['prerequisites'][0]): PrerequisiteCheck {
+    return {
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        status: 'pending' as const,
+        // Initially disabled; backend will enable via 'prerequisite-status' when deps are ready
+        canInstall: false,
+        isOptional: p.optional || false,
+        plugins: p.plugins,
+        message: 'Waiting...',
+    };
+}
+
+/** Initial loading placeholder shown before backend sends prerequisites */
+const INITIAL_LOADING_STATE: PrerequisiteCheck[] = [
+    {
+        id: 'loading',
+        name: 'Loading prerequisites...',
+        description: 'Fetching prerequisite configuration',
+        status: 'checking',
+        canInstall: false,
+        isOptional: false,
+        message: 'Initializing...',
+    },
+];
 
 export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesStepProps) {
-    const [checks, setChecks] = useState<PrerequisiteCheck[]>(getDefaultPrerequisites());
+    const [checks, setChecks] = useState<PrerequisiteCheck[]>(INITIAL_LOADING_STATE);
     const [isChecking, setIsChecking] = useState(false);
     const [installingIndex, setInstallingIndex] = useState<number | null>(null);
     const [versionComponentMapping, setVersionComponentMapping] = useState<{ [key: string]: string }>({});
@@ -89,19 +124,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         // Listen for prerequisites loaded from backend
         const unsubscribeLoaded = webviewClient.onMessage('prerequisites-loaded', (data) => {
             const prereqData = data as PrerequisitesLoadedData;
-            const prerequisites = prereqData.prerequisites.map((p) => {
-                return {
-                    id: p.id,
-                    name: p.name,
-                    description: p.description,
-                    status: 'pending' as const,
-                    // Initially disabled; backend will enable via 'prerequisite-status' when deps are ready
-                    canInstall: false,
-                    isOptional: p.optional || false,
-                    plugins: p.plugins,
-                    message: 'Waiting...',
-                };
-            });
+            const prerequisites = prereqData.prerequisites.map(toPrerequisiteCheckState);
             setChecks(prerequisites);
 
             // Store the version to component mapping
@@ -169,12 +192,8 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 }
 
                 // Check if all prerequisites are done checking
-                const allDone = newChecks.every(check =>
-                    check.status === 'success' ||
-                    check.status === 'error' ||
-                    check.status === 'warning' ||
-                    check.status === 'pending',
-                );
+                // SOP §10: Using named predicate instead of inline OR chain
+                const allDone = newChecks.every(check => isTerminalStatus(check.status));
 
                 if (allDone) {
                     setIsChecking(false);

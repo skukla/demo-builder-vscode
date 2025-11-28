@@ -34,6 +34,48 @@ export interface NavigationPanelProps {
 }
 
 /**
+ * Get styles for section button (SOP §6 compliance - extracted style object)
+ */
+function getSectionButtonStyles(isActive: boolean): React.CSSProperties {
+    return {
+        width: '100%',
+        padding: '12px',
+        background: isActive ? 'var(--spectrum-global-color-gray-200)' : 'transparent',
+        border: '1px solid var(--spectrum-global-color-gray-300)',
+        borderLeft: isActive
+            ? '3px solid var(--spectrum-global-color-blue-500)'
+            : '1px solid var(--spectrum-global-color-gray-300)',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: '4px',
+        transition: 'all 0.2s ease',
+    };
+}
+
+/**
+ * Get styles for field button (SOP §6 compliance - extracted style object)
+ */
+function getFieldButtonStyles(isActiveField: boolean): React.CSSProperties {
+    return {
+        width: '100%',
+        padding: '8px 12px',
+        background: isActiveField ? 'var(--spectrum-global-color-blue-100)' : 'transparent',
+        border: 'none',
+        borderLeft: isActiveField ? '2px solid var(--spectrum-global-color-blue-500)' : 'none',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        textAlign: 'left',
+        transition: 'all 0.2s',
+        borderRadius: '4px',
+    };
+}
+
+/**
  * Organism Component: NavigationPanel
  *
  * Configuration navigation sidebar with expandable sections and field navigation.
@@ -94,24 +136,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                 id={`nav-${section.id}`}
                                 onClick={() => handleToggleSection(section.id)}
                                 tabIndex={-1}
-                                style={{
-                                    width: '100%',
-                                    padding: '12px',
-                                    background: isActive
-                                        ? 'var(--spectrum-global-color-gray-200)'
-                                        : 'transparent',
-                                    border: '1px solid var(--spectrum-global-color-gray-300)',
-                                    borderLeft: isActive
-                                        ? '3px solid var(--spectrum-global-color-blue-500)'
-                                        : '1px solid var(--spectrum-global-color-gray-300)',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'flex-start',
-                                    gap: '4px',
-                                    transition: 'all 0.2s ease'
-                                }}
+                                style={getSectionButtonStyles(isActive)}
                                 onMouseEnter={(e) => {
                                     if (!isActive) {
                                         e.currentTarget.style.background =
@@ -173,24 +198,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                                 id={`nav-field-${field.key}`}
                                                 onClick={() => handleNavigateToField(field.key)}
                                                 tabIndex={-1}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '8px 12px',
-                                                    background: isActiveField
-                                                        ? 'var(--spectrum-global-color-blue-100)'
-                                                        : 'transparent',
-                                                    border: 'none',
-                                                    borderLeft: isActiveField
-                                                        ? '2px solid var(--spectrum-global-color-blue-500)'
-                                                        : 'none',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    textAlign: 'left',
-                                                    transition: 'all 0.2s',
-                                                    borderRadius: '4px'
-                                                }}
+                                                style={getFieldButtonStyles(isActiveField)}
                                                 onMouseEnter={(e) => {
                                                     if (!isActiveField) {
                                                         e.currentTarget.style.background =

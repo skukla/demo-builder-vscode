@@ -26,6 +26,31 @@ interface ConfigNavigationPanelProps {
 }
 
 /**
+ * Transform a ServiceGroup to NavigationSection (SOP §6 compliance)
+ *
+ * Extracts callback body for improved readability and testability.
+ */
+function toNavigationSection(
+    group: ServiceGroup,
+    getSectionCompletion: (group: ServiceGroup) => SectionCompletion,
+    isFieldComplete: (field: UniqueField) => boolean,
+): NavigationSection {
+    const completion = getSectionCompletion(group);
+    return {
+        id: group.id,
+        label: group.label,
+        isComplete: completion.isComplete,
+        completedCount: completion.completed,
+        totalCount: completion.total,
+        fields: group.fields.map((field) => ({
+            key: field.key,
+            label: field.label,
+            isComplete: isFieldComplete(field),
+        })),
+    };
+}
+
+/**
  * ConfigNavigationPanel
  *
  * Thin wrapper that transforms ServiceGroup data into NavigationSection format
@@ -41,23 +66,9 @@ export function ConfigNavigationPanel({
     getSectionCompletion,
     isFieldComplete,
 }: ConfigNavigationPanelProps) {
-    // Transform ServiceGroups to NavigationSections
+    // SOP §6: Using extracted transformation function
     const sections: NavigationSection[] = useMemo(() =>
-        serviceGroups.map((group) => {
-            const completion = getSectionCompletion(group);
-            return {
-                id: group.id,
-                label: group.label,
-                isComplete: completion.isComplete,
-                completedCount: completion.completed,
-                totalCount: completion.total,
-                fields: group.fields.map((field) => ({
-                    key: field.key,
-                    label: field.label,
-                    isComplete: isFieldComplete(field),
-                })),
-            };
-        }),
+        serviceGroups.map((group) => toNavigationSection(group, getSectionCompletion, isFieldComplete)),
         [serviceGroups, getSectionCompletion, isFieldComplete],
     );
 

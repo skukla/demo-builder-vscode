@@ -13,6 +13,42 @@ import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
+import type { PrerequisiteCheckState } from '@/types/handlers';
+
+/**
+ * Summary of a prerequisite check result for UI display
+ */
+interface PrerequisiteSummary {
+    id: number;
+    name: string;
+    required: boolean;
+    installed: boolean;
+    version?: string;
+    canInstall: boolean;
+}
+
+/**
+ * Transform prerequisite state to summary object for UI
+ *
+ * SOP §6: Extracted 6-property callback to named transformation
+ *
+ * @param id - The prerequisite index
+ * @param state - The prerequisite check state
+ * @returns Summary object for UI consumption
+ */
+function toPrerequisiteSummary(
+    id: number,
+    state: PrerequisiteCheckState,
+): PrerequisiteSummary {
+    return {
+        id,
+        name: state.prereq.name,
+        required: !state.prereq.optional,
+        installed: state.result.installed,
+        version: state.result.version,
+        canInstall: state.result.canInstall,
+    };
+}
 
 /**
  * check-prerequisites - Check all prerequisites for selected components
@@ -233,14 +269,8 @@ export async function handleCheckPrerequisites(
         // Send completion status
         await context.sendMessage('prerequisites-complete', {
             allInstalled: allRequiredInstalled,
-            prerequisites: Array.from(context.sharedState.currentPrerequisiteStates.entries()).map(([id, state]) => ({
-                id,
-                name: state.prereq.name,
-                required: !state.prereq.optional,
-                installed: state.result.installed,
-                version: state.result.version,
-                canInstall: state.result.canInstall,
-            })),
+            prerequisites: Array.from(context.sharedState.currentPrerequisiteStates.entries())
+                .map(([id, state]) => toPrerequisiteSummary(id, state)),
         });
 
         context.stepLogger?.log('prerequisites', `Prerequisites check complete. All required installed: ${allRequiredInstalled}`, 'info');
