@@ -10,6 +10,7 @@ import {
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 import type { Project } from '@/types/base';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { hasEntries } from '@/types/typeGuards';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { cn } from '@/core/ui/utils/classNames';
@@ -87,7 +88,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
     // Update componentConfigs when existingEnvValues becomes available
     useEffect(() => {
-        if (existingEnvValues && Object.keys(existingEnvValues).length > 0) {
+        if (hasEntries(existingEnvValues)) {
             setComponentConfigs(existingEnvValues);
         } else if (project.componentConfigs) {
             setComponentConfigs(project.componentConfigs);
@@ -579,7 +580,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         webviewClient.postMessage('cancel');
     }, []);
 
-    const canSave = Object.keys(validationErrors).length === 0;
+    const canSave = !hasEntries(validationErrors);
 
     return (
         <div
