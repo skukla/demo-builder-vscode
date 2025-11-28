@@ -126,6 +126,10 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                                 onSelectionChange={(key) => setSelectedFrontend(key as string)}
                                 placeholder="Select frontend system"
                                 aria-label="Select frontend system"
+                                isQuiet={false}
+                                align="start"
+                                direction="bottom"
+                                shouldFlip={false}
                                 menuWidth="size-4600"
                                 UNSAFE_className={cn('cursor-pointer')}
                             >
@@ -170,6 +174,10 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                             onSelectionChange={(key) => setSelectedBackend(key as string)}
                             placeholder="Select backend system"
                             aria-label="Select backend system"
+                            isQuiet={false}
+                            align="start"
+                            direction="bottom"
+                            shouldFlip={false}
                             menuWidth="size-4600"
                             UNSAFE_className={cn('cursor-pointer')}
                         >
@@ -211,7 +219,12 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         External Systems
                     </Text>
-                    <View UNSAFE_className={cn('border', 'rounded', 'bg-gray-50', 'p-3')}>
+                    <View UNSAFE_style={{
+                        border: '1px solid var(--spectrum-global-color-gray-300)',
+                        borderRadius: '4px',
+                        backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                        padding: '12px'
+                    }}>
                         {integrationsOptions.map((system) => (
                             <Checkbox
                                 key={system.id}
@@ -234,7 +247,12 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         App Builder Apps
                     </Text>
-                    <View UNSAFE_className={cn('border', 'rounded', 'bg-gray-50', 'p-3')}>
+                    <View UNSAFE_style={{
+                        border: '1px solid var(--spectrum-global-color-gray-300)',
+                        borderRadius: '4px',
+                        backgroundColor: 'var(--spectrum-global-color-gray-50)',
+                        padding: '12px'
+                    }}>
                         {appBuilderOptions.map((app) => (
                             <Checkbox
                                 key={app.id}
