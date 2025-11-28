@@ -256,16 +256,41 @@ export function getButtonClasses(
 }
 
 /**
+ * SOP §3: Lookup map for timeline step dot status classes
+ * Extracted from nested ternary for clarity
+ */
+const TIMELINE_DOT_STATUS_CLASS: Record<string, string> = {
+    'completed': 'timeline-step-dot-completed',
+    'completed-current': 'timeline-step-dot-completed',
+    'current': 'timeline-step-dot-current',
+    'upcoming': 'timeline-step-dot-upcoming',
+};
+
+/**
  * Helper function to build timeline step dot classes based on status
  */
 export function getTimelineStepDotClasses(status: 'completed' | 'current' | 'upcoming' | 'completed-current'): string {
     const baseClasses = 'timeline-step-dot';
-    const statusClass = status === 'completed' || status === 'completed-current'
-        ? 'timeline-step-dot-completed'
-        : status === 'current'
-        ? 'timeline-step-dot-current'
-        : 'timeline-step-dot-upcoming';
+    const statusClass = TIMELINE_DOT_STATUS_CLASS[status] ?? 'timeline-step-dot-upcoming';
     return cn(baseClasses, statusClass);
+}
+
+/**
+ * SOP §3: Lookup map for timeline step label color classes
+ * Extracted from nested ternary for clarity
+ */
+const TIMELINE_LABEL_COLOR_CLASS: Record<string, string> = {
+    'completed': 'text-gray-800',
+    'completed-current': 'text-blue-700',
+    'current': 'text-blue-700',
+    'upcoming': 'text-gray-600',
+};
+
+/**
+ * Helper to check if status indicates current/active step
+ */
+function isCurrentOrCompletedCurrent(status: string): boolean {
+    return status === 'current' || status === 'completed-current';
 }
 
 /**
@@ -273,12 +298,8 @@ export function getTimelineStepDotClasses(status: 'completed' | 'current' | 'upc
  */
 export function getTimelineStepLabelClasses(status: 'completed' | 'current' | 'upcoming' | 'completed-current'): string {
     const fontSize = 'text-base';
-    const fontWeight = status === 'current' || status === 'completed-current' ? 'font-semibold' : 'font-normal';
-    const color = status === 'current' || status === 'completed-current'
-        ? 'text-blue-700'
-        : status === 'completed'
-        ? 'text-gray-800'
-        : 'text-gray-600';
+    const fontWeight = isCurrentOrCompletedCurrent(status) ? 'font-semibold' : 'font-normal';
+    const color = TIMELINE_LABEL_COLOR_CLASS[status] ?? 'text-gray-600';
     return cn(fontSize, fontWeight, color, 'whitespace-nowrap', 'user-select-none');
 }
 
