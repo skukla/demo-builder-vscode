@@ -8,7 +8,7 @@ import { updateFrontendState } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation/securityValidation';
 import { DEFAULT_SHELL } from '@/types/shell';
-import { getComponentIds } from '@/types/typeGuards';
+import { getComponentIds, getComponentInstanceValues } from '@/types/typeGuards';
 
 /**
  * Command to start the demo frontend server
@@ -279,27 +279,26 @@ export class StartDemoCommand extends BaseCommand {
                 const envFiles: string[] = [];
 
                 // Collect .env files from all component instances
-                if (project.componentInstances) {
-                    for (const componentInstance of Object.values(project.componentInstances)) {
-                        if (componentInstance.path) {
-                            const componentPath = componentInstance.path;
-                            const envPath = path.join(componentPath, '.env');
-                            const envLocalPath = path.join(componentPath, '.env.local');
+                // SOP §4: Using helper instead of inline Object.values
+                for (const componentInstance of getComponentInstanceValues(project)) {
+                    if (componentInstance.path) {
+                        const componentPath = componentInstance.path;
+                        const envPath = path.join(componentPath, '.env');
+                        const envLocalPath = path.join(componentPath, '.env.local');
 
-                            // Check if files exist using static fs import
-                            try {
-                                await fs.promises.access(envPath);
-                                envFiles.push(envPath);
-                            } catch {
-                                // File doesn't exist
-                            }
+                        // Check if files exist using static fs import
+                        try {
+                            await fs.promises.access(envPath);
+                            envFiles.push(envPath);
+                        } catch {
+                            // File doesn't exist
+                        }
 
-                            try {
-                                await fs.promises.access(envLocalPath);
-                                envFiles.push(envLocalPath);
-                            } catch {
-                                // File doesn't exist
-                            }
+                        try {
+                            await fs.promises.access(envLocalPath);
+                            envFiles.push(envLocalPath);
+                        } catch {
+                            // File doesn't exist
                         }
                     }
                 }

@@ -483,11 +483,13 @@ export class DiagnosticsCommand {
         // Tools summary
         this.logger.info('');
         this.logger.info('Tools Status:');
-        Object.entries(report.tools).forEach(([tool, info]) => {
+        // SOP §4: Using for...of instead of Object.entries().forEach()
+        const toolEntries = Object.entries(report.tools);
+        for (const [tool, info] of toolEntries) {
             const status = info.installed ? '✅' : '❌';
             const version = info.installed ? info.output : 'Not installed';
             this.logger.info(`  ${status} ${tool}: ${version}`);
-        });
+        }
 
         // Adobe CLI summary
         if (report.adobe.installed) {

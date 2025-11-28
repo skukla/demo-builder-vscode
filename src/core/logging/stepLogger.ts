@@ -75,9 +75,11 @@ export class StepLogger {
         };
         
         // Start with defaults
-        Object.entries(defaults).forEach(([id, name]) => {
+        // SOP §4: Using for...of instead of Object.entries().forEach()
+        const defaultEntries = Object.entries(defaults);
+        for (const [id, name] of defaultEntries) {
             this.stepNames.set(id, name);
-        });
+        }
         
         // Override with config if provided
         if (wizardSteps && Array.isArray(wizardSteps)) {
@@ -237,12 +239,14 @@ export class StepLogger {
         }
         
         // Replace all parameters in template
+        // SOP §4: Using for...of instead of Object.entries().forEach()
         let finalMessage = template;
-        Object.entries(params).forEach(([key, value]) => {
+        const paramEntries = Object.entries(params);
+        for (const [key, value] of paramEntries) {
             const placeholder = `{${key}}`;
             const stringValue = String(value ?? '');
             finalMessage = finalMessage.replace(new RegExp(placeholder, 'g'), stringValue);
-        });
+        }
         
         // Clean up any remaining placeholders
         finalMessage = finalMessage.replace(/\{\w+\}/g, '');

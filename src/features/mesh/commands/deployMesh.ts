@@ -8,7 +8,7 @@ import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Project } from '@/types/base';
-import { parseJSON } from '@/types/typeGuards';
+import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
 import { formatAdobeCliError, extractMeshErrorSummary } from '../utils/errorFormatter';
 
 /**
@@ -316,7 +316,8 @@ export class DeployMeshCommand extends BaseCommand {
         }
 
         // Fallback: search for any component with 'mesh' in the ID (for backward compatibility)
-        for (const [id, component] of Object.entries(project.componentInstances)) {
+        // SOP §4: Using helper instead of inline Object.entries
+        for (const [id, component] of getComponentInstanceEntries(project)) {
             if (id.includes('mesh')) {
                 return component;
             }

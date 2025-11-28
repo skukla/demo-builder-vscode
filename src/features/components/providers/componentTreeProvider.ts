@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
 import { CustomIconPaths } from '@/types';
+import { getComponentInstanceEntries } from '@/types/typeGuards';
 
 type FileSystemItem = ComponentFolder | FileItem | ProjectItem;
 
@@ -68,14 +69,13 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
         if (!element) {
             const items: FileSystemItem[] = [];
             
-            if (project.componentInstances) {
-                for (const [, component] of Object.entries(project.componentInstances)) {
-                    if (component?.path) {
-                        // Pass component icon and subType for custom icons
-                        const icon = component.icon || null;
-                        const subType = component.subType || null;
-                        items.push(new ComponentFolder(component.name, component.path, icon, subType, this.extensionPath));
-                    }
+            // SOP §4: Using helper instead of inline Object.entries
+            for (const [, component] of getComponentInstanceEntries(project)) {
+                if (component?.path) {
+                    // Pass component icon and subType for custom icons
+                    const icon = component.icon || null;
+                    const subType = component.subType || null;
+                    items.push(new ComponentFolder(component.name, component.path, icon, subType, this.extensionPath));
                 }
             }
             

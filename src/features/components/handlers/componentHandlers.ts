@@ -135,7 +135,9 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             envVars: registry.envVars || {},
         };
 
-        const envVarKeys = Object.keys(registry.envVars || {});
+        // SOP §4: Extract fallback to variable before Object operation
+        const envVars = registry.envVars ?? {};
+        const envVarKeys = Object.keys(envVars);
         context.logger.debug('[componentHandlers] Sending components-data:', {
             frontendsCount: frontends.length,
             backendsCount: backends.length,

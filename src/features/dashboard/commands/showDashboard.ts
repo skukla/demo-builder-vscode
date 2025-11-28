@@ -9,6 +9,7 @@ import {
 import { DashboardHandlerRegistry } from '@/features/dashboard/handlers';
 import { Project, ComponentInstance } from '@/types';
 import { HandlerContext, SharedState } from '@/types/handlers';
+import { getComponentInstanceValues } from '@/types/typeGuards';
 
 /**
  * Command to show the "Project Dashboard" after project creation
@@ -251,29 +252,28 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         const envFiles: string[] = [];
 
         // Collect .env files from all component instances
-        if (project.componentInstances) {
-            for (const componentInstance of Object.values(project.componentInstances)) {
-                const instance = componentInstance as ComponentInstance;
-                if (instance.path) {
-                    const componentPath = instance.path;
-                    const envPath = path.join(componentPath, '.env');
-                    const envLocalPath = path.join(componentPath, '.env.local');
+        // SOP §4: Using helper instead of inline Object.values
+        for (const componentInstance of getComponentInstanceValues(project)) {
+            const instance = componentInstance as ComponentInstance;
+            if (instance.path) {
+                const componentPath = instance.path;
+                const envPath = path.join(componentPath, '.env');
+                const envLocalPath = path.join(componentPath, '.env.local');
 
-                    // Check if files exist
-                    const fsPromises = (await import('fs')).promises;
-                    try {
-                        await fsPromises.access(envPath);
-                        envFiles.push(envPath);
-                    } catch {
-                        // File doesn't exist
-                    }
+                // Check if files exist
+                const fsPromises = (await import('fs')).promises;
+                try {
+                    await fsPromises.access(envPath);
+                    envFiles.push(envPath);
+                } catch {
+                    // File doesn't exist
+                }
 
-                    try {
-                        await fsPromises.access(envLocalPath);
-                        envFiles.push(envLocalPath);
-                    } catch {
-                        // File doesn't exist
-                    }
+                try {
+                    await fsPromises.access(envLocalPath);
+                    envFiles.push(envLocalPath);
+                } catch {
+                    // File doesn't exist
                 }
             }
         }

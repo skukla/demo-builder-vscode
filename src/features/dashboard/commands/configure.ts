@@ -9,7 +9,7 @@ import { ComponentRegistryManager } from '@/features/components/services/Compone
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
-import { parseJSON } from '@/types/typeGuards';
+import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
 
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
@@ -296,13 +296,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
      */
     private async loadExistingEnvValues(project: Project): Promise<Record<string, Record<string, string>>> {
         const envValues: Record<string, Record<string, string>> = {};
-        
-        if (!project.componentInstances) {
-            return envValues;
-        }
 
         // Read each component's .env file
-        for (const [componentId, instance] of Object.entries(project.componentInstances)) {
+        // SOP §4: Using helper instead of inline Object.entries
+        for (const [componentId, instance] of getComponentInstanceEntries(project)) {
             if (!instance.path) {
                 continue;
             }
@@ -374,14 +371,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         
         // Project root .env
         filePaths.push(path.join(project.path, '.env'));
-        
+
         // Component .env files
-        if (project.componentInstances) {
-            for (const [componentId, instance] of Object.entries(project.componentInstances)) {
-                if (instance.path && componentConfigs[componentId]) {
-                    const envFileName = componentId.includes('nextjs') ? '.env.local' : '.env';
-                    filePaths.push(path.join(instance.path, envFileName));
-                }
+        // SOP §4: Using helper instead of inline Object.entries
+        for (const [componentId, instance] of getComponentInstanceEntries(project)) {
+            if (instance.path && componentConfigs[componentId]) {
+                const envFileName = componentId.includes('nextjs') ? '.env.local' : '.env';
+                filePaths.push(path.join(instance.path, envFileName));
             }
         }
         
@@ -401,16 +397,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             await this.generateProjectEnvFile(project, componentConfigs);
 
             // Regenerate component .env files
-            if (project.componentInstances) {
-                for (const [componentId, instance] of Object.entries(project.componentInstances)) {
-                    if (instance.path && componentConfigs[componentId]) {
-                        await this.generateComponentEnvFile(
-                            instance.path,
-                            componentId,
-                            componentConfigs[componentId],
-                        );
-                        fileCount++;
-                    }
+            // SOP §4: Using helper instead of inline Object.entries
+            for (const [componentId, instance] of getComponentInstanceEntries(project)) {
+                if (instance.path && componentConfigs[componentId]) {
+                    await this.generateComponentEnvFile(
+                        instance.path,
+                        componentId,
+                        componentConfigs[componentId],
+                    );
+                    fileCount++;
                 }
             }
 
@@ -437,23 +432,28 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // Add project-wide configuration from componentConfigs
         // Collect all unique keys across all components
+        // SOP §4: Extract Object operations to variables
         const allKeys = new Set<string>();
-        Object.values(componentConfigs).forEach((config) => {
-            Object.keys(config).forEach(key => allKeys.add(key));
-        });
+        const configValues = Object.values(componentConfigs);
+        for (const config of configValues) {
+            const configKeys = Object.keys(config);
+            for (const key of configKeys) {
+                allKeys.add(key);
+            }
+        }
 
         // Write each unique key (using first component's value)
         // Skip empty, null, or undefined values
-        allKeys.forEach(key => {
+        for (const key of allKeys) {
             // Find first component that has this key with a non-empty value
-            for (const config of Object.values(componentConfigs)) {
+            for (const config of configValues) {
                 const value = config[key];
                 if (value !== undefined && value !== null && value !== '') {
                     lines.push(`${key}=${value}`);
                     break;
                 }
             }
-        });
+        }
 
         await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
     }
@@ -479,11 +479,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // Add all configuration values for this component
         // Skip empty, null, or undefined values (don't write them to file)
-        Object.entries(config).forEach(([key, value]) => {
+        // SOP §4: Using for...of instead of Object.entries().forEach()
+        const configEntries = Object.entries(config);
+        for (const [key, value] of configEntries) {
             if (value !== undefined && value !== null && value !== '') {
                 lines.push(`${key}=${value}`);
             }
-        });
+        }
 
         await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
     }

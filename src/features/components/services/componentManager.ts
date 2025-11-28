@@ -6,6 +6,7 @@ import type { ComponentInstallOptions, ComponentInstallResult } from '@/features
 import { Project, ComponentInstance, TransformedComponentDefinition, ComponentStatus } from '@/types';
 import type { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
+import { getComponentInstancesByType } from '@/types/typeGuards';
 
 export type { ComponentInstallOptions, ComponentInstallResult };
 
@@ -447,18 +448,13 @@ export class ComponentManager {
 
     /**
      * Get all components of a specific type
+     * SOP §4: Using helper instead of inline Object.values with filter
      */
     public getComponentsByType(
         project: Project,
         type: ComponentInstance['type'],
     ): ComponentInstance[] {
-        if (!project.componentInstances) {
-            return [];
-        }
-
-        return Object.values(project.componentInstances).filter(
-            comp => comp.type === type,
-        );
+        return getComponentInstancesByType(project, type);
     }
 
     /**
