@@ -379,17 +379,56 @@ errorLogger.logError(
    - `warn()` - Warnings that users should see
    - `error()` - Errors (always visible)
 
-2. **Include Context**: Always provide context in error messages (what operation failed)
+2. **Channel Routing Rule (Critical)**:
 
-3. **Sanitize Errors**: ErrorLogger automatically sanitizes, but be aware of what's logged
+   The key principle for clean logging:
+   - **User Logs channel** ("Demo Builder: Logs"): User milestones only
+   - **Debug Logs channel** ("Demo Builder: Debug"): Technical flow details
 
-4. **Don't Over-Log**: Avoid logging inside tight loops or very frequent operations
+   **Rule: If a message has a `[ComponentName]` prefix, it should use `debug()` NOT `info()`**
 
-5. **Use Step Logger**: For wizard steps, use StepLogger for consistent formatting
+   **Exceptions** (keep as `info()` even with prefix):
+   - Messages with ✅/✓ emoji (user milestones)
+   - Messages with "successfully", "completed", or similar milestone words
+   - Messages without any prefix (user-facing by nature)
 
-6. **Log Command Results**: Always log command execution for debugging
+   **Examples**:
+   ```typescript
+   // ❌ WRONG: Technical flow with prefix → should be debug
+   logger.info('[Adobe Setup] Checking authentication');
+   logger.info('[Project Creation] Cancellation requested by user');
 
-7. **Security First**: Never log tokens, passwords, or sensitive data
+   // ✅ CORRECT: Technical flow with prefix → use debug
+   logger.debug('[Adobe Setup] Checking authentication');
+   logger.debug('[Project Creation] Cancellation requested by user');
+
+   // ✅ CORRECT: Milestone with prefix + success indicator → keep as info
+   logger.info('[Auth] Authentication completed successfully');
+   logger.info('[Update] ✓ Extension installed successfully');
+   logger.info('[Project Creation] ✅ All components downloaded');
+
+   // ✅ CORRECT: User-facing without prefix → use info
+   logger.info('Demo started at http://localhost:3000');
+   logger.info('Wizard cancelled by user');
+   logger.info('Node.js v20.11.0 installed successfully');
+   ```
+
+   **Why This Matters**:
+   - Users see clean, actionable output in "Demo Builder: Logs"
+   - Technical details remain available in "Demo Builder: Debug" for support
+   - Prevents log noise from obscuring important milestones
+
+3. **Include Context**: Always provide context in error messages (what operation failed)
+
+4. **Sanitize Errors**: ErrorLogger automatically sanitizes, but be aware of what's logged
+
+5. **Don't Over-Log**: Avoid logging inside tight loops or very frequent operations
+
+6. **Use Step Logger**: For wizard steps, use StepLogger for consistent formatting
+
+7. **Log Command Results**: Always log command execution for debugging
+
+8. **Security First**: Never log tokens, passwords, or sensitive data
 
 ## Log Level Configuration
 

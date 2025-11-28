@@ -657,30 +657,34 @@ function isValidInput(value: unknown): value is string {
 
 ## 11. Minimize Inline Styles
 
-**REQUIREMENT**: Prefer Tailwind CSS classes or external stylesheets over inline styles. Inline styles should only be used for truly dynamic values.
+**REQUIREMENT**: Prefer utility classes from `custom-spectrum.css` over inline styles. Add new utility classes for repeated patterns. Inline styles should only be used for truly dynamic values.
+
+### Project Context
+
+This project uses **Adobe Spectrum** with a custom utility class system defined in:
+- `src/core/ui/styles/custom-spectrum.css`
+
+**This is NOT Tailwind CSS.** Class names differ (e.g., `flex-column` not `flex-col`).
 
 ### The Pattern
 
 ```typescript
-// ✅ CORRECT: Tailwind CSS classes
-<div className="w-full p-4 bg-gray-100 border border-gray-300 rounded-lg">
-    <Text className="text-sm font-semibold text-blue-600">
+// ✅ CORRECT: Use existing utility classes from custom-spectrum.css
+<div className="w-full p-4 bg-gray-100 border rounded">
+    <Text UNSAFE_className="text-sm font-semibold text-blue-600">
         {label}
     </Text>
 </div>
 
-// ✅ CORRECT: Style object extracted (when inline is necessary)
-const BUTTON_STYLES: React.CSSProperties = {
-    padding: '12px',
-    backgroundColor: 'var(--spectrum-global-color-gray-200)',
-    borderRadius: '4px',
-};
-
-<button style={BUTTON_STYLES}>{label}</button>
+// ✅ CORRECT: Add new utility class to custom-spectrum.css for repeated patterns
+// In custom-spectrum.css:
+// .border-b-gray-300 { border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important; }
+// Then use:
+<div className="border-b-gray-300">...</div>
 ```
 
 ```typescript
-// ❌ WRONG: Inline style object in JSX
+// ❌ WRONG: Inline style object in JSX (even with CSS variables)
 <div style={{
     width: '100%',
     padding: '12px',
@@ -690,6 +694,40 @@ const BUTTON_STYLES: React.CSSProperties = {
 }}>
     {content}
 </div>
+```
+
+### Available Utility Classes (Partial List)
+
+Check `custom-spectrum.css` for the full list. Key classes include:
+
+| Category | Available Classes |
+|----------|-------------------|
+| **Layout** | `flex`, `flex-column`, `flex-1`, `items-center`, `justify-between`, `h-full`, `w-full` |
+| **Spacing** | `p-2` to `p-5`, `px-3`, `px-4`, `py-2`, `py-3`, `m-0`, `mb-1` to `mb-5`, `mt-1`, `mt-2` |
+| **Text** | `text-xs` to `text-5xl`, `font-normal`, `font-medium`, `font-semibold`, `font-bold` |
+| **Colors** | `text-gray-500` to `text-gray-800`, `text-green-600`, `text-red-600`, `bg-gray-50` to `bg-gray-100` |
+| **Border** | `border`, `border-t`, `border-b`, `rounded`, `rounded-lg`, `rounded-full` |
+| **Position** | `relative`, `absolute`, `top-0`, `left-0`, `right-0`, `bottom-0`, `z-1`, `z-10` |
+| **Width/Height** | `w-3`, `w-4`, `w-6`, `w-100` to `w-600`, `h-3`, `h-4`, `h-6`, `max-w-800` |
+
+### Adding New Utility Classes
+
+When you need a style that doesn't exist as a utility class:
+
+```css
+/* In src/core/ui/styles/custom-spectrum.css */
+
+/* For CSS variable-based styles */
+.border-b-spectrum-gray {
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
+}
+
+/* For dimension values */
+.p-6 { padding: 24px !important; }
+.scroll-mt-4 { scroll-margin-top: 16px !important; }
+
+/* For flex utilities */
+.shrink-0 { flex-shrink: 0 !important; }
 ```
 
 ### Problems with Inline Styles
@@ -723,16 +761,27 @@ const BUTTON_STYLES: React.CSSProperties = {
 <div style={{ backgroundColor: userSelectedColor }}>
     {content}
 </div>
+
+// ✅ OK: Conditional margin for last-item handling
+<div style={{ marginBottom: index < items.length - 1 ? '16px' : undefined }}>
+    {item}
+</div>
 ```
 
-### VS Code Webview Constraints
+### Adobe Spectrum Components
 
-In VS Code webviews, external CSS has limitations due to Content Security Policy (CSP). Acceptable alternatives:
+For Spectrum components, use `UNSAFE_className` (this is the official API):
 
-1. **Tailwind classes** (compiled at build time)
-2. **Spectrum design tokens** via CSS variables
-3. **Extracted style objects** (defined once, reused)
-4. **CSS-in-JS** with static extraction
+```typescript
+// ✅ CORRECT: UNSAFE_className for Spectrum components
+<Text UNSAFE_className="text-sm text-gray-600 font-medium">
+    {label}
+</Text>
+
+<View UNSAFE_className="flex-column gap-3 p-4">
+    {content}
+</View>
+```
 
 ### Refactoring Inline Styles
 
@@ -740,35 +789,38 @@ When you encounter inline styles:
 
 ```typescript
 // Before: Inline style object
-<button
-    style={{
-        width: '100%',
-        padding: '12px',
-        background: isActive ? 'var(--blue)' : 'transparent',
-    }}
->
+<div style={{
+    borderBottom: '1px solid var(--spectrum-global-color-gray-300)',
+    paddingBottom: '8px',
+    marginBottom: '12px',
+}}>
 
-// After: Extracted helper function (for dynamic styles)
-function getButtonStyles(isActive: boolean): React.CSSProperties {
-    return {
-        width: '100%',
-        padding: '12px',
-        background: isActive ? 'var(--blue)' : 'transparent',
-    };
-}
+// Step 1: Check if utility classes exist
+// border-b exists! pb-2 exists! mb-3 exists!
+<div className="border-b pb-2 mb-3">
 
-<button style={getButtonStyles(isActive)}>
-
-// Better: Tailwind classes (when possible)
-<button className={`w-full p-3 ${isActive ? 'bg-blue-500' : 'bg-transparent'}`}>
+// Step 2: If class doesn't exist, ADD IT to custom-spectrum.css
+// .scroll-mt-6 { scroll-margin-top: 24px !important; }
+// Then use:
+<div className="scroll-mt-6">
 ```
+
+### Migration Checklist
+
+When migrating inline styles:
+
+1. **Check `custom-spectrum.css`** for existing utility class
+2. **If exists**: Use the class (note naming differs from Tailwind)
+3. **If missing**: Add the utility class to `custom-spectrum.css`
+4. **If dynamic**: Keep inline (props/state dependent values)
 
 ### Why This Pattern Matters
 
-- **Performance**: Tailwind generates optimized CSS at build time
-- **Maintainability**: Styles are consistent and discoverable
+- **Performance**: CSS classes are parsed once, cached by browser
+- **Maintainability**: Styles are consistent and discoverable in one file
 - **Functionality**: CSS classes support hover/focus/media queries
 - **Bundle size**: Shared classes reduce overall CSS size
+- **Consistency**: Same style = same class name across codebase
 
 ---
 
