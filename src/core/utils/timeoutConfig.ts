@@ -93,6 +93,8 @@ export const TIMEOUTS = {
     // SOP §1 Compliance - Round 3: Centralized timeout constants
     // Webview communication
     WEBVIEW_HANDSHAKE: 10000,       // Handshake protocol timeout (10 seconds)
+    WEBVIEW_HANDSHAKE_EXTENDED: 15000, // Extended handshake for slow systems (15 seconds)
+    WEBVIEW_MESSAGE_TIMEOUT: 30000, // Message response timeout (30 seconds)
     WEBVIEW_RETRY_DELAY: 1000,      // Retry delay for failed messages (1 second)
     LOADING_MIN_DISPLAY: 1500,      // Minimum spinner display time (1.5 seconds)
 
@@ -111,9 +113,26 @@ export const TIMEOUTS = {
     // File operations
     FILE_DELETE_RETRY_BASE: 100,    // Base delay for delete retry backoff (100ms)
     FILE_HANDLE_RELEASE: 100,       // Wait for OS to release file handles (100ms)
+    FILE_WATCH_TIMEOUT: 10000,      // Default timeout for file watcher operations (10 seconds)
+    FILE_WATCH_INITIAL: 100,        // Initial delay for file watcher polling (100ms)
+    FILE_WATCH_MAX: 1000,           // Max delay for file watcher polling (1 second)
+
+    // Retry strategy delays (SOP §1 Round 4)
+    RETRY_INITIAL_DELAY: 1000,      // Initial delay for network/adobe-cli retry strategies (1 second)
+    RETRY_MAX_DELAY: 5000,          // Max delay for retry backoff (5 seconds)
+    FILE_RETRY_INITIAL: 200,        // Initial delay for file operation retry (200ms)
+    FILE_RETRY_MAX: 1000,           // Max delay for file operation retry (1 second)
+
+    // Progress update intervals (SOP §1 Round 4)
+    PROGRESS_UPDATE_INTERVAL: 1000, // Interval for progress bar updates (1 second)
 
     // Authentication retry
     TOKEN_RETRY_BASE: 500,          // Base delay for token retry backoff (500ms)
+
+    // SOP §1 Compliance - Round 5
+    RATE_LIMIT_WINDOW: 1000,        // Rate limiting window (1 second - operations per second)
+    ELAPSED_TIME_THRESHOLD: 30000,  // Show elapsed time after this duration (30 seconds)
+    DEFAULT_STEP_DURATION: 10000,   // Default estimated step duration (10 seconds)
 } as const;
 
 /**
