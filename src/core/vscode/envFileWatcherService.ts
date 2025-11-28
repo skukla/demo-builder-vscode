@@ -62,7 +62,8 @@ export class EnvFileWatcherService implements vscode.Disposable {
     private fileContentHashes = new Map<string, string>();
     private activeTimeouts = new Set<NodeJS.Timeout>();
 
-    private readonly STARTUP_GRACE_PERIOD = 10000; // 10 seconds
+    // SOP §1: Using TIMEOUTS constant for startup grace period
+    private readonly STARTUP_GRACE_PERIOD = TIMEOUTS.STARTUP_UPDATE_CHECK_DELAY;
 
     constructor(
         private context: vscode.ExtensionContext,

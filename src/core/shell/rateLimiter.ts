@@ -1,4 +1,5 @@
 import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Rate limiter for controlling operation frequency
@@ -53,11 +54,12 @@ export class RateLimiter {
         const now = Date.now();
         const ops = this.operations.get(resource) || [];
 
-        // Remove operations older than 1 second
-        const recentOps = ops.filter(timestamp => now - timestamp < 1000);
+        // Remove operations older than rate limit window
+        // SOP §1: Using TIMEOUTS.RATE_LIMIT_WINDOW instead of magic number
+        const recentOps = ops.filter(timestamp => now - timestamp < TIMEOUTS.RATE_LIMIT_WINDOW);
 
         if (recentOps.length >= this.maxOpsPerSecond) {
-            const waitTime = 1000 - (now - recentOps[0]);
+            const waitTime = TIMEOUTS.RATE_LIMIT_WINDOW - (now - recentOps[0]);
             this.logger.debug(
                 `[Rate Limiter] Rate limit exceeded for ${resource} ` +
                 `(${recentOps.length}/${this.maxOpsPerSecond} ops/sec). ` +
@@ -103,7 +105,8 @@ export class RateLimiter {
     getOperationCount(resource: string): number {
         const now = Date.now();
         const ops = this.operations.get(resource) || [];
-        const recentOps = ops.filter(timestamp => now - timestamp < 1000);
+        // SOP §1: Using TIMEOUTS.RATE_LIMIT_WINDOW
+        const recentOps = ops.filter(timestamp => now - timestamp < TIMEOUTS.RATE_LIMIT_WINDOW);
         return recentOps.length;
     }
 

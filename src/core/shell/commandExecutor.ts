@@ -394,11 +394,12 @@ export class CommandExecutor {
 
     /**
      * Wait for a file system change
+     * SOP §1: Using TIMEOUTS constant instead of magic number
      */
     async waitForFileSystem(
         path: string,
         expectedCondition?: () => Promise<boolean>,
-        timeout = 10000,
+        timeout = TIMEOUTS.FILE_WATCH_TIMEOUT,
     ): Promise<void> {
         return this.fileWatcher.waitForFileSystem(path, expectedCondition, timeout);
     }

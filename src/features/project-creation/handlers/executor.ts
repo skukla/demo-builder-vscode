@@ -70,9 +70,10 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             context.logger.info(`[Project Creation] Stopping running demo on port ${runningPort} before creating new project`);
 
             // Show notification that we're auto-stopping the demo
+            // SOP §1: Using TIMEOUTS constant instead of magic number
             vscode.window.setStatusBarMessage(
                 `⚠️  Stopping "${existingProject.name}" demo (port ${runningPort} conflict)`,
-                5000,
+                TIMEOUTS.STATUS_BAR_SUCCESS,
             );
 
             await vscode.commands.executeCommand('demoBuilder.stopDemo');

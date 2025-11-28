@@ -1,6 +1,7 @@
 import { RateLimiter } from './rateLimiter';
 import type { RetryStrategy, CommandResult } from './types';
 import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { toAppError, isTimeout, isNetwork } from '@/types/errors';
 
 /**
@@ -23,10 +24,11 @@ export class RetryStrategyManager {
      */
     private setupDefaultStrategies(): void {
         // Network-related commands
+        // SOP §1: Using TIMEOUTS constants instead of magic numbers
         this.strategies.set('network', {
             maxAttempts: 3,
-            initialDelay: 1000,
-            maxDelay: 5000,
+            initialDelay: TIMEOUTS.RETRY_INITIAL_DELAY,
+            maxDelay: TIMEOUTS.RETRY_MAX_DELAY,
             backoffFactor: 2,
             shouldRetry: (error) => {
                 // Use typed error detection for network and timeout errors
@@ -36,10 +38,11 @@ export class RetryStrategyManager {
         });
 
         // File system operations
+        // SOP §1: Using TIMEOUTS constants instead of magic numbers
         this.strategies.set('filesystem', {
             maxAttempts: 3,
-            initialDelay: 200,
-            maxDelay: 1000,
+            initialDelay: TIMEOUTS.FILE_RETRY_INITIAL,
+            maxDelay: TIMEOUTS.FILE_RETRY_MAX,
             backoffFactor: 1.5,
             shouldRetry: (error) => {
                 const message = error.message.toLowerCase();
@@ -50,10 +53,11 @@ export class RetryStrategyManager {
         });
 
         // Adobe CLI operations
+        // SOP §1: Using TIMEOUTS constants instead of magic numbers
         this.strategies.set('adobe-cli', {
             maxAttempts: 2,
-            initialDelay: 1000,
-            maxDelay: 5000,
+            initialDelay: TIMEOUTS.RETRY_INITIAL_DELAY,
+            maxDelay: TIMEOUTS.RETRY_MAX_DELAY,
             backoffFactor: 1.5,
             shouldRetry: (error, attempt) => {
                 const message = error.message.toLowerCase();
@@ -99,12 +103,13 @@ export class RetryStrategyManager {
 
     /**
      * Get default retry strategy
+     * SOP §1: Using TIMEOUTS constants instead of magic numbers
      */
     getDefaultStrategy(): RetryStrategy {
         return {
             maxAttempts: 1,
-            initialDelay: 1000,
-            maxDelay: 5000,
+            initialDelay: TIMEOUTS.RETRY_INITIAL_DELAY,
+            maxDelay: TIMEOUTS.RETRY_MAX_DELAY,
             backoffFactor: 2,
         };
     }

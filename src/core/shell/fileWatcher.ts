@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { PollingService } from './pollingService';
 import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Manages file system change detection
@@ -18,10 +19,11 @@ export class FileWatcher {
     /**
      * Wait for a file system change with smart detection
      */
+    // SOP §1: Using TIMEOUTS constant instead of magic number
     async waitForFileSystem(
         path: string,
         expectedCondition?: () => Promise<boolean>,
-        timeout = 10000,
+        timeout = TIMEOUTS.FILE_WATCH_TIMEOUT,
     ): Promise<void> {
         this.logger.debug(`[File Watcher] Waiting for file system change: ${path}`);
 
@@ -37,12 +39,13 @@ export class FileWatcher {
             }, timeout);
 
             // If we have a condition, poll for it
+            // SOP §1: Using TIMEOUTS constants instead of magic numbers
             if (expectedCondition) {
                 this.pollingService.pollUntilCondition(expectedCondition, {
                     timeout,
                     name: `file system: ${path}`,
-                    initialDelay: 100,
-                    maxDelay: 1000,
+                    initialDelay: TIMEOUTS.FILE_WATCH_INITIAL,
+                    maxDelay: TIMEOUTS.FILE_WATCH_MAX,
                 }).then(() => {
                     clearTimeout(timeoutHandle);
                     resolve();

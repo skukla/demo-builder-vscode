@@ -9,7 +9,14 @@ export class PerformanceTracker {
     private timings = new Map<string, number>();
     private logger = getLogger();
 
-    // Expected operation times in milliseconds
+    /**
+     * Expected operation times in milliseconds (performance benchmarks)
+     *
+     * NOTE: These are PERFORMANCE BENCHMARKS, not operational timeouts.
+     * They're used only for slow operation detection and logging.
+     * Intentionally kept here (not in TIMEOUTS config) per SOP §1
+     * as they're domain-specific benchmarks rather than configurable timeouts.
+     */
     private readonly expectedTimes: Record<string, number> = {
         'isAuthenticated': 2500,
         'isFullyAuthenticated': 3000,

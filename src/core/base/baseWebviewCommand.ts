@@ -262,10 +262,11 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         );
 
         // Create communication manager
+        // SOP §1: Using TIMEOUTS constants instead of magic numbers
         this.communicationManager = await createWebviewCommunication(this.panel, {
             enableLogging: true,
-            handshakeTimeout: 15000,
-            messageTimeout: 30000,
+            handshakeTimeout: TIMEOUTS.WEBVIEW_HANDSHAKE_EXTENDED,
+            messageTimeout: TIMEOUTS.WEBVIEW_MESSAGE_TIMEOUT,
             maxRetries: 3,
         });
 
@@ -399,9 +400,10 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         // Notify about disposal if webview requested Welcome reopen
         if (this.shouldReopenWelcomeOnDispose() && BaseWebviewCommand.disposalCallback) {
             // Use setTimeout to ensure disposal is fully complete before callback
+            // SOP §1: Using TIMEOUTS.UI_UPDATE_DELAY
             setTimeout(() => {
                 BaseWebviewCommand.disposalCallback?.(webviewId);
-            }, 100);
+            }, TIMEOUTS.UI_UPDATE_DELAY);
         }
     }
 

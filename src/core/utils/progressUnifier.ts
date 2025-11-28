@@ -1,5 +1,6 @@
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
 import { Logger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 
 /**
@@ -49,8 +50,9 @@ type ProgressHandler = (progress: UnifiedProgress) => Promise<void>;
 /**
  * Threshold in milliseconds for showing elapsed time in progress messages
  * Only operations exceeding this duration will display elapsed time
+ * SOP §1: Using TIMEOUTS constant instead of magic number
  */
-const ELAPSED_TIME_THRESHOLD_MS = 30000; // 30 seconds
+const ELAPSED_TIME_THRESHOLD_MS = TIMEOUTS.ELAPSED_TIME_THRESHOLD;
 
 /**
  * Format elapsed time in human-readable format
@@ -439,9 +441,11 @@ export class ProgressUnifier {
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
             const startTime = this.dateProvider.now();
-            const estimatedDuration = step.estimatedDuration || 10000;
+            // SOP §1: Using TIMEOUTS constant for default step duration
+            const estimatedDuration = step.estimatedDuration || TIMEOUTS.DEFAULT_STEP_DURATION;
 
             // Update progress every second
+            // SOP §1: Using TIMEOUTS constant instead of magic number
             const progressInterval = this.timerProvider.setInterval(async () => {
                 const elapsed = this.dateProvider.now() - startTime;
                 const progress = Math.min(95, (elapsed / estimatedDuration) * 100);
@@ -462,7 +466,7 @@ export class ProgressUnifier {
                         confidence: 'synthetic',
                     },
                 });
-            }, 1000);
+            }, TIMEOUTS.PROGRESS_UPDATE_INTERVAL);
 
             child.stdout.on('data', (data) => {
                 this.logger.info(`[${step.name}] ${data.toString().trim()}`);
