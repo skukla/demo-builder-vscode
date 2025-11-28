@@ -6,13 +6,24 @@
  *
  * @example
  * ```tsx
+ * // Using default variant icon
  * <StatusDisplay
  *   variant="error"
  *   title="Authentication Failed"
  *   message={errorMessage}
  *   actions={[
  *     { label: 'Retry', variant: 'accent', onPress: handleRetry },
- *     { label: 'Back', variant: 'secondary', onPress: handleBack },
+ *   ]}
+ * />
+ *
+ * // Using custom icon and button icons
+ * <StatusDisplay
+ *   variant="info"
+ *   icon={<Key size="L" UNSAFE_className="text-gray-500" />}
+ *   title="Sign in to Adobe"
+ *   message="Connect your Adobe account"
+ *   actions={[
+ *     { label: 'Sign In', icon: <Login size="S" />, variant: 'accent', onPress: handleLogin },
  *   ]}
  * />
  * ```
@@ -27,15 +38,22 @@ import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
 
 export type StatusVariant = 'error' | 'success' | 'warning' | 'info' | 'pending';
 
-interface StatusAction {
+export interface StatusAction {
+    /** Button label text */
     label: string;
+    /** Optional icon to display before the label */
+    icon?: React.ReactNode;
+    /** Button variant */
     variant?: 'accent' | 'primary' | 'secondary' | 'negative';
+    /** Click handler */
     onPress: () => void;
 }
 
 export interface StatusDisplayProps {
     /** Visual variant determining icon and color */
     variant: StatusVariant;
+    /** Custom icon to override the default variant icon */
+    icon?: React.ReactNode;
     /** Main title text */
     title: string;
     /** Description or error message */
@@ -50,6 +68,8 @@ export interface StatusDisplayProps {
     height?: string;
     /** Max width of the content (default: 600px) */
     maxWidth?: string;
+    /** Center the message text (default: false) */
+    centerMessage?: boolean;
 }
 
 const variantConfig: Record<StatusVariant, { icon: React.ReactNode; colorClass: string }> = {
@@ -77,6 +97,7 @@ const variantConfig: Record<StatusVariant, { icon: React.ReactNode; colorClass: 
 
 export function StatusDisplay({
     variant,
+    icon: customIcon,
     title,
     message,
     details,
@@ -84,8 +105,14 @@ export function StatusDisplay({
     children,
     height = '350px',
     maxWidth = '600px',
+    centerMessage = false,
 }: StatusDisplayProps) {
-    const { icon } = variantConfig[variant];
+    const { icon: defaultIcon } = variantConfig[variant];
+    const displayIcon = customIcon ?? defaultIcon;
+
+    const messageClassName = centerMessage
+        ? 'text-sm text-gray-600 text-center'
+        : 'text-sm text-gray-600';
 
     return (
         <FadeTransition show={true}>
@@ -101,15 +128,15 @@ export function StatusDisplay({
                     alignItems="center"
                     UNSAFE_style={{ maxWidth }}
                 >
-                    {icon}
+                    {displayIcon}
 
                     <Flex direction="column" gap="size-100" alignItems="center">
                         <Text UNSAFE_className="text-xl font-medium">{title}</Text>
                         {message && (
-                            <Text UNSAFE_className="text-sm text-gray-600">{message}</Text>
+                            <Text UNSAFE_className={messageClassName}>{message}</Text>
                         )}
                         {details?.map((detail, index) => (
-                            <Text key={index} UNSAFE_className="text-sm text-gray-600">
+                            <Text key={index} UNSAFE_className={messageClassName}>
                                 {detail}
                             </Text>
                         ))}
@@ -125,6 +152,11 @@ export function StatusDisplay({
                                     variant={action.variant || 'secondary'}
                                     onPress={action.onPress}
                                 >
+                                    {action.icon && (
+                                        <span style={{ marginRight: '8px', display: 'inline-flex', alignItems: 'center' }}>
+                                            {action.icon}
+                                        </span>
+                                    )}
                                     {action.label}
                                 </Button>
                             ))}

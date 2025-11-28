@@ -1,8 +1,6 @@
 import {
-    Flex,
     Heading,
     Text,
-    Button,
 } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
@@ -11,6 +9,7 @@ import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import React from 'react';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { AuthLoadingState } from './components/AuthLoadingState';
 import { ErrorCode } from '@/types/errorCodes';
@@ -59,139 +58,99 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
 
             {/* Token expiring soon */}
             {isTokenExpiringSoon(adobeAuth) && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                    <Flex direction="column" gap="size-200" alignItems="center">
-                        <Alert UNSAFE_className="text-orange-500" size="L" />
-                        <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-xl font-medium">Session Expiring Soon</Text>
-                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                Your Adobe session expires in {adobeAuth.tokenExpiresIn || 0} {adobeAuth.tokenExpiresIn === 1 ? 'minute' : 'minutes'}. Please re-authenticate to avoid interruption during project setup.
-                            </Text>
-                        </Flex>
-                        <Button variant="accent" onPress={() => handleLogin(true)} marginTop="size-300">
-                            <Login size="S" marginEnd="size-100" />
-                            Re-authenticate Now
-                        </Button>
-                    </Flex>
-                </Flex>
+                <StatusDisplay
+                    variant="warning"
+                    icon={<Alert UNSAFE_className="text-orange-500" size="L" />}
+                    title="Session Expiring Soon"
+                    message={`Your Adobe session expires in ${adobeAuth.tokenExpiresIn || 0} ${adobeAuth.tokenExpiresIn === 1 ? 'minute' : 'minutes'}. Please re-authenticate to avoid interruption during project setup.`}
+                    centerMessage
+                    maxWidth="450px"
+                    actions={[
+                        { label: 'Re-authenticate Now', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) },
+                    ]}
+                />
             )}
 
             {/* Authenticated with valid organization */}
             {isAuthenticatedWithOrg(adobeAuth, adobeOrg) && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                    <Flex direction="column" gap="size-200" alignItems="center">
-                        <CheckmarkCircle UNSAFE_className="text-green-600" size="L" />
-                        <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-lg font-medium">Connected</Text>
-                            <Text UNSAFE_className="text-sm text-gray-600">{adobeOrg.name}</Text>
-                        </Flex>
-                        <Button variant="secondary" onPress={() => handleLogin(true)} marginTop="size-200">
-                            Switch Organizations
-                        </Button>
-                    </Flex>
-                </Flex>
+                <StatusDisplay
+                    variant="success"
+                    title="Connected"
+                    message={adobeOrg.name}
+                    actions={[
+                        { label: 'Switch Organizations', variant: 'secondary', onPress: () => handleLogin(true) },
+                    ]}
+                />
             )}
 
             {/* Authenticated but organization selection required */}
             {needsOrgSelection(adobeAuth, adobeOrg) && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                    <Flex direction="column" gap="size-200" alignItems="center">
-                        <AlertCircle UNSAFE_className="text-orange-500" size="L" />
-                        <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-xl font-medium">Select Your Organization</Text>
-                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                {getOrgSelectionMessage(adobeAuth)}
-                            </Text>
-                        </Flex>
-                        <Button variant="accent" onPress={() => handleLogin(true)} marginTop="size-300">
-                            <Key size="S" marginEnd="size-100" />
-                            Select Organization
-                        </Button>
-                    </Flex>
-                </Flex>
+                <StatusDisplay
+                    variant="warning"
+                    icon={<AlertCircle UNSAFE_className="text-orange-500" size="L" />}
+                    title="Select Your Organization"
+                    message={getOrgSelectionMessage(adobeAuth)}
+                    centerMessage
+                    maxWidth="450px"
+                    actions={[
+                        { label: 'Select Organization', icon: <Key size="S" />, variant: 'accent', onPress: () => handleLogin(true) },
+                    ]}
+                />
             )}
 
             {/* Not authenticated */}
             {isNotAuthenticated(adobeAuth, authTimeout) && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                    <Flex direction="column" gap="size-200" alignItems="center">
-                        <Key UNSAFE_className="text-gray-500" size="L" />
-                        <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-xl font-medium">{authStatus || 'Sign in to Adobe'}</Text>
-                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                {authSubMessage || "Connect your Adobe account to create and deploy App Builder applications."}
-                            </Text>
-                        </Flex>
-                        <Button variant="accent" onPress={() => handleLogin(false)} marginTop="size-300">
-                            <Login size="S" marginEnd="size-100" />
-                            Sign In with Adobe
-                        </Button>
-                    </Flex>
-                </Flex>
+                <StatusDisplay
+                    variant="info"
+                    icon={<Key UNSAFE_className="text-gray-500" size="L" />}
+                    title={authStatus || 'Sign in to Adobe'}
+                    message={authSubMessage || 'Connect your Adobe account to create and deploy App Builder applications.'}
+                    centerMessage
+                    maxWidth="450px"
+                    actions={[
+                        { label: 'Sign In with Adobe', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(false) },
+                    ]}
+                />
             )}
 
             {/* Error state */}
             {hasAuthError(adobeAuth, authTimeout) && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                    <Flex direction="column" gap="size-200" alignItems="center">
-                        {adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? (
-                            <AlertCircle UNSAFE_className="text-orange-500" size="L" />
-                        ) : (
-                            <Alert UNSAFE_className="text-red-500" size="L" />
-                        )}
-                        <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-xl font-medium">
-                                {adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? 'Insufficient Privileges' : 'Connection Issue'}
-                            </Text>
-                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                {authSubMessage || (adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
-                                    ? "You need Developer or System Admin role in an Adobe organization with App Builder access."
-                                    : "We couldn't connect to Adobe services. Please check your internet connection.")}
-                            </Text>
-                        </Flex>
-                        <Flex direction="row" gap="size-200" marginTop="size-300">
-                            {adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? (
-                                <Button variant="accent" onPress={() => handleLogin(true)}>
-                                    <Login size="S" marginEnd="size-100" />
-                                    Sign In Again
-                                </Button>
-                            ) : (
-                                <>
-                                    <Button variant="secondary" onPress={() => checkAuthentication()}>
-                                        <Refresh size="S" marginEnd="size-100" />
-                                        Try Again
-                                    </Button>
-                                    <Button variant="accent" onPress={() => handleLogin(false)}>
-                                        <Login size="S" marginEnd="size-100" />
-                                        Sign In Again
-                                    </Button>
-                                </>
-                            )}
-                        </Flex>
-                    </Flex>
-                </Flex>
+                <StatusDisplay
+                    variant={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? 'warning' : 'error'}
+                    icon={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
+                        ? <AlertCircle UNSAFE_className="text-orange-500" size="L" />
+                        : <Alert UNSAFE_className="text-red-500" size="L" />
+                    }
+                    title={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER ? 'Insufficient Privileges' : 'Connection Issue'}
+                    message={authSubMessage || (adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
+                        ? 'You need Developer or System Admin role in an Adobe organization with App Builder access.'
+                        : "We couldn't connect to Adobe services. Please check your internet connection.")}
+                    centerMessage
+                    maxWidth="450px"
+                    actions={adobeAuth.code === ErrorCode.AUTH_NO_APP_BUILDER
+                        ? [{ label: 'Sign In Again', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(true) }]
+                        : [
+                            { label: 'Try Again', icon: <Refresh size="S" />, variant: 'secondary', onPress: () => checkAuthentication() },
+                            { label: 'Sign In Again', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(false) },
+                        ]
+                    }
+                />
             )}
 
             {/* Timeout state */}
             {hasAuthTimeout(adobeAuth, authTimeout) && (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                    <Flex direction="column" gap="size-200" alignItems="center">
-                        <Alert UNSAFE_className="text-red-500" size="L" />
-                        <Flex direction="column" gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-xl font-medium">Authentication Timed Out</Text>
-                            <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{ maxWidth: '450px' }}>
-                                The browser authentication window may have been closed or the session expired.
-                            </Text>
-                        </Flex>
-                        <Button variant="accent" onPress={() => handleLogin(false)} marginTop="size-300">
-                            <Login size="S" marginEnd="size-100" />
-                            Retry Login
-                        </Button>
-                    </Flex>
-                </Flex>
+                <StatusDisplay
+                    variant="error"
+                    icon={<Alert UNSAFE_className="text-red-500" size="L" />}
+                    title="Authentication Timed Out"
+                    message="The browser authentication window may have been closed or the session expired."
+                    centerMessage
+                    maxWidth="450px"
+                    actions={[
+                        { label: 'Retry Login', icon: <Login size="S" />, variant: 'accent', onPress: () => handleLogin(false) },
+                    ]}
+                />
             )}
-
-            <style>{`.text-center { text-align: center; }`}</style>
         </SingleColumnLayout>
     );
 }
