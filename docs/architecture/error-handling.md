@@ -1,12 +1,12 @@
 # Error Handling Architecture
 
-> **Status:** Interim Documentation
-> **Last Updated:** 2025-11-27
-> **Related Plan:** `.rptc/plans/error-handling-standardization/overview.md`
+> **Status:** Active Documentation
+> **Last Updated:** 2025-11-28
+> **Phase:** D - Status Quo with Documentation
 
 ## Overview
 
-This document describes the current error handling patterns in the Adobe Demo Builder extension. The codebase currently uses **3 different error payload formats** across features, which creates friction for UI error handling.
+This document describes the error handling patterns in the Adobe Demo Builder extension. The codebase uses **typed error infrastructure** with `ErrorCode` enum for programmatic error handling, while maintaining **backward-compatible payload formats** for gradual migration.
 
 ## Logging Infrastructure
 
@@ -49,9 +49,91 @@ log.error('Failed to load data', error);  // Always logs, even in production
 - Frontend webviewLogger uses browser console (dev-only, except errors)
 - Both provide consistent `[Context]` prefix formatting
 
+---
+
+## Typed Error Infrastructure
+
+### Error Classes (`src/types/errors.ts`)
+
+The codebase provides typed error classes for programmatic error handling:
+
+```typescript
+import { AppError, TimeoutError, NetworkError, toAppError, isTimeout, isNetwork } from '@/types/errors';
+import { ErrorCode } from '@/types/errorCodes';
+
+// Convert unknown error to typed AppError
+const appError = toAppError(error);
+
+// Type guards for specific error types
+if (isTimeout(appError)) {
+    // Handle timeout specifically
+}
+
+if (isNetwork(appError)) {
+    // Handle network error specifically
+}
+
+// Access error properties
+appError.code;        // ErrorCode enum value (e.g., 'TIMEOUT')
+appError.message;     // Technical error message
+appError.userMessage; // User-friendly message
+```
+
+### Error Codes (`src/types/errorCodes.ts`)
+
+```typescript
+export enum ErrorCode {
+    UNKNOWN = 'UNKNOWN',
+    TIMEOUT = 'TIMEOUT',
+    NETWORK = 'NETWORK',
+    AUTH_REQUIRED = 'AUTH_REQUIRED',
+    CANCELLED = 'CANCELLED',
+    VALIDATION = 'VALIDATION',
+    NOT_FOUND = 'NOT_FOUND',
+    // ... additional codes
+}
+```
+
+### Usage in Handlers
+
+Handlers should use typed errors for consistent error detection:
+
+```typescript
+import { toAppError, isTimeout } from '@/types/errors';
+
+export async function handleGetProjects(context: HandlerContext) {
+    try {
+        const projects = await fetchProjects();
+        return { success: true, data: projects };
+    } catch (error) {
+        const appError = toAppError(error);
+
+        // Use type guards instead of string matching
+        const errorMessage = isTimeout(appError)
+            ? appError.userMessage
+            : 'Failed to load projects. Please try again.';
+
+        return {
+            success: false,
+            error: errorMessage,
+            code: appError.code,  // Include code for programmatic handling
+        };
+    }
+}
+```
+
+### Benefits of Typed Errors
+
+1. **No String Matching**: Use `isTimeout()` instead of `error.message.includes('timed out')`
+2. **Consistent Messages**: `appError.userMessage` provides user-friendly text
+3. **Programmatic Handling**: Frontend can switch on `code` field
+4. **Type Safety**: TypeScript knows error properties exist
+
+---
+
 ## Current State: Three Error Payload Formats
 
-### Format A: Components (Simple Response)
+### Format A: Components (Simple Response + Code)
 
 **Used by:** Component handlers (`src/features/components/handlers/`)
 
@@ -59,16 +141,19 @@ log.error('Failed to load data', error);  // Always logs, even in production
 ```typescript
 {
     success: false,
-    error: string,        // Error message
-    message: string       // User-friendly message
+    error: string,        // User-friendly error message
+    message: string,      // Context message
+    code: ErrorCode       // Programmatic error code (NEW)
 }
 ```
 
 **Example:**
 ```typescript
+const appError = toAppError(error);
 return {
     success: false,
-    error: error instanceof Error ? error.message : 'Unknown error',
+    error: appError.userMessage,
+    code: appError.code,
     message: 'Failed to load components',
 };
 ```
@@ -233,9 +318,75 @@ await context.sendMessage('feature-status', {
 
 ---
 
-## Future Consolidation (Phase C)
+## Migration Strategy (Phase D)
 
-The step-12 plan proposes unifying to a single format:
+The codebase now uses typed errors internally. Migration to consistent payloads happens **gradually** as files are touched.
+
+### For New Code
+
+**Always include `code` field in error responses:**
+
+```typescript
+import { toAppError } from '@/types/errors';
+
+// In catch block
+const appError = toAppError(error);
+return {
+    success: false,
+    error: appError.userMessage,
+    code: appError.code,  // Always include this
+    // ... other fields as needed
+};
+```
+
+### For Existing Code
+
+When modifying existing handlers, add the `code` field:
+
+**Before:**
+```typescript
+return {
+    success: false,
+    error: error instanceof Error ? error.message : 'Unknown error',
+};
+```
+
+**After:**
+```typescript
+const appError = toAppError(error);
+return {
+    success: false,
+    error: appError.userMessage,
+    code: appError.code,
+};
+```
+
+### Frontend Handling
+
+Frontend code can now use the `code` field for programmatic handling:
+
+```typescript
+// Handle response
+if (!response.success) {
+    switch (response.code) {
+        case 'TIMEOUT':
+            // Show retry button with longer timeout
+            break;
+        case 'NETWORK':
+            // Show offline indicator
+            break;
+        case 'AUTH_REQUIRED':
+            // Redirect to login
+            break;
+        default:
+            // Show generic error
+    }
+}
+```
+
+### Future Consolidation
+
+Once all handlers include `code` field, consider unifying to:
 
 ```typescript
 interface ErrorPayload {
@@ -249,17 +400,27 @@ interface ErrorPayload {
 }
 ```
 
-This consolidation is deferred until Phase A and B are complete, pending decision gate evaluation.
+This is **not required** for current development. The `code` field provides sufficient programmatic handling capability.
 
 ---
 
 ## Quick Reference
 
-| Feature | Format | Error Type | Message Pattern |
-|---------|--------|------------|-----------------|
-| Components | A | `string` | `{ error, message }` |
-| Mesh | B | `string` | `{ error }` |
-| Authentication | C | `boolean \| string` | `{ error, message, subMessage }` |
+| Feature | Format | Error Type | Message Pattern | Has `code`? |
+|---------|--------|------------|-----------------|-------------|
+| Components | A | `string` | `{ error, message, code }` | ✅ Yes |
+| Project/Workspace | B | `string` | `{ error, code }` | ✅ Yes |
+| Mesh | B | `string` | `{ error }` | ❌ Not yet |
+| Authentication | C | `boolean \| string` | `{ error, message, subMessage }` | ❌ Not yet |
+
+### Handlers with `code` Field (Migrated)
+
+- `handleGetProjects` - `code: 'TIMEOUT' | 'UNKNOWN'`
+- `handleGetWorkspaces` - `code: 'TIMEOUT' | 'UNKNOWN'`
+- `handleLoadComponents` - `code: ErrorCode`
+- `handleGetComponentsData` - `code: ErrorCode`
+- `handleCheckCompatibility` - `code: ErrorCode`
+- `createHandler` (project creation) - `code: 'TIMEOUT' | 'UNKNOWN'`
 
 ---
 
