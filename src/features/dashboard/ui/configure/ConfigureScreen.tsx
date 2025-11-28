@@ -67,6 +67,136 @@ interface SaveConfigurationResponse {
     error?: string;
 }
 
+/**
+ * Transform a ServiceGroup to a NavigationSection
+ *
+ * SOP §6: Extracted callback body complexity to named helper
+ *
+ * @param group - Service group to transform
+ * @param isFieldComplete - Callback to check if a field is complete
+ * @returns NavigationSection for NavigationPanel
+ */
+function toNavigationSection(
+    group: ServiceGroup,
+    isFieldComplete: (field: UniqueField) => boolean,
+): NavigationSection {
+    const requiredFields = group.fields.filter(f => f.required);
+    const completedFields = requiredFields.filter(f => isFieldComplete(f));
+
+    return {
+        id: group.id,
+        label: group.label,
+        fields: group.fields.map(f => ({
+            key: f.key,
+            label: f.label,
+            isComplete: isFieldComplete(f),
+        })),
+        isComplete: requiredFields.length === 0 || completedFields.length === requiredFields.length,
+        completedCount: completedFields.length,
+        totalCount: requiredFields.length,
+    };
+}
+
+/**
+ * Context for rendering form fields
+ */
+interface FormFieldRenderContext {
+    getFieldValue: (field: UniqueField) => string | boolean | undefined;
+    validationErrors: Record<string, string>;
+    touchedFields: Set<string>;
+    updateField: (field: UniqueField, value: string | boolean) => void;
+    selectableDefaultProps: Record<string, unknown>;
+}
+
+/**
+ * Render a FormField component with proper value/error handling
+ *
+ * SOP §6: Extracted callback body complexity to named helper
+ *
+ * @param field - The field definition
+ * @param context - Render context with callbacks and state
+ * @returns FormField JSX element
+ */
+function renderFormField(
+    field: UniqueField,
+    context: FormFieldRenderContext,
+): React.ReactElement {
+    const value = context.getFieldValue(field);
+    const error = context.validationErrors[field.key];
+    const showError = error && context.touchedFields.has(field.key);
+    const hasDefault = value && field.default && value === field.default;
+
+    return (
+        <FormField
+            key={field.key}
+            fieldKey={field.key}
+            label={field.label}
+            type={field.type as 'text' | 'url' | 'password' | 'select' | 'number'}
+            value={value !== undefined && value !== null ? String(value) : ''}
+            onChange={(val) => context.updateField(field, val)}
+            placeholder={field.placeholder}
+            description={field.description}
+            required={field.required}
+            error={error}
+            showError={!!showError}
+            options={field.options}
+            selectableDefaultProps={hasDefault ? context.selectableDefaultProps : undefined}
+        />
+    );
+}
+
+/**
+ * Check if a component has environment variables configured
+ */
+function componentHasEnvVars(componentDef: ComponentData): boolean {
+    return (componentDef.configuration?.requiredEnvVars?.length || 0) > 0 ||
+           (componentDef.configuration?.optionalEnvVars?.length || 0) > 0;
+}
+
+/**
+ * Capitalize the first letter of a string
+ */
+function capitalizeFirst(str: string): string {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+/**
+ * Get component type display name from instance
+ */
+function getComponentTypeDisplay(instance: ComponentInstance): string {
+    const instanceType = instance?.type;
+    return instanceType ? capitalizeFirst(instanceType) : 'Component';
+}
+
+/**
+ * Discover components from componentInstances as fallback
+ *
+ * SOP §6: Extracted callback body complexity from forEach
+ *
+ * @param componentInstances - Map of component ID to instance
+ * @param allComponentDefs - All component definitions to search
+ * @returns Array of discovered components with their data and types
+ */
+function discoverComponentsFromInstances(
+    componentInstances: Record<string, ComponentInstance>,
+    allComponentDefs: ComponentData[],
+): Array<{ id: string; data: ComponentData; type: string }> {
+    const discovered: Array<{ id: string; data: ComponentData; type: string }> = [];
+
+    for (const [id, instance] of Object.entries(componentInstances)) {
+        const componentDef = allComponentDefs.find((c: ComponentData) => c.id === id);
+        if (componentDef && componentHasEnvVars(componentDef)) {
+            discovered.push({
+                id: componentDef.id,
+                data: componentDef,
+                type: getComponentTypeDisplay(instance),
+            });
+        }
+    }
+
+    return discovered;
+}
+
 export function ConfigureScreen({ project, componentsData, existingEnvValues }: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -170,30 +300,21 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             if (app) addComponentWithDeps(app, 'App Builder');
         });
 
+        // Fallback: discover components from componentInstances if no selections
         if (components.length === 0 && project.componentInstances) {
-            Object.entries(project.componentInstances).forEach(([id, instance]) => {
-                const allComponentDefs = [
-                    ...(componentsData.frontends || []),
-                    ...(componentsData.backends || []),
-                    ...(componentsData.dependencies || []),
-                    ...(componentsData.integrations || []),
-                    ...(componentsData.appBuilder || [])
-                ];
+            const allComponentDefs = [
+                ...(componentsData.frontends || []),
+                ...(componentsData.backends || []),
+                ...(componentsData.dependencies || []),
+                ...(componentsData.integrations || []),
+                ...(componentsData.appBuilder || []),
+            ];
 
-                const componentDef = allComponentDefs.find((c: ComponentData) => c.id === id);
-                if (componentDef) {
-                    const hasEnvVars = (componentDef.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                       (componentDef.configuration?.optionalEnvVars?.length || 0) > 0;
-                    if (hasEnvVars) {
-                        const instanceType = (instance as ComponentInstance)?.type;
-                        components.push({
-                            id: componentDef.id,
-                            data: componentDef,
-                            type: instanceType ? instanceType.charAt(0).toUpperCase() + instanceType.slice(1) : 'Component'
-                        });
-                    }
-                }
-            });
+            const discovered = discoverComponentsFromInstances(
+                project.componentInstances,
+                allComponentDefs,
+            );
+            components.push(...discovered);
         }
 
         return components;
@@ -492,23 +613,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
     // Navigation sections for NavigationPanel
     const navigationSections = useMemo<NavigationSection[]>(() => {
-        return serviceGroups.map(group => {
-            const requiredFields = group.fields.filter(f => f.required);
-            const completedFields = requiredFields.filter(f => isFieldComplete(f));
-
-            return {
-                id: group.id,
-                label: group.label,
-                fields: group.fields.map(f => ({
-                    key: f.key,
-                    label: f.label,
-                    isComplete: isFieldComplete(f)
-                })),
-                isComplete: requiredFields.length === 0 || completedFields.length === requiredFields.length,
-                completedCount: completedFields.length,
-                totalCount: requiredFields.length
-            };
-        });
+        return serviceGroups.map(group => toNavigationSection(group, isFieldComplete));
     }, [serviceGroups, isFieldComplete]);
 
     const toggleNavSection = useCallback((sectionId: string) => {
@@ -617,30 +722,15 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                             label={group.label}
                                             showDivider={index > 0}
                                         >
-                                            {group.fields.map(field => {
-                                                const value = getFieldValue(field);
-                                                const error = validationErrors[field.key];
-                                                const showError = error && touchedFields.has(field.key);
-                                                const hasDefault = value && field.default && value === field.default;
-
-                                                return (
-                                                    <FormField
-                                                        key={field.key}
-                                                        fieldKey={field.key}
-                                                        label={field.label}
-                                                        type={field.type as 'text' | 'url' | 'password' | 'select' | 'number'}
-                                                        value={value !== undefined && value !== null ? String(value) : ''}
-                                                        onChange={(val) => updateField(field, val)}
-                                                        placeholder={field.placeholder}
-                                                        description={field.description}
-                                                        required={field.required}
-                                                        error={error}
-                                                        showError={!!showError}
-                                                        options={field.options}
-                                                        selectableDefaultProps={hasDefault ? selectableDefaultProps : undefined}
-                                                    />
-                                                );
-                                            })}
+                                            {group.fields.map(field =>
+                                                renderFormField(field, {
+                                                    getFieldValue,
+                                                    validationErrors,
+                                                    touchedFields,
+                                                    updateField,
+                                                    selectableDefaultProps,
+                                                })
+                                            )}
                                         </ConfigSection>
                                     ))}
                                 </Form>
