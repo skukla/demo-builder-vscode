@@ -99,6 +99,7 @@ describe('DeleteProjectCommand - Retry Logic', () => {
         // Mock status bar
         mockStatusBar = {
             clear: jest.fn(),
+            reset: jest.fn(),
         } as any;
 
         // Mock logger

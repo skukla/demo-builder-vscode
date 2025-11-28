@@ -101,6 +101,7 @@ describe('DeleteProjectCommand - Error Handling', () => {
         // Mock status bar
         mockStatusBar = {
             clear: jest.fn(),
+            reset: jest.fn(),
         } as any;
 
         // Mock logger

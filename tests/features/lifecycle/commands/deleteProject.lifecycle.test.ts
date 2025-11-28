@@ -98,6 +98,7 @@ describe('DeleteProjectCommand - Lifecycle', () => {
         // Mock status bar
         mockStatusBar = {
             clear: jest.fn(),
+            reset: jest.fn(),
         } as any;
 
         // Mock logger
@@ -170,13 +171,13 @@ describe('DeleteProjectCommand - Lifecycle', () => {
             expect(mockStateManager.removeFromRecentProjects).toHaveBeenCalledWith(testProjectPath);
         });
 
-        it('should update status bar after successful deletion', async () => {
+        it('should reset status bar before file deletion', async () => {
             // Given: Project exists
             // When: deleteProject command executes
             await command.execute();
 
-            // Then: Status bar should be cleared
-            expect(mockStatusBar.clear).toHaveBeenCalled();
+            // Then: Status bar should be reset (stops timer to prevent race condition)
+            expect(mockStatusBar.reset).toHaveBeenCalled();
         });
     });
 
@@ -237,13 +238,14 @@ describe('DeleteProjectCommand - Lifecycle', () => {
             expect(mockStateManager.clearProject).toHaveBeenCalled();
         });
 
-        it('should clear status bar', async () => {
+        it('should reset status bar (stops timer to prevent race condition)', async () => {
             // Given: Project exists
             // When: Deletion succeeds
             await command.execute();
 
-            // Then: Status bar should be cleared
-            expect(mockStatusBar.clear).toHaveBeenCalled();
+            // Then: Status bar should be reset (not just cleared)
+            // reset() stops the update timer AND clears the display
+            expect(mockStatusBar.reset).toHaveBeenCalled();
         });
 
         it('should open Welcome screen after successful deletion', async () => {
