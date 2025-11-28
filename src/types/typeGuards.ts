@@ -295,3 +295,38 @@ export function getEntryCount(obj: Record<string, unknown> | undefined | null): 
     return Object.keys(obj).length;
 }
 
+// =============================================================================
+// Project Accessor Functions
+// =============================================================================
+// These extract common deep optional chain patterns from project data
+// per SOP code-patterns.md §4 (Deep Optional Chaining)
+
+/**
+ * Get frontend component port from project
+ *
+ * Replaces inline: `project?.componentInstances?.['citisignal-nextjs']?.port`
+ * SOP §4: Extracted deep optional chain to named getter
+ *
+ * @param project - Project to extract port from (can be undefined/null)
+ * @returns Port number if available, undefined otherwise
+ */
+export function getProjectFrontendPort(project: Project | undefined | null): number | undefined {
+    return project?.componentInstances?.['citisignal-nextjs']?.port;
+}
+
+/**
+ * Get component IDs from component instances record
+ *
+ * Replaces inline: `Object.keys(componentInstances || {})`
+ * SOP §4: Extracted inline object operation to named helper
+ *
+ * @param componentInstances - Component instances record (can be undefined/null)
+ * @returns Array of component IDs, empty array if null/undefined
+ */
+export function getComponentIds(
+    componentInstances: Record<string, ComponentInstance> | undefined | null,
+): string[] {
+    if (!componentInstances) return [];
+    return Object.keys(componentInstances);
+}
+

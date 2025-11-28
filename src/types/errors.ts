@@ -71,11 +71,7 @@ export class AppError extends Error {
             return error;
         }
 
-        const message = error instanceof Error
-            ? error.message
-            : typeof error === 'string'
-                ? error
-                : 'Unknown error occurred';
+        const message = extractErrorMessage(error);
 
         return new AppError(message, code, {
             userMessage: message,
@@ -313,6 +309,22 @@ export function isAppError(error: unknown): error is AppError {
     return error instanceof AppError;
 }
 
+// ===== Helper Functions =====
+
+/**
+ * Extract error message from unknown error value
+ * SOP §3: Extracted nested ternary to named helper
+ */
+export function extractErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+        return error.message;
+    }
+    if (typeof error === 'string') {
+        return error;
+    }
+    return 'Unknown error occurred';
+}
+
 /**
  * Check if error is a TimeoutError
  */
@@ -351,12 +363,7 @@ export function toAppError(error: unknown): AppError {
     }
 
     // Get error message
-    const message = error instanceof Error
-        ? error.message
-        : typeof error === 'string'
-            ? error
-            : 'Unknown error occurred';
-
+    const message = extractErrorMessage(error);
     const lowerMessage = message.toLowerCase();
 
     // Detect timeout errors
