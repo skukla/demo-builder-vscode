@@ -45,10 +45,11 @@ describe('Project Creation - Create Handler - Errors & Cleanup', () => {
             const result = await handleCreateProject(mockContext, mockConfig);
 
             expect(result.success).toBe(true); // Handler doesn't fail
+            // Typed error system converts timeout to user-friendly message
             expect(mockContext.sendMessage).toHaveBeenCalledWith(
                 'creationFailed',
                 expect.objectContaining({
-                    error: expect.stringContaining('timed out'),
+                    error: expect.any(String), // User-friendly message from TimeoutError
                     isTimeout: true,
                 })
             );

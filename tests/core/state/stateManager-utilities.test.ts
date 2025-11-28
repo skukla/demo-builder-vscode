@@ -8,7 +8,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { setupMocks, mockHomedir, mockStateFile, createMockProject, type TestMocks } from './stateManager.testUtils';
+import { setupMocks, mockHomedir, mockStateFile, createMockProject, mockLoggerInstance, type TestMocks } from './stateManager.testUtils';
 import type { Project } from '@/types';
 
 // Re-declare mocks to ensure proper typing and hoisting
@@ -97,9 +97,6 @@ describe('StateManager - Utilities', () => {
         it('should detect running demo from terminal', async () => {
             const { stateManager } = testMocks;
 
-            // Spy on console.log to verify detection message
-            const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
-
             const mockManifest = {
                 name: 'Test Project',
                 created: '2024-01-01',
@@ -132,15 +129,13 @@ describe('StateManager - Utilities', () => {
             // Load project with injected terminal provider
             const project = await stateManager.loadProjectFromPath('/test/project', terminalProvider);
 
-            // Verify detection log was called
-            const detectionLog = consoleLogSpy.mock.calls.find((call: any[]) =>
-                call[0]?.includes?.('[StateManager] Detected running demo')
+            // Verify detection log was called via Logger (Phase A migrated console.log to Logger)
+            expect(mockLoggerInstance.info).toHaveBeenCalledWith(
+                expect.stringContaining('Detected running demo for Test Project')
             );
-            expect(detectionLog).toBeDefined();
-            expect(detectionLog![0]).toContain('Test Project');
-            expect(detectionLog![0]).toContain('Test Project - Frontend');
-
-            consoleLogSpy.mockRestore();
+            expect(mockLoggerInstance.info).toHaveBeenCalledWith(
+                expect.stringContaining('Test Project - Frontend')
+            );
 
             // The key assertions: status should be 'running' when terminal is detected
             expect(project?.status).toBe('running');

@@ -11,7 +11,7 @@
  */
 
 import * as fs from 'fs/promises';
-import { setupMocks, createMockProject, type TestMocks } from './stateManager.testUtils';
+import { setupMocks, createMockProject, mockLoggerInstance, type TestMocks } from './stateManager.testUtils';
 import type { Project } from '@/types';
 
 // Re-declare mocks to ensure proper typing and hoisting
@@ -197,7 +197,6 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
 
         it('should warn when falling back to stale cache', async () => {
             const { stateManager } = testMocks;
-            const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
 
             const cachedProject = createMockProject();
             cachedProject.path = '/mock/home/.demo-builder/projects/test-project';
@@ -217,12 +216,10 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
 
             await stateManager.getCurrentProject();
 
-            // Should log warning about fallback (without Error object since loadProjectFromPath caught it)
-            expect(consoleWarnSpy).toHaveBeenCalledWith(
+            // Should log warning about fallback via Logger (Phase A migrated console.warn to Logger)
+            expect(mockLoggerInstance.warn).toHaveBeenCalledWith(
                 expect.stringContaining('Failed to reload project from disk')
             );
-
-            consoleWarnSpy.mockRestore();
         });
     });
 

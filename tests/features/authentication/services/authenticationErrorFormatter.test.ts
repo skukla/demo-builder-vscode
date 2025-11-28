@@ -118,7 +118,8 @@ describe('AuthenticationErrorFormatter', () => {
 
             const result = AuthenticationErrorFormatter.formatError(error, context);
 
-            expect(result.message).toBe('Something went wrong');
+            // AppError.from now uses the error string as userMessage for consistency
+            expect(result.message).toBe('Simple error string');
             expect(result.technical).toContain('Error: Simple error string');
             expect(result.code).toBe(ErrorCode.UNKNOWN);
         });
@@ -130,7 +131,8 @@ describe('AuthenticationErrorFormatter', () => {
             const result = AuthenticationErrorFormatter.formatError(error, context);
 
             // toAppError converts objects without message to generic error
-            expect(result.message).toBe('Something went wrong');
+            // AppError.from now uses message as userMessage for consistency
+            expect(result.message).toBe('Unknown error occurred');
             expect(result.code).toBe(ErrorCode.UNKNOWN);
         });
 
@@ -195,8 +197,8 @@ describe('AuthenticationErrorFormatter', () => {
 
         it('should handle null and undefined errors', () => {
             const contexts = [
-                { error: null, expectedMessage: 'Something went wrong' },
-                { error: undefined, expectedMessage: 'Something went wrong' },
+                { error: null, expectedMessage: 'Unknown error occurred' },
+                { error: undefined, expectedMessage: 'Unknown error occurred' },
             ];
 
             contexts.forEach(({ error, expectedMessage }) => {
@@ -204,7 +206,8 @@ describe('AuthenticationErrorFormatter', () => {
                     error as unknown,
                     { operation: 'Test' },
                 );
-                // toAppError converts null/undefined to generic "Unknown error occurred"
+                // toAppError converts null/undefined to generic error
+                // AppError.from now uses message as userMessage for consistency
                 expect(result.message).toBe(expectedMessage);
                 expect(result.code).toBe(ErrorCode.UNKNOWN);
             });

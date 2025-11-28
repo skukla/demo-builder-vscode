@@ -14,6 +14,28 @@ jest.mock('vscode');
 jest.mock('fs/promises');
 jest.mock('os');
 
+// Mock Logger - StateManager uses Logger internally
+const mockLoggerInstance = {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn(),
+    setOutputChannel: jest.fn(),
+};
+
+jest.mock('@/core/logging', () => ({
+    Logger: jest.fn().mockImplementation(() => mockLoggerInstance),
+    getLogger: jest.fn().mockReturnValue({
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        debug: jest.fn(),
+    }),
+}));
+
+// Export mock logger for tests to verify calls
+export { mockLoggerInstance };
+
 export const mockHomedir = '/mock/home';
 export const mockStateFile = path.join(mockHomedir, '.demo-builder', 'state.json');
 export const mockRecentProjectsFile = path.join(mockHomedir, '.demo-builder', 'recent-projects.json');
@@ -42,6 +64,12 @@ export function createMockProject(id?: string): Partial<Project> {
 
 export function setupMocks(): TestMocks {
     jest.clearAllMocks();
+
+    // Clear mock logger calls
+    mockLoggerInstance.info.mockClear();
+    mockLoggerInstance.warn.mockClear();
+    mockLoggerInstance.error.mockClear();
+    mockLoggerInstance.debug.mockClear();
 
     // Mock os.homedir
     (os.homedir as jest.Mock).mockReturnValue(mockHomedir);

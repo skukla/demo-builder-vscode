@@ -136,9 +136,11 @@ describe('WizardContainer ErrorBoundary', () => {
 
         render(<WizardContainer wizardSteps={defaultWizardSteps} />);
 
+        // webviewLogger passes prefix, message, and error.message as separate arguments
         await waitFor(() => {
             expect(consoleErrorSpy).toHaveBeenCalledWith(
-                '[WizardContainer] Step error:',
+                '[WizardContainer]',
+                'Step error:',
                 'Test error for logging'
             );
         });

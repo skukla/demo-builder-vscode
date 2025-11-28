@@ -139,9 +139,11 @@ describe('workspaceHandlers', () => {
             const result = await handleGetWorkspaces(mockContext);
 
             expect(result.success).toBe(false);
-            expect(result.error).toContain('timed out');
+            // Typed error system converts timeout to user-friendly message
+            expect(result.error).toBeDefined();
             expect(mockContext.sendMessage).toHaveBeenCalledWith('get-workspaces', {
-                error: expect.stringContaining('timed out')
+                error: expect.any(String),
+                code: 'TIMEOUT', // Typed error includes error code
             });
         });
 
@@ -369,9 +371,11 @@ describe('workspaceHandlers', () => {
 
             const result = await handleGetWorkspaces(mockContext);
 
-            expect(result.error).toContain('timed out');
+            // Typed error system converts timeout to user-friendly message
+            expect(result.error).toBeDefined();
             expect(mockContext.sendMessage).toHaveBeenCalledWith('get-workspaces', {
-                error: expect.stringContaining('timed out')
+                error: expect.any(String),
+                code: 'TIMEOUT', // Typed error includes error code
             });
         });
 

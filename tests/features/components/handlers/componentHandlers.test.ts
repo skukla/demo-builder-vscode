@@ -200,10 +200,11 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             // Act: Call handler
             const result = await handleGetComponentsData(mockContext);
 
-            // Assert: Verify error response
+            // Assert: Verify error response (typed errors include code field)
             expect(result).toEqual({
                 success: false,
                 error: 'Failed to load registry',
+                code: 'UNKNOWN', // Typed error includes error code
                 message: 'Failed to load component configurations',
             });
 

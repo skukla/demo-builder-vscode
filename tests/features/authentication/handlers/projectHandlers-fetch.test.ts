@@ -79,9 +79,11 @@ describe('projectHandlers - Fetch', () => {
             const result = await handleGetProjects(mockContext);
 
             expect(result.success).toBe(false);
-            expect(result.error).toContain('timed out');
+            // Typed error system converts timeout to user-friendly message
+            expect(result.error).toBeDefined();
             expect(mockContext.sendMessage).toHaveBeenCalledWith('get-projects', {
-                error: expect.stringContaining('timed out')
+                error: expect.any(String),
+                code: 'TIMEOUT', // Typed error includes error code
             });
         });
 
