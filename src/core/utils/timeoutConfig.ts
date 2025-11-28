@@ -63,6 +63,9 @@ export const TIMEOUTS = {
     FOCUS_FALLBACK: 1000,           // Fallback timeout for MutationObserver-based focus management
     DASHBOARD_OPEN_DELAY: 500,      // Delay before opening dashboard after project creation
     UI_UPDATE_DELAY: 100,           // Small delay for UI updates before subsequent operations
+    WEBVIEW_INIT_DELAY: 50,         // Small delay for webview initialization to avoid race conditions (SOP §1)
+    PROGRESS_MESSAGE_DELAY: 1000,   // First progress message update timing (SOP §1)
+    PROGRESS_MESSAGE_DELAY_LONG: 2000, // Second progress message update timing (SOP §1)
 
     // Shell and system operations
     QUICK_SHELL: 2000,              // Quick shell commands (fnm --version, fnm current)

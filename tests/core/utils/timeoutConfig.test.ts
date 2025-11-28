@@ -103,4 +103,65 @@ describe('Timeout Configuration', () => {
             expect(TIMEOUTS).not.toBeNull();
         });
     });
+
+    describe('WEBVIEW_INIT_DELAY timeout (SOP §1 compliance)', () => {
+        it('should be defined in TIMEOUTS', () => {
+            expect(TIMEOUTS).toHaveProperty('WEBVIEW_INIT_DELAY');
+            expect(TIMEOUTS.WEBVIEW_INIT_DELAY).toBeDefined();
+        });
+
+        it('should be set to 50ms', () => {
+            // Small delay for webview initialization to avoid race conditions
+            expect(TIMEOUTS.WEBVIEW_INIT_DELAY).toBe(50);
+        });
+
+        it('should be a short delay for fast transitions', () => {
+            // Short enough to not be noticeable but long enough to prevent race conditions
+            expect(TIMEOUTS.WEBVIEW_INIT_DELAY).toBeGreaterThan(0);
+            expect(TIMEOUTS.WEBVIEW_INIT_DELAY).toBeLessThanOrEqual(100);
+        });
+    });
+
+    describe('PROGRESS_MESSAGE_DELAY timeout (SOP §1 compliance)', () => {
+        it('should be defined in TIMEOUTS', () => {
+            expect(TIMEOUTS).toHaveProperty('PROGRESS_MESSAGE_DELAY');
+            expect(TIMEOUTS.PROGRESS_MESSAGE_DELAY).toBeDefined();
+        });
+
+        it('should be set to 1000ms (1 second)', () => {
+            // First progress message update timing
+            expect(TIMEOUTS.PROGRESS_MESSAGE_DELAY).toBe(1000);
+        });
+
+        it('should be suitable for initial progress indicator update', () => {
+            // User should see first progress update within 1-2 seconds
+            expect(TIMEOUTS.PROGRESS_MESSAGE_DELAY).toBeGreaterThanOrEqual(500);
+            expect(TIMEOUTS.PROGRESS_MESSAGE_DELAY).toBeLessThanOrEqual(1500);
+        });
+    });
+
+    describe('PROGRESS_MESSAGE_DELAY_LONG timeout (SOP §1 compliance)', () => {
+        it('should be defined in TIMEOUTS', () => {
+            expect(TIMEOUTS).toHaveProperty('PROGRESS_MESSAGE_DELAY_LONG');
+            expect(TIMEOUTS.PROGRESS_MESSAGE_DELAY_LONG).toBeDefined();
+        });
+
+        it('should be set to 2000ms (2 seconds)', () => {
+            // Second progress message update timing
+            expect(TIMEOUTS.PROGRESS_MESSAGE_DELAY_LONG).toBe(2000);
+        });
+
+        it('should be longer than PROGRESS_MESSAGE_DELAY', () => {
+            // Progressive delays: first message at 1s, second at 2s
+            expect(TIMEOUTS.PROGRESS_MESSAGE_DELAY_LONG).toBeGreaterThan(
+                TIMEOUTS.PROGRESS_MESSAGE_DELAY
+            );
+        });
+
+        it('should be suitable for secondary progress indicator update', () => {
+            // Second progress update should come after first
+            expect(TIMEOUTS.PROGRESS_MESSAGE_DELAY_LONG).toBeGreaterThanOrEqual(1500);
+            expect(TIMEOUTS.PROGRESS_MESSAGE_DELAY_LONG).toBeLessThanOrEqual(3000);
+        });
+    });
 });

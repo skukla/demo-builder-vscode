@@ -49,7 +49,7 @@ export class WelcomeWebviewCommand extends BaseWebviewCommand {
             // Start webview transition to prevent auto-welcome reopening
             BaseWebviewCommand.startWebviewTransition();
             WelcomeWebviewCommand.disposeActivePanel();
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await new Promise(resolve => setTimeout(resolve, TIMEOUTS.WEBVIEW_INIT_DELAY));
             await vscode.commands.executeCommand('demoBuilder.createProject');
             return { success: true };
         });
