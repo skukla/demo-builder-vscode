@@ -78,6 +78,7 @@ export class AppError extends Error {
                 : 'Unknown error occurred';
 
         return new AppError(message, code, {
+            userMessage: message,
             cause: error instanceof Error ? error : undefined,
         });
     }
