@@ -7,7 +7,7 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WizardState } from '@/types/webview';
 import { vscode } from '@/core/ui/utils/vscode-api';
-import { isProgressActive } from './projectCreationPredicates';
+import { isProgressActive, isReadyToShowOpenButton } from './projectCreationPredicates';
 
 interface ProjectCreationStepProps {
     state: WizardState;
@@ -37,6 +37,8 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
     const isFailed = progress?.currentOperation === 'Failed';
     const isCompleted = progress?.currentOperation === 'Project Created';
     const isActive = isProgressActive(progress, isCancelled, isFailed, isCompleted);
+    // SOP §10: Using named predicate for complex condition
+    const showOpenButton = isReadyToShowOpenButton(isCompleted, progress, isOpeningProject);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
@@ -151,7 +153,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
             )}
             
             {/* Show Open Project button on success */}
-            {isCompleted && !progress?.error && !isOpeningProject && (
+            {showOpenButton && (
                 <div
                     style={{
                         padding: '16px',

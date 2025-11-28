@@ -112,6 +112,22 @@ export function formatAdobeError(error: Error | string, context?: string): strin
  * Output: "Could not reach GraphQL endpoint: https://example.com/graphq
  *          The server returned an error page. Check that the URL is correct."
  */
+/**
+ * Check if a line is meaningful error content (not noise)
+ *
+ * SOP §10: Extracted 4-condition AND chain to named predicate
+ *
+ * @param line - The line to check
+ * @returns true if the line contains meaningful error content
+ */
+function isMeaningfulErrorLine(line: string): boolean {
+    if (!line.trim()) return false;
+    if (line.includes('Building Mesh')) return false;
+    if (line.includes('💡')) return false;
+    if (line.includes('Cleaning existing')) return false;
+    return true;
+}
+
 export function extractMeshErrorSummary(error: string): string {
     // Try to extract the failing URL from introspection errors
     // URL is followed by ": GraphQLError" so we match non-whitespace until the trailing colon
@@ -159,12 +175,7 @@ export function extractMeshErrorSummary(error: string): string {
 
     // Fallback: just strip HTML and return first meaningful line
     const cleaned = formatAdobeCliError(error);
-    const lines = cleaned.split('\n').filter(line =>
-        line.trim() &&
-        !line.includes('Building Mesh') &&
-        !line.includes('💡') &&
-        !line.includes('Cleaning existing')
-    );
+    const lines = cleaned.split('\n').filter(isMeaningfulErrorLine);
 
     return lines[0] || 'Mesh deployment failed. Check the Debug logs for details.';
 }

@@ -10,6 +10,7 @@ import { BaseStepProps } from '@/types/wizard';
 import { useMeshOperations } from '../hooks/useMeshOperations';
 import { MeshErrorDialog } from './components/MeshErrorDialog';
 import { MeshStatusDisplay } from './components/MeshStatusDisplay';
+import { isMeshDataReady, isReadyForMeshCreation } from './meshPredicates';
 
 interface ApiMeshStepProps extends BaseStepProps {
     onBack: () => void;
@@ -28,6 +29,10 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
         createMesh,
         recreateMesh,
     } = useMeshOperations({ state, updateState, setCanProceed });
+
+    // SOP §10: Using named predicates for complex conditions
+    const showMeshData = isMeshDataReady(isChecking, error, meshData);
+    const showCreateMesh = isReadyForMeshCreation(isChecking, error, meshData);
 
     const handleOpenConsole = useCallback(() => {
         webviewClient.postMessage('open-adobe-console', {
@@ -70,7 +75,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     )}
 
                     {/* Mesh exists */}
-                    {!isChecking && !error && meshData && (
+                    {showMeshData && (
                         <MeshStatusDisplay
                             meshData={meshData}
                             onRecreateMesh={recreateMesh}
@@ -79,7 +84,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     )}
 
                     {/* API enabled, no mesh - ready to create */}
-                    {!isChecking && !error && !meshData && (
+                    {showCreateMesh && (
                         <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
                             <Flex direction="column" gap="size-200" alignItems="center">
                                 <Info size="L" UNSAFE_className="text-blue-600" />

@@ -6,6 +6,19 @@ import { toAppError, isTimeout } from '@/types/errors';
 import { parseJSON, toError } from '@/types/typeGuards';
 
 /**
+ * Check if message indicates a permission-related error (SOP §10 compliance)
+ */
+function isPermissionError(message: string): boolean {
+    const lowerMessage = message.toLowerCase();
+    if (lowerMessage.includes('permission')) return true;
+    if (lowerMessage.includes('unauthorized')) return true;
+    if (lowerMessage.includes('forbidden')) return true;
+    if (lowerMessage.includes('access denied')) return true;
+    if (lowerMessage.includes('insufficient privileges')) return true;
+    return false;
+}
+
+/**
  * Validates organization access and manages invalid organization contexts
  * Ensures users only work with organizations they have App Builder access to
  */
@@ -163,15 +176,9 @@ export class OrganizationValidator {
                 return { hasPermissions: true };
             }
 
-            // Check for specific permission-related error messages
-            const errorMsg = result.stderr?.toLowerCase() || '';
-            if (
-                errorMsg.includes('permission') ||
-                errorMsg.includes('unauthorized') ||
-                errorMsg.includes('forbidden') ||
-                errorMsg.includes('access denied') ||
-                errorMsg.includes('insufficient privileges')
-            ) {
+            // Check for specific permission-related error messages (SOP §10: using predicate)
+            const errorMsg = result.stderr || '';
+            if (isPermissionError(errorMsg)) {
                 const userMessage =
                     'Your account lacks Developer or System Admin role for this organization. ' +
                     'Please select a different organization or contact your administrator to request App Builder access.';
@@ -186,13 +193,8 @@ export class OrganizationValidator {
             const errorString = toError(error).message;
             this.debugLogger.debug('[Org Validator] Developer permissions test failed:', error);
 
-            // Check if it's a permission-related error in the exception
-            if (
-                errorString.toLowerCase().includes('permission') ||
-                errorString.toLowerCase().includes('unauthorized') ||
-                errorString.toLowerCase().includes('forbidden') ||
-                errorString.toLowerCase().includes('insufficient privileges')
-            ) {
+            // Check if it's a permission-related error in the exception (SOP §10: using predicate)
+            if (isPermissionError(errorString)) {
                 const userMessage =
                     'Your account lacks Developer or System Admin role for this organization. ' +
                     'Please select a different organization or contact your administrator to request App Builder access.';

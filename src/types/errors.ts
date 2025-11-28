@@ -354,6 +354,29 @@ export function hasErrorCode(error: unknown, code: ErrorCode): boolean {
 }
 
 /**
+ * Check if message indicates a network error (SOP §10 compliance)
+ */
+function isNetworkErrorMessage(lowerMessage: string): boolean {
+    if (lowerMessage.includes('network')) return true;
+    if (lowerMessage.includes('enotfound')) return true;
+    if (lowerMessage.includes('econnrefused')) return true;
+    if (lowerMessage.includes('fetch failed')) return true;
+    return false;
+}
+
+/**
+ * Check if message indicates an auth error (SOP §10 compliance)
+ */
+function isAuthErrorMessage(lowerMessage: string): boolean {
+    if (lowerMessage.includes('unauthorized')) return true;
+    if (lowerMessage.includes('authentication')) return true;
+    if (lowerMessage.includes('not authenticated')) return true;
+    if (lowerMessage.includes('auth failed')) return true;
+    if (lowerMessage.includes('auth token')) return true;
+    return false;
+}
+
+/**
  * Convert unknown error to AppError, detecting common error types
  */
 export function toAppError(error: unknown): AppError {
@@ -377,26 +400,15 @@ export function toAppError(error: unknown): AppError {
         });
     }
 
-    // Detect network errors
-    if (
-        lowerMessage.includes('network') ||
-        lowerMessage.includes('enotfound') ||
-        lowerMessage.includes('econnrefused') ||
-        lowerMessage.includes('fetch failed')
-    ) {
+    // Detect network errors (SOP §10: using predicate)
+    if (isNetworkErrorMessage(lowerMessage)) {
         return new NetworkError(message, {
             cause: error instanceof Error ? error : undefined,
         });
     }
 
-    // Detect auth errors
-    if (
-        lowerMessage.includes('unauthorized') ||
-        lowerMessage.includes('authentication') ||
-        lowerMessage.includes('not authenticated') ||
-        lowerMessage.includes('auth failed') ||
-        lowerMessage.includes('auth token')
-    ) {
+    // Detect auth errors (SOP §10: using predicate)
+    if (isAuthErrorMessage(lowerMessage)) {
         return new AuthError(ErrorCode.AUTH_REQUIRED, message, {
             cause: error instanceof Error ? error : undefined,
         });

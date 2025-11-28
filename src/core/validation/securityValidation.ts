@@ -411,6 +411,21 @@ export function validateAccessToken(token: string): void {
  * validateURL('https://10.0.0.1'); // Throws - private network
  * validateURL('file:///etc/passwd'); // Throws - invalid protocol
  */
+
+/**
+ * Check if hostname is a private IPv4 address (SOP §10 compliance)
+ *
+ * Private ranges: 10.0.0.0/8, 127.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16
+ */
+function isPrivateIPv4(hostname: string): boolean {
+    if (hostname.startsWith('127.')) return true;
+    if (hostname.startsWith('10.')) return true;
+    if (hostname.startsWith('192.168.')) return true;
+    if (hostname.startsWith('169.254.')) return true;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true;
+    return false;
+}
+
 export function validateURL(url: string, allowedProtocols: string[] = ['https']): void {
     if (!url || typeof url !== 'string') {
         throw new Error('URL must be a non-empty string');
@@ -434,15 +449,9 @@ export function validateURL(url: string, allowedProtocols: string[] = ['https'])
             throw new Error('URLs pointing to localhost are not allowed');
         }
 
-        // Check for private IPv4 ranges
+        // Check for private IPv4 ranges (SOP §10: using predicate)
         // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 (link-local)
-        if (
-            hostname.startsWith('127.') ||
-            hostname.startsWith('10.') ||
-            hostname.startsWith('192.168.') ||
-            hostname.startsWith('169.254.') ||
-            /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
-        ) {
+        if (isPrivateIPv4(hostname)) {
             throw new Error('URLs pointing to local/private networks are not allowed');
         }
 
