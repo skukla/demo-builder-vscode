@@ -189,7 +189,7 @@ export async function calculateMeshSourceHash(meshComponentPath: string): Promis
         
         return crypto.createHash('md5').update(combinedContent).digest('hex');
     } catch (error) {
-        console.error('[MeshChangeDetector] Error calculating source hash:', error);
+        logger.error('Error calculating source hash', error instanceof Error ? error : undefined);
         return null;
     }
 }

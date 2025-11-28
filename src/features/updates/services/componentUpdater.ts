@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { Logger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project } from '@/types';
+import { toAppError, isTimeout, isNetwork } from '@/types/errors';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { parseJSON } from '@/types/typeGuards';
 
@@ -116,23 +117,23 @@ export class ComponentUpdater {
 
     /**
    * RESILIENCE: Format error messages to be user-friendly
-   * Detects common failure types (network, offline, timeout) and provides helpful context
+   * Uses typed error detection for common failure types and provides helpful context
    */
     private formatUpdateError(error: Error): string {
+        const appError = toAppError(error);
         const message = error.message.toLowerCase();
-    
-        // Network/offline errors
-        if (message.includes('fetch') || message.includes('network') || 
-        message.includes('enotfound') || message.includes('econnrefused')) {
+
+        // Network/offline errors - use typed error detection
+        if (isNetwork(appError)) {
             return 'Update failed: No internet connection. Please check your network and try again.';
         }
-    
-        // Timeout errors
-        if (message.includes('abort') || message.includes('timeout')) {
+
+        // Timeout errors - use typed error detection
+        if (isTimeout(appError)) {
             return 'Update failed: Download timed out. Please try again with a better connection.';
         }
-    
-        // HTTP errors
+
+        // HTTP errors - still use string detection for specific status codes
         if (message.includes('http 404')) {
             return 'Update failed: Release not found on GitHub. The version may have been removed.';
         }
@@ -142,14 +143,14 @@ export class ComponentUpdater {
         if (message.includes('http')) {
             return `Update failed: Server error (${error.message}). Please try again later.`;
         }
-    
+
         // Extraction/verification errors
         if (message.includes('verification failed') || message.includes('missing after extraction')) {
             return 'Update failed: Downloaded component is incomplete or corrupted. Please try again.';
         }
-    
-        // Generic fallback with original message
-        return `Update failed and was rolled back: ${error.message}`;
+
+        // Generic fallback with user message from typed error
+        return `Update failed and was rolled back: ${appError.userMessage}`;
     }
 
     /**

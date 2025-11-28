@@ -4,6 +4,7 @@ import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthToken } from '@/features/authentication/services/types';
+import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';
 
 /**
@@ -155,12 +156,12 @@ export class TokenManager {
                 return result;
             } catch (error) {
                 lastError = toError(error);
-                const errorMessage = lastError.message;
+                const appError = toAppError(error);
 
                 // Check if it's a timeout error that should be retried
-                const isTimeout = errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT');
+                const isTimeoutError = isTimeout(appError);
 
-                if (isTimeout && attempt < maxRetries) {
+                if (isTimeoutError && attempt < maxRetries) {
                     // Exponential backoff: 500ms, 1000ms, 2000ms
                     const backoffMs = 500 * Math.pow(2, attempt - 1);
                     this.logger.warn(`[Token] Timeout on attempt ${attempt}/${maxRetries}, retrying in ${backoffMs}ms...`);
@@ -170,9 +171,9 @@ export class TokenManager {
 
                 // Non-timeout error or max retries reached
                 if (attempt === maxRetries) {
-                    this.logger.warn(`[Token] Failed after ${maxRetries} attempts: ${errorMessage}`);
+                    this.logger.warn(`[Token] Failed after ${maxRetries} attempts: ${appError.userMessage}`);
                 } else {
-                    this.logger.warn(`[Token] Non-timeout error on attempt ${attempt}, giving up: ${errorMessage}`);
+                    this.logger.warn(`[Token] Non-timeout error on attempt ${attempt}, giving up: ${appError.userMessage}`);
                 }
 
                 return { valid: false, expiresIn: 0 };

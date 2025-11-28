@@ -2,6 +2,7 @@ import { getLogger, Logger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
+import { toAppError, isTimeout } from '@/types/errors';
 import { parseJSON, toError } from '@/types/typeGuards';
 
 /**
@@ -47,22 +48,15 @@ export class OrganizationValidator {
             this.debugLogger.debug('[Org Validator] Organization access validation failed:', result.stderr);
             return false;
         } catch (error) {
-            // Better timeout detection
-            const errorString = toError(error).message;
-            const errorObj = error as NodeJS.ErrnoException;
+            // Use typed error detection
+            const appError = toAppError(error);
 
-            const isTimeout =
-                errorString.toLowerCase().includes('timeout') ||
-                errorString.toLowerCase().includes('timed out') ||
-                errorString.includes('ETIMEDOUT') ||
-                errorObj?.code === 'ETIMEDOUT';
-
-            if (isTimeout) {
+            if (isTimeout(appError)) {
                 this.debugLogger.warn('[Org Validator] Validation timed out - assuming valid (network delay)');
                 return true; // Fail-open: assume org is valid on timeout
             }
 
-            this.debugLogger.debug('[Org Validator] Validation error:', error);
+            this.debugLogger.debug('[Org Validator] Validation error:', appError);
             return false;
         }
     }
