@@ -163,7 +163,7 @@ export class TokenManager {
 
                 if (isTimeoutError && attempt < maxRetries) {
                     // Exponential backoff: 500ms, 1000ms, 2000ms
-                    const backoffMs = 500 * Math.pow(2, attempt - 1);
+                    const backoffMs = TIMEOUTS.TOKEN_RETRY_BASE * Math.pow(2, attempt - 1);
                     this.logger.warn(`[Token] Timeout on attempt ${attempt}/${maxRetries}, retrying in ${backoffMs}ms...`);
                     await new Promise(resolve => setTimeout(resolve, backoffMs));
                     continue; // Retry

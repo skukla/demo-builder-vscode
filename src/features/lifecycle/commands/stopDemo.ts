@@ -30,7 +30,7 @@ export class StopDemoCommand extends BaseCommand {
      */
     private get processCleanup(): ProcessCleanup {
         if (!this._processCleanup) {
-            this._processCleanup = new ProcessCleanup({ gracefulTimeout: 5000 });
+            this._processCleanup = new ProcessCleanup({ gracefulTimeout: TIMEOUTS.PROCESS_GRACEFUL_SHUTDOWN });
         }
         return this._processCleanup;
     }

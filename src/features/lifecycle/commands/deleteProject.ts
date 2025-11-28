@@ -1,15 +1,16 @@
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { toError } from '@/types/typeGuards';
 
 export class DeleteProjectCommand extends BaseCommand {
     /** Maximum number of retry attempts for deletion */
     private readonly MAX_RETRIES = 5;
     /** Base delay in milliseconds for exponential backoff */
-    private readonly BASE_DELAY = 100;
+    private readonly BASE_DELAY = TIMEOUTS.FILE_DELETE_RETRY_BASE;
     /** Delay for OS to release file handles (watchers, etc.) */
-    private readonly HANDLE_RELEASE_DELAY = 100;
+    private readonly HANDLE_RELEASE_DELAY = TIMEOUTS.FILE_HANDLE_RELEASE;
 
     public async execute(): Promise<void> {
         try {

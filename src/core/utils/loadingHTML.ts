@@ -1,12 +1,13 @@
 import * as vscode from 'vscode';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Utility for managing webview loading states with consistent UX.
  * Ensures loading spinners are visible for a minimum time to prevent jarring flashes.
  */
 
-const MIN_DISPLAY_TIME = 1500; // milliseconds
-const INIT_DELAY = 100; // milliseconds - prevents VSCode's "Initializing web view..." message
+const MIN_DISPLAY_TIME = TIMEOUTS.LOADING_MIN_DISPLAY; // milliseconds
+const INIT_DELAY = TIMEOUTS.WEBVIEW_INIT_DELAY; // milliseconds - prevents VSCode's "Initializing web view..." message
 
 /**
  * Generates the HTML for a loading spinner.

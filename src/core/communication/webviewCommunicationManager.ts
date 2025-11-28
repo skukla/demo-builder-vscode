@@ -47,7 +47,7 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     'select-workspace': TIMEOUTS.CONFIG_WRITE,       // 10s - write selected workspace to config
     
     // API Mesh operations
-    'check-api-mesh': 60000,                         // 60s - workspace download + mesh describe
+    'check-api-mesh': TIMEOUTS.API_MESH_CHECK,       // 60s - workspace download + mesh describe
     'create-api-mesh': TIMEOUTS.API_MESH_CREATE,     // 120s - create and deploy mesh
     'update-api-mesh': TIMEOUTS.API_MESH_UPDATE,      // 120s - update and deploy mesh
 };
@@ -90,10 +90,10 @@ export class WebviewCommunicationManager {
     constructor(panel: vscode.WebviewPanel, config: CommunicationConfig = {}) {
         this.panel = panel;
         this.config = {
-            handshakeTimeout: config.handshakeTimeout || 10000,
-            messageTimeout: config.messageTimeout || 30000,
+            handshakeTimeout: config.handshakeTimeout || TIMEOUTS.WEBVIEW_HANDSHAKE,
+            messageTimeout: config.messageTimeout || TIMEOUTS.COMMAND_DEFAULT,
             maxRetries: config.maxRetries || 3,
-            retryDelay: config.retryDelay || 1000,
+            retryDelay: config.retryDelay || TIMEOUTS.WEBVIEW_RETRY_DELAY,
             enableLogging: config.enableLogging !== false,
         };
     }

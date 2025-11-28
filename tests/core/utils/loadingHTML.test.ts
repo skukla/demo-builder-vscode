@@ -1,4 +1,5 @@
 import { setLoadingState } from '@/core/utils/loadingHTML';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import * as vscode from 'vscode';
 
 // Mock vscode with ColorThemeKind
@@ -273,22 +274,23 @@ describe('loadingHTML', () => {
 
         it('should wait for initial delay to prevent VSCode message', async () => {
             const getContent = jest.fn().mockResolvedValue('<div>Content</div>');
+            const initDelay = TIMEOUTS.WEBVIEW_INIT_DELAY; // Use actual timeout value
 
             const promise = setLoadingState(mockPanel, getContent);
 
             // Panel HTML should not be set immediately (before INIT_DELAY)
             expect(mockPanel.webview.html).toBe('');
 
-            // Advance just 50ms - still should be empty
-            await advanceTime(50);
+            // Advance just before INIT_DELAY - still should be empty
+            await advanceTime(initDelay - 10);
             expect(mockPanel.webview.html).toBe('');
 
-            // Advance to 100ms - now loading should appear
-            await advanceTime(50);
+            // Advance past INIT_DELAY - now loading should appear
+            await advanceTime(20);
             expect(mockPanel.webview.html).toContain('Loading...');
 
             // Complete
-            await advanceTime(1500);
+            await advanceTime(TIMEOUTS.LOADING_MIN_DISPLAY);
             await promise;
         });
 
