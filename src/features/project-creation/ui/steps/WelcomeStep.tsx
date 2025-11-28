@@ -26,6 +26,18 @@ export function WelcomeStep({ state, updateState, setCanProceed }: BaseStepProps
         return validator(value).error;
     };
 
+    /**
+     * Get validation state for project name field
+     * SOP §3: Extracted nested ternary to named helper
+     */
+    const getProjectNameValidationState = (
+        projectName: string | undefined,
+    ): 'valid' | 'invalid' | undefined => {
+        if (!projectName) return undefined;
+        const error = validateProjectName(projectName);
+        return error ? 'invalid' : 'valid';
+    };
+
     // Set default project name and manually focus + select on mount
     useEffect(() => {
         if (!state.projectName) {
@@ -85,16 +97,10 @@ export function WelcomeStep({ state, updateState, setCanProceed }: BaseStepProps
                             value={state.projectName}
                             onChange={(value) => updateState({ projectName: value })}
                             description="Lowercase letters, numbers, and hyphens only"
-                            validationState={
-                                state.projectName && validateProjectName(state.projectName) 
-                                    ? 'invalid' 
-                                    : state.projectName && !validateProjectName(state.projectName)
-                                    ? 'valid'
-                                    : undefined
-                            }
+                            validationState={getProjectNameValidationState(state.projectName)}
                             errorMessage={
-                                state.projectName 
-                                    ? validateProjectName(state.projectName) 
+                                state.projectName
+                                    ? validateProjectName(state.projectName)
                                     : undefined
                             }
                             isRequired

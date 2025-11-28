@@ -4,6 +4,41 @@ import React from 'react';
 import { WizardStep } from '@/types/webview';
 import { cn, getTimelineStepDotClasses, getTimelineStepLabelClasses } from '@/core/ui/utils/classNames';
 
+/**
+ * Timeline step status type
+ */
+type TimelineStatus = 'completed' | 'completed-current' | 'current' | 'upcoming';
+
+/**
+ * Render the appropriate indicator icon for a timeline step
+ *
+ * SOP §3: Extracted JSX ternary chain to named helper
+ *
+ * @param status - The step's current status
+ * @returns JSX element for the step indicator
+ */
+function renderStepIndicator(status: TimelineStatus): React.ReactNode {
+    if (status === 'completed' || status === 'completed-current') {
+        return <CheckmarkCircle size="XS" UNSAFE_className={cn('text-white', 'icon-xs')} />;
+    }
+    if (status === 'current') {
+        return (
+            <View
+                width="size-100"
+                height="size-100"
+                UNSAFE_className={cn('rounded-full', 'bg-white', 'animate-pulse')}
+            />
+        );
+    }
+    return (
+        <View
+            width="size-100"
+            height="size-100"
+            UNSAFE_className={cn('rounded-full', 'bg-gray-400')}
+        />
+    );
+}
+
 interface TimelineNavProps {
     steps: { id: WizardStep; name: string }[];
     currentStep: WizardStep;
@@ -80,21 +115,7 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
                                         UNSAFE_className={getTimelineStepDotClasses(status)}
                                         UNSAFE_style={{ flexShrink: 0 }}
                                     >
-                                        {status === 'completed' || status === 'completed-current' ? (
-                                            <CheckmarkCircle size="XS" UNSAFE_className={cn('text-white', 'icon-xs')} />
-                                        ) : status === 'current' ? (
-                                            <View
-                                                width="size-100"
-                                                height="size-100"
-                                                UNSAFE_className={cn('rounded-full', 'bg-white', 'animate-pulse')}
-                                            />
-                                        ) : (
-                                            <View
-                                                width="size-100"
-                                                height="size-100"
-                                                UNSAFE_className={cn('rounded-full', 'bg-gray-400')}
-                                            />
-                                        )}
+                                        {renderStepIndicator(status)}
                                     </View>
 
                                     {/* Step label */}
