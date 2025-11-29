@@ -338,9 +338,10 @@ export class CommandExecutor {
             const result = await subprocess;
             const duration = Date.now() - startTime;
 
-            // Log non-zero exit codes
+            // Log non-zero exit codes at debug level (many are expected)
+            // Examples: git exit 128 (no tags), grep exit 1 (no match)
             if (result.exitCode && result.exitCode !== 0) {
-                this.logger.warn(`[Command Executor] Process exited with code ${result.exitCode} after ${duration}ms`);
+                this.logger.debug(`[Command Executor] Process exited with code ${result.exitCode} after ${duration}ms`);
             }
 
             return {
