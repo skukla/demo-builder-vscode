@@ -126,6 +126,12 @@ export function SearchableList<T extends SearchableListItem>({
                         autoFocus={autoFocus && !selectedKeys.length}
                         UNSAFE_className="search-field-custom flex-1"
                     />
+                    {/* SearchField input padding - accounts for magnifying glass icon */}
+                    <style>{`
+                        .search-field-custom input {
+                            padding-left: 32px !important;
+                        }
+                    `}</style>
                     {onRefresh && (
                         <ActionButton
                             isQuiet
@@ -141,17 +147,6 @@ export function SearchableList<T extends SearchableListItem>({
                             )}
                         </ActionButton>
                     )}
-                    <style>{`
-                        .search-field-custom .spectrum-Textfield-input {
-                            padding-left: 40px !important;
-                        }
-                        .search-field-custom input[type="search"] {
-                            padding-left: 40px !important;
-                        }
-                        .search-field-custom .spectrum-Search-input {
-                            padding-left: 40px !important;
-                        }
-                    `}</style>
                 </Flex>
             )}
 

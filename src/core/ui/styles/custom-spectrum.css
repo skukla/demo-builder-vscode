@@ -1367,3 +1367,24 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     border-color: var(--spectrum-global-color-gray-500) !important;
     background-color: var(--spectrum-global-color-gray-200) !important;
 }
+
+/* ===========================================
+   SearchField Input Padding
+   Account for magnifying glass icon space
+   =========================================== */
+/* Target SearchField inputs with multiple selector strategies */
+/* React Spectrum uses various class patterns - cover them all */
+.search-field-custom input,
+.search-field-custom input[type="search"],
+[class*="SearchField"] input,
+[class*="Search-input"],
+[data-testid*="search"] input,
+div[class*="spectrum"] input[type="search"] {
+    padding-left: 32px !important;
+}
+
+/* Also target via the icon positioning wrapper */
+.search-field-custom [class*="icon"] + input,
+.search-field-custom [class*="Icon"] + input {
+    padding-left: 32px !important;
+}
