@@ -5,26 +5,22 @@
  * - Loading state with spinner
  * - Error state with retry button
  * - Empty state with message
- * - List view with search/filter
+ * - List view with search/filter (delegates to SearchableList)
  *
  * Used by AdobeProjectStep and AdobeWorkspaceStep to reduce duplication.
  */
 import {
     Heading,
-    ListView,
     Item,
     Text,
-    SearchField,
     Flex,
-    ActionButton,
 } from '@adobe/react-spectrum';
-import Refresh from '@spectrum-icons/workflow/Refresh';
 import React from 'react';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { ErrorDisplay } from '@/core/ui/components/feedback/ErrorDisplay';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { SearchableList } from '@/core/ui/components/navigation/SearchableList';
 import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
-import { Spinner } from '@/core/ui/components/ui/Spinner';
 
 /**
  * Props for a selectable item (must have id and display text)
@@ -171,108 +167,48 @@ export function SelectionStepContent<T extends SelectableItem>({
         );
     }
 
-    // State 4: Data loaded - show list
-    const showSearch = items.length > 5;
-    const plural = items.length !== 1 ? 's' : '';
+    // State 4: Data loaded - show list (delegates to SearchableList)
 
-    return (
-        <>
-            <Heading level={2} marginBottom="size-300">{labels.heading}</Heading>
+    // Adapter: Convert Set-based onSelectionChange to item-based onSelect
+    const handleSelectionChange = (keys: Set<any>) => {
+        const itemId = Array.from(keys)[0] as string;
+        const item = items.find(i => i.id === itemId);
+        if (item) {
+            onSelect(item);
+        }
+    };
 
-            {/* Search field - only show when > 5 items */}
-            {showSearch && (
-                <Flex gap="size-100" marginBottom="size-200" alignItems="end">
-                    <SearchField
-                        placeholder={labels.searchPlaceholder}
-                        value={searchQuery}
-                        onChange={onSearchChange}
-                        width="100%"
-                        isQuiet
-                        autoFocus={!selectedId}
-                        UNSAFE_className="flex-1"
-                    />
-                    <RefreshButton
-                        isLoading={isLoading}
-                        onRefresh={onRefresh}
-                        ariaLabel={`Refresh ${labels.itemNoun}s`}
-                    />
-                </Flex>
+    // Adapter: Create combined renderItem that wraps content in Item with description support
+    const combinedRenderItem = (item: T) => (
+        <Item key={item.id} textValue={item.title || item.name}>
+            {renderItem ? renderItem(item) : (
+                <Text>{item.title || item.name}</Text>
             )}
-
-            {/* Item count - only show after data has loaded */}
-            {hasLoadedOnce && (
-                <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-                    <Text UNSAFE_className="text-sm text-gray-700">
-                        Showing {filteredItems.length} of {items.length} {labels.itemNoun}{plural}
-                    </Text>
-                    {!showSearch && (
-                        <RefreshButton
-                            isLoading={isLoading}
-                            onRefresh={onRefresh}
-                            ariaLabel={`Refresh ${labels.itemNoun}s`}
-                        />
-                    )}
-                </Flex>
-            )}
-
-            {/* List view */}
-            <div className={`list-refresh-container ${isRefreshing ? 'refreshing' : ''}`}>
-                <ListView
-                    items={filteredItems}
-                    selectionMode="single"
-                    selectedKeys={selectedId ? [selectedId] : []}
-                    onSelectionChange={(keys) => {
-                        const itemId = Array.from(keys)[0] as string;
-                        const item = items.find(i => i.id === itemId);
-                        if (item) {
-                            onSelect(item);
-                        }
-                    }}
-                    aria-label={labels.ariaLabel}
-                    height="100%"
-                    UNSAFE_className="flex-1"
-                >
-                    {(item) => (
-                        <Item key={item.id} textValue={item.title || item.name}>
-                            {renderItem ? renderItem(item) : (
-                                <Text>{item.title || item.name}</Text>
-                            )}
-                            {renderDescription && renderDescription(item)}
-                        </Item>
-                    )}
-                </ListView>
-
-                {filteredItems.length === 0 && searchQuery && (
-                    <Text UNSAFE_className="text-sm text-gray-600" marginTop="size-200">
-                        No {labels.itemNoun}s match "{searchQuery}"
-                    </Text>
-                )}
-            </div>
-        </>
+            {renderDescription && renderDescription(item)}
+        </Item>
     );
-}
 
-/**
- * RefreshButton - Consistent refresh button used in selection steps
- */
-function RefreshButton({
-    isLoading,
-    onRefresh,
-    ariaLabel,
-}: {
-    isLoading: boolean;
-    onRefresh: () => void;
-    ariaLabel: string;
-}) {
     return (
-        <ActionButton
-            isQuiet
-            onPress={onRefresh}
-            aria-label={ariaLabel}
-            isDisabled={isLoading}
-            UNSAFE_className="cursor-pointer"
-        >
-            {isLoading ? <Spinner size="S" aria-label="Loading" /> : <Refresh />}
-        </ActionButton>
+        <div className="selection-step-content">
+            <Heading level={2} marginBottom="size-300">{labels.heading}</Heading>
+            <SearchableList
+                items={items}
+                selectedKeys={selectedId ? [selectedId] : []}
+                onSelectionChange={handleSelectionChange}
+                searchQuery={searchQuery}
+                onSearchQueryChange={onSearchChange}
+                filteredItems={filteredItems}
+                isLoading={isLoading}
+                isRefreshing={isRefreshing}
+                onRefresh={onRefresh}
+                hasLoadedOnce={hasLoadedOnce}
+                ariaLabel={labels.ariaLabel}
+                autoFocus={!selectedId}
+                renderItem={combinedRenderItem}
+                itemNoun={labels.itemNoun}
+                searchPlaceholder={labels.searchPlaceholder}
+                refreshAriaLabel={`Refresh ${labels.itemNoun}s`}
+            />
+        </div>
     );
 }

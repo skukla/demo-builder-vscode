@@ -47,6 +47,12 @@ export interface SearchableListProps<T extends SearchableListItem> {
     autoFocus?: boolean;
     /** Custom item renderer */
     renderItem?: (item: T) => React.ReactNode;
+    /** Singular noun for item type (default: "item") */
+    itemNoun?: string;
+    /** Placeholder text for search field (default: "Type to filter...") */
+    searchPlaceholder?: string;
+    /** Aria label for refresh button (default: "Refresh list") */
+    refreshAriaLabel?: string;
 }
 
 /**
@@ -92,9 +98,13 @@ export function SearchableList<T extends SearchableListItem>({
     searchThreshold = 5,
     ariaLabel,
     autoFocus = false,
-    renderItem
+    renderItem,
+    itemNoun = 'item',
+    searchPlaceholder = 'Type to filter...',
+    refreshAriaLabel = 'Refresh list',
 }: SearchableListProps<T>) {
     const showSearch = items.length > searchThreshold;
+    const plural = items.length !== 1 ? 's' : '';
 
     // Default item renderer
     const defaultRenderItem = (item: T) => (
@@ -113,30 +123,24 @@ export function SearchableList<T extends SearchableListItem>({
         : defaultRenderItem;
 
     return (
-        <>
+        <div className="searchable-list-container">
             {/* Search + Refresh Bar (conditional) */}
             {showSearch && (
                 <Flex gap="size-100" marginBottom="size-200" alignItems="end">
                     <SearchField
-                        placeholder="Type to filter..."
+                        placeholder={searchPlaceholder}
                         value={searchQuery}
                         onChange={onSearchQueryChange}
                         width="100%"
                         isQuiet
                         autoFocus={autoFocus && !selectedKeys.length}
-                        UNSAFE_className="search-field-custom flex-1"
+                        UNSAFE_className="searchable-list-search-field flex-1"
                     />
-                    {/* SearchField input padding - accounts for magnifying glass icon */}
-                    <style>{`
-                        .search-field-custom input {
-                            padding-left: 32px !important;
-                        }
-                    `}</style>
                     {onRefresh && (
                         <ActionButton
                             isQuiet
                             onPress={onRefresh}
-                            aria-label="Refresh list"
+                            aria-label={refreshAriaLabel}
                             isDisabled={isLoading}
                             UNSAFE_className="cursor-pointer"
                         >
@@ -154,14 +158,13 @@ export function SearchableList<T extends SearchableListItem>({
             {hasLoadedOnce && (
                 <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
                     <Text UNSAFE_className="text-sm text-gray-700">
-                        Showing {filteredItems.length} of {items.length} item
-                        {items.length !== 1 ? 's' : ''}
+                        Showing {filteredItems.length} of {items.length} {itemNoun}{plural}
                     </Text>
                     {!showSearch && onRefresh && (
                         <ActionButton
                             isQuiet
                             onPress={onRefresh}
-                            aria-label="Refresh list"
+                            aria-label={refreshAriaLabel}
                             isDisabled={isLoading}
                             UNSAFE_className="cursor-pointer"
                         >
@@ -194,10 +197,10 @@ export function SearchableList<T extends SearchableListItem>({
                 {/* No results message */}
                 {filteredItems.length === 0 && searchQuery && (
                     <Text UNSAFE_className="text-sm text-gray-600" marginTop="size-200">
-                        No items match "{searchQuery}"
+                        No {itemNoun}s match "{searchQuery}"
                     </Text>
                 )}
             </div>
-        </>
+        </div>
     );
 }

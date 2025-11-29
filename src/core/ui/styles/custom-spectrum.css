@@ -1242,16 +1242,47 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 }
 
 /* ===========================================
+   Selection Step Content Container
+   =========================================== */
+.selection-step-content {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    min-height: 0 !important;  /* Allow shrinking below content size */
+    overflow: hidden !important;
+}
+
+/* ===========================================
    List Refresh Container
    =========================================== */
 .list-refresh-container {
+    display: flex !important;
+    flex-direction: column !important;
     flex: 1 !important;
+    min-height: 0 !important;  /* Allow shrinking below content size */
+    overflow: auto !important;  /* Enable scrolling */
     transition: opacity 200ms ease-in-out !important;
 }
 
 .list-refresh-container.refreshing {
     opacity: 0.5 !important;
     pointer-events: none !important;
+}
+
+/* ===========================================
+   Searchable List Container
+   =========================================== */
+.searchable-list-container {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 !important;
+    min-height: 0 !important;  /* Allow shrinking below content size */
+    overflow: hidden !important;
+}
+
+/* SearchField input padding - accounts for magnifying glass icon */
+.searchable-list-search-field input {
+    padding-left: 32px !important;
 }
 
 /* Pointer cursor for interactive elements */
