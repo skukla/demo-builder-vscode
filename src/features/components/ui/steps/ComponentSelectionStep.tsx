@@ -110,7 +110,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     const appBuilderOptions = dataTyped.appBuilder || DEFAULT_APP_BUILDER;
 
     return (
-        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+        <div className="max-w-800 w-full m-0 p-5">
             {/* Frontend and Backend */}
             <Flex gap="size-300" wrap marginBottom="size-300">
                 {/* Frontend */}
@@ -219,12 +219,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         External Systems
                     </Text>
-                    <View UNSAFE_style={{
-                        border: '1px solid var(--spectrum-global-color-gray-300)',
-                        borderRadius: '4px',
-                        backgroundColor: 'var(--spectrum-global-color-gray-50)',
-                        padding: '12px'
-                    }}>
+                    <View UNSAFE_className="bordered-container">
                         {integrationsOptions.map((system) => (
                             <Checkbox
                                 key={system.id}
@@ -247,12 +242,7 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                     <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
                         App Builder Apps
                     </Text>
-                    <View UNSAFE_style={{
-                        border: '1px solid var(--spectrum-global-color-gray-300)',
-                        borderRadius: '4px',
-                        backgroundColor: 'var(--spectrum-global-color-gray-50)',
-                        padding: '12px'
-                    }}>
+                    <View UNSAFE_className="bordered-container">
                         {appBuilderOptions.map((app) => (
                             <Checkbox
                                 key={app.id}

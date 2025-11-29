@@ -496,7 +496,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             height="100vh"
             UNSAFE_className={cn('flex', 'overflow-hidden')}
         >
-            <div ref={wizardContainerRef} style={{ display: 'flex', height: '100%', width: '100%' }}>
+            <div ref={wizardContainerRef} className="flex h-full w-full">
                 {/* Timeline Navigation */}
                 <View 
                     width="size-3000" 
@@ -513,7 +513,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                 </View>
 
                 {/* Content Area */}
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, height: '100%', width: '100%' }}>
+                <div className="flex-column flex-1 h-full w-full">
                     {/* Header */}
                     <View 
                         padding="size-400"
@@ -530,11 +530,12 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                     {/* Step Content */}
                     <div
                         ref={stepContentRef}
-                        style={{ width: '100%', height: '100%', overflowY: 'auto', overflowX: 'hidden', position: 'relative' }}
+                        className="w-full h-full overflow-y-auto overflow-x-hidden relative"
                     >
                         <div
-                            style={{ height: '100%', width: '100%' }}
                             className={cn(
+                                'h-full',
+                                'w-full',
                                 'step-content',
                                 animationDirection,
                                 isTransitioning && 'transitioning',
@@ -565,7 +566,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
                             padding="size-400"
                             UNSAFE_className={cn('border-t', 'bg-gray-75')}
                         >
-                            <div style={{ maxWidth: '800px', width: '100%' }}>
+                            <div className="max-w-800 w-full">
                                 <Flex justifyContent="space-between" width="100%">
                                     <Button
                                         variant="secondary"
