@@ -66,7 +66,11 @@ export class DebugLogger {
      */
     private shouldLog(level: LogLevel): boolean {
         const config = vscode.workspace.getConfiguration('demoBuilder');
-        const configuredLevel = (config.get<string>('logLevel') || 'debug') as LogLevel;
+        const rawLevel = config.get<string>('logLevel');
+        // Validate configured level is valid, default to 'debug' if not
+        const configuredLevel: LogLevel = (rawLevel && rawLevel in LOG_LEVEL_PRIORITY)
+            ? rawLevel as LogLevel
+            : 'debug';
         return LOG_LEVEL_PRIORITY[level] <= LOG_LEVEL_PRIORITY[configuredLevel];
     }
 
@@ -144,6 +148,7 @@ export class DebugLogger {
      * Not included in export buffer
      * Uses info() with [trace] prefix to bypass VS Code's log level filtering
      * Respects demoBuilder.logLevel configuration setting
+     * SECURITY: Sanitizes data to redact API keys, tokens, and sensitive values
      */
     public trace(message: string, data?: unknown): void {
         if (!this.shouldLog('trace')) return;
@@ -154,7 +159,9 @@ export class DebugLogger {
         if (data !== undefined) {
             try {
                 const formatted = JSON.stringify(data, null, 2);
-                this.debugChannel.info(`[trace] ${formatted}`);
+                // SECURITY: Sanitize to redact API keys, tokens, secrets
+                const sanitized = sanitizeErrorForLogging(formatted);
+                this.debugChannel.info(`[trace] ${sanitized}`);
             } catch {
                 this.debugChannel.info(`[trace] ${String(data)}`);
             }
