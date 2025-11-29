@@ -16,7 +16,7 @@ export class ExtensionUpdater {
    * Download and install extension update via VSIX
    */
     async updateExtension(downloadUrl: string, newVersion: string): Promise<void> {
-        this.logger.debug(`[Update] Starting extension update to v${newVersion}`);
+        this.logger.debug(`[Updates] Starting extension update to v${newVersion}`);
 
         await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
@@ -29,12 +29,12 @@ export class ExtensionUpdater {
       
             // Install via VS Code command
             progress.report({ message: 'Installing...' });
-            this.logger.debug(`[Update] Installing extension from ${vsixPath}`);
+            this.logger.debug(`[Updates] Installing extension from ${vsixPath}`);
             await vscode.commands.executeCommand(
                 'workbench.extensions.installExtension',
                 vscode.Uri.file(vsixPath),
             );
-            this.logger.info('[Update] ✓ Extension installed successfully');
+            this.logger.info('[Updates] ✓ Extension installed successfully');
       
             // Cleanup temp file
             try {
@@ -51,10 +51,10 @@ export class ExtensionUpdater {
             );
 
             if (reload === 'Reload Now') {
-                this.logger.debug('[Update] Reloading window to apply extension update');
+                this.logger.debug('[Updates] Reloading window to apply extension update');
                 await vscode.commands.executeCommand('workbench.action.reloadWindow');
             } else {
-                this.logger.debug('[Update] User chose to reload later');
+                this.logger.debug('[Updates] User chose to reload later');
             }
         });
     }
@@ -68,7 +68,7 @@ export class ExtensionUpdater {
         try {
             validateGitHubDownloadURL(url);
         } catch (error) {
-            this.logger.error('[Update] Download URL validation failed', error as Error);
+            this.logger.error('[Updates] Download URL validation failed', error as Error);
             throw new Error(`Security check failed: ${(error as Error).message}`);
         }
 
@@ -87,7 +87,7 @@ export class ExtensionUpdater {
 
             await fs.writeFile(vsixPath, Buffer.from(buffer));
 
-            this.logger.debug(`[Update] Downloaded VSIX to ${vsixPath}`);
+            this.logger.debug(`[Updates] Downloaded VSIX to ${vsixPath}`);
             return vsixPath;
         } finally {
             clearTimeout(timeout);

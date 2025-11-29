@@ -56,7 +56,7 @@ export async function handleGetWorkspaces(
             ? appError.userMessage
             : 'Failed to load workspaces. Please try again.';
 
-        context.logger.error('Failed to get workspaces:', appError);
+        context.logger.error('[Workspace] Failed to get workspaces:', appError);
         await context.sendMessage('get-workspaces', {
             error: errorMessage,
             code: appError.code,
@@ -89,14 +89,14 @@ export async function handleSelectWorkspace(
         // Actually call the authManager to select the workspace
         const success = await context.authManager?.selectWorkspace(workspaceId);
         if (success) {
-            context.logger.info(`Selected workspace: ${workspaceId}`);
+            context.logger.info(`[Workspace] Selected workspace: ${workspaceId}`);
 
             // Cache invalidation is handled in authManager.selectWorkspace
 
             await context.sendMessage('workspaceSelected', { workspaceId });
             return { success: true };
         } else {
-            context.logger.error(`Failed to select workspace ${workspaceId}`);
+            context.logger.error(`[Workspace] Failed to select workspace ${workspaceId}`);
             await context.sendMessage('error', {
                 message: 'Failed to select workspace',
                 details: `Workspace selection for ${workspaceId} was unsuccessful`,
@@ -104,7 +104,7 @@ export async function handleSelectWorkspace(
             throw new Error(`Failed to select workspace ${workspaceId}`);
         }
     } catch (error) {
-        context.logger.error('Failed to select workspace:', error as Error);
+        context.logger.error('[Workspace] Failed to select workspace:', error as Error);
         await context.sendMessage('error', {
             message: 'Failed to select workspace',
             details: toError(error).message,

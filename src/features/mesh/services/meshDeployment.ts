@@ -48,12 +48,12 @@ export async function deployMeshComponent(
 
         // Use the original mesh.json path directly (not a temp copy)
         // This ensures relative paths in mesh.json (like build/resolvers/*.js) resolve correctly
-        logger.debug(`[Deploy Mesh] Using config from: ${meshConfigPath}`);
+        logger.debug(`[Mesh Deployment] Using config from: ${meshConfigPath}`);
 
         onProgress?.('Deploying API Mesh...', 'Updating mesh configuration');
 
         // Always use 'update' during project creation since mesh was already created in wizard
-        logger.debug('[Deploy Mesh] Updating mesh with configuration from commerce-mesh component');
+        logger.debug('[Mesh Deployment] Updating mesh with configuration from commerce-mesh component');
         const deployResult = await commandManager.execute(
             `aio api-mesh:update "${meshConfigPath}" --autoConfirmAction`,
             {
@@ -85,7 +85,7 @@ export async function deployMeshComponent(
             throw new Error(formatAdobeCliError(errorMsg));
         }
 
-        logger.debug('[Deploy Mesh] Update command completed, verifying deployment...');
+        logger.debug('[Mesh Deployment] Update command completed, verifying deployment...');
 
         // Use shared verification utility (same as manual deploy command)
         const { waitForMeshDeployment } = await import('./meshDeploymentVerifier');
@@ -106,7 +106,7 @@ export async function deployMeshComponent(
             throw new Error(verificationResult.error || 'Mesh deployment verification failed');
         }
 
-        logger.info('[Deploy Mesh] ✅ Mesh verified and deployed successfully');
+        logger.info('[Mesh Deployment] ✅ Mesh verified and deployed successfully');
         onProgress?.('✓ Deployment Complete', 'Mesh deployed successfully');
 
         return {
@@ -118,7 +118,7 @@ export async function deployMeshComponent(
         };
 
     } catch (error) {
-        logger.error('[Deploy Mesh] Deployment failed', error as Error);
+        logger.error('[Mesh Deployment] Deployment failed', error as Error);
         return {
             success: false,
             error: toError(error).message,

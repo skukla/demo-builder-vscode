@@ -199,12 +199,16 @@ export class AdobeEntityService {
 
     /**
      * Get list of projects for current org (SDK with CLI fallback)
+     * @param options.silent - If true, suppress user-facing log messages (used for internal ID resolution)
      */
-    async getProjects(): Promise<AdobeProject[]> {
+    async getProjects(options?: { silent?: boolean }): Promise<AdobeProject[]> {
         const startTime = Date.now();
+        const silent = options?.silent ?? false;
 
         try {
-            this.stepLogger.logTemplate('adobe-setup', 'operations.loading-projects', {});
+            if (!silent) {
+                this.stepLogger.logTemplate('adobe-setup', 'operations.loading-projects', {});
+            }
 
             let mappedProjects: AdobeProject[] = [];
             const cachedOrg = this.cacheManager.getCachedOrganization();
@@ -271,10 +275,12 @@ export class AdobeEntityService {
                 this.debugLogger.debug(`[Entity Service] Retrieved ${mappedProjects.length} projects via CLI in ${cliDuration}ms`);
             }
 
-            this.stepLogger.logTemplate('adobe-setup', 'statuses.projects-loaded', {
-                count: mappedProjects.length,
-                plural: mappedProjects.length === 1 ? '' : 's',
-            });
+            if (!silent) {
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.projects-loaded', {
+                    count: mappedProjects.length,
+                    plural: mappedProjects.length === 1 ? '' : 's',
+                });
+            }
 
             return mappedProjects;
         } catch (error) {
@@ -499,7 +505,8 @@ export class AdobeEntityService {
 
                 if (typeof context.project === 'string') {
                     try {
-                        const projects = await this.getProjects();
+                        // Use silent mode for internal ID resolution to avoid duplicate log messages
+                        const projects = await this.getProjects({ silent: true });
                         const matchedProject = projects.find(p => p.name === context.project || p.title === context.project);
 
                         if (matchedProject) {
@@ -661,7 +668,7 @@ export class AdobeEntityService {
                 if (!permissionCheck.hasPermissions) {
                     this.debugLogger.error('[Entity Service] User lacks Developer permissions for this organization');
                     const errorMessage = permissionCheck.error || 'Insufficient permissions for App Builder access';
-                    this.logger.error(`[Auth] Developer permissions check failed: ${errorMessage}`);
+                    this.logger.error(`[Entity Service] Developer permissions check failed: ${errorMessage}`);
 
                     // Throw error with specific message to signal permission failure to UI
                     throw new Error(errorMessage);
@@ -701,9 +708,9 @@ export class AdobeEntityService {
             if (result.code === 0) {
                 this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectId });
 
-                // Smart caching
+                // Smart caching - use silent mode to avoid duplicate log messages
                 try {
-                    const projects = await this.getProjects();
+                    const projects = await this.getProjects({ silent: true });
                     const selectedProject = projects.find(p => p.id === projectId);
 
                     if (selectedProject) {
@@ -733,9 +740,9 @@ export class AdobeEntityService {
                 this.debugLogger.debug('[Entity Service] Project selection succeeded despite timeout');
                 this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectId });
 
-                // Smart caching even on timeout success
+                // Smart caching even on timeout success - use silent mode
                 try {
-                    const projects = await this.getProjects();
+                    const projects = await this.getProjects({ silent: true });
                     const selectedProject = projects.find(p => p.id === projectId);
 
                     if (selectedProject) {

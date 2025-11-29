@@ -92,7 +92,7 @@ export async function getEndpoint(
                 if (jsonMatch) {
                     const meshData = parseJSON<{ meshEndpoint?: string; endpoint?: string }>(jsonMatch[0]);
                     if (!meshData) {
-                        logger.warn('[Mesh Endpoint] Failed to parse mesh data');
+                        logger.warn('[Mesh] Failed to parse mesh data from describe');
                         // Continue to fallback
                     } else {
                         const endpoint = meshData.meshEndpoint || meshData.endpoint;

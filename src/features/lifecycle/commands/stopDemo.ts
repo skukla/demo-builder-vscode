@@ -48,7 +48,7 @@ export class StopDemoCommand extends BaseCommand {
         // Security: Validate port number to prevent command injection
         // Note: Number.isInteger() already handles NaN (returns false for NaN)
         if (!Number.isInteger(port) || port < 1 || port > 65535) {
-            this.logger.warn(`[StopDemo] Invalid port number: ${port}`);
+            this.logger.warn(`[Stop Demo] Invalid port number: ${port}`);
             return null;
         }
 
@@ -72,7 +72,7 @@ export class StopDemoCommand extends BaseCommand {
                 }
             }
         } catch (error) {
-            this.logger.debug(`[StopDemo] No process found on port ${port}:`, error as Error);
+            this.logger.debug(`[Stop Demo] No process found on port ${port}:`, error as Error);
         }
 
         return null;
@@ -100,19 +100,19 @@ export class StopDemoCommand extends BaseCommand {
             if (!project) {
                 // Silently return - no project means nothing to stop
                 // (often called programmatically during cleanup/reset)
-                this.logger.debug('[StopDemo] No project found, nothing to stop');
+                this.logger.debug('[Stop Demo] No project found, nothing to stop');
                 return;
             }
 
             // Check if demo is running
             const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
             if (!frontendComponent) {
-                this.logger.debug('[StopDemo] No frontend component, nothing to stop');
+                this.logger.debug('[Stop Demo] No frontend component, nothing to stop');
                 return;
             }
 
             if (project.status !== 'running' && project.status !== 'starting') {
-                this.logger.debug('[StopDemo] Demo already stopped');
+                this.logger.debug('[Stop Demo] Demo already stopped');
                 return;
             }
 
@@ -147,14 +147,14 @@ export class StopDemoCommand extends BaseCommand {
                             return;
                         }
                         // Log error but continue - show error and don't update state
-                        this.logger.warn(`[StopDemo] Error killing process:`, error);
+                        this.logger.warn(`[Stop Demo] Error killing process:`, error);
                         await this.showError('Failed to stop demo process', error);
                         // Dispose terminal anyway (attempt cleanup)
                         this.disposeTerminal(terminalName);
                         return;
                     }
                 } else {
-                    this.logger.debug('[StopDemo] No process found on port, may have already exited');
+                    this.logger.debug('[Stop Demo] No process found on port, may have already exited');
                 }
 
                 // STEP 4: Dispose terminal (cleanup)

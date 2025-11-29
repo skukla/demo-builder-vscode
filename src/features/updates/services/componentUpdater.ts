@@ -46,14 +46,14 @@ export class ComponentUpdater {
         this.updatingComponents.add(componentId);
 
         try {
-            this.logger.debug(`[Update] Updating ${componentId} to ${newVersion}`);
+            this.logger.debug(`[Updates] Updating ${componentId} to ${newVersion}`);
 
             // CRITICAL: Always create snapshot for rollback
             const snapshotPath = `${component.path}.snapshot-${Date.now()}`;
 
             try {
                 // 1. Create pre-update snapshot (full directory backup)
-                this.logger.debug(`[Update] Creating snapshot at ${snapshotPath}`);
+                this.logger.debug(`[Updates] Creating snapshot at ${snapshotPath}`);
                 await fs.cp(component.path, snapshotPath, { recursive: true });
 
                 // 2. Preserve .env file(s) for merge
@@ -80,15 +80,15 @@ export class ComponentUpdater {
                     lastUpdated: new Date().toISOString(),
                 };
 
-                this.logger.info(`[Update] Successfully updated ${componentId} to ${newVersion}`);
+                this.logger.info(`[Updates] Successfully updated ${componentId} to ${newVersion}`);
 
                 // 8. Cleanup snapshot on success
                 await fs.rm(snapshotPath, { recursive: true, force: true });
-                this.logger.debug('[Update] Removed snapshot (update successful)');
+                this.logger.debug('[Updates] Removed snapshot (update successful)');
 
             } catch (error) {
                 // AUTOMATIC ROLLBACK: Restore snapshot on ANY failure
-                this.logger.error('[Update] Update failed, rolling back to snapshot', error as Error);
+                this.logger.error('[Updates] Update failed, rolling back to snapshot', error as Error);
         
                 try {
                     // Remove broken update (if exists)
@@ -97,13 +97,13 @@ export class ComponentUpdater {
                     // Restore snapshot
                     await fs.rename(snapshotPath, component.path);
           
-                    this.logger.info('[Update] Rollback successful - component restored to previous state');
+                    this.logger.info('[Updates] Rollback successful - component restored to previous state');
           
                     // RESILIENCE: Format user-friendly error message
                     throw new Error(this.formatUpdateError(error as Error));
                 } catch (rollbackError) {
                     // Rollback itself failed - critical situation
-                    this.logger.error('[Update] CRITICAL: Rollback failed', rollbackError as Error);
+                    this.logger.error('[Updates] CRITICAL: Rollback failed', rollbackError as Error);
                     throw new Error(
                         `Update failed AND rollback failed. Manual recovery required. Snapshot at: ${snapshotPath}`,
                     );
@@ -158,7 +158,7 @@ export class ComponentUpdater {
    * Ensures critical files exist before marking update as successful
    */
     private async verifyComponentStructure(componentPath: string, componentId: string): Promise<void> {
-        this.logger.debug(`[Update] Verifying component structure for ${componentId}`);
+        this.logger.debug(`[Updates] Verifying component structure for ${componentId}`);
     
         // Define required files per component type
         const requiredFiles: string[] = ['package.json'];
@@ -173,7 +173,7 @@ export class ComponentUpdater {
             const filePath = path.join(componentPath, file);
             try {
                 await fs.access(filePath);
-                this.logger.debug(`[Update] ✓ Verified ${file} exists`);
+                this.logger.debug(`[Updates] ✓ Verified ${file} exists`);
             } catch {
                 throw new Error(`Component verification failed: ${file} missing after extraction`);
             }
@@ -187,12 +187,12 @@ export class ComponentUpdater {
             if (!pkg) {
                 throw new Error('Invalid JSON');
             }
-            this.logger.debug('[Update] ✓ package.json is valid JSON');
+            this.logger.debug('[Updates] ✓ package.json is valid JSON');
         } catch {
             throw new Error('Component verification failed: package.json is invalid');
         }
     
-        this.logger.info('[Update] ✓ Component structure verified successfully');
+        this.logger.info('[Updates] ✓ Component structure verified successfully');
     }
 
     /**
@@ -207,7 +207,7 @@ export class ComponentUpdater {
             try {
                 const content = await fs.readFile(envPath, 'utf-8');
                 envFiles.set(filename, content);
-                this.logger.debug(`[Update] Backed up ${filename}`);
+                this.logger.debug(`[Updates] Backed up ${filename}`);
             } catch {
                 // File doesn't exist, skip
             }
@@ -230,7 +230,7 @@ export class ComponentUpdater {
         try {
             validateGitHubDownloadURL(downloadUrl);
         } catch (error) {
-            this.logger.error('[Update] Download URL validation failed', error as Error);
+            this.logger.error('[Updates] Download URL validation failed', error as Error);
             throw new Error(`Security check failed: ${(error as Error).message}`);
         }
 
@@ -241,7 +241,7 @@ export class ComponentUpdater {
 
         try {
             // Download zip with timeout
-            this.logger.debug(`[Update] Downloading from ${downloadUrl}`);
+            this.logger.debug(`[Updates] Downloading from ${downloadUrl}`);
 
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), TIMEOUTS.UPDATE_DOWNLOAD);
@@ -253,7 +253,7 @@ export class ComponentUpdater {
                 }
                 const buffer = await response.arrayBuffer();
                 await fs.writeFile(tempZip, Buffer.from(buffer));
-                this.logger.debug(`[Update] Downloaded ${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
+                this.logger.debug(`[Updates] Downloaded ${(buffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
             } finally {
                 clearTimeout(timeout);
             }
@@ -275,7 +275,7 @@ export class ComponentUpdater {
                 },
             );
 
-            this.logger.debug(`[Update] Extracted to ${targetPath}`);
+            this.logger.debug(`[Updates] Extracted to ${targetPath}`);
         } finally {
             // Cleanup temp zip
             try {
@@ -304,7 +304,7 @@ export class ComponentUpdater {
             envFilePaths,
         );
     
-        this.logger.debug(`[Update] Registered ${envFilePaths.length} programmatic writes with file watcher`);
+        this.logger.debug(`[Updates] Registered ${envFilePaths.length} programmatic writes with file watcher`);
     
         // Now perform merge and write - file watcher will ignore these changes
         for (const [filename, oldContent] of oldEnvFiles.entries()) {
@@ -319,7 +319,7 @@ export class ComponentUpdater {
             } catch {
                 // No example file, just restore old .env as-is
                 await fs.writeFile(envPath, oldContent, 'utf-8');
-                this.logger.debug(`[Update] Restored ${filename} (no template found)`);
+                this.logger.debug(`[Updates] Restored ${filename} (no template found)`);
                 continue;
             }
       
@@ -339,9 +339,9 @@ export class ComponentUpdater {
       
             const addedKeys = Array.from(templateVars.keys()).filter(k => !oldVars.has(k));
             if (addedKeys.length > 0) {
-                this.logger.debug(`[Update] Merged ${filename}: added ${addedKeys.length} new variables (${addedKeys.join(', ')})`);
+                this.logger.debug(`[Updates] Merged ${filename}: added ${addedKeys.length} new variables (${addedKeys.join(', ')})`);
             } else {
-                this.logger.debug(`[Update] Merged ${filename}: preserved user config, no new variables`);
+                this.logger.debug(`[Updates] Merged ${filename}: preserved user config, no new variables`);
             }
         }
     }

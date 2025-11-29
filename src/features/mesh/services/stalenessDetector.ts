@@ -64,7 +64,7 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         const { TIMEOUTS } = await import('@/core/utils/timeoutConfig');
         const commandManager = ServiceLocator.getCommandExecutor();
 
-        logger.debug('[MeshStaleness] Fetching deployed mesh config from Adobe I/O...');
+        logger.debug('[Mesh Staleness] Fetching deployed mesh config from Adobe I/O...');
 
         // Pre-check: Verify authentication status without triggering browser auth
         // Use a fast command that doesn't trigger interactive login
@@ -74,11 +74,11 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
             });
 
             if (authCheckResult.code !== 0) {
-                logger.debug('[MeshStaleness] Not authenticated or no org selected, skipping mesh fetch');
+                logger.debug('[Mesh Staleness] Not authenticated or no org selected, skipping mesh fetch');
                 return null;
             }
         } catch (authError) {
-            logger.debug('[MeshStaleness] Auth check failed, skipping mesh fetch:', authError);
+            logger.debug('[Mesh Staleness] Auth check failed, skipping mesh fetch:', authError);
             return null;
         }
 
@@ -90,7 +90,7 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         // Parse the JSON response
         const meshData = parseJSON<{ meshConfig?: { sources?: { name?: string; handler?: { graphql?: { endpoint?: string; operationHeaders?: Record<string, string> } } }[] } }>(result.stdout);
         if (!meshData) {
-            logger.debug('[MeshStaleness] Failed to parse mesh data');
+            logger.debug('[Mesh Staleness] Failed to parse mesh data');
             return null;
         }
         
@@ -122,14 +122,14 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
             }
         }
         
-        logger.debug('[MeshStaleness] Successfully fetched deployed mesh config', {
+        logger.debug('[Mesh Staleness] Successfully fetched deployed mesh config', {
             keysFound: Object.keys(deployedEnvVars),
         });
         
         return deployedEnvVars;
         
     } catch (error) {
-        logger.debug('[MeshStaleness] Failed to fetch deployed mesh config:', error);
+        logger.debug('[Mesh Staleness] Failed to fetch deployed mesh config:', error);
         return null;
     }
 }
@@ -247,13 +247,13 @@ export async function detectMeshChanges(
     let didPopulateFromDeployedConfig = false;
 
     if (!envVarsExist) {
-        logger.debug('[MeshStaleness] meshState.envVars is empty, attempting to fetch deployed config from Adobe I/O');
+        logger.debug('[Mesh Staleness] meshState.envVars is empty, attempting to fetch deployed config from Adobe I/O');
 
         const deployedConfig = await fetchDeployedMeshConfig();
 
         if (deployedConfig) {
             // Successfully fetched deployed config - use it as baseline
-            logger.debug('[MeshStaleness] Successfully fetched deployed config, populating meshState.envVars');
+            logger.debug('[Mesh Staleness] Successfully fetched deployed config, populating meshState.envVars');
 
             project.meshState!.envVars = deployedConfig;
             didPopulateFromDeployedConfig = true;
@@ -264,7 +264,7 @@ export async function detectMeshChanges(
         } else {
             // Failed to fetch - can't verify deployed state
             // Conservative approach: Don't force redeployment, flag as unknown
-            logger.warn('[MeshStaleness] Failed to fetch deployed config, unable to verify deployment status');
+            logger.warn('[Mesh Staleness] Failed to fetch deployed config, unable to verify deployment status');
             return {
                 hasChanges: false,        // Don't force redeployment
                 envVarsChanged: false,    // No changes detected
@@ -287,14 +287,14 @@ export async function detectMeshChanges(
         
         if (oldValue !== newValue) {
             changedEnvVars.push(key);
-            logger.debug(`[MeshStaleness]   ❌ ${key} changed: "${oldValue}" → "${newValue}"`);
+            logger.debug(`[Mesh Staleness]   ❌ ${key} changed: "${oldValue}" → "${newValue}"`);
         }
     });
     
     const envVarsChanged = changedEnvVars.length > 0;
 
     if (envVarsChanged) {
-        logger.debug(`[MeshStaleness] Detected ${changedEnvVars.length} changed env vars:`, changedEnvVars);
+        logger.debug(`[Mesh Staleness] Detected ${changedEnvVars.length} changed env vars:`, changedEnvVars);
     }
     
     // Check source files changes

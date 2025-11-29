@@ -119,7 +119,7 @@ export class PrerequisitesCacheManager {
         // Check if expired
         const now = Date.now();
         if (now >= cached.expiry) {
-            this.logger.debug(`[Prereq Cache] Cache expired for ${key}`);
+            this.logger.debug(`[Prerequisites Cache] Cache expired for ${key}`);
             this.cache.delete(key);
             this.stats.misses++;
             return undefined;
@@ -162,7 +162,7 @@ export class PrerequisitesCacheManager {
 
             if (oldestKey) {
                 this.cache.delete(oldestKey);
-                this.logger.debug(`[Prereq Cache] Evicted oldest entry: ${oldestKey} (cache size: ${this.cache.size})`);
+                this.logger.debug(`[Prerequisites Cache] Evicted oldest entry: ${oldestKey} (cache size: ${this.cache.size})`);
             }
         }
 
@@ -200,7 +200,7 @@ export class PrerequisitesCacheManager {
 
         if (keysToDelete.length > 0) {
             this.logger.debug(
-                `[Prereq Cache] Invalidated ${keysToDelete.length} cache entries for ${prereqId} ` +
+                `[Prerequisites Cache] Invalidated ${keysToDelete.length} cache entries for ${prereqId} ` +
                 `(total invalidations=${this.stats.invalidations})`,
             );
         }
@@ -215,7 +215,7 @@ export class PrerequisitesCacheManager {
         this.cache.clear();
         this.stats.invalidations += count;
         this.logger.debug(
-            `[Prereq Cache] Cleared all caches (${count} entries, ` +
+            `[Prerequisites Cache] Cleared all caches (${count} entries, ` +
             `total invalidations=${this.stats.invalidations})`,
         );
     }

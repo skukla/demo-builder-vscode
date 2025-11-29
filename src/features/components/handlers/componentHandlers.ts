@@ -136,7 +136,7 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
         };
 
         // Log summary at debug level (concise)
-        context.logger.debug(`[componentHandlers] Sending components-data: ${frontends.length} frontends, ${backends.length} backends, ${dependencies.length} deps, ${getEntryCount(registry.envVars)} envVars`);
+        context.logger.debug(`[Components] Sending components-data: ${frontends.length} frontends, ${backends.length} backends, ${dependencies.length} deps, ${getEntryCount(registry.envVars)} envVars`);
 
         return {
             success: true,

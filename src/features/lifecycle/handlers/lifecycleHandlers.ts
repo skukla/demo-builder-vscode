@@ -74,7 +74,7 @@ export async function handleCancelMeshCreation(
         // For now, just acknowledge the cancellation
         return { success: true, data: { cancelled: true } };
     } catch (error) {
-        context.logger.error('[API Mesh Cancel] Failed', error as Error);
+        context.logger.error('[API Mesh] Cancel failed', error as Error);
         return {
             success: false,
             error: toError(error).message,

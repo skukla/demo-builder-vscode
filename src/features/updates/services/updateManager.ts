@@ -110,7 +110,7 @@ export class UpdateManager {
                 // HTTP status validation (Step 4)
                 if (!response.ok) {
                     if (response.status === 404) {
-                        this.logger.debug(`[Update] Release not found for ${repo}`);
+                        this.logger.debug(`[Updates] Release not found for ${repo}`);
                         return null;
                     }
                     if (response.status === 403) {
@@ -142,7 +142,7 @@ export class UpdateManager {
                 }
 
                 if (!release || release.message === 'Not Found') {
-                    this.logger.debug(`[Update] No releases found for ${repo}`);
+                    this.logger.debug(`[Updates] No releases found for ${repo}`);
                     return null;
                 }
 
@@ -153,7 +153,7 @@ export class UpdateManager {
                     : release.zipball_url;
 
                 if (!asset) {
-                    this.logger.debug(`[Update] No valid asset found in release for ${repo}`);
+                    this.logger.debug(`[Updates] No valid asset found in release for ${repo}`);
                     return null;
                 }
 
@@ -167,12 +167,12 @@ export class UpdateManager {
                 try {
                     validateGitHubDownloadURL(downloadUrl);
                 } catch (error) {
-                    this.logger.warn(`[Update] Security check failed for download URL from ${repo}: ${(error as Error).message}`);
+                    this.logger.warn(`[Updates] Security check failed for download URL from ${repo}: ${(error as Error).message}`);
                     return null; // Treat as no update available if URL is invalid
                 }
 
                 const version = this.parseVersionFromTag(release.tag_name);
-                this.logger.debug(`[Update] Found ${channel} release v${version} for ${repo}`);
+                this.logger.debug(`[Updates] Found ${channel} release v${version} for ${repo}`);
 
                 return {
                     version,
@@ -189,7 +189,7 @@ export class UpdateManager {
             // Graceful degradation: returning null means "no update available" which
             // is better UX than showing "update check failed" errors for transient
             // network issues, rate limits, or GitHub outages.
-            this.logger.debug(`[Update] Failed to fetch release for ${repo}:`, error);
+            this.logger.debug(`[Updates] Failed to fetch release for ${repo}:`, error);
             return null;
         }
     }
@@ -204,7 +204,7 @@ export class UpdateManager {
             // semver.gt() properly handles: 1.0.0-beta.6 > 1.0.0-beta.5
             return semver.gt(latest, current);
         } catch (error) {
-            this.logger.debug(`[Update] Version comparison failed: ${error}`);
+            this.logger.debug(`[Updates] Version comparison failed: ${error}`);
             return false;
         }
     }

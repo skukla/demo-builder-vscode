@@ -187,11 +187,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         // Check for existing project
         const project = await this.stateManager.getCurrentProject();
         if (!project) {
-            this.logger.warn('[Project Dashboard] No project found');
+            this.logger.warn('[Dashboard] No project found');
             return;
         }
 
-        this.logger.debug(`[Project Dashboard] Showing dashboard for project: ${project.name}`);
+        this.logger.debug(`[Dashboard] Showing dashboard for project: ${project.name}`);
 
         // If demo is already running, initialize file hashes for change detection
         if (project.status === 'running') {

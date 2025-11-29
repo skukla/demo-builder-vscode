@@ -49,7 +49,7 @@ export class DeployMeshCommand extends BaseCommand {
                     await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
                 }
                 
-                this.logger.debug('[Deploy Mesh] Authentication required - directed user to dashboard');
+                this.logger.debug('[Mesh Deployment] Authentication required - directed user to dashboard');
                 return;
             }
             
@@ -132,7 +132,7 @@ export class DeployMeshCommand extends BaseCommand {
 
                         // Use the original mesh.json path directly (not a temp copy)
                         // This ensures relative paths in mesh.json (like build/resolvers/*.js) resolve correctly
-                        this.logger.debug(`[Deploy Mesh] Deploying mesh from: ${meshConfigPath}`);
+                        this.logger.debug(`[Mesh Deployment] Deploying mesh from: ${meshConfigPath}`);
                     
                         progress.report({ message: 'Deploying to Adobe I/O...' });
                         await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Deploying to Adobe I/O...');
@@ -184,7 +184,7 @@ export class DeployMeshCommand extends BaseCommand {
                             throw new Error(formatAdobeCliError(rawError));
                         }
                         
-                        this.logger.debug('[Deploy Mesh] Update command completed, starting deployment verification...');
+                        this.logger.debug('[Mesh Deployment] Update command completed, starting deployment verification...');
                         this.logger.info('-'.repeat(60));
                         this.logger.info('✓ Update command completed');
                         this.logger.info('');
@@ -243,7 +243,7 @@ export class DeployMeshCommand extends BaseCommand {
                         // This ensures the dashboard knows the config is in sync
                         const { updateMeshState } = await import('../services/stalenessDetector');
                         await updateMeshState(project);
-                        this.logger.debug('[Deploy Mesh] Updated mesh state after successful deployment');
+                        this.logger.debug('[Mesh Deployment] Updated mesh state after successful deployment');
                         
                         await this.stateManager.saveProject(project);
                         
@@ -290,7 +290,7 @@ export class DeployMeshCommand extends BaseCommand {
             }
         } catch (error) {
             // Outer catch for any unexpected errors during validation/setup
-            this.logger.error('[Deploy Mesh] Unexpected error', error as Error);
+            this.logger.error('[Mesh Deployment] Unexpected error', error as Error);
             const selection = await vscode.window.showErrorMessage(
                 'Failed to deploy API Mesh. Check logs for details.',
                 'View Logs'

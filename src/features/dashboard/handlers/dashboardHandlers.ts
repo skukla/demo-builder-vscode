@@ -131,7 +131,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
 
                         // Verify mesh still exists
                         verifyMeshDeployment(context, project).catch(err => {
-                            context.logger.debug('[Project Dashboard] Background mesh verification failed', err);
+                            context.logger.debug('[Dashboard] Background mesh verification failed', err);
                         });
                     } else if (meshChanges.unknownDeployedState) {
                         // Unable to determine if config changed
@@ -253,7 +253,7 @@ export const handleOpenBrowser: MessageHandler = async (context) => {
     if (frontendPort) {
         const url = `http://localhost:${frontendPort}`;
         await vscode.env.openExternal(vscode.Uri.parse(url));
-        context.logger.debug(`[Project Dashboard] Opening browser: ${url}`);
+        context.logger.debug(`[Dashboard] Opening browser: ${url}`);
     }
 
     return { success: true };
@@ -620,7 +620,7 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
     const verificationResult = await verify(project);
 
     if (!verificationResult.success || !verificationResult.data?.exists) {
-        context.logger.warn('[Project Dashboard] Mesh verification failed - mesh may not exist in Adobe I/O', {
+        context.logger.warn('[Dashboard] Mesh verification failed - mesh may not exist in Adobe I/O', {
             error: verificationResult.success ? undefined : verificationResult.error,
         });
 

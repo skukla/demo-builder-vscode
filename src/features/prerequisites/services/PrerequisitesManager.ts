@@ -168,14 +168,14 @@ export class PrerequisitesManager {
             // Step 2 Fix: Use fnm-aware logic for perNodeVersion prerequisites
             // Check perNodeVersion prerequisites using checkPerNodeVersionStatus (same as per-node check)
             if (prereq.perNodeVersion && prereq.id !== 'node' && prereq.id !== 'npm') {
-                this.logger.debug(`[Prereq Check] ${prereq.id}: Using fnm-aware detection (perNodeVersion=true)`);
+                this.logger.debug(`[Prerequisites] ${prereq.id}: Using fnm-aware detection (perNodeVersion=true)`);
 
                 // Get list of installed Node versions to check against
                 const installedNodeVersions = await this.getInstalledNodeVersions();
 
                 if (installedNodeVersions.length === 0) {
                     // No Node versions installed - prerequisite can't be installed
-                    this.logger.debug(`[Prereq Check] ${prereq.id}: No Node versions installed`);
+                    this.logger.debug(`[Prerequisites] ${prereq.id}: No Node versions installed`);
                     status.installed = false;
                 } else {
                     // Check prerequisite against all installed Node versions using fnm-aware logic
@@ -211,11 +211,11 @@ export class PrerequisitesManager {
                         status.version = this.extractVersionFromPerNodeStatus(perNodeStatus);
                     }
 
-                    this.logger.debug(`[Prereq Check] ${prereq.id}: fnm-aware check complete, installed=${status.installed}, cached ${perNodeStatus.perNodeVersionStatus.length} per-version results`);
+                    this.logger.debug(`[Prerequisites] ${prereq.id}: fnm-aware check complete, installed=${status.installed}, cached ${perNodeStatus.perNodeVersionStatus.length} per-version results`);
                 }
 
                 const totalDuration = Date.now() - startTime;
-                this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Complete in ${totalDuration}ms, installed=${status.installed}`);
+                this.logger.debug(`[Prerequisites] ${prereq.id}: ✓ Complete in ${totalDuration}ms, installed=${status.installed}`);
 
                 // Cache result
                 this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
@@ -250,8 +250,8 @@ export class PrerequisitesManager {
                     status.installed = true;
                     status.version = match[1];
                 } else {
-                    this.logger.debug(`[Prereq Check] ${prereq.id}: ✗ Version regex did not match`);
-                    this.logger.debug(`[Prereq Check] ${prereq.id}: stdout to match against: ${stdout.substring(0, 300)}`);
+                    this.logger.debug(`[Prerequisites] ${prereq.id}: ✗ Version regex did not match`);
+                    this.logger.debug(`[Prerequisites] ${prereq.id}: stdout to match against: ${stdout.substring(0, 300)}`);
                 }
             } else if (prereq.check.contains) {
                 status.installed = stdout.includes(prereq.check.contains);
@@ -269,14 +269,14 @@ export class PrerequisitesManager {
             }
             
             const totalDuration = Date.now() - startTime;
-            this.logger.debug(`[Prereq Check] ${prereq.id}: ✓ Complete in ${totalDuration}ms, installed=${status.installed}`);
+            this.logger.debug(`[Prerequisites] ${prereq.id}: ✓ Complete in ${totalDuration}ms, installed=${status.installed}`);
 
             // Cache successful result (Step 2: Prerequisite Caching)
             this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
 
         } catch (error) {
             const totalDuration = Date.now() - startTime;
-            this.logger.debug(`[Prereq Check] ${prereq.id}: ✗ Failed after ${totalDuration}ms`);
+            this.logger.debug(`[Prerequisites] ${prereq.id}: ✗ Failed after ${totalDuration}ms`);
 
             // Check if this is a timeout error
             const errorMessage = toError(error).message;
