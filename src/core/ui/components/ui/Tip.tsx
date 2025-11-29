@@ -41,9 +41,9 @@ export function Tip({ children, icon = '💡', variant = 'default' }: TipProps) 
     return (
         <View
             padding="size-200"
+            UNSAFE_className="rounded-md"
             UNSAFE_style={{
                 backgroundColor: getBackgroundColor(),
-                borderRadius: '6px',
                 border: `1px solid ${getBorderColor()}`
             }}
         >

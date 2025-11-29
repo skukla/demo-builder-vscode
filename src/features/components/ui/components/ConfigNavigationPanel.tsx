@@ -73,7 +73,7 @@ export function ConfigNavigationPanel({
     );
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="flex-column h-full">
             <NavigationPanel
                 sections={sections}
                 activeSection={activeSection}

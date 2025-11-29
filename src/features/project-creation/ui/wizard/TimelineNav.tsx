@@ -112,8 +112,7 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
                                     <View
                                         width="size-300"
                                         height="size-300"
-                                        UNSAFE_className={getTimelineStepDotClasses(status)}
-                                        UNSAFE_style={{ flexShrink: 0 }}
+                                        UNSAFE_className={cn(getTimelineStepDotClasses(status), 'shrink-0')}
                                     >
                                         {renderStepIndicator(status)}
                                     </View>

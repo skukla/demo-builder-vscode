@@ -120,7 +120,7 @@
    =========================================== */
 .border { border: 1px solid var(--spectrum-global-color-gray-300) !important; }
 .border-radius { border-radius: 4px !important; }
-.rounded-md { border-radius: 4px !important; }
+.rounded-md { border-radius: 6px !important; }
 
 /* ===========================================
    Button Classes - Override Spectrum defaults
