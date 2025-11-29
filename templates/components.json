@@ -10,7 +10,7 @@
   "selectionGroups": {
     "frontends": ["citisignal-nextjs"],
     "backends": ["adobe-commerce-paas"],
-    "dependencies": ["commerce-mesh", "demo-inspector"],
+    "dependencies": ["commerce-mesh"],
     "appBuilderApps": ["integration-service"],
     "integrations": ["experience-platform"]
   },
@@ -28,12 +28,18 @@
         "url": "https://github.com/skukla/citisignal-nextjs",
         "branch": "master",
         "gitOptions": {
-          "shallow": true
+          "shallow": false,
+          "recursive": true
         }
       },
       "dependencies": {
-        "required": ["commerce-mesh"],
-        "optional": ["demo-inspector"]
+        "required": ["commerce-mesh"]
+      },
+      "submodules": {
+        "demo-inspector": {
+          "path": "src/demo-inspector",
+          "repository": "skukla/demo-inspector"
+        }
       },
       "compatibleBackends": ["adobe-commerce-paas"],
       "configuration": {
@@ -90,26 +96,6 @@
         ],
         "providesEnvVars": ["MESH_ENDPOINT"]
       }
-    },
-    "demo-inspector": {
-      "name": "Demo Inspector",
-      "description": "Visual debugging overlay showing data sources and API calls",
-      "icon": {
-        "light": "adobe-file-icon-light.svg",
-        "dark": "adobe-file-icon-dark.svg"
-      },
-      "source": {
-        "type": "npm",
-        "package": "@adobe/demo-inspector",
-        "version": "^1.0.0"
-      },
-      "configuration": {
-        "defaultEnabled": true,
-        "position": "right",
-        "startOpen": false
-      },
-      "impact": "minimal",
-      "removable": true
     },
     "experience-platform": {
       "name": "Experience Platform",

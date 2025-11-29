@@ -1,10 +1,13 @@
+import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
+import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { Project } from '@/types';
+import { Project, SubmoduleConfig } from '@/types';
 import { getComponentIds } from '@/types/typeGuards';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 export type { UpdateCheckResult };
 
@@ -18,6 +21,7 @@ export class UpdateManager {
         'citisignal-nextjs': 'skukla/citisignal-nextjs',
         'commerce-mesh': 'skukla/commerce-mesh',
         'integration-service': 'skukla/kukla-integration-service',
+        'demo-inspector': 'skukla/demo-inspector',
     };
 
     constructor(context: vscode.ExtensionContext, logger: Logger) {
@@ -85,6 +89,81 @@ export class UpdateManager {
         }
     
         return results;
+    }
+
+    /**
+     * Check for updates to submodules within a parent component
+     *
+     * @param parentComponentPath - Path to the parent component directory
+     * @param submodules - Submodule configurations from component definition
+     * @returns Map of submodule IDs to their update status
+     */
+    async checkSubmoduleUpdates(
+        parentComponentPath: string,
+        submodules: Record<string, SubmoduleConfig>
+    ): Promise<Map<string, UpdateCheckResult>> {
+        const results = new Map<string, UpdateCheckResult>();
+        const channel = this.getUpdateChannel();
+
+        for (const [submoduleId, submoduleConfig] of Object.entries(submodules)) {
+            const repoPath = this.COMPONENT_REPOS[submoduleId];
+            if (!repoPath) {
+                this.logger.debug(`[Updates] Skipping submodule ${submoduleId}: no repository mapping`);
+                continue;
+            }
+
+            // Get current submodule commit
+            const submodulePath = path.join(parentComponentPath, submoduleConfig.path);
+            const currentCommit = await this.getGitCommit(submodulePath);
+
+            this.logger.debug(`[Updates] Checking submodule ${submoduleId}: current=${currentCommit?.substring(0, 8) || 'unknown'}`);
+
+            // Fetch latest release from GitHub
+            const latestRelease = await this.fetchLatestRelease(repoPath, channel);
+
+            if (!latestRelease) {
+                results.set(submoduleId, {
+                    hasUpdate: false,
+                    current: currentCommit?.substring(0, 8) || 'unknown',
+                    latest: 'unknown',
+                });
+                continue;
+            }
+
+            // For submodules, we compare commit-based versions
+            // If current commit is unknown or different from latest tag, an update may be available
+            const hasUpdate = !currentCommit || currentCommit !== latestRelease.version;
+
+            if (hasUpdate) {
+                this.logger.debug(`[Updates] ${submoduleId} update available: ${currentCommit?.substring(0, 8) || 'unknown'} -> ${latestRelease.version}`);
+            }
+
+            results.set(submoduleId, {
+                hasUpdate,
+                current: currentCommit?.substring(0, 8) || 'unknown',
+                latest: latestRelease.version,
+                releaseInfo: hasUpdate ? latestRelease : undefined,
+            });
+        }
+
+        return results;
+    }
+
+    /**
+     * Get the current HEAD commit hash from a git repository
+     */
+    private async getGitCommit(repoPath: string): Promise<string | null> {
+        try {
+            const executor = ServiceLocator.getCommandExecutor();
+            const result = await executor.execute('git rev-parse HEAD', {
+                cwd: repoPath,
+                timeout: TIMEOUTS.QUICK_SHELL,
+                shell: DEFAULT_SHELL,
+            });
+            return result.code === 0 ? result.stdout.trim() : null;
+        } catch {
+            return null;
+        }
     }
 
     /**

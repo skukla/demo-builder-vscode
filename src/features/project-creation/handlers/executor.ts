@@ -18,6 +18,42 @@ import { AdobeConfig } from '@/types/base';
 import { parseJSON, hasEntries, getEntryCount, getComponentIds } from '@/types/typeGuards';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { TransformedComponentDefinition } from '@/types';
+
+// ============================================================================
+// Helper Functions (SOP §6: Extract named functions for transformations)
+// ============================================================================
+
+/**
+ * Convert kebab-case submodule ID to Title Case display name
+ * @example 'demo-inspector' -> 'Demo Inspector'
+ */
+function formatSubmoduleDisplayName(id: string): string {
+    return id
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
+/**
+ * Build user-friendly submessage for component installation progress
+ * Shows "Adding [Submodule Name]..." when submodules are present
+ */
+function buildInstallationSubmessage(componentDef: TransformedComponentDefinition): string {
+    const DEFAULT_MESSAGE = 'Cloning repository and installing dependencies...';
+
+    if (!componentDef.submodules) {
+        return DEFAULT_MESSAGE;
+    }
+
+    const submoduleIds = Object.keys(componentDef.submodules);
+    if (submoduleIds.length === 0) {
+        return DEFAULT_MESSAGE;
+    }
+
+    const displayNames = submoduleIds.map(formatSubmoduleDisplayName);
+    return `Adding ${displayNames.join(', ')}...`;
+}
 
 /**
  * ProjectCreationConfig - Configuration passed to project creation
@@ -193,7 +229,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             continue;
         }
 
-        progressTracker(`Installing ${componentDef.name}`, currentProgress, 'Cloning repository and installing dependencies...');
+        const submessage = buildInstallationSubmessage(componentDef);
+        progressTracker(`Installing ${componentDef.name}`, currentProgress, submessage);
         context.logger.debug(`[Project Creation] Installing component: ${componentDef.name}`);
 
         const result = await componentManager.installComponent(project, componentDef);

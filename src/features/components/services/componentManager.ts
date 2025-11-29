@@ -175,6 +175,11 @@ export class ComponentManager {
             throw new Error(`Git clone failed: ${result.stderr}`);
         }
 
+        // Log submodule initialization if recursive clone was used
+        if (componentDef.source.gitOptions?.recursive) {
+            this.logger.debug(`[ComponentManager] Submodules initialized for ${componentDef.name}`);
+        }
+
         // Detect component version using hybrid approach:
         // 1. Try git tag (most accurate for releases)
         // 2. Fallback to package.json version
