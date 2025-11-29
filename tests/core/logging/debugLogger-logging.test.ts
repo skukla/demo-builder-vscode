@@ -20,9 +20,14 @@ jest.mock('vscode', () => {
             ...originalModule.window,
             createOutputChannel: jest.fn((name: string, options?: { log: boolean }) => {
                 const { mockLogsChannel, mockDebugChannel } = require('./debugLogger.testUtils');
+                // Both channels use LogOutputChannel with { log: true }
                 if (options?.log) {
-                    if (name === 'Demo Builder: User Logs') return mockLogsChannel;
-                    if (name === 'Demo Builder: Debug Logs') return mockDebugChannel;
+                    if (name === 'Demo Builder: User Logs') {
+                        return mockLogsChannel;
+                    }
+                    if (name === 'Demo Builder: Debug Logs') {
+                        return mockDebugChannel;
+                    }
                 }
                 return { append: jest.fn(), appendLine: jest.fn(), clear: jest.fn(), show: jest.fn(), hide: jest.fn(), dispose: jest.fn(), name };
             }),
@@ -96,8 +101,9 @@ describe('DebugLogger - Severity Level Methods', () => {
             const data = { key: 'value', count: 42 };
             logger.debug('Test with data', data);
 
-            expect(mockDebugChannel.debug).toHaveBeenCalledWith('Test with data');
-            expect(mockDebugChannel.debug).toHaveBeenCalledWith(
+            // Debug channel receives info() with [debug] prefix
+            expect(mockDebugChannel.info).toHaveBeenCalledWith('[debug] Test with data');
+            expect(mockDebugChannel.info).toHaveBeenCalledWith(
                 expect.stringContaining('"key"')
             );
         });
@@ -108,20 +114,14 @@ describe('DebugLogger - Severity Level Methods', () => {
 
             logger.debug('Test with circular data', circular);
 
-            expect(mockDebugChannel.debug).toHaveBeenCalled();
+            // Debug channel receives info() with [debug] prefix
+            expect(mockDebugChannel.info).toHaveBeenCalled();
         });
 
-        it('should respect debugEnabled setting', () => {
-            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-                get: jest.fn().mockReturnValue(false),
-            });
+        it('should always output debug messages via info() with [debug] prefix', () => {
+            logger.debug('Should always appear');
 
-            const disabledLogger = new DebugLogger(mockContext);
-            jest.clearAllMocks();
-
-            disabledLogger.debug('Should not appear');
-
-            expect(mockDebugChannel.debug).not.toHaveBeenCalled();
+            expect(mockDebugChannel.info).toHaveBeenCalledWith('[debug] Should always appear');
         });
     });
 
@@ -136,7 +136,8 @@ describe('DebugLogger - Severity Level Methods', () => {
         it('should handle data parameter', () => {
             logger.trace('Trace with data', { detail: 'value' });
 
-            expect(mockDebugChannel.trace).toHaveBeenCalled();
+            // Debug channel receives info() with [trace] prefix
+            expect(mockDebugChannel.info).toHaveBeenCalledWith('[trace] Trace with data');
         });
     });
 });
@@ -153,7 +154,7 @@ describe('DebugLogger - Command Logging', () => {
         jest.clearAllMocks();
     });
 
-    it('should log command execution to Debug Logs channel', () => {
+    it('should log command execution to Debug Logs channel only', () => {
         const result = {
             stdout: 'command output',
             stderr: '',
@@ -163,8 +164,14 @@ describe('DebugLogger - Command Logging', () => {
 
         logger.logCommand('npm install', result);
 
-        expect(mockDebugChannel.debug).toHaveBeenCalled();
-        expect(mockLogsChannel.debug).not.toHaveBeenCalled();
+        // Debug channel receives info() with [debug] prefix
+        expect(mockDebugChannel.info).toHaveBeenCalledWith(
+            expect.stringContaining('[debug] COMMAND EXECUTION')
+        );
+        // User Logs should not get command debug info
+        expect(mockLogsChannel.info).not.toHaveBeenCalledWith(
+            expect.stringContaining('COMMAND EXECUTION')
+        );
     });
 
     it('should include command name in log', () => {
@@ -177,14 +184,9 @@ describe('DebugLogger - Command Logging', () => {
 
         logger.logCommand('aio auth login', result);
 
-        const debugCalls = mockDebugChannel.debug.mock.calls;
-        const hasCommandName = debugCalls.some((call: unknown[]) =>
-            call.some(
-                (arg: unknown) =>
-                    typeof arg === 'string' && arg.includes('aio auth login')
-            )
+        expect(mockDebugChannel.info).toHaveBeenCalledWith(
+            expect.stringContaining('aio auth login')
         );
-        expect(hasCommandName).toBe(true);
     });
 
     it('should include duration in log', () => {
@@ -197,13 +199,9 @@ describe('DebugLogger - Command Logging', () => {
 
         logger.logCommand('git status', result);
 
-        const debugCalls = mockDebugChannel.debug.mock.calls;
-        const hasDuration = debugCalls.some((call: unknown[]) =>
-            call.some(
-                (arg: unknown) => typeof arg === 'string' && arg.includes('500')
-            )
+        expect(mockDebugChannel.info).toHaveBeenCalledWith(
+            expect.stringContaining('500')
         );
-        expect(hasDuration).toBe(true);
     });
 
     it('should include exit code in log', () => {
@@ -216,18 +214,12 @@ describe('DebugLogger - Command Logging', () => {
 
         logger.logCommand('failing-command', result);
 
-        const debugCalls = mockDebugChannel.debug.mock.calls;
-        const hasExitCode = debugCalls.some((call: unknown[]) =>
-            call.some(
-                (arg: unknown) =>
-                    typeof arg === 'string' &&
-                    (arg.includes('Exit Code') || arg.includes('code'))
-            )
+        expect(mockDebugChannel.info).toHaveBeenCalledWith(
+            expect.stringContaining('Exit Code')
         );
-        expect(hasExitCode).toBe(true);
     });
 
-    it('should log stdout at trace level to Debug Logs channel', () => {
+    it('should log stdout to Debug Logs channel with [trace] prefix', () => {
         const result = {
             stdout: 'Detailed command output here',
             stderr: '',
@@ -237,10 +229,10 @@ describe('DebugLogger - Command Logging', () => {
 
         logger.logCommand('verbose-command', result);
 
-        expect(mockDebugChannel.trace).toHaveBeenCalled();
+        expect(mockDebugChannel.info).toHaveBeenCalledWith('[trace] --- STDOUT ---');
     });
 
-    it('should log stderr when present', () => {
+    it('should log stderr when present with [trace] prefix', () => {
         const result = {
             stdout: '',
             stderr: 'Warning: something happened',
@@ -250,7 +242,7 @@ describe('DebugLogger - Command Logging', () => {
 
         logger.logCommand('warning-command', result);
 
-        expect(mockDebugChannel.trace).toHaveBeenCalled();
+        expect(mockDebugChannel.info).toHaveBeenCalledWith('[trace] --- STDERR ---');
     });
 
     it('should warn about slow commands in User Logs channel', () => {

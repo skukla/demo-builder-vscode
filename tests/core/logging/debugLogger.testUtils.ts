@@ -1,8 +1,14 @@
 /**
  * Shared test utilities for DebugLogger tests
  *
- * Provides mock LogOutputChannels and setup functions for testing
- * the dual-channel logging system.
+ * Provides mock channels and setup functions for testing the dual-channel logging system.
+ *
+ * Channel Architecture:
+ * - User Logs: LogOutputChannel for user-friendly messages
+ * - Debug Logs: LogOutputChannel for complete technical record
+ *
+ * Both channels use LogOutputChannel. Debug/trace messages are "promoted" to info()
+ * with [debug]/[trace] prefixes to bypass VS Code's log level filtering.
  */
 
 import * as vscode from 'vscode';
@@ -38,7 +44,7 @@ export const mockDebugChannel = {
     clear: jest.fn(),
     dispose: jest.fn(),
     name: 'Demo Builder: Debug Logs',
-    logLevel: 0, // Trace level
+    logLevel: 2, // Info level
 };
 
 // Override the vscode mock for createOutputChannel to return appropriate channel
@@ -49,15 +55,16 @@ jest.mock('vscode', () => {
         window: {
             ...originalModule.window,
             createOutputChannel: jest.fn((name: string, options?: { log: boolean }) => {
+                // Both channels use LogOutputChannel with { log: true }
                 if (options?.log) {
-                    // Return appropriate mock based on channel name
                     if (name === 'Demo Builder: User Logs') {
                         return mockLogsChannel;
-                    } else if (name === 'Demo Builder: Debug Logs') {
+                    }
+                    if (name === 'Demo Builder: Debug Logs') {
                         return mockDebugChannel;
                     }
                 }
-                // Fallback for non-log channels
+                // Fallback for any other channels
                 return {
                     append: jest.fn(),
                     appendLine: jest.fn(),
@@ -72,7 +79,7 @@ jest.mock('vscode', () => {
         workspace: {
             ...originalModule.workspace,
             getConfiguration: jest.fn().mockReturnValue({
-                get: jest.fn().mockReturnValue(true), // debugEnabled = true
+                get: jest.fn().mockReturnValue(true),
             }),
         },
     };

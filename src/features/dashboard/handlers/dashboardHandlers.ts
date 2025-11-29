@@ -47,6 +47,8 @@ export const handleReady: MessageHandler = async (context) => {
  * Handle 'requestStatus' message - Send current project status
  */
 export const handleRequestStatus: MessageHandler = async (context) => {
+    context.logger.debug('[Dashboard] handleRequestStatus called');
+
     if (!context.panel) {
         return { success: false, error: 'No panel available', code: ErrorCode.PROJECT_NOT_FOUND };
     }
@@ -57,10 +59,14 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     }
 
     const meshComponent = project.componentInstances?.['commerce-mesh'];
+    context.logger.debug(`[Dashboard] meshComponent: ${meshComponent ? `status=${meshComponent.status}` : 'none'}`);
 
     const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
 
-    if (meshComponent && shouldAsyncCheckMesh(meshComponent)) {
+    const shouldAsync = meshComponent && shouldAsyncCheckMesh(meshComponent);
+    context.logger.debug(`[Dashboard] shouldAsyncCheckMesh: ${shouldAsync}`);
+
+    if (shouldAsync) {
         // Send initial status with 'checking' for mesh
         const initialStatusData = buildStatusPayload(project, frontendConfigChanged, {
             status: 'checking',
@@ -472,6 +478,8 @@ async function checkMeshStatusAsync(
     meshComponent: ComponentInstance,
     frontendConfigChanged: boolean,
 ): Promise<void> {
+    context.logger.debug('[Dashboard] Starting async mesh status check');
+
     try {
         let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
         let meshEndpoint: string | undefined;
@@ -494,9 +502,11 @@ async function checkMeshStatusAsync(
             }
 
             // Check org access
+            context.logger.debug('[Dashboard] Initializing SDK for org access check');
             await authManager.ensureSDKInitialized();
 
             if (project.adobe?.organization) {
+                context.logger.debug('[Dashboard] Verifying org access');
                 const currentOrg = await authManager.getCurrentOrganization();
                 if (!currentOrg || currentOrg.id !== project.adobe.organization) {
                     context.logger.warn('[Dashboard] User lost access to project organization');
@@ -520,7 +530,9 @@ async function checkMeshStatusAsync(
                 };
             }
 
+            context.logger.debug('[Dashboard] Detecting mesh changes');
             const meshChanges = await detectMeshChanges(project, project.componentConfigs);
+            context.logger.debug(`[Dashboard] Mesh changes detected: hasChanges=${meshChanges.hasChanges}, unknownDeployedState=${meshChanges.unknownDeployedState}`);
 
             if (meshChanges.shouldSaveProject) {
                 context.logger.debug('[Dashboard] Populated meshState.envVars from deployed config, saving project');
@@ -554,6 +566,7 @@ async function checkMeshStatusAsync(
         }
 
         // Send updated status to UI
+        context.logger.debug(`[Dashboard] Async mesh check complete, status: ${meshStatus}`);
         if (context.panel) {
             context.panel.webview.postMessage({
                 type: 'statusUpdate',

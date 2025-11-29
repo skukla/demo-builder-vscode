@@ -20,9 +20,14 @@ jest.mock('vscode', () => {
             ...originalModule.window,
             createOutputChannel: jest.fn((name: string, options?: { log: boolean }) => {
                 const { mockLogsChannel, mockDebugChannel } = require('./debugLogger.testUtils');
+                // Both channels use LogOutputChannel with { log: true }
                 if (options?.log) {
-                    if (name === 'Demo Builder: User Logs') return mockLogsChannel;
-                    if (name === 'Demo Builder: Debug Logs') return mockDebugChannel;
+                    if (name === 'Demo Builder: User Logs') {
+                        return mockLogsChannel;
+                    }
+                    if (name === 'Demo Builder: Debug Logs') {
+                        return mockDebugChannel;
+                    }
                 }
                 return { append: jest.fn(), appendLine: jest.fn(), clear: jest.fn(), show: jest.fn(), hide: jest.fn(), dispose: jest.fn(), name };
             }),
@@ -75,26 +80,41 @@ describe('DebugLogger - Channel Routing', () => {
             const testError = new Error('Underlying error');
             logger.error('Test error message', testError);
 
+            // User Logs gets the error messages
             expect(mockLogsChannel.error).toHaveBeenCalled();
+            // Debug Logs gets error + debug details via info() with [debug] prefix
             expect(mockDebugChannel.error).toHaveBeenCalled();
-            expect(mockDebugChannel.debug).toHaveBeenCalled();
-            expect(mockLogsChannel.debug).not.toHaveBeenCalled();
+            expect(mockDebugChannel.info).toHaveBeenCalledWith(
+                expect.stringContaining('[debug] Error details')
+            );
+            // User Logs should not get debug-level details
+            expect(mockLogsChannel.info).not.toHaveBeenCalledWith(
+                expect.stringContaining('[debug]')
+            );
         });
     });
 
     describe('Debug Logs Only (debug, trace)', () => {
-        it('should route debug() to Debug Logs channel only', () => {
+        it('should route debug() to Debug Logs channel only via info() with [debug] prefix', () => {
             logger.debug('Test debug message');
 
-            expect(mockDebugChannel.debug).toHaveBeenCalledWith('Test debug message');
-            expect(mockLogsChannel.debug).not.toHaveBeenCalled();
+            // Debug channel receives info() with [debug] prefix
+            expect(mockDebugChannel.info).toHaveBeenCalledWith('[debug] Test debug message');
+            // User Logs should not get debug messages
+            expect(mockLogsChannel.info).not.toHaveBeenCalledWith(
+                expect.stringContaining('[debug]')
+            );
         });
 
-        it('should route trace() to Debug Logs channel only', () => {
+        it('should route trace() to Debug Logs channel only via info() with [trace] prefix', () => {
             logger.trace('Test trace message');
 
-            expect(mockDebugChannel.trace).toHaveBeenCalledWith('Test trace message');
-            expect(mockLogsChannel.trace).not.toHaveBeenCalled();
+            // Debug channel receives info() with [trace] prefix
+            expect(mockDebugChannel.info).toHaveBeenCalledWith('[trace] Test trace message');
+            // User Logs should not get trace messages
+            expect(mockLogsChannel.info).not.toHaveBeenCalledWith(
+                expect.stringContaining('[trace]')
+            );
         });
     });
 });

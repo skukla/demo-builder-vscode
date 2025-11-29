@@ -22,10 +22,12 @@ jest.mock('vscode', () => {
             ...originalModule.window,
             createOutputChannel: jest.fn((name: string, options?: { log: boolean }) => {
                 const { mockLogsChannel, mockDebugChannel } = require('./debugLogger.testUtils');
+                // Both channels use LogOutputChannel with { log: true }
                 if (options?.log) {
                     if (name === 'Demo Builder: User Logs') {
                         return mockLogsChannel;
-                    } else if (name === 'Demo Builder: Debug Logs') {
+                    }
+                    if (name === 'Demo Builder: Debug Logs') {
                         return mockDebugChannel;
                     }
                 }
@@ -68,9 +70,10 @@ describe('DebugLogger - Core', () => {
     });
 
     describe('Initialization', () => {
-        it('should create two LogOutputChannels with log: true option', () => {
+        it('should create LogOutputChannel for both channels', () => {
             logger = new DebugLogger(mockContext);
 
+            // Both channels use LogOutputChannel with { log: true }
             expect(vscode.window.createOutputChannel).toHaveBeenCalledWith(
                 'Demo Builder: User Logs',
                 { log: true }
@@ -87,12 +90,13 @@ describe('DebugLogger - Core', () => {
             expect(mockContext.subscriptions.length).toBe(2);
         });
 
-        it('should initialize with debug enabled by default', () => {
+        it('should always output debug messages via info() with [debug] prefix', () => {
             logger = new DebugLogger(mockContext);
             jest.clearAllMocks();
 
             logger.debug('test message');
-            expect(mockDebugChannel.debug).toHaveBeenCalled();
+            // Debug messages promoted to info() with [debug] prefix
+            expect(mockDebugChannel.info).toHaveBeenCalledWith('[debug] test message');
         });
 
         it('should write initialization messages to both channels', () => {
@@ -131,7 +135,7 @@ describe('DebugLogger - Core', () => {
             jest.clearAllMocks();
         });
 
-        it('should log environment info to Debug Logs channel', () => {
+        it('should log environment info to Debug Logs channel only', () => {
             const env = {
                 PATH: '/usr/bin:/usr/local/bin',
                 HOME: '/Users/test',
@@ -140,21 +144,24 @@ describe('DebugLogger - Core', () => {
 
             logger.logEnvironment('Test Environment', env);
 
-            expect(mockDebugChannel.debug).toHaveBeenCalled();
-            expect(mockLogsChannel.debug).not.toHaveBeenCalled();
+            // Debug channel receives info() with [debug] prefix
+            expect(mockDebugChannel.info).toHaveBeenCalledWith(
+                expect.stringContaining('[debug] Environment - Test Environment')
+            );
+            // User Logs should not get environment info
+            expect(mockLogsChannel.info).not.toHaveBeenCalledWith(
+                expect.stringContaining('Environment')
+            );
         });
 
-        it('should respect debug enabled setting', () => {
-            (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-                get: jest.fn().mockReturnValue(false),
-            });
+        it('should always log environment info', () => {
+            const env = {
+                PATH: '/usr/bin:/usr/local/bin',
+            } as unknown as NodeJS.ProcessEnv;
 
-            const disabledLogger = new DebugLogger(mockContext);
-            jest.clearAllMocks();
+            logger.logEnvironment('Test', env);
 
-            disabledLogger.logEnvironment('Test', {} as NodeJS.ProcessEnv);
-
-            expect(mockDebugChannel.debug).not.toHaveBeenCalled();
+            expect(mockDebugChannel.info).toHaveBeenCalled();
         });
     });
 

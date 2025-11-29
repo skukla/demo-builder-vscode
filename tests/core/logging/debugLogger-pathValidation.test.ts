@@ -21,9 +21,14 @@ jest.mock('vscode', () => {
             ...originalModule.window,
             createOutputChannel: jest.fn((name: string, options?: { log: boolean }) => {
                 const { mockLogsChannel, mockDebugChannel } = require('./debugLogger.testUtils');
+                // Both channels use LogOutputChannel with { log: true }
                 if (options?.log) {
-                    if (name === 'Demo Builder: User Logs') return mockLogsChannel;
-                    if (name === 'Demo Builder: Debug Logs') return mockDebugChannel;
+                    if (name === 'Demo Builder: User Logs') {
+                        return mockLogsChannel;
+                    }
+                    if (name === 'Demo Builder: Debug Logs') {
+                        return mockDebugChannel;
+                    }
                 }
                 return { append: jest.fn(), appendLine: jest.fn(), clear: jest.fn(), show: jest.fn(), hide: jest.fn(), dispose: jest.fn(), name };
             }),
@@ -59,7 +64,8 @@ describe('DebugLogger - replayLogsFromFile Path Validation', () => {
     it('should reject paths outside ~/.demo-builder directory', async () => {
         await logger.replayLogsFromFile('/etc/passwd');
 
-        expect(mockDebugChannel.debug).toHaveBeenCalledWith(
+        // Debug channel receives info() with [debug] prefix
+        expect(mockDebugChannel.info).toHaveBeenCalledWith(
             expect.stringContaining('Rejecting replay from untrusted path')
         );
     });
@@ -69,7 +75,8 @@ describe('DebugLogger - replayLogsFromFile Path Validation', () => {
             '/Users/testuser/.demo-builder/../.ssh/id_rsa'
         );
 
-        expect(mockDebugChannel.debug).toHaveBeenCalledWith(
+        // Debug channel receives info() with [debug] prefix
+        expect(mockDebugChannel.info).toHaveBeenCalledWith(
             expect.stringContaining('Rejecting replay from untrusted path')
         );
     });
@@ -83,8 +90,9 @@ describe('DebugLogger - replayLogsFromFile Path Validation', () => {
         const validPath = '/Users/testuser/.demo-builder/session-logs.txt';
         await logger.replayLogsFromFile(validPath);
 
-        const debugCalls = mockDebugChannel.debug.mock.calls;
-        const hasRejection = debugCalls.some((call: unknown[]) =>
+        // Debug channel receives info() calls
+        const infoCalls = mockDebugChannel.info.mock.calls;
+        const hasRejection = infoCalls.some((call: unknown[]) =>
             call.some(
                 (arg: unknown) =>
                     typeof arg === 'string' && arg.includes('Rejecting replay')

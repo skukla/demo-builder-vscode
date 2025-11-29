@@ -24,30 +24,25 @@ export interface CommandResultWithContext extends CommandResult {
  * - info(), warn(), error() → BOTH channels (user sees clean output, support sees everything)
  * - debug(), trace(), logCommand() → Debug Logs only (technical details)
  *
- * Features:
- * - Native severity levels within each channel (users can filter via "Set Log Level...")
- * - VS Code handles timestamps automatically
- * - Debug Logs is complete record for support workflow
- * - User Logs is clean filtered view for end users
+ * Implementation Note:
+ * Both channels are LogOutputChannel for consistent VS Code formatting (timestamps, colors).
+ * Since VS Code's log level filtering defaults to Info and isn't persisted across sessions,
+ * we "promote" debug/trace messages to info() calls with a [debug]/[trace] prefix.
+ * This ensures all messages are always visible in the Debug channel without user intervention.
  */
 export class DebugLogger {
     private logsChannel: vscode.LogOutputChannel;   // User-facing messages
-    private debugChannel: vscode.LogOutputChannel;  // Technical diagnostics
-    private debugEnabled = true;
+    private debugChannel: vscode.LogOutputChannel;  // Technical diagnostics (complete record)
     private logBuffer: string[] = []; // Track info/warn/error for export (not debug/trace)
     private static readonly MAX_BUFFER_SIZE = 10000; // Cap at 10K entries to prevent unbounded growth
 
     constructor(context: vscode.ExtensionContext) {
-        // Create dual LogOutputChannels (VS Code 1.84+)
+        // Both channels use LogOutputChannel for consistent VS Code formatting
         this.logsChannel = vscode.window.createOutputChannel('Demo Builder: User Logs', { log: true });
         this.debugChannel = vscode.window.createOutputChannel('Demo Builder: Debug Logs', { log: true });
 
         context.subscriptions.push(this.logsChannel);
         context.subscriptions.push(this.debugChannel);
-
-        // Load debug setting if available
-        const config = vscode.workspace.getConfiguration('demoBuilder');
-        this.debugEnabled = config.get<boolean>('enableDebugLogging', true);
 
         // Initialize both channels
         this.logsChannel.info('Demo Builder initialized');
@@ -95,7 +90,8 @@ export class DebugLogger {
         }
 
         // Log error details to Debug channel only (technical support info)
-        if (error && this.debugEnabled && !this.isProduction()) {
+        // Use info() with [debug] prefix to bypass VS Code's log level filtering
+        if (error) {
             const MAX_MESSAGE_LENGTH = 2000;
             let truncatedMessage = error.message;
             if (truncatedMessage && truncatedMessage.length > MAX_MESSAGE_LENGTH) {
@@ -103,8 +99,8 @@ export class DebugLogger {
                     '\n... (truncated, full message was ' + error.message.length + ' chars)';
             }
 
-            this.debugChannel.debug('Error details (for support):');
-            this.debugChannel.debug(JSON.stringify({
+            this.debugChannel.info('[debug] Error details (for support):');
+            this.debugChannel.info('[debug] ' + JSON.stringify({
                 message: truncatedMessage,
                 name: error.name,
                 ...(error.stack && error.stack !== error.message ? { stack: error.stack } : {}),
@@ -113,54 +109,42 @@ export class DebugLogger {
     }
 
     /**
-     * Log debug message (detailed diagnostics → Debug channel)
+     * Log debug message (detailed diagnostics → Debug channel only)
      * Not included in export buffer for privacy
+     * Uses info() with [debug] prefix to bypass VS Code's log level filtering
      */
     public debug(message: string, data?: unknown): void {
-        if (!this.debugEnabled || this.isProduction()) {
-            return;
-        }
-
-        this.debugChannel.debug(message);
+        // Promote to info() with prefix to ensure visibility at default log level
+        this.debugChannel.info(`[debug] ${message}`);
 
         if (data !== undefined) {
             try {
                 const formatted = JSON.stringify(data, null, 2);
-                this.debugChannel.debug(formatted);
+                this.debugChannel.info(`[debug] ${formatted}`);
             } catch {
                 // If JSON.stringify fails (e.g., circular reference), use toString
-                this.debugChannel.debug(String(data));
+                this.debugChannel.info(`[debug] ${String(data)}`);
             }
         }
     }
 
     /**
-     * Log trace message (most verbose level → Debug channel)
+     * Log trace message (most verbose level → Debug channel only)
      * Not included in export buffer
+     * Uses info() with [trace] prefix to bypass VS Code's log level filtering
      */
     public trace(message: string, data?: unknown): void {
-        if (!this.debugEnabled || this.isProduction()) {
-            return;
-        }
-
-        this.debugChannel.trace(message);
+        // Promote to info() with prefix to ensure visibility at default log level
+        this.debugChannel.info(`[trace] ${message}`);
 
         if (data !== undefined) {
             try {
                 const formatted = JSON.stringify(data, null, 2);
-                this.debugChannel.trace(formatted);
+                this.debugChannel.info(`[trace] ${formatted}`);
             } catch {
-                this.debugChannel.trace(String(data));
+                this.debugChannel.info(`[trace] ${String(data)}`);
             }
         }
-    }
-
-    /**
-     * Check if running in production environment
-     * SECURITY: Used to disable debug/trace logging in production
-     */
-    private isProduction(): boolean {
-        return process.env.NODE_ENV === 'production';
     }
 
     /**
@@ -179,25 +163,22 @@ export class DebugLogger {
 
     /**
      * Log command execution (for diagnostics → Debug channel)
+     * Uses info() with prefixes to bypass VS Code's log level filtering
      */
     public logCommand(command: string, result: CommandResultWithContext, args?: string[]): void {
-        if (!this.debugEnabled || this.isProduction()) {
-            return;
-        }
-
-        this.debugChannel.debug('='.repeat(60));
-        this.debugChannel.debug(`COMMAND EXECUTION: ${command}`);
+        this.debugChannel.info(`[debug] ${'='.repeat(60)}`);
+        this.debugChannel.info(`[debug] COMMAND EXECUTION: ${command}`);
 
         if (args && args.length > 0) {
-            this.debugChannel.debug(`Arguments: ${args.join(' ')}`);
+            this.debugChannel.info(`[debug] Arguments: ${args.join(' ')}`);
         }
 
         if (result.cwd) {
-            this.debugChannel.debug(`Working Directory: ${result.cwd}`);
+            this.debugChannel.info(`[debug] Working Directory: ${result.cwd}`);
         }
 
         if (result.duration) {
-            this.debugChannel.debug(`Duration: ${result.duration}ms`);
+            this.debugChannel.info(`[debug] Duration: ${result.duration}ms`);
 
             // Warn about slow commands (>3s) - goes to Logs channel for visibility
             if (result.duration > 3000) {
@@ -205,32 +186,29 @@ export class DebugLogger {
             }
         }
 
-        this.debugChannel.debug(`Exit Code: ${result.code ?? 'null'}`);
+        this.debugChannel.info(`[debug] Exit Code: ${result.code ?? 'null'}`);
 
         // Log stdout/stderr at trace level to reduce noise
         if (result.stdout) {
-            this.debugChannel.trace('--- STDOUT ---');
-            this.debugChannel.trace(result.stdout);
+            this.debugChannel.info('[trace] --- STDOUT ---');
+            this.debugChannel.info(`[trace] ${result.stdout}`);
         }
 
         if (result.stderr) {
-            this.debugChannel.trace('--- STDERR ---');
-            this.debugChannel.trace(result.stderr);
+            this.debugChannel.info('[trace] --- STDERR ---');
+            this.debugChannel.info(`[trace] ${result.stderr}`);
         }
 
-        this.debugChannel.debug('='.repeat(60));
+        this.debugChannel.info(`[debug] ${'='.repeat(60)}`);
     }
 
     /**
      * Log environment information (→ Debug channel)
+     * Uses info() with prefix to bypass VS Code's log level filtering
      */
     public logEnvironment(label: string, env: NodeJS.ProcessEnv): void {
-        if (!this.debugEnabled || this.isProduction()) {
-            return;
-        }
-
-        this.debugChannel.debug(`Environment - ${label}`);
-        this.debugChannel.debug(JSON.stringify({
+        this.debugChannel.info(`[debug] Environment - ${label}`);
+        this.debugChannel.info('[debug] ' + JSON.stringify({
             PATH: env.PATH?.split(':').join('\n  '),
             HOME: env.HOME,
             SHELL: env.SHELL,
