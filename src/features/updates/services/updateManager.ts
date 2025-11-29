@@ -172,7 +172,7 @@ export class UpdateManager {
                 }
 
                 const version = this.parseVersionFromTag(release.tag_name);
-                this.logger.debug(`[Updates] Found ${channel} release v${version} for ${repo}`);
+                this.logger.debug(`[Updates] Latest ${channel}: v${version} (${repo.split('/')[1]})`);
 
                 return {
                     version,
