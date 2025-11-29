@@ -26,7 +26,11 @@ import { isStartActionDisabled } from './dashboardPredicates';
 
 type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'error';
 
-/** Mesh statuses that indicate an operation is in progress */
+/** Mesh statuses that indicate a user-initiated operation is in progress (preserve during updates) */
+const isMeshDeploying = (status: MeshStatus | undefined): boolean =>
+    status === 'deploying' || status === 'authenticating';
+
+/** Mesh statuses that indicate any operation is in progress (disable UI actions) */
 const isMeshBusy = (status: MeshStatus | undefined): boolean =>
     status === 'deploying' || status === 'checking' || status === 'authenticating';
 
@@ -69,11 +73,12 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
 
         const unsubscribeStatus = webviewClient.onMessage('statusUpdate', (data: unknown) => {
             const projectData = data as ProjectStatus;
-            // Merge status update, preserving mesh status if currently deploying
+            // Merge status update, preserving mesh status only during active deployment
             // This prevents update checks from resetting mesh button state mid-deployment
+            // but allows async 'checking' status to resolve to final state
             setProjectStatus(prev => ({
                 ...projectData,
-                mesh: isMeshBusy(prev?.mesh?.status) ? prev?.mesh : projectData.mesh
+                mesh: isMeshDeploying(prev?.mesh?.status) ? prev?.mesh : projectData.mesh
             }));
             setIsRunning(projectData.status === 'running');
             // Clear transitioning state when we receive a definitive status
