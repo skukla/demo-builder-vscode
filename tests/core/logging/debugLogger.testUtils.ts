@@ -78,8 +78,9 @@ jest.mock('vscode', () => {
         },
         workspace: {
             ...originalModule.workspace,
+            // Return 'trace' to enable all log levels in tests
             getConfiguration: jest.fn().mockReturnValue({
-                get: jest.fn().mockReturnValue(true),
+                get: jest.fn().mockReturnValue('trace'),
             }),
         },
     };
@@ -131,7 +132,8 @@ export function resetMocks(): void {
     jest.clearAllMocks();
 
     // Restore default mock for workspace.getConfiguration
+    // Return 'trace' to enable all log levels in tests
     (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
-        get: jest.fn().mockReturnValue(true), // debugEnabled = true by default
+        get: jest.fn().mockReturnValue('trace'),
     });
 }

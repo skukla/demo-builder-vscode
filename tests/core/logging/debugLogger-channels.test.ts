@@ -34,7 +34,8 @@ jest.mock('vscode', () => {
         },
         workspace: {
             ...originalModule.workspace,
-            getConfiguration: jest.fn().mockReturnValue({ get: jest.fn().mockReturnValue(true) }),
+            // Return 'trace' to enable all log levels in tests
+            getConfiguration: jest.fn().mockReturnValue({ get: jest.fn().mockReturnValue('trace') }),
         },
     };
 });
@@ -76,20 +77,20 @@ describe('DebugLogger - Channel Routing', () => {
             expect(mockDebugChannel.error).toHaveBeenCalledWith('Test error message');
         });
 
-        it('should route error details to Debug Logs channel only', () => {
+        it('should route error stack to Debug Logs channel only at trace level', () => {
             const testError = new Error('Underlying error');
             logger.error('Test error message', testError);
 
             // User Logs gets the error messages
             expect(mockLogsChannel.error).toHaveBeenCalled();
-            // Debug Logs gets error + debug details via info() with [debug] prefix
+            // Debug Logs gets error + stack trace via info() with [trace] prefix
             expect(mockDebugChannel.error).toHaveBeenCalled();
             expect(mockDebugChannel.info).toHaveBeenCalledWith(
-                expect.stringContaining('[debug] Error details')
+                expect.stringContaining('[trace] Error stack')
             );
-            // User Logs should not get debug-level details
+            // User Logs should not get trace-level details
             expect(mockLogsChannel.info).not.toHaveBeenCalledWith(
-                expect.stringContaining('[debug]')
+                expect.stringContaining('[trace]')
             );
         });
     });

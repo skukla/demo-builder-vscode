@@ -35,7 +35,8 @@ jest.mock('vscode', () => {
         },
         workspace: {
             ...originalModule.workspace,
-            getConfiguration: jest.fn().mockReturnValue({ get: jest.fn().mockReturnValue(true) }),
+            // Return 'trace' to enable all log levels in tests
+            getConfiguration: jest.fn().mockReturnValue({ get: jest.fn().mockReturnValue('trace') }),
         },
     };
 });
