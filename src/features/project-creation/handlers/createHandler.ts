@@ -117,8 +117,11 @@ export async function handleCreateProject(
     context.sharedState.projectCreationAbortController = new AbortController();
 
     try {
-        context.logger.debug('[Project Creation] Starting with config:', config);
-        context.logger.debug(`[Project Creation] Overall timeout: ${OVERALL_TIMEOUT_MS / 1000 / 60} minutes`);
+        // Log summary at debug, full config at trace
+        const typedConfig = config as { projectName?: string; components?: { frontend?: string; backend?: string; dependencies?: string[] } };
+        const componentCount = (typedConfig.components?.dependencies?.length || 0) + (typedConfig.components?.frontend ? 1 : 0) + (typedConfig.components?.backend ? 1 : 0);
+        context.logger.debug(`[Project Creation] Starting: ${typedConfig.projectName} (${componentCount} components)`);
+        context.logger.trace('[Project Creation] Full config:', config);
 
         // Send initial status with progress
         await context.sendMessage('creationProgress', {

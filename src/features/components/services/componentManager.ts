@@ -154,7 +154,7 @@ export class ComponentManager {
         
         const cloneCommand = `git clone ${cloneFlags.join(' ')} "${componentDef.source.url}" "${componentPath}"`.trim();
         
-        this.logger.debug(`[ComponentManager] Executing: ${cloneCommand}`);
+        this.logger.trace(`[ComponentManager] Executing: ${cloneCommand}`);
 
         // Use configurable timeout or default
         const cloneTimeout = componentDef.source.timeouts?.clone || TIMEOUTS.COMPONENT_CLONE;
@@ -174,8 +174,6 @@ export class ComponentManager {
             this.logger.error(`[ComponentManager] Git clone failed for ${componentDef.name}`, new Error(result.stderr));
             throw new Error(`Git clone failed: ${result.stderr}`);
         }
-        
-        this.logger.debug(`[ComponentManager] Clone completed for ${componentDef.name}`);
 
         // Detect component version using hybrid approach:
         // 1. Try git tag (most accurate for releases)
@@ -197,7 +195,6 @@ export class ComponentManager {
         if (tagResult.code === 0 && tagResult.stdout.trim()) {
             // On a tagged commit (e.g., "v1.0.0" or "1.0.0")
             detectedVersion = tagResult.stdout.trim().replace(/^v/, ''); // Remove 'v' prefix
-            this.logger.debug(`[ComponentManager] Detected version from git tag: ${detectedVersion}`);
         } else {
             // Strategy 2: Try reading package.json version
             const packageJsonPath = path.join(componentPath, 'package.json');
@@ -208,10 +205,9 @@ export class ComponentManager {
 
                 if (packageJson.version) {
                     detectedVersion = packageJson.version;
-                    this.logger.debug(`[ComponentManager] Detected version from package.json: ${detectedVersion}`);
                 }
-            } catch (error) {
-                this.logger.debug(`[ComponentManager] Could not read package.json version: ${(error as Error).message}`);
+            } catch {
+                // package.json not readable, will try commit hash
             }
         }
 
@@ -228,14 +224,12 @@ export class ComponentManager {
 
             if (commitResult.code === 0) {
                 detectedVersion = commitResult.stdout.trim().substring(0, 8); // Short hash
-                this.logger.debug(`[ComponentManager] Using commit hash as version: ${detectedVersion}`);
             }
         }
 
         // Set the detected version (or leave undefined if all strategies failed)
         if (detectedVersion) {
             componentInstance.version = detectedVersion;
-            this.logger.debug(`[ComponentManager] ${componentDef.name} version: ${detectedVersion}`);
         } else {
             this.logger.warn(`[ComponentManager] Could not detect version for ${componentDef.name}`);
         }
@@ -290,49 +284,40 @@ export class ComponentManager {
                 });
                 
                 if (installResult.code !== 0) {
-                    this.logger.warn(`[ComponentManager] npm install had warnings/errors for ${componentDef.name}`);
-                } else {
-                    this.logger.debug(`[ComponentManager] Dependencies installed successfully for ${componentDef.name}`);
+                    this.logger.warn(`[ComponentManager] npm install had warnings for ${componentDef.name}`);
                 }
-                
+
                 // Run build script if configured
                 const buildScript = componentDef.configuration?.buildScript;
                 if (buildScript && !options.skipDependencies) {
-                    this.logger.debug(`[ComponentManager] Running build script for ${componentDef.name}`);
-                    
-                    // Don't include fnm use in command - CommandManager handles it via useNodeVersion option
                     const buildCommand = `npm run ${buildScript}`;
-                    
-                    this.logger.debug(`[ComponentManager] Running: ${buildCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
-                    
                     const buildTimeout = TIMEOUTS.COMPONENT_BUILD;
-                    
+
                     const buildResult = await commandManager.execute(buildCommand, {
-                        cwd: componentPath,  // Run from component directory
+                        cwd: componentPath,
                         timeout: buildTimeout,
                         enhancePath: true,
-                        useNodeVersion: nodeVersion || null,  // CommandManager handles fnm use
+                        useNodeVersion: nodeVersion || null,
                         shell: DEFAULT_SHELL,
                     });
-                    
+
                     if (buildResult.code !== 0) {
-                        this.logger.warn(`[ComponentManager] Build script failed for ${componentDef.name}`);
-                        this.logger.debug(`[ComponentManager] Build stderr: ${buildResult.stderr?.substring(0, 500)}`);
-                    } else {
-                        this.logger.debug(`[ComponentManager] Build completed successfully for ${componentDef.name}`);
+                        this.logger.warn(`[ComponentManager] Build failed for ${componentDef.name}`);
+                        this.logger.trace(`[ComponentManager] Build stderr: ${buildResult.stderr?.substring(0, 500)}`);
                     }
                 }
             }
         } catch {
             // No package.json, skip dependency installation
-            this.logger.debug(`[ComponentManager] No package.json found for ${componentDef.name}`);
         }
 
         // Mark as ready
         componentInstance.status = 'ready';
         componentInstance.lastUpdated = new Date();
 
-        this.logger.debug(`[ComponentManager] Successfully installed ${componentDef.name}`);
+        // Single consolidated log line with all key info
+        const versionInfo = componentInstance.version ? `, v${componentInstance.version}` : '';
+        this.logger.debug(`[ComponentManager] Installed ${componentDef.name}${versionInfo}`);
 
         return {
             success: true,

@@ -77,8 +77,6 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
         const isAuthenticated = await context.authManager?.isAuthenticated();
         const checkDuration = Date.now() - checkStartTime;
 
-        context.logger.debug(`[Auth] Token-only authentication check completed in ${checkDuration}ms: ${isAuthenticated}`);
-
         // Check token expiry to warn user if token is about to expire
         let tokenExpiresIn: number | undefined;
         let tokenExpiringSoon = false;
@@ -93,16 +91,15 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
 
                         if (tokenExpiringSoon) {
                             context.logger.warn(`[Auth] Token expires in ${tokenExpiresIn} minutes - user should re-authenticate`);
-                        } else {
-                            context.logger.debug(`[Auth] Token expires in ${tokenExpiresIn} minutes`);
                         }
                     }
                 }
-            } catch (error) {
-                // Token inspection failed - log but continue (non-critical feature)
-                context.logger.debug('[Auth] Token expiry check failed, continuing without expiry warning', error as Error);
+            } catch {
+                // Token inspection failed - non-critical, continue without expiry warning
             }
         }
+
+        context.logger.debug(`[Auth] Check complete in ${checkDuration}ms: authenticated=${isAuthenticated}${tokenExpiresIn ? `, expires in ${tokenExpiresIn}min` : ''}`);
 
         // Get org/project context (check cache first, then Adobe CLI if cache miss)
         let currentOrg: AdobeOrg | undefined;
@@ -115,35 +112,19 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
 
             // If cache is empty, read from Adobe CLI (persists across extension restarts)
             if (!currentOrg) {
-                context.logger.debug('[Auth] Cache miss - fetching org context from Adobe CLI');
                 currentOrg = await context.authManager?.getCurrentOrganization();
                 currentProject = await context.authManager?.getCurrentProject();
-
-                if (currentOrg) {
-                    context.logger.debug(`[Auth] Retrieved persisted organization from Adobe CLI: ${currentOrg.name}`);
-                } else {
-                    context.logger.debug('[Auth] No persisted organization found in Adobe CLI');
-                }
             } else {
                 // Don't show cached org if validation failed
                 const validation = context.authManager?.getValidationCache();
 
                 if (validation) {
-                    // Check if this is the same org that was validated
                     const orgIdentifier = currentOrg.code || currentOrg.name;
 
-                    if (validation.org === orgIdentifier) {
-                        if (!validation.isValid) {
-                            // Cached org known to be invalid - don't show it
-                            context.logger.debug(`[Auth] Cached org "${currentOrg.name}" failed validation, not showing`);
-                            currentOrg = undefined;
-                            currentProject = undefined; // Clear project too
-                        } else {
-                            context.logger.debug(`[Auth] Using cached organization: ${currentOrg.name} (validated)`);
-                        }
-                    } else {
-                        // Different org than what was validated - show it from cache
-                        context.logger.debug(`[Auth] Using cached organization: ${currentOrg.name}`);
+                    if (validation.org === orgIdentifier && !validation.isValid) {
+                        // Cached org known to be invalid - don't show it
+                        currentOrg = undefined;
+                        currentProject = undefined;
                     }
                 } else {
                     // No validation cache - show org from cache (validation deferred until org is used)

@@ -65,12 +65,10 @@ export class DeleteProjectCommand extends BaseCommand {
 
                 // Note: Status bar already reset in step 1.5 (before file deletion)
                 // to prevent race condition with timer-based getCurrentProject() calls
-
-                this.logger.info(`Project "${project.name}" deleted`);
             });
 
-            // Show auto-dismissing success message
-            this.showSuccessMessage('Project deleted successfully');
+            this.logger.info(`[Delete Project] Completed: ${project.name}`);
+            this.showSuccessMessage('Project deleted');
             
             // Open Welcome screen to guide user to create a new project
             await vscode.commands.executeCommand('demoBuilder.showWelcome');

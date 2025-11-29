@@ -93,8 +93,7 @@ export async function handleCheckApiMesh(
         };
     }
 
-    context.logger.debug('[API Mesh] Checking API Mesh availability for workspace', { workspaceId });
-    context.debugLogger.debug('[API Mesh] Starting multi-layer check');
+    context.logger.debug(`[API Mesh] Checking workspace ${workspaceId}`);
 
     // PRE-FLIGHT: Check authentication before any Adobe CLI operations
     const authManager = ServiceLocator.getAuthenticationService();
@@ -126,7 +125,7 @@ export async function handleCheckApiMesh(
 
     try {
         // LAYER 1: Download workspace configuration (most reliable)
-        context.logger.debug('[API Mesh] Layer 1: Downloading workspace configuration');
+        context.debugLogger.trace('[API Mesh] Layer 1: Downloading workspace config');
 
         // Use extension's global storage instead of OS temp for better control and isolation
         const extensionTempPath = path.join(context.context.globalStorageUri.fsPath, 'temp');
@@ -135,7 +134,7 @@ export async function handleCheckApiMesh(
         const tempDir = await fsPromises.mkdtemp(path.join(extensionTempPath, 'aio-workspace-'));
         const configPath = path.join(tempDir, 'workspace-config.json');
 
-        context.debugLogger.debug('[API Mesh] Using extension temp path', { tempDir });
+        context.debugLogger.trace('[API Mesh] Using temp path', { tempDir });
 
         try {
             await commandManager.execute(
@@ -149,7 +148,7 @@ export async function handleCheckApiMesh(
             }
             const services = getWorkspaceServices(config);
 
-            context.debugLogger.debug('[API Mesh] Workspace services', { services });
+            context.debugLogger.trace('[API Mesh] Workspace services', { services });
 
             // Check if API Mesh service is enabled (extracted helper)
             const { enabled: apiEnabled } = checkApiMeshEnabled(services, context.sharedState.apiServicesConfig);
@@ -168,10 +167,7 @@ export async function handleCheckApiMesh(
                 };
             }
 
-            context.logger.debug('[API Mesh] API Mesh API is enabled (confirmed via workspace config)');
-
-            // LAYER 2: Now check if a mesh exists (API is already confirmed as enabled)
-            context.logger.debug('[API Mesh] Layer 2: Checking for existing mesh');
+            context.logger.debug('[API Mesh] API enabled, checking for existing mesh');
 
             // Check mesh existence using extracted helper
             const meshCheck = await checkMeshExistence(commandManager);
@@ -194,7 +190,7 @@ export async function handleCheckApiMesh(
             // Handle mesh status based on category
             switch (meshCheck.meshStatus) {
                 case 'deployed':
-                    context.logger.debug('[API Mesh] Existing mesh found and deployed', { meshId: meshCheck.meshId, endpoint });
+                    context.logger.debug(`[API Mesh] Mesh deployed: ${meshCheck.meshId}`);
                     return {
                         success: true,
                         apiEnabled: true,

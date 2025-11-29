@@ -135,19 +135,8 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             envVars: registry.envVars || {},
         };
 
-        // SOP §4: Extract fallback to variable before Object operation
-        const envVars = registry.envVars ?? {};
-        const envVarKeys = Object.keys(envVars);
-        context.logger.debug('[componentHandlers] Sending components-data:', {
-            frontendsCount: frontends.length,
-            backendsCount: backends.length,
-            dependenciesCount: dependencies.length,
-            integrationsCount: integrations.length,
-            appBuilderCount: appBuilder.length,
-            envVarsCount: getEntryCount(registry.envVars),
-            envVarsSample: envVarKeys.slice(0, 5),
-            sampleFrontendConfig: frontends[0]?.configuration,
-        });
+        // Log summary at debug level (concise)
+        context.logger.debug(`[componentHandlers] Sending components-data: ${frontends.length} frontends, ${backends.length} backends, ${dependencies.length} deps, ${getEntryCount(registry.envVars)} envVars`);
 
         return {
             success: true,

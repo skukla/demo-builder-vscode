@@ -200,7 +200,6 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
         if (result.success && result.component) {
             project.componentInstances![comp.id] = result.component;
-            context.logger.debug(`[Project Creation] Successfully installed ${componentDef.name}`);
 
             // Generate component-specific .env file (only for components with a path)
             if (result.component.path) {
@@ -212,8 +211,6 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     config,
                     context.logger,
                 );
-            } else {
-                context.logger.debug(`[Project Creation] Skipping .env generation for ${componentDef.name} (no path)`);
             }
 
             // Save project state to trigger sidebar refresh (show component in real-time)
@@ -232,7 +229,6 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const meshComponent = project.componentInstances?.['commerce-mesh'];
     if (meshComponent?.path) {
         progressTracker('Deploying API Mesh', 80, 'Deploying mesh configuration to Adobe I/O...');
-        context.logger.debug(`[Project Creation] Deploying mesh from ${meshComponent.path}`);
 
         try {
             const commandManager = ServiceLocator.getCommandExecutor();

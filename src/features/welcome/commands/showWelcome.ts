@@ -63,6 +63,11 @@ export class WelcomeWebviewCommand extends BaseWebviewCommand {
             await this.importProject();
             return { success: true };
         });
+
+        comm.onStreaming('open-settings', async () => {
+            await vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder');
+            return { success: true };
+        });
     }
 
     /**

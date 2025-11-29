@@ -59,12 +59,10 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     }
 
     const meshComponent = project.componentInstances?.['commerce-mesh'];
-    context.logger.debug(`[Dashboard] meshComponent: ${meshComponent ? `status=${meshComponent.status}` : 'none'}`);
-
     const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
-
     const shouldAsync = meshComponent && shouldAsyncCheckMesh(meshComponent);
-    context.logger.debug(`[Dashboard] shouldAsyncCheckMesh: ${shouldAsync}`);
+
+    context.logger.debug(`[Dashboard] Status request: mesh=${meshComponent?.status || 'none'}, asyncCheck=${shouldAsync}`);
 
     if (shouldAsync) {
         // Send initial status with 'checking' for mesh
@@ -502,11 +500,9 @@ async function checkMeshStatusAsync(
             }
 
             // Check org access
-            context.logger.debug('[Dashboard] Initializing SDK for org access check');
             await authManager.ensureSDKInitialized();
 
             if (project.adobe?.organization) {
-                context.logger.debug('[Dashboard] Verifying org access');
                 const currentOrg = await authManager.getCurrentOrganization();
                 if (!currentOrg || currentOrg.id !== project.adobe.organization) {
                     context.logger.warn('[Dashboard] User lost access to project organization');
@@ -530,43 +526,26 @@ async function checkMeshStatusAsync(
                 };
             }
 
-            context.logger.debug('[Dashboard] Detecting mesh changes');
             const meshChanges = await detectMeshChanges(project, project.componentConfigs);
-            context.logger.debug(`[Dashboard] Mesh changes detected: hasChanges=${meshChanges.hasChanges}, unknownDeployedState=${meshChanges.unknownDeployedState}`);
 
             if (meshChanges.shouldSaveProject) {
-                context.logger.debug('[Dashboard] Populated meshState.envVars from deployed config, saving project');
                 await context.stateManager.saveProject(project);
-                // Note: Don't set meshStatus here - let the logic below handle it
-                // based on whether there are actual changes to display
             }
 
             if (hasMeshDeploymentRecord(project)) {
                 meshStatus = determineMeshStatus(meshChanges, meshComponent, project);
-
-                if (meshChanges.hasChanges && meshChanges.unknownDeployedState) {
-                    context.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');
-                }
-
                 meshEndpoint = meshComponent.endpoint;
 
-                verifyMeshDeployment(context, project).catch(err => {
-                    context.logger.debug('[Project Dashboard] Background mesh verification failed', err);
+                verifyMeshDeployment(context, project).catch(() => {
+                    // Background verification - errors logged internally
                 });
             } else if (meshChanges.unknownDeployedState) {
-                // Unable to determine if config changed
-                // If previous deployment failed, show error (encourages investigation)
-                // Otherwise show not-deployed (safe assumption when verification failed)
                 meshStatus = meshComponent.status === 'error' ? 'error' : 'not-deployed';
                 meshMessage = MESH_STATUS_MESSAGES.UNKNOWN;
-                context.logger.debug('[Dashboard] Unable to verify mesh deployment status');
             }
-        } else {
-            context.logger.debug('[Dashboard] No component configs available for mesh status check');
         }
 
-        // Send updated status to UI
-        context.logger.debug(`[Dashboard] Async mesh check complete, status: ${meshStatus}`);
+        context.logger.debug(`[Dashboard] Mesh check complete: ${meshStatus}`);
         if (context.panel) {
             context.panel.webview.postMessage({
                 type: 'statusUpdate',
@@ -660,8 +639,6 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
             });
         }
     } else {
-        context.logger.debug(`[Project Dashboard] Mesh verified successfully (Mesh ID: ${verificationResult.data.meshId})`);
-
         await syncMeshStatus(project, verificationResult);
         await context.stateManager.saveProject(project);
     }

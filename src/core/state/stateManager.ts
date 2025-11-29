@@ -444,7 +444,17 @@ export class StateManager {
             
             return project;
         } catch (error) {
-            this.logger.error(`Failed to load project from ${projectPath}`, error instanceof Error ? error : undefined);
+            // Check if this is an expected "not found" error (e.g., project was deleted)
+            const isNotFound = error instanceof Error &&
+                (error.message.includes('ENOENT') || (error as NodeJS.ErrnoException).code === 'ENOENT');
+
+            if (isNotFound) {
+                // Project directory doesn't exist - expected after deletion, log at debug
+                this.logger.debug(`[StateManager] Project not found at ${projectPath} (deleted or moved)`);
+            } else {
+                // Unexpected error - log at error level
+                this.logger.error(`Failed to load project from ${projectPath}`, error instanceof Error ? error : undefined);
+            }
             return null;
         }
     }
