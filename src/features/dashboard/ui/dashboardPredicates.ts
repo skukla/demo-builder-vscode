@@ -9,6 +9,7 @@
  *
  * Disabled when:
  * - UI is transitioning
+ * - Mesh is being checked (verification in progress)
  * - Mesh is deploying
  * - Demo is starting
  * - Demo is stopping
@@ -19,6 +20,7 @@ export function isStartActionDisabled(
     status: string
 ): boolean {
     if (isTransitioning) return true;
+    if (meshStatus === 'checking') return true;
     if (meshStatus === 'deploying') return true;
     if (status === 'starting') return true;
     if (status === 'stopping') return true;

@@ -132,8 +132,8 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                     } else if (meshChanges.unknownDeployedState) {
                         // Unable to determine if config changed
                         // If previous deployment failed, show error (encourages investigation)
-                        // Otherwise show checking (unable to verify)
-                        meshStatus = meshComponent.status === 'error' ? 'error' : 'checking';
+                        // Otherwise show not-deployed (safe assumption when verification failed)
+                        meshStatus = meshComponent.status === 'error' ? 'error' : 'not-deployed';
                         context.logger.debug('[Dashboard] Unable to verify mesh deployment status');
                     }
                 }
@@ -544,8 +544,8 @@ async function checkMeshStatusAsync(
             } else if (meshChanges.unknownDeployedState) {
                 // Unable to determine if config changed
                 // If previous deployment failed, show error (encourages investigation)
-                // Otherwise show checking (unable to verify)
-                meshStatus = meshComponent.status === 'error' ? 'error' : 'checking';
+                // Otherwise show not-deployed (safe assumption when verification failed)
+                meshStatus = meshComponent.status === 'error' ? 'error' : 'not-deployed';
                 meshMessage = MESH_STATUS_MESSAGES.UNKNOWN;
                 context.logger.debug('[Dashboard] Unable to verify mesh deployment status');
             }

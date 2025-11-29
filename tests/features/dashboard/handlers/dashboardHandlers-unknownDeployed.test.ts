@@ -31,8 +31,9 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         // Individual tests will configure it with their specific needs
     });
 
-    it('should show "checking" status when unknownDeployedState is true (asynchronous path)', async () => {
-        // Given: Project with deployed mesh but fetch failed (unknownDeployedState)
+    it('should show "not-deployed" status when unknownDeployedState is true (asynchronous path)', async () => {
+        // Given: Project with mesh component but fetch failed (unknownDeployedState)
+        // When we can't verify the deployed state, we assume not-deployed as a safe default
         const { mockContext } = setupMocks({
             componentInstances: {
                 'citisignal-nextjs': {
@@ -95,13 +96,14 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         // Wait for async check to complete
         await flushPromises();
 
-        // Then: Async update sends "checking" status (not "not-deployed")
+        // Then: Async update sends "not-deployed" status (safe assumption when verification failed)
+        // 'checking' is a transient state, not a final status
         expect(mockContext.panel?.webview.postMessage).toHaveBeenCalledWith(
             expect.objectContaining({
                 type: 'statusUpdate',
                 payload: expect.objectContaining({
                     mesh: expect.objectContaining({
-                        status: 'checking',
+                        status: 'not-deployed',
                         message: 'Unable to verify deployment status',
                     }),
                 }),
