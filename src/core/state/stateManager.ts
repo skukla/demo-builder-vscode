@@ -425,7 +425,6 @@ export class StateManager {
                         // This project's demo is running, update status
                         project.status = 'running';
                         frontendComponent.status = 'running';
-                        this.logger.info(`Detected running demo for ${project.name} (terminal: ${projectTerminalName})`);
                     } else {
                         // No terminal for this project, ensure status is stopped
                         project.status = 'stopped';

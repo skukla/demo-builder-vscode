@@ -129,15 +129,8 @@ describe('StateManager - Utilities', () => {
             // Load project with injected terminal provider
             const project = await stateManager.loadProjectFromPath('/test/project', terminalProvider);
 
-            // Verify detection log was called via Logger (Phase A migrated console.log to Logger)
-            expect(mockLoggerInstance.info).toHaveBeenCalledWith(
-                expect.stringContaining('Detected running demo for Test Project')
-            );
-            expect(mockLoggerInstance.info).toHaveBeenCalledWith(
-                expect.stringContaining('Test Project - Frontend')
-            );
-
             // The key assertions: status should be 'running' when terminal is detected
+            // Note: No log is emitted for this routine detection (removed to prevent log spam)
             expect(project?.status).toBe('running');
             expect(project?.componentInstances?.['citisignal-nextjs']?.status).toBe('running');
         });
