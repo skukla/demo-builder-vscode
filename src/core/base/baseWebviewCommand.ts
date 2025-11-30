@@ -143,8 +143,13 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     public isVisible(): boolean {
         const webviewId = this.getWebviewId();
         const activePanel = BaseWebviewCommand.activePanels.get(webviewId);
-        return (activePanel !== undefined && activePanel.visible) ||
-               (this.panel !== undefined && this.panel.visible);
+        try {
+            return (activePanel !== undefined && activePanel.visible) ||
+                   (this.panel !== undefined && this.panel.visible);
+        } catch {
+            // Panel was disposed - accessing .visible throws "Webview is disposed"
+            return false;
+        }
     }
 
     /**
@@ -204,18 +209,31 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         const existingCommManager = BaseWebviewCommand.activeCommunicationManagers.get(webviewId);
 
         if (existingPanel && existingCommManager) {
-            this.logger.debug(`[Webview] Revealing existing ${webviewId} panel`);
-            existingPanel.reveal();
-            this.panel = existingPanel;
-            this.communicationManager = existingCommManager;
-            return existingPanel;
+            try {
+                this.logger.debug(`[Webview] Revealing existing ${webviewId} panel`);
+                existingPanel.reveal();
+                this.panel = existingPanel;
+                this.communicationManager = existingCommManager;
+                return existingPanel;
+            } catch {
+                // Panel was disposed - clean up stale references and create new one
+                this.logger.debug(`[Webview] Existing ${webviewId} panel was disposed, creating new one`);
+                BaseWebviewCommand.activePanels.delete(webviewId);
+                BaseWebviewCommand.activeCommunicationManagers.delete(webviewId);
+            }
         }
 
         // Check instance panel (legacy support)
         if (this.panel) {
-            this.logger.debug(`[Webview] Revealing instance panel for ${webviewId}`);
-            this.panel.reveal();
-            return this.panel;
+            try {
+                this.logger.debug(`[Webview] Revealing instance panel for ${webviewId}`);
+                this.panel.reveal();
+                return this.panel;
+            } catch {
+                // Panel was disposed - clear reference and create new one
+                this.logger.debug(`[Webview] Instance panel for ${webviewId} was disposed, creating new one`);
+                this.panel = undefined;
+            }
         }
 
         // Create new panel
