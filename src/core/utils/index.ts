@@ -21,4 +21,6 @@ export { setLoadingState } from './loadingHTML';
 
 export { TIMEOUTS } from './timeoutConfig';
 
+export { formatDuration, formatMinutes } from './timeFormatting';
+
 export * from './promiseUtils';
