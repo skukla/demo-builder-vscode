@@ -2,7 +2,6 @@
  * Type Guards Tests - Error Handling
  *
  * Tests for error handling utilities:
- * - assertNever (exhaustiveness checking)
  * - isError (Error instance checking)
  * - toError (error conversion)
  *
@@ -10,42 +9,11 @@
  */
 
 import {
-    assertNever,
     isError,
     toError
 } from '@/types/typeGuards';
 
 describe('typeGuards - Error Handling', () => {
-
-    // =================================================================
-    // assertNever Tests
-    // =================================================================
-
-    describe('assertNever', () => {
-        it('should throw error with value information', () => {
-            expect(() => assertNever('unexpected' as never))
-                .toThrow(/Unexpected value/);
-        });
-
-        it('should include the value in error message', () => {
-            try {
-                assertNever('test-value' as never);
-                fail('Should have thrown');
-            } catch (error) {
-                expect((error as Error).message).toContain('test-value');
-            }
-        });
-
-        it('should handle complex values', () => {
-            const complexValue = { key: 'value', nested: { deep: true } };
-            try {
-                assertNever(complexValue as never);
-                fail('Should have thrown');
-            } catch (error) {
-                expect((error as Error).message).toContain('key');
-            }
-        });
-    });
 
     // =================================================================
     // isError Tests

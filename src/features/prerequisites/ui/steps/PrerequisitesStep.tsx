@@ -14,7 +14,7 @@ import { Spinner } from '@/core/ui/components/ui/Spinner';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
 import { NavigableStepProps } from '@/types/wizard';
-import { cn, getPrerequisiteItemClasses, getPrerequisiteMessageClasses } from '@/core/ui/utils/classNames';
+import { cn } from '@/core/ui/utils/classNames';
 
 interface PrerequisitesStepProps extends NavigableStepProps {
     componentsData?: Record<string, unknown>;
@@ -174,14 +174,10 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
             setChecks(prev => {
                 const newChecks = [...prev];
                 if (newChecks[index]) {
-                    // For Node.js, the backend sends a detailed message with all the info we need
-                    // Just use the message as-is from the backend
-                    const enhancedMessage = message;
-
                     newChecks[index] = {
                         ...newChecks[index],
                         status,
-                        message: enhancedMessage,
+                        message,
                         version,
                         plugins,
                         // Respect backend gating for install button
@@ -504,7 +500,12 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         // Case 4: Default - show message text if no plugins or not success
         if (!check.plugins || check.plugins.length === 0 || check.status !== 'success') {
             return (
-                <Text UNSAFE_className={cn(getPrerequisiteMessageClasses(check.status), 'animate-fade-in')}>
+                <Text UNSAFE_className={cn(
+                    check.status === 'error'
+                        ? 'prerequisite-message prerequisite-message-error'
+                        : 'prerequisite-message prerequisite-message-default',
+                    'animate-fade-in'
+                )}>
                     {check.message || 'Waiting...'}
                 </Text>
             );
@@ -531,7 +532,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                             ref={el => { itemRefs.current[index] = el; }}
                         >
                             <Flex justifyContent="space-between" alignItems="center"
-                                UNSAFE_className={getPrerequisiteItemClasses('pending', index === checks.length - 1)}
+                                UNSAFE_className={cn('prerequisite-item', index !== checks.length - 1 && 'mb-2')}
                             >
                             <Flex gap="size-150" alignItems="center" flex>
                                 {getStatusIcon(check.status)}

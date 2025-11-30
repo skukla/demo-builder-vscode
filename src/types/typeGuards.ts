@@ -5,178 +5,10 @@
  * Used when receiving data from external sources (webview, JSON, CLI output).
  */
 
-import { Logger } from './logger';
-import { MessageResponse } from './messages';
-import { StateValue } from './state';
 import {
     Project,
     ComponentInstance,
-    ProcessInfo,
-    ComponentStatus,
-    ProjectStatus,
 } from './index';
-
-/**
- * ValidationResult - Represents validation result
- */
-export interface ValidationResult {
-    valid: boolean;
-    errors: string[];
-    warnings: string[];
-}
-
-/**
- * isProject - Type guard for Project
- */
-export function isProject(value: unknown): value is Project {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return (
-        typeof obj.name === 'string' &&
-        typeof obj.path === 'string' &&
-        typeof obj.status === 'string' &&
-        obj.created instanceof Date &&
-        obj.lastModified instanceof Date
-    );
-}
-
-/**
- * isComponentInstance - Type guard for ComponentInstance
- */
-export function isComponentInstance(value: unknown): value is ComponentInstance {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return (
-        typeof obj.id === 'string' &&
-        typeof obj.name === 'string' &&
-        typeof obj.status === 'string'
-    );
-}
-
-/**
- * isProcessInfo - Type guard for ProcessInfo
- */
-export function isProcessInfo(value: unknown): value is ProcessInfo {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return (
-        typeof obj.pid === 'number' &&
-        typeof obj.port === 'number' &&
-        typeof obj.command === 'string' &&
-        typeof obj.status === 'string' &&
-        obj.startTime instanceof Date
-    );
-}
-
-/**
- * isComponentStatus - Type guard for ComponentStatus
- */
-export function isComponentStatus(value: unknown): value is ComponentStatus {
-    const validStatuses: ComponentStatus[] = [
-        'not-installed',
-        'cloning',
-        'installing',
-        'ready',
-        'starting',
-        'running',
-        'stopping',
-        'stopped',
-        'deploying',
-        'deployed',
-        'updating',
-        'error',
-    ];
-    return typeof value === 'string' && validStatuses.includes(value as ComponentStatus);
-}
-
-/**
- * isProjectStatus - Type guard for ProjectStatus
- */
-export function isProjectStatus(value: unknown): value is ProjectStatus {
-    const validStatuses: ProjectStatus[] = [
-        'created',
-        'configuring',
-        'ready',
-        'starting',
-        'running',
-        'stopping',
-        'stopped',
-        'error',
-    ];
-    return typeof value === 'string' && validStatuses.includes(value as ProjectStatus);
-}
-
-/**
- * isValidationResult - Type guard for ValidationResult
- */
-export function isValidationResult(value: unknown): value is ValidationResult {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return (
-        typeof obj.valid === 'boolean' &&
-        Array.isArray(obj.errors) &&
-        Array.isArray(obj.warnings)
-    );
-}
-
-/**
- * isMessageResponse - Type guard for MessageResponse
- */
-export function isMessageResponse(value: unknown): value is MessageResponse {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return typeof obj.success === 'boolean';
-}
-
-/**
- * isLogger - Type guard for Logger interface
- */
-export function isLogger(value: unknown): value is Logger {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return (
-        typeof obj.debug === 'function' &&
-        typeof obj.info === 'function' &&
-        typeof obj.warn === 'function' &&
-        typeof obj.error === 'function'
-    );
-}
-
-/**
- * isStateValue - Type guard for StateValue
- */
-export function isStateValue(value: unknown): value is StateValue {
-    if (value === null || value === undefined) {
-        return true;
-    }
-
-    const type = typeof value;
-    return (
-        type === 'string' ||
-        type === 'number' ||
-        type === 'boolean' ||
-        Array.isArray(value) ||
-        type === 'object'
-    );
-}
 
 /**
  * isRecord - Type guard for Record<string, unknown>
@@ -200,23 +32,6 @@ export function hasProperty<K extends string>(
     key: K,
 ): obj is Record<K, unknown> {
     return isRecord(obj) && key in obj;
-}
-
-/**
- * assertNever - Exhaustiveness checking for discriminated unions
- *
- * @example
- * type Status = 'success' | 'error';
- * function handle(status: Status) {
- *   switch(status) {
- *     case 'success': return handleSuccess();
- *     case 'error': return handleError();
- *     default: assertNever(status); // Compile error if Status has unhandled cases
- *   }
- * }
- */
-export function assertNever(value: never): never {
-    throw new Error(`Unexpected value: ${JSON.stringify(value)}`);
 }
 
 /**
@@ -328,25 +143,6 @@ export function getComponentIds(
 ): string[] {
     if (!componentInstances) return [];
     return Object.keys(componentInstances);
-}
-
-/**
- * Get component instance entries from a record
- *
- * Replaces inline: `Object.entries(componentInstances || {})`
- * SOP §4: Extracted inline object operation to named helper
- *
- * Use this when you already have componentInstances extracted from a project.
- * For operations on Project objects directly, use getComponentInstanceEntries().
- *
- * @param componentInstances - Component instances record (can be undefined/null)
- * @returns Array of [id, instance] tuples
- */
-export function getInstanceEntriesFromRecord(
-    componentInstances: Record<string, ComponentInstance> | undefined | null,
-): Array<[string, ComponentInstance]> {
-    if (!componentInstances) return [];
-    return Object.entries(componentInstances);
 }
 
 /**

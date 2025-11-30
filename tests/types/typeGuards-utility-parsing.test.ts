@@ -1,9 +1,8 @@
 /**
- * Type Guards Tests - JSON Parsing & State Validation
+ * Type Guards Tests - JSON Parsing
  *
- * Tests for JSON parsing and state value validation:
+ * Tests for JSON parsing:
  * - parseJSON (JSON parsing with optional validation)
- * - isStateValue (serializable value checking)
  *
  * Target Coverage: 90%+
  */
@@ -11,11 +10,10 @@
 import {
     parseJSON,
     isRecord,
-    isStringArray,
-    isStateValue
+    isStringArray
 } from '@/types/typeGuards';
 
-describe('typeGuards - Parsing & State Validation', () => {
+describe('typeGuards - JSON Parsing', () => {
 
     // =================================================================
     // parseJSON Tests
@@ -160,48 +158,6 @@ describe('typeGuards - Parsing & State Validation', () => {
                 const json = `{"key": "${longString}"}`;
                 const result = parseJSON(json);
                 expect(result).toEqual({ key: longString });
-            });
-        });
-    });
-
-    // =================================================================
-    // isStateValue Tests
-    // =================================================================
-
-    describe('isStateValue', () => {
-        describe('valid state values', () => {
-            it('should accept null and undefined', () => {
-                expect(isStateValue(null)).toBe(true);
-                expect(isStateValue(undefined)).toBe(true);
-            });
-
-            it('should accept primitives', () => {
-                expect(isStateValue('string')).toBe(true);
-                expect(isStateValue(123)).toBe(true);
-                expect(isStateValue(true)).toBe(true);
-                expect(isStateValue(false)).toBe(true);
-            });
-
-            it('should accept arrays', () => {
-                expect(isStateValue([])).toBe(true);
-                expect(isStateValue([1, 2, 3])).toBe(true);
-                expect(isStateValue(['a', 'b'])).toBe(true);
-            });
-
-            it('should accept objects', () => {
-                expect(isStateValue({})).toBe(true);
-                expect(isStateValue({ key: 'value' })).toBe(true);
-                expect(isStateValue({ nested: { deep: true } })).toBe(true);
-            });
-        });
-
-        describe('invalid state values', () => {
-            it('should reject functions', () => {
-                expect(isStateValue(() => {})).toBe(false);
-            });
-
-            it('should reject symbols', () => {
-                expect(isStateValue(Symbol('test'))).toBe(false);
             });
         });
     });

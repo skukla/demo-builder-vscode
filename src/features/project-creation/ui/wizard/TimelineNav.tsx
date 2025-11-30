@@ -2,12 +2,51 @@ import { View, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
 import { WizardStep } from '@/types/webview';
-import { cn, getTimelineStepDotClasses, getTimelineStepLabelClasses } from '@/core/ui/utils/classNames';
+import { cn } from '@/core/ui/utils/classNames';
 
 /**
  * Timeline step status type
  */
 type TimelineStatus = 'completed' | 'completed-current' | 'current' | 'upcoming';
+
+/**
+ * Lookup map for timeline step dot status classes (inlined from classNames.ts - single consumer)
+ */
+const TIMELINE_DOT_STATUS_CLASS: Record<TimelineStatus, string> = {
+    'completed': 'timeline-step-dot-completed',
+    'completed-current': 'timeline-step-dot-completed',
+    'current': 'timeline-step-dot-current',
+    'upcoming': 'timeline-step-dot-upcoming',
+};
+
+/**
+ * Build timeline step dot classes based on status (inlined from classNames.ts - single consumer)
+ */
+function getTimelineStepDotClasses(status: TimelineStatus): string {
+    const baseClasses = 'timeline-step-dot';
+    const statusClass = TIMELINE_DOT_STATUS_CLASS[status] ?? 'timeline-step-dot-upcoming';
+    return cn(baseClasses, statusClass);
+}
+
+/**
+ * Lookup map for timeline step label color classes (inlined from classNames.ts - single consumer)
+ */
+const TIMELINE_LABEL_COLOR_CLASS: Record<TimelineStatus, string> = {
+    'completed': 'text-gray-800',
+    'completed-current': 'text-blue-700',
+    'current': 'text-blue-700',
+    'upcoming': 'text-gray-600',
+};
+
+/**
+ * Build timeline step label classes based on status (inlined from classNames.ts - single consumer)
+ */
+function getTimelineLabelClasses(status: TimelineStatus): string {
+    const isCurrent = status === 'current' || status === 'completed-current';
+    const fontWeight = isCurrent ? 'font-semibold' : 'font-normal';
+    const color = TIMELINE_LABEL_COLOR_CLASS[status];
+    return cn('text-base', fontWeight, color, 'whitespace-nowrap', 'user-select-none');
+}
 
 /**
  * Render the appropriate indicator icon for a timeline step
@@ -50,10 +89,9 @@ interface TimelineNavProps {
 export function TimelineNav({ steps, currentStep, completedSteps, highestCompletedStepIndex: _highestCompletedStepIndex, onStepClick }: TimelineNavProps) {
     const currentStepIndex = steps.findIndex(s => s.id === currentStep);
 
-    const getStepStatus = (step: WizardStep, _index: number) => {
+    const getStepStatus = (step: WizardStep): TimelineStatus => {
         const isCompleted = completedSteps.includes(step);
         const isCurrent = step === currentStep;
-
 
         if (isCurrent && isCompleted) return 'completed-current';
         if (isCurrent && !isCompleted) return 'current';
@@ -88,7 +126,7 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
             <View position="relative">
                 {/* Steps */}
                 {steps.map((step, index) => {
-                    const status = getStepStatus(step.id, index);
+                    const status = getStepStatus(step.id);
                     const isClickable = isStepClickable(step.id, index);
                     
                     return (
@@ -119,7 +157,7 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
 
                                     {/* Step label */}
                                     <Text
-                                        UNSAFE_className={getTimelineStepLabelClasses(status)}
+                                        UNSAFE_className={getTimelineLabelClasses(status)}
                                     >
                                         {step.name}
                                     </Text>
