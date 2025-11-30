@@ -162,8 +162,8 @@ describe('workspaceHandlers', () => {
             expect(result.success).toBe(false);
             expect(result.error).toBe('Failed to load workspaces. Please try again.');
             expect(mockContext.logger.error).toHaveBeenCalledWith(
-                'Failed to get workspaces:',
-                error
+                '[Workspace] Failed to get workspaces:',
+                expect.any(Object)
             );
         });
 
@@ -200,6 +200,12 @@ describe('workspaceHandlers', () => {
             (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {
                 // Valid by default
             });
+            // Mock getCurrentProject for context guard
+            mockAuthManager.getCurrentProject.mockResolvedValue({
+                id: 'proj-123',
+                name: 'Test Project',
+                title: 'Test Project'
+            });
         });
 
         it('should select workspace successfully', async () => {
@@ -209,11 +215,12 @@ describe('workspaceHandlers', () => {
             const result = await handleSelectWorkspace(mockContext, { workspaceId });
 
             expect(result.success).toBe(true);
-            expect(mockAuthManager.selectWorkspace).toHaveBeenCalledWith(workspaceId);
+            // selectWorkspace requires projectId for context guard
+            expect(mockAuthManager.selectWorkspace).toHaveBeenCalledWith(workspaceId, 'proj-123');
             expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaceSelected', {
                 workspaceId
             });
-            expect(mockContext.logger.info).toHaveBeenCalledWith(`Selected workspace: ${workspaceId}`);
+            expect(mockContext.logger.info).toHaveBeenCalledWith(`[Workspace] Selected workspace: ${workspaceId}`);
         });
 
         it('should validate workspace ID before selection', async () => {
@@ -252,7 +259,7 @@ describe('workspaceHandlers', () => {
             );
 
             expect(mockContext.logger.error).toHaveBeenCalledWith(
-                `Failed to select workspace ${workspaceId}`
+                `[Workspace] Failed to select workspace ${workspaceId}`
             );
             expect(mockContext.sendMessage).toHaveBeenCalledWith('error', {
                 message: 'Failed to select workspace',
@@ -270,7 +277,7 @@ describe('workspaceHandlers', () => {
             );
 
             expect(mockContext.logger.error).toHaveBeenCalledWith(
-                'Failed to select workspace:',
+                '[Workspace] Failed to select workspace:',
                 error
             );
             expect(mockContext.sendMessage).toHaveBeenCalledWith('error', {
@@ -296,7 +303,18 @@ describe('workspaceHandlers', () => {
             const result = await handleSelectWorkspace(mockContext, { workspaceId });
 
             expect(result.success).toBe(true);
-            expect(mockAuthManager.selectWorkspace).toHaveBeenCalledWith(workspaceId);
+            // selectWorkspace requires projectId for context guard
+            expect(mockAuthManager.selectWorkspace).toHaveBeenCalledWith(workspaceId, 'proj-123');
+        });
+
+        it('should fail if no project is selected', async () => {
+            const workspaceId = 'ws-123';
+            mockAuthManager.getCurrentProject.mockResolvedValue(null);
+
+            await expect(handleSelectWorkspace(mockContext, { workspaceId })).rejects.toThrow(
+                'No project selected'
+            );
+            expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
         });
     });
 
@@ -460,13 +478,19 @@ describe('workspaceHandlers', () => {
         it('should note that cache invalidation is handled in authManager', async () => {
             const workspaceId = 'ws-123';
             (securityValidation.validateWorkspaceId as jest.Mock).mockImplementation(() => {});
+            mockAuthManager.getCurrentProject.mockResolvedValue({
+                id: 'proj-123',
+                name: 'Test Project',
+                title: 'Test Project'
+            });
             mockAuthManager.selectWorkspace.mockResolvedValue(true);
 
             await handleSelectWorkspace(mockContext, { workspaceId });
 
             // Cache invalidation happens in authManager.selectWorkspace
             // This handler doesn't need to do it explicitly
-            expect(mockAuthManager.selectWorkspace).toHaveBeenCalledWith(workspaceId);
+            // selectWorkspace requires projectId for context guard
+            expect(mockAuthManager.selectWorkspace).toHaveBeenCalledWith(workspaceId, 'proj-123');
         });
     });
 });

@@ -95,6 +95,9 @@ export async function handleGetProjects(
  *
  * Sets the specified project as the current project context
  * in Adobe CLI configuration.
+ *
+ * Requires org ID to protect against context drift
+ * (e.g., when another process changes the global Adobe CLI context).
  */
 export async function handleSelectProject(
     context: HandlerContext,
@@ -111,8 +114,14 @@ export async function handleSelectProject(
     }
 
     try {
-        // Directly select the project - we already have the projectId
-        const success = await context.authManager?.selectProject(projectId);
+        // Get org ID for context guard (required for drift protection)
+        const currentOrg = await context.authManager?.getCurrentOrganization();
+        if (!currentOrg?.id) {
+            throw new Error('No organization selected - cannot select project without org context');
+        }
+
+        // Select project with org context guard to protect against context drift
+        const success = await context.authManager?.selectProject(projectId, currentOrg.id);
 
         if (success) {
             context.logger.info(`Selected project: ${projectId}`);

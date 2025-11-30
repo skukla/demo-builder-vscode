@@ -290,64 +290,134 @@ describe('AdobeEntityService - Projects', () => {
     });
 
     describe('selectProject()', () => {
-        it('should successfully select project', async () => {
-            const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: 'Project selected',
-                stderr: '',
-                code: 0,
-                duration: 100
+        it('should successfully select project with context guard', async () => {
+            const { service, mockCommandExecutor, mockCacheManager, mockOrgValidator } = testMocks;
+
+            // Mock context showing correct org already selected
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                org: { id: 'org1', name: 'Organization 1', code: 'ORG1@AdobeOrg' },
             });
 
-            const result = await service.selectProject('proj1');
+            mockOrgValidator.testDeveloperPermissions.mockResolvedValue({
+                hasPermissions: true,
+                message: 'Has Developer role',
+            });
+
+            mockCommandExecutor.execute.mockImplementation(async (cmd: string) => {
+                if (cmd.includes('console where')) {
+                    return {
+                        stdout: JSON.stringify({ org: { id: 'org1', name: 'Organization 1' } }),
+                        stderr: '',
+                        code: 0,
+                        duration: 50,
+                    };
+                }
+                if (cmd.includes('project select')) {
+                    return { stdout: 'Project selected', stderr: '', code: 0, duration: 100 };
+                }
+                if (cmd.includes('project list')) {
+                    return {
+                        stdout: JSON.stringify([{ id: 'proj1', name: 'Project 1' }]),
+                        stderr: '',
+                        code: 0,
+                        duration: 100,
+                    };
+                }
+                return { stdout: '', stderr: '', code: 0, duration: 50 };
+            });
+
+            const result = await service.selectProject('proj1', 'org1');
 
             expect(result).toBe(true);
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'aio console project select proj1',
-                expect.objectContaining({
-                    timeout: expect.any(Number)
-                })
-            );
         });
 
         it('should fail if project ID is invalid', async () => {
-            const { service } = testMocks;
+            const { service, mockCacheManager } = testMocks;
+
+            // Mock context
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                org: { id: 'org1', name: 'Organization 1' },
+            });
+
             (validateProjectId as jest.Mock).mockImplementation(() => {
                 throw new Error('Invalid project ID');
             });
 
-            const result = await service.selectProject('');
+            const result = await service.selectProject('', 'org1');
 
             expect(result).toBe(false);
         });
 
         it('should fail if CLI command fails', async () => {
-            const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: '',
-                stderr: 'Project not found',
-                code: 1,
-                duration: 100
+            const { service, mockCommandExecutor, mockCacheManager, mockOrgValidator } = testMocks;
+
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                org: { id: 'org1', name: 'Organization 1' },
             });
 
-            const result = await service.selectProject('invalid-proj');
+            mockOrgValidator.testDeveloperPermissions.mockResolvedValue({
+                hasPermissions: true,
+                message: 'Has Developer role',
+            });
+
+            mockCommandExecutor.execute.mockImplementation(async (cmd: string) => {
+                if (cmd.includes('console where')) {
+                    return {
+                        stdout: JSON.stringify({ org: { id: 'org1', name: 'Organization 1' } }),
+                        stderr: '',
+                        code: 0,
+                        duration: 50,
+                    };
+                }
+                if (cmd.includes('project select')) {
+                    return { stdout: '', stderr: 'Project not found', code: 1, duration: 100 };
+                }
+                return { stdout: '', stderr: '', code: 0, duration: 50 };
+            });
+
+            const result = await service.selectProject('invalid-proj', 'org1');
 
             expect(result).toBe(false);
         });
 
         it('should clear cached console.where after successful selection', async () => {
-            const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: 'Project selected',
-                stderr: '',
-                code: 0,
-                duration: 100
+            const { service, mockCommandExecutor, mockCacheManager, mockOrgValidator } = testMocks;
+
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                org: { id: 'org1', name: 'Organization 1' },
             });
 
-            await service.selectProject('proj1');
+            mockOrgValidator.testDeveloperPermissions.mockResolvedValue({
+                hasPermissions: true,
+                message: 'Has Developer role',
+            });
 
-            // Verify command was called (cache clearing is implementation detail)
-            expect(mockCommandExecutor.execute).toHaveBeenCalled();
+            mockCommandExecutor.execute.mockImplementation(async (cmd: string) => {
+                if (cmd.includes('console where')) {
+                    return {
+                        stdout: JSON.stringify({ org: { id: 'org1', name: 'Organization 1' } }),
+                        stderr: '',
+                        code: 0,
+                        duration: 50,
+                    };
+                }
+                if (cmd.includes('project select')) {
+                    return { stdout: 'Project selected', stderr: '', code: 0, duration: 100 };
+                }
+                if (cmd.includes('project list')) {
+                    return {
+                        stdout: JSON.stringify([{ id: 'proj1', name: 'Project 1' }]),
+                        stderr: '',
+                        code: 0,
+                        duration: 100,
+                    };
+                }
+                return { stdout: '', stderr: '', code: 0, duration: 50 };
+            });
+
+            await service.selectProject('proj1', 'org1');
+
+            expect(mockCacheManager.clearConsoleWhereCache).toHaveBeenCalled();
         });
     });
 

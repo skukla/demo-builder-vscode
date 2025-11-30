@@ -556,23 +556,27 @@ export class AuthenticationService {
     }
 
     /**
-     * Select project
+     * Select project with org context guard.
+     * @param projectId - The project ID to select
+     * @param orgId - Org ID to ensure context (protects against context drift)
      */
-    async selectProject(projectId: string): Promise<boolean> {
+    async selectProject(projectId: string, orgId: string): Promise<boolean> {
         this.performanceTracker.startTiming('selectProject');
         const entityService = await this.ensureEntityService();
-        const result = await entityService.selectProject(projectId);
+        const result = await entityService.selectProject(projectId, orgId);
         this.performanceTracker.endTiming('selectProject');
         return result;
     }
 
     /**
-     * Select workspace
+     * Select workspace with project context guard.
+     * @param workspaceId - The workspace ID to select
+     * @param projectId - Project ID to ensure context (protects against context drift)
      */
-    async selectWorkspace(workspaceId: string): Promise<boolean> {
+    async selectWorkspace(workspaceId: string, projectId: string): Promise<boolean> {
         this.performanceTracker.startTiming('selectWorkspace');
         const entityService = await this.ensureEntityService();
-        const result = await entityService.selectWorkspace(workspaceId);
+        const result = await entityService.selectWorkspace(workspaceId, projectId);
         this.performanceTracker.endTiming('selectWorkspace');
         return result;
     }

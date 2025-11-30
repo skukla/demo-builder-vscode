@@ -252,63 +252,119 @@ describe('AdobeEntityService - Workspaces', () => {
     });
 
     describe('selectWorkspace()', () => {
-        it('should successfully select workspace', async () => {
-            const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: 'Workspace selected',
-                stderr: '',
-                code: 0,
-                duration: 100
+        it('should successfully select workspace with context guard', async () => {
+            const { service, mockCommandExecutor, mockCacheManager } = testMocks;
+
+            // Mock context showing correct project already selected
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                project: { id: 'proj1', name: 'Project 1' },
             });
 
-            const result = await service.selectWorkspace('ws1');
+            mockCommandExecutor.execute.mockImplementation(async (cmd: string) => {
+                if (cmd.includes('console where')) {
+                    return {
+                        stdout: JSON.stringify({ project: { id: 'proj1', name: 'Project 1' } }),
+                        stderr: '',
+                        code: 0,
+                        duration: 50,
+                    };
+                }
+                if (cmd.includes('workspace select')) {
+                    return { stdout: 'Workspace selected', stderr: '', code: 0, duration: 100 };
+                }
+                if (cmd.includes('workspace list')) {
+                    return {
+                        stdout: JSON.stringify([{ id: 'ws1', name: 'Production' }]),
+                        stderr: '',
+                        code: 0,
+                        duration: 100,
+                    };
+                }
+                return { stdout: '', stderr: '', code: 0, duration: 50 };
+            });
+
+            const result = await service.selectWorkspace('ws1', 'proj1');
 
             expect(result).toBe(true);
-            expect(mockCommandExecutor.execute).toHaveBeenCalledWith(
-                'aio console workspace select ws1',
-                expect.objectContaining({
-                    timeout: expect.any(Number)
-                })
-            );
         });
 
         it('should fail if workspace ID is invalid', async () => {
-            const { service } = testMocks;
+            const { service, mockCacheManager } = testMocks;
+
+            // Mock context
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                project: { id: 'proj1', name: 'Project 1' },
+            });
+
             (validateWorkspaceId as jest.Mock).mockImplementation(() => {
                 throw new Error('Invalid workspace ID');
             });
 
-            const result = await service.selectWorkspace('');
+            const result = await service.selectWorkspace('', 'proj1');
 
             expect(result).toBe(false);
         });
 
         it('should fail if CLI command fails', async () => {
-            const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: '',
-                stderr: 'Workspace not found',
-                code: 1,
-                duration: 100
+            const { service, mockCommandExecutor, mockCacheManager } = testMocks;
+
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                project: { id: 'proj1', name: 'Project 1' },
             });
 
-            const result = await service.selectWorkspace('invalid-ws');
+            mockCommandExecutor.execute.mockImplementation(async (cmd: string) => {
+                if (cmd.includes('console where')) {
+                    return {
+                        stdout: JSON.stringify({ project: { id: 'proj1', name: 'Project 1' } }),
+                        stderr: '',
+                        code: 0,
+                        duration: 50,
+                    };
+                }
+                if (cmd.includes('workspace select')) {
+                    return { stdout: '', stderr: 'Workspace not found', code: 1, duration: 100 };
+                }
+                return { stdout: '', stderr: '', code: 0, duration: 50 };
+            });
+
+            const result = await service.selectWorkspace('invalid-ws', 'proj1');
 
             expect(result).toBe(false);
         });
 
         it('should clear cached console.where after successful selection', async () => {
-            const { service, mockCommandExecutor } = testMocks;
-            mockCommandExecutor.execute.mockResolvedValue({
-                stdout: 'Workspace selected',
-                stderr: '',
-                code: 0,
-                duration: 100
+            const { service, mockCommandExecutor, mockCacheManager } = testMocks;
+
+            mockCacheManager.getCachedConsoleWhere.mockReturnValue({
+                project: { id: 'proj1', name: 'Project 1' },
             });
 
-            await service.selectWorkspace('ws1');
+            mockCommandExecutor.execute.mockImplementation(async (cmd: string) => {
+                if (cmd.includes('console where')) {
+                    return {
+                        stdout: JSON.stringify({ project: { id: 'proj1', name: 'Project 1' } }),
+                        stderr: '',
+                        code: 0,
+                        duration: 50,
+                    };
+                }
+                if (cmd.includes('workspace select')) {
+                    return { stdout: 'Workspace selected', stderr: '', code: 0, duration: 100 };
+                }
+                if (cmd.includes('workspace list')) {
+                    return {
+                        stdout: JSON.stringify([{ id: 'ws1', name: 'Production' }]),
+                        stderr: '',
+                        code: 0,
+                        duration: 100,
+                    };
+                }
+                return { stdout: '', stderr: '', code: 0, duration: 50 };
+            });
 
-            expect(mockCommandExecutor.execute).toHaveBeenCalled();
+            await service.selectWorkspace('ws1', 'proj1');
+
+            expect(mockCacheManager.clearConsoleWhereCache).toHaveBeenCalled();
         });
     });
 

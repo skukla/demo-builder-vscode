@@ -42,6 +42,15 @@ describe('projectHandlers - Selection', () => {
     });
 
     describe('handleSelectProject', () => {
+        beforeEach(() => {
+            // Mock getCurrentOrganization for context guard
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue({
+                id: 'org-123',
+                code: 'ORG123@AdobeOrg',
+                name: 'Test Organization'
+            });
+        });
+
         it('should select project successfully', async () => {
             const projectId = 'proj-123';
             mockContext.authManager.selectProject.mockResolvedValue(true);
@@ -49,7 +58,8 @@ describe('projectHandlers - Selection', () => {
             const result = await handleSelectProject(mockContext, { projectId });
 
             expect(result.success).toBe(true);
-            expect(mockContext.authManager.selectProject).toHaveBeenCalledWith(projectId);
+            // selectProject requires orgId for context guard
+            expect(mockContext.authManager.selectProject).toHaveBeenCalledWith(projectId, 'org-123');
             expect(mockContext.sendMessage).toHaveBeenCalledWith('projectSelected', { projectId });
             expect(mockContext.logger.info).toHaveBeenCalledWith(`Selected project: ${projectId}`);
         });
@@ -61,6 +71,16 @@ describe('projectHandlers - Selection', () => {
             await handleSelectProject(mockContext, { projectId });
 
             expect(securityValidation.validateProjectId).toHaveBeenCalledWith(projectId);
+        });
+
+        it('should fail if no organization is selected', async () => {
+            const projectId = 'proj-123';
+            mockContext.authManager.getCurrentOrganization.mockResolvedValue(null);
+
+            await expect(handleSelectProject(mockContext, { projectId })).rejects.toThrow(
+                'No organization selected'
+            );
+            expect(mockContext.authManager.selectProject).not.toHaveBeenCalled();
         });
 
         it('should reject invalid project ID', async () => {

@@ -70,6 +70,9 @@ export async function handleGetWorkspaces(
  *
  * Sets the specified workspace as the current workspace context
  * in Adobe CLI configuration.
+ *
+ * Requires project ID to protect against context drift
+ * (e.g., when another process changes the global Adobe CLI context).
  */
 export async function handleSelectWorkspace(
     context: HandlerContext,
@@ -86,8 +89,14 @@ export async function handleSelectWorkspace(
     }
 
     try {
-        // Actually call the authManager to select the workspace
-        const success = await context.authManager?.selectWorkspace(workspaceId);
+        // Get project ID for context guard (required for drift protection)
+        const currentProject = await context.authManager?.getCurrentProject();
+        if (!currentProject?.id) {
+            throw new Error('No project selected - cannot select workspace without project context');
+        }
+
+        // Select workspace with project context guard to protect against context drift
+        const success = await context.authManager?.selectWorkspace(workspaceId, currentProject.id);
         if (success) {
             context.logger.info(`[Workspace] Selected workspace: ${workspaceId}`);
 

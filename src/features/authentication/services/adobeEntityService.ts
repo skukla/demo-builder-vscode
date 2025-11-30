@@ -616,6 +616,65 @@ export class AdobeEntityService {
         };
     }
 
+    // =========================================================================
+    // Context Guard - Protects against external CLI context changes
+    // =========================================================================
+
+    /**
+     * Extract ID from context value (can be string or object with id)
+     */
+    private extractContextId(value: string | { id: string } | undefined): string | undefined {
+        if (!value) return undefined;
+        if (typeof value === 'string') return value;
+        return value.id;
+    }
+
+    /**
+     * Ensure Adobe CLI context matches expected state before dependent operations.
+     * Re-selects org/project if another process changed the global context.
+     *
+     * @param expected - The org/project IDs that should be selected
+     * @returns true if context is correct (or was corrected), false on failure
+     */
+    private async ensureContext(expected: { orgId?: string; projectId?: string }): Promise<boolean> {
+        const context = await this.getConsoleWhereContext();
+
+        // Check organization context
+        const currentOrgId = this.extractContextId(context?.org);
+        if (expected.orgId && currentOrgId !== expected.orgId) {
+            this.debugLogger.debug(
+                `[Entity Service] Context drift: org ${currentOrgId || 'none'} → ${expected.orgId}`,
+            );
+            const orgSelected = await this.selectOrganization(expected.orgId);
+            if (!orgSelected) {
+                this.debugLogger.error('[Entity Service] Failed to restore org context');
+                return false;
+            }
+        }
+
+        // Check project context (re-fetch context if org was changed)
+        if (expected.projectId) {
+            const currentContext = expected.orgId ? await this.getConsoleWhereContext() : context;
+            const currentProjectId = this.extractContextId(currentContext?.project);
+            if (currentProjectId !== expected.projectId) {
+                this.debugLogger.debug(
+                    `[Entity Service] Context drift: project ${currentProjectId || 'none'} → ${expected.projectId}`,
+                );
+                const projectSelected = await this.doSelectProject(expected.projectId);
+                if (!projectSelected) {
+                    this.debugLogger.error('[Entity Service] Failed to restore project context');
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    // =========================================================================
+    // Selection Operations
+    // =========================================================================
+
     /**
      * Select organization
      */
@@ -688,9 +747,27 @@ export class AdobeEntityService {
     }
 
     /**
-     * Select project
+     * Select project with organization context guard.
+     * Ensures the org is selected first (protects against context drift).
+     *
+     * @param projectId - The project ID to select
+     * @param orgId - Org ID to ensure context before selection
      */
-    async selectProject(projectId: string): Promise<boolean> {
+    async selectProject(projectId: string, orgId: string): Promise<boolean> {
+        const contextOk = await this.ensureContext({ orgId });
+        if (!contextOk) {
+            this.debugLogger.error('[Entity Service] Failed to ensure org context for project selection');
+            return false;
+        }
+
+        return this.doSelectProject(projectId);
+    }
+
+    /**
+     * Internal project selection (no context guard).
+     * Used by ensureContext and selectProject.
+     */
+    private async doSelectProject(projectId: string): Promise<boolean> {
         try {
             // SECURITY: Validate projectId to prevent command injection
             validateProjectId(projectId);
@@ -766,9 +843,27 @@ export class AdobeEntityService {
     }
 
     /**
-     * Select workspace
+     * Select workspace with project context guard.
+     * Ensures the project is selected first (protects against context drift).
+     *
+     * @param workspaceId - The workspace ID to select
+     * @param projectId - Project ID to ensure context before selection
      */
-    async selectWorkspace(workspaceId: string): Promise<boolean> {
+    async selectWorkspace(workspaceId: string, projectId: string): Promise<boolean> {
+        const contextOk = await this.ensureContext({ projectId });
+        if (!contextOk) {
+            this.debugLogger.error('[Entity Service] Failed to ensure project context for workspace selection');
+            return false;
+        }
+
+        return this.doSelectWorkspace(workspaceId);
+    }
+
+    /**
+     * Internal workspace selection (no context guard).
+     * Used by selectWorkspace.
+     */
+    private async doSelectWorkspace(workspaceId: string): Promise<boolean> {
         try {
             // SECURITY: Validate workspaceId to prevent command injection
             validateWorkspaceId(workspaceId);

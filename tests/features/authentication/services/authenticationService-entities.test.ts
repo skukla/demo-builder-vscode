@@ -141,18 +141,18 @@ describe('AuthenticationService - Entity Retrieval and Selection', () => {
             expect(mockEntityService.selectOrganization).toHaveBeenCalledWith('org123');
         });
 
-        it('should select project', async () => {
-            const result = await authService.selectProject('proj123');
+        it('should select project with org context guard', async () => {
+            const result = await authService.selectProject('proj123', 'org123');
 
             expect(result).toBe(true);
-            expect(mockEntityService.selectProject).toHaveBeenCalledWith('proj123');
+            expect(mockEntityService.selectProject).toHaveBeenCalledWith('proj123', 'org123');
         });
 
-        it('should select workspace', async () => {
-            const result = await authService.selectWorkspace('ws123');
+        it('should select workspace with project context guard', async () => {
+            const result = await authService.selectWorkspace('ws123', 'proj123');
 
             expect(result).toBe(true);
-            expect(mockEntityService.selectWorkspace).toHaveBeenCalledWith('ws123');
+            expect(mockEntityService.selectWorkspace).toHaveBeenCalledWith('ws123', 'proj123');
         });
 
         it('should auto-select organization if needed', async () => {
