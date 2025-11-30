@@ -642,8 +642,9 @@ export class AdobeEntityService {
         // Check organization context
         const currentOrgId = this.extractContextId(context?.org);
         if (expected.orgId && currentOrgId !== expected.orgId) {
+            // Note: currentOrgId may be a name (from CLI), expected.orgId is always an ID
             this.debugLogger.debug(
-                `[Entity Service] Context drift: org ${currentOrgId || 'none'} → ${expected.orgId}`,
+                `[Entity Service] Context sync: org mismatch (current: "${currentOrgId || 'none'}"), re-selecting...`,
             );
             const orgSelected = await this.selectOrganization(expected.orgId);
             if (!orgSelected) {
@@ -657,8 +658,9 @@ export class AdobeEntityService {
             const currentContext = expected.orgId ? await this.getConsoleWhereContext() : context;
             const currentProjectId = this.extractContextId(currentContext?.project);
             if (currentProjectId !== expected.projectId) {
+                // Note: currentProjectId may be a name (from CLI), expected.projectId is always an ID
                 this.debugLogger.debug(
-                    `[Entity Service] Context drift: project ${currentProjectId || 'none'} → ${expected.projectId}`,
+                    `[Entity Service] Context sync: project mismatch (current: "${currentProjectId || 'none'}"), re-selecting...`,
                 );
                 const projectSelected = await this.doSelectProject(expected.projectId);
                 if (!projectSelected) {

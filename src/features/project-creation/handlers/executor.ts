@@ -499,8 +499,15 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // (User should click "Open Project" to close and open the project in workspace)
     setTimeout(() => {
         if (context.panel) {
-            context.panel.dispose();
-            context.logger.debug('[Project Creation] Webview panel closed automatically (timeout - user did not click Open Project)');
+            try {
+                // Check if panel is still visible (not already disposed)
+                if (context.panel.visible) {
+                    context.panel.dispose();
+                    context.logger.debug('[Project Creation] Webview panel auto-closed after timeout');
+                }
+            } catch {
+                // Panel was already disposed by user action - this is expected
+            }
         }
     }, TIMEOUTS.WEBVIEW_AUTO_CLOSE);
 

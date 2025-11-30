@@ -80,12 +80,12 @@ describe('PerformanceTracker', () => {
             // Use an operation that exceeds expected time to trigger logging
             tracker.startTiming('isAuthenticated');
 
-            jest.advanceTimersByTime(3000); // Exceeds 2500ms threshold
+            jest.advanceTimersByTime(3500); // Exceeds 3000ms threshold
             const duration = tracker.endTiming('isAuthenticated');
 
-            expect(duration).toBe(3000);
+            expect(duration).toBe(3500);
             expect(mockDebug).toHaveBeenCalledWith(
-                expect.stringContaining('[Performance] isAuthenticated took 3.0s'),
+                expect.stringContaining('[Performance] isAuthenticated took 3.5s'),
             );
         });
 
@@ -111,7 +111,7 @@ describe('PerformanceTracker', () => {
 
             expect(duration).toBe(5000);
             expect(mockDebug).toHaveBeenCalledWith(
-                expect.stringContaining('⚠️ SLOW (expected <3.0s)'),
+                expect.stringContaining('⚠️ SLOW (expected <4.0s)'),
             );
         });
 
@@ -126,10 +126,11 @@ describe('PerformanceTracker', () => {
 
         it('should use correct expected times for different operations', () => {
             // Operations with actual durations that exceed expected thresholds
-            // formatDuration converts: 4000ms → "4.0s", 3000ms → "3.0s", etc.
+            // formatDuration converts: 5000ms → "5.0s", 4000ms → "4.0s", etc.
+            // Thresholds updated 2025-11 based on observed production performance
             const operations = [
-                { name: 'isFullyAuthenticated', expectedFormatted: '3.0s', actualFormatted: '4.0s', actual: 4000 },
-                { name: 'isAuthenticated', expectedFormatted: '2.5s', actualFormatted: '3.0s', actual: 3000 },
+                { name: 'isFullyAuthenticated', expectedFormatted: '4.0s', actualFormatted: '5.0s', actual: 5000 },
+                { name: 'isAuthenticated', expectedFormatted: '3.0s', actualFormatted: '4.0s', actual: 4000 },
                 { name: 'getOrganizations', expectedFormatted: '5.0s', actualFormatted: '6.0s', actual: 6000 },
                 { name: 'login', expectedFormatted: '30.0s', actualFormatted: '31.0s', actual: 31000 },
             ];
@@ -148,7 +149,7 @@ describe('PerformanceTracker', () => {
             });
         });
 
-        it('should NOT log when isAuthenticated() takes 2200ms (within 2500ms threshold)', () => {
+        it('should NOT log when isAuthenticated() takes 2200ms (within 3000ms threshold)', () => {
             tracker.startTiming('isAuthenticated');
             jest.advanceTimersByTime(2200);
             const duration = tracker.endTiming('isAuthenticated');
@@ -158,14 +159,14 @@ describe('PerformanceTracker', () => {
             expect(mockDebug).not.toHaveBeenCalled();
         });
 
-        it('should warn when isAuthenticated() exceeds 2500ms threshold', () => {
+        it('should warn when isAuthenticated() exceeds 3000ms threshold', () => {
             tracker.startTiming('isAuthenticated');
-            jest.advanceTimersByTime(3000);
+            jest.advanceTimersByTime(3500);
             const duration = tracker.endTiming('isAuthenticated');
 
-            expect(duration).toBe(3000);
+            expect(duration).toBe(3500);
             expect(mockDebug).toHaveBeenCalledWith(
-                expect.stringContaining('⚠️ SLOW (expected <2.5s)'),
+                expect.stringContaining('⚠️ SLOW (expected <3.0s)'),
             );
         });
     });
