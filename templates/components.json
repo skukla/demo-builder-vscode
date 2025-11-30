@@ -29,7 +29,7 @@
         "branch": "master",
         "gitOptions": {
           "shallow": false,
-          "recursive": true
+          "recursive": false
         }
       },
       "dependencies": {

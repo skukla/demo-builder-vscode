@@ -37,21 +37,17 @@ function formatSubmoduleDisplayName(id: string): string {
 
 /**
  * Build user-friendly submessage for component installation progress
- * Shows "Adding [Submodule Name]..." when submodules are present
+ * Shows "Adding [Submodule Name]..." only when submodules are selected
+ * @param selectedSubmodules - Array of submodule IDs that were selected by user
  */
-function buildInstallationSubmessage(componentDef: TransformedComponentDefinition): string {
+function buildInstallationSubmessage(selectedSubmodules?: string[]): string {
     const DEFAULT_MESSAGE = 'Cloning repository and installing dependencies...';
 
-    if (!componentDef.submodules) {
+    if (!selectedSubmodules || selectedSubmodules.length === 0) {
         return DEFAULT_MESSAGE;
     }
 
-    const submoduleIds = Object.keys(componentDef.submodules);
-    if (submoduleIds.length === 0) {
-        return DEFAULT_MESSAGE;
-    }
-
-    const displayNames = submoduleIds.map(formatSubmoduleDisplayName);
+    const displayNames = selectedSubmodules.map(formatSubmoduleDisplayName);
     return `Adding ${displayNames.join(', ')}...`;
 }
 
@@ -200,10 +196,25 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const registry = await registryManager.loadRegistry();
     const sharedEnvVars = registry.envVars || {};
 
+    // Get frontend's submodule IDs to skip them in the dependency loop
+    // (submodules are handled during frontend clone via --recursive or selective init)
+    const frontendSubmoduleIds = new Set<string>();
+    if (typedConfig.components?.frontend) {
+        const frontends = await registryManager.getFrontends();
+        const frontendDef = frontends.find((f: { id: string }) => f.id === typedConfig.components?.frontend);
+        if (frontendDef?.submodules) {
+            Object.keys(frontendDef.submodules).forEach(id => frontendSubmoduleIds.add(id));
+        }
+    }
+
     // Step 4: Install selected components (25-80%)
+    // Filter out submodule IDs from dependencies - they're installed with the frontend
+    const filteredDependencies = (typedConfig.components?.dependencies || [])
+        .filter((id: string) => !frontendSubmoduleIds.has(id));
+
     const allComponents = [
         ...(typedConfig.components?.frontend ? [{ id: typedConfig.components.frontend, type: 'frontend' }] : []),
-        ...(typedConfig.components?.dependencies || []).map((id: string) => ({ id, type: 'dependency' })),
+        ...filteredDependencies.map((id: string) => ({ id, type: 'dependency' })),
         ...(typedConfig.components?.appBuilderApps || []).map((id: string) => ({ id, type: 'app-builder' })),
     ];
 
@@ -229,11 +240,26 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             continue;
         }
 
-        const submessage = buildInstallationSubmessage(componentDef);
+        // For frontend components, determine which submodules to initialize
+        // based on user's dependency selections (compute BEFORE progress message)
+        const installOptions: { selectedSubmodules?: string[] } = {};
+        if (comp.type === 'frontend' && componentDef.submodules) {
+            const allSelectedDeps = typedConfig.components?.dependencies || [];
+            const selectedSubmodules = allSelectedDeps.filter(
+                (depId: string) => componentDef.submodules?.[depId] !== undefined
+            );
+            if (selectedSubmodules.length > 0) {
+                installOptions.selectedSubmodules = selectedSubmodules;
+                context.logger.debug(`[Project Creation] Selected submodules for ${componentDef.name}: ${selectedSubmodules.join(', ')}`);
+            }
+        }
+
+        // Build progress message based on selected submodules (not all defined submodules)
+        const submessage = buildInstallationSubmessage(installOptions.selectedSubmodules);
         progressTracker(`Installing ${componentDef.name}`, currentProgress, submessage);
         context.logger.debug(`[Project Creation] Installing component: ${componentDef.name}`);
 
-        const result = await componentManager.installComponent(project, componentDef);
+        const result = await componentManager.installComponent(project, componentDef, installOptions);
 
         if (result.success && result.component) {
             project.componentInstances![comp.id] = result.component;

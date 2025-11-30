@@ -9,6 +9,12 @@ export interface ComponentInstallOptions {
     branch?: string;
     version?: string;
     skipDependencies?: boolean;
+    /**
+     * Submodule IDs to initialize after cloning.
+     * Only submodules in this list will be initialized.
+     * If undefined/empty, no submodules are initialized.
+     */
+    selectedSubmodules?: string[];
 }
 
 /**

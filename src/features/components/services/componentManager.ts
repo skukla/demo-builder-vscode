@@ -175,9 +175,44 @@ export class ComponentManager {
             throw new Error(`Git clone failed: ${result.stderr}`);
         }
 
-        // Log submodule initialization if recursive clone was used
-        if (componentDef.source.gitOptions?.recursive) {
-            this.logger.debug(`[ComponentManager] Submodules initialized for ${componentDef.name}`);
+        // Selectively initialize submodules based on user selection
+        // (only if component has submodules defined AND some are selected)
+        if (componentDef.submodules && options.selectedSubmodules?.length) {
+            const submodulesToInit: string[] = [];
+
+            for (const submoduleId of options.selectedSubmodules) {
+                const submoduleConfig = componentDef.submodules[submoduleId];
+                if (submoduleConfig?.path) {
+                    submodulesToInit.push(submoduleConfig.path);
+                }
+            }
+
+            if (submodulesToInit.length > 0) {
+                this.logger.debug(`[ComponentManager] Initializing selected submodules for ${componentDef.name}: ${submodulesToInit.join(', ')}`);
+
+                // Initialize each selected submodule
+                for (const submodulePath of submodulesToInit) {
+                    const submoduleResult = await commandManager.execute(
+                        `git submodule update --init "${submodulePath}"`,
+                        {
+                            cwd: componentPath,
+                            timeout: TIMEOUTS.COMPONENT_CLONE,
+                            enhancePath: true,
+                            shell: DEFAULT_SHELL,
+                        },
+                    );
+
+                    if (submoduleResult.code !== 0) {
+                        this.logger.warn(`[ComponentManager] Failed to initialize submodule ${submodulePath}: ${submoduleResult.stderr}`);
+                        // Continue with other submodules even if one fails
+                    }
+                }
+
+                this.logger.debug(`[ComponentManager] Submodules initialized for ${componentDef.name}`);
+            }
+        } else if (componentDef.submodules) {
+            // Component has submodules but none were selected - skip initialization
+            this.logger.debug(`[ComponentManager] Skipping submodule initialization for ${componentDef.name} (none selected)`);
         }
 
         // Detect component version using hybrid approach:
