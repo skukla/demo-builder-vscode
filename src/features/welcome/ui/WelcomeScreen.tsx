@@ -1,56 +1,54 @@
-import React, { useEffect, useCallback } from 'react';
 import {
     View,
     Flex,
     Heading,
     Text,
-    Grid,
     Divider,
-    ActionButton
+    ActionButton,
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
-import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Book from '@spectrum-icons/workflow/Book';
+import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Settings from '@spectrum-icons/workflow/Settings';
-import { vscode } from '@/webview-ui/shared/vscode-api';
-import { useFocusTrap } from '@/webview-ui/shared/hooks';
-import { cn } from '@/webview-ui/shared/utils/classNames';
+import React, { useEffect, useCallback } from 'react';
+import { GridLayout } from '@/core/ui/components/layout';
+import { useFocusTrap } from '@/core/ui/hooks';
+import { cn } from '@/core/ui/utils/classNames';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 interface WelcomeScreenProps {
     theme?: 'light' | 'dark';
 }
 
-export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
+export function WelcomeScreen(_props: WelcomeScreenProps) {
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
-        autoFocus: true
+        autoFocus: true,
+        containFocus: true,  // Prevent focus escape (WCAG 2.1 AA)
     });
-
-    useEffect(() => {
-        vscode.postMessage('ready');
-    }, []);
 
     // Action handlers with useCallback
     const handleCreateNew = useCallback(() => {
-        vscode.postMessage('create-new');
+        webviewClient.postMessage('create-new');
     }, []);
 
     const handleOpenExisting = useCallback(() => {
-        vscode.postMessage('open-project');
+        webviewClient.postMessage('open-project');
     }, []);
 
     const handleOpenDocs = useCallback(() => {
-        vscode.postMessage('open-docs');
+        webviewClient.postMessage('open-docs');
     }, []);
 
     const handleOpenSettings = useCallback(() => {
-        vscode.postMessage('open-settings');
+        webviewClient.postMessage('open-settings');
     }, []);
 
     return (
         <View height="100vh" backgroundColor="gray-50">
             <Flex direction="column" alignItems="center" justifyContent="center" height="100%">
-                <View ref={containerRef} width="100%" maxWidth="900px" padding="size-400">
+                <div ref={containerRef} className="w-full max-w-900 p-4">
+                <View>
                     {/* Header */}
                     <View marginBottom="size-400">
                         <Flex justifyContent="space-between" alignItems="center">
@@ -78,16 +76,12 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
                     <Divider size="S" marginBottom="size-400" />
 
                     {/* Main Actions */}
-                    <Grid
-                        columns={['1fr', '1fr']}
-                        gap="size-300"
-                    >
+                    <GridLayout columns={2} gap="size-300">
                         {/* Create New Project Card */}
                         <ActionButton
                             onPress={handleCreateNew}
                             isQuiet
                             UNSAFE_className="welcome-action-card"
-                            autoFocus
                         >
                             <View UNSAFE_className={cn('mb-5', 'scale-180')}>
                                 <Add size="L" UNSAFE_className="text-blue-600" />
@@ -116,8 +110,9 @@ export function WelcomeScreen({ theme = 'dark' }: WelcomeScreenProps) {
                                 Continue working on a demo
                             </Text>
                         </ActionButton>
-                    </Grid>
+                    </GridLayout>
                 </View>
+                </div>
             </Flex>
         </View>
     );

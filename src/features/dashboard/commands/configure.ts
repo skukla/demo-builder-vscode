@@ -1,14 +1,15 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Project } from '@/types';
-import { parseJSON } from '@/types/typeGuards';
+import { ProjectDashboardWebviewCommand } from './showDashboard';
+import { BaseWebviewCommand } from '@/core/base';
+import { WebviewCommunicationManager } from '@/core/communication';
+import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
-import { WebviewCommunicationManager } from '@/core/communication';
-import { BaseWebviewCommand } from '@/core/base';
-import { generateWebviewHTML } from '@/core/utils/webviewHTMLBuilder';
-import { ProjectDashboardWebviewCommand } from './showDashboard';
+import { Project } from '@/types';
+import { ErrorCode } from '@/types/errorCodes';
+import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
 
 // Component configuration type (key-value pairs for environment variables)
 type ComponentConfigs = Record<string, Record<string, string>>;
@@ -21,7 +22,7 @@ interface ConfigureInitialData {
         frontends?: unknown[];
         backends?: unknown[];
         dependencies?: unknown[];
-        externalSystems?: unknown[];
+        integrations?: unknown[];
         appBuilder?: unknown[];
         envVars: Record<string, unknown>;
     };
@@ -72,25 +73,47 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 await this.initializeCommunication();
             }
 
-            this.logger.info(`[Configure] Opened configuration for project: ${project.name}`);
+            this.logger.debug(`[Configure] Opened configuration for project: ${project.name}`);
         } catch (error) {
             await this.showError('Failed to open configuration', error as Error);
         }
     }
 
+    /**
+     * Generate webview HTML with webpack 4-bundle pattern.
+     *
+     * Loads bundles in correct order for code splitting:
+     * 1. runtime-bundle.js - Webpack runtime
+     * 2. vendors-bundle.js - Third-party libraries
+     * 3. common-bundle.js - Shared application code
+     * 4. configure-bundle.js - Configure-specific code
+     */
     protected async getWebviewContent(): Promise<string> {
         const nonce = this.getNonce();
-        const scriptUri = this.panel!.webview.asWebviewUri(
-            vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'webview', 'configure-bundle.js')),
-        );
+        const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
 
-        // Build the HTML content using shared utility
-        return generateWebviewHTML({
-            scriptUri,
+        // Build bundle URIs for webpack code-split bundles
+        const bundleUris = {
+            runtime: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'runtime-bundle.js'))
+            ),
+            vendors: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'vendors-bundle.js'))
+            ),
+            common: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'common-bundle.js'))
+            ),
+            feature: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'configure-bundle.js'))
+            ),
+        };
+
+        // Generate HTML using 4-bundle helper
+        return getWebviewHTMLWithBundles({
+            bundleUris,
             nonce,
-            title: 'Configure Project',
             cspSource: this.panel!.webview.cspSource,
-            includeLoadingSpinner: false,
+            title: 'Configure Project',
             additionalImgSources: ['https:', 'data:'],
         });
     }
@@ -110,24 +133,13 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             frontends: registry.components.frontends,
             backends: registry.components.backends,
             dependencies: registry.components.dependencies,
-            externalSystems: registry.components.externalSystems,
+            integrations: registry.components.integrations,
             appBuilder: registry.components.appBuilder,
             envVars: registry.envVars || {},
         };
 
         // Load existing env values from component .env files
         const existingEnvValues = await this.loadExistingEnvValues(project);
-
-        // Debug: Log what we're sending
-        this.logger.info('[ConfigureProjectWebview] Sending data to webview:');
-        this.logger.info(`  - Frontends: ${componentsData.frontends?.length || 0}`);
-        this.logger.info(`  - Backends: ${componentsData.backends?.length || 0}`);
-        this.logger.info(`  - Dependencies: ${componentsData.dependencies?.length || 0}`);
-        this.logger.info(`  - App Builder: ${componentsData.appBuilder?.length || 0}`);
-        this.logger.info(`  - EnvVars keys: ${Object.keys(componentsData.envVars || {}).length}`);
-        this.logger.info(`  - Existing env values: ${Object.keys(existingEnvValues).length} components`);
-        this.logger.info(`  - Project componentSelections: ${JSON.stringify(project.componentSelections || 'none')}`);
-        this.logger.info(`  - Project componentInstances: ${project.componentInstances ? Object.keys(project.componentInstances).join(', ') : 'none'}`);
 
         // Get current theme
         const theme = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
@@ -148,8 +160,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 if (!project) {
                     throw new Error('No project found');
                 }
-
-                this.logger.info('[Configure] Saving configuration...');
 
                 // Detect if mesh configuration changed BEFORE saving
                 const meshChanges = await detectMeshChanges(project, data.componentConfigs);
@@ -185,9 +195,19 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 'API Mesh configuration changed. Redeploy mesh and restart demo to apply changes.',
                                 'Redeploy Mesh',
                                 'Later',
-                            ).then(selection => {
+                            ).then(async selection => {
                                 if (selection === 'Redeploy Mesh') {
-                                    vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                    // deployMesh command handles its own errors
+                                    await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                } else if (selection === 'Later') {
+                                    // Track that user declined the update
+                                    if (project.meshState) {
+                                        project.meshState.userDeclinedUpdate = true;
+                                        project.meshState.declinedAt = new Date().toISOString();
+                                        await this.stateManager.saveProject(project);
+                                        // Refresh dashboard to show declined state
+                                        await ProjectDashboardWebviewCommand.refreshStatus();
+                                    }
                                 }
                             });
                         } else {
@@ -202,9 +222,19 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                                 'API Mesh configuration changed. Redeploy mesh to apply changes.',
                                 'Redeploy Mesh',
                                 'Later',
-                            ).then(selection => {
+                            ).then(async selection => {
                                 if (selection === 'Redeploy Mesh') {
-                                    vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                    // deployMesh command handles its own errors
+                                    await vscode.commands.executeCommand('demoBuilder.deployMesh');
+                                } else if (selection === 'Later') {
+                                    // Track that user declined the update
+                                    if (project.meshState) {
+                                        project.meshState.userDeclinedUpdate = true;
+                                        project.meshState.declinedAt = new Date().toISOString();
+                                        await this.stateManager.saveProject(project);
+                                        // Refresh dashboard to show declined state
+                                        await ProjectDashboardWebviewCommand.refreshStatus();
+                                    }
                                 }
                             });
                         } else {
@@ -218,11 +248,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                             vscode.window.showInformationMessage(
                                 'Restart the demo to apply configuration changes.',
                                 'Restart Demo',
-                            ).then(selection => {
+                            ).then(async selection => {
                                 if (selection === 'Restart Demo') {
-                                    vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
-                                        vscode.commands.executeCommand('demoBuilder.startDemo');
-                                    });
+                                    try {
+                                        await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                                        await vscode.commands.executeCommand('demoBuilder.startDemo');
+                                    } catch (error) {
+                                        // Commands handle their own error display
+                                        this.logger.error('[Configure] Failed to restart demo:', error as Error);
+                                    }
                                 }
                             });
                         } else {
@@ -235,7 +269,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             } catch (error) {
                 this.logger.error('[Configure] Failed to save configuration:', error as Error);
                 await vscode.window.showErrorMessage(`Failed to save configuration: ${(error as Error).message}`);
-                return { success: false, error: (error as Error).message };
+                return { success: false, error: (error as Error).message, code: ErrorCode.CONFIG_INVALID };
             }
         });
 
@@ -262,13 +296,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
      */
     private async loadExistingEnvValues(project: Project): Promise<Record<string, Record<string, string>>> {
         const envValues: Record<string, Record<string, string>> = {};
-        
-        if (!project.componentInstances) {
-            return envValues;
-        }
 
         // Read each component's .env file
-        for (const [componentId, instance] of Object.entries(project.componentInstances)) {
+        // SOP §4: Using helper instead of inline Object.entries
+        for (const [componentId, instance] of getComponentInstanceEntries(project)) {
             if (!instance.path) {
                 continue;
             }
@@ -284,7 +315,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 try {
                     const envContent = await fs.readFile(envPath, 'utf-8');
                     envValues[componentId] = this.parseEnvFile(envContent);
-                    this.logger.info(`  - Loaded ${Object.keys(envValues[componentId]).length} env vars from ${componentId} (${path.basename(envPath)})`);
                     loaded = true;
                     break;  // Found it, stop looking
                 } catch {
@@ -293,7 +323,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             }
 
             if (!loaded) {
-                this.logger.info(`  - No .env file found for ${componentId} (will be created on save)`);
                 envValues[componentId] = {};
             }
         }
@@ -342,20 +371,18 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         
         // Project root .env
         filePaths.push(path.join(project.path, '.env'));
-        
+
         // Component .env files
-        if (project.componentInstances) {
-            for (const [componentId, instance] of Object.entries(project.componentInstances)) {
-                if (instance.path && componentConfigs[componentId]) {
-                    const envFileName = componentId.includes('nextjs') ? '.env.local' : '.env';
-                    filePaths.push(path.join(instance.path, envFileName));
-                }
+        // SOP §4: Using helper instead of inline Object.entries
+        for (const [componentId, instance] of getComponentInstanceEntries(project)) {
+            if (instance.path && componentConfigs[componentId]) {
+                const envFileName = componentId.includes('nextjs') ? '.env.local' : '.env';
+                filePaths.push(path.join(instance.path, envFileName));
             }
         }
         
-        // Register all paths with file watcher
+        // Register all paths with file watcher (silent - internal coordination)
         await vscode.commands.executeCommand('demoBuilder._internal.registerProgrammaticWrites', filePaths);
-        this.logger.debug(`[Configure] Registered ${filePaths.length} programmatic writes`);
     }
 
     /**
@@ -363,23 +390,26 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
      */
     private async regenerateEnvFiles(project: Project, componentConfigs: ComponentConfigs): Promise<void> {
         try {
+            // Count files for summary log
+            let fileCount = 1;  // Project root .env
+
             // Regenerate project root .env file
             await this.generateProjectEnvFile(project, componentConfigs);
 
             // Regenerate component .env files
-            if (project.componentInstances) {
-                for (const [componentId, instance] of Object.entries(project.componentInstances)) {
-                    if (instance.path && componentConfigs[componentId]) {
-                        await this.generateComponentEnvFile(
-                            instance.path,
-                            componentId,
-                            componentConfigs[componentId],
-                        );
-                    }
+            // SOP §4: Using helper instead of inline Object.entries
+            for (const [componentId, instance] of getComponentInstanceEntries(project)) {
+                if (instance.path && componentConfigs[componentId]) {
+                    await this.generateComponentEnvFile(
+                        instance.path,
+                        componentId,
+                        componentConfigs[componentId],
+                    );
+                    fileCount++;
                 }
             }
 
-            this.logger.info('[Configure] Successfully regenerated .env files');
+            this.logger.debug(`[Configure] Regenerated ${fileCount} .env files`);
         } catch (error) {
             this.logger.error('[Configure] Failed to regenerate .env files:', error as Error);
             throw error;
@@ -402,26 +432,30 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // Add project-wide configuration from componentConfigs
         // Collect all unique keys across all components
+        // SOP §4: Extract Object operations to variables
         const allKeys = new Set<string>();
-        Object.values(componentConfigs).forEach((config) => {
-            Object.keys(config).forEach(key => allKeys.add(key));
-        });
+        const configValues = Object.values(componentConfigs);
+        for (const config of configValues) {
+            const configKeys = Object.keys(config);
+            for (const key of configKeys) {
+                allKeys.add(key);
+            }
+        }
 
         // Write each unique key (using first component's value)
         // Skip empty, null, or undefined values
-        allKeys.forEach(key => {
+        for (const key of allKeys) {
             // Find first component that has this key with a non-empty value
-            for (const config of Object.values(componentConfigs)) {
+            for (const config of configValues) {
                 const value = config[key];
                 if (value !== undefined && value !== null && value !== '') {
                     lines.push(`${key}=${value}`);
                     break;
                 }
             }
-        });
+        }
 
         await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
-        this.logger.debug(`[Configure] Generated project .env at ${envPath}`);
     }
 
     /**
@@ -445,14 +479,15 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
 
         // Add all configuration values for this component
         // Skip empty, null, or undefined values (don't write them to file)
-        Object.entries(config).forEach(([key, value]) => {
+        // SOP §4: Using for...of instead of Object.entries().forEach()
+        const configEntries = Object.entries(config);
+        for (const [key, value] of configEntries) {
             if (value !== undefined && value !== null && value !== '') {
                 lines.push(`${key}=${value}`);
             }
-        });
+        }
 
         await fs.writeFile(envPath, lines.join('\n'), 'utf-8');
-        this.logger.debug(`[Configure] Generated component ${envFileName} at ${envPath}`);
     }
 }
 

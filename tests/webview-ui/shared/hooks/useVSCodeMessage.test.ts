@@ -1,10 +1,10 @@
 import { renderHook } from '@testing-library/react';
-import { useVSCodeMessage } from '@/webview-ui/shared/hooks/useVSCodeMessage';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { useVSCodeMessage } from '@/core/ui/hooks/useVSCodeMessage';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 // Mock the vscode API
-jest.mock('@/core/ui/vscode-api', () => ({
-  vscode: {
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
+  webviewClient: {
     onMessage: jest.fn(),
     postMessage: jest.fn()
   }
@@ -16,7 +16,7 @@ describe('useVSCodeMessage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUnsubscribe = jest.fn();
-    (vscode.onMessage as jest.Mock).mockReturnValue(mockUnsubscribe);
+    (webviewClient.onMessage as jest.Mock).mockReturnValue(mockUnsubscribe);
   });
 
   describe('basic functionality', () => {
@@ -25,15 +25,15 @@ describe('useVSCodeMessage', () => {
 
       renderHook(() => useVSCodeMessage('test-message', callback));
 
-      expect(vscode.onMessage).toHaveBeenCalledWith('test-message', expect.any(Function));
-      expect(vscode.onMessage).toHaveBeenCalledTimes(1);
+      expect(webviewClient.onMessage).toHaveBeenCalledWith('test-message', expect.any(Function));
+      expect(webviewClient.onMessage).toHaveBeenCalledTimes(1);
     });
 
     it('calls callback when message is received', () => {
       const callback = jest.fn();
       let messageHandler: ((data: any) => void) | undefined;
 
-      (vscode.onMessage as jest.Mock).mockImplementation((type, handler) => {
+      (webviewClient.onMessage as jest.Mock).mockImplementation((type, handler) => {
         messageHandler = handler;
         return mockUnsubscribe;
       });
@@ -52,7 +52,7 @@ describe('useVSCodeMessage', () => {
       const callback = jest.fn();
       let messageHandler: ((data: any) => void) | undefined;
 
-      (vscode.onMessage as jest.Mock).mockImplementation((type, handler) => {
+      (webviewClient.onMessage as jest.Mock).mockImplementation((type, handler) => {
         messageHandler = handler;
         return mockUnsubscribe;
       });
@@ -68,7 +68,7 @@ describe('useVSCodeMessage', () => {
       const callback = jest.fn();
       let messageHandler: ((data: any) => void) | undefined;
 
-      (vscode.onMessage as jest.Mock).mockImplementation((type, handler) => {
+      (webviewClient.onMessage as jest.Mock).mockImplementation((type, handler) => {
         messageHandler = handler;
         return mockUnsubscribe;
       });
@@ -102,15 +102,15 @@ describe('useVSCodeMessage', () => {
         { initialProps: { type: 'message-1' } }
       );
 
-      expect(vscode.onMessage).toHaveBeenCalledWith('message-1', expect.any(Function));
-      expect(vscode.onMessage).toHaveBeenCalledTimes(1);
+      expect(webviewClient.onMessage).toHaveBeenCalledWith('message-1', expect.any(Function));
+      expect(webviewClient.onMessage).toHaveBeenCalledTimes(1);
 
       // Change message type
       rerender({ type: 'message-2' });
 
       expect(mockUnsubscribe).toHaveBeenCalledTimes(1); // Unsubscribe from old
-      expect(vscode.onMessage).toHaveBeenCalledWith('message-2', expect.any(Function));
-      expect(vscode.onMessage).toHaveBeenCalledTimes(2); // Subscribe to new
+      expect(webviewClient.onMessage).toHaveBeenCalledWith('message-2', expect.any(Function));
+      expect(webviewClient.onMessage).toHaveBeenCalledTimes(2); // Subscribe to new
     });
 
     it('does not resubscribe when callback changes without deps', () => {
@@ -122,13 +122,13 @@ describe('useVSCodeMessage', () => {
         { initialProps: { callback: callback1 } }
       );
 
-      expect(vscode.onMessage).toHaveBeenCalledTimes(1);
+      expect(webviewClient.onMessage).toHaveBeenCalledTimes(1);
 
       // Change callback
       rerender({ callback: callback2 });
 
       // Should not resubscribe (callback is memoized)
-      expect(vscode.onMessage).toHaveBeenCalledTimes(1);
+      expect(webviewClient.onMessage).toHaveBeenCalledTimes(1);
       expect(mockUnsubscribe).not.toHaveBeenCalled();
     });
   });
@@ -139,7 +139,7 @@ describe('useVSCodeMessage', () => {
       const callback2 = jest.fn();
       let messageHandler: ((data: any) => void) | undefined;
 
-      (vscode.onMessage as jest.Mock).mockImplementation((type, handler) => {
+      (webviewClient.onMessage as jest.Mock).mockImplementation((type, handler) => {
         messageHandler = handler;
         return mockUnsubscribe;
       });
@@ -168,7 +168,7 @@ describe('useVSCodeMessage', () => {
       const callback2 = jest.fn();
       let messageHandler: ((data: any) => void) | undefined;
 
-      (vscode.onMessage as jest.Mock).mockImplementation((type, handler) => {
+      (webviewClient.onMessage as jest.Mock).mockImplementation((type, handler) => {
         messageHandler = handler;
         return mockUnsubscribe;
       });
@@ -197,7 +197,7 @@ describe('useVSCodeMessage', () => {
       const callback = jest.fn();
       let messageHandler: ((data: any) => void) | undefined;
 
-      (vscode.onMessage as jest.Mock).mockImplementation((type, handler) => {
+      (webviewClient.onMessage as jest.Mock).mockImplementation((type, handler) => {
         messageHandler = handler;
         return mockUnsubscribe;
       });
@@ -218,7 +218,7 @@ describe('useVSCodeMessage', () => {
       const callback = jest.fn();
       let messageHandler: ((data: any) => void) | undefined;
 
-      (vscode.onMessage as jest.Mock).mockImplementation((type, handler) => {
+      (webviewClient.onMessage as jest.Mock).mockImplementation((type, handler) => {
         messageHandler = handler;
         return mockUnsubscribe;
       });
@@ -244,7 +244,7 @@ describe('useVSCodeMessage', () => {
       const callback = jest.fn<void, [TestData]>();
       let messageHandler: ((data: any) => void) | undefined;
 
-      (vscode.onMessage as jest.Mock).mockImplementation((type, handler) => {
+      (webviewClient.onMessage as jest.Mock).mockImplementation((type, handler) => {
         messageHandler = handler;
         return mockUnsubscribe;
       });

@@ -1,20 +1,23 @@
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/core/base';
 import { CommandManager } from '@/commands/commandManager';
-import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
-import { parseJSON } from '@/types/typeGuards';
-import { AutoUpdater } from '@/utils/autoUpdater';
-import { CommandExecutor } from '@/core/shell';
 import { initializeLogger, Logger } from '@/core/logging';
+import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { StatusBarManager, WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
+import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
+import { AuthenticationService } from '@/features/authentication';
+import { parseJSON, getProjectFrontendPort } from '@/types/typeGuards';
+import { AutoUpdater } from '@/utils/autoUpdater';
 
 let logger: Logger;
 let statusBar: StatusBarManager;
 let stateManager: StateManager;
 let autoUpdater: AutoUpdater;
 let externalCommandManager: CommandExecutor;
+let authenticationService: AuthenticationService;
 
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
@@ -46,7 +49,7 @@ export async function activate(context: vscode.ExtensionContext) {
     
     logger = new Logger('Demo Builder');
     const version = context.extension.packageJSON.version || '1.0.0';
-    logger.info(`[Extension] Adobe Demo Builder v${version} starting...`);
+    logger.debug(`[Extension] Adobe Demo Builder v${version} starting...`);
 
     try {
         // Initialize state manager
@@ -58,6 +61,16 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register CommandExecutor with ServiceLocator (breaks circular dependencies)
         ServiceLocator.setCommandExecutor(externalCommandManager);
+
+        // Initialize authentication service
+        authenticationService = new AuthenticationService(
+            context.extensionPath,
+            logger,
+            externalCommandManager
+        );
+
+        // Register AuthenticationService with ServiceLocator
+        ServiceLocator.setAuthenticationService(authenticationService);
 
         // Check workspace trust
         if (!vscode.workspace.isTrusted) {
@@ -108,16 +121,19 @@ export async function activate(context: vscode.ExtensionContext) {
         // 2. When a webview closes, ensure user isn't left with no webviews
         BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
             // Small delay to let disposal complete before checking
-            await new Promise(resolve => setTimeout(resolve, 100));
-            
+            await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI_UPDATE_DELAY));
+
             // Check if any webviews are still open using the singleton map
             const activeWebviewCount = BaseWebviewCommand.getActivePanelCount();
-            
-            logger.debug(`[Extension] Webview ${webviewId} closed. Active webviews remaining: ${activeWebviewCount}`);
-            
+
+            // Don't auto-reopen Welcome if we're transitioning between webviews
+            if (BaseWebviewCommand.isWebviewTransitionInProgress()) {
+                return;
+            }
+
             // If no webviews are open, show Welcome to prevent user being stuck
             if (activeWebviewCount === 0) {
-                logger.info('[Extension] No webviews open after disposal - opening Welcome');
+                logger.debug('[Extension] No webviews open after disposal - opening Welcome');
                 await vscode.commands.executeCommand('demoBuilder.showWelcome');
             }
         });
@@ -128,7 +144,10 @@ export async function activate(context: vscode.ExtensionContext) {
         // (VSCode validates commands exist when assigned to status bar items)
         context.subscriptions.push(
             vscode.commands.registerCommand('demoBuilder.showLogs', () => {
-                debugLogger.toggle();
+                debugLogger.show(false); // Show Logs channel, take focus
+            }),
+            vscode.commands.registerCommand('demoBuilder.showDebugLogs', () => {
+                debugLogger.showDebug(false); // Show Debug channel, take focus
             }),
         );
 
@@ -136,7 +155,7 @@ export async function activate(context: vscode.ExtensionContext) {
             vscode.commands.registerCommand('demoBuilder.restartDemo', async () => {
                 await vscode.commands.executeCommand('demoBuilder.stopDemo');
                 // Small delay to ensure clean stop
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STATUS_UPDATE_DELAY));
                 await vscode.commands.executeCommand('demoBuilder.startDemo');
             }),
         );
@@ -144,7 +163,7 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(
             vscode.commands.registerCommand('demoBuilder.openBrowser', async () => {
                 const project = await stateManager.getCurrentProject();
-                const port = project?.componentInstances?.['citisignal-nextjs']?.port;
+                const port = getProjectFrontendPort(project);
                 if (port) {
                     const url = `http://localhost:${port}`;
                     await vscode.env.openExternal(vscode.Uri.parse(url));
@@ -193,7 +212,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 // Remove flag immediately
                 await fs.unlink(flagFile).catch(() => {});
                 
-                logger.info(`[Extension] Opening Project Dashboard after restart for: ${projectName}`);
+                logger.debug(`[Extension] Opening Project Dashboard after restart for: ${projectName}`);
                 
                 // Ensure project is loaded
                 const project = await stateManager.getCurrentProject();
@@ -226,7 +245,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 const project = await stateManager.getCurrentProject();
                 if (project) {
                     statusBar.updateProject(project);
-                    logger.info(`[Extension] Loaded existing project: ${project.name}`);
+                    logger.debug(`[Extension] Loaded existing project: ${project.name}`);
                 }
             }
             
@@ -261,7 +280,7 @@ export async function activate(context: vscode.ExtensionContext) {
                         logger.debug('[Updates] Background check failed:', err);
                     },
                 );
-            }, 10000); // 10 second delay
+            }, TIMEOUTS.STARTUP_UPDATE_CHECK_DELAY);
         }
 
         logger.info('[Extension] Ready');
@@ -275,229 +294,35 @@ export async function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {
-    logger?.info('Adobe Demo Builder extension is deactivating...');
+    logger.info('Adobe Demo Builder extension is deactivating...');
 
     // Clean up resources
     statusBar?.dispose();
     autoUpdater?.dispose();
     stateManager?.dispose();
     externalCommandManager?.dispose();
+    // Note: authenticationService has no dispose method
 
     // Reset service locator
     ServiceLocator.reset();
 
-    logger?.info('Adobe Demo Builder extension deactivated.');
+    logger.info('Adobe Demo Builder extension deactivated.');
 }
 
 function registerFileWatchers(context: vscode.ExtensionContext) {
-    // Watch for .env file changes in workspace (component directories)
-    const envWatcher = vscode.workspace.createFileSystemWatcher(
-        '**/{.env,.env.local}',
-        false, // create
-        false, // change
-        false,  // delete
+    // Create workspace watcher manager and env file watcher service
+    const watcherManager = new WorkspaceWatcherManager();
+    const envWatcherService = new EnvFileWatcherService(
+        context,
+        stateManager,
+        watcherManager,
+        logger,
     );
-    
-    // Track when demo starts to suppress notifications during startup
-    let demoStartTime: number | null = null;
-    const STARTUP_GRACE_PERIOD = 10000; // 10 seconds grace period after demo starts
-    
-    // Track if notifications have been shown for current demo session
-    // Show once per session, suppress subsequent changes until action taken
-    let restartNotificationShown = false;
-    let meshNotificationShown = false;
-    
-    // Track programmatic writes (from Configure screen) to suppress file watcher
-    // Configure screen handles its own restart notifications
-    const programmaticWrites = new Set<string>();
-    
-    // Track file content hashes to detect actual changes (not just file events)
-    const fileContentHashes = new Map<string, string>();
-    
-    const crypto = require('crypto');
-    const fs = require('fs');
-    
-    const getFileHash = async (filePath: string): Promise<string | null> => {
-        try {
-            const content = await fs.promises.readFile(filePath, 'utf-8');
-            return crypto.createHash('sha256').update(content).digest('hex');
-        } catch (error) {
-            logger.debug(`[Env Watcher] Could not read file ${filePath}:`, error);
-            return null;
-        }
-    };
-    
-    // Listen for demo start events to set grace period and reset restart notification flag
-    context.subscriptions.push(
-        vscode.commands.registerCommand('demoBuilder._internal.demoStarted', () => {
-            demoStartTime = Date.now();
-            restartNotificationShown = false;
-            // Note: meshNotificationShown stays unchanged (mesh doesn't auto-reset on demo restart)
-            logger.debug('[Env Watcher] Demo started, grace period active for 10s, restart notification flag reset');
-        }),
-    );
-    
-    // Listen for demo stop events to reset grace period and clear hashes
-    context.subscriptions.push(
-        vscode.commands.registerCommand('demoBuilder._internal.demoStopped', () => {
-            demoStartTime = null;
-            fileContentHashes.clear();
-            // Note: Don't reset notification flags on stop - only on start or when action taken
-            logger.debug('[Env Watcher] Demo stopped, grace period reset, file hashes cleared');
-        }),
-    );
-    
-    // Listen for Configure screen to register programmatic writes
-    // This allows us to ignore Configure screen's own writes (it shows its own notification)
-    context.subscriptions.push(
-        vscode.commands.registerCommand('demoBuilder._internal.registerProgrammaticWrites', 
-            (filePaths: string[]) => {
-                filePaths.forEach(fp => programmaticWrites.add(fp));
-                logger.debug(`[Env Watcher] Registered ${filePaths.length} programmatic writes to ignore`);
-                
-                // Auto-cleanup after 5 seconds in case watcher events are delayed
-                setTimeout(() => {
-                    filePaths.forEach(fp => programmaticWrites.delete(fp));
-                }, 5000);
-            },
-        ),
-    );
-    
-    // Listen for demo start to initialize file hashes (capture baseline state)
-    // This ensures first manual change is detected (not just initialization)
-    context.subscriptions.push(
-        vscode.commands.registerCommand('demoBuilder._internal.initializeFileHashes',
-            async (filePaths: string[]) => {
-                logger.debug(`[Env Watcher] Initializing hashes for ${filePaths.length} files`);
-                for (const filePath of filePaths) {
-                    const hash = await getFileHash(filePath);
-                    if (hash) {
-                        fileContentHashes.set(filePath, hash);
-                        logger.debug(`[Env Watcher] Initialized hash for ${filePath}: ${hash.substring(0, 8)}...`);
-                    }
-                }
-                logger.info(`[Env Watcher] Initialized ${fileContentHashes.size} file hashes`);
-            },
-        ),
-    );
-    
-    // Listen for action taken events to reset notification flags
-    context.subscriptions.push(
-        vscode.commands.registerCommand('demoBuilder._internal.restartActionTaken', () => {
-            restartNotificationShown = false;
-            logger.debug('[Notification] Restart action taken, flag reset');
-        }),
-    );
-    
-    context.subscriptions.push(
-        vscode.commands.registerCommand('demoBuilder._internal.meshActionTaken', () => {
-            meshNotificationShown = false;
-            logger.debug('[Notification] Mesh deployment action taken, flag reset');
-        }),
-    );
-    
-    // Commands for Configure UI to check notification state
-    context.subscriptions.push(
-        vscode.commands.registerCommand('demoBuilder._internal.shouldShowRestartNotification', () => {
-            return !restartNotificationShown;
-        }),
-    );
-    
-    context.subscriptions.push(
-        vscode.commands.registerCommand('demoBuilder._internal.shouldShowMeshNotification', () => {
-            return !meshNotificationShown;
-        }),
-    );
-    
-    // Commands to mark notifications as shown
-    context.subscriptions.push(
-        vscode.commands.registerCommand('demoBuilder._internal.markRestartNotificationShown', () => {
-            restartNotificationShown = true;
-            logger.debug('[Notification] Restart notification marked as shown');
-        }),
-    );
-    
-    context.subscriptions.push(
-        vscode.commands.registerCommand('demoBuilder._internal.markMeshNotificationShown', () => {
-            meshNotificationShown = true;
-            logger.debug('[Notification] Mesh notification marked as shown');
-        }),
-    );
-    
-    envWatcher.onDidChange(async uri => {
-        try {
-            const filePath = uri.fsPath;
-            logger.debug(`[Env Watcher] File system event for: ${filePath}`);
-            
-            // Check if we're in the demo startup grace period
-            if (demoStartTime && Date.now() - demoStartTime < STARTUP_GRACE_PERIOD) {
-                logger.debug('[Env Watcher] Ignoring change during demo startup grace period');
-                return;
-            }
-            
-            // Check if this is a programmatic write (Configure screen handles its own notifications)
-            if (programmaticWrites.has(filePath)) {
-                logger.debug('[Env Watcher] Ignoring programmatic write (Configure screen handles notification)');
-                programmaticWrites.delete(filePath); // Clean up immediately
-                return;
-            }
-            
-            // Calculate current file hash
-            const currentHash = await getFileHash(filePath);
-            if (!currentHash) {
-                logger.debug('[Env Watcher] File no longer readable, skipping');
-                return;
-            }
-            
-            // Check if this is the first time we're seeing this file
-            const previousHash = fileContentHashes.get(filePath);
-            if (previousHash === undefined) {
-                // First time seeing this file - initialize hash without notification
-                fileContentHashes.set(filePath, currentHash);
-                logger.debug(`[Env Watcher] First time tracking file, initialized hash: ${currentHash.substring(0, 8)}...`);
-                return;
-            }
-            
-            // Check if content actually changed
-            if (previousHash === currentHash) {
-                logger.debug('[Env Watcher] ✓ File event but content unchanged (hash match), ignoring');
-                return;
-            }
-            
-            // Content actually changed - update hash and proceed
-            fileContentHashes.set(filePath, currentHash);
-            logger.info(`[Env Watcher] ✓ Content actually changed: ${filePath}`);
-            logger.debug(`[Env Watcher] Hash changed from ${previousHash.substring(0, 8)}... to ${currentHash.substring(0, 8)}...`);
-            
-            // Only show restart notification if a demo is currently running
-            const currentProject = await stateManager.getCurrentProject();
-            if (currentProject && currentProject.status === 'running') {
-                // Check if we've already shown a restart notification this session
-                if (restartNotificationShown) {
-                    logger.debug('[Env Watcher] Restart notification already shown this session, suppressing');
-                    return;
-                }
-                
-                logger.info('[Env Watcher] Demo is running, suggesting restart');
-                restartNotificationShown = true;
-                
-                vscode.window.showInformationMessage(
-                    'Environment configuration changed. Restart the demo to apply changes.',
-                    'Restart Demo',
-                ).then(selection => {
-                    if (selection === 'Restart Demo') {
-                        vscode.commands.executeCommand('demoBuilder.stopDemo').then(() => {
-                            vscode.commands.executeCommand('demoBuilder.startDemo');
-                        });
-                    }
-                });
-            } else {
-                logger.debug('[Env Watcher] No running demo, skipping restart notification');
-            }
-        } catch (error) {
-            logger.error('[Env Watcher] Error handling file change:', error as Error);
-        }
-    });
-    
-    context.subscriptions.push(envWatcher);
+
+    // Initialize watchers for all workspace folders
+    envWatcherService.initialize();
+
+    // Register for disposal on extension deactivation
+    context.subscriptions.push(envWatcherService);
+    context.subscriptions.push(watcherManager);
 }

@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import {
     ComponentDefinition,
     ComponentRegistry,
@@ -10,7 +11,7 @@ import {
     PresetDefinition,
 } from '@/types';
 import { ProjectConfig } from '@/types/handlers';
-import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
+import { validateNodeVersion } from '@/core/validation/securityValidation';
 
 export class ComponentRegistryManager {
     private rawLoader: ConfigurationLoader<RawComponentRegistry>;
@@ -21,97 +22,172 @@ export class ComponentRegistryManager {
         this.rawLoader = new ConfigurationLoader<RawComponentRegistry>(registryPath);
     }
 
+    /**
+     * Formats validation error with component context
+     *
+     * Helper method to provide consistent error messages when Node.js version validation
+     * fails, helping developers quickly identify and fix issues in components.json.
+     *
+     * @param componentName - Name of the component with invalid version
+     * @param componentType - Type of component (e.g., "component", "infrastructure")
+     * @param originalError - Original validation error from validateNodeVersion
+     * @returns Formatted error with component context and fix instructions
+     */
+    private formatNodeVersionError(
+        componentName: string,
+        componentType: string,
+        originalError: Error
+    ): Error {
+        return new Error(
+            `Invalid Node version in ${componentType} "${componentName}": ${originalError.message}\n` +
+            `Please edit templates/components.json and ensure nodeVersion uses valid format (e.g., "20", "20.11.0").`
+        );
+    }
+
+    /**
+     * Validates and adds a Node.js version to a collection
+     *
+     * SECURITY: Defense-in-depth validation for CWE-77 (Command Injection)
+     * - Validates nodeVersion from components.json before it reaches CommandExecutor
+     * - Catches malicious versions from manually-edited configuration files
+     * - Prevents command injection attacks via fnm/nvm version parameters
+     *
+     * Error Context: Includes component name to help developers identify and fix issues
+     *
+     * @param version - Node.js version string to validate and add
+     * @param versions - Set to add the validated version to
+     * @param componentName - Component name for error context
+     * @param componentType - Component type (e.g., "component", "infrastructure") for error messages
+     * @throws Error with component context if validation fails
+     *
+     * @example
+     * // Valid version - added to set
+     * this.validateAndAddNodeVersion('20', nodeVersions, 'Frontend', 'component');
+     *
+     * @example
+     * // Invalid version - throws error with context
+     * this.validateAndAddNodeVersion('20; rm -rf /', nodeVersions, 'Frontend', 'component');
+     * // Throws: "Invalid Node version in component "Frontend": Invalid Node.js version format..."
+     */
+    private validateAndAddNodeVersion(
+        version: string,
+        versions: Set<string>,
+        componentName: string,
+        componentType: string = 'component'
+    ): void {
+        try {
+            // SECURITY: Validate nodeVersion from components.json (defense-in-depth for CWE-77)
+            // This validation happens at the SOURCE (component registry) before values reach
+            // CommandExecutor, providing an additional layer of security against command injection.
+            validateNodeVersion(version);
+            versions.add(version);
+        } catch (error) {
+            throw this.formatNodeVersionError(componentName, componentType, error as Error);
+        }
+    }
+
+    /**
+     * Validates and adds a Node.js version to a mapping
+     *
+     * SECURITY: Defense-in-depth validation for CWE-77 (Command Injection)
+     * - Validates nodeVersion from components.json before it reaches CommandExecutor
+     * - Catches malicious versions from manually-edited configuration files
+     * - Prevents command injection attacks via fnm/nvm version parameters
+     *
+     * Error Context: Includes component name to help developers identify and fix issues
+     *
+     * @param version - Node.js version string to validate
+     * @param componentName - Component name to map to the version
+     * @param mapping - Record to add the validated version mapping to
+     * @param componentType - Component type (e.g., "component", "infrastructure") for error messages
+     * @throws Error with component context if validation fails
+     *
+     * @example
+     * // Valid version - added to mapping
+     * this.validateAndMapNodeVersion('20', 'Frontend', mapping, 'component');
+     * // Result: mapping['20'] = 'Frontend'
+     *
+     * @example
+     * // Invalid version - throws error with context
+     * this.validateAndMapNodeVersion('20; rm -rf /', 'Frontend', mapping, 'component');
+     * // Throws: "Invalid Node version in component "Frontend": Invalid Node.js version format..."
+     */
+    private validateAndMapNodeVersion(
+        version: string,
+        componentName: string,
+        mapping: Record<string, string>,
+        componentType: string = 'component'
+    ): void {
+        try {
+            // SECURITY: Validate nodeVersion from components.json (defense-in-depth for CWE-77)
+            // This validation happens at the SOURCE (component registry) before values reach
+            // CommandExecutor, providing an additional layer of security against command injection.
+            validateNodeVersion(version);
+            mapping[version] = componentName;
+        } catch (error) {
+            throw this.formatNodeVersionError(componentName, componentType, error as Error);
+        }
+    }
+
     async loadRegistry(): Promise<ComponentRegistry> {
         if (!this.transformedRegistry) {
             const rawRegistry = await this.rawLoader.load({
-                validationErrorMessage: 'Failed to parse component registry'
+                validationErrorMessage: 'Failed to parse component registry',
             });
             this.transformedRegistry = this.transformToGroupedStructure(rawRegistry);
         }
         return this.transformedRegistry;
     }
 
-    /**
-     * Transform v2.0 flat structure to grouped structure for internal use
-     * Uses selectionGroups to organize components, builds envVars arrays from shared registry
-     */
     private transformToGroupedStructure(raw: RawComponentRegistry): ComponentRegistry {
         const components: {
             frontends: TransformedComponentDefinition[];
             backends: TransformedComponentDefinition[];
             dependencies: TransformedComponentDefinition[];
-            externalSystems: TransformedComponentDefinition[];
+            integrations: TransformedComponentDefinition[];
             appBuilder: TransformedComponentDefinition[];
         } = {
             frontends: [],
             backends: [],
             dependencies: [],
-            externalSystems: [],
+            integrations: [],
             appBuilder: [],
         };
 
         const groups = raw.selectionGroups || {};
-        const components_map = raw.components || {};
+        const componentsMap = raw.components || {};
 
-        // Helper to enhance a component with envVars and services
         const enhanceComponent = (id: string): TransformedComponentDefinition | null => {
-            const comp = components_map[id];
+            const comp = componentsMap[id];
             if (!comp) return null;
-            
+
             return {
                 ...comp,
                 id,
-                configuration: comp.configuration ? {
-                    ...comp.configuration,
-                    envVars: this.buildEnvVarsForComponent(id, comp, raw.envVars || {}),
-                    services: comp.configuration.requiredServices 
-                        ? this.buildServicesForComponent(comp.configuration.requiredServices, raw.services || {}, raw.envVars || {})
-                        : undefined,
-                } : undefined,
+                configuration: comp.configuration,
             };
         };
 
-        // Map selectionGroups to internal buckets
-        (groups.frontend || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.frontends.push(enhanced);
-        });
+        const addComponents = (groupIds: string[] | undefined, target: TransformedComponentDefinition[]) => {
+            (groupIds || []).forEach((id: string) => {
+                const enhanced = enhanceComponent(id);
+                if (enhanced) target.push(enhanced);
+            });
+        };
 
-        (groups.backend || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.backends.push(enhanced);
-        });
+        addComponents(groups.frontends, components.frontends);
+        addComponents(groups.backends, components.backends);
+        addComponents(groups.appBuilderApps, components.appBuilder);
+        addComponents(groups.integrations, components.integrations);
+        addComponents(groups.dependencies, components.dependencies);
 
-        (groups.appBuilder || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.appBuilder.push(enhanced);
-        });
-
-        (groups.externalSystems || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.externalSystems.push(enhanced);
-        });
-
-        // Map dependencies from selectionGroups (explicit list)
-        (groups.dependencies || []).forEach((id: string) => {
-            const enhanced = enhanceComponent(id);
-            if (enhanced) components.dependencies.push(enhanced);
-        });
-
-        // Process infrastructure components (always required)
         const infrastructure: TransformedComponentDefinition[] = [];
         if (raw.infrastructure) {
             for (const [id, comp] of Object.entries(raw.infrastructure)) {
                 const enhanced: TransformedComponentDefinition = {
                     ...comp,
                     id,
-                    configuration: comp.configuration ? {
-                        ...comp.configuration,
-                        envVars: this.buildEnvVarsForComponent(id, comp, raw.envVars || {}),
-                        services: comp.configuration.requiredServices
-                            ? this.buildServicesForComponent(comp.configuration.requiredServices, raw.services || {}, raw.envVars || {})
-                            : undefined,
-                    } : undefined,
+                    configuration: comp.configuration,
                 };
                 infrastructure.push(enhanced);
             }
@@ -126,38 +202,6 @@ export class ComponentRegistryManager {
         };
     }
 
-    /**
-     * Build envVars array for a component from the shared envVars registry
-     */
-    private buildEnvVarsForComponent(
-        componentId: string,
-        component: RawComponentDefinition,
-        sharedEnvVars: Record<string, Omit<EnvVarDefinition, 'key'>>,
-    ): EnvVarDefinition[] {
-        const envVars: EnvVarDefinition[] = [];
-        const envVarConfig = component.configuration?.envVars;
-        const requiredKeys = envVarConfig?.requiredEnvVars || [];
-        const optionalKeys = envVarConfig?.optionalEnvVars || [];
-        const allKeys = [...requiredKeys, ...optionalKeys];
-
-        for (const key of allKeys) {
-            const envVar = sharedEnvVars[key];
-            if (envVar) {
-                envVars.push({
-                    key,
-                    ...envVar,
-                    usedBy: [componentId],
-                });
-            }
-        }
-
-        return envVars;
-    }
-
-    /**
-     * Build services array for a component from service IDs
-     * Expands service references to full definitions with envVars
-     */
     private buildServicesForComponent(
         serviceIds: string[],
         services: Record<string, ServiceDefinition>,
@@ -168,7 +212,6 @@ export class ComponentRegistryManager {
         for (const serviceId of serviceIds) {
             const service = services[serviceId];
             if (service) {
-                // Build envVars for this service
                 const serviceEnvVars: EnvVarDefinition[] = [];
                 const requiredKeys = service.requiredEnvVars || [];
                 
@@ -207,9 +250,9 @@ export class ComponentRegistryManager {
         return registry.components.dependencies;
     }
 
-    async getExternalSystems(): Promise<TransformedComponentDefinition[]> {
+    async getIntegrations(): Promise<TransformedComponentDefinition[]> {
         const registry = await this.loadRegistry();
-        return registry.components.externalSystems || [];
+        return registry.components.integrations || [];
     }
 
     async getAppBuilder(): Promise<TransformedComponentDefinition[]> {
@@ -233,7 +276,7 @@ export class ComponentRegistryManager {
             ...registry.components.frontends,
             ...registry.components.backends,
             ...registry.components.dependencies,
-            ...(registry.components.externalSystems || []),
+            ...(registry.components.integrations || []),
             ...(registry.components.appBuilder || []),
         ];
         return allComponents.find(c => c.id === id) as ComponentDefinition | undefined;
@@ -251,11 +294,26 @@ export class ComponentRegistryManager {
         return frontend.compatibleBackends?.includes(backendId) || false;
     }
 
+    /**
+     * Gets all required Node.js versions for selected components
+     *
+     * SECURITY: Validates all Node.js versions from components.json to prevent
+     * command injection attacks (CWE-77). This provides defense-in-depth by
+     * catching malicious versions at the source before they reach CommandExecutor.
+     *
+     * @param frontendId - Frontend component ID (optional)
+     * @param backendId - Backend component ID (optional)
+     * @param dependencies - Array of dependency component IDs (optional)
+     * @param integrations - Array of integration component IDs (optional)
+     * @param appBuilder - Array of App Builder component IDs (optional)
+     * @returns Set of Node.js version strings required by all components
+     * @throws Error if any component has an invalid nodeVersion format
+     */
     async getRequiredNodeVersions(
         frontendId?: string,
         backendId?: string,
         dependencies?: string[],
-        externalSystems?: string[],
+        integrations?: string[],
         appBuilder?: string[],
     ): Promise<Set<string>> {
         const nodeVersions = new Set<string>();
@@ -264,7 +322,11 @@ export class ComponentRegistryManager {
         if (frontendId) {
             const frontend = await this.getComponentById(frontendId);
             if (frontend?.configuration?.nodeVersion) {
-                nodeVersions.add(frontend.configuration.nodeVersion);
+                this.validateAndAddNodeVersion(
+                    frontend.configuration.nodeVersion,
+                    nodeVersions,
+                    frontend.name
+                );
             }
         }
 
@@ -272,7 +334,11 @@ export class ComponentRegistryManager {
         if (backendId) {
             const backend = await this.getComponentById(backendId);
             if (backend?.configuration?.nodeVersion) {
-                nodeVersions.add(backend.configuration.nodeVersion);
+                this.validateAndAddNodeVersion(
+                    backend.configuration.nodeVersion,
+                    nodeVersions,
+                    backend.name
+                );
             }
         }
 
@@ -281,7 +347,11 @@ export class ComponentRegistryManager {
             for (const depId of dependencies) {
                 const dep = await this.getComponentById(depId);
                 if (dep?.configuration?.nodeVersion) {
-                    nodeVersions.add(dep.configuration.nodeVersion);
+                    this.validateAndAddNodeVersion(
+                        dep.configuration.nodeVersion,
+                        nodeVersions,
+                        dep.name
+                    );
                 }
             }
         }
@@ -291,7 +361,11 @@ export class ComponentRegistryManager {
             for (const appId of appBuilder) {
                 const app = await this.getComponentById(appId);
                 if (app?.configuration?.nodeVersion) {
-                    nodeVersions.add(app.configuration.nodeVersion);
+                    this.validateAndAddNodeVersion(
+                        app.configuration.nodeVersion,
+                        nodeVersions,
+                        app.name
+                    );
                 }
             }
         }
@@ -299,11 +373,26 @@ export class ComponentRegistryManager {
         return nodeVersions;
     }
 
+    /**
+     * Gets a mapping of Node.js versions to component names
+     *
+     * SECURITY: Validates all Node.js versions from components.json to prevent
+     * command injection attacks (CWE-77). This provides defense-in-depth by
+     * catching malicious versions at the source before they reach CommandExecutor.
+     *
+     * @param frontendId - Frontend component ID (optional)
+     * @param backendId - Backend component ID (optional)
+     * @param dependencies - Array of dependency component IDs (optional)
+     * @param integrations - Array of integration component IDs (optional)
+     * @param appBuilder - Array of App Builder component IDs (optional)
+     * @returns Record mapping Node.js versions to component names (e.g., {"20": "Frontend", "22": "App Builder"})
+     * @throws Error if any component has an invalid nodeVersion format
+     */
     async getNodeVersionToComponentMapping(
         frontendId?: string,
         backendId?: string,
         dependencies?: string[],
-        externalSystems?: string[],
+        integrations?: string[],
         appBuilder?: string[],
     ): Promise<Record<string, string>> {
         const mapping: Record<string, string> = {};
@@ -313,7 +402,12 @@ export class ComponentRegistryManager {
         if (registry.infrastructure) {
             for (const infra of registry.infrastructure) {
                 if (infra.configuration?.nodeVersion) {
-                    mapping[infra.configuration.nodeVersion] = infra.name;
+                    this.validateAndMapNodeVersion(
+                        infra.configuration.nodeVersion,
+                        infra.name,
+                        mapping,
+                        'infrastructure'
+                    );
                 }
             }
         }
@@ -322,7 +416,11 @@ export class ComponentRegistryManager {
         if (frontendId) {
             const frontend = await this.getComponentById(frontendId);
             if (frontend?.configuration?.nodeVersion) {
-                mapping[frontend.configuration.nodeVersion] = frontend.name;
+                this.validateAndMapNodeVersion(
+                    frontend.configuration.nodeVersion,
+                    frontend.name,
+                    mapping
+                );
             }
         }
 
@@ -330,7 +428,11 @@ export class ComponentRegistryManager {
         if (backendId) {
             const backend = await this.getComponentById(backendId);
             if (backend?.configuration?.nodeVersion) {
-                mapping[backend.configuration.nodeVersion] = backend.name;
+                this.validateAndMapNodeVersion(
+                    backend.configuration.nodeVersion,
+                    backend.name,
+                    mapping
+                );
             }
         }
 
@@ -339,7 +441,11 @@ export class ComponentRegistryManager {
             for (const depId of dependencies) {
                 const dep = await this.getComponentById(depId);
                 if (dep?.configuration?.nodeVersion) {
-                    mapping[dep.configuration.nodeVersion] = dep.name;
+                    this.validateAndMapNodeVersion(
+                        dep.configuration.nodeVersion,
+                        dep.name,
+                        mapping
+                    );
                 }
             }
         }
@@ -349,7 +455,11 @@ export class ComponentRegistryManager {
             for (const appId of appBuilder) {
                 const app = await this.getComponentById(appId);
                 if (app?.configuration?.nodeVersion) {
-                    mapping[app.configuration.nodeVersion] = app.name;
+                    this.validateAndMapNodeVersion(
+                        app.configuration.nodeVersion,
+                        app.name,
+                        mapping
+                    );
                 }
             }
         }
@@ -543,12 +653,4 @@ export class DependencyResolver {
 
         return config as ProjectConfig;
     }
-}
-
-export function createComponentRegistryManager(extensionPath: string): ComponentRegistryManager {
-    return new ComponentRegistryManager(extensionPath);
-}
-
-export function createDependencyResolver(registryManager: ComponentRegistryManager): DependencyResolver {
-    return new DependencyResolver(registryManager);
 }

@@ -1,6 +1,8 @@
-import { getLogger } from '@/core/logging';
 import { RateLimiter } from './rateLimiter';
 import type { RetryStrategy, CommandResult } from './types';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS, formatDuration } from '@/core/utils';
+import { toAppError, isTimeout, isNetwork } from '@/types/errors';
 
 /**
  * Manages retry strategies for failed commands
@@ -22,24 +24,25 @@ export class RetryStrategyManager {
      */
     private setupDefaultStrategies(): void {
         // Network-related commands
+        // SOP §1: Using TIMEOUTS constants instead of magic numbers
         this.strategies.set('network', {
             maxAttempts: 3,
-            initialDelay: 1000,
-            maxDelay: 5000,
+            initialDelay: TIMEOUTS.RETRY_INITIAL_DELAY,
+            maxDelay: TIMEOUTS.RETRY_MAX_DELAY,
             backoffFactor: 2,
             shouldRetry: (error) => {
-                const message = error.message.toLowerCase();
-                return message.includes('network') ||
-                       message.includes('timeout') ||
-                       message.includes('econnrefused');
+                // Use typed error detection for network and timeout errors
+                const appError = toAppError(error);
+                return isNetwork(appError) || isTimeout(appError);
             },
         });
 
         // File system operations
+        // SOP §1: Using TIMEOUTS constants instead of magic numbers
         this.strategies.set('filesystem', {
             maxAttempts: 3,
-            initialDelay: 200,
-            maxDelay: 1000,
+            initialDelay: TIMEOUTS.FILE_RETRY_INITIAL,
+            maxDelay: TIMEOUTS.FILE_RETRY_MAX,
             backoffFactor: 1.5,
             shouldRetry: (error) => {
                 const message = error.message.toLowerCase();
@@ -50,13 +53,15 @@ export class RetryStrategyManager {
         });
 
         // Adobe CLI operations
+        // SOP §1: Using TIMEOUTS constants instead of magic numbers
         this.strategies.set('adobe-cli', {
             maxAttempts: 2,
-            initialDelay: 1000,
-            maxDelay: 5000,
+            initialDelay: TIMEOUTS.RETRY_INITIAL_DELAY,
+            maxDelay: TIMEOUTS.RETRY_MAX_DELAY,
             backoffFactor: 1.5,
             shouldRetry: (error, attempt) => {
                 const message = error.message.toLowerCase();
+                const appError = toAppError(error);
 
                 /**
                  * KNOWN WORKAROUND: Shell syntax check
@@ -78,11 +83,12 @@ export class RetryStrategyManager {
                     return false;
                 }
 
+                // Use typed error detection where possible, with fallback for Adobe-specific patterns
                 return attempt === 1 && (
+                    isTimeout(appError) ||
                     message.includes('token') ||
                     message.includes('unauthorized') ||
-                    message.includes('session') ||
-                    message.includes('timeout')
+                    message.includes('session')
                 );
             },
         });
@@ -97,12 +103,13 @@ export class RetryStrategyManager {
 
     /**
      * Get default retry strategy
+     * SOP §1: Using TIMEOUTS constants instead of magic numbers
      */
     getDefaultStrategy(): RetryStrategy {
         return {
             maxAttempts: 1,
-            initialDelay: 1000,
-            maxDelay: 5000,
+            initialDelay: TIMEOUTS.RETRY_INITIAL_DELAY,
+            maxDelay: TIMEOUTS.RETRY_MAX_DELAY,
             backoffFactor: 2,
         };
     }
@@ -112,7 +119,6 @@ export class RetryStrategyManager {
      */
     registerStrategy(name: string, strategy: RetryStrategy): void {
         this.strategies.set(name, strategy);
-        this.logger.debug(`[Retry Strategy] Registered strategy: ${name}`);
     }
 
     /**
@@ -142,25 +148,26 @@ export class RetryStrategyManager {
                 const result = await executeFn();
 
                 const duration = Date.now() - startTime;
-                // Only log if retried or took > 5 seconds
-                if (attempt > 1 || duration > 5000) {
-                    this.logger.debug(`[Retry Strategy] Command succeeded after ${duration}ms (attempt ${attempt}/${strategy.maxAttempts})`);
+                // Only log if retried or took longer than slow threshold
+                if (attempt > 1 || duration > TIMEOUTS.SLOW_COMMAND_THRESHOLD) {
+                    this.logger.debug(`[Retry Strategy] Command succeeded after ${formatDuration(duration)} (attempt ${attempt}/${strategy.maxAttempts})`);
                 }
 
                 return result;
             } catch (error) {
                 lastError = error as Error;
                 const duration = Date.now() - startTime;
+                const appError = toAppError(error);
 
-                // Enhanced error logging
-                const errorMessage = error instanceof Error ? error.message : String(error);
-                this.logger.debug(`[Retry Strategy] Command failed (attempt ${attempt}/${strategy.maxAttempts}) after ${duration}ms:`);
-                this.logger.debug(`  Command: ${commandDescription}`);
-                this.logger.debug(`  Error: ${errorMessage}`);
+                // Log errors only on final attempt
+                if (attempt === strategy.maxAttempts) {
+                    this.logger.debug(`[Retry Strategy] Command failed after ${strategy.maxAttempts} attempts:`);
+                    this.logger.debug(`  Command: ${commandDescription}`);
+                    this.logger.debug(`  Error: ${appError.userMessage}`);
+                }
 
-                // Don't retry on timeout errors
-                const isTimeout = errorMessage.toLowerCase().includes('timed out');
-                if (isTimeout) {
+                // Don't retry on timeout errors - use typed error detection
+                if (isTimeout(appError)) {
                     this.logger.warn('[Retry Strategy] Command timed out - not retrying');
                     throw error;
                 }

@@ -15,9 +15,12 @@
  * - validateSelection: Validate component selection
  */
 
-import { ComponentSelection } from '@/types/components';
-import { HandlerContext, MessageHandler } from '@/types/handlers';
 import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
+import { toComponentDataArray, toDependencyData } from './componentTransforms';
+import { ComponentSelection } from '@/types/components';
+import { toAppError } from '@/types/errors';
+import { HandlerContext, MessageHandler } from '@/types/handlers';
+import { getEntryCount } from '@/types/typeGuards';
 
 /**
  * Get or create ComponentRegistryManager from context
@@ -75,44 +78,17 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
 
         const frontends = await registryManager.getFrontends();
         const backends = await registryManager.getBackends();
-        const externalSystems = await registryManager.getExternalSystems();
+        const integrations = await registryManager.getIntegrations();
         const appBuilder = await registryManager.getAppBuilder();
         const dependencies = await registryManager.getDependencies();
         const presets = await registryManager.getPresets();
 
         const componentsData = {
-            frontends: frontends.map(f => ({
-                id: f.id,
-                name: f.name,
-                description: f.description,
-                features: f.features,
-                configuration: f.configuration,
-                recommended: f.id === 'citisignal-nextjs',
-            })),
-            backends: backends.map(b => ({
-                id: b.id,
-                name: b.name,
-                description: b.description,
-                configuration: b.configuration,
-            })),
-            externalSystems: externalSystems.map(e => ({
-                id: e.id,
-                name: e.name,
-                description: e.description,
-                configuration: e.configuration,
-            })),
-            appBuilder: appBuilder.map(a => ({
-                id: a.id,
-                name: a.name,
-                description: a.description,
-                configuration: a.configuration,
-            })),
-            dependencies: dependencies.map(d => ({
-                id: d.id,
-                name: d.name,
-                description: d.description,
-                configuration: d.configuration,
-            })),
+            frontends: toComponentDataArray(frontends, { recommendedId: 'citisignal-nextjs', includeFeatures: true }),
+            backends: toComponentDataArray(backends),
+            integrations: toComponentDataArray(integrations),
+            appBuilder: toComponentDataArray(appBuilder),
+            dependencies: toComponentDataArray(dependencies),
             presets,
         };
 
@@ -122,10 +98,12 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
             data: componentsData,
         };
     } catch (error) {
-        context.logger.error('Failed to load components:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to load components:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to load components',
         };
     }
@@ -135,6 +113,7 @@ export const handleLoadComponents: MessageHandler = async (context: HandlerConte
  * get-components-data - Fetch component data with full configuration
  *
  * Retrieves component data including dependency relationships and env vars.
+ * Uses flat structure (requiredEnvVars/optionalEnvVars) throughout.
  */
 export const handleGetComponentsData: MessageHandler = async (context: HandlerContext) => {
     try {
@@ -142,49 +121,22 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
 
         const frontends = await registryManager.getFrontends();
         const backends = await registryManager.getBackends();
-        const externalSystems = await registryManager.getExternalSystems();
+        const integrations = await registryManager.getIntegrations();
         const appBuilder = await registryManager.getAppBuilder();
         const dependencies = await registryManager.getDependencies();
         const registry = await registryManager.loadRegistry();
 
         const componentsData = {
-            frontends: frontends.map(f => ({
-                id: f.id,
-                name: f.name,
-                description: f.description,
-                dependencies: f.dependencies,
-                configuration: f.configuration,
-            })),
-            backends: backends.map(b => ({
-                id: b.id,
-                name: b.name,
-                description: b.description,
-                dependencies: b.dependencies,
-                configuration: b.configuration,
-            })),
-            externalSystems: externalSystems.map(e => ({
-                id: e.id,
-                name: e.name,
-                description: e.description,
-                dependencies: e.dependencies,
-                configuration: e.configuration,
-            })),
-            appBuilder: appBuilder.map(a => ({
-                id: a.id,
-                name: a.name,
-                description: a.description,
-                dependencies: a.dependencies,
-                configuration: a.configuration,
-            })),
-            dependencies: dependencies.map(d => ({
-                id: d.id,
-                name: d.name,
-                description: d.description,
-                dependencies: d.dependencies,
-                configuration: d.configuration,
-            })),
+            frontends: toComponentDataArray(frontends, { includeDependencies: true }),
+            backends: toComponentDataArray(backends, { includeDependencies: true }),
+            integrations: toComponentDataArray(integrations, { includeDependencies: true }),
+            appBuilder: toComponentDataArray(appBuilder, { includeDependencies: true }),
+            dependencies: toComponentDataArray(dependencies, { includeDependencies: true }),
             envVars: registry.envVars || {},
         };
+
+        // Log summary at debug level (concise)
+        context.logger.debug(`[Components] Sending components-data: ${frontends.length} frontends, ${backends.length} backends, ${dependencies.length} deps, ${getEntryCount(registry.envVars)} envVars`);
 
         return {
             success: true,
@@ -192,10 +144,12 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             data: componentsData,
         };
     } catch (error) {
-        context.logger.error('Failed to load component configurations:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to load component configurations:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to load component configurations',
         };
     }
@@ -222,10 +176,12 @@ export const handleCheckCompatibility: MessageHandler = async (
             data: { compatible },
         };
     } catch (error) {
-        context.logger.error('Failed to check compatibility:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to check compatibility:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to check compatibility',
         };
     }
@@ -247,20 +203,8 @@ export const handleLoadDependencies: MessageHandler = async (
         const resolved = await dependencyResolver.resolveDependencies(frontend, backend);
 
         const dependencies = [
-            ...resolved.required.map(d => ({
-                id: d.id,
-                name: d.name,
-                description: d.description,
-                required: true,
-                impact: d.configuration?.impact,
-            })),
-            ...resolved.optional.map(d => ({
-                id: d.id,
-                name: d.name,
-                description: d.description,
-                required: false,
-                impact: d.configuration?.impact,
-            })),
+            ...resolved.required.map(d => toDependencyData(d, true)),
+            ...resolved.optional.map(d => toDependencyData(d, false)),
         ];
 
         return {
@@ -269,10 +213,12 @@ export const handleLoadDependencies: MessageHandler = async (
             data: { dependencies },
         };
     } catch (error) {
-        context.logger.error('Failed to load dependencies:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to load dependencies:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to load dependencies',
         };
     }
@@ -308,10 +254,12 @@ export const handleLoadPreset: MessageHandler = async (
             },
         };
     } catch (error) {
-        context.logger.error('Failed to load preset:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to load preset:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to load preset',
         };
     }
@@ -348,10 +296,12 @@ export const handleValidateSelection: MessageHandler = async (
             data: validation,
         };
     } catch (error) {
-        context.logger.error('Failed to validate selection:', error as Error);
+        const appError = toAppError(error);
+        context.logger.error('Failed to validate selection:', appError);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
+            error: appError.userMessage,
+            code: appError.code,
             message: 'Failed to validate selection',
         };
     }

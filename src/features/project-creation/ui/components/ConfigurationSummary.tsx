@@ -1,15 +1,90 @@
-import React from 'react';
 import { View, Heading, Text, Flex, Divider } from '@adobe/react-spectrum';
+import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import { WizardState, WizardStep } from '@/webview-ui/shared/types';
-import { cn } from '@/webview-ui/shared/utils/classNames';
+import React from 'react';
+import { WizardState, WizardStep } from '@/types/webview';
+import { cn } from '@/core/ui/utils/classNames';
+import { getStepStatus, renderApiMeshStatus } from './configurationSummaryHelpers';
 
 interface ConfigurationSummaryProps {
     state: WizardState;
     completedSteps?: WizardStep[];
     currentStep?: WizardStep;
+}
+
+/**
+ * StatusSection - Reusable status display section
+ *
+ * Displays a labeled section with icon indicating status (completed/pending/checking)
+ */
+interface StatusSectionProps {
+    label: string;
+    value?: string;
+    description?: string;
+    status: 'completed' | 'pending' | 'checking' | 'empty' | 'error';
+    emptyText?: string;
+    statusText?: string;
+}
+
+function StatusSection({ label, value, description, status, emptyText = 'Not selected', statusText }: StatusSectionProps) {
+    const renderIcon = () => {
+        switch (status) {
+            case 'completed':
+                return <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />;
+            case 'checking':
+            case 'pending':
+                return <Clock size="S" UNSAFE_className="text-blue-600" />;
+            case 'error':
+                return <AlertCircle size="S" UNSAFE_className="text-red-600" />;
+            default:
+                return null;
+        }
+    };
+
+    /**
+     * Render status content based on current status
+     * Extracts 3-branch nested ternary per SOP §5
+     */
+    const renderStatusContent = (): React.ReactNode => {
+        if (status === 'empty') {
+            return <Text UNSAFE_className="text-sm text-gray-600">{emptyText}</Text>;
+        }
+
+        if (status === 'checking') {
+            return (
+                <Flex gap="size-100" alignItems="center">
+                    {renderIcon()}
+                    <Text UNSAFE_className="text-sm text-gray-600">{statusText || 'Checking...'}</Text>
+                </Flex>
+            );
+        }
+
+        return (
+            <Flex gap="size-100" alignItems="center">
+                {renderIcon()}
+                <View>
+                    <Text UNSAFE_className={status === 'error' ? 'text-sm text-red-600' : 'text-sm'}>
+                        {statusText || value}
+                    </Text>
+                    {description && (
+                        <Text UNSAFE_className="text-xs text-gray-600">{description}</Text>
+                    )}
+                </View>
+            </Flex>
+        );
+    };
+
+    return (
+        <View marginTop="size-200" marginBottom="size-200">
+            <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
+                {label}
+            </Text>
+            <View marginTop="size-100">
+                {renderStatusContent()}
+            </View>
+        </View>
+    );
 }
 
 export function ConfigurationSummary({ state, completedSteps = [], currentStep }: ConfigurationSummaryProps) {
@@ -24,7 +99,7 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
         'api-mesh',
         'settings',
         'review',
-        'project-creation'
+        'project-creation',
     ];
     
     const getCurrentStepIndex = () => {
@@ -44,6 +119,19 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
         // Otherwise, check completedSteps array
         return completedSteps.includes(step);
     };
+    // Helper to determine organization status
+    const getOrgStatus = (): StatusSectionProps['status'] => {
+        if (!state.adobeAuth.isAuthenticated) return 'empty';
+        if (state.adobeAuth.isChecking) return 'checking';
+        if (state.adobeOrg) return 'completed';
+        return 'empty';
+    };
+
+    const getOrgEmptyText = () => {
+        if (!state.adobeAuth.isAuthenticated) return 'Not authenticated';
+        return 'No organization selected';
+    };
+
     return (
         <View height="100%">
             <Heading level={3} marginBottom="size-300">
@@ -51,91 +139,32 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
             </Heading>
 
             {/* Authentication Status */}
-            <View marginTop="size-200" marginBottom="size-200">
-                <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
-                    Organization
-                </Text>
-                <View marginTop="size-100">
-                    {state.adobeAuth.isAuthenticated ? (
-                        state.adobeOrg ? (
-                            <Flex gap="size-100" alignItems="center">
-                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                                <Text UNSAFE_className="text-sm">
-                                    {state.adobeOrg.name}
-                                </Text>
-                            </Flex>
-                        ) : state.adobeAuth.isChecking ? (
-                            <Flex gap="size-100" alignItems="center">
-                                <Clock size="S" UNSAFE_className="text-blue-600" />
-                                <Text UNSAFE_className="text-sm text-gray-600">Switching...</Text>
-                            </Flex>
-                        ) : (
-                            <Text UNSAFE_className="text-sm text-gray-600">No organization selected</Text>
-                        )
-                    ) : (
-                        <Text UNSAFE_className="text-sm text-gray-600">Not authenticated</Text>
-                    )}
-                </View>
-            </View>
+            <StatusSection
+                label="Organization"
+                value={state.adobeOrg?.name}
+                status={getOrgStatus()}
+                emptyText={getOrgEmptyText()}
+                statusText={state.adobeAuth.isChecking ? 'Switching...' : undefined}
+            />
 
             <Divider size="S" />
 
             {/* Project Selection */}
-            <View marginTop="size-200" marginBottom="size-200">
-                <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
-                    Project
-                </Text>
-                <View marginTop="size-100">
-                    {state.adobeProject ? (
-                        <Flex gap="size-100" alignItems="center">
-                            {isStepCompleted('adobe-project') ? (
-                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                            ) : (
-                                <Clock size="S" UNSAFE_className="text-blue-600" />
-                            )}
-                            <View>
-                                <Text UNSAFE_className="text-sm">
-                                    {state.adobeProject.title || state.adobeProject.name}
-                                </Text>
-                                {state.adobeProject.description && (
-                                    <Text UNSAFE_className="text-xs text-gray-600">
-                                        {state.adobeProject.description}
-                                    </Text>
-                                )}
-                            </View>
-                        </Flex>
-                    ) : (
-                        <Text UNSAFE_className="text-sm text-gray-600">Not selected</Text>
-                    )}
-                </View>
-            </View>
+            <StatusSection
+                label="Project"
+                value={state.adobeProject?.title || state.adobeProject?.name}
+                description={state.adobeProject?.description}
+                status={getStepStatus(!!state.adobeProject, isStepCompleted('adobe-project'))}
+            />
 
             <Divider size="S" />
 
             {/* Workspace Selection */}
-            <View marginTop="size-200" marginBottom="size-200">
-                <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
-                    Workspace
-                </Text>
-                <View marginTop="size-100">
-                    {state.adobeWorkspace ? (
-                        <Flex gap="size-100" alignItems="center">
-                            {isStepCompleted('adobe-workspace') ? (
-                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                            ) : (
-                                <Clock size="S" UNSAFE_className="text-blue-600" />
-                            )}
-                            <View>
-                                <Text UNSAFE_className="text-sm">
-                                    {state.adobeWorkspace.title || state.adobeWorkspace.name}
-                                </Text>
-                            </View>
-                        </Flex>
-                    ) : (
-                        <Text UNSAFE_className="text-sm text-gray-600">Not selected</Text>
-                    )}
-                </View>
-            </View>
+            <StatusSection
+                label="Workspace"
+                value={state.adobeWorkspace?.title || state.adobeWorkspace?.name}
+                status={getStepStatus(!!state.adobeWorkspace, isStepCompleted('adobe-workspace'))}
+            />
 
             <Divider size="S" />
 
@@ -145,57 +174,13 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                     API Mesh
                 </Text>
                 <View marginTop="size-100">
-                    {!state.adobeWorkspace ? (
-                        <Text UNSAFE_className="text-sm text-gray-600">Not selected</Text>
-                    ) : getCurrentStepIndex() < stepOrder.indexOf('api-mesh') && !completedSteps.includes('api-mesh') ? (
-                        // Never been to api-mesh step yet - show "Not selected"
-                        <Text UNSAFE_className="text-sm text-gray-600">Not selected</Text>
-                    ) : getCurrentStepIndex() < stepOrder.indexOf('api-mesh') && completedSteps.includes('api-mesh') ? (
-                        // We've been there before, but now we're before it - show "Waiting"
-                        <Flex gap="size-100" alignItems="center">
-                            <Clock size="S" UNSAFE_className="text-blue-600" />
-                            <Text UNSAFE_className="text-sm text-gray-600">Waiting</Text>
-                        </Flex>
-                    ) : state.apiMesh?.isChecking ? (
-                        <Flex gap="size-100" alignItems="center">
-                            <Clock size="S" UNSAFE_className="text-blue-600" />
-                            <Text UNSAFE_className="text-sm text-gray-600">Checking...</Text>
-                        </Flex>
-                    ) : state.apiMesh?.apiEnabled && state.apiMesh?.meshExists ? (
-                        <Flex gap="size-100" alignItems="center">
-                            {state.apiMesh?.meshStatus === 'deployed' || state.apiMesh?.meshStatus === 'success' ? (
-                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                            ) : state.apiMesh?.meshStatus === 'error' ? (
-                                <AlertCircle size="S" UNSAFE_className="text-red-600" />
-                            ) : (
-                                <Clock size="S" UNSAFE_className="text-blue-600" />
-                            )}
-                            <Text UNSAFE_className="text-sm">
-                                {state.apiMesh?.meshStatus === 'deployed' || state.apiMesh?.meshStatus === 'success' ? 'Mesh Deployed' :
-                                 state.apiMesh?.meshStatus === 'error' ? 'Mesh Error' :
-                                 'Mesh Pending'}
-                            </Text>
-                        </Flex>
-                    ) : state.apiMesh?.apiEnabled && !state.apiMesh?.meshExists ? (
-                        <Flex gap="size-100" alignItems="center">
-                            {isStepCompleted('api-mesh') ? (
-                                <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                            ) : (
-                                <Clock size="S" UNSAFE_className="text-blue-600" />
-                            )}
-                            <Text UNSAFE_className="text-sm text-gray-600">Ready for creation</Text>
-                        </Flex>
-                    ) : state.apiMesh?.apiEnabled === false ? (
-                        <Flex gap="size-100" alignItems="center">
-                            <AlertCircle size="S" UNSAFE_className="text-red-600" />
-                            <Text UNSAFE_className="text-sm text-red-600">Not enabled</Text>
-                        </Flex>
-                    ) : (
-                        <Flex gap="size-100" alignItems="center">
-                            <Clock size="S" UNSAFE_className="text-blue-600" />
-                            <Text UNSAFE_className="text-sm text-gray-600">Pending</Text>
-                        </Flex>
-                    )}
+                    {renderApiMeshStatus({
+                        state,
+                        currentStepIndex: getCurrentStepIndex(),
+                        stepOrder,
+                        completedSteps,
+                        isStepCompleted,
+                    })}
                 </View>
             </View>
 

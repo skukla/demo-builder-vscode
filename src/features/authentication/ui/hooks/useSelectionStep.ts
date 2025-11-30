@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { vscode } from '@/webview-ui/shared/vscode-api';
-import { useDebouncedLoading } from './useDebouncedLoading';
-import { WizardState } from '@/webview-ui/shared/types';
+import { useDebouncedLoading } from '@/core/ui/hooks/useDebouncedLoading';
+import { WizardState } from '@/types/webview';
+import { ErrorCode } from '@/types/errorCodes';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /**
  * Configuration options for the selection step hook
@@ -76,6 +77,9 @@ export interface UseSelectionStepResult<T extends { id: string }> {
   /** Error message, if any */
   error: string | null;
 
+  /** Typed error code for programmatic error handling */
+  errorCode: ErrorCode | null;
+
   /** Current search query */
   searchQuery: string;
 
@@ -137,7 +141,7 @@ export interface UseSelectionStepResult<T extends { id: string }> {
  * ```
  */
 export function useSelectionStep<T extends { id: string }>(
-  options: UseSelectionStepOptions<T>
+  options: UseSelectionStepOptions<T>,
 ): UseSelectionStepResult<T> {
   const {
     cacheKey,
@@ -152,7 +156,7 @@ export function useSelectionStep<T extends { id: string }>(
     onSelect,
     autoLoad = true,
     searchFields = [],
-    validateBeforeLoad
+    validateBeforeLoad,
   } = options;
 
   // Get cached items from wizard state
@@ -162,11 +166,13 @@ export function useSelectionStep<T extends { id: string }>(
   const [isLoading, setIsLoading] = useState(!state[cacheKey]); // Only load if cache is empty
   const [isRefreshing, setIsRefreshing] = useState(false); // Track refresh vs initial load
   const [hasLoadedOnce, setHasLoadedOnce] = useState(!!state[cacheKey]); // Track if we've ever loaded data
+  const [loadRequested, setLoadRequested] = useState(!!state[cacheKey]); // Prevent StrictMode double-load
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<ErrorCode | null>(null);
   const [searchQuery, setSearchQuery] = useState(
     searchFilterKey && typeof state[searchFilterKey] === 'string'
       ? (state[searchFilterKey] as string)
-      : ''
+      : '',
   );
 
   // Debounce loading state: only show loading UI if operation takes >300ms
@@ -177,6 +183,7 @@ export function useSelectionStep<T extends { id: string }>(
   const load = useCallback(() => {
     setIsLoading(true);
     setError(null);
+    setErrorCode(null);
 
     // Run validation if provided
     if (validateBeforeLoad) {
@@ -189,7 +196,7 @@ export function useSelectionStep<T extends { id: string }>(
     }
 
     // Send request to extension (extension will respond via message)
-    vscode.postMessage(messageType, {});
+    webviewClient.postMessage(messageType, {});
   }, [messageType, validateBeforeLoad]);
 
   // Refresh items (keeps cache visible during load)
@@ -205,16 +212,17 @@ export function useSelectionStep<T extends { id: string }>(
     }
   }, [searchQuery, searchFilterKey, updateState]);
 
-  // Auto-load on mount if cache is empty
+  // Auto-load on mount if cache is empty (guard prevents StrictMode double-load)
   useEffect(() => {
-    if (autoLoad && !state[cacheKey]) {
+    if (autoLoad && !state[cacheKey] && !loadRequested) {
+      setLoadRequested(true);
       load();
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [autoLoad, state, cacheKey, loadRequested, load]);
 
   // Listen for items from extension
   useEffect(() => {
-    const unsubscribeItems = vscode.onMessage(messageType, (data) => {
+    const unsubscribeItems = webviewClient.onMessage(messageType, (data) => {
       if (Array.isArray(data)) {
         // Store items in wizard state cache for persistence
         updateState({ [cacheKey]: data } as Partial<WizardState>);
@@ -222,6 +230,7 @@ export function useSelectionStep<T extends { id: string }>(
         setIsRefreshing(false);
         setHasLoadedOnce(true);
         setError(null);
+        setErrorCode(null);
 
         // Auto-select if only one item
         if (autoSelectSingle && data.length === 1 && !selectedItem?.id) {
@@ -240,15 +249,18 @@ export function useSelectionStep<T extends { id: string }>(
         }
       } else if (data && typeof data === 'object' && 'error' in data) {
         // Backend sends structured error (including timeout)
-        setError((data as { error: string }).error);
+        const errorData = data as { error: string; code?: ErrorCode };
+        setError(errorData.error);
+        setErrorCode(errorData.code ?? null);
         setIsLoading(false);
         setIsRefreshing(false);
       }
     });
 
-    const unsubscribeError = vscode.onMessage(errorMessageType, (data) => {
-      const errorData = data as { error?: string };
+    const unsubscribeError = webviewClient.onMessage(errorMessageType, (data) => {
+      const errorData = data as { error?: string; code?: ErrorCode };
       setError(errorData.error || 'Failed to load items');
+      setErrorCode(errorData.code ?? null);
       setIsLoading(false);
       setIsRefreshing(false);
     });
@@ -265,7 +277,7 @@ export function useSelectionStep<T extends { id: string }>(
     selectedItem,
     autoSelectSingle,
     autoSelectCustom,
-    onSelect
+    onSelect,
   ]);
 
   // Select an item
@@ -289,7 +301,7 @@ export function useSelectionStep<T extends { id: string }>(
           return false;
         }
         return String(value).toLowerCase().includes(query);
-      })
+      }),
     );
   }, [items, searchQuery, searchFields]);
 
@@ -301,10 +313,11 @@ export function useSelectionStep<T extends { id: string }>(
     isRefreshing,
     hasLoadedOnce,
     error,
+    errorCode,
     searchQuery,
     setSearchQuery,
     load,
     refresh,
-    selectItem
+    selectItem,
   };
 }

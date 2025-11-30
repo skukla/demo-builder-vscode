@@ -1,15 +1,15 @@
-import React, { useEffect } from 'react';
-import { 
-    View, 
-    Text, 
+import {
+    View,
+    Text,
     Flex,
-    Divider,
-    Well
+    Well,
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import { WizardState } from '@/webview-ui/shared/types';
+import React, { useEffect } from 'react';
+import { BaseStepProps } from '@/types/wizard';
+import { hasRequiredReviewData } from './reviewPredicates';
 
-interface ComponentData {
+export interface ComponentData {
     id: string;
     name: string;
     description?: string;
@@ -23,30 +23,22 @@ interface ComponentData {
     };
 }
 
-interface ComponentsData {
+export interface ComponentsData {
     frontends?: ComponentData[];
     backends?: ComponentData[];
     dependencies?: ComponentData[];
-    externalSystems?: ComponentData[];
+    integrations?: ComponentData[];
     appBuilder?: ComponentData[];
 }
 
-interface ReviewStepProps {
-    state: WizardState;
-    updateState: (updates: Partial<WizardState>) => void;
-    setCanProceed: (canProceed: boolean) => void;
+interface ReviewStepProps extends BaseStepProps {
     componentsData?: ComponentsData;
 }
 
 export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepProps) {
     useEffect(() => {
         // Can proceed if we have all required data
-        const canProceed = !!(
-            state.projectName &&
-            state.adobeOrg?.id &&
-            state.adobeProject?.id &&
-            state.adobeWorkspace?.id
-        );
+        const canProceed = hasRequiredReviewData(state);
         setCanProceed(canProceed);
     }, [state, setCanProceed]);
 
@@ -75,7 +67,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     type: 'frontend',
                     label: 'Frontend',
                     name: frontend.name,
-                    children: frontendChildren.length > 0 ? frontendChildren : undefined
+                    children: frontendChildren.length > 0 ? frontendChildren : undefined,
                 });
             }
         }
@@ -89,7 +81,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     sections.push({
                         type: 'middleware',
                         label: 'API Mesh',
-                        name: dep.name
+                        name: dep.name,
                     });
                 }
             });
@@ -112,7 +104,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     type: 'backend',
                     label: 'Backend',
                     name: backend.name,
-                    children: backendChildren.length > 0 ? backendChildren : undefined
+                    children: backendChildren.length > 0 ? backendChildren : undefined,
                 });
             }
         }
@@ -126,21 +118,21 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     sections.push({
                         type: 'other',
                         label: 'Additional',
-                        name: dep.name
+                        name: dep.name,
                     });
                 }
             });
         }
         
         // 5. External systems
-        if (state.components?.externalSystems && componentsData?.externalSystems) {
-            state.components.externalSystems.forEach(systemId => {
-                const system = componentsData.externalSystems?.find(s => s.id === systemId);
+        if (state.components?.integrations && componentsData?.integrations) {
+            state.components.integrations.forEach(systemId => {
+                const system = componentsData.integrations?.find(s => s.id === systemId);
                 if (system) {
                     sections.push({
                         type: 'external',
                         label: 'External System',
-                        name: system.name
+                        name: system.name,
                     });
                 }
             });
@@ -154,7 +146,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     sections.push({
                         type: 'app-builder',
                         label: 'App Builder',
-                        name: app.name
+                        name: app.name,
                     });
                 }
             });
@@ -166,11 +158,11 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
     const componentSections = getComponentSections();
 
     return (
-        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+        <div className="container-wizard">
             {/* Status Indicator with Icon */}
             <Flex gap="size-150" alignItems="center" marginBottom="size-300">
                 <CheckmarkCircle size="M" UNSAFE_className="text-green-600" />
-                <Text UNSAFE_style={{ fontWeight: 600, fontSize: '16px', color: 'var(--spectrum-global-color-gray-700)' }}>
+                <Text UNSAFE_className="text-ready-label">
                     Ready to create
                 </Text>
             </Flex>
@@ -180,12 +172,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                 {/* Project Name - Hero Element */}
                 {state.projectName && (
                     <View marginBottom="size-400">
-                        <Text UNSAFE_style={{ 
-                            fontSize: '26px', 
-                            fontWeight: 700,
-                            color: 'var(--spectrum-global-color-gray-900)',
-                            lineHeight: '1.3'
-                        }}>
+                        <Text UNSAFE_className="text-project-name">
                             {state.projectName}
                         </Text>
                     </View>
@@ -196,12 +183,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                     {componentSections.map((section, index) => (
                         <View key={index}>
                             {/* Component Name */}
-                            <Text UNSAFE_style={{ 
-                                fontSize: '15px', 
-                                fontWeight: 600,
-                                color: 'var(--spectrum-global-color-gray-800)',
-                                lineHeight: '1.5'
-                            }}>
+                            <Text UNSAFE_className="text-section-title">
                                 {section.name}
                             </Text>
                             
@@ -210,18 +192,10 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                                 <Flex direction="column" gap="size-75" marginStart="size-300" marginTop="size-100">
                                     {section.children.map((child, childIndex) => (
                                         <Flex key={childIndex} gap="size-100" alignItems="center">
-                                            <Text UNSAFE_style={{ 
-                                                fontSize: '14px', 
-                                                lineHeight: '1',
-                                                color: 'var(--spectrum-global-color-gray-500)'
-                                            }}>
+                                            <Text UNSAFE_className="text-child-arrow">
                                                 ›
                                             </Text>
-                                            <Text UNSAFE_style={{ 
-                                                fontSize: '14px', 
-                                                color: 'var(--spectrum-global-color-gray-700)',
-                                                lineHeight: '1.5'
-                                            }}>
+                                            <Text UNSAFE_className="text-child-item">
                                                 {child}
                                             </Text>
                                         </Flex>

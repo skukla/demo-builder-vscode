@@ -155,7 +155,7 @@ class MyWebviewCommand extends BaseWebviewCommand {
     }
 
     async execute(): Promise<void> {
-        const panel = await this.createOrRevealPanel();
+        await this.createOrRevealPanel();
         await this.initializeCommunication();
     }
 }
@@ -176,9 +176,10 @@ class MyWebviewCommand extends BaseWebviewCommand {
 
 **Key Methods**:
 - `createOrRevealPanel()` - Create or reveal singleton panel
-- `initializeCommunication()` - Initialize communication manager
+- `initializeCommunication()` - Initialize communication manager (idempotent)
 - `sendMessage(type, payload?)` - Send message to webview
 - `request<T>(type, payload?)` - Request-response with webview
+- `getNonce()` - Generate cryptographically secure nonce for CSP
 - `isVisible()` - Check if webview is visible
 - `dispose()` - Clean up resources
 - `shouldReopenWelcomeOnDispose()` - Override to control Welcome reopen
@@ -187,6 +188,25 @@ class MyWebviewCommand extends BaseWebviewCommand {
 - `disposeAllActivePanels()` - Dispose all active webviews
 - `getActivePanelCount()` - Get count of active panels
 - `setDisposalCallback(callback)` - Set disposal callback
+
+**Disposal Pattern** (Resource Lifecycle Management):
+- Uses inherited `this.disposables` from BaseCommand (DisposableStore)
+- Resources disposed in LIFO order (Last In, First Out)
+- Add custom disposables: `this.disposables.add(resource)`
+- Clean separation: `handlePanelDisposal()` → webview cleanup, `super.dispose()` → resources
+
+**Example - Custom Resource Disposal**:
+```typescript
+class MyWebviewCommand extends BaseWebviewCommand {
+    protected async initializeCommunication() {
+        await super.initializeCommunication();
+
+        // Add custom disposable - automatically cleaned up in LIFO order
+        const watcher = vscode.workspace.createFileSystemWatcher('**/*.ts');
+        this.disposables.add(watcher);
+    }
+}
+```
 
 **Example**:
 ```typescript
@@ -512,8 +532,9 @@ async execute(): Promise<void> {
     const panel = await this.createOrRevealPanel();
     // Shows loading state automatically
 
-    // Step 2: Initialize communication (performs handshake)
+    // Step 2: Initialize communication (webview-initiated handshake)
     await this.initializeCommunication();
+    // Webview sends __webview_ready__, extension responds with __handshake_complete__
     // Handshake complete, webview ready
 
     // Step 3: Communication ready, initial data sent
@@ -535,13 +556,16 @@ try {
 }
 
 // BaseWebviewCommand disposal handling
-panel.onDidDispose(() => {
-    // Automatic cleanup:
-    // - Dispose communication manager
-    // - Clear disposables
-    // - Remove from singleton map
-    // - Fire disposal callback if configured
-});
+// Disposal flow (automatic, LIFO order):
+// 1. User closes panel → panel.onDidDispose fires → dispose() called
+// 2. handlePanelDisposal() - webview-specific cleanup
+//    - Dispose communication manager
+//    - Clear singleton maps (activePanels, activeCommunicationManagers)
+//    - Clear panel reference
+// 3. super.dispose() - inherited resource disposal (via DisposableStore, LIFO)
+//    - Panel disposal listener
+//    - Theme change listener
+//    - Custom disposables (if added via this.disposables.add)
 ```
 
 ## Performance Considerations

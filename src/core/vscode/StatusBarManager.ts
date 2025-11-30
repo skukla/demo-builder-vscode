@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
-import { Project } from '@/types';
 import { StateManager } from '@/core/state';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { Project } from '@/types';
+import { getProjectFrontendPort } from '@/types/typeGuards';
 
 export class StatusBarManager {
     private statusBarItem: vscode.StatusBarItem;
@@ -28,11 +30,11 @@ export class StatusBarManager {
         if (showStatusBar) {
             this.statusBarItem.show();
             this.updateStatus();
-            
-            // Update status every 5 seconds
+
+            // Update status periodically
             this.updateInterval = setInterval(() => {
                 this.updateStatus();
-            }, 5000);
+            }, TIMEOUTS.STATUS_BAR_UPDATE_INTERVAL);
         }
     }
 
@@ -69,7 +71,7 @@ export class StatusBarManager {
 
     private updateStatusForProject(project: Project): void {
         const status = project.status;
-        const port = project.componentInstances?.['citisignal-nextjs']?.port;
+        const port = getProjectFrontendPort(project);
         
         // Status indicator and colors based on state
         let statusDot = '○';

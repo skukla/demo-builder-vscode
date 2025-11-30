@@ -72,6 +72,60 @@ If TypeScript complains about missing types:
 npm install
 ```
 
+### Path Alias Resolution Issues
+
+If the extension fails to load with module resolution errors after using TypeScript path aliases (e.g., `@/core/base`):
+
+**Problem**: TypeScript compiles successfully but doesn't transform path aliases in JavaScript output, causing Node.js to fail at runtime.
+
+**Solution**: The build process automatically handles this via `tsc-alias`:
+
+```bash
+npm run compile:typescript
+# Runs: tsc && tsc-alias && mv dist/src/* dist/
+```
+
+This ensures:
+1. TypeScript path aliases transform to relative imports in compiled JS
+2. Output directory flattened from `dist/src/` to `dist/` for VS Code
+
+**Note**: If manually compiling TypeScript without npm scripts, you must run `tsc-alias` afterward.
+
+### Webpack Caching Issues
+
+If the extension shows stale behavior after rebuilding (e.g., old code running despite successful compilation):
+
+**Problem**: Webpack can cache output bundles even with `output.clean: true`, causing the extension to load outdated code.
+
+**Solution**: The build scripts now explicitly clean before webpack compilation:
+
+```bash
+npm run compile:webview
+# Runs: npm run clean:webview && webpack --mode production
+```
+
+**Manual Cleanup** (if needed):
+```bash
+# Clean all build output
+npm run clean
+
+# Clean only webview bundles
+npm run clean:webview
+
+# Then rebuild
+npm run compile
+```
+
+**Why This Happens**:
+- Webpack's persistent caching can survive clean operations in some cases
+- Module federation or code splitting can leave orphaned chunks
+- Build errors partway through can leave partial output
+
+**Prevention**:
+- Always use `npm run compile` instead of direct `webpack` commands
+- The compile scripts automatically clean before building
+- If suspicious behavior persists, run `npm run clean` manually
+
 ## Build Output
 
 After successful build, you should have:

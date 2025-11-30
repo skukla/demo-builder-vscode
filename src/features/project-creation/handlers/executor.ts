@@ -6,15 +6,50 @@
  */
 
 import * as vscode from 'vscode';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { ProgressTracker } from './shared';
 import { ServiceLocator } from '@/core/di';
-import { AdobeConfig } from '@/types/base';
-import { parseJSON } from '@/types/typeGuards';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     generateComponentEnvFile as generateEnvFile,
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
-import { HandlerContext } from './HandlerContext';
-import { ProgressTracker } from './shared';
+import { AdobeConfig } from '@/types/base';
+import { parseJSON, hasEntries, getEntryCount, getComponentIds, getProjectFrontendPort, getComponentConfigPort } from '@/types/typeGuards';
+import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { TransformedComponentDefinition } from '@/types';
+
+// ============================================================================
+// Helper Functions (SOP §6: Extract named functions for transformations)
+// ============================================================================
+
+/**
+ * Convert kebab-case submodule ID to Title Case display name
+ * @example 'demo-inspector' -> 'Demo Inspector'
+ */
+function formatSubmoduleDisplayName(id: string): string {
+    return id
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}
+
+/**
+ * Build user-friendly submessage for component installation progress
+ * Shows "Adding [Submodule Name]..." only when submodules are selected
+ * @param selectedSubmodules - Array of submodule IDs that were selected by user
+ */
+function buildInstallationSubmessage(selectedSubmodules?: string[]): string {
+    const DEFAULT_MESSAGE = 'Cloning repository and installing dependencies...';
+
+    if (!selectedSubmodules || selectedSubmodules.length === 0) {
+        return DEFAULT_MESSAGE;
+    }
+
+    const displayNames = selectedSubmodules.map(formatSubmoduleDisplayName);
+    return `Adding ${displayNames.join(', ')}...`;
+}
 
 /**
  * ProjectCreationConfig - Configuration passed to project creation
@@ -26,7 +61,7 @@ interface ProjectCreationConfig {
         frontend?: string;
         backend?: string;
         dependencies?: string[];
-        externalSystems?: string[];
+        integrations?: string[];
         appBuilderApps?: string[];
     };
     componentConfigs?: Record<string, Record<string, unknown>>;
@@ -59,54 +94,57 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const existingProject = await context.stateManager.getCurrentProject();
     if (existingProject && existingProject.status === 'running') {
         // Check if the running demo is using a port that would conflict
-        const runningPort = existingProject.componentInstances?.['citisignal-nextjs']?.port;
+        const runningPort = getProjectFrontendPort(existingProject);
         const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
-        const targetPort = typedConfig.componentConfigs?.['citisignal-nextjs']?.PORT || defaultPort;
+        const targetPort = getComponentConfigPort(typedConfig.componentConfigs, 'citisignal-nextjs') || defaultPort;
 
         if (runningPort === targetPort) {
-            context.logger.info(`[Project Creation] Stopping running demo on port ${runningPort} before creating new project`);
+            context.logger.debug(`[Project Creation] Stopping running demo on port ${runningPort} before creating new project`);
 
             // Show notification that we're auto-stopping the demo
+            // SOP §1: Using TIMEOUTS constant instead of magic number
             vscode.window.setStatusBarMessage(
                 `⚠️  Stopping "${existingProject.name}" demo (port ${runningPort} conflict)`,
-                5000,
+                TIMEOUTS.STATUS_BAR_SUCCESS,
             );
 
             await vscode.commands.executeCommand('demoBuilder.stopDemo');
 
             // Wait for clean stop and port release
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DEMO_STOP_WAIT));
         } else {
             context.logger.debug(`[Project Creation] Running demo on different port (${runningPort}), no conflict`);
         }
     }
 
     // Import ComponentManager and other dependencies
-    context.logger.debug('[Project Creation] Starting dynamic imports...');
     const { ComponentManager } = await import('@/features/components/services/componentManager');
-    context.logger.debug('[Project Creation] ComponentManager imported');
     const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
-    context.logger.debug('[Project Creation] ComponentRegistryManager imported');
     const fs = await import('fs/promises');
     const path = await import('path');
     const os = await import('os');
-    context.logger.debug('[Project Creation] All dynamic imports completed');
 
-    // PRE-FLIGHT CHECK: Ensure clean slate
+    // PRE-FLIGHT CHECK: Clean up orphaned/invalid directories
+    // NOTE: Valid projects (with .demo-builder.json) are blocked by createHandler
+    // This only runs for:
+    //   1. Orphaned directories (missing manifest)
+    //   2. Corrupted project directories
+    //   3. Manual folders in .demo-builder/projects/
     const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
 
     if (await fs.access(projectPath).then(() => true).catch(() => false)) {
         context.logger.warn(`[Project Creation] Directory already exists: ${projectPath}`);
+        context.logger.debug('[Project Creation] This should only happen for orphaned/invalid directories (valid projects are blocked earlier)');
 
         // Check if it has content
         const existingFiles = await fs.readdir(projectPath);
         if (existingFiles.length > 0) {
-            context.logger.info(`[Project Creation] Found ${existingFiles.length} existing files/folders, cleaning up...`);
+            context.logger.debug(`[Project Creation] Found ${existingFiles.length} existing files/folders, cleaning up...`);
             progressTracker('Preparing Project', 5, 'Removing existing project data...');
 
             // Clean it up before proceeding
             await fs.rm(projectPath, { recursive: true, force: true });
-            context.logger.info('[Project Creation] Existing directory cleaned');
+            context.logger.debug('[Project Creation] Existing directory cleaned');
         } else {
             // Empty directory is fine, just remove it to be safe
             await fs.rmdir(projectPath);
@@ -121,7 +159,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     await fs.mkdir(componentsDir, { recursive: true });
     await fs.mkdir(path.join(projectPath, 'logs'), { recursive: true });
 
-    context.logger.info(`[Project Creation] Created directory: ${projectPath}`);
+    context.logger.debug(`[Project Creation] Created directory: ${projectPath}`);
 
     // Step 2: Initialize project (15%)
     progressTracker('Setting Up Project', 15, 'Initializing project configuration...');
@@ -138,14 +176,15 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             frontend: typedConfig.components?.frontend,
             backend: typedConfig.components?.backend,
             dependencies: typedConfig.components?.dependencies || [],
-            externalSystems: typedConfig.components?.externalSystems || [],
+            integrations: typedConfig.components?.integrations || [],
             appBuilder: typedConfig.components?.appBuilderApps || [],
         },
+        componentConfigs: (typedConfig.componentConfigs || {}) as Record<string, Record<string, string | number | boolean | undefined>>,
     };
 
     // Save initial project state WITHOUT triggering events (to avoid crash)
     // We'll save again after components are installed
-    context.logger.info('[Project Creation] Deferring project state save and workspace addition until after installation');
+    context.logger.debug('[Project Creation] Deferring project state save and workspace addition until after installation');
 
     // Step 3: Load component definitions (20%)
     progressTracker('Loading Components', 20, 'Preparing component definitions...');
@@ -153,10 +192,31 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const registryManager = new ComponentRegistryManager(context.context.extensionPath);
     const componentManager = new ComponentManager(context.logger);
 
+    // Load registry to get shared envVars dictionary
+    const registry = await registryManager.loadRegistry();
+    const sharedEnvVars = registry.envVars || {};
+
+    // Get frontend's submodule IDs to skip them in the dependency loop
+    // (submodules are handled during frontend clone via --recursive or selective init)
+    const frontendSubmoduleIds = new Set<string>();
+    if (typedConfig.components?.frontend) {
+        const frontends = await registryManager.getFrontends();
+        const frontendDef = frontends.find((f: { id: string }) => f.id === typedConfig.components?.frontend);
+        if (frontendDef?.submodules) {
+            // SOP §4: Extract Object.keys to named variable
+            const submoduleIds = Object.keys(frontendDef.submodules);
+            submoduleIds.forEach(id => frontendSubmoduleIds.add(id));
+        }
+    }
+
     // Step 4: Install selected components (25-80%)
+    // Filter out submodule IDs from dependencies - they're installed with the frontend
+    const filteredDependencies = (typedConfig.components?.dependencies || [])
+        .filter((id: string) => !frontendSubmoduleIds.has(id));
+
     const allComponents = [
         ...(typedConfig.components?.frontend ? [{ id: typedConfig.components.frontend, type: 'frontend' }] : []),
-        ...(typedConfig.components?.dependencies || []).map((id: string) => ({ id, type: 'dependency' })),
+        ...filteredDependencies.map((id: string) => ({ id, type: 'dependency' })),
         ...(typedConfig.components?.appBuilderApps || []).map((id: string) => ({ id, type: 'app-builder' })),
     ];
 
@@ -182,14 +242,29 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             continue;
         }
 
-        progressTracker(`Installing ${componentDef.name}`, currentProgress, 'Cloning repository and installing dependencies...');
-        context.logger.info(`[Project Creation] Installing component: ${componentDef.name}`);
+        // For frontend components, determine which submodules to initialize
+        // based on user's dependency selections (compute BEFORE progress message)
+        const installOptions: { selectedSubmodules?: string[] } = {};
+        if (comp.type === 'frontend' && componentDef.submodules) {
+            const allSelectedDeps = typedConfig.components?.dependencies || [];
+            const selectedSubmodules = allSelectedDeps.filter(
+                (depId: string) => componentDef.submodules?.[depId] !== undefined
+            );
+            if (selectedSubmodules.length > 0) {
+                installOptions.selectedSubmodules = selectedSubmodules;
+                context.logger.debug(`[Project Creation] Selected submodules for ${componentDef.name}: ${selectedSubmodules.join(', ')}`);
+            }
+        }
 
-        const result = await componentManager.installComponent(project, componentDef);
+        // Build progress message based on selected submodules (not all defined submodules)
+        const submessage = buildInstallationSubmessage(installOptions.selectedSubmodules);
+        progressTracker(`Installing ${componentDef.name}`, currentProgress, submessage);
+        context.logger.debug(`[Project Creation] Installing component: ${componentDef.name}`);
+
+        const result = await componentManager.installComponent(project, componentDef, installOptions);
 
         if (result.success && result.component) {
             project.componentInstances![comp.id] = result.component;
-            context.logger.info(`[Project Creation] Successfully installed ${componentDef.name}`);
 
             // Generate component-specific .env file (only for components with a path)
             if (result.component.path) {
@@ -197,11 +272,10 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     result.component.path,
                     comp.id,
                     componentDef,
+                    sharedEnvVars,
                     config,
                     context.logger,
                 );
-            } else {
-                context.logger.debug(`[Project Creation] Skipping .env generation for ${componentDef.name} (no path)`);
             }
 
             // Save project state to trigger sidebar refresh (show component in real-time)
@@ -220,7 +294,6 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const meshComponent = project.componentInstances?.['commerce-mesh'];
     if (meshComponent?.path) {
         progressTracker('Deploying API Mesh', 80, 'Deploying mesh configuration to Adobe I/O...');
-        context.logger.info(`[Project Creation] Deploying mesh from ${meshComponent.path}`);
 
         try {
             const commandManager = ServiceLocator.getCommandExecutor();
@@ -247,19 +320,18 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                     try {
                         const commandManager = ServiceLocator.getCommandExecutor();
                         const describeResult = await commandManager.execute('aio api-mesh:describe', {
-                            timeout: 30000,
+                            timeout: TIMEOUTS.MESH_DESCRIBE,
                             configureTelemetry: false,
+                            useNodeVersion: getMeshNodeVersion(),
                             enhancePath: true,
                         });
 
                         if (describeResult.code === 0) {
-                            const jsonMatch = /\{[\s\S]*\}/.exec(describeResult.stdout);
-                            if (jsonMatch) {
-                                const meshData = parseJSON<{ meshId?: string; mesh_id?: string; meshEndpoint?: string; endpoint?: string }>(jsonMatch[0]);
-                                if (meshData) {
-                                    meshId = meshData.meshId || meshData.mesh_id;
-                                    endpoint = meshData.meshEndpoint || meshData.endpoint;
-                                }
+                            // Extract JSON from output using Step 2 helper (handles mixed CLI output)
+                            const meshData = extractAndParseJSON<{ meshId?: string; mesh_id?: string; meshEndpoint?: string; endpoint?: string }>(describeResult.stdout);
+                            if (meshData) {
+                                meshId = meshData.meshId || meshData.mesh_id;
+                                endpoint = meshData.meshEndpoint || meshData.endpoint;
                             }
                         }
                     } catch {
@@ -279,7 +351,18 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 // Update meshState to track deployment (required for status detection)
                 const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
                 await updateMeshState(project);
-                context.logger.info('[Project Creation] Updated mesh state after successful deployment');
+                context.logger.debug('[Project Creation] Updated mesh state after successful deployment');
+
+                // Fetch deployed mesh config to populate meshState.envVars
+                // This ensures dashboard shows correct "Deployed" status immediately
+                const { fetchDeployedMeshConfig } = await import('@/features/mesh/services/stalenessDetector');
+                const deployedConfig = await fetchDeployedMeshConfig();
+
+                if (hasEntries(deployedConfig)) {
+                    project.meshState!.envVars = deployedConfig;
+                    context.logger.debug('[Project Creation] Populated meshState.envVars with deployed config');
+                    await context.stateManager.saveProject(project);
+                }
 
                 context.logger.info(`[Project Creation] ✅ Mesh configuration updated successfully${endpoint ? ': ' + endpoint : ''}`);
             } else {
@@ -316,9 +399,20 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         // Update meshState to track deployment (required for status detection)
         const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
         await updateMeshState(project);
-        context.logger.info('[Project Creation] Updated mesh state for existing mesh');
+        context.logger.debug('[Project Creation] Updated mesh state for existing mesh');
 
-        context.logger.info('[Project Creation] API Mesh configured');
+        // Fetch deployed mesh config to populate meshState.envVars
+        // This ensures dashboard shows correct "Deployed" status immediately
+        const { fetchDeployedMeshConfig } = await import('@/features/mesh/services/stalenessDetector');
+        const deployedConfig = await fetchDeployedMeshConfig();
+
+        if (hasEntries(deployedConfig)) {
+            project.meshState!.envVars = deployedConfig;
+            context.logger.debug('[Project Creation] Populated meshState.envVars with deployed config');
+            await context.stateManager.saveProject(project);
+        }
+
+        context.logger.debug('[Project Creation] API Mesh configured');
     }
 
     // Step 6: Create project manifest (90%)
@@ -335,7 +429,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         componentConfigs: project.componentConfigs,
         meshState: project.meshState,
         commerce: project.commerce,
-        components: Object.keys(project.componentInstances || {}), // Keep for backward compatibility
+        components: getComponentIds(project.componentInstances), // Keep for backward compatibility
     };
 
     await fs.writeFile(
@@ -343,17 +437,12 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         JSON.stringify(manifest, null, 2),
     );
 
-    context.logger.info('[Project Creation] Project manifest created');
+    context.logger.debug('[Project Creation] Project manifest created');
 
     // Step 8: Save project state (95%)
     progressTracker('Finalizing Project', 95, 'Saving project state...');
 
-    context.logger.info('[Project Creation] About to save project state...');
-    context.logger.debug('[Project Creation] Project object:', JSON.stringify({
-        name: project.name,
-        status: 'ready',
-        componentCount: Object.keys(project.componentInstances || {}).length,
-    }));
+    context.logger.debug(`[Project Creation] Saving project: ${project.name} (${getEntryCount(project.componentInstances)} components)`);
 
     try {
         project.status = 'ready';
@@ -363,11 +452,18 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             project.componentVersions = {};
         }
 
-        for (const componentId of Object.keys(project.componentInstances || {})) {
+        for (const componentId of getComponentIds(project.componentInstances)) {
+            const componentInstance = project.componentInstances?.[componentId];
+            const detectedVersion = componentInstance?.version || 'unknown';
+
             project.componentVersions[componentId] = {
-                version: 'unknown', // Will be set on first update
+                version: detectedVersion, // Use version detected during installation
                 lastUpdated: new Date().toISOString(),
             };
+
+            if (detectedVersion !== 'unknown') {
+                context.logger.debug(`[Project Creation] ${componentId} version: ${detectedVersion}`);
+            }
         }
 
         await context.stateManager.saveProject(project);
@@ -396,7 +492,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             success: true,
             message: 'Your demo is ready to start',
         });
-        context.logger.info('[Project Creation] ✅ Completion message sent');
+        context.logger.debug('[Project Creation] ✅ Completion message sent');
     } catch (messageError) {
         context.logger.error('[Project Creation] ❌ Failed to send completion message', messageError instanceof Error ? messageError : undefined);
     }
@@ -405,10 +501,17 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // (User should click "Open Project" to close and open the project in workspace)
     setTimeout(() => {
         if (context.panel) {
-            context.panel.dispose();
-            context.logger.info('[Project Creation] Webview panel closed automatically (timeout - user did not click Open Project)');
+            try {
+                // Check if panel is still visible (not already disposed)
+                if (context.panel.visible) {
+                    context.panel.dispose();
+                    context.logger.debug('[Project Creation] Webview panel auto-closed after timeout');
+                }
+            } catch {
+                // Panel was already disposed by user action - this is expected
+            }
         }
-    }, 120000); // 2 minutes
+    }, TIMEOUTS.WEBVIEW_AUTO_CLOSE);
 
-    context.logger.info('[Project Creation] ===== PROJECT CREATION WORKFLOW COMPLETE =====');
+    context.logger.debug('[Project Creation] ===== PROJECT CREATION WORKFLOW COMPLETE =====');
 }

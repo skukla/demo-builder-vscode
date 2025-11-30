@@ -1,5 +1,6 @@
 import { getLogger } from '@/core/logging';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
+import { getCacheTTLWithJitter } from '@/core/cache/AbstractCacheManager';
 import type {
     AdobeOrg,
     AdobeProject,
@@ -22,20 +23,6 @@ import type {
  */
 export class AuthCacheManager {
     private logger = getLogger();
-
-    /**
-     * Add random jitter to TTL to prevent timing-based cache enumeration attacks
-     * SECURITY: Randomizes cache expiry by ±10% to make timing attacks infeasible
-     *
-     * @param baseTTL - Base TTL in milliseconds
-     * @returns TTL with random jitter applied
-     */
-    private getCacheTTLWithJitter(baseTTL: number): number {
-        const jitter = 0.1; // ±10%
-        const min = Math.floor(baseTTL * (1 - jitter));
-        const max = Math.floor(baseTTL * (1 + jitter));
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
 
     // Session caching for current selections
     private cachedOrganization: AdobeOrg | undefined;
@@ -71,11 +58,6 @@ export class AuthCacheManager {
      */
     setCachedOrganization(org: AdobeOrg | undefined): void {
         this.cachedOrganization = org;
-        if (org) {
-            this.logger.debug(`[Auth Cache] Cached organization: ${org.name}`);
-        } else {
-            this.logger.debug('[Auth Cache] Cleared cached organization');
-        }
     }
 
     /**
@@ -90,11 +72,6 @@ export class AuthCacheManager {
      */
     setCachedProject(project: AdobeProject | undefined): void {
         this.cachedProject = project;
-        if (project) {
-            this.logger.debug(`[Auth Cache] Cached project: ${project.name}`);
-        } else {
-            this.logger.debug('[Auth Cache] Cleared cached project');
-        }
     }
 
     /**
@@ -109,11 +86,6 @@ export class AuthCacheManager {
      */
     setCachedWorkspace(workspace: AdobeWorkspace | undefined): void {
         this.cachedWorkspace = workspace;
-        if (workspace) {
-            this.logger.debug(`[Auth Cache] Cached workspace: ${workspace.name}`);
-        } else {
-            this.logger.debug('[Auth Cache] Cleared cached workspace');
-        }
     }
 
     /**
@@ -122,10 +94,6 @@ export class AuthCacheManager {
     getCachedAuthStatus(): { isAuthenticated: boolean | undefined; isExpired: boolean } {
         const now = Date.now();
         const isExpired = now >= this.authCacheExpiry;
-
-        if (isExpired && this.cachedAuthStatus !== undefined) {
-            this.logger.debug('[Auth Cache] Auth status cache expired');
-        }
 
         return {
             isAuthenticated: isExpired ? undefined : this.cachedAuthStatus,
@@ -138,9 +106,8 @@ export class AuthCacheManager {
      */
     setCachedAuthStatus(isAuthenticated: boolean, ttlMs: number = CACHE_TTL.AUTH_STATUS): void {
         this.cachedAuthStatus = isAuthenticated;
-        const jitteredTTL = this.getCacheTTLWithJitter(ttlMs);
+        const jitteredTTL = getCacheTTLWithJitter(ttlMs);
         this.authCacheExpiry = Date.now() + jitteredTTL;
-        this.logger.debug(`[Auth Cache] Cached auth status: ${isAuthenticated} (TTL: ${jitteredTTL}ms)`);
     }
 
     /**
@@ -149,7 +116,6 @@ export class AuthCacheManager {
     clearAuthStatusCache(): void {
         this.cachedAuthStatus = undefined;
         this.authCacheExpiry = 0;
-        this.logger.debug('[Auth Cache] Cleared auth status cache');
     }
 
     /**
@@ -162,7 +128,6 @@ export class AuthCacheManager {
 
         const now = Date.now();
         if (now >= this.validationCache.expiry) {
-            this.logger.debug('[Auth Cache] Validation cache expired');
             this.validationCache = undefined;
             return undefined;
         }
@@ -175,13 +140,12 @@ export class AuthCacheManager {
      */
     setValidationCache(org: string, isValid: boolean): void {
         const now = Date.now();
-        const jitteredTTL = this.getCacheTTLWithJitter(CACHE_TTL.VALIDATION);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.VALIDATION);
         this.validationCache = {
             org,
             isValid,
             expiry: now + jitteredTTL,
         };
-        this.logger.debug(`[Auth Cache] Cached validation for ${org}: ${isValid} (TTL: ${jitteredTTL}ms)`);
     }
 
     /**
@@ -189,7 +153,6 @@ export class AuthCacheManager {
      */
     clearValidationCache(): void {
         this.validationCache = undefined;
-        this.logger.debug('[Auth Cache] Cleared validation cache');
     }
 
     /**
@@ -202,12 +165,10 @@ export class AuthCacheManager {
 
         const now = Date.now();
         if (now >= this.orgListCache.expiry) {
-            this.logger.debug('[Auth Cache] Org list cache expired');
             this.orgListCache = undefined;
             return undefined;
         }
 
-        this.logger.debug('[Auth Cache] Using cached organization list');
         return this.orgListCache.data;
     }
 
@@ -216,12 +177,11 @@ export class AuthCacheManager {
      */
     setCachedOrgList(orgs: AdobeOrg[]): void {
         const now = Date.now();
-        const jitteredTTL = this.getCacheTTLWithJitter(CACHE_TTL.ORG_LIST);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.ORG_LIST);
         this.orgListCache = {
             data: orgs,
             expiry: now + jitteredTTL,
         };
-        this.logger.debug(`[Auth Cache] Cached ${orgs.length} organizations (TTL: ${jitteredTTL}ms)`);
     }
 
     /**
@@ -234,12 +194,10 @@ export class AuthCacheManager {
 
         const now = Date.now();
         if (now >= this.consoleWhereCache.expiry) {
-            this.logger.debug('[Auth Cache] console.where cache expired');
             this.consoleWhereCache = undefined;
             return undefined;
         }
 
-        this.logger.debug('[Auth Cache] Using cached console.where response');
         return this.consoleWhereCache.data;
     }
 
@@ -248,12 +206,11 @@ export class AuthCacheManager {
      */
     setCachedConsoleWhere(context: AdobeConsoleWhereResponse): void {
         const now = Date.now();
-        const jitteredTTL = this.getCacheTTLWithJitter(CACHE_TTL.CONSOLE_WHERE);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.CONSOLE_WHERE);
         this.consoleWhereCache = {
             data: context,
             expiry: now + jitteredTTL,
         };
-        this.logger.debug(`[Auth Cache] Cached console.where result (TTL: ${jitteredTTL}ms)`);
     }
 
     /**
@@ -261,7 +218,6 @@ export class AuthCacheManager {
      */
     clearConsoleWhereCache(): void {
         this.consoleWhereCache = undefined;
-        this.logger.debug('[Auth Cache] Cleared console.where cache');
     }
 
     /**
@@ -275,12 +231,10 @@ export class AuthCacheManager {
 
         const now = Date.now();
         if (now >= this.tokenInspectionCache.expiry) {
-            this.logger.debug('[Auth Cache] Token inspection cache expired');
             this.tokenInspectionCache = undefined;
             return undefined;
         }
 
-        this.logger.debug('[Auth Cache] Using cached token inspection result');
         return this.tokenInspectionCache.data;
     }
 
@@ -290,12 +244,11 @@ export class AuthCacheManager {
      */
     setCachedTokenInspection(result: { valid: boolean; expiresIn: number; token?: string }): void {
         const now = Date.now();
-        const jitteredTTL = this.getCacheTTLWithJitter(CACHE_TTL.TOKEN_INSPECTION);
+        const jitteredTTL = getCacheTTLWithJitter(CACHE_TTL.TOKEN_INSPECTION);
         this.tokenInspectionCache = {
             data: result,
             expiry: now + jitteredTTL,
         };
-        this.logger.debug(`[Auth Cache] Cached token inspection (valid: ${result.valid}, TTL: ${jitteredTTL}ms)`);
     }
 
     /**
@@ -303,7 +256,6 @@ export class AuthCacheManager {
      */
     clearTokenInspectionCache(): void {
         this.tokenInspectionCache = undefined;
-        this.logger.debug('[Auth Cache] Cleared token inspection cache');
     }
 
     /**
@@ -311,7 +263,6 @@ export class AuthCacheManager {
      */
     wasOrgClearedDueToValidation(): boolean {
         const result = this.orgClearedDueToValidation;
-        this.logger.debug(`[Auth Cache] wasOrgClearedDueToValidation: ${result}`);
         // Clear flag after reading (one-time check)
         this.orgClearedDueToValidation = false;
         return result;
@@ -322,7 +273,6 @@ export class AuthCacheManager {
      */
     setOrgClearedDueToValidation(cleared: boolean): void {
         this.orgClearedDueToValidation = cleared;
-        this.logger.debug(`[Auth Cache] Set orgClearedDueToValidation: ${cleared}`);
     }
 
     /**
@@ -332,7 +282,6 @@ export class AuthCacheManager {
         this.cachedOrganization = undefined;
         this.cachedProject = undefined;
         this.cachedWorkspace = undefined;
-        this.logger.debug('[Auth Cache] Cleared session caches');
     }
 
     /**
@@ -342,7 +291,6 @@ export class AuthCacheManager {
         this.orgListCache = undefined;
         this.consoleWhereCache = undefined;
         this.tokenInspectionCache = undefined;
-        this.logger.debug('[Auth Cache] Cleared performance caches');
     }
 
     /**
@@ -355,6 +303,5 @@ export class AuthCacheManager {
         this.clearValidationCache();
         this.clearTokenInspectionCache();
         this.orgClearedDueToValidation = false;
-        this.logger.debug('[Auth Cache] Cleared all caches');
     }
 }

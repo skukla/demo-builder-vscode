@@ -1,13 +1,13 @@
 import { v4 as uuidv4 } from 'uuid';
 import * as vscode from 'vscode';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     Message,
     MessageType,
     MessagePayload,
     PendingRequest,
 } from '@/types/messages';
-import { getLogger } from '@/core/logging';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Message Handler Function Type
@@ -47,22 +47,31 @@ const REQUEST_TIMEOUTS: Record<string, number> = {
     'select-workspace': TIMEOUTS.CONFIG_WRITE,       // 10s - write selected workspace to config
     
     // API Mesh operations
-    'check-api-mesh': 60000,                         // 60s - workspace download + mesh describe
+    'check-api-mesh': TIMEOUTS.API_MESH_CHECK,       // 60s - workspace download + mesh describe
     'create-api-mesh': TIMEOUTS.API_MESH_CREATE,     // 120s - create and deploy mesh
     'update-api-mesh': TIMEOUTS.API_MESH_UPDATE,      // 120s - update and deploy mesh
 };
 
 /**
  * Manages robust bidirectional communication between extension and webview
- * 
+ *
  * Features:
  * - Message queuing until both sides are ready
- * - Two-way handshake protocol
+ * - Webview-initiated handshake protocol (VS Code Issue #125546)
  * - Request-response pattern with timeouts
  * - Automatic retry for failed messages
  * - State version tracking
  * - Comprehensive logging
  * - Backend-specified timeouts (single source of truth)
+ *
+ * Handshake Protocol (Reversed - Webview Initiates):
+ * 1. Extension sets up message listener and waits passively
+ * 2. Webview loads JavaScript bundle and sends `__webview_ready__`
+ * 3. Extension receives ready signal and sends `__handshake_complete__`
+ * 4. Both sides flush queued messages and begin normal communication
+ *
+ * This approach eliminates race conditions where the extension sends messages
+ * before the webview JavaScript bundle has finished loading.
  */
 export class WebviewCommunicationManager {
     private panel: vscode.WebviewPanel;
@@ -76,14 +85,15 @@ export class WebviewCommunicationManager {
     private disposables: vscode.Disposable[] = [];
     private logger = getLogger();
     private config: Required<CommunicationConfig>;
+    private isDisposed = false;
 
     constructor(panel: vscode.WebviewPanel, config: CommunicationConfig = {}) {
         this.panel = panel;
         this.config = {
-            handshakeTimeout: config.handshakeTimeout || 10000,
-            messageTimeout: config.messageTimeout || 30000,
+            handshakeTimeout: config.handshakeTimeout || TIMEOUTS.WEBVIEW_HANDSHAKE,
+            messageTimeout: config.messageTimeout || TIMEOUTS.COMMAND_DEFAULT,
             maxRetries: config.maxRetries || 3,
-            retryDelay: config.retryDelay || 1000,
+            retryDelay: config.retryDelay || TIMEOUTS.WEBVIEW_RETRY_DELAY,
             enableLogging: config.enableLogging !== false,
         };
     }
@@ -92,10 +102,6 @@ export class WebviewCommunicationManager {
      * Initialize communication with handshake protocol
      */
     async initialize(): Promise<void> {
-        if (this.config.enableLogging) {
-            this.logger.debug('[WebviewComm] Starting initialization');
-        }
-
         // Set up message listener
         this.panel.webview.onDidReceiveMessage(
             message => this.handleWebviewMessage(message),
@@ -112,14 +118,8 @@ export class WebviewCommunicationManager {
                 reject(new Error('Webview handshake timeout'));
             }, this.config.handshakeTimeout);
 
-            // Send extension ready signal
-            this.sendRawMessage({
-                id: uuidv4(),
-                type: '__extension_ready__',
-                timestamp: Date.now(),
-            });
-
             // Set up handshake completion handler
+            // Extension waits passively for webview ready signal (VS Code Issue #125546)
             this.once('__webview_ready__', () => {
                 this.isWebviewReady = true;
                 
@@ -133,10 +133,6 @@ export class WebviewCommunicationManager {
 
                 this.handshakeComplete = true;
                 clearTimeout(handshakeTimeout);
-
-                if (this.config.enableLogging) {
-                    this.logger.debug('[WebviewComm] Handshake complete');
-                }
 
                 // Flush queued messages
                 this.flushMessageQueue();
@@ -229,6 +225,19 @@ export class WebviewCommunicationManager {
     }
 
     /**
+     * Register a streaming message handler (alias for on)
+     *
+     * Explicit naming to indicate handlers that return streaming responses.
+     * Functionally identical to on() but semantically clearer for response handlers.
+     */
+    onStreaming<P = MessagePayload, R = unknown>(
+        type: MessageType,
+        handler: MessageHandlerFunction<P, R>,
+    ): void {
+        this.on(type, handler);
+    }
+
+    /**
      * Update state version (for consistency tracking)
      */
     incrementStateVersion(): number {
@@ -246,6 +255,9 @@ export class WebviewCommunicationManager {
      * Clean up resources
      */
     dispose(): void {
+        // Mark as disposed to prevent further message sends
+        this.isDisposed = true;
+
         // Clear all timeouts
         this.pendingRequests.forEach(request => {
             clearTimeout(request.timeout);
@@ -265,10 +277,6 @@ export class WebviewCommunicationManager {
      * Handle incoming message from webview
      */
     private async handleWebviewMessage(message: Message): Promise<void> {
-        if (this.config.enableLogging) {
-            this.logger.debug(`[WebviewComm] Received: ${message.type}`);
-        }
-
         // Handle special protocol messages
         if (message.type === '__webview_ready__') {
             const handler = this.messageHandlers.get('__webview_ready__');
@@ -304,25 +312,25 @@ export class WebviewCommunicationManager {
         if (handler) {
             try {
                 // Send timeout hint for requests that need extended timeouts
+                // NOTE: Nesting depth intentional - timeout hint must not block handler execution
                 if (message.id && message.expectsResponse) {
                     const requestTimeout = REQUEST_TIMEOUTS[message.type];
                     if (requestTimeout) {
-                        try {
-                            await this.sendRawMessage({
-                                id: uuidv4(),
-                                type: '__timeout_hint__',
-                                payload: { 
-                                    requestId: message.id,
-                                    timeout: requestTimeout, 
-                                },
-                                timestamp: Date.now(),
-                            });
-                        } catch (hintError) {
+                        // Fire-and-forget: Don't await to avoid blocking handler
+                        this.sendRawMessage({
+                            id: uuidv4(),
+                            type: '__timeout_hint__',
+                            payload: {
+                                requestId: message.id,
+                                timeout: requestTimeout,
+                            },
+                            timestamp: Date.now(),
+                        }).catch(hintError => {
                             // Timeout hint is non-critical, log and continue
                             if (this.config.enableLogging) {
                                 this.logger.warn(`[WebviewComm] Failed to send timeout hint (non-fatal): ${hintError}`);
                             }
-                        }
+                        });
                     }
                 }
 
@@ -392,6 +400,11 @@ export class WebviewCommunicationManager {
      * Send raw message to webview
      */
     private async sendRawMessage(message: Message): Promise<void> {
+        // Silently ignore if disposed (prevents error spam during webview transitions)
+        if (this.isDisposed) {
+            return;
+        }
+
         try {
             await this.panel.webview.postMessage(message);
         } catch (error) {
@@ -406,7 +419,7 @@ export class WebviewCommunicationManager {
      * Flush queued messages after handshake
      */
     private flushMessageQueue(): void {
-        if (this.config.enableLogging) {
+        if (this.config.enableLogging && this.messageQueue.length > 0) {
             this.logger.debug(`[WebviewComm] Flushing ${this.messageQueue.length} queued messages`);
         }
 

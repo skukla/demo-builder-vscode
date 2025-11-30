@@ -4,18 +4,23 @@
  * Infrastructure utilities for webviews, progress tracking, and configuration.
  */
 
-export { generateWebviewHTML } from './webviewHTMLBuilder';
-export type { WebviewHTMLOptions } from './webviewHTMLBuilder';
+// Note: generateWebviewHTML has been deprecated and removed
+// All webview commands should use getWebviewHTMLWithBundles instead
+
+export { getWebviewHTMLWithBundles } from './getWebviewHTMLWithBundles';
+export type { BundleUris, WebviewHTMLWithBundlesOptions } from './getWebviewHTMLWithBundles';
 
 export { extractEnvVars, extractEnvVarsSync } from './envVarExtraction';
 
 export { ProgressUnifier } from './progressUnifier';
 export type {
-    UnifiedProgress
+    UnifiedProgress,
 } from './progressUnifier';
 
 export { setLoadingState } from './loadingHTML';
 
 export { TIMEOUTS } from './timeoutConfig';
+
+export { formatDuration, formatMinutes } from './timeFormatting';
 
 export * from './promiseUtils';

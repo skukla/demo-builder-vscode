@@ -217,6 +217,18 @@ interface UnifiedProgress {
     percent?: number;
     detail?: string;
     confidence: 'exact' | 'estimated' | 'synthetic';
+
+    /**
+     * Current milestone index (0-based) for multi-step operations.
+     * Used with totalMilestones to display substep progress like "Step 2 of 3".
+     */
+    currentMilestoneIndex?: number;
+
+    /**
+     * Total number of milestones in the current operation.
+     * Used with currentMilestoneIndex to display substep progress.
+     */
+    totalMilestones?: number;
   };
 }
 ```
@@ -677,6 +689,35 @@ Plugins are shown as indented sub-items:
 ))}
 ```
 
+#### Milestone Substep Indicators
+
+For multi-step operations with progress milestones, the UI displays substep progress to show users where they are in the operation:
+
+```tsx
+{check.unifiedProgress?.command?.currentMilestoneIndex !== undefined &&
+ check.unifiedProgress?.command?.totalMilestones !== undefined && (
+    <Text
+        UNSAFE_className={cn('text-xs', 'text-gray-400', 'ml-2')}
+        aria-label={`Step ${check.unifiedProgress.command.currentMilestoneIndex + 1} of ${check.unifiedProgress.command.totalMilestones}`}
+    >
+        (Step {check.unifiedProgress.command.currentMilestoneIndex + 1} of {check.unifiedProgress.command.totalMilestones})
+    </Text>
+)}
+```
+
+**Key Features:**
+- **Conditional Display**: Only shown when both milestone fields are present
+- **1-Based Indexing**: Converts 0-based internal index to 1-based user-facing display (e.g., "Step 1 of 3")
+- **Accessibility**: Includes `aria-label` for screen reader support
+- **Visual Styling**: Uses subtle gray text with reduced size to avoid overwhelming the UI
+
+**Example Use Cases:**
+- Installing multiple Adobe I/O CLI plugins
+- Multi-version Node.js installations
+- Operations with distinct, trackable phases
+
+This provides clear feedback during long-running operations with multiple distinct steps, helping users understand progress and estimate completion time.
+
 ### Error Message Parsing
 
 The UI intelligently parses error messages to extract structured information:
@@ -811,6 +852,46 @@ After 5min:   3-6 seconds (cache expired, re-validation)
 - Installation time reduction: 40-60% compared to default flags
 - Removed `--no-audit` flag for security (vulnerability scanning still runs)
 - Cache validation ensures offline cache integrity
+
+### Smart Version Satisfaction
+
+**Intelligent Installation Prevention:**
+- Checks installed Node versions before installation using semver
+- Skips installation if required version family already satisfied
+- Example: If 24.0.10 is installed, requesting "24" skips installation
+
+**Implementation:**
+- `checkVersionSatisfaction(requiredFamily)` - Checks if version family is satisfied
+- Uses semver library for reliable version comparison
+- Queries `fnm list` to get all installed versions
+
+**Performance Impact:**
+```
+Without satisfaction check: Installs Node 24 even if 24.0.10 exists (30s wasted)
+With satisfaction check:    Skips installation (instant, 100% time saved)
+```
+
+**UI Messaging:**
+When installation is skipped, the UI displays a detailed message showing detected versions:
+- **With versions detected**: "Already installed (Node 20: 11.0.0, Node 24: 10.3.3)"
+- **Without version details**: "Already installed for all required Node versions"
+
+This enhanced messaging helps users understand exactly which versions are installed and why installation was skipped, reducing confusion about whether the prerequisite check succeeded.
+
+**Debug Logging:**
+The system logs detailed pre-check results to the Debug channel for troubleshooting:
+- Prerequisite name and versions checked
+- Per-Node-version status (installed/missing)
+- Command execution results (exit code, stdout, stderr)
+- Installation decision rationale
+
+This debug information helps diagnose false positives or unexpected installation behavior.
+
+**Benefits:**
+- Prevents redundant installations during repeated wizard runs
+- Faster prerequisite checking when versions already installed
+- Reduces unnecessary network traffic and disk operations
+- Clear user feedback about detected versions
 
 ### Enhanced Progress Visibility
 

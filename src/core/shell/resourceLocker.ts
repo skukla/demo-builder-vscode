@@ -13,8 +13,6 @@ export class ResourceLocker {
      * This ensures only one command accessing a resource runs at a time
      */
     async executeExclusive<T>(resource: string, operation: () => Promise<T>): Promise<T> {
-        this.logger.debug(`[Resource Locker] Acquiring lock for resource: ${resource}`);
-
         // Get or create lock promise for this resource
         const currentLock = this.locks.get(resource) || Promise.resolve();
 
@@ -27,11 +25,9 @@ export class ResourceLocker {
         // Chain our operation after current lock
         const resultPromise = currentLock
             .then(() => {
-                this.logger.debug(`[Resource Locker] Lock acquired for resource: ${resource}`);
                 return operation();
             })
             .finally(() => {
-                this.logger.debug(`[Resource Locker] Releasing lock for resource: ${resource}`);
                 releaseLock!();
             });
 
@@ -53,7 +49,6 @@ export class ResourceLocker {
      */
     clearAllLocks(): void {
         this.locks.clear();
-        this.logger.debug('[Resource Locker] Cleared all locks');
     }
 
     /**

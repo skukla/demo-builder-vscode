@@ -7,12 +7,15 @@
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
-import { parseJSON, toError } from '@/types/typeGuards';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
-import { getEndpoint } from '@/features/mesh/handlers/shared';
 import { validateWorkspaceId } from '@/core/validation';
+import { createProgressCallback, handleMeshAlreadyExists } from '@/features/mesh/handlers/createHandlerHelpers';
+import { getEndpoint } from '@/features/mesh/handlers/shared';
+import { getMeshStatusCategory, extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
+import { ErrorCode } from '@/types/errorCodes';
+import { parseJSON, toError } from '@/types/typeGuards';
 
 /**
  * Handler: create-api-mesh
@@ -42,6 +45,7 @@ export async function handleCreateApiMesh(
     meshStatus?: 'deployed' | 'error';
     message?: string;
     error?: string;
+    code?: ErrorCode;
 }> {
     const { workspaceId, onProgress } = payload;
 
@@ -53,10 +57,11 @@ export async function handleCreateApiMesh(
         return {
             success: false,
             error: `Invalid workspace ID: ${(validationError as Error).message}`,
+            code: ErrorCode.MESH_CONFIG_INVALID,
         };
     }
 
-    context.logger.info('[API Mesh] Creating new mesh for workspace', { workspaceId });
+    context.logger.debug('[API Mesh] Creating new mesh for workspace', { workspaceId });
 
     // PRE-FLIGHT: Check authentication before any Adobe CLI operations
     const authManager = ServiceLocator.getAuthenticationService();
@@ -78,6 +83,7 @@ export async function handleCreateApiMesh(
         return {
             success: false,
             error: 'Adobe authentication required. Please sign in via the Project Dashboard.',
+            code: ErrorCode.AUTH_REQUIRED,
         };
     }
 
@@ -102,7 +108,7 @@ export async function handleCreateApiMesh(
         meshConfigPath = path.join(storagePath, `mesh-config-${Date.now()}.json`);
         await fsPromises.writeFile(meshConfigPath, JSON.stringify(minimalMeshConfig, null, 2), 'utf-8');
 
-        context.logger.info('[API Mesh] Created minimal mesh configuration from template', {
+        context.logger.debug('[API Mesh] Created minimal mesh configuration from template', {
             templatePath,
             outputPath: meshConfigPath,
         });
@@ -111,28 +117,13 @@ export async function handleCreateApiMesh(
         // Create mesh with the configuration file
         onProgress?.('Creating API Mesh...', 'Submitting configuration to Adobe');
 
-        let lastOutput = '';
+        const lastOutput = { value: '' };
         const createResult = await commandManager.execute(
             `aio api-mesh create "${meshConfigPath}" --autoConfirmAction`,
             {
                 streaming: true,
                 timeout: TIMEOUTS.API_MESH_CREATE,
-                onOutput: (data: string) => {
-                    lastOutput += data;
-
-                    // Parse output for progress indicators (don't show raw CLI output)
-                    const output = data.toLowerCase();
-                    if (output.includes('validating')) {
-                        onProgress?.('Creating API Mesh...', 'Validating configuration');
-                    } else if (output.includes('creating')) {
-                        onProgress?.('Creating API Mesh...', 'Provisioning mesh infrastructure');
-                    } else if (output.includes('deploying')) {
-                        onProgress?.('Creating API Mesh...', 'Deploying mesh');
-                    } else if (output.includes('success')) {
-                        onProgress?.('Creating API Mesh...', 'Finalizing mesh setup');
-                    }
-                    // Note: Don't show raw CLI output - it may contain masked credentials (*******) or other noise
-                },
+                onOutput: createProgressCallback('create', onProgress, lastOutput),
                 configureTelemetry: false,
                 useNodeVersion: null,
                 enhancePath: true,
@@ -140,79 +131,22 @@ export async function handleCreateApiMesh(
         );
 
         if (createResult.code !== 0) {
-            const errorMsg = createResult.stderr || lastOutput || 'Failed to create mesh';
+            // Try to handle as "mesh already exists" or "partially created" case
+            const meshExistsResult = await handleMeshAlreadyExists(
+                context,
+                commandManager,
+                meshConfigPath,
+                createResult,
+                lastOutput,
+                onProgress,
+            );
 
-            // Special case 1: mesh already exists - update it instead
-            // Special case 2: mesh was created but deployment failed - update to redeploy
-            const meshAlreadyExists = errorMsg.includes('already has a mesh') || lastOutput.includes('already has a mesh');
-            const meshCreatedButFailed = createResult.stdout.includes('Mesh created') ||
-                                     createResult.stdout.includes('mesh created') ||
-                                     lastOutput.includes('Mesh created');
-
-            if (meshAlreadyExists || meshCreatedButFailed) {
-                if (meshCreatedButFailed) {
-                    context.logger.info('[API Mesh] Mesh created but deployment failed, attempting update to redeploy');
-                    onProgress?.('Completing API Mesh Setup...', 'Detected partial creation, now deploying mesh');
-                } else {
-                    context.logger.info('[API Mesh] Mesh already exists, updating with new configuration');
-                    onProgress?.('Updating Existing Mesh...', 'Found existing mesh, updating configuration');
-                }
-
-                // Update the existing mesh to ensure proper deployment
-                try {
-                    const updateResult = await commandManager.execute(
-                        `aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
-                        {
-                            streaming: true,
-                            timeout: TIMEOUTS.API_MESH_UPDATE,
-                            onOutput: (data: string) => {
-                                const output = data.toLowerCase();
-                                if (output.includes('validating')) {
-                                    onProgress?.('Deploying API Mesh...', 'Validating mesh configuration');
-                                } else if (output.includes('updating')) {
-                                    onProgress?.('Deploying API Mesh...', 'Updating mesh infrastructure');
-                                } else if (output.includes('deploying')) {
-                                    onProgress?.('Deploying API Mesh...', 'Deploying to Adobe infrastructure');
-                                } else if (output.includes('success')) {
-                                    onProgress?.('API Mesh Ready', 'Mesh deployed successfully');
-                                }
-                            },
-                            configureTelemetry: false,
-                            useNodeVersion: null,
-                            enhancePath: true,
-                        },
-                    );
-
-                    if (updateResult.code === 0) {
-                        context.logger.info('[API Mesh] Mesh updated successfully');
-
-                        // Extract mesh ID from output
-                        const meshIdMatch = /mesh[_-]?id[:\s]+([a-f0-9-]+)/i.exec(updateResult.stdout);
-                        const meshId = meshIdMatch ? meshIdMatch[1] : undefined;
-
-                        // Get endpoint using single source of truth
-                        const endpoint = meshId ? await getEndpoint(context, meshId) : undefined;
-
-                        onProgress?.('✓ API Mesh Ready', 'Mesh successfully deployed and ready to use');
-
-                        return {
-                            success: true,
-                            meshId,
-                            endpoint,
-                            message: 'API Mesh deployed successfully',
-                        };
-                    } else {
-                        const updateError = updateResult.stderr || 'Failed to update mesh';
-                        context.logger.error('[API Mesh] Update failed', new Error(updateError));
-                        throw new Error(updateError);
-                    }
-                } catch (updateError) {
-                    context.logger.error('[API Mesh] Failed to update existing mesh', updateError as Error);
-                    throw updateError;
-                }
+            if (meshExistsResult) {
+                return meshExistsResult; // Mesh exists case handled successfully
             }
 
             // Other errors: fail
+            const errorMsg = createResult.stderr || lastOutput.value || 'Failed to create mesh';
             context.logger.error('[API Mesh] Creation failed', new Error(errorMsg));
             throw new Error(errorMsg);
         }
@@ -222,12 +156,12 @@ export async function handleCreateApiMesh(
 
         // Mesh creation is asynchronous - poll until it's deployed
         // Typical deployment time: 60-90 seconds, with 2 minute buffer for safety
-        context.logger.info('[API Mesh] Starting deployment verification polling...');
+        context.logger.debug('[API Mesh] Starting deployment verification polling...');
         onProgress?.('Waiting for mesh deployment...', 'Mesh is being provisioned (typically takes 60-90 seconds)');
 
         const maxRetries = 10; // 10 attempts with strategic timing = ~2 minutes max
-        const pollInterval = 10000; // 10 seconds between checks
-        const initialWait = 20000; // 20 seconds before first check (avoid premature polling)
+        const pollInterval = TIMEOUTS.MESH_VERIFY_POLL_INTERVAL;
+        const initialWait = TIMEOUTS.MESH_VERIFY_INITIAL_WAIT;
         let attempt = 0;
         let meshDeployed = false;
         let deployedMeshId: string | undefined;
@@ -252,7 +186,7 @@ export async function handleCreateApiMesh(
                 await new Promise(resolve => setTimeout(resolve, pollInterval));
             }
 
-            context.logger.info(`[API Mesh] Verification attempt ${attempt}/${maxRetries}`);
+            context.logger.debug(`[API Mesh] Verification attempt ${attempt}/${maxRetries}`);
 
             try {
                 // Use 'get' without --active flag to get JSON response with meshStatus
@@ -263,53 +197,56 @@ export async function handleCreateApiMesh(
                         configureTelemetry: false,
                         useNodeVersion: null,
                         enhancePath: true,
+                        shell: true,
                     },
                 );
 
                 if (verifyResult.code === 0) {
                     // Parse JSON response to check meshStatus
                     try {
-                        // Extract JSON from output (skip "Successfully retrieved mesh" line)
-                        const jsonMatch = /\{[\s\S]*\}/.exec(verifyResult.stdout);
-                        if (!jsonMatch) {
+                        // Extract JSON from output using Step 2 helper (skips "Successfully retrieved mesh" line)
+                        const meshData = extractAndParseJSON<{ meshId?: string; meshStatus?: string; error?: string }>(verifyResult.stdout);
+                        if (!meshData) {
                             context.logger.warn('[API Mesh] Could not parse JSON from get response');
                             context.debugLogger.debug('[API Mesh] Output:', verifyResult.stdout);
                             continue; // Try next iteration
                         }
+                        const rawMeshStatus = meshData.meshStatus || '';
+                        const statusCategory = getMeshStatusCategory(rawMeshStatus);
 
-                        const meshData = parseJSON<{ meshId?: string; meshStatus?: string; error?: string }>(jsonMatch[0]);
-                        if (!meshData) {
-                            context.logger.warn('[API Mesh] Failed to parse mesh data');
-                            continue; // Try next iteration
-                        }
-                        const meshStatus = meshData.meshStatus?.toLowerCase();
+                        context.debugLogger.debug('[API Mesh] Mesh status:', { rawMeshStatus, statusCategory, meshId: meshData.meshId });
 
-                        context.debugLogger.debug('[API Mesh] Mesh status:', { meshStatus, meshId: meshData.meshId });
+                        switch (statusCategory) {
+                            case 'deployed': {
+                                // Success! Mesh is fully deployed - store the mesh data
+                                const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
+                                context.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
+                                deployedMeshId = meshData.meshId;
+                                // Get endpoint using single source of truth
+                                deployedEndpoint = meshData.meshId ? await getEndpoint(context, meshData.meshId) : undefined;
+                                meshDeployed = true;
+                                break;
+                            }
 
-                        if (meshStatus === 'deployed' || meshStatus === 'success') {
-                            // Success! Mesh is fully deployed - store the mesh data
-                            const totalTime = Math.floor((initialWait + (attempt - 1) * pollInterval) / 1000);
-                            context.logger.info(`[API Mesh] Mesh deployed successfully after ${attempt} attempts (~${totalTime}s total)`);
-                            deployedMeshId = meshData.meshId;
-                            // Get endpoint using single source of truth
-                            deployedEndpoint = meshData.meshId ? await getEndpoint(context, meshData.meshId) : undefined;
-                            meshDeployed = true;
-                            break;
-                        } else if (meshStatus === 'error' || meshStatus === 'failed') {
-                            // Deployment failed - return error
-                            const errorMsg = meshData.error || 'Mesh deployment failed';
-                            context.logger.error('[API Mesh] Mesh deployment failed with error status');
-                            context.debugLogger.debug('[API Mesh] Error details:', errorMsg.substring(0, 500));
+                            case 'error': {
+                                // Deployment failed - return error
+                                const errorMsg = meshData.error || 'Mesh deployment failed';
+                                context.logger.error('[API Mesh] Mesh deployment failed with error status');
+                                context.debugLogger.debug('[API Mesh] Error details:', errorMsg.substring(0, 500));
 
-                            return {
-                                success: false,
-                                meshExists: true,
-                                meshStatus: 'error',
-                                error: 'Mesh deployment failed. Click "Recreate Mesh" to delete and try again.',
-                            };
-                        } else {
-                            // Status is pending/provisioning/building - continue polling
-                            context.logger.info(`[API Mesh] Mesh status: ${meshStatus || 'unknown'} (attempt ${attempt}/${maxRetries})`);
+                                return {
+                                    success: false,
+                                    meshExists: true,
+                                    meshStatus: 'error',
+                                    error: 'Mesh deployment failed. Click "Recreate Mesh" to delete and try again.',
+                                    code: ErrorCode.UNKNOWN,
+                                };
+                            }
+
+                            case 'pending':
+                                // Status is pending/provisioning/building - continue polling
+                                context.logger.debug(`[API Mesh] Mesh status: ${rawMeshStatus || 'unknown'} (attempt ${attempt}/${maxRetries})`);
+                                break;
                         }
                     } catch (parseError) {
                         context.logger.warn('[API Mesh] Failed to parse mesh status JSON', parseError as Error);
@@ -334,7 +271,7 @@ export async function handleCreateApiMesh(
         if (!meshDeployed) {
             const totalWaitTime = Math.floor((initialWait + maxRetries * pollInterval) / 1000);
             context.logger.warn(`[API Mesh] Mesh deployment verification timed out after ${maxRetries} attempts (~${totalWaitTime}s)`);
-            context.logger.info('[API Mesh] Mesh is still provisioning but taking longer than expected');
+            context.logger.debug('[API Mesh] Mesh is still provisioning but taking longer than expected');
             onProgress?.('Mesh still provisioning', 'Deployment is taking longer than usual');
 
             // TIMEOUT is not an ERROR - mesh is likely still being deployed
@@ -361,13 +298,14 @@ export async function handleCreateApiMesh(
         return {
             success: false,
             error: toError(error).message,
+            code: ErrorCode.UNKNOWN,
         };
     } finally {
         // Clean up temporary mesh config file
         if (meshConfigPath) {
             try {
                 await fsPromises.rm(meshConfigPath, { force: true });
-                context.logger.info('[API Mesh] Cleaned up temporary mesh config file');
+                context.logger.debug('[API Mesh] Cleaned up temporary mesh config file');
             } catch (cleanupError) {
                 context.logger.warn('[API Mesh] Failed to clean up mesh config file', cleanupError as Error);
             }

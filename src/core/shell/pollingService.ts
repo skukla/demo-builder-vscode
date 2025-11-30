@@ -1,6 +1,7 @@
-import { getLogger } from '@/core/logging';
 import { RateLimiter } from './rateLimiter';
 import type { PollOptions } from './types';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Service for polling operations with exponential backoff
@@ -21,14 +22,12 @@ export class PollingService {
     ): Promise<void> {
         const {
             maxAttempts = 60,
-            initialDelay = 500,
-            maxDelay = 5000,
+            initialDelay = TIMEOUTS.POLL_INITIAL_DELAY,
+            maxDelay = TIMEOUTS.POLL_MAX_DELAY,
             backoffFactor = 1.5,
-            timeout = 120000,
+            timeout = TIMEOUTS.API_MESH_UPDATE,
             name = 'condition',
         } = options;
-
-        this.logger.debug(`[Polling Service] Starting poll for: ${name}`);
 
         const startTime = Date.now();
         let attempt = 0;
@@ -56,7 +55,6 @@ export class PollingService {
             }
 
             // Wait before next attempt
-            this.logger.debug(`[Polling Service] Poll attempt ${attempt} for ${name} - waiting ${delay}ms`);
             await this.delay(delay);
 
             // Calculate next delay with exponential backoff

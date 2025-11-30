@@ -1,6 +1,15 @@
 module.exports = {
-  preset: 'ts-jest',
   roots: ['<rootDir>/tests'],
+
+  // Performance optimizations
+  // Note: Heap size configured via package.json test script (--max-old-space-size=4096)
+  cache: true,
+  cacheDirectory: '<rootDir>/.jest-cache',
+  maxWorkers: '50%',
+
+  // Memory management - recycle workers when they exceed 512MB
+  // Critical for preventing memory crashes during large test runs
+  workerIdleMemoryLimit: '512MB',
 
   // Separate test environments for Node and React tests
   projects: [
@@ -9,14 +18,29 @@ module.exports = {
       testEnvironment: 'node',
       testMatch: [
         '**/tests/**/*.test.ts',
-        '!**/tests/webviews/**/*.test.ts',
-        '!**/tests/webviews/**/*.test.tsx'
+        '!**/tests/webview-ui/**/*.test.ts',
+        '!**/tests/webview-ui/**/*.test.tsx'
       ],
       transform: {
-        '^.+\\.ts$': 'ts-jest',
+        '^.+\\.ts$': ['@swc/jest', {
+          jsc: {
+            parser: {
+              syntax: 'typescript',
+              tsx: false,
+              decorators: true,
+            },
+            target: 'es2021',
+            keepClassNames: true,
+          },
+          module: {
+            type: 'commonjs',
+          },
+          sourceMaps: true,
+        }],
       },
       moduleFileExtensions: ['ts', 'js', 'json'],
       moduleNameMapper: {
+        '^@/commands/(.*)$': '<rootDir>/src/commands/$1',
         '^@/core/(.*)$': '<rootDir>/src/core/$1',
         '^@/features/(.*)$': '<rootDir>/src/features/$1',
         '^@/shared/(.*)$': '<rootDir>/src/shared/$1',
@@ -27,26 +51,38 @@ module.exports = {
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
       },
-      globals: {
-        'ts-jest': {
-          tsconfig: {
-            esModuleInterop: true,
-            allowSyntheticDefaultImports: true,
-          },
-        },
-      },
+      setupFilesAfterEnv: ['<rootDir>/tests/setup/node.ts'],
     },
     {
       displayName: 'react',
       testEnvironment: 'jsdom',
-      testMatch: ['**/tests/webviews/**/*.test.ts', '**/tests/webviews/**/*.test.tsx'],
+      testMatch: [
+        '**/tests/webview-ui/**/*.test.ts',
+        '**/tests/webview-ui/**/*.test.tsx',
+        '**/tests/features/**/*.test.tsx',
+        '**/tests/core/ui/**/*.test.tsx',
+        '**/src/features/**/*.test.tsx'
+      ],
       transform: {
-        '^.+\\.(ts|tsx)$': ['ts-jest', {
-          tsconfig: {
-            jsx: 'react',
-            esModuleInterop: true,
-            allowSyntheticDefaultImports: true,
+        '^.+\\.(ts|tsx)$': ['@swc/jest', {
+          jsc: {
+            parser: {
+              syntax: 'typescript',
+              tsx: true,
+              decorators: true,
+            },
+            transform: {
+              react: {
+                runtime: 'automatic',
+              },
+            },
+            target: 'es2021',
+            keepClassNames: true,
           },
+          module: {
+            type: 'commonjs',
+          },
+          sourceMaps: true,
         }],
       },
       setupFilesAfterEnv: ['<rootDir>/tests/setup/react.ts'],
@@ -59,19 +95,9 @@ module.exports = {
         '^@/types/(.*)$': '<rootDir>/src/types/$1',
         '^@/providers/(.*)$': '<rootDir>/src/providers/$1',
         '^@/utils/(.*)$': '<rootDir>/src/utils/$1',
-        '^@/(.*)$': '<rootDir>/src/webviews/$1',
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
-      },
-      globals: {
-        'ts-jest': {
-          tsconfig: {
-            jsx: 'react',
-            esModuleInterop: true,
-            allowSyntheticDefaultImports: true,
-          },
-        },
       },
     }
   ],

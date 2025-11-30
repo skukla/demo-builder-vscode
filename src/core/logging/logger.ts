@@ -1,4 +1,3 @@
-import type { LogLevel } from '@/types/logger';
 import { getLogger, DebugLogger } from './debugLogger';
 
 /**
@@ -61,5 +60,12 @@ export class Logger {
 
         // Debug messages go to debug channel
         this.debugLogger.debug(message, args.length > 0 ? args : undefined);
+    }
+
+    public trace(message: string, ...args: unknown[]): void {
+        if (!this.debugLogger) return;
+
+        // Trace messages go to debug channel (most verbose)
+        this.debugLogger.trace(message, args.length > 0 ? args : undefined);
     }
 }

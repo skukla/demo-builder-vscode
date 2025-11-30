@@ -4,11 +4,11 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import type { Logger } from '@/types/logger';
-import { parseJSON, toError } from '@/types/typeGuards';
 import { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { MeshDeploymentResult } from '@/features/mesh/services/types';
+import type { Logger } from '@/types/logger';
+import { parseJSON, toError } from '@/types/typeGuards';
 
 export type { MeshDeploymentResult };
 
@@ -48,17 +48,18 @@ export async function deployMeshComponent(
 
         // Use the original mesh.json path directly (not a temp copy)
         // This ensures relative paths in mesh.json (like build/resolvers/*.js) resolve correctly
-        logger.debug(`[Deploy Mesh] Using config from: ${meshConfigPath}`);
+        logger.debug(`[Mesh Deployment] Using config from: ${meshConfigPath}`);
 
         onProgress?.('Deploying API Mesh...', 'Updating mesh configuration');
 
         // Always use 'update' during project creation since mesh was already created in wizard
-        logger.info('[Deploy Mesh] Updating mesh with configuration from commerce-mesh component');
+        logger.debug('[Mesh Deployment] Updating mesh with configuration from commerce-mesh component');
         const deployResult = await commandManager.execute(
-            `aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
+            `aio api-mesh:update "${meshConfigPath}" --autoConfirmAction`,
             {
                 cwd: componentPath, // Run from mesh component directory (where .env file is)
                 streaming: true,
+                shell: true, // Required for command string with arguments and quoted paths
                 timeout: TIMEOUTS.API_MESH_UPDATE,
                 onOutput: (data: string) => {
                     const output = data.toLowerCase();
@@ -84,7 +85,7 @@ export async function deployMeshComponent(
             throw new Error(formatAdobeCliError(errorMsg));
         }
 
-        logger.info('[Deploy Mesh] Update command completed, verifying deployment...');
+        logger.debug('[Mesh Deployment] Update command completed, verifying deployment...');
 
         // Use shared verification utility (same as manual deploy command)
         const { waitForMeshDeployment } = await import('./meshDeploymentVerifier');
@@ -105,8 +106,8 @@ export async function deployMeshComponent(
             throw new Error(verificationResult.error || 'Mesh deployment verification failed');
         }
 
-        logger.info('[Deploy Mesh] ✅ Mesh verified and deployed successfully');
-        onProgress?.('✓ Deployment Complete', verificationResult.endpoint || 'Mesh deployed successfully');
+        logger.info('[Mesh Deployment] ✅ Mesh verified and deployed successfully');
+        onProgress?.('✓ Deployment Complete', 'Mesh deployed successfully');
 
         return {
             success: true,
@@ -117,7 +118,7 @@ export async function deployMeshComponent(
         };
 
     } catch (error) {
-        logger.error('[Deploy Mesh] Deployment failed', error as Error);
+        logger.error('[Mesh Deployment] Deployment failed', error as Error);
         return {
             success: false,
             error: toError(error).message,

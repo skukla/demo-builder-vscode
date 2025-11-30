@@ -1,13 +1,75 @@
 import * as vscode from 'vscode';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { DisposableStore } from '@/core/utils/disposableStore';
 
-export abstract class BaseCommand {
+/**
+ * Base class for all VS Code commands
+ *
+ * Provides standardized infrastructure for command implementations:
+ * - Error handling and user notifications
+ * - Progress indicators
+ * - User prompts (confirm, input, quick pick)
+ * - Terminal creation with automatic disposal
+ * - Resource disposal via DisposableStore (LIFO ordering)
+ *
+ * All command subclasses automatically get:
+ * - `this.disposables` - DisposableStore for managing command-owned resources
+ * - `this.dispose()` - Dispose all resources in LIFO order
+ * - vscode.Disposable compliance (can be added to context.subscriptions)
+ *
+ * @example Basic Command with Disposal
+ * ```typescript
+ * class MyCommand extends BaseCommand {
+ *     async execute(): Promise<void> {
+ *         // Resources automatically disposed when command disposed
+ *         const terminal = this.createTerminal('My Terminal');
+ *
+ *         // Add custom disposables
+ *         const watcher = vscode.workspace.createFileSystemWatcher('**\/*.ts');
+ *         this.disposables.add(watcher);
+ *
+ *         // Work with resources...
+ *     }
+ * }
+ *
+ * // Usage
+ * const command = new MyCommand(context, state, statusBar, logger);
+ * context.subscriptions.push(command); // Auto-disposed on deactivation
+ * ```
+ *
+ * @example Subclass with Custom Disposal
+ * ```typescript
+ * class ComplexCommand extends BaseCommand {
+ *     private connection: Connection;
+ *
+ *     async execute(): Promise<void> {
+ *         this.connection = await createConnection();
+ *         this.disposables.add({
+ *             dispose: () => this.connection.close()
+ *         });
+ *     }
+ *
+ *     // Optional: Override dispose for custom cleanup
+ *     override dispose(): void {
+ *         // Custom cleanup first
+ *         this.logger.info('Cleaning up complex command');
+ *         // Then call parent to dispose all resources
+ *         super.dispose();
+ *     }
+ * }
+ * ```
+ *
+ * @see DisposableStore for LIFO disposal ordering details
+ */
+export abstract class BaseCommand implements vscode.Disposable {
     protected context: vscode.ExtensionContext;
     protected stateManager: StateManager;
     protected statusBar: StatusBarManager;
     protected logger: Logger;
+    protected disposables = new DisposableStore();
 
     constructor(
         context: vscode.ExtensionContext,
@@ -22,6 +84,19 @@ export abstract class BaseCommand {
     }
 
     public abstract execute(): Promise<void>;
+
+    /**
+     * Dispose all resources owned by this command
+     *
+     * This method is called when the command is no longer needed.
+     * It disposes all resources added via this.disposables.add()
+     * in LIFO (Last-In-First-Out) order.
+     *
+     * Safe to call multiple times (idempotent via DisposableStore).
+     */
+    public dispose(): void {
+        this.disposables.dispose();
+    }
 
     protected async withProgress<T>(
         title: string,
@@ -55,12 +130,12 @@ export abstract class BaseCommand {
      * Shows a notification popup that auto-dismisses after 2 seconds
      * and a status bar message that persists for 5 seconds
      * @param message Success message to display
-     * @param timeout Milliseconds to show in status bar (default 5000)
+     * @param timeout Milliseconds to show in status bar (default STATUS_BAR_SUCCESS)
      */
-    protected async showSuccessMessage(message: string, timeout = 5000): Promise<void> {
+    protected async showSuccessMessage(message: string, timeout = TIMEOUTS.STATUS_BAR_SUCCESS): Promise<void> {
         this.logger.info(message);
-        // Show auto-dismissing notification popup (2 seconds)
-        await this.showProgressNotification(message, 2000);
+        // Show auto-dismissing notification popup
+        await this.showProgressNotification(message, TIMEOUTS.NOTIFICATION_AUTO_DISMISS);
         // Also show in status bar as secondary indicator
         vscode.window.setStatusBarMessage(`✅ ${message}`, timeout);
     }
@@ -69,9 +144,9 @@ export abstract class BaseCommand {
      * Show an auto-dismissing progress notification
      * Use for informational messages that should disappear automatically
      * @param message Message to display
-     * @param duration Duration in milliseconds (default 2000)
+     * @param duration Duration in milliseconds (default NOTIFICATION_AUTO_DISMISS)
      */
-    protected async showProgressNotification(message: string, duration = 2000): Promise<void> {
+    protected async showProgressNotification(message: string, duration = TIMEOUTS.NOTIFICATION_AUTO_DISMISS): Promise<void> {
         await vscode.window.withProgress(
             {
                 location: vscode.ProgressLocation.Notification,
@@ -87,10 +162,10 @@ export abstract class BaseCommand {
     /**
      * Show a temporary info message in status bar (auto-dismissing)
      * Use for non-critical informational messages
-     * @param message Info message to display  
-     * @param timeout Milliseconds to show (default 3000)
+     * @param message Info message to display
+     * @param timeout Milliseconds to show (default STATUS_BAR_INFO)
      */
-    protected showStatusMessage(message: string, timeout = 3000): void {
+    protected showStatusMessage(message: string, timeout = TIMEOUTS.STATUS_BAR_INFO): void {
         this.logger.info(message);
         vscode.window.setStatusBarMessage(`ℹ️  ${message}`, timeout);
     }
@@ -106,12 +181,31 @@ export abstract class BaseCommand {
         return vscode.window.showInputBox(options);
     }
 
+    /**
+     * Create a terminal with automatic disposal
+     *
+     * The terminal is automatically added to this.disposables and will be
+     * disposed when the command is disposed. This ensures terminals are
+     * properly cleaned up on extension deactivation.
+     *
+     * @param name Terminal name
+     * @param cwd Optional working directory
+     * @returns Created terminal instance
+     *
+     * @example
+     * ```typescript
+     * const terminal = this.createTerminal('Build');
+     * terminal.sendText('npm run build');
+     * terminal.show();
+     * // Terminal automatically disposed when command disposed
+     * ```
+     */
     protected createTerminal(name: string, cwd?: string): vscode.Terminal {
         const terminal = vscode.window.createTerminal({
             name,
             cwd: cwd || undefined, // Only set cwd if explicitly provided
         });
-        this.context.subscriptions.push(terminal);
+        this.disposables.add(terminal);
         return terminal;
     }
 

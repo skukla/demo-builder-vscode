@@ -57,3 +57,4 @@ jscpd-output/
 # Claude settings
 .claude/settings.local.json  # Local overrides
 .claude/.env*           # Secrets
+.jest-cache/

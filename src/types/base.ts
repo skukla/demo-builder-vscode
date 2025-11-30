@@ -27,7 +27,7 @@ export interface Project {
         frontend?: string;  // Component ID
         backend?: string;   // Component ID
         dependencies?: string[]; // Component IDs
-        externalSystems?: string[]; // Component IDs
+        integrations?: string[]; // Component IDs
         appBuilder?: string[]; // Component IDs
     };
     // Component configurations (environment variables and settings)
@@ -37,6 +37,8 @@ export interface Project {
         envVars: Record<string, string>;
         sourceHash: string | null;
         lastDeployed: string; // ISO date string
+        userDeclinedUpdate?: boolean; // User clicked "Later" on redeploy prompt
+        declinedAt?: string; // ISO date string when user declined
     };
     // Frontend config state (tracks changes since demo started)
     frontendEnvState?: {

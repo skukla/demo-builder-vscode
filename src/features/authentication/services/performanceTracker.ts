@@ -1,4 +1,5 @@
 import { getLogger } from '@/core/logging';
+import { formatDuration } from '@/core/utils';
 import type { PerformanceMetric } from '@/features/authentication/services/types';
 
 /**
@@ -9,20 +10,32 @@ export class PerformanceTracker {
     private timings = new Map<string, number>();
     private logger = getLogger();
 
-    // Expected operation times in milliseconds
+    /**
+     * Expected operation times in milliseconds (performance benchmarks)
+     *
+     * NOTE: These are PERFORMANCE BENCHMARKS, not operational timeouts.
+     * They're used only for slow operation detection and logging.
+     * Intentionally kept here (not in TIMEOUTS config) per SOP §1
+     * as they're domain-specific benchmarks rather than configurable timeouts.
+     *
+     * Values based on observed production performance (2025-11):
+     * - Token validation: ~2.5s (network round-trip to Adobe)
+     * - SDK operations: <500ms (fast, cached)
+     * - CLI selection: 10-12s (Adobe CLI writes config files)
+     */
     private readonly expectedTimes: Record<string, number> = {
-        'isAuthenticated': 3000,
-        'isAuthenticatedQuick': 1000,
-        'getOrganizations': 5000,
-        'getProjects': 5000,
-        'getWorkspaces': 5000,
-        'selectOrganization': 5000,
-        'selectProject': 5000,
-        'selectWorkspace': 5000,
-        'getCurrentOrganization': 3000,
-        'getCurrentProject': 3000,
-        'getCurrentWorkspace': 3000,
-        'login': 30000,
+        'isAuthenticated': 3000,           // Token validation (~2.5s observed)
+        'isFullyAuthenticated': 4000,      // Token + org validation
+        'getOrganizations': 5000,          // SDK call, usually <1s
+        'getProjects': 5000,               // SDK call, usually <500ms
+        'getWorkspaces': 5000,             // SDK call, usually <500ms
+        'selectOrganization': 8000,        // CLI write + permission check (~6s observed)
+        'selectProject': 15000,            // CLI write + cache refresh (~11s observed)
+        'selectWorkspace': 15000,          // CLI write + cache refresh (~10s observed)
+        'getCurrentOrganization': 5000,    // Context fetch + SDK (~3s observed)
+        'getCurrentProject': 5000,         // Context fetch
+        'getCurrentWorkspace': 5000,       // Context fetch
+        'login': 30000,                    // Browser-based, user interaction
     };
 
     /**
@@ -45,10 +58,12 @@ export class PerformanceTracker {
         const duration = Date.now() - start;
         this.timings.delete(operation);
 
-        // Log performance metrics to debug channel with warning if exceeded
+        // Log performance metrics to debug channel only when slow (exceeded expected time)
         const expected = this.expectedTimes[operation];
-        const warning = expected && duration > expected ? ` ⚠️ SLOW (expected <${expected}ms)` : '';
-        this.logger.debug(`[Performance] ${operation} took ${duration}ms${warning}`);
+        const warning = expected && duration > expected ? ` ⚠️ SLOW (expected <${formatDuration(expected)})` : '';
+        if (warning) {
+            this.logger.debug(`[Performance] ${operation} took ${formatDuration(duration)}${warning}`);
+        }
 
         return duration;
     }

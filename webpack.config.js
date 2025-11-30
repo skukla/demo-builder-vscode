@@ -1,18 +1,47 @@
 const path = require('path');
 const webpack = require('webpack');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 
 module.exports = {
   mode: process.env.NODE_ENV || 'development',
   entry: {
-    wizard: './webview-ui/src/wizard/index.tsx',
-    welcome: './webview-ui/src/welcome/index.tsx',
-    dashboard: './webview-ui/src/dashboard/index.tsx',
-    configure: './webview-ui/src/configure/index.tsx'
+    // Feature-based entry points (new architecture)
+    wizard: './src/features/project-creation/ui/wizard/index.tsx',
+    welcome: './src/features/welcome/ui/index.tsx',
+    dashboard: './src/features/dashboard/ui/index.tsx',
+    configure: './src/features/dashboard/ui/configure/index.tsx'
   },
   output: {
     path: path.resolve(__dirname, 'dist', 'webview'),
     filename: '[name]-bundle.js',
+    chunkFilename: '[name].js', // Separate naming for code-split chunks
     clean: true
+  },
+  optimization: {
+    // Code splitting configuration
+    splitChunks: {
+      cacheGroups: {
+        // Extract React, ReactDOM, and Adobe Spectrum to vendors bundle
+        vendors: {
+          test: /[\\/]node_modules[\\/](react|react-dom|@adobe\/react-spectrum)/,
+          name: 'vendors',
+          chunks: 'all',
+          priority: 20
+        },
+        // Extract common code shared between features
+        common: {
+          minChunks: 2,
+          name: 'common',
+          chunks: 'all',
+          priority: 10,
+          reuseExistingChunk: true
+        }
+      }
+    },
+    // Extract webpack runtime to separate bundle
+    runtimeChunk: {
+      name: 'runtime'
+    }
   },
   module: {
     rules: [
@@ -21,7 +50,7 @@ module.exports = {
         use: {
           loader: 'ts-loader',
           options: {
-            configFile: 'webview-ui/tsconfig.json',
+            configFile: 'tsconfig.json',
             transpileOnly: true
           }
         },
@@ -40,26 +69,20 @@ module.exports = {
   resolve: {
     extensions: ['.tsx', '.ts', '.js', '.jsx'],
     alias: {
-      // Extension host aliases (for feature UI code that imports from extension)
+      // Feature-based architecture aliases
       '@/features': path.resolve(__dirname, 'src/features'),
-      '@/shared': path.resolve(__dirname, 'src/shared'),
-      '@/types': path.resolve(__dirname, 'src/types'),
-      // Webview UI aliases (new structure)
-      '@/webview-ui': path.resolve(__dirname, 'webview-ui/src'),
-      '@/design-system': path.resolve(__dirname, 'webview-ui/src/shared/components'),
-      // Legacy aliases for backward compatibility (remove after full migration)
-      '@/components': path.resolve(__dirname, 'webview-ui/src/shared/components'),
-      '@/hooks': path.resolve(__dirname, 'webview-ui/src/shared/hooks'),
-      '@/contexts': path.resolve(__dirname, 'webview-ui/src/shared/contexts'),
-      '@/utils': path.resolve(__dirname, 'webview-ui/src/shared/utils')
+      '@/core': path.resolve(__dirname, 'src/core'),
+      '@/types': path.resolve(__dirname, 'src/types')
     }
   },
   plugins: [
-    // Define process.env for browser environment
-    new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
-      'process.env': JSON.stringify({ NODE_ENV: process.env.NODE_ENV || 'production' })
-    })
+    // Provide process global for browser (polyfill for Node.js process object)
+    // Note: process.env.NODE_ENV is automatically defined by webpack's 'mode' option
+    new webpack.ProvidePlugin({
+      process: 'process/browser'
+    }),
+    // Bundle analyzer (only when ANALYZE=true environment variable set)
+    ...(process.env.ANALYZE ? [new BundleAnalyzerPlugin()] : [])
   ],
   devtool: process.env.NODE_ENV === 'production' ? false : 'source-map',
   performance: {

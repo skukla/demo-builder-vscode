@@ -133,6 +133,13 @@ demo-builder-vscode/
 - **Solution**: Use standard HTML div with flex styles for critical layouts
 - **Details**: See `src/webviews/CLAUDE.md`
 
+### Spectrum Design Token Support (v1.7.0)
+- **Feature**: Layout components support type-safe Spectrum design tokens
+- **Components**: `GridLayout`, `TwoColumnLayout` accept `DimensionValue` props
+- **Example**: `gap="size-300"` compiles to `"24px"` with TypeScript validation
+- **Backward Compatible**: Pixel strings and numbers still work
+- **Details**: See `docs/development/ui-patterns.md` and `docs/development/styling-guide.md`
+
 ### Adobe Setup Redesign (Two-Column Layout)
 - **Unified Experience**: Single step replaces separate auth/org/project steps
 - **Two-Column Design**: Active content (60%) + persistent summary (40%)
@@ -157,7 +164,7 @@ demo-builder-vscode/
 
 1. **extension.ts** - Entry point and command registration
 2. **src/commands/createProjectWebview.ts** - Main wizard orchestration
-3. **src/webviews/components/wizard/WizardContainer.tsx** - Wizard UI container
+3. **src/features/project-creation/ui/wizard/WizardContainer.tsx** - Wizard UI container
 4. **src/utils/adobeAuthManager.ts** - Adobe authentication and SDK integration
 5. **src/utils/updateManager.ts** - GitHub Releases integration and update checking
 6. **src/utils/componentUpdater.ts** - Safe component updates with snapshot/rollback
@@ -171,7 +178,13 @@ demo-builder-vscode/
 → See `templates/CLAUDE.md` and `docs/systems/prerequisites-system.md`
 
 ### Modifying Wizard Steps
-→ See `src/webviews/components/steps/` and `src/webviews/CLAUDE.md`
+→ See wizard steps in respective feature directories:
+  - `src/features/authentication/ui/steps/` - Adobe auth steps
+  - `src/features/components/ui/steps/` - Component selection steps
+  - `src/features/prerequisites/ui/steps/` - Prerequisites step
+  - `src/features/mesh/ui/steps/` - API Mesh step
+  - `src/features/project-creation/ui/steps/` - Wizard-specific steps (Welcome, Review, ProjectCreation)
+→ See feature documentation for wizard orchestration details
 
 ### Debugging Width Issues
 → See `docs/troubleshooting.md` and use WidthDebugger component
@@ -189,7 +202,7 @@ demo-builder-vscode/
 - **Extension**: TypeScript, VS Code Extension API
 - **UI**: React, Adobe Spectrum, Webpack
 - **Build**: TypeScript compiler, Webpack
-- **Testing**: Manual testing checklist (automated tests planned)
+- **Testing**: Jest with ts-jest, @testing-library/react, structure-aligned test organization (see tests/README.md)
 
 ## Development Workflow
 

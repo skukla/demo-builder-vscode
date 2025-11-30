@@ -1,8 +1,8 @@
 // @ts-expect-error - Adobe SDK lacks TypeScript declarations
 import * as sdk from '@adobe/aio-lib-console';
 import { getLogger, Logger } from '@/core/logging';
-import { validateAccessToken } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateAccessToken } from '@/core/validation';
 
 /**
  * Manages Adobe Console SDK client for high-performance operations
@@ -46,19 +46,16 @@ export class AdobeSDKClient {
     async ensureInitialized(): Promise<boolean> {
         // Already initialized
         if (this.sdkClient) {
-            this.debugLogger.debug('[Auth SDK] SDK already initialized');
             return true;
         }
 
         // PERFORMANCE FIX: If initialization is in flight, wait for it
         if (this.sdkInitPromise) {
-            this.debugLogger.debug('[Auth SDK] SDK initialization in progress, waiting for completion...');
             await this.sdkInitPromise;
             return this.sdkClient !== undefined;
         }
 
         // Not initialized and not in flight, start now (blocking)
-        this.debugLogger.debug('[Auth SDK] Ensuring SDK is initialized...');
         await this.initialize();
 
         return this.sdkClient !== undefined;
@@ -75,13 +72,11 @@ export class AdobeSDKClient {
     async initialize(): Promise<void> {
         // PERFORMANCE FIX: If initialization is in flight, wait for it
         if (this.sdkInitPromise) {
-            this.debugLogger.debug('[Auth SDK] SDK initialization already in progress, waiting...');
             return this.sdkInitPromise;
         }
 
         // Already initialized
         if (this.sdkClient) {
-            this.debugLogger.debug('[Auth SDK] SDK client already initialized');
             return;
         }
 
@@ -102,8 +97,6 @@ export class AdobeSDKClient {
      */
     private async doInitialize(): Promise<void> {
         try {
-            this.debugLogger.debug('[Auth SDK] Initializing Adobe Console SDK...');
-
             // CRITICAL FIX: Pre-check token validity before calling getToken('cli')
             // This prevents Adobe IMS library from opening browser if token not ready
             // getToken('cli') can trigger browser auth if token is missing/invalid/expired
@@ -115,13 +108,9 @@ export class AdobeSDKClient {
             const tokenInspection = await tokenManager.inspectToken();
 
             if (!tokenInspection.valid) {
-                this.debugLogger.debug('[Auth SDK] Token not valid yet, deferring SDK initialization');
-                this.debugLogger.debug(`[Auth SDK] Token status: expiresIn=${tokenInspection.expiresIn}min`);
-                this.debugLogger.debug('[Auth SDK] SDK will be initialized on next call when token is stable');
+                this.debugLogger.debug('[Auth SDK] Token not valid, deferring SDK initialization');
                 return;
             }
-
-            this.debugLogger.debug('[Auth SDK] Token pre-check passed, proceeding with SDK init');
 
             // CRITICAL FIX: Use token from disk (inspectToken) instead of Adobe IMS Context cache
             // getToken('cli') reads from Adobe IMS Context memory cache which can be stale after login
@@ -143,7 +132,6 @@ export class AdobeSDKClient {
             this.sdkClient = await sdk.init(accessToken, 'aio-cli-console-auth');
 
             this.debugLogger.debug('[Auth SDK] SDK initialized successfully - enabling 30x faster operations');
-            this.logger.info('[Auth] Enabled high-performance mode for Adobe operations');
 
         } catch (error) {
             // SDK initialization failure is not critical - we'll fall back to CLI
@@ -159,6 +147,5 @@ export class AdobeSDKClient {
     clear(): void {
         this.sdkClient = undefined;
         this.sdkInitPromise = null;
-        this.debugLogger.debug('[Auth SDK] Cleared SDK client and initialization promise');
     }
 }

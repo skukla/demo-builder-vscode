@@ -5,6 +5,7 @@ import axios from 'axios';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
 import { Logger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { UpdateInfo } from '@/types';
 
 export class AutoUpdater {
@@ -22,13 +23,14 @@ export class AutoUpdater {
             this.checkForUpdates().catch(err => {
                 this.logger.warn('Auto-update check failed:', err.message);
             });
-        }, 4 * 60 * 60 * 1000);
+        }, TIMEOUTS.AUTO_UPDATE_CHECK_INTERVAL);
     }
 
     public async checkForUpdates(): Promise<UpdateInfo | undefined> {
         try {
             const currentVersion = this.context.extension.packageJSON.version;
-            this.logger.info(`[Extension] Checking for updates (current: ${currentVersion})...`);
+            // Debug level for background checks (only log to info when update found)
+            this.logger.debug(`[Updates] Background check starting (current: ${currentVersion})`);
 
             // For development, use mock data
             if (process.env.NODE_ENV === 'development') {
@@ -40,7 +42,7 @@ export class AutoUpdater {
                 headers: {
                     'Accept': 'application/vnd.github.v3+json',
                 },
-                timeout: 10000,
+                timeout: TIMEOUTS.UPDATE_CHECK,
             });
 
             const latestVersion = response.data.tag_name.replace('v', '');
@@ -61,12 +63,13 @@ export class AutoUpdater {
                         minSupportedVersion: '1.0.0',
                     };
 
-                    this.logger.info(`[Extension] Update available: ${latestVersion}`);
+                    this.logger.info(`[Updates] Update available: ${latestVersion}`);
                     return updateInfo;
                 }
             }
 
-            this.logger.info('[Extension] No updates available');
+            // Debug level for background checks (don't spam user logs)
+            this.logger.debug('[Updates] Background check: no updates available');
             return undefined;
 
         } catch (error) {
@@ -92,7 +95,7 @@ export class AutoUpdater {
 
     public async downloadAndInstall(updateInfo: UpdateInfo): Promise<void> {
         try {
-            this.logger.info(`[Extension] Downloading update ${updateInfo.version}...`);
+            this.logger.info(`[Updates] Downloading update ${updateInfo.version}...`);
             
             // Download VSIX to temp directory
             const tempDir = os.tmpdir();
@@ -100,7 +103,7 @@ export class AutoUpdater {
             
             const response = await axios.get(updateInfo.downloadUrl, {
                 responseType: 'arraybuffer',
-                timeout: 60000,
+                timeout: TIMEOUTS.UPDATE_DOWNLOAD,
                 onDownloadProgress: (progressEvent) => {
                     const percentCompleted = progressEvent.total 
                         ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
@@ -110,7 +113,7 @@ export class AutoUpdater {
             });
 
             await fs.writeFile(vsixPath, Buffer.from(response.data));
-            this.logger.info(`[Extension] Downloaded to: ${vsixPath}`);
+            this.logger.info(`[Updates] Downloaded to: ${vsixPath}`);
 
             // Install the extension
             await vscode.commands.executeCommand(

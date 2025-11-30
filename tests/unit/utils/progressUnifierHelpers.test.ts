@@ -11,7 +11,7 @@ describe('ProgressUnifier Helper Functions', () => {
         it('should be implemented in progressUnifier.ts', () => {
             // Verifying function exists via import
             const source = require('fs').readFileSync(
-                require('path').join(__dirname, '../../../src/utils/progressUnifier.ts'),
+                require('path').join(__dirname, '../../../src/core/utils/progressUnifier.ts'),
                 'utf-8'
             );
 
@@ -23,7 +23,7 @@ describe('ProgressUnifier Helper Functions', () => {
         it('should format seconds correctly', () => {
             // Test via code inspection - function formats 35000ms as "35s"
             const source = require('fs').readFileSync(
-                require('path').join(__dirname, '../../../src/utils/progressUnifier.ts'),
+                require('path').join(__dirname, '../../../src/core/utils/progressUnifier.ts'),
                 'utf-8'
             );
 
@@ -33,7 +33,7 @@ describe('ProgressUnifier Helper Functions', () => {
         it('should format minutes and seconds correctly', () => {
             // Test via code inspection - function formats 75000ms as "1m 15s"
             const source = require('fs').readFileSync(
-                require('path').join(__dirname, '../../../src/utils/progressUnifier.ts'),
+                require('path').join(__dirname, '../../../src/core/utils/progressUnifier.ts'),
                 'utf-8'
             );
 
@@ -44,7 +44,7 @@ describe('ProgressUnifier Helper Functions', () => {
     describe('Enhanced progress features (via code inspection)', () => {
         it('should have enhanceDetailWithElapsedTime method', () => {
             const source = require('fs').readFileSync(
-                require('path').join(__dirname, '../../../src/utils/progressUnifier.ts'),
+                require('path').join(__dirname, '../../../src/core/utils/progressUnifier.ts'),
                 'utf-8'
             );
 
@@ -53,20 +53,20 @@ describe('ProgressUnifier Helper Functions', () => {
             expect(source).toContain('if (elapsed > ELAPSED_TIME_THRESHOLD_MS)');
         });
 
-        it('should track startTime, timer, and currentNodeVersion', () => {
+        it('should track startTime and timer for elapsed time tracking', () => {
             const source = require('fs').readFileSync(
-                require('path').join(__dirname, '../../../src/utils/progressUnifier.ts'),
+                require('path').join(__dirname, '../../../src/core/utils/progressUnifier.ts'),
                 'utf-8'
             );
 
             expect(source).toContain('private startTime: number | undefined');
             expect(source).toContain('private timer: NodeJS.Timeout | undefined');
-            expect(source).toContain('private currentNodeVersion: string | undefined');
+            // Note: nodeVersion is now passed as options parameter, not stored as class property
         });
 
         it('should start elapsed timer in executeStep', () => {
             const source = require('fs').readFileSync(
-                require('path').join(__dirname, '../../../src/utils/progressUnifier.ts'),
+                require('path').join(__dirname, '../../../src/core/utils/progressUnifier.ts'),
                 'utf-8'
             );
 
@@ -75,7 +75,7 @@ describe('ProgressUnifier Helper Functions', () => {
 
         it('should stop elapsed timer in finally block', () => {
             const source = require('fs').readFileSync(
-                require('path').join(__dirname, '../../../src/utils/progressUnifier.ts'),
+                require('path').join(__dirname, '../../../src/core/utils/progressUnifier.ts'),
                 'utf-8'
             );
 
@@ -85,7 +85,7 @@ describe('ProgressUnifier Helper Functions', () => {
 
         it('should use resolveStepName for Node version context', () => {
             const source = require('fs').readFileSync(
-                require('path').join(__dirname, '../../../src/utils/progressUnifier.ts'),
+                require('path').join(__dirname, '../../../src/core/utils/progressUnifier.ts'),
                 'utf-8'
             );
 
@@ -94,7 +94,7 @@ describe('ProgressUnifier Helper Functions', () => {
 
         it('should enhance detail with elapsed time in synthetic progress', () => {
             const source = require('fs').readFileSync(
-                require('path').join(__dirname, '../../../src/utils/progressUnifier.ts'),
+                require('path').join(__dirname, '../../../src/core/utils/progressUnifier.ts'),
                 'utf-8'
             );
 

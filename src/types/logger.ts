@@ -18,6 +18,11 @@ export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
  */
 export interface Logger {
     /**
+     * Write trace message (very low priority, verbose)
+     */
+    trace(message: string, ...args: unknown[]): void;
+
+    /**
      * Write debug message (low priority)
      */
     debug(message: string, ...args: unknown[]): void;

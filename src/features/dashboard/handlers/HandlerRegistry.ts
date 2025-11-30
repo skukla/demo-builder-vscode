@@ -5,9 +5,8 @@
  * Maps message types to handler functions for the Project Dashboard.
  */
 
-import { BaseHandlerRegistry } from '@/core/base';
-import { MessageHandler, HandlerContext } from '@/types/handlers';
 import * as handlers from './dashboardHandlers';
+import { BaseHandlerRegistry } from '@/core/base';
 
 /**
  * Dashboard HandlerRegistry class
@@ -33,6 +32,7 @@ export class DashboardHandlerRegistry extends BaseHandlerRegistry {
         // Navigation handlers
         this.handlers.set('openBrowser', handlers.handleOpenBrowser);
         this.handlers.set('viewLogs', handlers.handleViewLogs);
+        this.handlers.set('viewDebugLogs', handlers.handleViewDebugLogs);
         this.handlers.set('configure', handlers.handleConfigure);
         this.handlers.set('openDevConsole', handlers.handleOpenDevConsole);
 

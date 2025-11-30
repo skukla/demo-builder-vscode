@@ -38,7 +38,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
         mockRegistryManager = {
             getFrontends: jest.fn(),
             getBackends: jest.fn(),
-            getExternalSystems: jest.fn(),
+            getIntegrations: jest.fn(),
             getAppBuilder: jest.fn(),
             getDependencies: jest.fn(),
             loadRegistry: jest.fn(),
@@ -75,7 +75,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                     configuration: {},
                 },
             ];
-            const mockExternalSystems = [
+            const mockIntegrations = [
                 {
                     id: 'target',
                     name: 'Adobe Target',
@@ -120,7 +120,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
 
             mockRegistryManager.getFrontends.mockResolvedValue(mockFrontends);
             mockRegistryManager.getBackends.mockResolvedValue(mockBackends);
-            mockRegistryManager.getExternalSystems.mockResolvedValue(mockExternalSystems);
+            mockRegistryManager.getIntegrations.mockResolvedValue(mockIntegrations);
             mockRegistryManager.getAppBuilder.mockResolvedValue(mockAppBuilder);
             mockRegistryManager.getDependencies.mockResolvedValue(mockDependencies);
             mockRegistryManager.loadRegistry.mockResolvedValue(mockRegistry);
@@ -151,7 +151,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                             configuration: {},
                         },
                     ],
-                    externalSystems: [
+                    integrations: [
                         {
                             id: 'target',
                             name: 'Adobe Target',
@@ -200,10 +200,11 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             // Act: Call handler
             const result = await handleGetComponentsData(mockContext);
 
-            // Assert: Verify error response
+            // Assert: Verify error response (typed errors include code field)
             expect(result).toEqual({
                 success: false,
                 error: 'Failed to load registry',
+                code: 'UNKNOWN', // Typed error includes error code
                 message: 'Failed to load component configurations',
             });
 
@@ -221,7 +222,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             // Arrange: Mock empty registry
             mockRegistryManager.getFrontends.mockResolvedValue([]);
             mockRegistryManager.getBackends.mockResolvedValue([]);
-            mockRegistryManager.getExternalSystems.mockResolvedValue([]);
+            mockRegistryManager.getIntegrations.mockResolvedValue([]);
             mockRegistryManager.getAppBuilder.mockResolvedValue([]);
             mockRegistryManager.getDependencies.mockResolvedValue([]);
             mockRegistryManager.loadRegistry.mockResolvedValue({
@@ -244,7 +245,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                 data: {
                     frontends: [],
                     backends: [],
-                    externalSystems: [],
+                    integrations: [],
                     appBuilder: [],
                     dependencies: [],
                     envVars: {},
@@ -263,7 +264,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             mockRegistryManager.getBackends.mockResolvedValue([
                 { id: 'b1', name: 'Backend', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
             ]);
-            mockRegistryManager.getExternalSystems.mockResolvedValue([
+            mockRegistryManager.getIntegrations.mockResolvedValue([
                 { id: 'e1', name: 'External', description: 'desc', dependencies: { required: [], optional: [] }, configuration: {} },
             ]);
             mockRegistryManager.getAppBuilder.mockResolvedValue([
@@ -299,7 +300,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
             const data = (result as any).data;
             expect(data).toHaveProperty('frontends');
             expect(data).toHaveProperty('backends');
-            expect(data).toHaveProperty('externalSystems');
+            expect(data).toHaveProperty('integrations');
             expect(data).toHaveProperty('appBuilder');
             expect(data).toHaveProperty('dependencies');
             expect(data).toHaveProperty('envVars');

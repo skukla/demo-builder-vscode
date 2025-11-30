@@ -32,6 +32,7 @@
 /rptc:helper-catch-up-deep           # Deep analysis (15-30 min)
 /rptc:helper-update-plan "@plan/"    # Modify existing plan
 /rptc:helper-resume-plan "@plan/"    # Resume from previous session
+/rptc:helper-sop-scan                # Scan codebase against code-patterns SOP
 ```
 
 ## RPTC Workflow Philosophy
@@ -106,6 +107,23 @@ Every feature follows this workflow:
   - **YOU approve** Master Security Agent review
 - **YOU approve** final completion
 
+**Optimized Test Execution (5-10 Second Feedback Loop)**:
+
+During TDD implementation, use fast test commands for rapid iteration:
+
+```bash
+# RECOMMENDED: Watch mode for instant feedback (5-10s per change)
+npm run test:watch -- tests/path/to/working-on
+
+# Alternative: Single file testing (5-10s)
+npm run test:file -- tests/path/to/specific.test.ts
+
+# Changed files only (30s-2min)
+npm run test:changed
+```
+
+**See `TESTING.md` for complete test workflow guide.**
+
 **Master Efficiency Agent** (with permission):
 
 - Removes dead code and unused imports
@@ -125,6 +143,8 @@ Every feature follows this workflow:
 **Comprehensive Verification**:
 
 - Full test suite (BLOCKS if any fail)
+  - Use `npm run test:fast` (3-5 min) for quick validation
+  - Use `npm test` for full pretest + lint + tests
 - Coverage validation (80%+ target)
 - Code quality checks
 - Generates conventional commit message
@@ -254,6 +274,12 @@ Before accepting AI-generated code, ALWAYS verify these conditions. Checking BEF
 
 #### Category 1: Simplicity Validation
 
+- [ ] **Does this follow project code patterns?**
+  - **Check:** Verify TIMEOUTS constants, helper function extraction, no nested ternaries
+  - **Threshold:** Any magic numbers for timeouts → REJECT, use `TIMEOUTS.*` constants
+  - **Example:** AI writes `timeout: 10000` → Replace with `timeout: TIMEOUTS.PREREQUISITE_CHECK`
+  - **Reference:** See code-patterns.md (SOP) - Centralized Timeout Constants, Helper Functions, Ternaries
+
 - [ ] **Could this be done in fewer files?**
   - **Check:** Count files created by AI
   - **Threshold:** If >3 files for feature, ask: "Can this be consolidated?"
@@ -375,6 +401,18 @@ If AI-generated code exhibits these patterns, REJECT and request simplification.
 ---
 
 #### Category 1: Complexity Red Flags
+
+🚩 **Magic numbers for timeouts or delays**
+- **Detection:** Search for numeric literals in `setTimeout`, `timeout:` options, delay values
+- **Example:** `timeout: 10000`, `setTimeout(fn, 5000)`, `delay: 30000`
+- **Action:** REJECT. Use `TIMEOUTS.*` constants from `@/core/utils/timeoutConfig`
+- **Reference:** See code-patterns.md (SOP) - Centralized Timeout Constants
+
+🚩 **Nested ternary operators**
+- **Detection:** Search for `? ... : ... ?` patterns (ternary within ternary)
+- **Example:** `a ? b ? 'x' : 'y' : c ? 'z' : 'w'`
+- **Action:** REJECT. Extract to explicit helper function with if/else
+- **Reference:** See code-patterns.md (SOP) - Nested Ternary Refactoring
 
 🚩 **More than 3 layers of indirection between request and data**
 - **Detection:** Trace path from entry point (controller/route) to data (database/API)
@@ -522,11 +560,14 @@ This section provides quick links to enhanced SOPs. Use these for detailed guida
 
 | Topic | SOP Section | Step |
 |-------|-------------|------|
+| **Code patterns** | code-patterns.md → TIMEOUTS, Helper Functions, Ternaries | All |
 | **Security blind spots** | security-and-performance.md → AI Security Verification Checklist | Step 2 |
 | **Complexity anti-patterns** | architecture-patterns.md → AI Complexity Anti-Patterns | Step 3 |
 | **Test anti-patterns** | testing-guide.md → AI Test Anti-Patterns | Step 5 |
 | **Commit quality** | git-and-deployment.md → AI Commit Quality Standards | Step 6 |
 | **Documentation anti-patterns** | languages-and-style.md → AI Documentation Anti-Patterns | Step 7 |
+
+**Automated SOP Scanning:** Use `/rptc:helper-sop-scan` to automatically detect code pattern violations against `code-patterns.md`.
 
 **SOP Resolution via Fallback Chain:**
 
@@ -569,6 +610,9 @@ Need to update a plan?
 
 Resuming previous work?
   └─ /rptc:helper-resume-plan "@plan.md"
+
+Check code quality against SOPs?
+  └─ /rptc:helper-sop-scan (before plan or after TDD)
 ```
 
 ## Context Helpers
@@ -594,6 +638,35 @@ Resuming previous work?
 - All documentation review
 - Code pattern analysis
 - Use for: Complex work, unfamiliar projects
+
+## Quality Helpers
+
+### `/rptc:helper-sop-scan` (30-60 seconds)
+
+Scans codebase against `.rptc/sop/code-patterns.md` to detect violations:
+
+- **Magic timeout numbers** (§1) - Should use `TIMEOUTS.*` constants
+- **Nested ternaries** (§3) - Should extract to helpers
+- **Deep optional chaining** (§4) - Should extract >2 level chains
+- **Inline Object operations** (§4) - Should use predicate helpers
+- **JSX inline complexity** (§5) - Should extract render helpers
+- **Callback body complexity** (§6) - Should extract transformations
+- **Conditional spread chains** (§8) - Should use builder functions
+- **Long validation chains** (§10) - Should use type guards
+
+**Usage:**
+```bash
+/rptc:helper-sop-scan                    # Full scan
+/rptc:helper-sop-scan --pattern timeouts # Specific pattern
+/rptc:helper-sop-scan --path src/features/mesh  # Specific directory
+/rptc:helper-sop-scan --fix high         # Auto-fix high priority
+```
+
+**When to use:**
+- Before `/rptc:plan` - Ensure new features won't add violations
+- After `/rptc:tdd` - Verify implementation follows patterns
+- Monthly maintenance - Catch pattern drift
+- Before major releases - Quality gate check
 
 ## File Organization
 

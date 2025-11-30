@@ -7,12 +7,13 @@
  */
 
 import { withTimeout } from '@/core/utils/promiseUtils';
-import { validateWorkspaceId } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { toError } from '@/types/typeGuards';
+import { validateWorkspaceId } from '@/core/validation';
+import type { AdobeWorkspace } from '@/features/authentication/services/types';
+import { toAppError, isTimeout } from '@/types/errors';
 import { HandlerContext } from '@/types/handlers';
 import { DataResult, SimpleResult } from '@/types/results';
-import type { AdobeWorkspace } from '@/features/authentication/services/types';
+import { toError } from '@/types/typeGuards';
 
 /**
  * get-workspaces - Fetch workspaces for current project
@@ -26,7 +27,7 @@ export async function handleGetWorkspaces(
 ): Promise<DataResult<AdobeWorkspace[]>> {
     try {
         // Send loading status with sub-message
-        const currentProject = await context.authManager.getCurrentProject();
+        const currentProject = await context.authManager?.getCurrentProject();
         if (currentProject) {
             await context.sendMessage('workspace-loading-status', {
                 isLoading: true,
@@ -36,8 +37,12 @@ export async function handleGetWorkspaces(
         }
 
         // Wrap getWorkspaces with timeout (30 seconds)
+        const workspacesPromise = context.authManager?.getWorkspaces();
+        if (!workspacesPromise) {
+            throw new Error('Auth manager not available');
+        }
         const workspaces = await withTimeout(
-            context.authManager.getWorkspaces(),
+            workspacesPromise,
             {
                 timeoutMs: TIMEOUTS.WORKSPACE_LIST,
                 timeoutMessage: 'Request timed out. Please check your connection and try again.',
@@ -46,15 +51,17 @@ export async function handleGetWorkspaces(
         await context.sendMessage('get-workspaces', workspaces);
         return { success: true, data: workspaces };
     } catch (error) {
-        const errorMessage = error instanceof Error && error.message.includes('timed out')
-            ? error.message
+        const appError = toAppError(error);
+        const errorMessage = isTimeout(appError)
+            ? appError.userMessage
             : 'Failed to load workspaces. Please try again.';
 
-        context.logger.error('Failed to get workspaces:', error as Error);
+        context.logger.error('[Workspace] Failed to get workspaces:', appError);
         await context.sendMessage('get-workspaces', {
             error: errorMessage,
+            code: appError.code,
         });
-        return { success: false, error: errorMessage };
+        return { success: false, error: errorMessage, code: appError.code };
     }
 }
 
@@ -63,6 +70,9 @@ export async function handleGetWorkspaces(
  *
  * Sets the specified workspace as the current workspace context
  * in Adobe CLI configuration.
+ *
+ * Requires project ID to protect against context drift
+ * (e.g., when another process changes the global Adobe CLI context).
  */
 export async function handleSelectWorkspace(
     context: HandlerContext,
@@ -79,17 +89,23 @@ export async function handleSelectWorkspace(
     }
 
     try {
-        // Actually call the authManager to select the workspace
-        const success = await context.authManager.selectWorkspace(workspaceId);
+        // Get project ID for context guard (required for drift protection)
+        const currentProject = await context.authManager?.getCurrentProject();
+        if (!currentProject?.id) {
+            throw new Error('No project selected - cannot select workspace without project context');
+        }
+
+        // Select workspace with project context guard to protect against context drift
+        const success = await context.authManager?.selectWorkspace(workspaceId, currentProject.id);
         if (success) {
-            context.logger.info(`Selected workspace: ${workspaceId}`);
+            // Note: Selection already logged by adobeEntityService with workspace name
 
             // Cache invalidation is handled in authManager.selectWorkspace
 
             await context.sendMessage('workspaceSelected', { workspaceId });
             return { success: true };
         } else {
-            context.logger.error(`Failed to select workspace ${workspaceId}`);
+            context.logger.error(`[Workspace] Failed to select workspace ${workspaceId}`);
             await context.sendMessage('error', {
                 message: 'Failed to select workspace',
                 details: `Workspace selection for ${workspaceId} was unsuccessful`,
@@ -97,7 +113,7 @@ export async function handleSelectWorkspace(
             throw new Error(`Failed to select workspace ${workspaceId}`);
         }
     } catch (error) {
-        context.logger.error('Failed to select workspace:', error as Error);
+        context.logger.error('[Workspace] Failed to select workspace:', error as Error);
         await context.sendMessage('error', {
             message: 'Failed to select workspace',
             details: toError(error).message,

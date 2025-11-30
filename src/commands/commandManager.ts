@@ -1,21 +1,22 @@
 import * as vscode from 'vscode';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
-import { Project } from '@/types';
+import { ConfigureCommand } from './configure';
+import { DiagnosticsCommand } from './diagnostics';
+import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
+import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
+import { ViewStatusCommand } from '@/features/lifecycle/commands/viewStatus';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
-import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
-import { ConfigureCommand } from './configure';
-import { ConfigureProjectWebviewCommand } from './configureProjectWebview';
-import { CreateProjectWebviewCommand } from './createProjectWebview';
-import { DeleteProjectCommand } from './deleteProject';
-import { DiagnosticsCommand } from './diagnostics';
-import { ProjectDashboardWebviewCommand } from './projectDashboardWebview';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
-import { ViewStatusCommand } from './viewStatus';
-import { ResetAllCommand } from './resetAll';
 import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
-import { WelcomeWebviewCommand } from './welcomeWebview';
+import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
+import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
+import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
+import { Project } from '@/types';
 
 export class CommandManager {
     private context: vscode.ExtensionContext;
@@ -40,8 +41,6 @@ export class CommandManager {
     }
 
     public registerCommands(): void {
-        // Move to debug logging - this is an implementation detail
-        this.logger.debug('Registering Demo Builder commands...');
 
         // Welcome Screen
         this.welcomeScreen = new WelcomeWebviewCommand(
@@ -112,7 +111,16 @@ export class CommandManager {
             const projects = await this.stateManager.getAllProjects();
             
             if (projects.length === 0) {
-                vscode.window.showInformationMessage('No existing projects found. Create a new project to get started!');
+                await vscode.window.withProgress(
+                    {
+                        location: vscode.ProgressLocation.Notification,
+                        title: 'No projects found',
+                        cancellable: false,
+                    },
+                    async () => {
+                        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_RESULT_DISPLAY));
+                    },
+                );
                 return;
             }
             

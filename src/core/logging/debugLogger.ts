@@ -1,8 +1,9 @@
 import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { sanitizeErrorForLogging } from '@/core/validation';
 import type { CommandResult } from '@/core/shell/types';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { sanitizeErrorForLogging } from '@/core/validation';
 
 /**
  * Extended CommandResult with additional context for logging
@@ -13,241 +14,307 @@ export interface CommandResultWithContext extends CommandResult {
     env?: NodeJS.ProcessEnv;
 }
 
+/**
+ * DebugLogger - Dual-channel logging using VS Code's LogOutputChannel API (v1.84+)
+ *
+ * Architecture:
+ * - "Demo Builder: User Logs" - Clean, user-friendly messages (subset)
+ * - "Demo Builder: Debug Logs" - Complete technical record (superset)
+ *
+ * Channel Routing:
+ * - info(), warn(), error() → BOTH channels (user sees clean output, support sees everything)
+ * - debug(), trace(), logCommand() → Debug Logs only (technical details)
+ *
+ * Implementation Note:
+ * Both channels are LogOutputChannel for consistent VS Code formatting (timestamps, colors).
+ * Since VS Code's log level filtering defaults to Info and isn't persisted across sessions,
+ * we "promote" debug/trace messages to info() calls with a [debug]/[trace] prefix.
+ * This ensures all messages are always visible in the Debug channel without user intervention.
+ */
+/** Log level hierarchy (lower number = less verbose) */
+type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'trace';
+const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
+    error: 0,
+    warn: 1,
+    info: 2,
+    debug: 3,
+    trace: 4,
+};
+
 export class DebugLogger {
-    private outputChannel: vscode.OutputChannel;
-    private debugChannel: vscode.OutputChannel;
-    private debugEnabled = true; // Can be controlled by settings later
-    private logBuffer: string[] = []; // Track all main channel logs for persistence
-    private debugBuffer: string[] = []; // Track all debug channel logs for persistence
-    private isLogsVisible = false; // Track visibility for toggle functionality
-    private isDebugVisible = false; // Track debug channel visibility
+    private logsChannel: vscode.LogOutputChannel;   // User-facing messages
+    private debugChannel: vscode.LogOutputChannel;  // Technical diagnostics (complete record)
+    private logBuffer: string[] = []; // Track info/warn/error for export (not debug/trace)
+    private static readonly MAX_BUFFER_SIZE = 10000; // Cap at 10K entries to prevent unbounded growth
 
     constructor(context: vscode.ExtensionContext) {
-        // Main channel for user-facing messages
-        this.outputChannel = vscode.window.createOutputChannel('Demo Builder: Logs');
-        context.subscriptions.push(this.outputChannel);
+        // Both channels use LogOutputChannel for consistent VS Code formatting
+        this.logsChannel = vscode.window.createOutputChannel('Demo Builder: User Logs', { log: true });
+        this.debugChannel = vscode.window.createOutputChannel('Demo Builder: Debug Logs', { log: true });
 
-        // Debug channel for detailed diagnostics
-        this.debugChannel = vscode.window.createOutputChannel('Demo Builder: Debug');
+        context.subscriptions.push(this.logsChannel);
         context.subscriptions.push(this.debugChannel);
 
-        // Load debug setting if available
+        // Initialize both channels
+        this.logsChannel.info('Demo Builder initialized');
+        this.debugChannel.info('Demo Builder initialized - Debug Logs channel ready');
+    }
+
+    /**
+     * Check if a message at the given level should be logged based on configuration
+     * @param level The log level to check
+     * @returns true if the message should be logged
+     */
+    private shouldLog(level: LogLevel): boolean {
         const config = vscode.workspace.getConfiguration('demoBuilder');
-        this.debugEnabled = config.get<boolean>('enableDebugLogging', true);
+        const rawLevel = config.get<string>('logLevel');
+        // Validate configured level is valid, default to 'debug' if not
+        const configuredLevel: LogLevel = (rawLevel && rawLevel in LOG_LEVEL_PRIORITY)
+            ? rawLevel as LogLevel
+            : 'debug';
+        return LOG_LEVEL_PRIORITY[level] <= LOG_LEVEL_PRIORITY[configuredLevel];
     }
 
-    // User-facing messages (main channel)
+    /**
+     * Log informational message → BOTH channels
+     * User Logs: Clean message for end users
+     * Debug Logs: Same message (part of complete record)
+     */
     public info(message: string): void {
-        const timestamp = new Date().toLocaleTimeString();
-        const logLine = `[${timestamp}] ${message}`;
-        this.outputChannel.appendLine(logLine);
-        this.logBuffer.push(logLine);
+        this.logsChannel.info(message);
+        this.debugChannel.info(message);
+        this.addToBuffer(`[INFO] ${message}`);
     }
 
+    /**
+     * Log warning message → BOTH channels
+     * User Logs: Clean warning for end users
+     * Debug Logs: Same warning (part of complete record)
+     */
     public warn(message: string): void {
-        const timestamp = new Date().toLocaleTimeString();
-        const logLine = `[${timestamp}] ⚠️ ${message}`;
-        this.outputChannel.appendLine(logLine);
-        this.logBuffer.push(logLine);
+        this.logsChannel.warn(message);
+        this.debugChannel.warn(message);
+        this.addToBuffer(`[WARN] ${message}`);
     }
 
+    /**
+     * Log error message → BOTH channels
+     * User Logs: Clean error message for end users
+     * Debug Logs: Error message + technical details (stack trace, etc.)
+     */
     public error(message: string, error?: Error): void {
-        const timestamp = new Date().toLocaleTimeString();
-        const logLine = `[${timestamp}] ❌ ${message}`;
-        this.outputChannel.appendLine(logLine);
-        this.logBuffer.push(logLine);
+        this.logsChannel.error(message);
+        this.debugChannel.error(message);
+        this.addToBuffer(`[ERROR] ${message}`);
 
         // SECURITY: Sanitize error message for user-facing logs
         if (error?.message) {
             const sanitizedMessage = sanitizeErrorForLogging(error);
-            const errorLine = `  Error: ${sanitizedMessage}`;
-            this.outputChannel.appendLine(errorLine);
-            this.logBuffer.push(errorLine);
+            this.logsChannel.error(`  Error: ${sanitizedMessage}`);
+            this.debugChannel.error(`  Error: ${sanitizedMessage}`);
+            this.addToBuffer(`  Error: ${sanitizedMessage}`);
         }
 
-        // Log full (unsanitized) error details to debug channel only
-        if (error && this.debugEnabled) {
-            this.debug('Full error details:', {
-                message: error.message,
-                stack: error.stack,
-                name: error.name,
-            });
+        // Log verbose error details at trace level (reduces noise, available for deep debugging)
+        if (error?.stack && this.shouldLog('trace')) {
+            this.debugChannel.info(`[trace] Error stack: ${error.name}: ${error.stack.split('\n').slice(0, 5).join('\n')}`);
         }
     }
 
-    // Debug messages (debug channel)
+    /**
+     * Log debug message (detailed diagnostics → Debug channel only)
+     * Not included in export buffer for privacy
+     * Uses info() with [debug] prefix to bypass VS Code's log level filtering
+     * Respects demoBuilder.logLevel configuration setting
+     */
     public debug(message: string, data?: unknown): void {
-        // SECURITY: Disable debug logging in production to prevent information disclosure
-        if (!this.debugEnabled || this.isProduction()) {
-            return;
-        }
+        if (!this.shouldLog('debug')) return;
 
-        const timestamp = new Date().toISOString();
-        const logLine = `[${timestamp}] DEBUG: ${message}`;
-        this.debugChannel.appendLine(logLine);
-        this.debugBuffer.push(logLine);
+        // Promote to info() with prefix to ensure visibility at default log level
+        this.debugChannel.info(`[debug] ${message}`);
 
         if (data !== undefined) {
             try {
                 const formatted = JSON.stringify(data, null, 2);
-                this.debugChannel.appendLine(formatted);
-                this.debugBuffer.push(formatted);
+                this.debugChannel.info(`[debug] ${formatted}`);
             } catch {
-                // If JSON.stringify fails, use toString
-                const dataStr = String(data);
-                this.debugChannel.appendLine(dataStr);
-                this.debugBuffer.push(dataStr);
+                // If JSON.stringify fails (e.g., circular reference), use toString
+                this.debugChannel.info(`[debug] ${String(data)}`);
             }
         }
     }
 
     /**
-     * Check if running in production environment
-     * SECURITY: Used to disable debug logging in production
+     * Log trace message (most verbose level → Debug channel only)
+     * Not included in export buffer
+     * Uses info() with [trace] prefix to bypass VS Code's log level filtering
+     * Respects demoBuilder.logLevel configuration setting
+     * SECURITY: Sanitizes data to redact API keys, tokens, and sensitive values
      */
-    private isProduction(): boolean {
-        return process.env.NODE_ENV === 'production';
-    }
+    public trace(message: string, data?: unknown): void {
+        if (!this.shouldLog('trace')) return;
 
-    // Helper to append to debug channel and buffer
-    private appendDebug(line: string): void {
-        this.debugChannel.appendLine(line);
-        this.debugBuffer.push(line);
-    }
+        // Promote to info() with prefix to ensure visibility at default log level
+        this.debugChannel.info(`[trace] ${message}`);
 
-    // Command execution logging (debug channel)
-    public logCommand(command: string, result: CommandResultWithContext, args?: string[]): void {
-        // SECURITY: Disable command logging in production
-        if (!this.debugEnabled || this.isProduction()) {
-            return;
-        }
-
-        const timestamp = new Date().toISOString();
-        this.appendDebug(`\n${'='.repeat(80)}`);
-        this.appendDebug(`[${timestamp}] COMMAND EXECUTION`);
-        this.appendDebug(`${'='.repeat(80)}`);
-        this.appendDebug(`Command: ${command}`);
-        
-        if (args && args.length > 0) {
-            this.appendDebug(`Arguments: ${args.join(' ')}`);
-        }
-        
-        if (result.cwd) {
-            this.appendDebug(`Working Directory: ${result.cwd}`);
-        }
-        
-        if (result.duration) {
-            this.appendDebug(`Duration: ${result.duration}ms`);
-            
-            // Warn about slow commands
-            if (result.duration > 3000) {
-                const warningMsg = `⚠️ WARNING: Slow command detected - took ${result.duration}ms`;
-                this.appendDebug(warningMsg);
-                this.debug(warningMsg);
+        if (data !== undefined) {
+            try {
+                const formatted = JSON.stringify(data, null, 2);
+                // SECURITY: Sanitize to redact API keys, tokens, secrets
+                const sanitized = sanitizeErrorForLogging(formatted);
+                this.debugChannel.info(`[trace] ${sanitized}`);
+            } catch {
+                this.debugChannel.info(`[trace] ${String(data)}`);
             }
         }
-        
-        this.appendDebug(`Exit Code: ${result.code ?? 'null'}`);
-        
-        if (result.stdout) {
-            this.appendDebug('\n--- STDOUT ---');
-            this.appendDebug(result.stdout);
-        }
-        
-        if (result.stderr) {
-            this.appendDebug('\n--- STDERR ---');
-            this.appendDebug(result.stderr);
-        }
-        
-        this.appendDebug(`${'='.repeat(80)}\n`);
     }
 
-    // Log environment information
-    public logEnvironment(label: string, env: NodeJS.ProcessEnv): void {
-        // SECURITY: Disable environment logging in production
-        if (!this.debugEnabled || this.isProduction()) {
-            return;
+    /**
+     * Add entry to log buffer with size cap
+     * Uses LRU-style eviction (removes oldest entries when limit reached)
+     */
+    private addToBuffer(entry: string): void {
+        this.logBuffer.push(entry);
+        // Evict oldest entries if buffer exceeds limit
+        if (this.logBuffer.length > DebugLogger.MAX_BUFFER_SIZE) {
+            // Remove oldest 10% when limit reached (batch eviction for efficiency)
+            const evictCount = Math.floor(DebugLogger.MAX_BUFFER_SIZE * 0.1);
+            this.logBuffer.splice(0, evictCount);
+        }
+    }
+
+    /**
+     * Log command execution (for diagnostics → Debug channel)
+     * Uses info() with prefixes to bypass VS Code's log level filtering
+     * Respects demoBuilder.logLevel configuration setting
+     */
+    public logCommand(command: string, result: CommandResultWithContext, args?: string[]): void {
+        if (!this.shouldLog('debug')) return;
+
+        this.debugChannel.info(`[debug] ${'='.repeat(60)}`);
+        this.debugChannel.info(`[debug] COMMAND EXECUTION: ${command}`);
+
+        if (args && args.length > 0) {
+            this.debugChannel.info(`[debug] Arguments: ${args.join(' ')}`);
         }
 
-        this.debug(`Environment - ${label}`, {
+        if (result.cwd) {
+            this.debugChannel.info(`[debug] Working Directory: ${result.cwd}`);
+        }
+
+        if (result.duration) {
+            this.debugChannel.info(`[debug] Duration: ${result.duration}ms`);
+
+            // Warn about slow commands - goes to Logs channel for visibility
+            if (result.duration > TIMEOUTS.SLOW_COMMAND_THRESHOLD) {
+                this.logsChannel.warn(`Slow command detected - ${command} took ${result.duration}ms`);
+            }
+        }
+
+        this.debugChannel.info(`[debug] Exit Code: ${result.code ?? 'null'}`);
+
+        // Log stdout/stderr at trace level to reduce noise
+        if (this.shouldLog('trace')) {
+            if (result.stdout) {
+                this.debugChannel.info('[trace] --- STDOUT ---');
+                this.debugChannel.info(`[trace] ${result.stdout}`);
+            }
+
+            if (result.stderr) {
+                this.debugChannel.info('[trace] --- STDERR ---');
+                this.debugChannel.info(`[trace] ${result.stderr}`);
+            }
+        }
+
+        this.debugChannel.info(`[debug] ${'='.repeat(60)}`);
+    }
+
+    /**
+     * Log environment information (→ Debug channel)
+     * Uses info() with prefix to bypass VS Code's log level filtering
+     * Respects demoBuilder.logLevel configuration setting
+     */
+    public logEnvironment(label: string, env: NodeJS.ProcessEnv): void {
+        if (!this.shouldLog('debug')) return;
+
+        this.debugChannel.info(`[debug] Environment - ${label}`);
+        this.debugChannel.info('[debug] ' + JSON.stringify({
             PATH: env.PATH?.split(':').join('\n  '),
             HOME: env.HOME,
             SHELL: env.SHELL,
             USER: env.USER,
             NODE_PATH: env.NODE_PATH,
             npm_config_prefix: env.npm_config_prefix,
-        });
+        }, null, 2));
     }
 
-    // Show the output channel
+    /**
+     * Show the Logs output channel (user-facing)
+     */
     public show(preserveFocus = true): void {
-        this.outputChannel.show(preserveFocus);
-        this.isLogsVisible = true;
-        this.isDebugVisible = false; // Logs is now active, not Debug
+        this.logsChannel.show(preserveFocus);
     }
 
-    // Hide the output channel
-    public hide(): void {
-        this.outputChannel.hide();
-        this.isLogsVisible = false;
-    }
-
-    // Toggle the output channel visibility
-    // Smart behavior:
-    // - If Logs channel is visible → toggle it off (close)
-    // - If Debug channel is visible → leave it (don't switch)
-    // - If neither visible → show Logs
-    public toggle(): void {
-        if (this.isLogsVisible) {
-            // Logs is currently showing, toggle it off
-            this.hide();
-        } else if (this.isDebugVisible) {
-            // Debug is showing, leave it alone (don't interrupt)
-            return;
-        } else {
-            // No Demo Builder channels visible, show Logs
-            this.show(true);
-        }
-    }
-
-    // Show the debug channel
+    /**
+     * Show the Debug output channel (technical diagnostics)
+     */
     public showDebug(preserveFocus = true): void {
         this.debugChannel.show(preserveFocus);
-        this.isDebugVisible = true;
-        this.isLogsVisible = false; // Debug is now active, not Logs
     }
-    
-    // Hide the debug channel
+
+    /**
+     * Hide the Logs output channel
+     */
+    public hide(): void {
+        this.logsChannel.hide();
+    }
+
+    /**
+     * Hide the Debug output channel
+     */
     public hideDebug(): void {
         this.debugChannel.hide();
-        this.isDebugVisible = false;
     }
 
-    // Clear channels
+    /**
+     * Toggle the Logs output channel visibility
+     * @deprecated Use show() or showDebug() directly for clarity
+     */
+    public toggle(): void {
+        this.show(true);
+    }
+
+    /**
+     * Clear the Logs output channel
+     */
     public clear(): void {
-        this.outputChannel.clear();
+        this.logsChannel.clear();
     }
 
+    /**
+     * Clear the Debug output channel
+     */
     public clearDebug(): void {
         this.debugChannel.clear();
     }
 
-    // Export debug log to file
+    /**
+     * Export log to file
+     */
     public async exportDebugLog(): Promise<string | undefined> {
         const uri = await vscode.window.showSaveDialog({
-            defaultUri: vscode.Uri.file('demo-builder-debug.log'),
+            defaultUri: vscode.Uri.file('demo-builder.log'),
             filters: {
                 'Log files': ['log', 'txt'],
             },
         });
 
         if (uri) {
-            // Use debug buffer instead of accessing private _content property
-            const content = this.debugBuffer.length > 0
-                ? this.debugBuffer.join('\n')
-                : 'No debug content available';
+            const content = this.logBuffer.length > 0
+                ? this.logBuffer.join('\n')
+                : 'No log content available';
             await fs.writeFile(uri.fsPath, content);
-            this.info(`Debug log exported to: ${uri.fsPath}`);
+            this.info(`Log exported to: ${uri.fsPath}`);
             return uri.fsPath;
         }
 
@@ -258,86 +325,47 @@ export class DebugLogger {
      * Save current logs to a file for persistence across Extension Host restarts
      */
     public async saveLogsToFile(filePath: string): Promise<void> {
-        
-        // Ensure directory exists
         const dir = path.dirname(filePath);
         await fs.mkdir(dir, { recursive: true });
-        
-        // Write main logs
+
         const content = this.logBuffer.join('\n');
         await fs.writeFile(filePath, content, 'utf8');
-        
-        // Write debug logs to separate file
-        const debugFilePath = filePath.replace('.log', '-debug.log');
-        const debugContent = this.debugBuffer.join('\n');
-        await fs.writeFile(debugFilePath, debugContent, 'utf8');
-        
-        this.debug(`Saved ${this.logBuffer.length} main log lines and ${this.debugBuffer.length} debug log lines`);
+
+        this.debug(`Saved ${this.logBuffer.length} log lines to ${filePath}`);
     }
 
     /**
-     * Replay logs from a file into the current log buffer and output channel
+     * Replay logs from a file into the current log buffer and Logs channel
+     * SECURITY: Validates file path before reading to prevent path traversal
      */
     public async replayLogsFromFile(filePath: string): Promise<void> {
-        
         try {
-            // Replay main logs
+            // SECURITY: Validate path is within expected directory (~/.demo-builder/)
+            const normalizedPath = path.normalize(filePath);
+            const expectedDir = path.join(process.env.HOME || '', '.demo-builder');
+            if (!normalizedPath.startsWith(expectedDir)) {
+                this.debug(`Rejecting replay from untrusted path: ${filePath}`);
+                return;
+            }
+
             const content = await fs.readFile(filePath, 'utf8');
             const lines = content.split('\n').filter((line: string) => line.trim());
-            
+
             for (const line of lines) {
-                this.outputChannel.appendLine(line);
-                this.logBuffer.push(line);
+                this.logsChannel.info(line);
+                this.addToBuffer(line);
             }
-            
-            // Add separator after replayed logs
-            this.outputChannel.appendLine('');
-            this.outputChannel.appendLine('--- Extension reloaded, continuing from saved logs ---');
-            this.outputChannel.appendLine('');
-            this.logBuffer.push('');
-            this.logBuffer.push('--- Extension reloaded, continuing from saved logs ---');
-            this.logBuffer.push('');
-            
-            // Replay debug logs
-            const debugFilePath = filePath.replace('.log', '-debug.log');
-            try {
-                const debugContent = await fs.readFile(debugFilePath, 'utf8');
-                const debugLines = debugContent.split('\n').filter((line: string) => line.trim());
-                
-                for (const line of debugLines) {
-                    this.debugChannel.appendLine(line);
-                    this.debugBuffer.push(line);
-                }
-                
-                // Add separator after replayed debug logs
-                this.debugChannel.appendLine('');
-                this.debugChannel.appendLine('--- Extension reloaded, continuing from saved logs ---');
-                this.debugChannel.appendLine('');
-                this.debugBuffer.push('');
-                this.debugBuffer.push('--- Extension reloaded, continuing from saved logs ---');
-                this.debugBuffer.push('');
-                
-                // Note: Don't log to debug channel here since we're still replaying
-                // Clean up debug log file
-                await fs.unlink(debugFilePath);
-            } catch {
-                // Debug log file might not exist, that's okay
-            }
-            
-            // Now we can log the replay summary (after replay is complete)
-            const timestamp = new Date().toISOString();
-            const summaryLine = `[${timestamp}] DEBUG: Replayed ${lines.length} main logs and debug logs from session`;
-            this.debugChannel.appendLine(summaryLine);
-            this.debugBuffer.push(summaryLine);
-            
-            // Clean up main log file
+
+            this.logsChannel.info('');
+            this.logsChannel.info('--- Extension reloaded, continuing from saved logs ---');
+            this.logsChannel.info('');
+
+            this.debug(`Replayed ${lines.length} logs from session`);
+
+            // Clean up log file
             await fs.unlink(filePath);
         } catch (error) {
-            // If file doesn't exist or can't be read, just log a debug message
-            const timestamp = new Date().toISOString();
-            const errorLine = `[${timestamp}] DEBUG: Could not replay logs from ${filePath}: ${error}`;
-            this.debugChannel.appendLine(errorLine);
-            this.debugBuffer.push(errorLine);
+            this.debug(`Could not replay logs from ${filePath}: ${error}`);
         }
     }
 
@@ -348,9 +376,11 @@ export class DebugLogger {
         return this.logBuffer.join('\n');
     }
 
-    // Dispose channels
+    /**
+     * Dispose both channels
+     */
     public dispose(): void {
-        this.outputChannel.dispose();
+        this.logsChannel.dispose();
         this.debugChannel.dispose();
     }
 }
@@ -370,4 +400,11 @@ export function getLogger(): DebugLogger {
         throw new Error('Logger not initialized. Call initializeLogger first.');
     }
     return loggerInstance;
+}
+
+/**
+ * Reset logger instance (for testing purposes only)
+ */
+export function _resetLoggerForTesting(): void {
+    loggerInstance = undefined;
 }

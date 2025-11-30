@@ -178,6 +178,7 @@ This extension is part of Adobe's Demo Builder toolkit. For development setup:
 
 - All API keys are stored securely using VSCode's Secret Storage
 - License keys are validated locally with encrypted database
+- Content Security Policy (CSP) with cryptographically secure nonces
 - No sensitive data is logged or transmitted
 
 ## Version History

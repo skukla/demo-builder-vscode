@@ -62,7 +62,7 @@ This document details the comprehensive solution implemented to eliminate race c
 **Purpose**: Ensures reliable bidirectional communication between extension and webview.
 
 **Key Features**:
-- **Handshake Protocol**: Three-way handshake ensures both sides ready
+- **Handshake Protocol**: Webview-initiated two-way handshake ensures both sides ready
 - **Message Queuing**: Messages queued until handshake complete
 - **Request-Response**: Unique IDs for request tracking
 - **Automatic Retry**: Exponential backoff for failed messages

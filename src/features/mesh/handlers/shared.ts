@@ -5,11 +5,11 @@
  */
 
 import { ServiceLocator } from '@/core/di';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import {
     getSetupInstructions as getSetupInstructionsHelper,
     getEndpoint as getEndpointHelper,
 } from '@/features/project-creation/helpers';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 
 /**
  * Get setup instructions for API Mesh

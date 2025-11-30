@@ -1,35 +1,41 @@
-import React, { useEffect } from 'react';
 import {
     View,
     Flex,
     Form,
     TextField,
     Heading,
-    Text
+    Text,
 } from '@adobe/react-spectrum';
-import { WizardState } from '@/webview-ui/shared/types';
-import { useSelectableDefault } from '@/webview-ui/shared/hooks/useSelectableDefault';
+import React, { useEffect } from 'react';
+import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { BaseStepProps } from '@/types/wizard';
+import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
 
-interface WelcomeStepProps {
-    state: WizardState;
-    updateState: (updates: Partial<WizardState>) => void;
-    onNext: () => void;
-    onBack: () => void;
-    setCanProceed: (canProceed: boolean) => void;
-}
-
-export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepProps) {
+export function WelcomeStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
     
     const validateProjectName = (value: string): string | undefined => {
-        if (!value) return 'Project name is required';
-        if (!/^[a-z0-9-]+$/.test(value)) {
-            return 'Use lowercase letters, numbers, and hyphens only';
-        }
-        if (value.length < 3) return 'Name must be at least 3 characters';
-        if (value.length > 30) return 'Name must be less than 30 characters';
-        return undefined;
+        const validator = compose(
+            required('Project name is required'),
+            pattern(/^[a-z0-9-]+$/, 'Use lowercase letters, numbers, and hyphens only'),
+            minLength(3, 'Name must be at least 3 characters'),
+            maxLength(30, 'Name must be less than 30 characters')
+        );
+        return validator(value).error;
+    };
+
+    /**
+     * Get validation state for project name field
+     * SOP §3: Extracted nested ternary to named helper
+     */
+    const getProjectNameValidationState = (
+        projectName: string | undefined,
+    ): 'valid' | 'invalid' | undefined => {
+        if (!projectName) return undefined;
+        const error = validateProjectName(projectName);
+        return error ? 'invalid' : 'valid';
     };
 
     // Set default project name and manually focus + select on mount
@@ -39,13 +45,14 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
         }
         
         // Manually focus and select text (more reliable than autoFocus + onFocus)
+        // Delay slightly longer than WizardContainer's auto-focus (300ms + 100ms)
         setTimeout(() => {
             const input = document.querySelector('input[type="text"]') as HTMLInputElement;
             if (input) {
                 input.focus();
                 input.select();
             }
-        }, 100); // Small delay to ensure field is rendered with value
+        }, TIMEOUTS.STEP_CONTENT_FOCUS + 100); // Delay to allow Spectrum components to mount and win focus race
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount
 
@@ -57,7 +64,7 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
     }, [state.projectName, setCanProceed]);
 
     return (
-        <div style={{ maxWidth: '800px', width: '100%', margin: '0', padding: '24px' }}>
+        <div className="container-wizard">
             <Flex direction="column" gap="size-400">
                 <View>
                     <Heading level={2} marginBottom="size-200">
@@ -90,16 +97,10 @@ export function WelcomeStep({ state, updateState, setCanProceed }: WelcomeStepPr
                             value={state.projectName}
                             onChange={(value) => updateState({ projectName: value })}
                             description="Lowercase letters, numbers, and hyphens only"
-                            validationState={
-                                state.projectName && validateProjectName(state.projectName) 
-                                    ? 'invalid' 
-                                    : state.projectName && !validateProjectName(state.projectName)
-                                    ? 'valid'
-                                    : undefined
-                            }
+                            validationState={getProjectNameValidationState(state.projectName)}
                             errorMessage={
-                                state.projectName 
-                                    ? validateProjectName(state.projectName) 
+                                state.projectName
+                                    ? validateProjectName(state.projectName)
                                     : undefined
                             }
                             isRequired

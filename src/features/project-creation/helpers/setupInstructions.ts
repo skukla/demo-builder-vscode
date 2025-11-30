@@ -25,6 +25,47 @@ interface RawInstruction {
 }
 
 /**
+ * Process a single instruction with dynamic value substitution (SOP §6 compliance)
+ *
+ * Extracts callback body for improved readability and testability.
+ */
+function processInstruction(
+    instruction: RawInstruction,
+    selectedComponents: string[],
+    componentsData: ComponentRegistry | undefined,
+): SetupInstruction {
+    let details = instruction.details;
+
+    // Process {{ALLOWED_DOMAINS}} substitution
+    if (instruction.dynamicValues?.ALLOWED_DOMAINS) {
+        // Get frontends from selected components
+        const frontends = selectedComponents.filter((comp: string) => {
+            // Check if it's a frontend by looking it up in components data
+            const components = componentsData?.components;
+            return components?.frontends?.some((f: TransformedComponentDefinition) => f.id === comp);
+        });
+
+        // Get ports from frontends
+        const allowedDomains = frontends.map((compId: string) => {
+            const components = componentsData?.components;
+            const frontend = components?.frontends?.find((f: TransformedComponentDefinition) => f.id === compId);
+            // Access port from the base configuration type
+            const baseConfig = frontend?.configuration as RawComponentDefinition['configuration'];
+            const port = baseConfig?.port || 3000;
+            return `localhost:${port}`;
+        }).join(', ');
+
+        details = details.replace('{{ALLOWED_DOMAINS}}', allowedDomains || 'localhost:3000');
+    }
+
+    return {
+        step: instruction.step,
+        details,
+        important: instruction.important,
+    };
+}
+
+/**
  * Get setup instructions with dynamic values resolved
  *
  * @param apiServicesConfig - API services configuration from templates/api-services.json
@@ -44,36 +85,8 @@ export function getSetupInstructions(
         return undefined;
     }
 
-    // Process dynamic values in instructions
-    return rawInstructions.map((instruction: RawInstruction) => {
-        let details = instruction.details;
-
-        // Process {{ALLOWED_DOMAINS}} substitution
-        if (instruction.dynamicValues?.ALLOWED_DOMAINS) {
-            // Get frontends from selected components
-            const frontends = selectedComponents.filter((comp: string) => {
-                // Check if it's a frontend by looking it up in components data
-                const components = componentsData?.components;
-                return components?.frontends?.some((f: TransformedComponentDefinition) => f.id === comp);
-            });
-
-            // Get ports from frontends
-            const allowedDomains = frontends.map((compId: string) => {
-                const components = componentsData?.components;
-                const frontend = components?.frontends?.find((f: TransformedComponentDefinition) => f.id === compId);
-                // Access port from the base configuration type
-                const baseConfig = frontend?.configuration as RawComponentDefinition['configuration'];
-                const port = baseConfig?.port || 3000;
-                return `localhost:${port}`;
-            }).join(', ');
-
-            details = details.replace('{{ALLOWED_DOMAINS}}', allowedDomains || 'localhost:3000');
-        }
-
-        return {
-            step: instruction.step,
-            details,
-            important: instruction.important,
-        };
-    });
+    // SOP §6: Using extracted transformation function
+    return rawInstructions.map((instruction: RawInstruction) =>
+        processInstruction(instruction, selectedComponents, componentsData)
+    );
 }

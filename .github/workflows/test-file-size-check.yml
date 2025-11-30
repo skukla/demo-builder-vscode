@@ -1,0 +1,43 @@
+name: Test File Size Check
+
+on:
+  pull_request:
+    paths:
+      - 'tests/**/*.test.ts'
+      - 'tests/**/*.test.tsx'
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'tests/**/*.test.ts'
+      - 'tests/**/*.test.tsx'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  check-test-file-sizes:
+    name: Validate Test File Sizes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --only=production --ignore-scripts
+
+      - name: Check test file sizes
+        run: npm run validate:test-file-sizes
+
+      - name: Report results
+        if: failure()
+        run: |
+          echo "::error::Test file size validation failed. See output above for details."
+          echo "::notice::Files over 750 lines must be split or added to .testfilesizerc.json exclusion list."
+          echo "::notice::See docs/testing/test-file-splitting-playbook.md for guidance."

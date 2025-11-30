@@ -10,9 +10,11 @@
  */
 
 import { validateProjectPath, validateURL } from '@/core/validation';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
-import { toError } from '@/types/typeGuards';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult, DataResult } from '@/types/results';
+import { toError } from '@/types/typeGuards';
 
 /**
  * ready - Initial wizard ready event
@@ -50,11 +52,11 @@ export async function handleCancelProjectCreation(
     context: HandlerContext,
 ): Promise<DataResult<{ message: string }>> {
     if (context.sharedState.projectCreationAbortController) {
-        context.logger.info('[Project Creation] Cancellation requested by user');
+        context.logger.debug('[Project Creation] Cancellation requested by user');
         context.sharedState.projectCreationAbortController.abort();
         return { success: true, data: { message: 'Project creation cancelled' } };
     }
-    return { success: false, data: { message: 'No active project creation to cancel' } };
+    return { success: false, data: { message: 'No active project creation to cancel' }, code: ErrorCode.PROJECT_NOT_FOUND };
 }
 
 /**
@@ -67,15 +69,16 @@ export async function handleCancelMeshCreation(
     context: HandlerContext,
 ): Promise<DataResult<{ cancelled: boolean }>> {
     try {
-        context.logger.info('[API Mesh] User cancelled mesh creation');
+        context.logger.debug('[API Mesh] User cancelled mesh creation');
         // Set cancellation flag if needed (for future implementation)
         // For now, just acknowledge the cancellation
         return { success: true, data: { cancelled: true } };
     } catch (error) {
-        context.logger.error('[API Mesh Cancel] Failed', error as Error);
+        context.logger.error('[API Mesh] Cancel failed', error as Error);
         return {
             success: false,
             error: toError(error).message,
+            code: ErrorCode.UNKNOWN,
         };
     }
 }
@@ -89,7 +92,7 @@ export async function handleCancelMeshCreation(
 export async function handleCancelAuthPolling(context: HandlerContext): Promise<SimpleResult> {
     // Polling is now handled internally by authManager.login()
     context.sharedState.isAuthenticating = false;
-    context.logger.info('[Auth] Cancelled authentication request');
+    context.logger.debug('[Auth] Cancelled authentication request');
     return { success: true };
 }
 
@@ -142,7 +145,7 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
 
         // Dispose this panel
         context.panel?.dispose();
-        context.logger.info('[Project Creation] Wizard closed');
+        context.logger.debug('[Project Creation] Wizard closed');
 
         // REMOVED (Package 4 - beta.64): No longer add workspace folder
         // Previously added workspace folder, which caused terminal directory issues.
@@ -151,8 +154,8 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
         // const added = vscode.workspace.updateWorkspaceFolders(0, 0, workspaceFolder);
 
         // Open dashboard directly (no workspace manipulation)
-        context.logger.info('[Project Creation] Opening project dashboard...');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        context.logger.debug('[Project Creation] Opening project dashboard...');
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DASHBOARD_OPEN_DELAY));
         await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
 
     } catch (error) {
@@ -186,17 +189,18 @@ export async function handleBrowseFiles(
                 return {
                     success: false,
                     error: `Access denied: ${toError(validationError).message}`,
+                    code: ErrorCode.CONFIG_INVALID,
                 };
             }
 
             await vscode.commands.executeCommand('workbench.view.explorer');
             await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(projectPath));
-            context.logger.info('[Project Creation] Opened project in Explorer');
+            context.logger.debug('[Project Creation] Opened project in Explorer');
         }
         return { success: true };
     } catch (error) {
         context.logger.error('[Project Creation] Failed to open Explorer', error as Error);
-        return { success: false, error: 'Failed to open file browser' };
+        return { success: false, error: 'Failed to open file browser', code: ErrorCode.UNKNOWN };
     }
 }
 
@@ -221,7 +225,7 @@ export async function handleLog(
             context.logger.debug(`[Webview] ${message}`);
             break;
         default:
-            context.logger.info(`[Webview] ${message}`);
+            context.logger.debug(`[Webview] ${message}`);
     }
     return { success: true };
 }
@@ -244,31 +248,15 @@ export async function handleOpenAdobeConsole(
     try {
         let consoleUrl = 'https://developer.adobe.com/console';
 
-        context.logger.info('[Adobe Console] Received data from webview', {
-            data: payload,
-            hasOrgId: !!payload?.orgId,
-            hasProjectId: !!payload?.projectId,
-            hasWorkspaceId: !!payload?.workspaceId,
-        });
-
         // Construct direct link to workspace if IDs are provided
         if (payload?.orgId && payload?.projectId && payload?.workspaceId) {
             consoleUrl = `https://developer.adobe.com/console/projects/${payload.orgId}/${payload.projectId}/workspaces/${payload.workspaceId}/details`;
-            context.logger.info('[Adobe Console] Opening workspace-specific URL', {
-                url: consoleUrl,
-                orgId: payload.orgId,
-                projectId: payload.projectId,
-                workspaceId: payload.workspaceId,
-            });
+            context.logger.debug('[Adobe Console] Opening workspace-specific URL');
         } else if (payload?.orgId && payload?.projectId) {
             consoleUrl = `https://developer.adobe.com/console/projects/${payload.orgId}/${payload.projectId}/overview`;
-            context.logger.info('[Adobe Console] Opening project-specific URL', {
-                url: consoleUrl,
-                orgId: payload.orgId,
-                projectId: payload.projectId,
-            });
+            context.logger.debug('[Adobe Console] Opening project-specific URL');
         } else {
-            context.logger.info('[Adobe Console] Opening generic console URL (missing IDs)', { data: payload });
+            context.logger.debug('[Adobe Console] Opening generic console URL');
         }
 
         // SECURITY: Validate URL before opening in browser
@@ -277,14 +265,14 @@ export async function handleOpenAdobeConsole(
             validateURL(consoleUrl);
         } catch (validationError) {
             context.logger.error('[Adobe Console] URL validation failed', validationError as Error);
-            return { success: false };
+            return { success: false, error: 'Invalid URL', code: ErrorCode.CONFIG_INVALID };
         }
 
         await vscode.env.openExternal(vscode.Uri.parse(consoleUrl));
         return { success: true };
     } catch (error) {
         context.logger.error('[Adobe Console] Failed to open URL', error as Error);
-        return { success: false };
+        return { success: false, error: 'Failed to open Adobe Console', code: ErrorCode.UNKNOWN };
     }
 }
 

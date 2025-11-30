@@ -1,14 +1,15 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
-import { Project } from '@/types/base';
-import { parseJSON } from '@/types/typeGuards';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { BaseCommand } from '@/core/base';
+import { StatusBarManager } from '@/core/vscode/StatusBarManager';
+import { Project } from '@/types/base';
+import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
+import { formatAdobeCliError, extractMeshErrorSummary } from '../utils/errorFormatter';
 
 /**
  * Deploy (or redeploy) API Mesh using the mesh.json from the mesh component
@@ -48,7 +49,7 @@ export class DeployMeshCommand extends BaseCommand {
                     await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
                 }
                 
-                this.logger.info('[Deploy Mesh] Authentication required - directed user to dashboard');
+                this.logger.debug('[Mesh Deployment] Authentication required - directed user to dashboard');
                 return;
             }
             
@@ -131,7 +132,7 @@ export class DeployMeshCommand extends BaseCommand {
 
                         // Use the original mesh.json path directly (not a temp copy)
                         // This ensures relative paths in mesh.json (like build/resolvers/*.js) resolve correctly
-                        this.logger.info(`[Deploy Mesh] Deploying mesh from: ${meshConfigPath}`);
+                        this.logger.debug(`[Mesh Deployment] Deploying mesh from: ${meshConfigPath}`);
                     
                         progress.report({ message: 'Deploying to Adobe I/O...' });
                         await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('deploying', 'Deploying to Adobe I/O...');
@@ -141,14 +142,16 @@ export class DeployMeshCommand extends BaseCommand {
                     
                         const commandManager = ServiceLocator.getCommandExecutor();
                         const updateResult = await commandManager.execute(
-                            `aio api-mesh update "${meshConfigPath}" --autoConfirmAction`,
+                            `aio api-mesh:update "${meshConfigPath}" --autoConfirmAction`,
                             {
                                 cwd: meshComponent.path, // Run from mesh component directory (where .env file is)
                                 streaming: true,
+                                shell: true, // Required for command string with arguments and quoted paths
                                 timeout: TIMEOUTS.API_MESH_UPDATE,
                                 onOutput: (data: string) => {
                                     // Write detailed streaming output to main logs
-                                    const trimmedData = data.trim();
+                                    // Filter out HTML error responses (Adobe CLI sometimes includes entire error pages)
+                                    const trimmedData = formatAdobeCliError(data).trim();
                                     if (trimmedData) {
                                         this.logger.info(`  ${trimmedData}`);
                                     }
@@ -175,28 +178,13 @@ export class DeployMeshCommand extends BaseCommand {
                         );
                         
                         if (updateResult.code !== 0) {
-                            // Log full error details to logs channel
-                            this.logger.error('');
-                            this.logger.error('✗ Mesh deployment command failed');
-                            this.logger.error(`Exit code: ${updateResult.code}`);
-                            
-                            if (updateResult.stderr) {
-                                this.logger.error('');
-                                this.logger.error('Error output (stderr):');
-                                this.logger.error(updateResult.stderr);
-                            }
-                            
-                            if (updateResult.stdout) {
-                                this.logger.error('');
-                                this.logger.error('Command output (stdout):');
-                                this.logger.error(updateResult.stdout);
-                            }
-                            
-                            const errorMsg = updateResult.stderr || updateResult.stdout || 'Mesh deployment failed';
-                            throw new Error(errorMsg);
+                            // Don't re-log stderr/stdout here - they've already been streamed above
+                            // Just extract a clean error message for the exception
+                            const rawError = updateResult.stderr || updateResult.stdout || 'Mesh deployment failed';
+                            throw new Error(formatAdobeCliError(rawError));
                         }
                         
-                        this.logger.info('[Deploy Mesh] Update command completed, starting deployment verification...');
+                        this.logger.debug('[Mesh Deployment] Update command completed, starting deployment verification...');
                         this.logger.info('-'.repeat(60));
                         this.logger.info('✓ Update command completed');
                         this.logger.info('');
@@ -224,10 +212,15 @@ export class DeployMeshCommand extends BaseCommand {
                         });
                         
                         if (!verificationResult.deployed) {
-                            this.logger.error('');
-                            this.logger.error('✗ Deployment verification failed');
-                            this.logger.error(`  ${verificationResult.error || 'Unknown error'}`);
-                            throw new Error(verificationResult.error || 'Mesh deployment verification failed');
+                            // Extract user-friendly summary from verbose mesh error
+                            const errorSummary = verificationResult.error
+                                ? extractMeshErrorSummary(verificationResult.error)
+                                : 'Mesh deployment verification failed';
+
+                            this.logger.info(''); // Blank line before error (no ❌ prefix)
+                            this.logger.error('Mesh deployment failed:');
+                            this.logger.error(errorSummary);
+                            throw new Error(errorSummary);
                         }
                         
                         const deployedMeshId = verificationResult.meshId;
@@ -250,7 +243,7 @@ export class DeployMeshCommand extends BaseCommand {
                         // This ensures the dashboard knows the config is in sync
                         const { updateMeshState } = await import('../services/stalenessDetector');
                         await updateMeshState(project);
-                        this.logger.info('[Deploy Mesh] Updated mesh state after successful deployment');
+                        this.logger.debug('[Mesh Deployment] Updated mesh state after successful deployment');
                         
                         await this.stateManager.saveProject(project);
                         
@@ -271,25 +264,9 @@ export class DeployMeshCommand extends BaseCommand {
                 );
             
             } catch (error) {
-                this.logger.error('[Deploy Mesh] Failed', error as Error);
-                
-                // Log error details
-                this.logger.error('');
-                this.logger.error('='.repeat(60));
-                this.logger.error('Deployment Failed');
-                this.logger.error('='.repeat(60));
-                this.logger.error(`Error: ${(error as Error).message}`);
-                
-                // Log stack trace for debugging (if available)
-                if ((error as Error).stack) {
-                    this.logger.error('');
-                    this.logger.error('Stack trace:');
-                    this.logger.error((error as Error).stack || '');
-                }
-                
-                this.logger.error('');
-                this.logger.error('Review the logs above for full error details.');
-                this.logger.error('='.repeat(60));
+                // Error details already shown above
+                this.logger.info(''); // Blank line (no ❌ prefix)
+                this.logger.error('Deployment failed. See error above.');
                 
                 // Send error status to Project Dashboard
                 await ProjectDashboardWebviewCommand.sendMeshStatusUpdate('error', 'Deployment failed');
@@ -302,15 +279,25 @@ export class DeployMeshCommand extends BaseCommand {
                     await this.stateManager.saveProject(project);
                 }
                 
-                const { formatMeshDeploymentError } = await import('@/features/mesh/utils/errorFormatter');
-                
-                // Show error message (logs are already in Demo Builder: Logs channel)
-                vscode.window.showErrorMessage(formatMeshDeploymentError(error as Error));
+                // Show simple error with View Logs button (details are in Demo Builder: User Logs channel)
+                const selection = await vscode.window.showErrorMessage(
+                    'Mesh deployment failed. Check logs for details.',
+                    'View Logs'
+                );
+                if (selection === 'View Logs') {
+                    vscode.commands.executeCommand('demoBuilder.showLogs');
+                }
             }
         } catch (error) {
             // Outer catch for any unexpected errors during validation/setup
-            this.logger.error('[Deploy Mesh] Unexpected error', error as Error);
-            vscode.window.showErrorMessage(`Failed to deploy API Mesh: ${(error as Error).message}`);
+            this.logger.error('[Mesh Deployment] Unexpected error', error as Error);
+            const selection = await vscode.window.showErrorMessage(
+                'Failed to deploy API Mesh. Check logs for details.',
+                'View Logs'
+            );
+            if (selection === 'View Logs') {
+                vscode.commands.executeCommand('demoBuilder.showLogs');
+            }
         }
     }
 
@@ -329,7 +316,8 @@ export class DeployMeshCommand extends BaseCommand {
         }
 
         // Fallback: search for any component with 'mesh' in the ID (for backward compatibility)
-        for (const [id, component] of Object.entries(project.componentInstances)) {
+        // SOP §4: Using helper instead of inline Object.entries
+        for (const [id, component] of getComponentInstanceEntries(project)) {
             if (id.includes('mesh')) {
                 return component;
             }

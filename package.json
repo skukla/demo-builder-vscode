@@ -5,7 +5,7 @@
   "version": "1.0.0-beta.73",
   "publisher": "adobe-demo-team",
   "engines": {
-    "vscode": "^1.74.0"
+    "vscode": "^1.84.0"
   },
   "categories": [
     "Other"
@@ -27,7 +27,6 @@
   },
   "author": "Steve Kukla",
   "activationEvents": [
-    "onStartupFinished",
     "workspaceContains:.demo-builder"
   ],
   "main": "./dist/extension.js",
@@ -110,10 +109,11 @@
             "error",
             "warn",
             "info",
-            "debug"
+            "debug",
+            "trace"
           ],
-          "default": "info",
-          "description": "Log level for Demo Builder output"
+          "default": "debug",
+          "description": "Log level for Demo Builder Debug Logs channel: debug (normal) or trace (verbose with stack traces)"
         }
       }
     },
@@ -136,20 +136,38 @@
     }
   },
   "scripts": {
+    "clean": "rm -rf dist",
+    "clean:webview": "rm -rf dist/webview",
     "compile": "npm run compile:typescript && npm run compile:webview && npm run copy:media",
-    "compile:typescript": "tsc -p tsconfig.build.json",
-    "compile:webview": "webpack --mode production",
+    "compile:typescript": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
+    "compile:webview": "npm run clean:webview && webpack --mode production",
     "copy:media": "mkdir -p dist/media && cp -r media/* dist/media/",
-    "watch": "tsc -watch -p ./",
+    "watch": "concurrently \"tsc -watch -p tsconfig.build.json\" \"tsc-alias -w -p tsconfig.build.json\" --names \"tsc,alias\" --prefix-colors \"blue,magenta\"",
     "watch:webview": "webpack --mode development --watch",
-    "watch:all": "npm run watch & npm run watch:webview",
+    "watch:all": "concurrently \"npm run watch\" \"npm run watch:webview\" --names \"ts,webpack\" --prefix-colors \"blue,green\"",
+    "vscode:prepublish": "npm run compile",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"tests/**/*.{ts,tsx}\"",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "node --max-old-space-size=4096 node_modules/.bin/jest --forceExit",
+    "test:fast": "node --max-old-space-size=4096 node_modules/.bin/jest --maxWorkers=75% --forceExit",
+    "test:changed": "node --max-old-space-size=4096 node_modules/.bin/jest --onlyChanged",
+    "test:file": "node --max-old-space-size=4096 node_modules/.bin/jest --maxWorkers=1",
+    "test:safe": "node --max-old-space-size=1024 node_modules/.bin/jest --maxWorkers=1 --forceExit",
+    "test:no-compile": "node --max-old-space-size=4096 node_modules/.bin/jest",
+    "test:watch": "node --max-old-space-size=4096 node_modules/.bin/jest --watch",
+    "test:coverage": "node --max-old-space-size=4096 node_modules/.bin/jest --coverage",
+    "test:unit": "node --max-old-space-size=4096 node_modules/.bin/jest --selectProjects node --testPathIgnorePatterns='integration'",
+    "test:integration": "node --max-old-space-size=4096 node_modules/.bin/jest --testPathPattern='integration'",
+    "test:ui": "node --max-old-space-size=4096 node_modules/.bin/jest --selectProjects react",
+    "test:typecheck": "tsc --noEmit",
+    "metrics:baseline": "node scripts/capture-baseline-metrics.js",
+    "validate:jest-config": "node scripts/validate-jest-config.js",
+    "validate:eslint-rules": "node scripts/validate-eslint-rules.js",
+    "validate:test-guidelines": "node scripts/validate-test-guidelines.js",
+    "validate:test-file-sizes": "node scripts/check-test-file-sizes.js",
+    "analyze": "ANALYZE=true npm run compile:webview",
     "package": "vsce package",
     "publish": "vsce publish",
     "encrypt-keys": "node scripts/encrypt-keys.js",
@@ -163,6 +181,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
+    "@swc/core": "^1.15.3",
+    "@swc/jest": "^0.2.39",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
@@ -175,6 +195,7 @@
     "@vscode/test-electron": "^2.5.2",
     "@vscode/vsce": "^3.6.0",
     "cloc": "^2.6.0-cloc",
+    "concurrently": "^9.2.1",
     "css-loader": "^7.1.2",
     "eslint": "^9.15.0",
     "eslint-config-prettier": "^10.1.8",
@@ -193,9 +214,11 @@
     "ts-jest": "^29.4.5",
     "ts-loader": "^9.5.4",
     "ts-prune": "^0.10.3",
+    "tsc-alias": "^1.8.16",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.16.0",
     "webpack": "^5.101.3",
+    "webpack-bundle-analyzer": "^4.10.2",
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
@@ -205,6 +228,7 @@
     "@types/uuid": "^10.0.0",
     "axios": "^1.6.0",
     "crypto-js": "^4.2.0",
+    "execa": "^5.1.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "semver": "^7.5.4",

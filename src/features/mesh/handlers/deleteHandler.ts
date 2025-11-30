@@ -5,10 +5,12 @@
  */
 
 import * as vscode from 'vscode';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateWorkspaceId } from '@/core/validation';
+import { ErrorCode } from '@/types/errorCodes';
 import { toError } from '@/types/typeGuards';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
 
 /**
  * Handler: delete-api-mesh
@@ -21,11 +23,24 @@ export async function handleDeleteApiMesh(
 ): Promise<{
     success: boolean;
     error?: string;
+    code?: ErrorCode;
 }> {
     const { workspaceId } = payload;
 
+    // SECURITY: Validate workspaceId to prevent command injection
     try {
-        context.logger.info('[API Mesh] Deleting mesh for workspace', { workspaceId });
+        validateWorkspaceId(workspaceId);
+    } catch (validationError) {
+        context.logger.error('[API Mesh] Invalid workspace ID provided', validationError as Error);
+        return {
+            success: false,
+            error: (validationError as Error).message,
+            code: ErrorCode.MESH_CONFIG_INVALID,
+        };
+    }
+
+    try {
+        context.logger.debug('[API Mesh] Deleting mesh for workspace', { workspaceId });
 
         // PRE-FLIGHT: Check authentication before any Adobe CLI operations
         const authManager = ServiceLocator.getAuthenticationService();
@@ -47,6 +62,7 @@ export async function handleDeleteApiMesh(
             return {
                 success: false,
                 error: 'Adobe authentication required. Please sign in via the Project Dashboard.',
+                code: ErrorCode.AUTH_REQUIRED,
             };
         }
 
@@ -78,6 +94,7 @@ export async function handleDeleteApiMesh(
         return {
             success: false,
             error: toError(error).message,
+            code: ErrorCode.UNKNOWN,
         };
     }
 }

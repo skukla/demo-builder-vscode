@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
 import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import { WizardState } from '@/webview-ui/shared/types';
-import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React, { useState } from 'react';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { WizardState } from '@/types/webview';
+import { vscode } from '@/core/ui/utils/vscode-api';
+import { isProgressActive, isReadyToShowOpenButton } from './projectCreationPredicates';
 
 interface ProjectCreationStepProps {
     state: WizardState;
@@ -23,29 +26,31 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
 
     const handleOpenProject = () => {
         setIsOpeningProject(true);
-        
-        // Wait 1.5 seconds to show transition message, then trigger reload
+
+        // Show transition message, then trigger reload
         setTimeout(() => {
             vscode.postMessage('openProject');
-        }, 1500);
+        }, TIMEOUTS.PROJECT_OPEN_TRANSITION);
     };
 
     const isCancelled = progress?.currentOperation === 'Cancelled';
     const isFailed = progress?.currentOperation === 'Failed';
     const isCompleted = progress?.currentOperation === 'Project Created';
-    const isActive = progress && !progress.error && !isCancelled && !isFailed && !isCompleted;
+    const isActive = isProgressActive(progress, isCancelled, isFailed, isCompleted);
+    // SOP §10: Using named predicate for complex condition
+    const showOpenButton = isReadyToShowOpenButton(isCompleted, progress, isOpeningProject);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
+        <div className="flex-column h-full w-full">
             {/* Main content area */}
-            <div style={{ flex: 1, display: 'flex', width: '100%' }}>
-                <div style={{ maxWidth: '800px', width: '100%', padding: '24px' }}>
-            <Heading level={2} marginBottom="size-300">
-                Creating Your Demo Project
-            </Heading>
-            <Text marginBottom="size-400">
-                Setting up your project with all selected components and configurations.
-            </Text>
+            <div className="flex-1 flex w-full">
+                <SingleColumnLayout>
+                    <Heading level={2} marginBottom="size-300">
+                        Creating Your Demo Project
+                    </Heading>
+                    <Text marginBottom="size-400">
+                        Setting up your project with all selected components and configurations.
+                    </Text>
 
             {/* Active creation state - matches ApiMeshStep loading pattern (no buttons) */}
             {isActive && (
@@ -112,27 +117,21 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                 {/* Initial loading state (before progress updates arrive) */}
                 {!progress && (
                     <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                        <LoadingDisplay 
+                        <LoadingDisplay
                             size="L"
                             message="Initializing"
                             subMessage="Preparing to create your project..."
                         />
                     </Flex>
                 )}
-                </div>
+                </SingleColumnLayout>
             </div>
 
             {/* Footer - matches WizardContainer footer pattern */}
             {/* Show Cancel during active creation */}
             {isActive && (
-                <div
-                    style={{
-                        padding: '16px',
-                        borderTop: '1px solid var(--vscode-panel-border)',
-                        backgroundColor: 'var(--spectrum-global-color-gray-75)'
-                    }}
-                >
-                    <div style={{ maxWidth: '800px', width: '100%' }}>
+                <div className="footer-bar">
+                    <div className="max-w-800 w-full">
                         <Flex justifyContent="start" width="100%">
                             <Button
                                 variant="secondary"
@@ -148,15 +147,9 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
             )}
             
             {/* Show Open Project button on success */}
-            {isCompleted && !progress?.error && !isOpeningProject && (
-                <div
-                    style={{
-                        padding: '16px',
-                        borderTop: '1px solid var(--vscode-panel-border)',
-                        backgroundColor: 'var(--spectrum-global-color-gray-75)'
-                    }}
-                >
-                    <div style={{ maxWidth: '800px', width: '100%' }}>
+            {showOpenButton && (
+                <div className="footer-bar">
+                    <div className="max-w-800 w-full">
                         <Flex justifyContent="end" width="100%">
                             <Button
                                 variant="cta"

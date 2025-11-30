@@ -10,29 +10,64 @@ import * as path from 'path';
 
 /**
  * Patterns to detect and redact sensitive information
+ *
+ * Security Compliance:
+ * - OWASP A09:2021 - Security Logging and Monitoring Failures
+ * - CWE-532 - Insertion of Sensitive Information into Log File
+ * - CWE-209 - Generation of Error Message Containing Sensitive Information
+ *
+ * Pattern ordering is critical: More specific patterns must come before generic ones
+ * to prevent over-redaction (e.g., environment variables before paths).
  */
 const SENSITIVE_PATTERNS = [
-    // File paths (Unix and Windows)
-    { pattern: /\/(?:Users|home|root)\/[^\s]+/g, replacement: '<path>' },
-    { pattern: /[A-Z]:\\[^\s]+/g, replacement: '<path>' },
+    // === AUTHENTICATION TOKENS === (CWE-798: Use of Hard-coded Credentials)
 
-    // GitHub tokens
-    { pattern: /ghp_[a-zA-Z0-9]{36}/g, replacement: '<redacted>' },
-    { pattern: /gho_[a-zA-Z0-9]{36}/g, replacement: '<redacted>' },
-    { pattern: /ghu_[a-zA-Z0-9]{36}/g, replacement: '<redacted>' },
-    { pattern: /ghs_[a-zA-Z0-9]{36}/g, replacement: '<redacted>' },
-    { pattern: /ghr_[a-zA-Z0-9]{36}/g, replacement: '<redacted>' },
+    // GitHub tokens (all 5 types: ghp_=personal, gho_=OAuth, ghu_=user-to-server, ghs_=server-to-server, ghr_=refresh)
+    // Format: prefix (4 chars) + base62 (32 chars) = 36 chars total
+    { pattern: /ghp_[a-zA-Z0-9]{32}/g, replacement: '<redacted>' },
+    { pattern: /gho_[a-zA-Z0-9]{32}/g, replacement: '<redacted>' },
+    { pattern: /ghu_[a-zA-Z0-9]{32}/g, replacement: '<redacted>' },
+    { pattern: /ghs_[a-zA-Z0-9]{32}/g, replacement: '<redacted>' },
+    { pattern: /ghr_[a-zA-Z0-9]{32}/g, replacement: '<redacted>' },
 
-    // Adobe tokens (JWT format)
-    { pattern: /eyJ[a-zA-Z0-9_-]+\.eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g, replacement: '<token>' },
+    // JWT tokens (eyJ prefix = base64-encoded {"alg":...})
+    // Pattern 1: Full JWT format (header.payload.signature) - must match first for complete redaction
+    { pattern: /eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+/g, replacement: '<redacted>' },
+    // Pattern 2: Partial JWT-like strings (fallback, minimum 20 chars total to avoid false positives)
+    { pattern: /eyJ[a-zA-Z0-9_-]{16,}/g, replacement: '<redacted>' },
 
-    // Generic API keys and secrets
-    { pattern: /['"](api[_-]?key|token|secret|password)['"]\s*:\s*['"][^'"]+['"]/gi, replacement: '"$1": "<redacted>"' },
+    // Base64-encoded strings (30+ chars with optional padding)
+    // High threshold to reduce false positives
+    { pattern: /[A-Za-z0-9+/]{30,}={0,2}/g, replacement: '<redacted>' },
 
-    // Bearer tokens
+    // Generic API keys (24+ chars minimum to avoid false positives)
+    { pattern: /\b[a-z0-9]{24,}\b/g, replacement: '<redacted>' },  // Alphanumeric
+    { pattern: /\b[a-f0-9]{24,}\b/gi, replacement: '<redacted>' }, // Hex-only
+
+    // Bearer tokens (Authorization header format)
     { pattern: /Bearer\s+[a-zA-Z0-9_-]+/gi, replacement: 'Bearer <redacted>' },
 
-    // Access tokens in URLs
+    // === ENVIRONMENT VARIABLES === (CWE-526: Exposure of Sensitive Information Through Environmental Variables)
+
+    // KEY=value format (with optional quotes)
+    // CRITICAL: Must appear BEFORE path patterns to prevent false positives with URLs
+    { pattern: /([\w_]+)=(['"]?)([^'"&\s]+)\2/g, replacement: '$1=<redacted>' },
+
+    // === FILE PATHS === (CWE-200: Exposure of Sensitive Information to an Unauthorized Actor)
+
+    // Unix absolute paths (negative lookbehind prevents matching URLs like postgresql://)
+    // Only matches common sensitive directories to reduce false positives
+    { pattern: /(?<!:)\/(?:Users|home|root|var|etc|usr|opt|tmp)\/[^\s]*/g, replacement: '<path>/' },
+
+    // Windows absolute paths (C:\, D:\, etc.)
+    { pattern: /[A-Z]:\\[^\s]+/g, replacement: '<path>\\' },
+
+    // === API KEYS IN STRUCTURED DATA === (CWE-522: Insufficiently Protected Credentials)
+
+    // JSON format: {"api_key": "value", "token": "value", ...}
+    { pattern: /['"](api[_-]?key|token|secret|password)['"]\s*:\s*['"][^'"]+['"]/gi, replacement: '"$1": "<redacted>"' },
+
+    // Query parameters: ?access_token=value&api_key=value
     { pattern: /([?&])(access_token|token|api_key)=[^&\s]+/gi, replacement: '$1$2=<redacted>' },
 ];
 
@@ -44,6 +79,9 @@ const SENSITIVE_PATTERNS = [
  */
 export function sanitizeErrorForLogging(error: Error | string): string {
     let message = typeof error === 'string' ? error : error.message;
+
+    // Take only first line (multi-line truncation and stack trace removal)
+    message = message.split('\n')[0];
 
     // Apply all sensitive pattern replacements
     for (const { pattern, replacement } of SENSITIVE_PATTERNS) {
@@ -79,7 +117,7 @@ export function sanitizeError(error: Error): Error {
  */
 export async function validatePathSafety(
     targetPath: string,
-    expectedParent?: string
+    expectedParent?: string,
 ): Promise<{ safe: boolean; reason?: string }> {
     const fs = await import('fs/promises');
     const path = await import('path');
@@ -92,7 +130,7 @@ export async function validatePathSafety(
         if (stats.isSymbolicLink()) {
             return {
                 safe: false,
-                reason: 'Path is a symbolic link - refusing to delete for security'
+                reason: 'Path is a symbolic link - refusing to delete for security',
             };
         }
 
@@ -104,7 +142,7 @@ export async function validatePathSafety(
             if (!normalizedTarget.startsWith(normalizedParent)) {
                 return {
                     safe: false,
-                    reason: 'Path is outside expected directory - refusing to delete for security'
+                    reason: 'Path is outside expected directory - refusing to delete for security',
                 };
             }
         }
@@ -119,7 +157,7 @@ export async function validatePathSafety(
         // Other errors are suspicious - be conservative
         return {
             safe: false,
-            reason: `Unable to validate path safety: ${sanitizeErrorForLogging(error as Error)}`
+            reason: `Unable to validate path safety: ${sanitizeErrorForLogging(error as Error)}`,
         };
     }
 }
@@ -148,7 +186,7 @@ export function validateGitHubDownloadURL(url: string): boolean {
         // Must be a releases download URL pattern
         const validPatterns = [
             /^\/[^\/]+\/[^\/]+\/releases\/download\//,  // Standard releases
-            /^\/repos\/[^\/]+\/[^\/]+\/releases\/assets\// // API endpoint
+            /^\/repos\/[^\/]+\/[^\/]+\/releases\/assets\//, // API endpoint
         ];
 
         return validPatterns.some(pattern => pattern.test(parsedUrl.pathname));
@@ -373,6 +411,21 @@ export function validateAccessToken(token: string): void {
  * validateURL('https://10.0.0.1'); // Throws - private network
  * validateURL('file:///etc/passwd'); // Throws - invalid protocol
  */
+
+/**
+ * Check if hostname is a private IPv4 address (SOP §10 compliance)
+ *
+ * Private ranges: 10.0.0.0/8, 127.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16
+ */
+function isPrivateIPv4(hostname: string): boolean {
+    if (hostname.startsWith('127.')) return true;
+    if (hostname.startsWith('10.')) return true;
+    if (hostname.startsWith('192.168.')) return true;
+    if (hostname.startsWith('169.254.')) return true;
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return true;
+    return false;
+}
+
 export function validateURL(url: string, allowedProtocols: string[] = ['https']): void {
     if (!url || typeof url !== 'string') {
         throw new Error('URL must be a non-empty string');
@@ -396,15 +449,9 @@ export function validateURL(url: string, allowedProtocols: string[] = ['https'])
             throw new Error('URLs pointing to localhost are not allowed');
         }
 
-        // Check for private IPv4 ranges
+        // Check for private IPv4 ranges (SOP §10: using predicate)
         // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 169.254.0.0/16 (link-local)
-        if (
-            hostname.startsWith('127.') ||
-            hostname.startsWith('10.') ||
-            hostname.startsWith('192.168.') ||
-            hostname.startsWith('169.254.') ||
-            /^172\.(1[6-9]|2\d|3[01])\./.test(hostname)
-        ) {
+        if (isPrivateIPv4(hostname)) {
             throw new Error('URLs pointing to local/private networks are not allowed');
         }
 
@@ -431,6 +478,74 @@ export function validateURL(url: string, allowedProtocols: string[] = ['https'])
         }
 
         throw error;
+    }
+}
+
+/**
+ * Error message for invalid Node.js version format
+ * Used by validateNodeVersion for consistent error reporting
+ */
+const INVALID_NODE_VERSION_ERROR =
+    'Invalid Node.js version format. Valid formats: numeric (e.g., 18, 20), ' +
+    'semantic version (e.g., 18.20.0), or keywords (auto, current).';
+
+/**
+ * Validates Node.js version parameter for command execution safety
+ *
+ * Prevents command injection attacks in CommandExecutor when using nodeVersion
+ * parameter with fnm (Fast Node Manager). The nodeVersion is interpolated into
+ * shell commands like: `fnm exec --using=${nodeVersion} ${command}`
+ *
+ * SECURITY: HIGH severity (CWE-77: Command Injection)
+ * - Attack Vector: Unvalidated nodeVersion directly interpolated into shell command
+ * - Example Attack: nodeVersion = "20; rm -rf /" results in: `fnm exec --using=20; rm -rf / npm install`
+ * - Protection: Allowlist-based validation blocks ALL shell metacharacters
+ *
+ * Valid Formats:
+ * - Numeric major versions: "18", "20", "22"
+ * - Semantic versions: "18.20.0", "20.11.0"
+ * - Keywords: "auto", "current"
+ * - null/undefined (skip validation)
+ *
+ * Shell metacharacters BLOCKED: ; & | < > ` ' " $ ( ) \ space and all control characters
+ *
+ * @param nodeVersion - Node.js version string to validate (or null/undefined to skip)
+ * @throws Error if nodeVersion contains invalid characters or format
+ *
+ * @example
+ * // Valid formats
+ * validateNodeVersion('20');          // OK - numeric major version
+ * validateNodeVersion('18.20.0');     // OK - semantic version
+ * validateNodeVersion('auto');        // OK - keyword
+ * validateNodeVersion(null);          // OK - skip validation
+ *
+ * // Invalid formats (throw errors)
+ * validateNodeVersion('20; rm -rf /'); // Throws - command injection attempt
+ * validateNodeVersion('v20');          // Throws - invalid prefix
+ * validateNodeVersion('20.11');        // Throws - incomplete semver
+ */
+export function validateNodeVersion(nodeVersion: string | null | undefined): void {
+    // Allow null/undefined (skip validation when nodeVersion not specified)
+    if (nodeVersion === null || nodeVersion === undefined) {
+        return;
+    }
+
+    // Type check: must be a string if provided
+    if (typeof nodeVersion !== 'string') {
+        throw new Error(INVALID_NODE_VERSION_ERROR);
+    }
+
+    // Allowlist-based validation: only accept specific patterns
+    // Pattern breakdown:
+    // - \d+                : Numeric major version (e.g., 18, 20, 22)
+    // - \d+\.\d+\.\d+     : Semantic version (e.g., 18.20.0, 20.11.0)
+    // - auto              : Auto-detect version keyword
+    // - current           : Use current version keyword
+    // ^ and $ anchors ensure no additional characters before/after
+    const validPattern = /^(?:\d+|\d+\.\d+\.\d+|auto|current)$/;
+
+    if (!validPattern.test(nodeVersion)) {
+        throw new Error(INVALID_NODE_VERSION_ERROR);
     }
 }
 

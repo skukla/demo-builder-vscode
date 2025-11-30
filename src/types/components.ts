@@ -28,6 +28,16 @@ export interface EnvVarDefinition {
 }
 
 /**
+ * SubmoduleConfig - Git submodule configuration within a component
+ */
+export interface SubmoduleConfig {
+    /** Relative path within parent component (e.g., "packages/demo-inspector") */
+    path: string;
+    /** GitHub repository in owner/repo format (e.g., "skukla/demo-inspector") */
+    repository: string;
+}
+
+/**
  * ServiceDefinition - Service definition from registry
  */
 export interface ServiceDefinition {
@@ -40,15 +50,6 @@ export interface ServiceDefinition {
     optionalEnvVars?: string[];
     description?: string;
     envVars?: EnvVarDefinition[]; // Added during transformation
-}
-
-/**
- * ComponentEnvVars - Component environment variables configuration
- */
-export interface ComponentEnvVars {
-    requiredEnvVars?: string[];
-    optionalEnvVars?: string[];
-    services?: string[];
 }
 
 /**
@@ -83,7 +84,9 @@ export interface RawComponentDefinition {
         optional: string[];
     };
     configuration?: {
-        envVars?: ComponentEnvVars;
+        // Flat structure - requiredEnvVars/optionalEnvVars directly in configuration
+        requiredEnvVars?: string[];
+        optionalEnvVars?: string[];
         port?: number;
         nodeVersion?: string;
         buildScript?: string;
@@ -101,15 +104,24 @@ export interface RawComponentDefinition {
             handlers?: Record<string, unknown>;
         };
         providesEndpoint?: boolean;
+        providesEnvVars?: string[];
+        requiresDeployment?: boolean;
+        deploymentTarget?: string;
+        runtime?: string;
+        actions?: string[];
         impact?: 'minimal' | 'moderate' | 'significant';
         removable?: boolean;
         defaultEnabled?: boolean;
+        position?: string;
+        startOpen?: boolean;
     };
     compatibleBackends?: string[];
     features?: string[];
     requiresApiKey?: boolean;
     endpoint?: string;
     requiresDeployment?: boolean;
+    /** Git submodules contained within this component */
+    submodules?: Record<string, SubmoduleConfig>;
 }
 
 /**
@@ -119,11 +131,11 @@ export interface RawComponentRegistry {
     version: string;
     components?: Record<string, RawComponentDefinition>;
     selectionGroups?: {
-        frontend?: string[];
-        backend?: string[];
+        frontends?: string[];
+        backends?: string[];
         dependencies?: string[];
-        externalSystems?: string[];
-        appBuilder?: string[];
+        integrations?: string[];
+        appBuilderApps?: string[];
     };
     infrastructure?: Record<string, RawComponentDefinition>;
     services?: Record<string, ServiceDefinition>;
@@ -142,7 +154,7 @@ export interface PresetDefinition {
         frontend: string;
         backend: string;
         dependencies: string[];
-        externalSystems?: string[];
+        integrations?: string[];
         appBuilder?: string[];
     };
 }
@@ -150,35 +162,11 @@ export interface PresetDefinition {
 /**
  * TransformedComponentDefinition - Component after transformation
  *
- * After transformation:
- * - envVars becomes EnvVarDefinition[] (expanded from registry)
- * - services becomes ServiceDefinition[] (expanded from service IDs)
+ * NO transformation anymore - just passes through the flat structure from JSON:
+ * - requiredEnvVars/optionalEnvVars directly in configuration (NOT nested)
+ * - services remains as-is (no transformation needed)
  */
-export interface TransformedComponentDefinition extends Omit<RawComponentDefinition, 'configuration'> {
-    configuration?: {
-        port?: number;
-        nodeVersion?: string;
-        buildScript?: string;
-        required?: Record<string, {
-            type: 'string' | 'url' | 'password' | 'number' | 'boolean';
-            label: string;
-            placeholder?: string;
-            default?: string | number | boolean;
-            validation?: string;
-        }>;
-        requiredServices?: string[];
-        meshIntegration?: {
-            sources?: Record<string, unknown>;
-            handlers?: Record<string, unknown>;
-        };
-        providesEndpoint?: boolean;
-        impact?: 'minimal' | 'moderate' | 'significant';
-        removable?: boolean;
-        defaultEnabled?: boolean;
-        envVars?: EnvVarDefinition[];
-        services?: ServiceDefinition[];
-    };
-}
+export type TransformedComponentDefinition = RawComponentDefinition;
 
 /**
  * ComponentRegistry - Transformed registry for runtime use
@@ -190,7 +178,7 @@ export interface ComponentRegistry {
         frontends: TransformedComponentDefinition[];
         backends: TransformedComponentDefinition[];
         dependencies: TransformedComponentDefinition[];
-        externalSystems?: TransformedComponentDefinition[];
+        integrations?: TransformedComponentDefinition[];
         appBuilder?: TransformedComponentDefinition[];
     };
     services?: Record<string, ServiceDefinition>;
@@ -205,7 +193,7 @@ export interface ComponentSelection {
     frontend?: string;
     backend?: string;
     dependencies?: string[];
-    externalSystems?: string[];
+    integrations?: string[];
     appBuilder?: string[];
     services?: ServiceDefinition[];
     preset?: string;

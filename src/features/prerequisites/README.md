@@ -321,10 +321,11 @@ for (const prereq of orderedPrereqs) {
       "install": {
         "steps": [
           {
+            "name": "Install Adobe I/O CLI (Node {version})",
+            "message": "Installing Adobe I/O CLI for Node {version}",
             "command": "npm install -g @adobe/aio-cli",
-            "message": "Installing Adobe I/O CLI...",
-            "progressStrategy": "exact",
-            "estimatedDuration": 45000
+            "progressStrategy": "milestones",
+            "estimatedDuration": 60000
           }
         ]
       },
@@ -385,9 +386,10 @@ for (const prereq of orderedPrereqs) {
    {
      "steps": [
        {
+         "name": "Install Adobe I/O CLI (Node {version})",
+         "message": "Installing Adobe I/O CLI for Node {version}",
          "command": "npm install -g @adobe/aio-cli",
-         "message": "Installing Adobe I/O CLI...",
-         "progressStrategy": "exact"
+         "progressStrategy": "milestones"
        }
      ]
    }
@@ -414,10 +416,14 @@ for (const prereq of orderedPrereqs) {
 
 ### Timeout Errors
 ```typescript
+import { toAppError, isTimeout } from '@/types/errors';
+
 try {
     const status = await prereqManager.checkPrerequisite(prereq);
 } catch (error) {
-    if (error.message.includes('timed out')) {
+    const appError = toAppError(error);
+
+    if (isTimeout(appError)) {
         // Prerequisite check took > 15 seconds
         console.error(`${prereq.name} check timed out - may be unresponsive`);
         // Show user-friendly message with troubleshooting steps

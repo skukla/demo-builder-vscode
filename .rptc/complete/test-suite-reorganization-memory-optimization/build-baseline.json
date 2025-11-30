@@ -1,0 +1,1 @@
+{"currentStep": 2, "status": "completed", "completedSteps": [1, 2], "stepResults": {"step1": {"status": "completed", "baselineSkipped": true, "configurationValidated": true, "decision": "proceed-to-step-2"}, "step2": {"status": "completed", "validationsPass": true, "playbookWordCount": 1604, "testUtilsFilesFound": 3}}}

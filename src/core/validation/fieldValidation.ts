@@ -6,11 +6,35 @@
  *
  * Usage: Import these functions in helper files and UI components for
  * validating user input before submission.
+ *
+ * **Implementation**: Uses composable validators from `@/core/validation/Validator`
+ * for consistent validation logic across the codebase.
  */
+
+import {
+    required,
+    alphanumeric,
+    maxLength,
+    optional,
+    url,
+    compose,
+    type ValidationResult,
+} from '@/core/validation/Validator';
 
 export interface FieldValidation {
     isValid: boolean;
     message: string;
+}
+
+/**
+ * Convert ValidationResult to FieldValidation format
+ * @internal
+ */
+function toFieldValidation(result: ValidationResult): FieldValidation {
+    return {
+        isValid: result.valid,
+        message: result.error || '',
+    };
 }
 
 /**
@@ -28,31 +52,13 @@ export interface FieldValidation {
  * validateProjectNameUI('my project!'); // { isValid: false, message: 'Project name can only contain...' }
  */
 export function validateProjectNameUI(value: string): FieldValidation {
-    if (!value || value.trim().length === 0) {
-        return {
-            isValid: false,
-            message: 'Project name is required',
-        };
-    }
+    const validator = compose(
+        required('Project name is required'),
+        alphanumeric('Project name can only contain letters, numbers, hyphens, and underscores'),
+        maxLength(50, 'Project name must be 50 characters or less')
+    );
 
-    if (!/^[a-zA-Z0-9-_]+$/.test(value)) {
-        return {
-            isValid: false,
-            message: 'Project name can only contain letters, numbers, hyphens, and underscores',
-        };
-    }
-
-    if (value.length > 50) {
-        return {
-            isValid: false,
-            message: 'Project name must be 50 characters or less',
-        };
-    }
-
-    return {
-        isValid: true,
-        message: '',
-    };
+    return toFieldValidation(validator(value));
 }
 
 /**
@@ -69,33 +75,8 @@ export function validateProjectNameUI(value: string): FieldValidation {
  * validateCommerceUrlUI('invalid'); // { isValid: false, message: 'Invalid URL format' }
  */
 export function validateCommerceUrlUI(value: string): FieldValidation {
-    // Empty value is valid (optional field)
-    if (!value || value.trim().length === 0) {
-        return {
-            isValid: true,
-            message: '',
-        };
-    }
-
-    try {
-        new URL(value);
-        if (!value.startsWith('http://') && !value.startsWith('https://')) {
-            return {
-                isValid: false,
-                message: 'URL must start with http:// or https://',
-            };
-        }
-    } catch {
-        return {
-            isValid: false,
-            message: 'Invalid URL format',
-        };
-    }
-
-    return {
-        isValid: true,
-        message: '',
-    };
+    const validator = optional(url('Invalid URL format. Must start with http:// or https://'));
+    return toFieldValidation(validator(value));
 }
 
 /**

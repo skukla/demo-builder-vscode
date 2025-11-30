@@ -2,11 +2,43 @@
  * Mesh endpoint resolution utilities
  */
 
+import type { CommandExecutor } from '@/core/shell';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateMeshId } from '@/core/validation';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
-import type { CommandExecutor } from '@/core/shell';
-import { validateMeshId } from '@/core/validation';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getMeshNodeVersion } from './meshConfig';
+
+/**
+ * Check if aio api-mesh plugin is installed
+ *
+ * @param commandManager - CommandExecutor instance
+ * @param debugLogger - Debug logger for diagnostic messages
+ * @returns True if plugin is installed, false otherwise
+ */
+async function checkApiMeshPlugin(
+    commandManager: CommandExecutor,
+    debugLogger: Logger,
+): Promise<boolean> {
+    try {
+        // Mesh plugin is installed with the Node version defined for commerce-mesh component
+        const result = await commandManager.execute('aio plugins', {
+            timeout: TIMEOUTS.CONFIG_READ,
+            configureTelemetry: false,
+            useNodeVersion: getMeshNodeVersion(),
+            enhancePath: true,
+        });
+
+        if (result.code === 0) {
+            const hasPlugin = result.stdout.includes('@adobe/aio-cli-plugin-api-mesh');
+            debugLogger.debug(`[API Mesh] Plugin check: ${hasPlugin ? 'installed' : 'not installed'}`);
+            return hasPlugin;
+        }
+    } catch (error) {
+        debugLogger.debug('[API Mesh] Plugin check failed, assuming not installed');
+    }
+    return false;
+}
 
 /**
  * Get mesh endpoint - single source of truth approach:
@@ -37,42 +69,49 @@ export async function getEndpoint(
         return cachedEndpoint;
     }
 
-    // Call describe command (official Adobe method)
-    try {
-        debugLogger.debug('[API Mesh] Fetching endpoint via describe command');
-        const result = await commandManager.execute(
-            'aio api-mesh:describe',
-            {
-                timeout: TIMEOUTS.API_CALL,
-                configureTelemetry: false,
-                useNodeVersion: null,
-                enhancePath: true,
-            },
-        );
+    // Check if api-mesh plugin is installed before attempting describe
+    const hasPlugin = await checkApiMeshPlugin(commandManager, debugLogger);
 
-        if (result.code === 0) {
-            // Parse JSON response
-            const jsonMatch = /\{[\s\S]*\}/.exec(result.stdout);
-            if (jsonMatch) {
-                const meshData = parseJSON<{ meshEndpoint?: string; endpoint?: string }>(jsonMatch[0]);
-                if (!meshData) {
-                    logger?.warn('[Mesh Endpoint] Failed to parse mesh data');
-                    // Continue to fallback
-                } else {
-                    const endpoint = meshData.meshEndpoint || meshData.endpoint;
-                    if (endpoint) {
-                        logger.info('[API Mesh] Retrieved endpoint from describe:', endpoint);
-                        return endpoint;
+    if (hasPlugin) {
+        // Call describe command (official Adobe method)
+        try {
+            debugLogger.debug('[API Mesh] Fetching endpoint via describe command');
+            const result = await commandManager.execute(
+                'aio api-mesh:describe',
+                {
+                    timeout: TIMEOUTS.API_CALL,
+                    configureTelemetry: false,
+                    useNodeVersion: getMeshNodeVersion(),
+                    enhancePath: true,
+                },
+            );
+
+            if (result.code === 0) {
+                // Parse JSON response
+                const jsonMatch = /\{[\s\S]*\}/.exec(result.stdout);
+                if (jsonMatch) {
+                    const meshData = parseJSON<{ meshEndpoint?: string; endpoint?: string }>(jsonMatch[0]);
+                    if (!meshData) {
+                        logger.warn('[Mesh] Failed to parse mesh data from describe');
+                        // Continue to fallback
+                    } else {
+                        const endpoint = meshData.meshEndpoint || meshData.endpoint;
+                        if (endpoint) {
+                            logger.debug('[API Mesh] Retrieved endpoint from describe:', endpoint);
+                            return endpoint;
+                        }
                     }
                 }
             }
+        } catch {
+            debugLogger.debug('[API Mesh] Describe failed, using constructed fallback');
         }
-    } catch {
-        debugLogger.debug('[API Mesh] Describe failed, using constructed fallback');
+    } else {
+        debugLogger.debug('[API Mesh] Plugin not installed, using constructed endpoint');
     }
 
     // Construct as reliable fallback
     const endpoint = `https://edge-sandbox-graph.adobe.io/api/${meshId}/graphql`;
-    logger.info('[API Mesh] Using constructed endpoint (fallback)');
+    logger.debug('[API Mesh] Using constructed endpoint (fallback)');
     return endpoint;
 }

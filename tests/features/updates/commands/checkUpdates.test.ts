@@ -127,7 +127,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
             await executePromise;
         });
 
-        it('should wait 1500ms after showing message before making GitHub API call', async () => {
+        it('should wait 2000ms after showing message before making GitHub API call', async () => {
             // Arrange
             const mockUpdateManager = UpdateManager as jest.MockedClass<typeof UpdateManager>;
             const checkExtensionUpdateSpy = jest.fn().mockResolvedValue({
@@ -145,14 +145,14 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
             // Assert: Progress message shown
             expect(mockProgress.report).toHaveBeenCalled();
 
-            // Assert: API should NOT be called yet (no delay exists in current implementation)
+            // Assert: API should NOT be called yet (delay is 2000ms)
             expect(checkExtensionUpdateSpy).not.toHaveBeenCalled();
 
-            // Advance by 1499ms - should still not be called
-            await jest.advanceTimersByTimeAsync(1499);
+            // Advance by 1999ms - should still not be called
+            await jest.advanceTimersByTimeAsync(1999);
             expect(checkExtensionUpdateSpy).not.toHaveBeenCalled();
 
-            // Advance by 1ms more (total 1500ms) - now should be called
+            // Advance by 1ms more (total 2000ms) - now should be called
             await jest.advanceTimersByTimeAsync(1);
             expect(checkExtensionUpdateSpy).toHaveBeenCalled();
 

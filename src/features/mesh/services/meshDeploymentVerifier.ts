@@ -4,10 +4,11 @@
  */
 
 import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateMeshId } from '@/core/validation';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
-import { validateMeshId } from '@/core/validation';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { getMeshNodeVersion } from './meshConfig';
 
 /**
  * MeshDeploymentVerificationResult - Result from deployment verification polling
@@ -41,8 +42,8 @@ export interface VerificationOptions {
 export async function waitForMeshDeployment(
     options: VerificationOptions = {},
 ): Promise<MeshDeploymentVerificationResult> {
-    const pollInterval = options.pollInterval ?? 10000;     // 10 seconds between attempts
-    const initialWait = options.initialWait ?? 20000;       // 20 seconds initial wait
+    const pollInterval = options.pollInterval ?? TIMEOUTS.MESH_VERIFY_POLL_INTERVAL;
+    const initialWait = options.initialWait ?? TIMEOUTS.MESH_VERIFY_INITIAL_WAIT;
     
     // Calculate maxRetries from configured timeout if not provided
     // Formula: (totalTimeout - initialWait) / pollInterval
@@ -86,10 +87,11 @@ export async function waitForMeshDeployment(
             const verifyResult = await commandManager.execute(
                 'aio api-mesh get',
                 {
-                    timeout: 30000,
+                    timeout: TIMEOUTS.MESH_DESCRIBE,
                     configureTelemetry: false,
                     useNodeVersion: null,
                     enhancePath: true,
+                    shell: true,
                 },
             );
             
@@ -121,11 +123,11 @@ export async function waitForMeshDeployment(
                         meshDeployed = true;
                         break;
                     } else if (meshStatus === 'error' || meshStatus === 'failed') {
-                        const error = 'Mesh deployment failed with error status';
-                        logger?.error(`[Mesh Verification] ${error}`);
+                        // Return raw error - caller will format for display
+                        // Don't log here to avoid duplication
                         return {
                             deployed: false,
-                            error,
+                            error: meshData.error || 'Mesh deployment failed with error status',
                         };
                     }
                     // Otherwise continue polling (status is pending/building/etc)
@@ -165,9 +167,9 @@ async function getEndpoint(meshId: string, logger?: Logger): Promise<string | un
         const result = await commandManager.execute(
             'aio api-mesh:describe',
             {
-                timeout: 30000,
+                timeout: TIMEOUTS.MESH_DESCRIBE,
                 configureTelemetry: false,
-                useNodeVersion: null,
+                useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,
             },
         );
@@ -192,7 +194,7 @@ async function getEndpoint(meshId: string, logger?: Logger): Promise<string | un
 
         // Fallback: construct endpoint from mesh ID
         if (meshId) {
-            logger?.info('[Mesh Verification] Constructing endpoint from mesh ID');
+            logger?.debug('[Mesh Verification] Constructing endpoint from mesh ID');
             return `https://graph.adobe.io/api/${meshId}/graphql`;
         }
 

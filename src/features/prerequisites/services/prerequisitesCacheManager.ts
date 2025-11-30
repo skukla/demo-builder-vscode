@@ -37,9 +37,19 @@
  * ```
  */
 
+import type { PrerequisiteStatus, CachedPrerequisiteResult } from './types';
 import { getLogger } from '@/core/logging/debugLogger';
 import { CACHE_TTL } from '@/core/utils/timeoutConfig';
-import type { PrerequisiteStatus, CachedPrerequisiteResult } from './types';
+import { getCacheTTLWithJitter } from '@/core/cache/AbstractCacheManager';
+
+/**
+ * Separator for cache keys with Node version suffix
+ * Format: "{prereqId}{SEPARATOR}{nodeVersion}"
+ * Example: "aio-cli##20"
+ *
+ * SECURITY: Must be a sequence that cannot appear in prereqId
+ */
+const CACHE_KEY_SEPARATOR = '##' as const;
 
 export class PrerequisitesCacheManager {
     private logger = getLogger();
@@ -73,35 +83,22 @@ export class PrerequisitesCacheManager {
      * Generate cache key for a prerequisite
      * Separate cache entries for each Node version when perNodeVersion is true
      *
-     * SECURITY: Uses "##" separator to prevent collision between:
+     * SECURITY: Uses CACHE_KEY_SEPARATOR to prevent collision between:
      *   - prereqId "aio:cli" vs prereqId "aio" + nodeVersion "cli"
-     * Validates prereqId doesn't contain "##" to ensure no collisions
+     * Validates prereqId doesn't contain separator to ensure no collisions
      */
     private getCacheKey(prereqId: string, nodeVersion?: string): string {
         // SECURITY: Validate prereqId doesn't contain separator
-        if (prereqId.includes('##')) {
-            throw new Error(`Invalid prereqId: "${prereqId}" - cannot contain "##" separator`);
+        if (prereqId.includes(CACHE_KEY_SEPARATOR)) {
+            throw new Error(`Invalid prereqId: "${prereqId}" - cannot contain "${CACHE_KEY_SEPARATOR}" separator`);
         }
 
         if (nodeVersion) {
-            return `${prereqId}##${nodeVersion}`;
+            return `${prereqId}${CACHE_KEY_SEPARATOR}${nodeVersion}`;
         }
         return prereqId;
     }
 
-    /**
-     * Add random jitter to TTL to prevent timing-based cache enumeration attacks
-     * SECURITY: Randomizes cache expiry by ±10% to make timing attacks infeasible
-     *
-     * @param baseTTL - Base TTL in milliseconds
-     * @returns TTL with random jitter applied
-     */
-    private getCacheTTLWithJitter(baseTTL: number): number {
-        const jitter = 0.1; // ±10%
-        const min = Math.floor(baseTTL * (1 - jitter));
-        const max = Math.floor(baseTTL * (1 + jitter));
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
 
     /**
      * Get cached prerequisite result
@@ -122,14 +119,13 @@ export class PrerequisitesCacheManager {
         // Check if expired
         const now = Date.now();
         if (now >= cached.expiry) {
-            this.logger.debug(`[Prereq Cache] Cache expired for ${key}`);
+            this.logger.debug(`[Prerequisites Cache] Cache expired for ${key}`);
             this.cache.delete(key);
             this.stats.misses++;
             return undefined;
         }
 
         this.stats.hits++;
-        this.logger.debug(`[Prereq Cache] Cache hit for ${key} (hits=${this.stats.hits}, misses=${this.stats.misses})`);
         return cached;
     }
 
@@ -145,10 +141,10 @@ export class PrerequisitesCacheManager {
         prereqId: string,
         result: PrerequisiteStatus,
         ttlMs: number = CACHE_TTL.PREREQUISITE_CHECK,
-        nodeVersion?: string
+        nodeVersion?: string,
     ): void {
         const key = this.getCacheKey(prereqId, nodeVersion);
-        const jitteredTTL = this.getCacheTTLWithJitter(ttlMs);
+        const jitteredTTL = getCacheTTLWithJitter(ttlMs);
         const now = Date.now();
 
         // LRU eviction: If cache is at max size and key doesn't exist, remove oldest entry
@@ -166,23 +162,18 @@ export class PrerequisitesCacheManager {
 
             if (oldestKey) {
                 this.cache.delete(oldestKey);
-                this.logger.debug(`[Prereq Cache] Evicted oldest entry: ${oldestKey} (cache size: ${this.cache.size})`);
+                this.logger.debug(`[Prerequisites Cache] Evicted oldest entry: ${oldestKey} (cache size: ${this.cache.size})`);
             }
         }
 
         const cached: CachedPrerequisiteResult = {
             data: result,
             expiry: now + jitteredTTL,
+            nodeVersion,
         };
 
         this.cache.set(key, cached);
         this.stats.sets++;
-
-        const versionSuffix = nodeVersion ? ` (Node ${nodeVersion})` : '';
-        this.logger.debug(
-            `[Prereq Cache] Cached ${prereqId}${versionSuffix}: ` +
-            `installed=${result.installed}, TTL=${jitteredTTL}ms (sets=${this.stats.sets})`
-        );
     }
 
     /**
@@ -198,8 +189,8 @@ export class PrerequisitesCacheManager {
 
         for (const key of this.cache.keys()) {
             // Match exact ID or ID with version suffix (e.g., "aio-cli" or "aio-cli##20")
-            // SECURITY: Uses "##" separator (updated from ":" to prevent collisions)
-            if (key === prereqId || key.startsWith(`${prereqId}##`)) {
+            // SECURITY: Uses CACHE_KEY_SEPARATOR to prevent collisions
+            if (key === prereqId || key.startsWith(`${prereqId}${CACHE_KEY_SEPARATOR}`)) {
                 keysToDelete.push(key);
             }
         }
@@ -209,8 +200,8 @@ export class PrerequisitesCacheManager {
 
         if (keysToDelete.length > 0) {
             this.logger.debug(
-                `[Prereq Cache] Invalidated ${keysToDelete.length} cache entries for ${prereqId} ` +
-                `(total invalidations=${this.stats.invalidations})`
+                `[Prerequisites Cache] Invalidated ${keysToDelete.length} cache entries for ${prereqId} ` +
+                `(total invalidations=${this.stats.invalidations})`,
             );
         }
     }
@@ -224,9 +215,42 @@ export class PrerequisitesCacheManager {
         this.cache.clear();
         this.stats.invalidations += count;
         this.logger.debug(
-            `[Prereq Cache] Cleared all caches (${count} entries, ` +
-            `total invalidations=${this.stats.invalidations})`
+            `[Prerequisites Cache] Cleared all caches (${count} entries, ` +
+            `total invalidations=${this.stats.invalidations})`,
         );
+    }
+
+    /**
+     * Get per-version results for a perNodeVersion prerequisite
+     * Returns all cached version-specific results for a given prerequisite
+     *
+     * @param prereqId - Prerequisite ID (e.g., "aio-cli")
+     * @returns Array of version statuses, or empty array if none cached
+     */
+    getPerVersionResults(prereqId: string): Array<{ version: string; major: string; component: string; installed: boolean }> {
+        const results: Array<{ version: string; major: string; component: string; installed: boolean }> = [];
+
+        // Find all cache entries for this prerequisite with version suffix
+        for (const [key, cached] of this.cache.entries()) {
+            // Match entries like "aio-cli##20", "aio-cli##24", etc.
+            if (key.startsWith(`${prereqId}${CACHE_KEY_SEPARATOR}`)) {
+                // Check if expired
+                const now = Date.now();
+                if (now < cached.expiry && cached.data) {
+                    // Use stored Node version (avoid string parsing)
+                    // Fallback to parsing from key for backward compatibility with old cache entries
+                    const major = cached.nodeVersion || key.split(CACHE_KEY_SEPARATOR)[1];
+                    results.push({
+                        version: `Node ${major}`,
+                        major,
+                        component: '',
+                        installed: cached.data.installed || false,
+                    });
+                }
+            }
+        }
+
+        return results;
     }
 
     /**

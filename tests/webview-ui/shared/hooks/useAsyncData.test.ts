@@ -1,10 +1,10 @@
 import { renderHook, act } from '@testing-library/react';
-import { useAsyncData } from '@/webview-ui/shared/hooks/useAsyncData';
-import { vscode } from '@/webview-ui/shared/vscode-api';
+import { useAsyncData } from '@/core/ui/hooks/useAsyncData';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 // Mock vscode API
-jest.mock('@/core/ui/vscode-api', () => ({
-  vscode: {
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
+  webviewClient: {
     onMessage: jest.fn()
   }
 }));
@@ -20,7 +20,7 @@ describe('useAsyncData', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUnsubscribe = jest.fn();
-    (vscode.onMessage as jest.Mock).mockReturnValue(mockUnsubscribe);
+    (webviewClient.onMessage as jest.Mock).mockReturnValue(mockUnsubscribe);
   });
 
   describe('initial state', () => {

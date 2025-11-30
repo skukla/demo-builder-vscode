@@ -86,6 +86,69 @@ The loading system uses a combination of:
 3. **Smooth Transitions**: Seamless change from loading to content
 4. **Error Handling**: Graceful fallback if content fails to load
 
+## Bundle Loading with getWebviewHTMLWithBundles()
+
+The extension uses a centralized helper function for generating webview HTML with the 4-bundle webpack pattern. This eliminates code duplication across webview commands and ensures consistent CSP handling.
+
+### Usage Pattern
+
+```typescript
+import { getWebviewHTMLWithBundles, type BundleUris } from '@/core/utils/getWebviewHTMLWithBundles';
+
+protected async getWebviewContent(): Promise<string> {
+    const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
+
+    const bundleUris: BundleUris = {
+        runtime: this.panel!.webview.asWebviewUri(
+            vscode.Uri.file(path.join(webviewPath, 'runtime-bundle.js'))
+        ),
+        vendors: this.panel!.webview.asWebviewUri(
+            vscode.Uri.file(path.join(webviewPath, 'vendors-bundle.js'))
+        ),
+        common: this.panel!.webview.asWebviewUri(
+            vscode.Uri.file(path.join(webviewPath, 'common-bundle.js'))
+        ),
+        feature: this.panel!.webview.asWebviewUri(
+            vscode.Uri.file(path.join(webviewPath, 'wizard-bundle.js'))
+        ),
+    };
+
+    const nonce = this.getNonce();
+
+    return getWebviewHTMLWithBundles({
+        bundleUris,
+        nonce,
+        cspSource: this.panel!.webview.cspSource,
+        title: 'My Webview',
+    });
+}
+```
+
+### Bundle Loading Order
+
+The helper ensures bundles load in the correct dependency order:
+1. **runtime-bundle.js** - Webpack runtime
+2. **vendors-bundle.js** - Third-party dependencies
+3. **common-bundle.js** - Shared code across webviews
+4. **feature-bundle.js** - Feature-specific code
+
+This order is critical for preventing race conditions and ensuring dependencies are available before feature code executes.
+
+### CSP Compliance
+
+The helper automatically generates Content Security Policy headers with:
+- Nonce-based script execution for security
+- Proper source allowances for styles, images, and fonts
+- No inline script execution (all scripts use nonces)
+
+### Why This Prevents Timeouts
+
+The 4-bundle pattern with proper loading order ensures:
+- Smaller individual bundles load faster than single large bundle
+- Webpack runtime initializes before feature code attempts to use it
+- Dependencies are guaranteed available before dependent code executes
+- Webview JavaScript loads completely before sending `__webview_ready__` signal
+
 ## Future Improvements
 
 - Progressive loading states for slow operations

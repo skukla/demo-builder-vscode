@@ -1,5 +1,17 @@
-import { getLogger } from '@/core/logging';
 import type { CommandResult, CommandConfig } from './types';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+
+/**
+ * Extract error code from NodeJS.ErrnoException (SOP §3 compliance)
+ *
+ * Handles cases where err.code may be string (ENOENT) or number.
+ */
+export function getNumericErrorCode(err: NodeJS.ErrnoException): number {
+    if (err.code === undefined || err.code === null) return 1;
+    if (typeof err.code === 'number') return err.code;
+    return 1;
+}
 
 /**
  * Manages sequential and parallel command execution
@@ -65,7 +77,7 @@ export class CommandSequencer {
                 this.logger.debug(`[Command Sequencer] Completed: ${config.name || config.command} (${duration}ms)`);
 
                 // Warn if command is slow
-                if (duration > 3000) {
+                if (duration > TIMEOUTS.SLOW_COMMAND_THRESHOLD) {
                     this.logger.debug(`[Command Sequencer] WARNING: Slow command detected - ${config.name || config.command} took ${duration}ms`);
                 }
 
@@ -81,7 +93,7 @@ export class CommandSequencer {
                 return {
                     stdout: '',
                     stderr: (error instanceof Error ? error.message : String(error)) || `Command failed: ${config.command}`,
-                    code: err.code ? (typeof err.code === 'number' ? err.code : 1) : 1,
+                    code: getNumericErrorCode(err),
                     duration,
                 } as CommandResult;
             }

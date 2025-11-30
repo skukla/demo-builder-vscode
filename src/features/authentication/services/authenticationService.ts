@@ -1,6 +1,6 @@
 import * as path from 'path';
-import type { CommandExecutor } from '@/core/shell';
 import { getLogger, Logger, StepLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, CACHE_TTL } from '@/core/utils/timeoutConfig';
 import { AdobeEntityService } from '@/features/authentication/services/adobeEntityService';
 import { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
@@ -10,6 +10,7 @@ import { OrganizationValidator } from '@/features/authentication/services/organi
 import { PerformanceTracker } from '@/features/authentication/services/performanceTracker';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation } from '@/features/authentication/services/types';
+import { isValidTokenResponse } from './authPredicates';
 
 /**
  * Main authentication service - orchestrates all authentication operations
@@ -70,7 +71,7 @@ export class AuthenticationService {
         this.stepLoggerInitPromise = StepLogger.create(
             this.logger,
             undefined,
-            this.templatesPath
+            this.templatesPath,
         ).then(stepLogger => {
             this.stepLogger = stepLogger;
 
@@ -104,54 +105,13 @@ export class AuthenticationService {
     }
 
     /**
-     * Quick authentication check - only verifies token existence and expiry
+     * Token-only authentication check - verifies token existence and expiry
      * Does NOT validate org access or call getCurrentOrganization()
      * Does NOT initialize SDK - SDK will be initialized on-demand when needed
-     * Use this for dashboard loads and other performance-critical paths
+     * Typical duration: 2-3 seconds (Adobe CLI config read overhead)
      *
-     * Performance: < 1 second (vs 9+ seconds for full isAuthenticated)
-     *
-     * CRITICAL: This method MUST NOT call getCurrentOrganization() or any org-related APIs
-     */
-    async isAuthenticatedQuick(): Promise<boolean> {
-        this.performanceTracker.startTiming('isAuthenticatedQuick');
-
-        // Check cache first
-        const { isAuthenticated, isExpired } = this.cacheManager.getCachedAuthStatus();
-        if (!isExpired && isAuthenticated !== undefined) {
-            this.debugLogger.debug(`[Auth] Using cached authentication status: ${isAuthenticated}`);
-            this.performanceTracker.endTiming('isAuthenticatedQuick');
-            return isAuthenticated;
-        }
-
-        try {
-            this.debugLogger.debug('[Auth] Quick authentication check (token only, no org validation)');
-
-            const isValid = await this.tokenManager.isTokenValid();
-
-            // Cache the result
-            this.cacheManager.setCachedAuthStatus(isValid);
-
-            this.performanceTracker.endTiming('isAuthenticatedQuick');
-            return isValid;
-        } catch (error) {
-            this.debugLogger.error('[Auth] Quick authentication check failed', error as Error);
-
-            // Cache the failed result (short TTL for errors)
-            this.cacheManager.setCachedAuthStatus(false, CACHE_TTL.AUTH_STATUS_ERROR);
-
-            this.performanceTracker.endTiming('isAuthenticatedQuick');
-            return false;
-        }
-    }
-
-    /**
-     * Check if authenticated - validates token and organization access
-     * Does NOT initialize SDK - SDK will be initialized on-demand when needed
-     * Use this when you need full authentication context
-     *
-     * Performance: 3-10 seconds (includes org validation)
-     * For faster checks, use isAuthenticatedQuick()
+     * Use this for dashboard loads and non-critical paths.
+     * For full validation including org context, use isFullyAuthenticated()
      */
     async isAuthenticated(): Promise<boolean> {
         this.performanceTracker.startTiming('isAuthenticated');
@@ -159,8 +119,43 @@ export class AuthenticationService {
         // Check cache first
         const { isAuthenticated, isExpired } = this.cacheManager.getCachedAuthStatus();
         if (!isExpired && isAuthenticated !== undefined) {
-            this.debugLogger.debug(`[Auth] Using cached authentication status: ${isAuthenticated}`);
             this.performanceTracker.endTiming('isAuthenticated');
+            return isAuthenticated;
+        }
+
+        try {
+            const isValid = await this.tokenManager.isTokenValid();
+
+            // Cache the result
+            this.cacheManager.setCachedAuthStatus(isValid);
+
+            this.performanceTracker.endTiming('isAuthenticated');
+            return isValid;
+        } catch (error) {
+            this.debugLogger.error('[Auth] Quick authentication check failed', error as Error);
+
+            // Cache the failed result (short TTL for errors)
+            this.cacheManager.setCachedAuthStatus(false, CACHE_TTL.AUTH_STATUS_ERROR);
+
+            this.performanceTracker.endTiming('isAuthenticated');
+            return false;
+        }
+    }
+
+    /**
+     * Full authentication check - validates token AND organization access
+     * Includes org context validation via validateAndClearInvalidOrgContext()
+     * Typical duration: 3-10 seconds (includes org API calls)
+     *
+     * For token-only checks without org validation, use isAuthenticated()
+     */
+    async isFullyAuthenticated(): Promise<boolean> {
+        this.performanceTracker.startTiming('isFullyAuthenticated');
+
+        // Check cache first
+        const { isAuthenticated, isExpired } = this.cacheManager.getCachedAuthStatus();
+        if (!isExpired && isAuthenticated !== undefined) {
+            this.performanceTracker.endTiming('isFullyAuthenticated');
             return isAuthenticated;
         }
 
@@ -180,7 +175,7 @@ export class AuthenticationService {
                 // Cache the successful result
                 this.cacheManager.setCachedAuthStatus(true);
 
-                this.performanceTracker.endTiming('isAuthenticated');
+                this.performanceTracker.endTiming('isFullyAuthenticated');
                 return true;
             } else {
                 this.logger.info('[Auth] Not authenticated with Adobe. Please click "Log in to Adobe" to authenticate.');
@@ -189,7 +184,7 @@ export class AuthenticationService {
                 // Cache the failed result
                 this.cacheManager.setCachedAuthStatus(false);
 
-                this.performanceTracker.endTiming('isAuthenticated');
+                this.performanceTracker.endTiming('isFullyAuthenticated');
                 return false;
             }
         } catch (error) {
@@ -213,7 +208,7 @@ export class AuthenticationService {
             // Cache the failed result (shorter TTL for errors to allow retry)
             this.cacheManager.setCachedAuthStatus(false, CACHE_TTL.AUTH_STATUS_ERROR);
 
-            this.performanceTracker.endTiming('isAuthenticated');
+            this.performanceTracker.endTiming('isFullyAuthenticated');
             return false;
         }
     }
@@ -227,7 +222,6 @@ export class AuthenticationService {
         try {
             const stepLogger = await this.ensureStepLogger();
             stepLogger.logTemplate('adobe-setup', 'operations.opening-browser', {});
-            this.debugLogger.debug(`[Auth] Initiating Adobe login${force ? ' (forced)' : ''}`);
 
             // If forced login, clear caches BEFORE login
             if (force) {
@@ -248,7 +242,7 @@ export class AuthenticationService {
             stepLogger.logTemplate('adobe-setup', 'operations.waiting-authentication', {});
 
             // Add timeout to the command execution (2 minutes)
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 loginCommand,
                 {
                     encoding: 'utf8',
@@ -286,7 +280,7 @@ export class AuthenticationService {
                 const token = result.stdout?.trim();
 
                 // Check if we got a valid token (JWT tokens are typically >100 chars)
-                if (token && token.length > 50 && !token.includes('Error') && !token.includes('error')) {
+                if (isValidTokenResponse(token)) {
                     this.debugLogger.debug('[Auth] Received access token from login command');
 
                     // TRUST ADOBE CLI: If 'aio auth login' returns exit code 0 with valid token,
@@ -302,13 +296,13 @@ export class AuthenticationService {
                     this.debugLogger.debug('[Auth] Cleared SDK client to force re-init with new token');
 
                     // Clear auth cache to force fresh check next time
-                    // Note: Token inspection cache cleared via cacheManager.clearAll() in other branches
                     // If forced login, clearAll() already cleared everything at line 233
-                    // Only clear specific caches for non-forced login
+                    // For non-forced login, clear specific caches including token inspection
                     if (!force) {
                         this.cacheManager.clearAuthStatusCache();
                         this.cacheManager.clearValidationCache();
-                        this.debugLogger.debug('[Auth] Cleared auth and validation caches after login');
+                        this.cacheManager.clearTokenInspectionCache(); // FIX: Clear token inspection cache to prevent stale cached tokens
+                        this.debugLogger.debug('[Auth] Cleared auth, validation, and token inspection caches after login');
                     } else {
                         this.debugLogger.debug('[Auth] Skipping cache clear - already cleared before forced login');
                     }
@@ -322,7 +316,7 @@ export class AuthenticationService {
 
                 // If we didn't get a valid token and force wasn't used, retry with force
                 if (!force) {
-                    this.debugLogger.info('[Auth] Retrying with force flag to ensure fresh authentication');
+                    this.debugLogger.debug('[Auth] Retrying with force flag to ensure fresh authentication');
                     stepLogger.logTemplate('adobe-setup', 'operations.retrying', { item: 'authentication with fresh login' });
                     this.performanceTracker.endTiming('login');
                     return await this.login(true);
@@ -349,7 +343,7 @@ export class AuthenticationService {
      */
     async logout(): Promise<void> {
         try {
-            await this.commandManager.executeAdobeCLI(
+            await this.commandManager.execute(
                 'aio auth logout',
                 { encoding: 'utf8' },
             );
@@ -367,24 +361,6 @@ export class AuthenticationService {
     }
 
     /**
-     * Clear console context
-     */
-    private async clearConsoleContext(): Promise<void> {
-        try {
-            await Promise.all([
-                this.commandManager.executeAdobeCLI('aio config delete console.org', { encoding: 'utf8' }),
-                this.commandManager.executeAdobeCLI('aio config delete console.project', { encoding: 'utf8' }),
-                this.commandManager.executeAdobeCLI('aio config delete console.workspace', { encoding: 'utf8' }),
-            ]);
-
-            this.cacheManager.clearConsoleWhereCache();
-            this.debugLogger.debug('[Auth] Cleared Adobe CLI console context');
-        } catch (error) {
-            this.debugLogger.debug('[Auth] Failed to clear console context:', error);
-        }
-    }
-
-    /**
      * Clear all caches
      */
     clearCache(): void {
@@ -397,6 +373,14 @@ export class AuthenticationService {
      */
     getCacheManager(): AuthCacheManager {
         return this.cacheManager;
+    }
+
+    /**
+     * Get token manager instance
+     * Used for token inspection in handlers
+     */
+    getTokenManager(): TokenManager {
+        return this.tokenManager;
     }
 
     /**
@@ -572,23 +556,27 @@ export class AuthenticationService {
     }
 
     /**
-     * Select project
+     * Select project with org context guard.
+     * @param projectId - The project ID to select
+     * @param orgId - Org ID to ensure context (protects against context drift)
      */
-    async selectProject(projectId: string): Promise<boolean> {
+    async selectProject(projectId: string, orgId: string): Promise<boolean> {
         this.performanceTracker.startTiming('selectProject');
         const entityService = await this.ensureEntityService();
-        const result = await entityService.selectProject(projectId);
+        const result = await entityService.selectProject(projectId, orgId);
         this.performanceTracker.endTiming('selectProject');
         return result;
     }
 
     /**
-     * Select workspace
+     * Select workspace with project context guard.
+     * @param workspaceId - The workspace ID to select
+     * @param projectId - Project ID to ensure context (protects against context drift)
      */
-    async selectWorkspace(workspaceId: string): Promise<boolean> {
+    async selectWorkspace(workspaceId: string, projectId: string): Promise<boolean> {
         this.performanceTracker.startTiming('selectWorkspace');
         const entityService = await this.ensureEntityService();
-        const result = await entityService.selectWorkspace(workspaceId);
+        const result = await entityService.selectWorkspace(workspaceId, projectId);
         this.performanceTracker.endTiming('selectWorkspace');
         return result;
     }

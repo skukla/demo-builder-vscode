@@ -1,8 +1,7 @@
-import { parseJSON } from '@/types/typeGuards';
-import type { CommandExecutor } from '@/core/shell';
 import { getLogger, Logger, StepLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
+import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
@@ -18,6 +17,7 @@ import type {
     AdobeConsoleWhereResponse,
     SDKResponse,
 } from '@/features/authentication/services/types';
+import { parseJSON } from '@/types/typeGuards';
 
 /**
  * Service for managing Adobe entities (organizations, projects, workspaces)
@@ -71,6 +71,43 @@ export class AdobeEntityService {
     }
 
     /**
+     * Get console.where context with caching
+     *
+     * Fetches the current Adobe console context (org, project, workspace) from CLI
+     * and caches the result. Used by getCurrentOrganization, getCurrentProject,
+     * and getCurrentWorkspace to avoid redundant CLI calls.
+     *
+     * @returns The console context or undefined if fetch fails
+     */
+    private async getConsoleWhereContext(): Promise<AdobeConsoleWhereResponse | undefined> {
+        // Check console.where cache first
+        let context = this.cacheManager.getCachedConsoleWhere();
+
+        if (!context) {
+            this.debugLogger.debug('[Entity Service] Fetching context from Adobe CLI');
+            const result = await this.commandManager.execute(
+                'aio console where --json',
+                { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
+            );
+
+            if (result.code === 0 && result.stdout) {
+                // SECURITY: Use parseJSON for type-safe parsing
+                const parsedContext = parseJSON<AdobeConsoleWhereResponse>(result.stdout);
+                if (!parsedContext) {
+                    this.debugLogger.warn('[Entity Service] Failed to parse console.where response');
+                    return undefined;
+                }
+                context = parsedContext;
+                this.cacheManager.setCachedConsoleWhere(context);
+            } else {
+                return undefined;
+            }
+        }
+
+        return context;
+    }
+
+    /**
      * Get list of organizations (SDK with CLI fallback)
      */
     async getOrganizations(): Promise<AdobeOrg[]> {
@@ -87,11 +124,14 @@ export class AdobeEntityService {
 
             let mappedOrgs: AdobeOrg[] = [];
 
+            // Auto-initialize SDK if not ready (lazy init pattern)
+            if (!this.sdkClient.isInitialized()) {
+                await this.sdkClient.ensureInitialized();
+            }
+
             // Try SDK first for 30x performance improvement
             if (this.sdkClient.isInitialized()) {
                 try {
-                    this.debugLogger.debug('[Entity Service] Fetching organizations via SDK (fast path)');
-
                     const client = this.sdkClient.getClient() as { getOrganizations: () => Promise<SDKResponse<RawAdobeOrg[]>> };
                     const sdkResult = await client.getOrganizations();
                     const sdkDuration = Date.now() - startTime;
@@ -99,7 +139,7 @@ export class AdobeEntityService {
                     if (sdkResult.body && Array.isArray(sdkResult.body)) {
                         mappedOrgs = this.mapOrganizations(sdkResult.body);
 
-                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedOrgs.length} organizations via SDK in ${sdkDuration}ms`);
+                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedOrgs.length} organizations via SDK in ${formatDuration(sdkDuration)}`);
                     } else {
                         throw new Error('Invalid SDK response format');
                     }
@@ -111,9 +151,8 @@ export class AdobeEntityService {
 
             // CLI fallback (if SDK not available or failed)
             if (mappedOrgs.length === 0) {
-                this.debugLogger.debug('[Entity Service] Fetching organizations via CLI (fallback path)');
 
-                const result = await this.commandManager.executeAdobeCLI(
+                const result = await this.commandManager.execute(
                     'aio console org list --json',
                     { encoding: 'utf8' },
                 );
@@ -133,7 +172,14 @@ export class AdobeEntityService {
 
                 mappedOrgs = this.mapOrganizations(orgs);
 
-                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedOrgs.length} organizations via CLI in ${cliDuration}ms`);
+                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedOrgs.length} organizations via CLI in ${formatDuration(cliDuration)}`);
+            }
+
+            // Clear stale CLI context if no orgs accessible
+            if (mappedOrgs.length === 0) {
+                this.logger.info('No organizations accessible. Clearing previous selections...');
+                this.debugLogger.debug('[Entity Service] No organizations accessible - clearing stale CLI context');
+                await this.clearConsoleContext();
             }
 
             // Cache the result
@@ -153,34 +199,41 @@ export class AdobeEntityService {
 
     /**
      * Get list of projects for current org (SDK with CLI fallback)
+     * @param options.silent - If true, suppress user-facing log messages (used for internal ID resolution)
      */
-    async getProjects(): Promise<AdobeProject[]> {
+    async getProjects(options?: { silent?: boolean }): Promise<AdobeProject[]> {
         const startTime = Date.now();
+        const silent = options?.silent ?? false;
 
         try {
-            this.stepLogger.logTemplate('adobe-setup', 'operations.loading-projects', {});
+            if (!silent) {
+                this.stepLogger.logTemplate('adobe-setup', 'operations.loading-projects', {});
+            }
 
             let mappedProjects: AdobeProject[] = [];
             const cachedOrg = this.cacheManager.getCachedOrganization();
 
-            // Try SDK first if available and we have a VALID org code
-            // PERFORMANCE FIX: SDK requires org code with @AdobeOrg suffix (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
-            // The 'code' field contains the full IMS org ID, while 'id' is just numeric (e.g., "3397333")
-            // Passing org name or numeric ID causes 400 Bad Request and forces slow CLI fallback
-            const hasValidOrgCode = cachedOrg?.code && cachedOrg.code.includes('@');
+            // Try SDK first if available and we have a VALID numeric org ID
+            // PERFORMANCE FIX: SDK requires numeric org ID (e.g., "3397333")
+            // The 'id' field contains the numeric org ID, while 'code' is the IMS org ID (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
+            // Passing IMS org code or org name causes 400 Bad Request and forces slow CLI fallback
+            const hasValidOrgId = cachedOrg?.id && cachedOrg.id.length > 0;
 
-            if (this.sdkClient.isInitialized() && hasValidOrgCode) {
+            // Auto-initialize SDK if not ready (lazy init pattern)
+            if (!this.sdkClient.isInitialized()) {
+                await this.sdkClient.ensureInitialized();
+            }
+
+            if (this.sdkClient.isInitialized() && hasValidOrgId) {
                 try {
-                    this.debugLogger.debug(`[Entity Service] Fetching projects for org ${cachedOrg.code} via SDK (fast path)`);
-
                     const client = this.sdkClient.getClient() as { getProjectsForOrg: (orgId: string) => Promise<SDKResponse<RawAdobeProject[]>> };
-                    const sdkResult = await client.getProjectsForOrg(cachedOrg.code);
+                    const sdkResult = await client.getProjectsForOrg(cachedOrg.id);
                     const sdkDuration = Date.now() - startTime;
 
                     if (sdkResult.body && Array.isArray(sdkResult.body)) {
                         mappedProjects = this.mapProjects(sdkResult.body);
 
-                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedProjects.length} projects via SDK in ${sdkDuration}ms`);
+                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedProjects.length} projects via SDK in ${formatDuration(sdkDuration)}`);
                     } else {
                         throw new Error('Invalid SDK response format');
                     }
@@ -188,15 +241,13 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] SDK failed, falling back to CLI:', sdkError);
                     this.debugLogger.warn('[Entity Service] SDK unavailable, using slower CLI fallback for projects');
                 }
-            } else if (this.sdkClient.isInitialized() && !hasValidOrgCode) {
-                this.debugLogger.debug('[Entity Service] SDK available but org code is invalid (expected IMS org code like "ABC@AdobeOrg"), using CLI');
+            } else if (this.sdkClient.isInitialized() && !hasValidOrgId) {
+                this.debugLogger.debug('[Entity Service] SDK available but org ID is missing (expected numeric ID like "3397333"), using CLI');
             }
 
             // CLI fallback
             if (mappedProjects.length === 0) {
-                this.debugLogger.debug('[Entity Service] Fetching projects via CLI (fallback path)');
-
-                const result = await this.commandManager.executeAdobeCLI(
+                const result = await this.commandManager.execute(
                     'aio console project list --json',
                     { encoding: 'utf8' },
                 );
@@ -221,13 +272,15 @@ export class AdobeEntityService {
 
                 mappedProjects = this.mapProjects(projects);
 
-                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedProjects.length} projects via CLI in ${cliDuration}ms`);
+                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedProjects.length} projects via CLI in ${formatDuration(cliDuration)}`);
             }
 
-            this.stepLogger.logTemplate('adobe-setup', 'statuses.projects-loaded', {
-                count: mappedProjects.length,
-                plural: mappedProjects.length === 1 ? '' : 's',
-            });
+            if (!silent) {
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.projects-loaded', {
+                    count: mappedProjects.length,
+                    plural: mappedProjects.length === 1 ? '' : 's',
+                });
+            }
 
             return mappedProjects;
         } catch (error) {
@@ -249,19 +302,22 @@ export class AdobeEntityService {
             const cachedOrg = this.cacheManager.getCachedOrganization();
             const cachedProject = this.cacheManager.getCachedProject();
 
-            // Try SDK first if available and we have VALID org code and project ID
-            // PERFORMANCE FIX: SDK requires org code with @AdobeOrg suffix (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
-            // The 'code' field contains the full IMS org ID, while 'id' is just numeric (e.g., "3397333")
-            const hasValidOrgCode = cachedOrg?.code && cachedOrg.code.includes('@');
+            // Try SDK first if available and we have VALID numeric org ID and project ID
+            // PERFORMANCE FIX: SDK requires numeric org ID (e.g., "3397333")
+            // The 'id' field contains the numeric org ID, while 'code' is the IMS org ID (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg")
+            const hasValidOrgId = cachedOrg?.id && cachedOrg.id.length > 0;
             const hasValidProjectId = cachedProject?.id && cachedProject.id.length > 0;
 
-            if (this.sdkClient.isInitialized() && hasValidOrgCode && hasValidProjectId) {
-                try {
-                    this.debugLogger.debug(`[Entity Service] Fetching workspaces for project ${cachedProject.id} via SDK (fast path)`);
+            // Auto-initialize SDK if not ready (lazy init pattern)
+            if (!this.sdkClient.isInitialized()) {
+                await this.sdkClient.ensureInitialized();
+            }
 
+            if (this.sdkClient.isInitialized() && hasValidOrgId && hasValidProjectId) {
+                try {
                     const client = this.sdkClient.getClient() as { getWorkspacesForProject: (orgId: string, projectId: string) => Promise<SDKResponse<RawAdobeWorkspace[]>> };
                     const sdkResult = await client.getWorkspacesForProject(
-                        cachedOrg.code,
+                        cachedOrg.id,
                         cachedProject.id,
                     );
                     const sdkDuration = Date.now() - startTime;
@@ -269,7 +325,7 @@ export class AdobeEntityService {
                     if (sdkResult.body && Array.isArray(sdkResult.body)) {
                         mappedWorkspaces = this.mapWorkspaces(sdkResult.body);
 
-                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedWorkspaces.length} workspaces via SDK in ${sdkDuration}ms`);
+                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedWorkspaces.length} workspaces via SDK in ${formatDuration(sdkDuration)}`);
                     } else {
                         throw new Error('Invalid SDK response format');
                     }
@@ -277,15 +333,13 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] SDK failed, falling back to CLI:', sdkError);
                     this.debugLogger.warn('[Entity Service] SDK unavailable, using slower CLI fallback for workspaces');
                 }
-            } else if (this.sdkClient.isInitialized() && (!hasValidOrgCode || !hasValidProjectId)) {
-                this.debugLogger.debug('[Entity Service] SDK available but org code or project ID is invalid, using CLI');
+            } else if (this.sdkClient.isInitialized() && (!hasValidOrgId || !hasValidProjectId)) {
+                this.debugLogger.debug('[Entity Service] SDK available but org ID or project ID is missing, using CLI');
             }
 
             // CLI fallback
             if (mappedWorkspaces.length === 0) {
-                this.debugLogger.debug('[Entity Service] Fetching workspaces via CLI (fallback path)');
-
-                const result = await this.commandManager.executeAdobeCLI(
+                const result = await this.commandManager.execute(
                     'aio console workspace list --json',
                     { encoding: 'utf8' },
                 );
@@ -305,7 +359,7 @@ export class AdobeEntityService {
 
                 mappedWorkspaces = this.mapWorkspaces(workspaces);
 
-                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedWorkspaces.length} workspaces via CLI in ${cliDuration}ms`);
+                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedWorkspaces.length} workspaces via CLI in ${formatDuration(cliDuration)}`);
             }
 
             this.stepLogger.logTemplate('adobe-setup', 'statuses.workspaces-loaded', {
@@ -328,61 +382,35 @@ export class AdobeEntityService {
             // Check cache first
             const cachedOrg = this.cacheManager.getCachedOrganization();
             if (cachedOrg) {
-                this.debugLogger.debug('[Entity Service] Using cached organization data');
                 return cachedOrg;
             }
 
-            // Check console.where cache first
-            let context = this.cacheManager.getCachedConsoleWhere();
-
+            const context = await this.getConsoleWhereContext();
             if (!context) {
-                this.debugLogger.debug('[Entity Service] Fetching organization data from Adobe CLI');
-                const result = await this.commandManager.executeAdobeCLI(
-                    'aio console where --json',
-                    { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
-                );
-
-                if (result.code === 0 && result.stdout) {
-                    // SECURITY: Use parseJSON for type-safe parsing
-                    const parsedContext = parseJSON<AdobeConsoleWhereResponse>(result.stdout);
-                    if (!parsedContext) {
-                        this.debugLogger.warn('[Entity Service] Failed to parse console.where response');
-                        return undefined;
-                    }
-                    context = parsedContext;
-                    // Cache the result
-                    this.cacheManager.setCachedConsoleWhere(context);
-                    this.debugLogger.debug('[Entity Service] Raw Adobe CLI response:', JSON.stringify(context));
-                } else {
-                    return undefined;
-                }
+                return undefined;
             }
 
-            if (context?.org) {
+            if (context.org) {
                 // Handle both string and object formats
                 let orgData;
                 if (typeof context.org === 'string') {
                     if (context.org.trim()) {
-                        this.debugLogger.debug(`[Entity Service] Current organization name: ${context.org}`);
 
                         // PERFORMANCE FIX: Always resolve full org object for SDK compatibility
-                        // The SDK requires org code with @AdobeOrg suffix (e.g., "E94E1E3766FBA7DC0A495FFA@AdobeOrg"), not names
-                        // Passing name causes 400 Bad Request and forces slow CLI fallback
+                        // The SDK requires numeric org ID (e.g., "3397333"), not names or IMS org codes
+                        // Passing name or IMS org code causes 400 Bad Request and forces slow CLI fallback
 
                         // Check if we're in post-login phase (no cached org list)
                         const cachedOrgList = this.cacheManager.getCachedOrgList();
 
                         if (!cachedOrgList || cachedOrgList.length === 0) {
                             // No cached org list = likely post-login, fetch it now to resolve full org object
-                            this.debugLogger.debug('[Entity Service] Org list not cached, fetching to resolve org code');
-
                             try {
                                 // Fetch org list to get full org object with code (required for SDK operations)
                                 const orgs = await this.getOrganizations();
                                 const matchedOrg = orgs.find(o => o.name === context.org || o.code === context.org);
 
                                 if (matchedOrg) {
-                                    this.debugLogger.debug(`[Entity Service] Resolved org "${context.org}" to ID: ${matchedOrg.id}`);
                                     orgData = matchedOrg;
                                 } else {
                                     this.debugLogger.warn('[Entity Service] Could not find org in list, using name as fallback');
@@ -403,14 +431,11 @@ export class AdobeEntityService {
                             }
                         } else {
                             // We have cached org list, safe to resolve full org object without API calls
-                            this.debugLogger.debug('[Entity Service] Using cached org list to resolve org code');
-
                             try {
                                 // Try to resolve ID from cache
                                 const matchedOrg = cachedOrgList.find(o => o.name === context.org || o.code === context.org);
 
                                 if (matchedOrg) {
-                                    this.debugLogger.debug(`[Entity Service] Resolved org "${context.org}" to ID: ${matchedOrg.id} (from cache)`);
                                     orgData = matchedOrg;
                                 } else {
                                     this.debugLogger.warn('[Entity Service] Could not find org in cached list, using name as fallback');
@@ -467,47 +492,24 @@ export class AdobeEntityService {
             // Check cache first
             const cachedProject = this.cacheManager.getCachedProject();
             if (cachedProject) {
-                this.debugLogger.debug('[Entity Service] Using cached project data');
                 return cachedProject;
             }
 
-            // Check console.where cache first
-            let context = this.cacheManager.getCachedConsoleWhere();
-
+            const context = await this.getConsoleWhereContext();
             if (!context) {
-                this.debugLogger.debug('[Entity Service] Fetching project data from Adobe CLI');
-                const result = await this.commandManager.executeAdobeCLI(
-                    'aio console where --json',
-                    { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
-                );
-
-                if (result.code === 0 && result.stdout) {
-                    // SECURITY: Use parseJSON for type-safe parsing
-                    const parsedContext = parseJSON<AdobeConsoleWhereResponse>(result.stdout);
-                    if (!parsedContext) {
-                        this.debugLogger.warn('[Entity Service] Failed to parse console.where response');
-                        return undefined;
-                    }
-                    context = parsedContext;
-                    this.cacheManager.setCachedConsoleWhere(context);
-                    this.debugLogger.debug('[Entity Service] Raw Adobe CLI response:', JSON.stringify(context));
-                } else {
-                    return undefined;
-                }
+                return undefined;
             }
 
-            if (context?.project) {
+            if (context.project) {
                 let projectData;
 
                 if (typeof context.project === 'string') {
-                    this.debugLogger.debug(`[Entity Service] Current project name: ${context.project}, fetching numeric ID...`);
-
                     try {
-                        const projects = await this.getProjects();
+                        // Use silent mode for internal ID resolution to avoid duplicate log messages
+                        const projects = await this.getProjects({ silent: true });
                         const matchedProject = projects.find(p => p.name === context.project || p.title === context.project);
 
                         if (matchedProject) {
-                            this.debugLogger.debug(`[Entity Service] Resolved project "${context.project}" to ID: ${matchedProject.id}`);
                             projectData = matchedProject;
                         } else {
                             this.debugLogger.warn(`[Entity Service] Could not find numeric ID for project "${context.project}", using name as fallback`);
@@ -561,35 +563,15 @@ export class AdobeEntityService {
             // Check cache first
             const cachedWorkspace = this.cacheManager.getCachedWorkspace();
             if (cachedWorkspace) {
-                this.debugLogger.debug('[Entity Service] Using cached workspace data');
                 return cachedWorkspace;
             }
 
-            // Check console.where cache first
-            let context = this.cacheManager.getCachedConsoleWhere();
-
+            const context = await this.getConsoleWhereContext();
             if (!context) {
-                this.debugLogger.debug('[Entity Service] Fetching workspace data from Adobe CLI');
-                const result = await this.commandManager.executeAdobeCLI(
-                    'aio console where --json',
-                    { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
-                );
-
-                if (result.code === 0 && result.stdout) {
-                    // SECURITY: Use parseJSON for type-safe parsing
-                    const parsedContext = parseJSON<AdobeConsoleWhereResponse>(result.stdout);
-                    if (!parsedContext) {
-                        this.debugLogger.warn('[Entity Service] Failed to parse console.where response');
-                        return undefined;
-                    }
-                    context = parsedContext;
-                    this.cacheManager.setCachedConsoleWhere(context);
-                } else {
-                    return undefined;
-                }
+                return undefined;
             }
 
-            if (context?.workspace) {
+            if (context.workspace) {
                 // Type guard - workspace can be string or object
                 if (typeof context.workspace === 'object') {
                     this.debugLogger.debug(`[Entity Service] Current workspace: ${context.workspace.name}`);
@@ -634,6 +616,67 @@ export class AdobeEntityService {
         };
     }
 
+    // =========================================================================
+    // Context Guard - Protects against external CLI context changes
+    // =========================================================================
+
+    /**
+     * Extract ID from context value (can be string or object with id)
+     */
+    private extractContextId(value: string | { id: string } | undefined): string | undefined {
+        if (!value) return undefined;
+        if (typeof value === 'string') return value;
+        return value.id;
+    }
+
+    /**
+     * Ensure Adobe CLI context matches expected state before dependent operations.
+     * Re-selects org/project if another process changed the global context.
+     *
+     * @param expected - The org/project IDs that should be selected
+     * @returns true if context is correct (or was corrected), false on failure
+     */
+    private async ensureContext(expected: { orgId?: string; projectId?: string }): Promise<boolean> {
+        const context = await this.getConsoleWhereContext();
+
+        // Check organization context
+        const currentOrgId = this.extractContextId(context?.org);
+        if (expected.orgId && currentOrgId !== expected.orgId) {
+            // Note: currentOrgId may be a name (from CLI), expected.orgId is always an ID
+            this.debugLogger.debug(
+                `[Entity Service] Context sync: org mismatch (current: "${currentOrgId || 'none'}"), re-selecting...`,
+            );
+            const orgSelected = await this.selectOrganization(expected.orgId);
+            if (!orgSelected) {
+                this.debugLogger.error('[Entity Service] Failed to restore org context');
+                return false;
+            }
+        }
+
+        // Check project context (re-fetch context if org was changed)
+        if (expected.projectId) {
+            const currentContext = expected.orgId ? await this.getConsoleWhereContext() : context;
+            const currentProjectId = this.extractContextId(currentContext?.project);
+            if (currentProjectId !== expected.projectId) {
+                // Note: currentProjectId may be a name (from CLI), expected.projectId is always an ID
+                this.debugLogger.debug(
+                    `[Entity Service] Context sync: project mismatch (current: "${currentProjectId || 'none'}"), re-selecting...`,
+                );
+                const projectSelected = await this.doSelectProject(expected.projectId);
+                if (!projectSelected) {
+                    this.debugLogger.error('[Entity Service] Failed to restore project context');
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    // =========================================================================
+    // Selection Operations
+    // =========================================================================
+
     /**
      * Select organization
      */
@@ -643,9 +686,8 @@ export class AdobeEntityService {
             validateOrgId(orgId);
 
             this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'organization' });
-            this.debugLogger.debug(`[Entity Service] Selecting organization ${orgId}`);
 
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 `aio console org select ${orgId}`,
                 {
                     encoding: 'utf8',
@@ -653,21 +695,19 @@ export class AdobeEntityService {
                 },
             );
 
-            this.debugLogger.debug(`[Entity Service] Organization select command completed with code: ${result.code}`);
-
             if (result.code === 0) {
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.organization-selected', { name: orgId });
-
                 // Clear validation failure flag since new org was successfully selected
                 this.cacheManager.setOrgClearedDueToValidation(false);
 
-                // Smart caching: populate org cache directly
+                // Smart caching: populate org cache directly and get name for logging
+                let orgName = orgId; // Fallback to ID if name lookup fails
                 try {
                     const orgs = await this.getOrganizations();
                     const selectedOrg = orgs.find(o => o.id === orgId);
 
                     if (selectedOrg) {
                         this.cacheManager.setCachedOrganization(selectedOrg);
+                        orgName = selectedOrg.name;
                     } else {
                         this.cacheManager.setCachedOrganization(undefined);
                         this.debugLogger.warn(`[Entity Service] Could not find org ${orgId} in list`);
@@ -676,6 +716,9 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] Failed to cache org after selection:', error);
                     this.cacheManager.setCachedOrganization(undefined);
                 }
+
+                // Log with org name (or ID as fallback)
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.organization-selected', { name: orgName });
 
                 // Clear downstream caches
                 this.cacheManager.setCachedProject(undefined);
@@ -689,7 +732,7 @@ export class AdobeEntityService {
                 if (!permissionCheck.hasPermissions) {
                     this.debugLogger.error('[Entity Service] User lacks Developer permissions for this organization');
                     const errorMessage = permissionCheck.error || 'Insufficient permissions for App Builder access';
-                    this.logger.error(`[Auth] Developer permissions check failed: ${errorMessage}`);
+                    this.logger.error(`[Entity Service] Developer permissions check failed: ${errorMessage}`);
 
                     // Throw error with specific message to signal permission failure to UI
                     throw new Error(errorMessage);
@@ -709,17 +752,34 @@ export class AdobeEntityService {
     }
 
     /**
-     * Select project
+     * Select project with organization context guard.
+     * Ensures the org is selected first (protects against context drift).
+     *
+     * @param projectId - The project ID to select
+     * @param orgId - Org ID to ensure context before selection
      */
-    async selectProject(projectId: string): Promise<boolean> {
+    async selectProject(projectId: string, orgId: string): Promise<boolean> {
+        const contextOk = await this.ensureContext({ orgId });
+        if (!contextOk) {
+            this.debugLogger.error('[Entity Service] Failed to ensure org context for project selection');
+            return false;
+        }
+
+        return this.doSelectProject(projectId);
+    }
+
+    /**
+     * Internal project selection (no context guard).
+     * Used by ensureContext and selectProject.
+     */
+    private async doSelectProject(projectId: string): Promise<boolean> {
         try {
             // SECURITY: Validate projectId to prevent command injection
             validateProjectId(projectId);
 
             this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'project' });
-            this.debugLogger.debug(`[Entity Service] Selecting project ${projectId}`);
 
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 `aio console project select ${projectId}`,
                 {
                     encoding: 'utf8',
@@ -727,18 +787,16 @@ export class AdobeEntityService {
                 },
             );
 
-            this.debugLogger.debug(`[Entity Service] Project select command completed with code: ${result.code}`);
-
             if (result.code === 0) {
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectId });
-
-                // Smart caching
+                // Smart caching - use silent mode to avoid duplicate log messages
+                let projectName = projectId; // Fallback to ID if name lookup fails
                 try {
-                    const projects = await this.getProjects();
+                    const projects = await this.getProjects({ silent: true });
                     const selectedProject = projects.find(p => p.id === projectId);
 
                     if (selectedProject) {
                         this.cacheManager.setCachedProject(selectedProject);
+                        projectName = selectedProject.title || selectedProject.name || projectId;
                     } else {
                         this.cacheManager.setCachedProject(undefined);
                         this.debugLogger.warn(`[Entity Service] Could not find project ${projectId} in list`);
@@ -747,6 +805,9 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] Failed to cache project after selection:', error);
                     this.cacheManager.setCachedProject(undefined);
                 }
+
+                // Log with project name (or ID as fallback)
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectName });
 
                 // Clear downstream caches
                 this.cacheManager.setCachedWorkspace(undefined);
@@ -762,20 +823,24 @@ export class AdobeEntityService {
             const err = error as AdobeCLIError;
             if (err.stdout?.includes('Project selected :')) {
                 this.debugLogger.debug('[Entity Service] Project selection succeeded despite timeout');
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectId });
 
-                // Smart caching even on timeout success
+                // Smart caching even on timeout success - use silent mode
+                let projectName = projectId; // Fallback to ID if name lookup fails
                 try {
-                    const projects = await this.getProjects();
+                    const projects = await this.getProjects({ silent: true });
                     const selectedProject = projects.find(p => p.id === projectId);
 
                     if (selectedProject) {
                         this.cacheManager.setCachedProject(selectedProject);
+                        projectName = selectedProject.title || selectedProject.name || projectId;
                     }
                 } catch (cacheError) {
                     this.debugLogger.debug('[Entity Service] Failed to cache project after timeout success:', cacheError);
                     this.cacheManager.setCachedProject(undefined);
                 }
+
+                // Log with project name (or ID as fallback)
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectName });
 
                 // Clear downstream caches
                 this.cacheManager.setCachedWorkspace(undefined);
@@ -790,17 +855,34 @@ export class AdobeEntityService {
     }
 
     /**
-     * Select workspace
+     * Select workspace with project context guard.
+     * Ensures the project is selected first (protects against context drift).
+     *
+     * @param workspaceId - The workspace ID to select
+     * @param projectId - Project ID to ensure context before selection
      */
-    async selectWorkspace(workspaceId: string): Promise<boolean> {
+    async selectWorkspace(workspaceId: string, projectId: string): Promise<boolean> {
+        const contextOk = await this.ensureContext({ projectId });
+        if (!contextOk) {
+            this.debugLogger.error('[Entity Service] Failed to ensure project context for workspace selection');
+            return false;
+        }
+
+        return this.doSelectWorkspace(workspaceId);
+    }
+
+    /**
+     * Internal workspace selection (no context guard).
+     * Used by selectWorkspace.
+     */
+    private async doSelectWorkspace(workspaceId: string): Promise<boolean> {
         try {
             // SECURITY: Validate workspaceId to prevent command injection
             validateWorkspaceId(workspaceId);
 
             this.stepLogger.logTemplate('adobe-setup', 'operations.selecting', { item: 'workspace' });
-            this.debugLogger.debug(`[Entity Service] Selecting workspace ${workspaceId}`);
 
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 `aio console workspace select ${workspaceId}`,
                 {
                     encoding: 'utf8',
@@ -808,18 +890,16 @@ export class AdobeEntityService {
                 },
             );
 
-            this.debugLogger.debug(`[Entity Service] Workspace select command completed with code: ${result.code}`);
-
             if (result.code === 0) {
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.workspace-selected', { name: workspaceId });
-
-                // Smart caching
+                // Smart caching and get name for logging
+                let workspaceName = workspaceId; // Fallback to ID if name lookup fails
                 try {
                     const workspaces = await this.getWorkspaces();
                     const selectedWorkspace = workspaces.find(w => w.id === workspaceId);
 
                     if (selectedWorkspace) {
                         this.cacheManager.setCachedWorkspace(selectedWorkspace);
+                        workspaceName = selectedWorkspace.name || workspaceId;
                     } else {
                         this.cacheManager.setCachedWorkspace(undefined);
                         this.debugLogger.warn(`[Entity Service] Could not find workspace ${workspaceId} in list`);
@@ -828,6 +908,9 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] Failed to cache workspace after selection:', error);
                     this.cacheManager.setCachedWorkspace(undefined);
                 }
+
+                // Log with workspace name (or ID as fallback)
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.workspace-selected', { name: workspaceName });
 
                 // Invalidate console.where cache
                 this.cacheManager.clearConsoleWhereCache();
@@ -887,6 +970,29 @@ export class AdobeEntityService {
         } catch (error) {
             this.debugLogger.error('[Entity Service] Failed to auto-select organization:', error as Error);
             return undefined;
+        }
+    }
+
+    /**
+     * Clear Adobe CLI console context (org/project/workspace selections)
+     * Preserves authentication token (ims context)
+     */
+    private async clearConsoleContext(): Promise<void> {
+        try {
+            // Use established pattern: Promise.all for parallel execution
+            await Promise.all([
+                this.commandManager.execute('aio config delete console.org', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.project', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8' }),
+            ]);
+
+            // Clear console.where cache since context was cleared
+            this.cacheManager.clearConsoleWhereCache();
+
+            this.debugLogger.debug('[Entity Service] Cleared Adobe CLI console context (preserved token)');
+        } catch (error) {
+            // Fail gracefully - config may not exist
+            this.debugLogger.debug('[Entity Service] Failed to clear console context (non-critical):', error);
         }
     }
 }

@@ -254,7 +254,7 @@ class CheckUpdatesCommand extends BaseCommand {
 class DeployMeshCommand extends BaseCommand {
     async execute() {
         // 1. Pre-flight auth check
-        const isAuthenticated = await this.authManager.isAuthenticatedQuick();
+        const isAuthenticated = await this.authManager.isAuthenticated();
         if (!isAuthenticated) {
             const action = await vscode.window.showWarningMessage(
                 'Authentication required to deploy mesh',
@@ -437,9 +437,9 @@ class SimpleCommand {
 ```typescript
 class AdobeIOCommand extends BaseCommand {
     async execute() {
-        // 1. Quick auth check (< 1 second, token only)
-        const isAuthenticated = await this.authManager.isAuthenticatedQuick();
-        
+        // 1. Token-only auth check (2-3s, no org validation)
+        const isAuthenticated = await this.authManager.isAuthenticated();
+
         if (!isAuthenticated) {
             // 2. Show explicit warning with user choice
             const action = await vscode.window.showWarningMessage(
@@ -473,7 +473,7 @@ class AdobeIOCommand extends BaseCommand {
 - Clear context for why auth is needed
 - Graceful degradation (operation cancelled if user declines)
 
-**Performance Note**: `isAuthenticatedQuick()` only checks token validity (< 1s) vs full org validation (9+ seconds).
+**Performance Note**: `isAuthenticated()` only checks token validity (2-3s) vs full org validation (3-10s with `isFullyAuthenticated()`).
 
 ## Key Responsibilities
 

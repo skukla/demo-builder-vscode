@@ -25,8 +25,8 @@ The feature leverages the Adobe Console SDK to achieve 30x faster operations com
 **Purpose**: Main orchestration service for all authentication operations
 
 **Key Methods**:
-- `isAuthenticatedQuick()` - Fast token check (<1s, no org validation, no SDK initialization)
-- `isAuthenticated()` - Full authentication check with org validation and SDK initialization (3-10s)
+- `isAuthenticated()` - Token-only check (2-3s, no org validation, no SDK initialization)
+- `isFullyAuthenticated()` - Full authentication check with org validation and SDK initialization (3-10s)
 - `login(force?: boolean)` - Browser-based authentication flow with automatic retry
 - `logout()` - Sign out and clear all caches
 - `getOrganizations()` - Fetch available Adobe organizations
@@ -39,6 +39,7 @@ The feature leverages the Adobe Console SDK to achieve 30x faster operations com
 - `getCurrentProject()` - Get currently selected project
 - `getCurrentWorkspace()` - Get currently selected workspace
 - `autoSelectOrganizationIfNeeded()` - Auto-select if only one org available
+- `getTokenManager()` - Get TokenManager instance for token inspection operations
 
 **Example Usage**:
 ```typescript
@@ -50,11 +51,11 @@ const authService = new AuthenticationService(
     commandManager
 );
 
-// Quick check for dashboard loads (fast)
-const isAuth = await authService.isAuthenticatedQuick();
+// Token-only check for dashboard loads (fast, 2-3s)
+const isAuth = await authService.isAuthenticated();
 
-// Full check with SDK initialization (slower but comprehensive)
-const isFullyAuth = await authService.isAuthenticated();
+// Full check with SDK initialization (slower but comprehensive, 3-10s)
+const isFullyAuth = await authService.isFullyAuthenticated();
 
 // Login flow
 await authService.login();
@@ -164,7 +165,7 @@ cacheManager.setCachedAuthStatus(false, 30000); // 30 seconds
 **Purpose**: Manages Adobe organizations, projects, and workspaces with SDK acceleration
 
 **Key Methods**:
-- `getOrganizations()` - Fetch organizations (SDK-accelerated when available)
+- `getOrganizations()` - Fetch organizations (SDK-accelerated when available, clears CLI context if zero orgs found)
 - `getProjects()` - Fetch projects in current org
 - `getWorkspaces()` - Fetch workspaces in current project
 - `getCurrentOrganization()` - Get current org context
@@ -174,6 +175,9 @@ cacheManager.setCachedAuthStatus(false, 30000); // 30 seconds
 - `selectProject(projectId)` - Select project and update CLI context
 - `selectWorkspace(workspaceId)` - Select workspace and update CLI context
 - `autoSelectOrganizationIfNeeded(skipCurrentCheck?)` - Auto-select single org
+
+**Zero-Organization Behavior**:
+When `getOrganizations()` returns an empty array (user has no accessible organizations), the service automatically clears stale Adobe CLI console context (org/project/workspace selections) while preserving the authentication token. This prevents showing outdated organization selections from previous sessions.
 
 **Example Usage**:
 ```typescript
@@ -327,14 +331,14 @@ AuthenticationService (orchestrator)
 ```typescript
 import { AuthenticationService } from '@/features/authentication';
 
-// Fast auth check for dashboard loads (<1 second)
+// Token-only auth check for dashboard loads (2-3 seconds)
 const authService = new AuthenticationService(
     context.extensionPath,
     logger,
     commandManager
 );
 
-const isAuthenticated = await authService.isAuthenticatedQuick();
+const isAuthenticated = await authService.isAuthenticated();
 
 if (isAuthenticated) {
     // Load dashboard
@@ -454,13 +458,13 @@ cacheManager.setCachedAuthStatus(isAuth);
 ## Performance Considerations
 
 ### Authentication Speed
-- **Quick Check**: `isAuthenticatedQuick()` - <1 second (token only)
-- **Full Check**: `isAuthenticated()` - 3-10 seconds (with org validation)
+- **Token-Only Check**: `isAuthenticated()` - 2-3 seconds (token validation only)
+- **Full Check**: `isFullyAuthenticated()` - 3-10 seconds (with org validation)
 - **SDK Operations**: 30x faster than pure CLI approach
 - **Caching**: 5-30 minute TTLs reduce redundant checks
 
 ### Best Practices
-1. **Use Quick Checks**: For dashboard loads and non-critical paths, use `isAuthenticatedQuick()`
+1. **Use Token-Only Checks**: For dashboard loads and non-critical paths, use `isAuthenticated()`
 2. **Pre-flight Authentication**: Verify auth BEFORE expensive operations to avoid surprise browser launches
 3. **SDK Initialization**: Initialize SDK in background after auth for future performance gains
 4. **Cache Appropriately**:
@@ -504,18 +508,22 @@ cacheManager.setCachedAuthStatus(isAuth);
 
 ### Error Recovery
 ```typescript
+import { toAppError, isTimeout, isNetwork } from '@/types/errors';
+
 try {
     await authService.login();
 } catch (error) {
-    if (error.message.includes('timeout')) {
+    const appError = toAppError(error);
+
+    if (isTimeout(appError)) {
         // User closed browser or session expired
         showMessage('Authentication timed out. Please try again.');
-    } else if (error.message.includes('ENETUNREACH')) {
+    } else if (isNetwork(appError)) {
         // Network error
         showMessage('Network error. Check your internet connection.');
     } else {
-        // Generic error
-        showMessage(`Authentication failed: ${error.message}`);
+        // Generic error - use user-friendly message from typed error
+        showMessage(`Authentication failed: ${appError.userMessage}`);
     }
 }
 ```

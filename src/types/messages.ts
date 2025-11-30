@@ -146,12 +146,12 @@ export interface WorkspacePayload {
  */
 export interface ComponentPayload {
     componentId?: string;
-    category?: 'frontend' | 'backend' | 'dependencies' | 'externalSystems' | 'appBuilder';
+    category?: 'frontend' | 'backend' | 'dependencies' | 'integrations' | 'appBuilder';
     selection?: {
         frontend?: string;
         backend?: string;
         dependencies?: string[];
-        externalSystems?: string[];
+        integrations?: string[];
         appBuilder?: string[];
     };
     presetId?: string;

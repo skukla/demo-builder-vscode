@@ -1,10 +1,11 @@
-import type { CommandExecutor } from '@/core/shell';
-import { getLogger } from '@/core/logging';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { toError } from '@/types/typeGuards';
-import type { AuthToken } from '@/features/authentication/services/types';
 import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
+import { getLogger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
+import { TIMEOUTS, formatMinutes } from '@/core/utils';
+import type { AuthToken } from '@/features/authentication/services/types';
+import { toAppError, isTimeout } from '@/types/errors';
+import { toError } from '@/types/typeGuards';
 
 /**
  * Manages Adobe access tokens
@@ -87,7 +88,7 @@ export class TokenManager {
             try {
                 // Get ENTIRE access_token object (includes both token and expiry)
                 // Using --json flag ensures atomic read of both fields
-                const cmdResult = await this.commandManager.executeAdobeCLI(
+                const cmdResult = await this.commandManager.execute(
                     'aio config get ims.contexts.cli.access_token --json',
                     { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ },
                 );
@@ -113,10 +114,6 @@ export class TokenManager {
                 const expiry = tokenData.expiry || 0;
                 const now = Date.now();
 
-                this.logger.debug(`[Token] Fetched token config (attempt ${attempt}/${maxRetries})`);
-                this.logger.debug(`[Token] Token length: ${token?.length || 0}`);
-                this.logger.debug(`[Token] Expiry: ${expiry}, Now: ${now}, Diff (min): ${Math.floor((expiry - now) / 1000 / 60)}`);
-
                 // CORRUPTION DETECTION (beta.42): expiry=0 indicates corrupted state
                 if (token && token.length > 100 && expiry === 0) {
                     this.logger.warn('[Token] CORRUPTION DETECTED: Token present but expiry=0');
@@ -124,7 +121,7 @@ export class TokenManager {
                     // Format user-friendly corruption message
                     const formatted = AuthenticationErrorFormatter.formatError(
                         new Error('Token corruption: expiry=0'),
-                        { operation: 'token-validation' }
+                        { operation: 'token-validation' },
                     );
 
                     this.logger.error(`[Token] ${formatted.message}`);
@@ -147,7 +144,7 @@ export class TokenManager {
                 }
 
                 const expiresIn = Math.floor((expiry - now) / 1000 / 60);
-                this.logger.debug(`[Token] Token valid, expires in ${expiresIn} minutes`);
+                this.logger.debug(`[Token] Token valid, expires in ${formatMinutes(expiresIn)}`);
 
                 const result = { valid: true, expiresIn, token };
 
@@ -159,14 +156,14 @@ export class TokenManager {
                 return result;
             } catch (error) {
                 lastError = toError(error);
-                const errorMessage = lastError.message;
+                const appError = toAppError(error);
 
                 // Check if it's a timeout error that should be retried
-                const isTimeout = errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT');
+                const isTimeoutError = isTimeout(appError);
 
-                if (isTimeout && attempt < maxRetries) {
+                if (isTimeoutError && attempt < maxRetries) {
                     // Exponential backoff: 500ms, 1000ms, 2000ms
-                    const backoffMs = 500 * Math.pow(2, attempt - 1);
+                    const backoffMs = TIMEOUTS.TOKEN_RETRY_BASE * Math.pow(2, attempt - 1);
                     this.logger.warn(`[Token] Timeout on attempt ${attempt}/${maxRetries}, retrying in ${backoffMs}ms...`);
                     await new Promise(resolve => setTimeout(resolve, backoffMs));
                     continue; // Retry
@@ -174,9 +171,9 @@ export class TokenManager {
 
                 // Non-timeout error or max retries reached
                 if (attempt === maxRetries) {
-                    this.logger.warn(`[Token] Failed after ${maxRetries} attempts: ${errorMessage}`);
+                    this.logger.warn(`[Token] Failed after ${maxRetries} attempts: ${appError.userMessage}`);
                 } else {
-                    this.logger.warn(`[Token] Non-timeout error on attempt ${attempt}, giving up: ${errorMessage}`);
+                    this.logger.warn(`[Token] Non-timeout error on attempt ${attempt}, giving up: ${appError.userMessage}`);
                 }
 
                 return { valid: false, expiresIn: 0 };
@@ -203,7 +200,7 @@ export class TokenManager {
      */
     async getTokenExpiry(): Promise<number | undefined> {
         try {
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 'aio config get ims.contexts.cli.access_token.expiry',
                 { encoding: 'utf8', timeout: TIMEOUTS.CONFIG_READ },
             );

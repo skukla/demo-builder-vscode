@@ -426,11 +426,153 @@ if (data.isAuthenticated) {
 3. **Progressive disclosure reduces overwhelm**: Show options only when relevant
 4. **Persistent summary provides confidence**: Users always see their configuration
 
+## Layout Components with Spectrum Tokens
+
+### Overview
+
+As of v1.7.0, the project's layout components (`GridLayout`, `TwoColumnLayout`) support Adobe Spectrum design tokens for dimension properties. This provides type-safe, design-system-aligned values while maintaining backward compatibility.
+
+### Using Spectrum Tokens
+
+#### GridLayout with Tokens
+
+```tsx
+// Recommended: Use Spectrum tokens
+<GridLayout
+  columns={3}
+  gap="size-300"      // 24px
+  padding="size-400"  // 32px
+  maxWidth="size-6000" // 480px
+>
+  <TileCard />
+  <TileCard />
+</GridLayout>
+
+// Also works: Backward compatible with pixel values
+<GridLayout gap="24px" padding={32}>
+  <TileCard />
+</GridLayout>
+```
+
+#### TwoColumnLayout with Tokens
+
+```tsx
+// Recommended: Use Spectrum tokens
+<TwoColumnLayout
+  gap="size-300"           // 24px gap between columns
+  leftPadding="size-400"   // 32px padding
+  leftMaxWidth="size-6000" // 480px max width
+  leftContent={<ProjectList />}
+  rightContent={<Summary />}
+/>
+
+// Mixed usage: Tokens + pixel values
+<TwoColumnLayout
+  gap="size-300"
+  leftPadding="24px"  // Still works
+  leftContent={<Form />}
+  rightContent={<Preview />}
+/>
+```
+
+### Supported Tokens
+
+The following 13 Spectrum size tokens are supported (based on codebase analysis):
+
+| Token | Pixel Value | Common Use Case |
+|-------|-------------|-----------------|
+| `size-50` | 4px | Extra small spacing |
+| `size-100` | 8px | Small spacing |
+| `size-115` | 9.2px | Rare, specific components |
+| `size-130` | 10.4px | Rare, specific components |
+| `size-150` | 12px | Medium-small spacing |
+| `size-160` | 12.8px | Rare, specific components |
+| `size-200` | 16px | Medium spacing |
+| `size-300` | 24px | **Large spacing (most common)** |
+| `size-400` | 32px | Extra large spacing |
+| `size-500` | 40px | Section spacing |
+| `size-600` | 48px | Large section spacing |
+| `size-1000` | 80px | Very large spacing |
+| `size-6000` | 480px | Maximum width constraints |
+
+### Type Safety
+
+Using invalid tokens causes TypeScript compilation errors:
+
+```tsx
+// ✅ Compiles: Valid token
+<GridLayout gap="size-300" />
+
+// ❌ Compile error: Invalid token
+<GridLayout gap="size-999" />
+// Type '"size-999"' is not assignable to type 'DimensionValue'
+
+// ✅ Compiles: Numeric and pixel string values still work
+<GridLayout gap={24} />
+<GridLayout gap="24px" />
+```
+
+### Migration Examples
+
+#### Before (WelcomeScreen)
+```tsx
+// Bug: gap={24} rendered as "24" (no unit), CSS interpreted as 24px anyway
+<GridLayout columns={2} gap={24}>
+```
+
+#### After (WelcomeScreen)
+```tsx
+// Fixed: gap="size-300" translates to "24px"
+<GridLayout columns={2} gap="size-300">
+```
+
+#### Before (AdobeProjectStep)
+```tsx
+// Hardcoded pixel values
+<TwoColumnLayout
+  leftMaxWidth="800px"
+  leftPadding="24px"
+  rightPadding="24px"
+/>
+```
+
+#### After (AdobeProjectStep)
+```tsx
+// Design system tokens
+<TwoColumnLayout
+  leftMaxWidth="800px"  // No token for 800px yet
+  leftPadding="size-300"
+  rightPadding="size-300"
+/>
+```
+
+### Implementation Details
+
+The translation utility (`webview-ui/src/shared/utils/spectrumTokens.ts`) handles three value types:
+
+1. **Spectrum tokens**: `"size-300"` → `"24px"`
+2. **Pixel strings**: `"24px"` → `"24px"` (pass-through)
+3. **Numbers**: `24` → `"24px"` (automatic unit)
+
+This ensures backward compatibility while enabling design system alignment.
+
+### When to Use Tokens vs Pixels
+
+**Use Tokens When:**
+- Value matches a standard Spectrum size (check table above)
+- Building new features or refactoring
+- You want compile-time validation
+
+**Use Pixels When:**
+- Value doesn't match any token (e.g., `800px`, `1200px`)
+- Working with specific pixel-perfect requirements
+- Dealing with calculated values
+
 ## Future Considerations
 
 - Consider creating a custom Picker wrapper component with our standard props
 - Investigate React Spectrum theming for more systematic customization
 - Monitor React Spectrum updates that might provide better native solutions
-- Create standard layout components that avoid Spectrum Flex constraints
 - Implement caching for projects/workspaces to improve performance
 - Add keyboard navigation for accessibility
+- Expand token support as more Spectrum sizes are needed (YAGNI principle)

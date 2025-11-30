@@ -28,9 +28,7 @@
       "@/types": ["src/types"],
       "@/types/*": ["src/types/*"],
       "@/providers/*": ["src/providers/*"],
-      "@/utils/*": ["src/utils/*"],
-      "@/webview-ui/*": ["webview-ui/src/*"],
-      "@/design-system/*": ["webview-ui/src/shared/components/*"]
+      "@/utils/*": ["src/utils/*"]
     }
   },
   "include": ["src/**/*"],
@@ -38,13 +36,8 @@
     "node_modules",
     "dist",
     "**/*.test.ts",
-    "webview-ui/**/*",
-    "src/features/*/ui/**/*",
-    "src/features/*/commands/*Webview*.ts",
-    "src/features/welcome/**/*",
-    "src/features/dashboard/commands/configure.ts",
-    "src/features/dashboard/commands/showDashboard.ts",
-    "src/features/project-creation/commands/createProject.ts",
-    "src/features/project-creation/handlers/validateHandler.ts"
+    "**/*.test.tsx",
+    "tests/**/*",
+    "webview-ui/**/*"
   ]
 }

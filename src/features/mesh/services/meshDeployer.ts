@@ -1,9 +1,11 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ServiceLocator } from '@/core/di';
-import { Project } from '@/types';
 import { Logger } from '@/core/logging';
 import { validateMeshId } from '@/core/validation';
+import { Project } from '@/types';
+import { ErrorCode } from '@/types/errorCodes';
+import { toAppError } from '@/types/errors';
 import { DataResult, SimpleResult } from '@/types/results';
 
 export class MeshDeployer {
@@ -26,7 +28,7 @@ export class MeshDeployer {
             // Deploy mesh
             this.logger.info('Deploying API Mesh...');
             const commandManager = ServiceLocator.getCommandExecutor();
-            const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:create mesh.json', {
+            const { stdout } = await commandManager.execute('aio api-mesh:create mesh.json', {
                 cwd: project.path,
             });
 
@@ -39,10 +41,11 @@ export class MeshDeployer {
                 return { success: true, data: { endpoint } };
             }
 
-            return { success: false, error: 'No endpoint found in deployment output' };
+            return { success: false, error: 'No endpoint found in deployment output', code: ErrorCode.MESH_DEPLOY_FAILED };
         } catch (error) {
+            const appError = toAppError(error);
             this.logger.error('Mesh deployment failed', error as Error);
-            return { success: false, error: (error as Error).message };
+            return { success: false, error: appError.userMessage, code: appError.code };
         }
     }
 
@@ -106,7 +109,7 @@ export class MeshDeployer {
             await fs.writeFile(meshPath, JSON.stringify(meshConfig, null, 2));
 
             const commandManager = ServiceLocator.getCommandExecutor();
-            const { stdout } = await commandManager.executeAdobeCLI('aio api-mesh:update mesh.json', {
+            const { stdout } = await commandManager.execute('aio api-mesh:update mesh.json', {
                 cwd: project.path,
             });
 
@@ -118,10 +121,11 @@ export class MeshDeployer {
                 return { success: true, data: { endpoint } };
             }
 
-            return { success: false, error: 'No endpoint found in update output' };
+            return { success: false, error: 'No endpoint found in update output', code: ErrorCode.MESH_DEPLOY_FAILED };
         } catch (error) {
+            const appError = toAppError(error);
             this.logger.error('Mesh update failed', error as Error);
-            return { success: false, error: (error as Error).message };
+            return { success: false, error: appError.userMessage, code: appError.code };
         }
     }
 
@@ -132,7 +136,7 @@ export class MeshDeployer {
             validateMeshId(meshId);
 
             const commandManager = ServiceLocator.getCommandExecutor();
-            await commandManager.executeAdobeCLI(`aio api-mesh:delete ${meshId}`);
+            await commandManager.execute(`aio api-mesh:delete ${meshId}`);
             this.logger.info(`Mesh ${meshId} deleted`);
             return true;
         } catch (error) {

@@ -2,6 +2,9 @@
  * Promise utilities for timeout and cancellation handling
  */
 
+import { TimeoutError, toAppError, isTimeout } from '@/types/errors';
+import { ErrorCode } from '@/types/errorCodes';
+
 export interface TimeoutOptions {
     timeoutMs: number;
     timeoutMessage?: string;
@@ -46,20 +49,25 @@ export async function withTimeout<T>(
 ): Promise<T> {
     const { timeoutMs, timeoutMessage, signal } = options;
 
-    // Create timeout promise
+    // Create timeout promise - use TimeoutError for typed detection
+    // Note: TimeoutError generates its own userMessage, but callers can provide custom via timeoutMessage
     const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-            reject(new Error(
-                timeoutMessage || `Operation timed out after ${timeoutMs}ms`,
-            ));
+            const error = new TimeoutError(
+                timeoutMessage || 'Operation',
+                timeoutMs,
+            );
+            reject(error);
         }, timeoutMs);
     });
 
-    // Create cancellation promise if signal provided
+    // Create cancellation promise if signal provided - use Error with code for typed detection
     const cancellationPromise = signal
         ? new Promise<never>((_, reject) => {
             signal.addEventListener('abort', () => {
-                reject(new Error('Operation cancelled by user'));
+                const cancelError = new Error('Operation cancelled by user');
+                (cancelError as Error & { code?: string }).code = ErrorCode.CANCELLED;
+                reject(cancelError);
             });
         })
         : null;
@@ -111,12 +119,17 @@ export async function tryWithTimeout<T>(
             cancelled: false,
         };
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        
+        const appError = toAppError(error);
+
+        // Use typed error detection instead of string matching
+        const timedOut = isTimeout(appError);
+        const cancelled = appError.code === ErrorCode.CANCELLED ||
+            (error instanceof Error && (error as Error & { code?: string }).code === ErrorCode.CANCELLED);
+
         return {
-            timedOut: errorMessage.includes('timed out'),
-            cancelled: errorMessage.includes('cancelled'),
-            error: error instanceof Error ? error : new Error(errorMessage),
+            timedOut,
+            cancelled,
+            error: error instanceof Error ? error : new Error(appError.userMessage),
         };
     }
 }

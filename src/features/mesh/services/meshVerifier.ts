@@ -4,9 +4,11 @@
  */
 
 import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { MeshVerificationResult } from '@/features/mesh/services/types';
 import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
-import type { MeshVerificationResult } from '@/features/mesh/services/types';
+import { getMeshNodeVersion } from './meshConfig';
 
 export type { MeshVerificationResult };
 
@@ -35,12 +37,13 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
         const commandManager = ServiceLocator.getCommandExecutor();
         
         // Call aio api-mesh:describe to verify mesh exists
+        // Uses Node version defined in commerce-mesh component configuration
         const result = await commandManager.execute(
             'aio api-mesh:describe',
             {
-                timeout: 30000,
+                timeout: TIMEOUTS.MESH_DESCRIBE,
                 configureTelemetry: false,
-                useNodeVersion: null,
+                useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,
             },
         );

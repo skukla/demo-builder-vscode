@@ -88,18 +88,12 @@
         "dynamic": true,
         "steps": [
           {
-            "name": "Install Node.js",
-            "message": "Installing Node.js",
+            "name": "Install Node.js (Node {version})",
+            "message": "Installing Node.js (Node {version})",
             "commandTemplate": "fnm install {version}",
             "estimatedDuration": 30000,
-            "progressStrategy": "synthetic"
-          },
-          {
-            "name": "Set as default",
-            "message": "Setting as default Node.js version",
-            "commandTemplate": "fnm default {version}",
-            "estimatedDuration": 2000,
-            "progressStrategy": "immediate"
+            "progressStrategy": "exact",
+            "progressParser": "fnm"
           }
         ]
       },
@@ -123,8 +117,8 @@
       "install": {
         "steps": [
           {
-            "name": "Install Adobe I/O CLI",
-            "message": "Installing Adobe I/O CLI globally",
+            "name": "Install Adobe I/O CLI (Node {version})",
+            "message": "Installing Adobe I/O CLI for Node {version}",
             "commands": ["npm install -g @adobe/aio-cli --no-fund --prefer-offline --verbose"],
             "estimatedDuration": 60000,
             "progressStrategy": "milestones",
@@ -166,7 +160,7 @@
               }
             ]
           },
-          "requiredFor": ["commerce-mesh"]
+          "requiredFor": ["commerce-mesh", "adobe-commerce-paas", "adobe-commerce-saas"]
         }
       ]
     },

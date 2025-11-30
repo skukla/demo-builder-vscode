@@ -7,12 +7,48 @@
  * - Sends status updates to UI with progress tracking
  */
 
-import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { toError, isTimeoutError } from '@/types/typeGuards';
+import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
-import { HandlerContext } from '@/features/project-creation/handlers/HandlerContext';
-import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled } from '@/features/prerequisites/handlers/shared';
+import { toError } from '@/types/typeGuards';
+import type { PrerequisiteCheckState } from '@/types/handlers';
+
+/**
+ * Summary of a prerequisite check result for UI display
+ */
+interface PrerequisiteSummary {
+    id: number;
+    name: string;
+    required: boolean;
+    installed: boolean;
+    version?: string;
+    canInstall: boolean;
+}
+
+/**
+ * Transform prerequisite state to summary object for UI
+ *
+ * SOP §6: Extracted 6-property callback to named transformation
+ *
+ * @param id - The prerequisite index
+ * @param state - The prerequisite check state
+ * @returns Summary object for UI consumption
+ */
+function toPrerequisiteSummary(
+    id: number,
+    state: PrerequisiteCheckState,
+): PrerequisiteSummary {
+    return {
+        id,
+        name: state.prereq.name,
+        required: !state.prereq.optional,
+        installed: state.result.installed,
+        version: state.result.version,
+        canInstall: state.result.canInstall,
+    };
+}
 
 /**
  * check-prerequisites - Check all prerequisites for selected components
@@ -25,11 +61,11 @@ export async function handleCheckPrerequisites(
     payload?: { componentSelection?: import('../../../types/components').ComponentSelection; isRecheck?: boolean },
 ): Promise<SimpleResult> {
     try {
-        context.stepLogger.log('prerequisites', 'Starting prerequisites check', 'info');
+        context.stepLogger?.log('prerequisites', 'Starting prerequisites check', 'info');
 
         // Clear cache on Recheck button click (Step 2: Prerequisite Caching)
         if (payload?.isRecheck) {
-            context.prereqManager.getCacheManager().clearAll();
+            context.prereqManager?.getCacheManager().clearAll();
             context.logger.debug('[Prerequisites] Cache cleared for recheck');
         }
 
@@ -39,9 +75,9 @@ export async function handleCheckPrerequisites(
         }
 
         // Load config and get prerequisites
-        const config = await context.prereqManager.loadConfig();
+        const config = await context.prereqManager?.loadConfig();
         // Get prerequisites and resolve dependency order
-        const prerequisites = context.prereqManager.resolveDependencies(config.prerequisites || []);
+        const prerequisites = context.prereqManager?.resolveDependencies(config?.prerequisites || []);
         context.sharedState.currentPrerequisites = prerequisites;
 
         // Initialize state tracking
@@ -50,11 +86,11 @@ export async function handleCheckPrerequisites(
         // Get Node version to component mapping if we have components selected
         const nodeVersionMapping = await getNodeVersionMapping(context);
 
-        context.stepLogger.log('prerequisites', `Found ${prerequisites.length} prerequisites to check`, 'info');
+        context.stepLogger?.log('prerequisites', `Found ${prerequisites?.length ?? 0} prerequisites to check`, 'info');
 
         // Send prerequisites list to UI so it can display them
         await context.sendMessage('prerequisites-loaded', {
-            prerequisites: prerequisites.map((p, index) => ({
+            prerequisites: prerequisites?.map((p, index) => ({
                 id: index,
                 name: p.name,
                 description: p.description,
@@ -65,12 +101,14 @@ export async function handleCheckPrerequisites(
         });
 
         // Small delay to ensure UI updates before we start checking
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI_UPDATE_DELAY));
 
         // Check each prerequisite
-        for (let i = 0; i < prerequisites.length; i++) {
-            const prereq = prerequisites[i];
-            context.stepLogger.log('prerequisites', `Checking ${prereq.name}...`, 'info');
+        for (let i = 0; i < (prerequisites?.length ?? 0); i++) {
+            const prereq = prerequisites?.[i];
+            if (!prereq) continue;
+
+            context.stepLogger?.log('prerequisites', formatProgressMessage(prereq, nodeVersionMapping), 'info');
 
             // Send status update
             await context.sendMessage('prerequisite-status', {
@@ -84,54 +122,29 @@ export async function handleCheckPrerequisites(
             // Check prerequisite with timeout error handling
             let checkResult;
             try {
-                checkResult = await context.prereqManager.checkPrerequisite(prereq);
+                checkResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;
             } catch (error) {
-                // Handle timeout or other check errors
-                const errorMessage = toError(error).message;
-
-                // Log to all appropriate channels
-                if (isTimeoutError(error)) {
-                    context.logger.warn(`[Prerequisites] ${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000}s`);
-                    context.stepLogger.log('prerequisites', `⏱️ ${prereq.name} check timed out (${TIMEOUTS.PREREQUISITE_CHECK / 1000}s)`, 'warn');
-                    context.debugLogger.debug('[Prerequisites] Timeout details:', { prereq: prereq.id, timeout: TIMEOUTS.PREREQUISITE_CHECK, error: errorMessage });
-                } else {
-                    context.logger.error(`[Prerequisites] Failed to check ${prereq.name}:`, error as Error);
-                    context.stepLogger.log('prerequisites', `✗ ${prereq.name} check failed: ${errorMessage}`, 'error');
-                    context.debugLogger.debug('[Prerequisites] Check failure details:', { prereq: prereq.id, error });
-                }
-
-                await context.sendMessage('prerequisite-status', {
-                    index: i,
-                    name: prereq.name,
-                    status: 'error',
-                    description: prereq.description,
-                    required: !prereq.optional,
-                    installed: false,
-                    message: isTimeoutError(error)
-                        ? `Check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds. Click Recheck to try again.`
-                        : `Failed to check: ${errorMessage}`,
-                    canInstall: false,
-                });
-
-                // Continue to next prerequisite
+                await handlePrerequisiteCheckError(context, prereq, i, error);
                 continue;
             }
 
+            if (!checkResult || !prereq) continue;
+
             // For Node.js, check multiple versions if we have a mapping
             let nodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
-            if (prereq.id === 'node' && Object.keys(nodeVersionMapping).length > 0) {
-                nodeVersionStatus = await context.prereqManager.checkMultipleNodeVersions(nodeVersionMapping);
+            if (prereq.id === 'node' && hasNodeVersions(nodeVersionMapping)) {
+                nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);
             }
 
             // For per-node-version prerequisites (e.g., Adobe I/O CLI), detect partial installs across required Node majors
-            // Always show required Node versions from component selection
-            // If main tool not installed: show all as "not installed"
-            // If main tool installed: check each Node version properly
+            // OPTIMIZATION: Reuse cached per-version results from checkPrerequisite() instead of re-checking
+            // The initial check already ran checkPerNodeVersionStatus for ALL installed Node versions
+            // We just need to filter to required versions and determine missing variants
             let perNodeVariantMissing = false;
             const missingVariantMajors: string[] = [];
-            const perNodeVersionStatus: { version: string; component: string; installed: boolean }[] = [];
-            if (prereq.perNodeVersion && Object.keys(nodeVersionMapping).length > 0) {
-                const requiredMajors = Object.keys(nodeVersionMapping);
+            const perNodeVersionStatus: { version: string; major: string; component: string; installed: boolean }[] = [];
+            if (prereq.perNodeVersion && hasNodeVersions(nodeVersionMapping)) {
+                const requiredMajors = getNodeVersionKeys(nodeVersionMapping);
 
                 if (!checkResult.installed) {
                     // Main tool not installed: populate with all NOT installed
@@ -139,6 +152,7 @@ export async function handleCheckPrerequisites(
                     for (const major of requiredMajors) {
                         perNodeVersionStatus.push({
                             version: `Node ${major}`,
+                            major,
                             component: '',
                             installed: false,
                         });
@@ -146,11 +160,41 @@ export async function handleCheckPrerequisites(
                     perNodeVariantMissing = true;
                     missingVariantMajors.push(...requiredMajors);
                 } else {
-                    // Main tool installed: check each Node version properly
-                    const result = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
-                    perNodeVariantMissing = result.perNodeVariantMissing;
-                    missingVariantMajors.push(...result.missingVariantMajors);
-                    perNodeVersionStatus.push(...result.perNodeVersionStatus);
+                    // Main tool installed: filter cached per-version results to required versions only
+                    // This avoids duplicate checks - checkPrerequisite() already checked all versions
+                    const cachedResults = context.prereqManager?.getCacheManager().getPerVersionResults(prereq.id);
+
+                    if (cachedResults && cachedResults.length > 0) {
+                        // Use cached results - just filter to required versions
+                        context.logger.debug(`[Prerequisites] Reusing cached per-version results for ${prereq.name} (${requiredMajors.length} required versions)`);
+
+                        for (const major of requiredMajors) {
+                            const cached = cachedResults.find(r => r.version === `Node ${major}`);
+                            if (cached) {
+                                perNodeVersionStatus.push(cached);
+                                if (!cached.installed) {
+                                    missingVariantMajors.push(major);
+                                }
+                            } else {
+                                // Fallback: version not in cache, assume not installed
+                                perNodeVersionStatus.push({
+                                    version: `Node ${major}`,
+                                    major,
+                                    component: nodeVersionMapping[major] || '',
+                                    installed: false,
+                                });
+                                missingVariantMajors.push(major);
+                            }
+                        }
+                        perNodeVariantMissing = missingVariantMajors.length > 0;
+                    } else {
+                        // Fallback: no cached results, run the check (shouldn't happen but be safe)
+                        context.logger.warn(`[Prerequisites] No cached per-version results for ${prereq.name}, falling back to re-check`);
+                        const result = await checkPerNodeVersionStatus(prereq, requiredMajors, context);
+                        perNodeVariantMissing = result.perNodeVariantMissing;
+                        missingVariantMajors.push(...result.missingVariantMajors);
+                        perNodeVersionStatus.push(...result.perNodeVersionStatus);
+                    }
                 }
             }
 
@@ -161,18 +205,19 @@ export async function handleCheckPrerequisites(
                 nodeVersionStatus: prereq.id === 'node' ? nodeVersionStatus : perNodeVersionStatus,
             });
 
-            // Log the result
+            // Log the result - for Node.js, show all installed versions (SOP §2)
             if (checkResult.installed) {
-                context.stepLogger.log('prerequisites', `✓ ${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`, 'info');
+                const versionDisplay = formatVersionSuffix(prereq, nodeVersionStatus, checkResult.version);
+                context.stepLogger?.log('prerequisites', `✓ ${prereq.name} is installed${versionDisplay}`, 'info');
             } else {
-                context.stepLogger.log('prerequisites', `✗ ${prereq.name} is not installed`, 'warn');
+                context.stepLogger?.log('prerequisites', `✗ ${prereq.name} is not installed`, 'warn');
             }
 
             // Compute dependency gating (disable install until deps are installed)
             const depsInstalled = areDependenciesInstalled(prereq, context);
 
             // Determine overall status for Node when specific required versions are missing
-            let overallStatus: 'success' | 'error' | 'warning' = checkResult.installed ? 'success' : (!prereq.optional ? 'error' : 'warning');
+            let overallStatus = determinePrerequisiteStatus(checkResult.installed, !!prereq.optional);
             let nodeMissing = false;
             if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 0) {
                 nodeMissing = nodeVersionStatus.some(v => !v.installed);
@@ -194,13 +239,16 @@ export async function handleCheckPrerequisites(
                 // For per-node-version prerequisites: installed is false if ANY required Node version is missing the tool
                 installed: (prereq.perNodeVersion && perNodeVariantMissing) ? false : checkResult.installed,
                 version: checkResult.version,
-                message: (prereq.perNodeVersion && perNodeVersionStatus && perNodeVersionStatus.length > 0)
-                    ? 'Installed for versions:'
-                    : (prereq.perNodeVersion && perNodeVariantMissing)
-                        ? `${prereq.name} is missing in Node ${missingVariantMajors.join(', ')}. Plugin status will be checked after CLI is installed.`
-                        : (checkResult.installed
-                            ? `${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`
-                            : `${prereq.name} is not installed`),
+                // Special message for per-node-version display, otherwise use standard status message
+                message: getPrerequisiteDisplayMessage(
+                    prereq.name,
+                    !!prereq.perNodeVersion,
+                    perNodeVersionStatus,
+                    perNodeVariantMissing,
+                    missingVariantMajors,
+                    checkResult.installed,
+                    checkResult.version,
+                ),
                 // Enable install only when dependencies are satisfied AND this prerequisite is incomplete
                 // Node: missing majors; perNodeVersion: missing any variant; Otherwise: not installed
                 canInstall: depsInstalled && (
@@ -222,17 +270,11 @@ export async function handleCheckPrerequisites(
         // Send completion status
         await context.sendMessage('prerequisites-complete', {
             allInstalled: allRequiredInstalled,
-            prerequisites: Array.from(context.sharedState.currentPrerequisiteStates.entries()).map(([id, state]) => ({
-                id,
-                name: state.prereq.name,
-                required: !state.prereq.optional,
-                installed: state.result.installed,
-                version: state.result.version,
-                canInstall: state.result.canInstall,
-            })),
+            prerequisites: Array.from(context.sharedState.currentPrerequisiteStates.entries())
+                .map(([id, state]) => toPrerequisiteSummary(id, state)),
         });
 
-        context.stepLogger.log('prerequisites', `Prerequisites check complete. All required installed: ${allRequiredInstalled}`, 'info');
+        context.stepLogger?.log('prerequisites', `Prerequisites check complete. All required installed: ${allRequiredInstalled}`, 'info');
 
         return { success: true };
     } catch (error) {
@@ -241,6 +283,6 @@ export async function handleCheckPrerequisites(
             message: 'Failed to check prerequisites',
             details: toError(error).message,
         });
-        return { success: false };
+        return { success: false, error: 'Failed to check prerequisites', code: ErrorCode.UNKNOWN };
     }
 }

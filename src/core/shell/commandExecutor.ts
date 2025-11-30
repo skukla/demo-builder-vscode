@@ -1,7 +1,5 @@
-import { spawn } from 'child_process';
 import type { ExecOptions } from 'child_process';
-import { getLogger } from '@/core/logging';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import execa, { type ExecaError, type ExecaChildProcess } from 'execa';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
@@ -9,6 +7,10 @@ import { PollingService } from './pollingService';
 import { ResourceLocker } from './resourceLocker';
 import { RetryStrategyManager } from './retryStrategyManager';
 import type { CommandResult, ExecuteOptions, CommandRequest, CommandConfig, PollOptions } from './types';
+import { DEFAULT_SHELL } from '@/types/shell';
+import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateNodeVersion } from '@/core/validation/securityValidation';
 
 /**
  * Main command executor - orchestrates all command execution operations
@@ -27,9 +29,9 @@ export class CommandExecutor {
     private commandQueue: CommandRequest[] = [];
     private isProcessingQueue = false;
 
-    // Session caching for Adobe CLI
-    private adobeVersionCache: CommandResult | null = null;
-    private adobePluginsCache: CommandResult | null = null;
+    // Session caching for Adobe CLI (keyed by node version for multi-version support)
+    private adobeVersionCache: Map<string, CommandResult> = new Map();
+    private adobePluginsCache: Map<string, CommandResult> = new Map();
 
     constructor() {
         this.environmentSetup = new EnvironmentSetup();
@@ -80,31 +82,105 @@ export class CommandExecutor {
      */
     private async executeInternal(command: string, options: ExecuteOptions): Promise<CommandResult> {
         let finalCommand = command;
-        const finalOptions: ExecOptions = { ...options };
+        // Type assertion needed because ExecuteOptions.shell supports boolean, but ExecOptions.shell only supports string
+        // Node.js spawn actually supports both, so this is safe
+        const finalOptions: ExecOptions = { ...options } as ExecOptions;
+
+        // Auto-detect Adobe CLI commands and automatically apply required defaults
+        // Eliminates ENOENT errors by ensuring shell: true is always set for 'aio' commands
+        // Developers can now safely use execute() for Adobe CLI without specifying options
+        const isAdobeCLI = command.startsWith('aio ') || command.startsWith('aio-');
+        if (isAdobeCLI) {
+            // Ensure Node version is set once per session
+            const isVersionCheck = command.includes('--version') || command.includes('-v');
+            if (!isVersionCheck) {
+                await this.environmentSetup.ensureAdobeCLINodeVersion(this.execute.bind(this));
+            }
+
+            // Auto-apply Adobe CLI defaults (unless explicitly overridden by caller)
+            // This makes execute() work correctly for Adobe CLI without manual options
+            if (!finalOptions.shell) {
+                finalOptions.shell = DEFAULT_SHELL;
+            }
+            if (options.configureTelemetry === undefined) {
+                options.configureTelemetry = false;
+            }
+            if (options.enhancePath === undefined) {
+                options.enhancePath = true;
+            }
+            if (options.useNodeVersion === undefined) {
+                options.useNodeVersion = null;
+            }
+            // Set retry strategy if not provided
+            if (!options.retryStrategy) {
+                options.retryStrategy = this.retryManager.getStrategy('adobe-cli');
+            }
+        }
 
         // Step 1: Handle telemetry configuration for Adobe CLI
-        if (options.configureTelemetry || (command.startsWith('aio ') && options.configureTelemetry !== false)) {
+        // Skip telemetry configuration for version checks (AIO CLI might not be installed yet)
+        const isVersionCheck = command.includes('--version') || command.includes('-v');
+        if (!isVersionCheck && (options.configureTelemetry || (command.startsWith('aio ') && options.configureTelemetry !== false))) {
             await this.environmentSetup.ensureAdobeCLIConfigured(this.execute.bind(this));
         }
 
-        // Step 2: Handle Node version management
+        // Step 2: Handle Node version management and resolve "auto" to actual version
         // Fix #7 (01b94d6): Use fnm exec for bulletproof isolation instead of fnm use
+        let effectiveNodeVersion: string | null = options.useNodeVersion ?? null;
+
         if (options.useNodeVersion !== null && options.useNodeVersion !== undefined) {
+            // SECURITY FIX (CWE-77): Validate nodeVersion BEFORE resolving "auto"
+            // Critical: nodeVersion is directly interpolated into shell command at line 113
+            // Attack example: nodeVersion = "20; rm -rf /" → `fnm exec --using=20; rm -rf / npm install`
+            // Allowlist validation blocks ALL shell metacharacters (;, &, |, <, >, etc.)
+            validateNodeVersion(options.useNodeVersion);
+
             const nodeVersion = options.useNodeVersion === 'auto'
                 ? await this.environmentSetup.findAdobeCLINodeVersion()
                 : options.useNodeVersion;
+
+            effectiveNodeVersion = nodeVersion;
+
+            // SECURITY FIX (CWE-77): Defense-in-depth validation for resolved version
+            // Protects against compromised findAdobeCLINodeVersion() or .aio config tampering
+            // "current" keyword is safe: uses `fnm env` (not interpolated into --using=)
+            if (nodeVersion && nodeVersion !== 'current') {
+                validateNodeVersion(nodeVersion);
+            }
 
             if (nodeVersion) {
                 // Use fnm exec for guaranteed isolation
                 const fnmPath = this.environmentSetup.findFnmPath();
                 if (fnmPath && nodeVersion !== 'current') {
+                    // SECURITY: nodeVersion is validated above - safe for shell interpolation
                     // fnm exec provides bulletproof isolation - no fallback to nvm/system Node
                     finalCommand = `${fnmPath} exec --using=${nodeVersion} ${finalCommand}`;
-                    finalOptions.shell = finalOptions.shell || '/bin/zsh';
+                    // CRITICAL: fnm exec REQUIRES /bin/zsh shell, override any caller-provided shell
+                    // Bug fix: Don't use ||, always force zsh for fnm commands
+                    finalOptions.shell = '/bin/zsh';
                 } else if (nodeVersion === 'current') {
-                    // Use fnm env for current version
+                    // Use fnm env for current version (not interpolated - safe without validation)
                     finalCommand = `eval "$(fnm env)" && ${finalCommand}`;
-                    finalOptions.shell = finalOptions.shell || '/bin/zsh';
+                    // CRITICAL: fnm env also requires /bin/zsh shell
+                    finalOptions.shell = '/bin/zsh';
+                }
+            }
+        }
+
+        // Step 2.5: Check cache for Adobe CLI commands (after Node version resolution)
+        // Cache is keyed by command + node version for correct multi-version support
+        if (isAdobeCLI) {
+            const cacheKey = `${command}##${effectiveNodeVersion || 'default'}`;
+
+            if (command === 'aio --version') {
+                const cachedResult = this.adobeVersionCache.get(cacheKey);
+                if (cachedResult) {
+                    return cachedResult;
+                }
+            } else if (command === 'aio plugins') {
+                const cachedResult = this.adobePluginsCache.get(cacheKey);
+                if (cachedResult) {
+                    return cachedResult;
                 }
             }
         }
@@ -126,20 +202,33 @@ export class CommandExecutor {
 
         // Step 5: Handle streaming vs regular execution
         if (options.streaming && options.onOutput) {
-            return this.executeStreamingInternal(finalCommand, finalOptions, options.onOutput);
+            return this.executeStreamingInternal(finalCommand, finalOptions, options.onOutput, options.signal);
         }
 
         // Step 6: Execute with retry logic
         const retryStrategy = options.retryStrategy || this.retryManager.getDefaultStrategy();
-        return this.retryManager.executeWithRetry(
-            () => this.executeStreamingInternal(finalCommand, finalOptions, () => {}),
+        const result = await this.retryManager.executeWithRetry(
+            () => this.executeStreamingInternal(finalCommand, finalOptions, () => {}, options.signal),
             retryStrategy,
             command.substring(0, 50),
         );
+
+        // Cache Adobe CLI results for version and plugins commands (keyed by node version)
+        if (isAdobeCLI && result.code === 0) {
+            const cacheKey = `${command}##${effectiveNodeVersion || 'default'}`;
+
+            if (command === 'aio --version') {
+                this.adobeVersionCache.set(cacheKey, result);
+            } else if (command === 'aio plugins') {
+                this.adobePluginsCache.set(cacheKey, result);
+            }
+        }
+
+        return result;
     }
 
     /**
-     * Execute command with streaming output
+     * Execute command with streaming output using execa
      *
      * SECURITY NOTE: shell option
      *
@@ -192,133 +281,99 @@ export class CommandExecutor {
         command: string,
         options: ExecOptions,
         onOutput: (data: string) => void,
+        signal?: AbortSignal,
     ): Promise<CommandResult> {
-        return new Promise((resolve, reject) => {
-            const startTime = Date.now();
-            let stdout = '';
-            let stderr = '';
+        const startTime = Date.now();
+        let stdout = '';
+        let stderr = '';
 
-            // SECURITY FIX: Remove shell: true default
-            // Only use shell if explicitly requested OR if fnm environment setup set it
-            const child = spawn(command, [], {
-                shell: options.shell || false,  // Changed from true to false
-                cwd: options.cwd,
-                env: options.env!,
+        // Build execa options
+        // Note: execa handles timeout internally with automatic cleanup (SIGTERM → SIGKILL after 5s)
+        const shellOption = options.shell || false;
+        const subprocess: ExecaChildProcess = execa(command, {
+            shell: shellOption,
+            cwd: options.cwd as string | undefined,
+            env: options.env as NodeJS.ProcessEnv | undefined,
+            timeout: options.timeout,
+            reject: false,    // Don't throw on non-zero exit - we handle it
+            stdin: 'pipe',    // Enable stdin for Adobe CLI telemetry prompt handling
+        });
+
+        // Manual AbortController support (execa v5 doesn't have native signal option)
+        if (signal) {
+            const abortHandler = () => {
+                subprocess.kill();  // execa handles SIGTERM → SIGKILL automatically
+            };
+            signal.addEventListener('abort', abortHandler);
+            // Clean up listener when process completes
+            subprocess.finally(() => {
+                signal.removeEventListener('abort', abortHandler);
             });
+        }
 
-            child.stdout?.on('data', (data) => {
-                const output = data.toString();
-                stdout += output;
+        // Stream stdout and handle Adobe CLI telemetry prompt
+        subprocess.stdout?.on('data', (data: Buffer) => {
+            const output = data.toString();
+            stdout += output;
 
-                // Auto-handle Adobe CLI telemetry prompt
-                if (output.includes('Would you like to allow @adobe/aio-cli to collect anonymous usage data?')) {
-                    this.logger.info('[Command Executor] Auto-answered aio-cli telemetry prompt');
-                    child.stdin?.write('n\n');
-                    child.stdin?.end();
-                }
-
-                onOutput(output);
-            });
-
-            child.stderr?.on('data', (data) => {
-                const output = data.toString();
-                stderr += output;
-                onOutput(output);
-            });
-
-            child.on('error', (error) => {
-                this.logger.error(`[Command Executor] Process error: ${error.message}`);
-                reject(error);
-            });
-
-            child.on('close', (code) => {
-                // Only log non-zero exit codes
-                if (code && code !== 0) {
-                    this.logger.warn(`[Command Executor] Process exited with code ${code} after ${Date.now() - startTime}ms`);
-                }
-                const duration = Date.now() - startTime;
-                resolve({
-                    stdout,
-                    stderr,
-                    code: code || 0,
-                    duration,
-                });
-            });
-
-            // Handle timeout
-            if (options.timeout) {
-                const timeoutId = setTimeout(() => {
-                    this.logger.warn(`[Command Executor] Command timed out after ${options.timeout}ms (PID: ${child.pid})`);
-
-                    if (!child.killed) {
-                        child.kill('SIGTERM');
-
-                        // Force kill after 2 seconds
-                        setTimeout(() => {
-                            if (!child.killed && child.exitCode === null) {
-                                this.logger.warn(`[Command Executor] Force killing process ${child.pid} (SIGKILL)`);
-                                child.kill('SIGKILL');
-                            }
-                        }, 2000);
-                    }
-
-                    reject(new Error(`Command timed out after ${options.timeout}ms`));
-                }, options.timeout);
-
-                // Clear timeout when process completes
-                child.on('close', () => clearTimeout(timeoutId));
+            // Auto-handle Adobe CLI telemetry prompt
+            if (output.includes('Would you like to allow @adobe/aio-cli to collect anonymous usage data?')) {
+                this.logger.debug('[Command Executor] Auto-answered aio-cli telemetry prompt');
+                subprocess.stdin?.write('n\n');
+                subprocess.stdin?.end();
             }
-        });
-    }
 
-    /**
-     * Get current fnm version
-     */
-    private async getCurrentFnmVersion(): Promise<string | null> {
+            onOutput(output);
+        });
+
+        // Stream stderr
+        subprocess.stderr?.on('data', (data: Buffer) => {
+            const output = data.toString();
+            stderr += output;
+            onOutput(output);
+        });
+
         try {
-            const result = await this.execute('fnm current', { timeout: 2000 });
-            return result.stdout?.trim() || null;
-        } catch {
-            return null;
+            // Wait for process to complete
+            const result = await subprocess;
+            const duration = Date.now() - startTime;
+
+            // Log non-zero exit codes at debug level (many are expected)
+            // Examples: git exit 128 (no tags), grep exit 1 (no match)
+            if (result.exitCode && result.exitCode !== 0) {
+                this.logger.debug(`[Command Executor] Process exited with code ${result.exitCode} after ${duration}ms`);
+            }
+
+            return {
+                stdout,
+                stderr,
+                code: result.exitCode,
+                duration,
+            };
+        } catch (error) {
+            const execaError = error as ExecaError;
+            const duration = Date.now() - startTime;
+
+            // Handle execa-specific error types
+            if (execaError.timedOut) {
+                this.logger.warn(`[Command Executor] Command timed out after ${options.timeout}ms`);
+                throw new Error(`Command timed out after ${options.timeout}ms`);
+            }
+
+            if (execaError.isCanceled) {
+                this.logger.debug('[Command Executor] Command was canceled via AbortController');
+                throw new Error('Command was canceled');
+            }
+
+            if (execaError.killed) {
+                this.logger.debug('[Command Executor] Command was killed');
+                throw new Error('Command was killed');
+            }
+
+            // For other errors, log and re-throw
+            this.logger.error(`[Command Executor] Process error: ${execaError.message}`);
+            throw error;
         }
-    }
-
-    /**
-     * Execute Adobe CLI command with the correct Node version
-     */
-    async executeAdobeCLI(command: string, options?: ExecuteOptions): Promise<CommandResult> {
-        // Check cache for specific commands
-        if (command === 'aio --version' && this.adobeVersionCache) {
-            this.logger.debug('[Command Executor] Using cached aio --version result');
-            return this.adobeVersionCache;
-        }
-        if (command === 'aio plugins' && this.adobePluginsCache) {
-            this.logger.debug('[Command Executor] Using cached aio plugins result');
-            return this.adobePluginsCache;
-        }
-
-        // Ensure Node version is set once per session
-        await this.environmentSetup.ensureAdobeCLINodeVersion(this.execute.bind(this));
-
-        // Execute command
-        const result = await this.execute(command, {
-            ...options,
-            configureTelemetry: false,
-            useNodeVersion: null,
-            enhancePath: true,
-            retryStrategy: this.retryManager.getStrategy('adobe-cli'),
-        });
-
-        // Cache results for version and plugins commands
-        if (command === 'aio --version' && result.code === 0) {
-            this.adobeVersionCache = result;
-            this.logger.debug('[Command Executor] Cached aio --version result');
-        } else if (command === 'aio plugins' && result.code === 0) {
-            this.adobePluginsCache = result;
-            this.logger.debug('[Command Executor] Cached aio plugins result');
-        }
-
-        return result;
     }
 
     /**
@@ -340,11 +395,12 @@ export class CommandExecutor {
 
     /**
      * Wait for a file system change
+     * SOP §1: Using TIMEOUTS constant instead of magic number
      */
     async waitForFileSystem(
         path: string,
         expectedCondition?: () => Promise<boolean>,
-        timeout = 10000,
+        timeout = TIMEOUTS.FILE_WATCH_TIMEOUT,
     ): Promise<void> {
         return this.fileWatcher.waitForFileSystem(path, expectedCondition, timeout);
     }
@@ -359,7 +415,7 @@ export class CommandExecutor {
         return this.commandSequencer.executeSequence(
             commands,
             async (command, config) => {
-                return await this.execute(command, {
+                return this.execute(command, {
                     ...config.options,
                     exclusive: config.resource,
                     configureTelemetry: command.startsWith('aio '),
@@ -378,7 +434,7 @@ export class CommandExecutor {
         return this.commandSequencer.executeParallel(
             commands,
             async (command, config) => {
-                return await this.execute(command, {
+                return this.execute(command, {
                     ...config.options,
                     configureTelemetry: command.startsWith('aio '),
                     enhancePath: command.startsWith('aio '),
@@ -411,7 +467,7 @@ export class CommandExecutor {
 
     /**
      * Process the command queue
-     * Uses index-based iteration instead of shift() for O(n) complexity
+     * Continues processing until queue is empty, handling commands added during processing
      */
     private async processQueue(): Promise<void> {
         if (this.isProcessingQueue || this.commandQueue.length === 0) {
@@ -420,25 +476,28 @@ export class CommandExecutor {
 
         this.isProcessingQueue = true;
 
-        // Process all queued commands
-        const commands = [...this.commandQueue];
-        this.commandQueue = [];
+        // Keep processing until queue is empty
+        while (this.commandQueue.length > 0) {
+            // Process all currently queued commands
+            const commands = [...this.commandQueue];
+            this.commandQueue = [];
 
-        for (const request of commands) {
-            try {
-                let result: CommandResult;
+            for (const request of commands) {
+                try {
+                    let result: CommandResult;
 
-                if (request.resourceLock) {
-                    result = await this.executeExclusive(request.resourceLock, () =>
-                        this.execute(request.command, request.options),
-                    );
-                } else {
-                    result = await this.execute(request.command, request.options);
+                    if (request.resourceLock) {
+                        result = await this.executeExclusive(request.resourceLock, () =>
+                            this.execute(request.command, request.options),
+                        );
+                    } else {
+                        result = await this.execute(request.command, request.options);
+                    }
+
+                    request.resolve(result);
+                } catch (error) {
+                    request.reject(error as Error);
                 }
-
-                request.resolve(result);
-            } catch (error) {
-                request.reject(error as Error);
             }
         }
 
@@ -453,7 +512,7 @@ export class CommandExecutor {
     async commandExists(command: string): Promise<boolean> {
         // SECURITY: Validate command name to prevent command injection
         // Only allow alphanumeric characters, hyphens, underscores, dots, and forward slashes (for paths)
-        if (!/^[a-zA-Z0-9_.\/-]+$/.test(command)) {
+        if (!/^[a-zA-Z0-9_./\-]+$/.test(command)) {
             this.logger.warn(`[Command Executor] Invalid command name rejected: ${command}`);
             return false;
         }
@@ -516,7 +575,5 @@ export class CommandExecutor {
 
         // Reset environment setup session
         this.environmentSetup.resetSession();
-
-        this.logger.debug('[Command Executor] Disposed all resources');
     }
 }

@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
-import { Project } from '@/types';
-import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
-import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
-import { UpdateManager, UpdateCheckResult } from '@/features/updates/services/updateManager';
 import { BaseCommand } from '@/core/base';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
+import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
+import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
+import { UpdateManager, UpdateCheckResult } from '@/features/updates/services/updateManager';
+import { Project } from '@/types';
 
 /**
  * Command to check for and apply updates to extension and components
@@ -20,7 +20,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                 {
                     location: vscode.ProgressLocation.Notification,
                     title: 'Demo Builder Updates',
-                    cancellable: false
+                    cancellable: false,
                 },
                 async (progress) => {
                     // Show initial message
@@ -34,13 +34,11 @@ export class CheckUpdatesCommand extends BaseCommand {
                     const project = await this.stateManager.getCurrentProject();
 
                     // Check extension updates
-                    this.logger.info('[Updates] Checking for extension updates');
                     const extensionUpdate = await updateManager.checkExtensionUpdate();
 
                     // Check component updates (if project loaded)
                     let componentUpdates: Map<string, UpdateCheckResult> = new Map();
                     if (project) {
-                        this.logger.info('[Updates] Checking for component updates');
                         componentUpdates = await updateManager.checkComponentUpdates(project);
                     }
 
@@ -51,13 +49,13 @@ export class CheckUpdatesCommand extends BaseCommand {
                     if (!hasUpdates) {
                         // Show "up to date" result using centralized timeout
                         progress.report({
-                            message: `Up to date (v${extensionUpdate.current})`
+                            message: `Up to date (v${extensionUpdate.current})`,
                         });
                         await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UPDATE_RESULT_DISPLAY));
                     }
 
                     return { extensionUpdate, componentUpdates, project, hasUpdates };
-                }
+                },
             );
 
             // If no updates, we already showed the result - just return
@@ -80,8 +78,8 @@ export class CheckUpdatesCommand extends BaseCommand {
             }
 
             // Log available updates
-            this.logger.info(`[Updates] Found ${updates.length} update(s):`);
-            updates.forEach(update => this.logger.info(`[Updates]   - ${update}`));
+            this.logger.debug(`[Updates] Found ${updates.length} update(s):`);
+            updates.forEach(update => this.logger.debug(`[Updates]   - ${update}`));
       
             // Show update prompt (simplified - no "View Details" button)
             const message = `Updates available:\n${updates.join('\n')}`;
@@ -120,12 +118,12 @@ export class CheckUpdatesCommand extends BaseCommand {
             );
       
             if (stop !== 'Stop & Update') {
-                this.logger.info('[Updates] User cancelled update (demo still running)');
+                this.logger.debug('[Updates] User cancelled update (demo still running)');
                 return;
             }
       
             // Stop demo
-            this.logger.info('[Updates] Stopping demo before component updates');
+            this.logger.debug('[Updates] Stopping demo before component updates');
             await vscode.commands.executeCommand('demoBuilder.stopDemo');
 
             // Wait for clean shutdown

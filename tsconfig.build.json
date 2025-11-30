@@ -7,7 +7,6 @@
     "node_modules",
     "dist",
     "**/*.test.ts",
-    "webview-ui/**/*",
     "src/features/*/ui/**/*",
     "src/features/welcome/**/*",
     "src/features/dashboard/**/*",

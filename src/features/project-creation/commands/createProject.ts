@@ -1,32 +1,48 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
-import { parseJSON } from '@/types/typeGuards';
-import { AuthenticationService } from '@/features/authentication';
-import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
-import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
-import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import { WebviewCommunicationManager } from '@/core/communication';
 import { BaseWebviewCommand } from '@/core/base';
-import { generateWebviewHTML } from '@/core/utils/webviewHTMLBuilder';
+import { WebviewCommunicationManager } from '@/core/communication';
+import { ServiceLocator } from '@/core/di';
+import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
+import { ProgressUnifier } from '@/core/utils/progressUnifier';
+import {
+    getWebviewHTMLWithBundles,
+    type BundleUris
+} from '@/core/utils/getWebviewHTMLWithBundles';
+import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
+import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 // Extracted helper functions
-import { HandlerContext, SharedState } from '@/features/project-creation/handlers/HandlerContext';
+import { HandlerContext, SharedState } from '@/commands/handlers/HandlerContext';
 import { HandlerRegistry } from '@/features/project-creation/handlers/HandlerRegistry';
 import {
     formatGroupName as formatGroupNameHelper,
-    generateComponentEnvFile as generateEnvFile,
     getSetupInstructions as getSetupInstructionsHelper,
     getEndpoint as getEndpointHelper,
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
+import { parseJSON } from '@/types/typeGuards';
 
 // Type definitions for createProjectWebview
 interface WizardStep {
     id: string;
+    name: string;
     [key: string]: unknown;
+}
+
+/**
+ * Type guard for WizardStep (SOP §10 compliance)
+ *
+ * Extracts inline 6-condition validation chain to explicit type guard
+ * with early returns for readability.
+ */
+function isWizardStep(value: unknown): value is WizardStep {
+    if (typeof value !== 'object' || value === null) return false;
+    if (!('id' in value) || typeof value.id !== 'string') return false;
+    if (!('name' in value) || typeof value.name !== 'string') return false;
+    return true;
 }
 
 interface ComponentDefaults {
@@ -107,7 +123,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 const apiServicesConfig = parseJSON<Record<string, unknown>>(servicesContent);
                 if (apiServicesConfig) {
                     this.sharedState.apiServicesConfig = apiServicesConfig;
-                    this.logger.debug('Loaded API services configuration');
                 }
             }
         } catch (error) {
@@ -139,13 +154,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                     const stepsContent = fs.readFileSync(stepsPath, 'utf8');
                     const stepsConfig = parseJSON<{ steps: unknown[] }>(stepsContent);
                     if (stepsConfig && Array.isArray(stepsConfig.steps)) {
-                        // Type guard: ensure each step has required properties
-                        const isWizardStepArray = stepsConfig.steps.every(
-                            (s): s is { id: string; name: string; [key: string]: unknown } =>
-                                typeof s === 'object' && s !== null && 'id' in s && typeof s.id === 'string' && 'name' in s && typeof s.name === 'string',
-                        );
-                        if (isWizardStepArray) {
-                            wizardSteps = stepsConfig.steps as { id: string; name: string; [key: string]: unknown }[];
+                        // Validate all steps have required properties using type guard
+                        if (stepsConfig.steps.every(isWizardStep)) {
+                            wizardSteps = stepsConfig.steps;
                         }
                     }
                 }
@@ -170,26 +181,51 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         return 'Create Demo Project';
     }
 
+    /**
+     * Generates webview HTML content with webpack 4-bundle pattern.
+     *
+     * Bundle loading order is critical for proper initialization:
+     * 1. runtime-bundle.js - Webpack runtime enables chunk loading
+     * 2. vendors-bundle.js - React/Spectrum must load before application code
+     * 3. common-bundle.js - Shared code (including WebviewClient for handshake)
+     * 4. wizard-bundle.js - Wizard-specific code executes last
+     *
+     * This pattern eliminates race conditions where webview JavaScript
+     * attempts to execute before dependencies are loaded, causing timeout errors.
+     *
+     * @returns HTML string with all 4 bundles in correct order
+     */
     protected async getWebviewContent(): Promise<string> {
         const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
 
-        // Get URI for bundle
-        const bundleUri = this.panel!.webview.asWebviewUri(
-            vscode.Uri.file(path.join(webviewPath, 'main-bundle.js')),
-        );
+        // Webpack code splitting requires loading bundles in order:
+        // 1. runtime (webpack runtime and chunk loading)
+        // 2. vendors (React, Spectrum, third-party libraries)
+        // 3. common (shared code including WebviewClient)
+        // 4. wizard (wizard-specific code)
+        const bundleUris: BundleUris = {
+            runtime: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'runtime-bundle.js'))
+            ),
+            vendors: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'vendors-bundle.js'))
+            ),
+            common: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'common-bundle.js'))
+            ),
+            feature: this.panel!.webview.asWebviewUri(
+                vscode.Uri.file(path.join(webviewPath, 'wizard-bundle.js'))
+            ),
+        };
 
         const nonce = this.getNonce();
-        const isDark = vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark;
 
-        // Build the HTML content using shared utility
-        return generateWebviewHTML({
-            scriptUri: bundleUri,
+        // Build HTML with 4-bundle pattern
+        return getWebviewHTMLWithBundles({
+            bundleUris,
             nonce,
-            title: 'Adobe Demo Builder',
             cspSource: this.panel!.webview.cspSource,
-            includeLoadingSpinner: true,
-            loadingMessage: 'Loading Adobe Demo Builder...',
-            isDark,
+            title: 'Adobe Demo Builder',
         });
     }
 
@@ -219,7 +255,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 const stepsConfig = parseJSON<{ steps: WizardStep[] }>(stepsContent);
                 if (stepsConfig) {
                     wizardSteps = stepsConfig.steps;
-                    this.logger.debug(`Loaded ${wizardSteps?.length || 0} wizard steps: ${wizardSteps?.slice(0, 3).map((s) => s.id).join(', ')}${wizardSteps?.length > 3 ? ` ... (and ${wizardSteps.length - 3} more)` : ''}`);
+                    // Extract step IDs for logging (show first 3 + count of remaining)
+                    const stepCount = wizardSteps?.length ?? 0;
+                    const stepPreview = wizardSteps?.slice(0, 3).map((s) => s.id).join(', ') ?? '';
+                    const remainingCount = stepCount > 3 ? ` ... (and ${stepCount - 3} more)` : '';
+                    this.logger.debug(`Loaded ${stepCount} wizard steps: ${stepPreview}${remainingCount}`);
                 }
             }
         } catch (error) {
@@ -308,25 +348,23 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     public async execute(): Promise<void> {
         try {
-            this.logger.info('[Project Creation] Initializing wizard interface...');
-            this.logger.debug(`[Project Creation] execute() called. Current panel: ${this.panel ? 'exists' : 'undefined'}, comm: ${this.communicationManager ? 'exists' : 'undefined'}`);
-            
+            this.logger.debug('[Project Creation] Initializing wizard interface...');
+
             // Create or reveal panel
             await this.createOrRevealPanel();
-            
-            this.logger.debug(`[Project Creation] After createOrRevealPanel(). Panel: ${this.panel ? 'exists' : 'undefined'}, comm: ${this.communicationManager ? 'exists' : 'undefined'}`);
-            
+
             // Initialize communication only if not already initialized
             // (singleton pattern: panel might already exist with active communication)
             if (!this.communicationManager) {
-                this.logger.debug('[Project Creation] No communication manager, initializing...');
                 await this.initializeCommunication();
-                this.logger.debug('Wizard webview initialized with handshake protocol');
-            } else {
-                this.logger.debug('Wizard webview already initialized, reusing existing communication');
             }
-            
+
+            // End webview transition (wizard successfully opened)
+            BaseWebviewCommand.endWebviewTransition();
+
         } catch (error) {
+            // Ensure transition is ended even on error
+            BaseWebviewCommand.endWebviewTransition();
             this.logger.error('Failed to create webview', error as Error);
             await this.showError('Failed to create webview', error as Error);
         }
@@ -384,20 +422,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     // Project creation with timeout and cancellation support
     
     // Actual project creation logic (extracted for testability)
-    
-    /**
-     * Generate component-specific .env file
-     * Each component gets its own .env with only the variables it needs
-     */
-    private async generateComponentEnvFile(
-        componentPath: string,
-        componentId: string,
-        componentDef: unknown,
-        config: Record<string, unknown>,
-    ): Promise<void> {
-        await generateEnvFile(componentPath, componentId, componentDef as import('@/types/components').TransformedComponentDefinition, config, this.logger);
-    }
-    
+
     /**
      * Format group name for display
      */

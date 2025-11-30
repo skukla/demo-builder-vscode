@@ -1,8 +1,22 @@
-import { parseJSON, toError, isTimeoutError } from '@/types/typeGuards';
-import type { CommandExecutor } from '@/core/shell';
 import { getLogger, Logger } from '@/core/logging';
+import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
+import { toAppError, isTimeout } from '@/types/errors';
+import { parseJSON, toError } from '@/types/typeGuards';
+
+/**
+ * Check if message indicates a permission-related error (SOP §10 compliance)
+ */
+function isPermissionError(message: string): boolean {
+    const lowerMessage = message.toLowerCase();
+    if (lowerMessage.includes('permission')) return true;
+    if (lowerMessage.includes('unauthorized')) return true;
+    if (lowerMessage.includes('forbidden')) return true;
+    if (lowerMessage.includes('access denied')) return true;
+    if (lowerMessage.includes('insufficient privileges')) return true;
+    return false;
+}
 
 /**
  * Validates organization access and manages invalid organization contexts
@@ -26,7 +40,7 @@ export class OrganizationValidator {
             this.debugLogger.debug('[Org Validator] Validating organization access...');
 
             // Try to list projects - this will fail with 403 if org is invalid
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 'aio console project list --json',
                 { encoding: 'utf8', timeout: TIMEOUTS.PROJECT_LIST },
             );
@@ -47,22 +61,15 @@ export class OrganizationValidator {
             this.debugLogger.debug('[Org Validator] Organization access validation failed:', result.stderr);
             return false;
         } catch (error) {
-            // Better timeout detection
-            const errorString = toError(error).message;
-            const errorObj = error as NodeJS.ErrnoException;
+            // Use typed error detection
+            const appError = toAppError(error);
 
-            const isTimeout =
-                errorString.toLowerCase().includes('timeout') ||
-                errorString.toLowerCase().includes('timed out') ||
-                errorString.includes('ETIMEDOUT') ||
-                errorObj?.code === 'ETIMEDOUT';
-
-            if (isTimeout) {
+            if (isTimeout(appError)) {
                 this.debugLogger.warn('[Org Validator] Validation timed out - assuming valid (network delay)');
                 return true; // Fail-open: assume org is valid on timeout
             }
 
-            this.debugLogger.debug('[Org Validator] Validation error:', error);
+            this.debugLogger.debug('[Org Validator] Validation error:', appError);
             return false;
         }
     }
@@ -73,7 +80,7 @@ export class OrganizationValidator {
     async validateAndClearInvalidOrgContext(forceValidation = false): Promise<void> {
         try {
             // Check if we have an organization context
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 'aio console where --json',
                 { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
             );
@@ -159,7 +166,7 @@ export class OrganizationValidator {
             this.debugLogger.debug('[Org Validator] Testing Developer permissions via App Builder access');
 
             // Try to list App Builder projects - this requires Developer or System Admin role
-            const result = await this.commandManager.executeAdobeCLI(
+            const result = await this.commandManager.execute(
                 'aio app list --json',
                 { encoding: 'utf8', timeout: TIMEOUTS.API_CALL },
             );
@@ -169,15 +176,9 @@ export class OrganizationValidator {
                 return { hasPermissions: true };
             }
 
-            // Check for specific permission-related error messages
-            const errorMsg = result.stderr?.toLowerCase() || '';
-            if (
-                errorMsg.includes('permission') ||
-                errorMsg.includes('unauthorized') ||
-                errorMsg.includes('forbidden') ||
-                errorMsg.includes('access denied') ||
-                errorMsg.includes('insufficient privileges')
-            ) {
+            // Check for specific permission-related error messages (SOP §10: using predicate)
+            const errorMsg = result.stderr || '';
+            if (isPermissionError(errorMsg)) {
                 const userMessage =
                     'Your account lacks Developer or System Admin role for this organization. ' +
                     'Please select a different organization or contact your administrator to request App Builder access.';
@@ -192,13 +193,8 @@ export class OrganizationValidator {
             const errorString = toError(error).message;
             this.debugLogger.debug('[Org Validator] Developer permissions test failed:', error);
 
-            // Check if it's a permission-related error in the exception
-            if (
-                errorString.toLowerCase().includes('permission') ||
-                errorString.toLowerCase().includes('unauthorized') ||
-                errorString.toLowerCase().includes('forbidden') ||
-                errorString.toLowerCase().includes('insufficient privileges')
-            ) {
+            // Check if it's a permission-related error in the exception (SOP §10: using predicate)
+            if (isPermissionError(errorString)) {
                 const userMessage =
                     'Your account lacks Developer or System Admin role for this organization. ' +
                     'Please select a different organization or contact your administrator to request App Builder access.';
@@ -217,9 +213,9 @@ export class OrganizationValidator {
         try {
             // Run all three operations in parallel
             await Promise.all([
-                this.commandManager.executeAdobeCLI('aio config delete console.org', { encoding: 'utf8' }),
-                this.commandManager.executeAdobeCLI('aio config delete console.project', { encoding: 'utf8' }),
-                this.commandManager.executeAdobeCLI('aio config delete console.workspace', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.org', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.project', { encoding: 'utf8' }),
+                this.commandManager.execute('aio config delete console.workspace', { encoding: 'utf8' }),
             ]);
 
             // Clear console.where cache since context was cleared

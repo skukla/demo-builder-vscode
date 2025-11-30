@@ -1,30 +1,11 @@
+import { Text } from '@adobe/react-spectrum';
 import React from 'react';
-import {
-    Heading,
-    ListView,
-    Item,
-    Text,
-    Button,
-    Well,
-    Flex,
-    ActionButton,
-    SearchField,
-    ProgressCircle
-} from '@adobe/react-spectrum';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import Refresh from '@spectrum-icons/workflow/Refresh';
-import { LoadingDisplay } from '@/webview-ui/shared/components/LoadingDisplay';
-import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
-import { FadeTransition } from '@/webview-ui/shared/components/FadeTransition';
-import { WizardState, Workspace, WizardStep } from '@/webview-ui/shared/types';
 import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
-
-interface AdobeWorkspaceStepProps {
-    state: WizardState;
-    updateState: (updates: Partial<WizardState>) => void;
-    setCanProceed: (canProceed: boolean) => void;
-    completedSteps?: WizardStep[];
-}
+import { SelectionStepContent } from '@/features/authentication/ui/components/SelectionStepContent';
+import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
+import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import { Workspace } from '@/types/webview';
+import { TrackableStepProps } from '@/types/wizard';
 
 /**
  * Adobe Workspace Selection Step
@@ -36,7 +17,7 @@ interface AdobeWorkspaceStepProps {
  * - Caching in wizard state
  * - Error handling and retry
  */
-export function AdobeWorkspaceStep({ state, updateState, setCanProceed, completedSteps = [] }: AdobeWorkspaceStepProps) {
+export function AdobeWorkspaceStep({ state, updateState, setCanProceed, completedSteps = [] }: TrackableStepProps) {
     // Use selection step hook for all common logic
     const {
         items: workspaces,
@@ -49,7 +30,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
         searchQuery,
         setSearchQuery,
         load: loadWorkspaces,
-        refresh
+        refresh,
     } = useSelectionStep<Workspace>({
         cacheKey: 'workspacesCache',
         messageType: 'get-workspaces',
@@ -64,7 +45,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
             // Look for Stage workspace (case-insensitive)
             return workspaces.find(ws =>
                 ws.name?.toLowerCase().includes('stage') ||
-                ws.title?.toLowerCase().includes('stage')
+                ws.title?.toLowerCase().includes('stage'),
             );
         },
         onSelect: (workspace) => {
@@ -75,19 +56,19 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                 adobeWorkspace: {
                     id: workspace.id,
                     name: workspace.name,
-                    title: workspace.title
-                }
+                    title: workspace.title,
+                },
             });
         },
         validateBeforeLoad: () => {
             if (!state.adobeProject?.id) {
                 return {
                     valid: false,
-                    error: 'No project selected. Please go back and select a project.'
+                    error: 'No project selected. Please go back and select a project.',
                 };
             }
             return { valid: true };
-        }
+        },
     });
 
     // Update can-proceed state when selection changes
@@ -95,162 +76,61 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
         setCanProceed(!!state.adobeWorkspace?.id);
     }, [state.adobeWorkspace, setCanProceed]);
 
+    // Handle selection from list
+    const handleSelect = (workspace: Workspace) => {
+        updateState({
+            adobeWorkspace: {
+                id: workspace.id,
+                name: workspace.name,
+                title: workspace.title,
+            },
+        });
+    };
+
     return (
-        <div style={{ display: 'flex', height: '100%', width: '100%', gap: '0' }}>
-            {/* Left: Workspace Selection - constrained to 800px like other steps */}
-            <div style={{
-                maxWidth: '800px',
-                width: '100%',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
-                <Heading level={2} marginBottom="size-300">
-                    Select Workspace
-                </Heading>
-
-                {showLoading || (isLoading && !hasLoadedOnce) ? (
-                    <Flex justifyContent="center" alignItems="center" height="350px">
-                        <LoadingDisplay
-                            size="L"
-                            message="Loading workspaces..."
-                            subMessage={state.adobeProject ? `Fetching from project: ${state.adobeProject.title || state.adobeProject.name}` : undefined}
-                            helperText="This could take up to 30 seconds"
-                        />
-                    </Flex>
-                ) : error && !isLoading ? (
-                    <FadeTransition show={true}>
-                        <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                            <Flex direction="column" gap="size-200" alignItems="center">
-                                <AlertCircle UNSAFE_className="text-red-600" size="L" />
-                                <Flex direction="column" gap="size-100" alignItems="center">
-                                    <Text UNSAFE_className="text-xl font-medium">
-                                        Error Loading Workspaces
-                                    </Text>
-                                    <Text UNSAFE_className="text-sm text-gray-600 text-center" UNSAFE_style={{maxWidth: '450px'}}>
-                                        {error}
-                                    </Text>
-                                </Flex>
-                                <Button variant="accent" onPress={loadWorkspaces} marginTop="size-300">
-                                    <Refresh size="S" marginEnd="size-100" />
-                                    Try Again
-                                </Button>
-                            </Flex>
-                        </Flex>
-                    </FadeTransition>
-                ) : workspaces.length === 0 && !isLoading ? (
-                    <Flex justifyContent="center" alignItems="center" height="350px">
-                        <Well>
-                            <Flex gap="size-200" alignItems="center">
-                                <AlertCircle UNSAFE_className="text-yellow-600" />
-                                <Flex direction="column" gap="size-50">
-                                    <Text><strong>No Workspaces Found</strong></Text>
-                                    <Text UNSAFE_className="text-sm">
-                                        No workspaces found in project {state.adobeProject?.title || state.adobeProject?.name}.
-                                        Please create a workspace in Adobe Console first.
-                                    </Text>
-                                </Flex>
-                            </Flex>
-                        </Well>
-                    </Flex>
-                ) : (
-                    <>
-                        {/* Search field - only show when > 5 workspaces */}
-                        {workspaces.length > 5 && (
-                            <Flex gap="size-100" marginBottom="size-200" alignItems="flex-end">
-                                <SearchField
-                                    placeholder="Type to filter workspaces..."
-                                    value={searchQuery}
-                                    onChange={setSearchQuery}
-                                    width="100%"
-                                    isQuiet
-                                    autoFocus={!state.adobeWorkspace?.id}
-                                    UNSAFE_style={{ flex: 1 }}
-                                />
-                                <ActionButton
-                                    isQuiet
-                                    onPress={refresh}
-                                    aria-label="Refresh workspaces"
-                                    isDisabled={isLoading}
-                                    UNSAFE_style={{ cursor: 'pointer' }}
-                                >
-                                    {isLoading ? <ProgressCircle size="S" isIndeterminate /> : <Refresh />}
-                                </ActionButton>
-                            </Flex>
-                        )}
-
-                        {/* Workspace count - only show after data has loaded */}
-                        {hasLoadedOnce && (
-                            <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-                                <Text UNSAFE_className="text-sm text-gray-700">
-                                    Showing {filteredWorkspaces.length} of {workspaces.length} workspace{workspaces.length !== 1 ? 's' : ''}
+        <TwoColumnLayout
+            leftContent={
+                <SelectionStepContent
+                    items={workspaces}
+                    filteredItems={filteredWorkspaces}
+                    showLoading={showLoading}
+                    isLoading={isLoading}
+                    isRefreshing={isRefreshing}
+                    hasLoadedOnce={hasLoadedOnce}
+                    error={error}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    onLoad={loadWorkspaces}
+                    onRefresh={refresh}
+                    selectedId={state.adobeWorkspace?.id}
+                    onSelect={handleSelect}
+                    labels={{
+                        heading: 'Select Workspace',
+                        loadingMessage: 'Loading workspaces...',
+                        loadingSubMessage: state.adobeProject ? `Fetching from project: ${state.adobeProject.title || state.adobeProject.name}` : undefined,
+                        errorTitle: 'Error Loading Workspaces',
+                        emptyTitle: 'No Workspaces Found',
+                        emptyMessage: `No workspaces found in project ${state.adobeProject?.title || state.adobeProject?.name}. Please create a workspace in Adobe Console first.`,
+                        searchPlaceholder: 'Type to filter workspaces...',
+                        itemNoun: 'workspace',
+                        ariaLabel: 'Adobe I/O Workspaces',
+                    }}
+                    renderDescription={(item) => {
+                        // Show name as description if different from title
+                        if (item.title && item.name && item.title !== item.name) {
+                            return (
+                                <Text slot="description" UNSAFE_className="text-sm text-gray-600">
+                                    {item.name}
                                 </Text>
-                                {workspaces.length <= 5 && (
-                                    <ActionButton
-                                        isQuiet
-                                        onPress={refresh}
-                                        aria-label="Refresh workspaces"
-                                        isDisabled={isLoading}
-                                        UNSAFE_style={{ cursor: 'pointer' }}
-                                    >
-                                        {isLoading ? <ProgressCircle size="S" isIndeterminate /> : <Refresh />}
-                                    </ActionButton>
-                                )}
-                            </Flex>
-                        )}
-
-                        <div style={{
-                            flex: 1,
-                            transition: 'opacity 200ms ease-in-out',
-                            opacity: isRefreshing ? 0.5 : 1,
-                            pointerEvents: isRefreshing ? 'none' : 'auto'
-                        }}>
-                            <ListView
-                            items={filteredWorkspaces}
-                            selectionMode="single"
-                            selectedKeys={state.adobeWorkspace?.id ? [state.adobeWorkspace.id] : []}
-                            onSelectionChange={(keys) => {
-                                const workspaceId = Array.from(keys)[0] as string;
-                                const workspace = workspaces.find(w => w.id === workspaceId);
-                                if (workspace) {
-                                    updateState({
-                                        adobeWorkspace: {
-                                            id: workspace.id,
-                                            name: workspace.name,
-                                            title: workspace.title
-                                        }
-                                    });
-                                }
-                            }}
-                            aria-label="Adobe I/O Workspaces"
-                            height="100%"
-                            UNSAFE_style={{ flex: 1 }}
-                        >
-                            {(item) => (
-                                <Item key={item.id} textValue={item.title || item.name}>
-                                    <Text>{item.title || item.name}</Text>
-                                    {item.title && item.name && item.title !== item.name && (
-                                        <Text slot="description" UNSAFE_className="text-sm text-gray-600">
-                                            {item.name}
-                                        </Text>
-                                    )}
-                                </Item>
-                            )}
-                        </ListView>
-                        </div>
-                    </>
-                )}
-            </div>
-
-            {/* Right: Summary Panel - positioned after main content */}
-            <div style={{
-                flex: '1',
-                padding: '24px',
-                backgroundColor: 'var(--spectrum-global-color-gray-75)',
-                borderLeft: '1px solid var(--spectrum-global-color-gray-200)'
-            }}>
+                            );
+                        }
+                        return null;
+                    }}
+                />
+            }
+            rightContent={
                 <ConfigurationSummary state={state} completedSteps={completedSteps} currentStep={state.currentStep} />
-            </div>
-        </div>
+            }
+        />
     );
 }

@@ -5,178 +5,10 @@
  * Used when receiving data from external sources (webview, JSON, CLI output).
  */
 
-import { Logger } from './logger';
-import { MessageResponse } from './messages';
-import { StateValue } from './state';
 import {
     Project,
     ComponentInstance,
-    ProcessInfo,
-    ComponentStatus,
-    ProjectStatus,
 } from './index';
-
-/**
- * ValidationResult - Represents validation result
- */
-export interface ValidationResult {
-    valid: boolean;
-    errors: string[];
-    warnings: string[];
-}
-
-/**
- * isProject - Type guard for Project
- */
-export function isProject(value: unknown): value is Project {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return (
-        typeof obj.name === 'string' &&
-        typeof obj.path === 'string' &&
-        typeof obj.status === 'string' &&
-        obj.created instanceof Date &&
-        obj.lastModified instanceof Date
-    );
-}
-
-/**
- * isComponentInstance - Type guard for ComponentInstance
- */
-export function isComponentInstance(value: unknown): value is ComponentInstance {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return (
-        typeof obj.id === 'string' &&
-        typeof obj.name === 'string' &&
-        typeof obj.status === 'string'
-    );
-}
-
-/**
- * isProcessInfo - Type guard for ProcessInfo
- */
-export function isProcessInfo(value: unknown): value is ProcessInfo {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return (
-        typeof obj.pid === 'number' &&
-        typeof obj.port === 'number' &&
-        typeof obj.command === 'string' &&
-        typeof obj.status === 'string' &&
-        obj.startTime instanceof Date
-    );
-}
-
-/**
- * isComponentStatus - Type guard for ComponentStatus
- */
-export function isComponentStatus(value: unknown): value is ComponentStatus {
-    const validStatuses: ComponentStatus[] = [
-        'not-installed',
-        'cloning',
-        'installing',
-        'ready',
-        'starting',
-        'running',
-        'stopping',
-        'stopped',
-        'deploying',
-        'deployed',
-        'updating',
-        'error',
-    ];
-    return typeof value === 'string' && validStatuses.includes(value as ComponentStatus);
-}
-
-/**
- * isProjectStatus - Type guard for ProjectStatus
- */
-export function isProjectStatus(value: unknown): value is ProjectStatus {
-    const validStatuses: ProjectStatus[] = [
-        'created',
-        'configuring',
-        'ready',
-        'starting',
-        'running',
-        'stopping',
-        'stopped',
-        'error',
-    ];
-    return typeof value === 'string' && validStatuses.includes(value as ProjectStatus);
-}
-
-/**
- * isValidationResult - Type guard for ValidationResult
- */
-export function isValidationResult(value: unknown): value is ValidationResult {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return (
-        typeof obj.valid === 'boolean' &&
-        Array.isArray(obj.errors) &&
-        Array.isArray(obj.warnings)
-    );
-}
-
-/**
- * isMessageResponse - Type guard for MessageResponse
- */
-export function isMessageResponse(value: unknown): value is MessageResponse {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return typeof obj.success === 'boolean';
-}
-
-/**
- * isLogger - Type guard for Logger interface
- */
-export function isLogger(value: unknown): value is Logger {
-    if (typeof value !== 'object' || value === null) {
-        return false;
-    }
-
-    const obj = value as Record<string, unknown>;
-    return (
-        typeof obj.debug === 'function' &&
-        typeof obj.info === 'function' &&
-        typeof obj.warn === 'function' &&
-        typeof obj.error === 'function'
-    );
-}
-
-/**
- * isStateValue - Type guard for StateValue
- */
-export function isStateValue(value: unknown): value is StateValue {
-    if (value === null || value === undefined) {
-        return true;
-    }
-
-    const type = typeof value;
-    return (
-        type === 'string' ||
-        type === 'number' ||
-        type === 'boolean' ||
-        Array.isArray(value) ||
-        type === 'object'
-    );
-}
 
 /**
  * isRecord - Type guard for Record<string, unknown>
@@ -200,23 +32,6 @@ export function hasProperty<K extends string>(
     key: K,
 ): obj is Record<K, unknown> {
     return isRecord(obj) && key in obj;
-}
-
-/**
- * assertNever - Exhaustiveness checking for discriminated unions
- *
- * @example
- * type Status = 'success' | 'error';
- * function handle(status: Status) {
- *   switch(status) {
- *     case 'success': return handleSuccess();
- *     case 'error': return handleError();
- *     default: assertNever(status); // Compile error if Status has unhandled cases
- *   }
- * }
- */
-export function assertNever(value: never): never {
-    throw new Error(`Unexpected value: ${JSON.stringify(value)}`);
 }
 
 /**
@@ -260,16 +75,158 @@ export function toError(error: unknown): Error {
     return new Error('Unknown error occurred');
 }
 
+// =============================================================================
+// Object Utility Functions
+// =============================================================================
+// These extract common inline Object.keys/values/entries patterns
+// per SOP code-patterns.md §4 (Inline Object Operations)
+
 /**
- * isTimeoutError - Check if error is a timeout error
+ * Check if object has any entries (type guard)
+ *
+ * Replaces inline: `Object.keys(obj).length > 0`
+ * Acts as a type guard to narrow out null/undefined.
+ *
+ * @param obj - Object to check (can be undefined/null)
+ * @returns true if object has at least one enumerable property
  */
-export function isTimeoutError(error: unknown): boolean {
-    const err = toError(error);
-    const message = err.message.toLowerCase();
-    return (
-        message.includes('timeout') ||
-        message.includes('timed out') ||
-        message.includes('etimedout') ||
-        (isRecord(error) && (error as any).code === 'ETIMEDOUT')
-    );
+export function hasEntries<T extends Record<string, unknown>>(
+    obj: T | undefined | null,
+): obj is T {
+    if (!obj) return false;
+    return Object.keys(obj).length > 0;
 }
+
+/**
+ * Get count of entries in object
+ *
+ * Replaces inline: `Object.keys(obj).length`
+ *
+ * @param obj - Object to count (can be undefined/null)
+ * @returns Number of enumerable properties, 0 if null/undefined
+ */
+export function getEntryCount(obj: Record<string, unknown> | undefined | null): number {
+    if (!obj) return 0;
+    return Object.keys(obj).length;
+}
+
+// =============================================================================
+// Project Accessor Functions
+// =============================================================================
+// These extract common deep optional chain patterns from project data
+// per SOP code-patterns.md §4 (Deep Optional Chaining)
+
+/**
+ * Get frontend component port from project
+ *
+ * Replaces inline: `project?.componentInstances?.['citisignal-nextjs']?.port`
+ * SOP §4: Extracted deep optional chain to named getter
+ *
+ * @param project - Project to extract port from (can be undefined/null)
+ * @returns Port number if available, undefined otherwise
+ */
+export function getProjectFrontendPort(project: Project | undefined | null): number | undefined {
+    return project?.componentInstances?.['citisignal-nextjs']?.port;
+}
+
+/**
+ * Get component IDs from component instances record
+ *
+ * Replaces inline: `Object.keys(componentInstances || {})`
+ * SOP §4: Extracted inline object operation to named helper
+ *
+ * @param componentInstances - Component instances record (can be undefined/null)
+ * @returns Array of component IDs, empty array if null/undefined
+ */
+export function getComponentIds(
+    componentInstances: Record<string, ComponentInstance> | undefined | null,
+): string[] {
+    if (!componentInstances) return [];
+    return Object.keys(componentInstances);
+}
+
+/**
+ * Get component instance entries from project
+ *
+ * Replaces inline: `Object.entries(project.componentInstances || {})`
+ * SOP §4: Extracted inline object operation to named helper
+ *
+ * @param project - Project to extract entries from
+ * @returns Array of [id, instance] tuples
+ */
+export function getComponentInstanceEntries(
+    project: Project | undefined | null,
+): Array<[string, ComponentInstance]> {
+    if (!project?.componentInstances) return [];
+    return Object.entries(project.componentInstances);
+}
+
+/**
+ * Get component instance values from project
+ *
+ * Replaces inline: `Object.values(project.componentInstances || {})`
+ * SOP §4: Extracted inline object operation to named helper
+ *
+ * @param project - Project to extract values from
+ * @returns Array of ComponentInstance
+ */
+export function getComponentInstanceValues(
+    project: Project | undefined | null,
+): ComponentInstance[] {
+    if (!project?.componentInstances) return [];
+    return Object.values(project.componentInstances);
+}
+
+/**
+ * Get component instances by type
+ *
+ * Replaces inline: `Object.values(componentInstances).filter(c => c.type === type)`
+ * SOP §4: Extracted inline object operation with filter to named helper
+ *
+ * @param project - Project to search
+ * @param type - Component type to filter by (returns empty if undefined)
+ * @returns Array of matching ComponentInstance
+ */
+export function getComponentInstancesByType(
+    project: Project | undefined | null,
+    type: string | undefined,
+): ComponentInstance[] {
+    if (!project?.componentInstances || type === undefined) return [];
+    return Object.values(project.componentInstances).filter(c => c.type === type);
+}
+
+/**
+ * Get the installed version of a component from a project
+ *
+ * Replaces inline: `project?.componentVersions?.[componentId]?.version`
+ * SOP §4: Extracted deep optional chain to named getter
+ *
+ * @param project - The project to check (can be undefined/null)
+ * @param componentId - The component ID to look up
+ * @returns The version string or undefined if not found
+ */
+export function getComponentVersion(
+    project: Project | undefined | null,
+    componentId: string,
+): string | undefined {
+    return project?.componentVersions?.[componentId]?.version;
+}
+
+/**
+ * Get the PORT configuration for a component
+ *
+ * Replaces inline: `componentConfigs?.[componentId]?.PORT`
+ * SOP §4: Extracted deep optional chain to named getter
+ *
+ * @param componentConfigs - The component configs object (can be undefined)
+ * @param componentId - The component ID to look up
+ * @returns The port number or undefined if not found
+ */
+export function getComponentConfigPort(
+    componentConfigs: Record<string, unknown> | undefined,
+    componentId: string,
+): number | undefined {
+    const config = componentConfigs?.[componentId] as { PORT?: number } | undefined;
+    return config?.PORT;
+}
+

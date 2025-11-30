@@ -3,8 +3,8 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ServiceLocator } from '@/core/di';
-import { parseJSON } from '@/types/typeGuards';
 import { getLogger, CommandResultWithContext } from '@/core/logging';
+import { parseJSON } from '@/types/typeGuards';
 
 // Diagnostic Type Definitions
 interface SystemInfo {
@@ -116,10 +116,10 @@ export class DiagnosticsCommand {
 
     public async execute(): Promise<void> {
         this.logger.info('Running Demo Builder diagnostics...');
-        this.logger.showDebug(true);
-        
-        // Clear debug channel for fresh diagnostics
-        this.logger.clearDebug();
+        this.logger.show(false); // Show log channel and take focus
+
+        // Clear channel for fresh diagnostics
+        this.logger.clear();
         
         const report: DiagnosticsReport = {
             timestamp: new Date().toISOString(),
@@ -164,13 +164,13 @@ export class DiagnosticsCommand {
             
             // Offer to export
             const action = await vscode.window.showInformationMessage(
-                'Diagnostics complete. Check the Debug output for details.',
-                'Show Debug Output',
+                'Diagnostics complete. Check the output for details.',
+                'Show Logs',
                 'Export Log',
             );
-            
-            if (action === 'Show Debug Output') {
-                this.logger.showDebug(false);
+
+            if (action === 'Show Logs') {
+                this.logger.show(false);
             } else if (action === 'Export Log') {
                 await this.logger.exportDebugLog();
             }
@@ -240,69 +240,79 @@ export class DiagnosticsCommand {
         adobe.version = aioVersion.output;
 
         if (adobe.installed) {
-            // Check authentication status
-            const authCheck = await this.checkCommand('aio config get ims.contexts.aio-cli-plugin-auth');
-            adobe.authConfigured = authCheck.installed && !!authCheck.output && authCheck.output.length > 0;
-
-            if (adobe.authConfigured && authCheck.output) {
-                // Try to parse the auth config
-                try {
-                    const authData = parseJSON<{ access_token?: string; refresh_token?: string; expires_in?: string }>(authCheck.output);
-                    if (!authData) {
-                        throw new Error('Invalid auth data format');
-                    }
-                    adobe.hasToken = !!authData.access_token;
-                    adobe.hasRefreshToken = !!authData.refresh_token;
-                    adobe.expiresIn = authData.expires_in;
-
-                    // Check if token is expired
-                    if (adobe.expiresIn) {
-                        const expiryTime = parseInt(adobe.expiresIn);
-                        const now = Date.now();
-                        adobe.tokenExpired = expiryTime < now;
-                        adobe.expiryDate = new Date(expiryTime).toISOString();
-                    }
-                } catch (e) {
-                    adobe.authParseError = (e as Error).message;
-                    this.logger.debug('Failed to parse auth config', authCheck.output);
-                }
-            }
-
-            // Check current context using 'aio console where'
-            const whereCheck = await this.checkCommand('aio console where --json');
-            if (whereCheck.installed && whereCheck.output) {
-                try {
-                    const context = parseJSON<{ org?: { name?: string }; project?: { name?: string }; workspace?: { name?: string } }>(whereCheck.output);
-                    if (!context) {
-                        throw new Error('Invalid context format');
-                    }
-                    adobe.currentContext = {
-                        org: context.org?.name || 'Not selected',
-                        project: context.project?.name || 'Not selected',
-                        workspace: context.workspace?.name || 'Not selected',
-                    };
-                } catch {
-                    adobe.currentContext = whereCheck.output;
-                }
-            }
-
-            // Try to list organizations
-            const orgCheck = await this.checkCommand('aio console org list --json');
-            adobe.canListOrgs = orgCheck.installed && orgCheck.output !== undefined && !orgCheck.output.includes('Error');
-            if (adobe.canListOrgs && orgCheck.output) {
-                try {
-                    const orgs = parseJSON<{ id?: string; name?: string }[]>(orgCheck.output);
-                    if (!orgs) {
-                        throw new Error('Invalid orgs format');
-                    }
-                    adobe.organizationCount = Array.isArray(orgs) ? orgs.length : 0;
-                } catch {
-                    // Fallback to raw output
-                }
-            }
+            await this.checkAuthenticationStatus(adobe);
+            await this.checkCurrentContext(adobe);
+            await this.checkOrganizations(adobe);
         }
 
         return adobe;
+    }
+
+    private async checkAuthenticationStatus(adobe: AdobeCLIInfo): Promise<void> {
+        const authCheck = await this.checkCommand('aio config get ims.contexts.aio-cli-plugin-auth');
+        adobe.authConfigured = authCheck.installed && !!authCheck.output && authCheck.output.length > 0;
+
+        if (adobe.authConfigured && authCheck.output) {
+            this.parseAuthConfig(adobe, authCheck.output);
+        }
+    }
+
+    private parseAuthConfig(adobe: AdobeCLIInfo, output: string): void {
+        try {
+            const authData = parseJSON<{ access_token?: string; refresh_token?: string; expires_in?: string }>(output);
+            if (!authData) {
+                throw new Error('Invalid auth data format');
+            }
+            adobe.hasToken = !!authData.access_token;
+            adobe.hasRefreshToken = !!authData.refresh_token;
+            adobe.expiresIn = authData.expires_in;
+
+            if (adobe.expiresIn) {
+                const expiryTime = parseInt(adobe.expiresIn);
+                const now = Date.now();
+                adobe.tokenExpired = expiryTime < now;
+                adobe.expiryDate = new Date(expiryTime).toISOString();
+            }
+        } catch (e) {
+            adobe.authParseError = (e as Error).message;
+            this.logger.debug('Failed to parse auth config', output);
+        }
+    }
+
+    private async checkCurrentContext(adobe: AdobeCLIInfo): Promise<void> {
+        const whereCheck = await this.checkCommand('aio console where --json');
+        if (whereCheck.installed && whereCheck.output) {
+            try {
+                const context = parseJSON<{ org?: { name?: string }; project?: { name?: string }; workspace?: { name?: string } }>(whereCheck.output);
+                if (!context) {
+                    throw new Error('Invalid context format');
+                }
+                adobe.currentContext = {
+                    org: context.org?.name || 'Not selected',
+                    project: context.project?.name || 'Not selected',
+                    workspace: context.workspace?.name || 'Not selected',
+                };
+            } catch {
+                adobe.currentContext = whereCheck.output;
+            }
+        }
+    }
+
+    private async checkOrganizations(adobe: AdobeCLIInfo): Promise<void> {
+        const orgCheck = await this.checkCommand('aio console org list --json');
+        adobe.canListOrgs = orgCheck.installed && orgCheck.output !== undefined && !orgCheck.output.includes('Error');
+
+        if (adobe.canListOrgs && orgCheck.output) {
+            try {
+                const orgs = parseJSON<{ id?: string; name?: string }[]>(orgCheck.output);
+                if (!orgs) {
+                    throw new Error('Invalid orgs format');
+                }
+                adobe.organizationCount = Array.isArray(orgs) ? orgs.length : 0;
+            } catch {
+                // Fallback to raw output
+            }
+        }
     }
 
     private getEnvironment(): EnvironmentInfo {
@@ -473,11 +483,13 @@ export class DiagnosticsCommand {
         // Tools summary
         this.logger.info('');
         this.logger.info('Tools Status:');
-        Object.entries(report.tools).forEach(([tool, info]) => {
+        // SOP §4: Using for...of instead of Object.entries().forEach()
+        const toolEntries = Object.entries(report.tools);
+        for (const [tool, info] of toolEntries) {
             const status = info.installed ? '✅' : '❌';
             const version = info.installed ? info.output : 'Not installed';
             this.logger.info(`  ${status} ${tool}: ${version}`);
-        });
+        }
 
         // Adobe CLI summary
         if (report.adobe.installed) {
@@ -499,6 +511,6 @@ export class DiagnosticsCommand {
         this.logger.info(`  File System Access: ${report.tests.fileSystem.canWrite ? 'OK' : 'Failed'}`);
 
         this.logger.info('');
-        this.logger.info('Full details available in Demo Builder - Debug output channel');
+        this.logger.info('Use VS Code\'s "Set Log Level..." command to see debug/trace details');
     }
 }

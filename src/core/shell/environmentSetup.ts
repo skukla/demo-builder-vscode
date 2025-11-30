@@ -2,9 +2,33 @@ import * as fsSync from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import type { CommandResult, ExecuteOptions } from './types';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { CommandResult, ExecuteOptions } from './types';
+import { DEFAULT_SHELL } from '@/types/shell';
+
+/**
+ * Components data structure from components.json
+ */
+interface ComponentsData {
+    infrastructure?: Record<string, { nodeVersion?: string }>;
+}
+
+/**
+ * Get infrastructure node version from components data
+ *
+ * SOP §4: Extracted deep optional chain to named helper
+ *
+ * @param componentsData - Parsed components.json data
+ * @param component - Infrastructure component ID (e.g., 'adobe-cli')
+ * @returns Node version string or undefined
+ */
+function getInfrastructureNodeVersion(
+    componentsData: ComponentsData | undefined,
+    component: string,
+): string | undefined {
+    return componentsData?.infrastructure?.[component]?.nodeVersion;
+}
 
 /**
  * Manages environment setup for command execution
@@ -82,7 +106,6 @@ export class EnvironmentSetup {
         // Check common install locations first
         for (const fnmPath of commonPaths) {
             if (fsSync.existsSync(fnmPath)) {
-                this.logger.debug(`[fnm] Found at: ${fnmPath}`);
                 this.cachedFnmPath = fnmPath;
                 return fnmPath;
             }
@@ -97,8 +120,8 @@ export class EnvironmentSetup {
                 stdio: ['pipe', 'pipe', 'ignore'],
             });
             const fnmPath = result.trim().split('\n')[0];
-            if (fnmPath) {
-                this.logger.debug(`[fnm] Found in PATH: ${fnmPath}`);
+            // Verify the path exists before caching (security: prevent PATH manipulation)
+            if (fnmPath && fsSync.existsSync(fnmPath)) {
                 this.cachedFnmPath = fnmPath;
                 return fnmPath;
             }
@@ -174,15 +197,14 @@ export class EnvironmentSetup {
                 return null;
             }
 
-            const componentsData = JSON.parse(fsSync.readFileSync(componentsPath, 'utf8'));
-            const nodeVersion = componentsData?.infrastructure?.[component]?.nodeVersion;
+            const componentsData: ComponentsData = JSON.parse(fsSync.readFileSync(componentsPath, 'utf8'));
+            const nodeVersion = getInfrastructureNodeVersion(componentsData, component);
 
             if (nodeVersion) {
                 this.logger.debug(`[Env Setup] Infrastructure Node version for ${component}: ${nodeVersion}`);
                 return String(nodeVersion);
             }
 
-            this.logger.debug(`[Env Setup] No infrastructure Node version defined for ${component}`);
             return null;
         } catch (error) {
             this.logger.debug(`[Env Setup] Failed to read infrastructure Node version: ${error instanceof Error ? error.message : String(error)}`);
@@ -222,8 +244,6 @@ export class EnvironmentSetup {
         // }
 
         // PRIORITY 3: Scan for installed aio-cli (fallback)
-        this.logger.debug('[Env Setup] No infrastructure/project version, scanning for aio-cli installation');
-
         const homeDir = os.homedir();
         // Fix #7 (01b94d6): Support FNM_DIR environment variable
         const fnmBase = process.env.FNM_DIR
@@ -346,7 +366,10 @@ export class EnvironmentSetup {
      */
     private async checkFnmAvailable(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<boolean> {
         try {
-            await executeCommand('fnm --version', { timeout: 2000 });
+            await executeCommand('fnm --version', {
+                timeout: TIMEOUTS.QUICK_SHELL,
+                shell: DEFAULT_SHELL  // Fixes ENOENT in Dock-launched VS Code
+            });
             return true;
         } catch {
             return false;
@@ -358,7 +381,10 @@ export class EnvironmentSetup {
      */
     private async getCurrentFnmVersion(executeCommand: (command: string, options?: ExecuteOptions) => Promise<CommandResult>): Promise<string | null> {
         try {
-            const result = await executeCommand('fnm current', { timeout: 2000 });
+            const result = await executeCommand('fnm current', {
+                timeout: TIMEOUTS.QUICK_SHELL,
+                shell: DEFAULT_SHELL  // Fixes ENOENT in Dock-launched VS Code
+            });
             return result.stdout?.trim() || null;
         } catch {
             return null;
@@ -380,21 +406,27 @@ export class EnvironmentSetup {
 
         try {
             // Set config directly without checking first
-            await executeCommand(
+            const result = await executeCommand(
                 'aio config set aio-cli-telemetry.optOut true',
                 {
                     configureTelemetry: false,  // Don't check telemetry for telemetry commands
                     encoding: 'utf8',
-                    timeout: 5000,
+                    timeout: TIMEOUTS.PORT_CHECK,  // Same timeout as quick operations
                 },
-            ).catch(error => {
-                this.logger.debug('[Telemetry] Failed to configure (non-critical):', error.message);
-            });
+            );
 
-            EnvironmentSetup.telemetryConfigured = true;
-            this.logger.info('[Telemetry] Configured aio-cli to opt out of telemetry');
+            // Only log success if command actually succeeded
+            if (result.code === 0) {
+                EnvironmentSetup.telemetryConfigured = true;
+                this.logger.info('[Telemetry] Configured aio-cli to opt out of telemetry');
+            } else {
+                this.logger.debug(`[Telemetry] Failed to configure (exit code ${result.code})`);
+                // Still mark as configured to avoid repeated attempts
+                EnvironmentSetup.telemetryConfigured = true;
+            }
 
-        } catch {
+        } catch (error) {
+            this.logger.debug('[Telemetry] Failed to configure (non-critical):', error instanceof Error ? error.message : String(error));
             // Still mark as configured to avoid repeated attempts
             EnvironmentSetup.telemetryConfigured = true;
         } finally {

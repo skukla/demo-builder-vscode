@@ -1,9 +1,13 @@
+import * as path from 'path';
 import * as semver from 'semver';
 import * as vscode from 'vscode';
-import { Project } from '@/types';
+import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
+import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import type { ReleaseInfo, UpdateCheckResult, GitHubRelease, GitHubReleaseAsset } from './types';
+import { Project, SubmoduleConfig } from '@/types';
+import { getComponentIds, getComponentVersion } from '@/types/typeGuards';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 export type { UpdateCheckResult };
 
@@ -17,6 +21,7 @@ export class UpdateManager {
         'citisignal-nextjs': 'skukla/citisignal-nextjs',
         'commerce-mesh': 'skukla/commerce-mesh',
         'integration-service': 'skukla/kukla-integration-service',
+        'demo-inspector': 'skukla/demo-inspector',
     };
 
     constructor(context: vscode.ExtensionContext, logger: Logger) {
@@ -55,12 +60,12 @@ export class UpdateManager {
         const channel = this.getUpdateChannel();
     
         if (!project.componentInstances) return results;
-    
-        for (const componentId of Object.keys(project.componentInstances)) {
+
+        for (const componentId of getComponentIds(project.componentInstances)) {
             const repoPath = this.COMPONENT_REPOS[componentId];
             if (!repoPath) continue; // Skip components without repos
       
-            const currentVersion = project.componentVersions?.[componentId]?.version || 'unknown';
+            const currentVersion = getComponentVersion(project, componentId) || 'unknown';
             const latestRelease = await this.fetchLatestRelease(repoPath, channel);
       
             if (!latestRelease) {
@@ -87,6 +92,81 @@ export class UpdateManager {
     }
 
     /**
+     * Check for updates to submodules within a parent component
+     *
+     * @param parentComponentPath - Path to the parent component directory
+     * @param submodules - Submodule configurations from component definition
+     * @returns Map of submodule IDs to their update status
+     */
+    async checkSubmoduleUpdates(
+        parentComponentPath: string,
+        submodules: Record<string, SubmoduleConfig>
+    ): Promise<Map<string, UpdateCheckResult>> {
+        const results = new Map<string, UpdateCheckResult>();
+        const channel = this.getUpdateChannel();
+
+        for (const [submoduleId, submoduleConfig] of Object.entries(submodules)) {
+            const repoPath = this.COMPONENT_REPOS[submoduleId];
+            if (!repoPath) {
+                this.logger.debug(`[Updates] Skipping submodule ${submoduleId}: no repository mapping`);
+                continue;
+            }
+
+            // Get current submodule commit
+            const submodulePath = path.join(parentComponentPath, submoduleConfig.path);
+            const currentCommit = await this.getGitCommit(submodulePath);
+
+            this.logger.debug(`[Updates] Checking submodule ${submoduleId}: current=${currentCommit?.substring(0, 8) || 'unknown'}`);
+
+            // Fetch latest release from GitHub
+            const latestRelease = await this.fetchLatestRelease(repoPath, channel);
+
+            if (!latestRelease) {
+                results.set(submoduleId, {
+                    hasUpdate: false,
+                    current: currentCommit?.substring(0, 8) || 'unknown',
+                    latest: 'unknown',
+                });
+                continue;
+            }
+
+            // For submodules, we compare commit-based versions
+            // If current commit is unknown or different from latest tag, an update may be available
+            const hasUpdate = !currentCommit || currentCommit !== latestRelease.version;
+
+            if (hasUpdate) {
+                this.logger.debug(`[Updates] ${submoduleId} update available: ${currentCommit?.substring(0, 8) || 'unknown'} -> ${latestRelease.version}`);
+            }
+
+            results.set(submoduleId, {
+                hasUpdate,
+                current: currentCommit?.substring(0, 8) || 'unknown',
+                latest: latestRelease.version,
+                releaseInfo: hasUpdate ? latestRelease : undefined,
+            });
+        }
+
+        return results;
+    }
+
+    /**
+     * Get the current HEAD commit hash from a git repository
+     */
+    private async getGitCommit(repoPath: string): Promise<string | null> {
+        try {
+            const executor = ServiceLocator.getCommandExecutor();
+            const result = await executor.execute('git rev-parse HEAD', {
+                cwd: repoPath,
+                timeout: TIMEOUTS.QUICK_SHELL,
+                shell: DEFAULT_SHELL,
+            });
+            return result.code === 0 ? result.stdout.trim() : null;
+        } catch {
+            return null;
+        }
+    }
+
+    /**
    * Fetch latest release from GitHub based on channel
    * Stable: Latest non-prerelease
    * Beta: Latest release (including prereleases)
@@ -98,9 +178,7 @@ export class UpdateManager {
             const url = channel === 'stable'
                 ? `https://api.github.com/repos/${repo}/releases/latest`
                 : `https://api.github.com/repos/${repo}/releases?per_page=20`;
-      
-            this.logger.debug(`[Update] Fetching latest ${channel} release for ${repo}`);
-      
+
             // Create timeout controller
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), TIMEOUTS.UPDATE_CHECK);
@@ -111,7 +189,7 @@ export class UpdateManager {
                 // HTTP status validation (Step 4)
                 if (!response.ok) {
                     if (response.status === 404) {
-                        this.logger.debug(`[Update] Release not found for ${repo}`);
+                        this.logger.debug(`[Updates] Release not found for ${repo}`);
                         return null;
                     }
                     if (response.status === 403) {
@@ -134,8 +212,8 @@ export class UpdateManager {
 
                     // Sort by version using semver
                     release = nonDraftReleases.sort((a: GitHubRelease, b: GitHubRelease) => {
-                        const versionA = a.tag_name.replace(/^v/, '');
-                        const versionB = b.tag_name.replace(/^v/, '');
+                        const versionA = this.parseVersionFromTag(a.tag_name);
+                        const versionB = this.parseVersionFromTag(b.tag_name);
                         return semver.gt(versionA, versionB) ? -1 : 1;
                     })[0];
                 } else {
@@ -143,7 +221,7 @@ export class UpdateManager {
                 }
 
                 if (!release || release.message === 'Not Found') {
-                    this.logger.debug(`[Update] No releases found for ${repo}`);
+                    this.logger.debug(`[Updates] No releases found for ${repo}`);
                     return null;
                 }
 
@@ -154,7 +232,7 @@ export class UpdateManager {
                     : release.zipball_url;
 
                 if (!asset) {
-                    this.logger.debug(`[Update] No valid asset found in release for ${repo}`);
+                    this.logger.debug(`[Updates] No valid asset found in release for ${repo}`);
                     return null;
                 }
 
@@ -168,12 +246,15 @@ export class UpdateManager {
                 try {
                     validateGitHubDownloadURL(downloadUrl);
                 } catch (error) {
-                    this.logger.warn(`[Update] Security check failed for download URL from ${repo}: ${(error as Error).message}`);
+                    this.logger.warn(`[Updates] Security check failed for download URL from ${repo}: ${(error as Error).message}`);
                     return null; // Treat as no update available if URL is invalid
                 }
 
+                const version = this.parseVersionFromTag(release.tag_name);
+                this.logger.debug(`[Updates] Latest ${channel}: v${version} (${repo.split('/')[1]})`);
+
                 return {
-                    version: release.tag_name.replace(/^v/, ''),
+                    version,
                     downloadUrl,
                     releaseNotes: release.body || 'No release notes available',
                     publishedAt: release.published_at,
@@ -183,7 +264,11 @@ export class UpdateManager {
                 clearTimeout(timeout);
             }
         } catch (error) {
-            this.logger.debug(`[Update] Failed to fetch release for ${repo}:`, error);
+            // INTENTIONALLY SILENT: Network/API errors should not alarm users.
+            // Graceful degradation: returning null means "no update available" which
+            // is better UX than showing "update check failed" errors for transient
+            // network issues, rate limits, or GitHub outages.
+            this.logger.debug(`[Updates] Failed to fetch release for ${repo}:`, error);
             return null;
         }
     }
@@ -198,9 +283,16 @@ export class UpdateManager {
             // semver.gt() properly handles: 1.0.0-beta.6 > 1.0.0-beta.5
             return semver.gt(latest, current);
         } catch (error) {
-            this.logger.debug(`[Update] Version comparison failed: ${error}`);
+            this.logger.debug(`[Updates] Version comparison failed: ${error}`);
             return false;
         }
+    }
+
+    /**
+     * Extract version string from Git tag (strips leading 'v')
+     */
+    private parseVersionFromTag(tagName: string): string {
+        return tagName.replace(/^v/, '');
     }
 }
 

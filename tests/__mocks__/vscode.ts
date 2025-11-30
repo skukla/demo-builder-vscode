@@ -11,11 +11,37 @@ export const workspace = {
         onDidDelete: jest.fn(),
         dispose: jest.fn(),
     })),
+    getConfiguration: jest.fn().mockReturnValue({
+        get: jest.fn().mockReturnValue(3000),
+    }),
+    workspaceFolders: [],
+};
+
+export const ProgressLocation = {
+    Notification: 15,
+    Window: 10,
+    SourceControl: 1,
 };
 
 export const Uri = {
-    file: jest.fn((path: string) => ({ fsPath: path, path })),
-    parse: jest.fn((uri: string) => ({ fsPath: uri, path: uri })),
+    file: jest.fn((path: string) => ({
+        fsPath: path,
+        path,
+        toString: () => path
+    })),
+    parse: jest.fn((uri: string) => ({
+        fsPath: uri,
+        path: uri,
+        toString: () => uri
+    })),
+    joinPath: jest.fn((base: any, ...paths: string[]) => {
+        const joinedPath = [base.fsPath || base.path, ...paths].join('/');
+        return {
+            fsPath: joinedPath,
+            path: joinedPath,
+            toString: () => joinedPath
+        };
+    }),
 };
 
 export const window = {
@@ -30,7 +56,30 @@ export const window = {
         hide: jest.fn(),
         dispose: jest.fn(),
     })),
+    createWebviewPanel: jest.fn(),
+    createStatusBarItem: jest.fn(() => ({
+        text: '',
+        tooltip: '',
+        command: '',
+        show: jest.fn(),
+        hide: jest.fn(),
+        dispose: jest.fn(),
+    })),
+    showQuickPick: jest.fn(),
     terminals: [],
+    activeColorTheme: {
+        kind: 1, // ColorThemeKind.Dark
+    },
+    withProgress: jest.fn().mockImplementation(async (_options: any, task: any) => {
+        return await task({ report: jest.fn() });
+    }),
+    setStatusBarMessage: jest.fn(),
+    createTerminal: jest.fn(() => ({
+        name: '',
+        dispose: jest.fn(),
+        show: jest.fn(),
+        sendText: jest.fn(),
+    })),
 };
 
 export const FileType = {
@@ -49,6 +98,38 @@ export const ExtensionMode = {
 export const commands = {
     registerCommand: jest.fn(),
     executeCommand: jest.fn(),
+};
+
+export const env = {
+    openExternal: jest.fn(),
+};
+
+export const languages = {
+    createDiagnosticCollection: jest.fn(() => ({
+        set: jest.fn(),
+        clear: jest.fn(),
+        delete: jest.fn(),
+        dispose: jest.fn(),
+    })),
+};
+
+export const ColorThemeKind = {
+    Light: 1,
+    Dark: 2,
+    HighContrast: 3,
+};
+
+export const ViewColumn = {
+    Active: -1,
+    Beside: -2,
+    One: 1,
+    Two: 2,
+    Three: 3,
+};
+
+export const StatusBarAlignment = {
+    Left: 1,
+    Right: 2,
 };
 
 export class EventEmitter {

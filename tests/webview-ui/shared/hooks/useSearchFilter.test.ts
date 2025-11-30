@@ -1,5 +1,5 @@
 import { renderHook, act } from '@testing-library/react';
-import { useSearchFilter } from '@/webview-ui/shared/hooks/useSearchFilter';
+import { useSearchFilter } from '@/core/ui/hooks/useSearchFilter';
 
 describe('useSearchFilter', () => {
   interface TestItem extends Record<string, unknown> {

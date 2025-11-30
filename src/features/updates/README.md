@@ -390,15 +390,19 @@ project.componentVersions = {
 
 ### Network Errors
 ```typescript
-// ComponentUpdater.formatUpdateError() detects common errors
+import { toAppError, isTimeout, isNetwork } from '@/types/errors';
 
-// Network/offline errors
-if (error.message.includes('fetch') || error.message.includes('ENOTFOUND')) {
+// ComponentUpdater.formatUpdateError() uses typed error detection
+
+const appError = toAppError(error);
+
+// Network/offline errors - typed detection
+if (isNetwork(appError)) {
     throw new Error('Update failed: No internet connection. Check your network and try again.');
 }
 
-// Timeout errors
-if (error.message.includes('timeout')) {
+// Timeout errors - typed detection
+if (isTimeout(appError)) {
     throw new Error('Update failed: Download timed out. Try again with a better connection.');
 }
 ```

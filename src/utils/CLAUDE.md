@@ -22,7 +22,6 @@ utils/
 ├── prerequisitesManager.ts    # Tool detection and installation
 ├── progressUnifier.ts         # Unified progress tracking
 ├── stateManager.ts            # Persistent state storage
-├── componentRegistry.ts       # Component definitions manager
 ├── debugLogger.ts             # Central debug logging system
 ├── logger.ts                  # Backward-compatible logger wrapper
 ├── errorLogger.ts             # Error tracking with UI integration
@@ -137,6 +136,18 @@ interface UnifiedProgress {
         percent?: number;
         detail?: string;
         confidence: 'exact' | 'estimated' | 'synthetic';
+
+        /**
+         * Current milestone index (0-based) for multi-step operations.
+         * Used with totalMilestones to display substep progress like "Step 2 of 3".
+         */
+        currentMilestoneIndex?: number;
+
+        /**
+         * Total number of milestones in the current operation.
+         * Used with currentMilestoneIndex to display substep progress.
+         */
+        totalMilestones?: number;
     };
 }
 ```
@@ -155,16 +166,16 @@ interface UnifiedProgress {
 ```typescript
 class StateManager {
     constructor(private context: vscode.ExtensionContext) {}
-    
+
     // Get state value
     async get<T>(key: string, defaultValue?: T): Promise<T>
-    
+
     // Set state value
     async set<T>(key: string, value: T): Promise<void>
-    
+
     // Clear specific key
     async clear(key: string): Promise<void>
-    
+
     // Migrate old state formats
     async migrate(): Promise<void>
 }
@@ -176,28 +187,7 @@ class StateManager {
 - `user.preferences` - User preferences
 - `projects.recent` - Recent projects
 
-### Component Registry
-
-**Purpose**: Manages available project components and their configurations
-
-**Data Source**: `templates/components.json`
-
-**Key Methods**:
-```typescript
-class ComponentRegistry {
-    // Get all components
-    getComponents(): ComponentDefinition[]
-    
-    // Get component dependencies
-    getDependencies(componentId: string): string[]
-    
-    // Get required prerequisites
-    getRequiredPrerequisites(components: string[]): string[]
-    
-    // Validate component selection
-    validateSelection(components: string[]): ValidationResult
-}
-```
+> **Note**: Component Registry functionality has been migrated to `@/features/components`. See `src/features/components/README.md` for ComponentRegistryManager documentation.
 
 ### Debug Logger
 
@@ -577,14 +567,14 @@ abstract class BaseWebviewCommand extends BaseCommand {
 
 **Performance Optimizations (v1.6.0)**:
 
-**Quick Authentication Check** (`isAuthenticatedQuick()`):
+**Token-Only Authentication Check** (`isAuthenticated()`):
 - Token-only validation (no org validation)
-- < 1 second vs 9+ seconds for full check
+- 2-3 seconds vs 3-10 seconds for full check with `isFullyAuthenticated()`
 - Used for dashboard loads and wizard startup
 - Pre-flight checks before Adobe I/O operations
 
 ```typescript
-async isAuthenticatedQuick(): Promise<boolean> {
+async isAuthenticated(): Promise<boolean> {
     // Only check token validity, skip org validation
     const token = await this.getToken();
     if (!token) return false;
@@ -629,7 +619,7 @@ async ensureSDKInitialized(): Promise<void> {
 - Use `executeExclusive()` for authentication operations
 - Replace `setTimeout` polling with `pollUntilCondition()`
 - Use StateCoordinator for all state updates
-- Use `isAuthenticatedQuick()` for pre-flight checks
+- Use `isAuthenticated()` for pre-flight checks (token-only validation)
 - Call `ensureSDKInitialized()` before org/project operations
 
 ### UpdateManager
