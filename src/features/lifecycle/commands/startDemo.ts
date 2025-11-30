@@ -309,9 +309,8 @@ export class StartDemoCommand extends BaseCommand {
                 
                 // Update status bar
                 this.statusBar.updateProject(project);
-                
+
                 this.logger.info(`Demo started at http://localhost:${port}`);
-                progress.report({ message: 'Demo started successfully!' });
             });
             
             // Show auto-dismissing success notification
