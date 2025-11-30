@@ -205,4 +205,35 @@ describe('Timeout Configuration', () => {
             expect(TIMEOUTS.PROJECT_OPEN_TRANSITION).toBe(1500);
         });
     });
+
+    // SOP Remediation Round 5 - Step 2: SLOW_COMMAND_THRESHOLD constant
+    describe('Slow command detection (SOP §1 compliance)', () => {
+        it('should have SLOW_COMMAND_THRESHOLD constant', () => {
+            expect(TIMEOUTS.SLOW_COMMAND_THRESHOLD).toBe(3000);
+        });
+
+        it('should be suitable for detecting slow commands', () => {
+            // 3 seconds is reasonable for slow command warnings
+            expect(TIMEOUTS.SLOW_COMMAND_THRESHOLD).toBeGreaterThanOrEqual(2000);
+            expect(TIMEOUTS.SLOW_COMMAND_THRESHOLD).toBeLessThanOrEqual(5000);
+        });
+    });
+
+    // SOP Remediation Round 5 - Step 3: Progress duration constants
+    describe('Progress duration constants (SOP §1 compliance)', () => {
+        it('should have PROGRESS_ESTIMATED_DEFAULT_SHORT constant', () => {
+            expect(TIMEOUTS.PROGRESS_ESTIMATED_DEFAULT_SHORT).toBe(500);
+        });
+
+        it('should have PROGRESS_MIN_DURATION_CAP constant', () => {
+            expect(TIMEOUTS.PROGRESS_MIN_DURATION_CAP).toBe(1000);
+        });
+
+        it('should have reasonable values for progress timing', () => {
+            // Short default should be quick
+            expect(TIMEOUTS.PROGRESS_ESTIMATED_DEFAULT_SHORT).toBeLessThanOrEqual(1000);
+            // Cap should be reasonable for immediate operations
+            expect(TIMEOUTS.PROGRESS_MIN_DURATION_CAP).toBeLessThanOrEqual(2000);
+        });
+    });
 });

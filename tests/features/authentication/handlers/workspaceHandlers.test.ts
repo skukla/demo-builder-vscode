@@ -220,7 +220,7 @@ describe('workspaceHandlers', () => {
             expect(mockContext.sendMessage).toHaveBeenCalledWith('workspaceSelected', {
                 workspaceId
             });
-            expect(mockContext.logger.info).toHaveBeenCalledWith(`[Workspace] Selected workspace: ${workspaceId}`);
+            // Note: Selection logging moved to adobeEntityService (logs with workspace name)
         });
 
         it('should validate workspace ID before selection', async () => {

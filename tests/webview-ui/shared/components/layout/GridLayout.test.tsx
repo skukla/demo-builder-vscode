@@ -127,7 +127,8 @@ describe('GridLayout', () => {
         </GridLayout>
       );
       const gridDiv = container.firstChild as HTMLDivElement;
-      expect(gridDiv.style.display).toBe('grid');
+      // SOP §11: Static styles now use utility classes instead of inline styles
+      expect(gridDiv).toHaveClass('grid');
       expect(gridDiv.style.gridTemplateColumns).toBe('repeat(3, 1fr)');
     });
   });

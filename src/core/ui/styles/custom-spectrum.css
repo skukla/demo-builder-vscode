@@ -77,6 +77,7 @@
 }
 .flex-1 { flex: 1 !important; }
 .items-center { align-items: center !important; }
+.items-stretch { align-items: stretch !important; }
 .justify-between { justify-content: space-between !important; }
 
 .block { display: block !important; }

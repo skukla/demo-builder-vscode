@@ -45,16 +45,16 @@ export const StatusDot: React.FC<StatusDotProps> = ({
         }
     };
 
+    // SOP §11: Static styles use utility classes, dynamic styles stay inline
+    const dotClasses = ['inline-block', 'rounded-full', 'shrink-0', className].filter(Boolean).join(' ');
+
     return (
         <span
-            className={className}
+            className={dotClasses}
             style={{
-                display: 'inline-block',
                 width: size,
                 height: size,
-                borderRadius: '50%',
                 backgroundColor: getColor(),
-                flexShrink: 0
             }}
             role="presentation"
         />

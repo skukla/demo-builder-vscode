@@ -133,6 +133,9 @@ export const TIMEOUTS = {
     RATE_LIMIT_WINDOW: 1000,        // Rate limiting window (1 second - operations per second)
     ELAPSED_TIME_THRESHOLD: 30000,  // Show elapsed time after this duration (30 seconds)
     DEFAULT_STEP_DURATION: 10000,   // Default estimated step duration (10 seconds)
+    SLOW_COMMAND_THRESHOLD: 3000,   // Threshold for slow command warnings (3 seconds)
+    PROGRESS_ESTIMATED_DEFAULT_SHORT: 500, // Default estimated step duration for short operations (500ms)
+    PROGRESS_MIN_DURATION_CAP: 1000,       // Maximum duration cap for immediate operations (1 second)
 } as const;
 
 /**

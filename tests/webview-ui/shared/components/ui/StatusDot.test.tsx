@@ -89,28 +89,23 @@ describe('StatusDot', () => {
     });
 
     describe('Base Styles', () => {
-        it('has circular shape', () => {
+        // SOP §11: Static styles now use utility classes instead of inline styles
+        it('has circular shape via utility class', () => {
             renderWithProviders(<StatusDot variant="success" />);
             const dot = screen.getByRole('presentation');
-            expect(dot).toHaveStyle({
-                borderRadius: '50%'
-            });
+            expect(dot).toHaveClass('rounded-full');
         });
 
-        it('is inline-block display', () => {
+        it('is inline-block display via utility class', () => {
             renderWithProviders(<StatusDot variant="success" />);
             const dot = screen.getByRole('presentation');
-            expect(dot).toHaveStyle({
-                display: 'inline-block'
-            });
+            expect(dot).toHaveClass('inline-block');
         });
 
-        it('has flex-shrink of 0', () => {
+        it('has flex-shrink of 0 via utility class', () => {
             renderWithProviders(<StatusDot variant="success" />);
             const dot = screen.getByRole('presentation');
-            expect(dot).toHaveStyle({
-                flexShrink: 0
-            });
+            expect(dot).toHaveClass('shrink-0');
         });
     });
 

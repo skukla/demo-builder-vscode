@@ -84,8 +84,9 @@ describe('StatusCard', () => {
             const { container } = renderWithProviders(
                 <StatusCard status="Running" color="green" />
             );
-            // Find a wrapper with flex display
-            const wrapper = container.querySelector('[style*="flex"]');
+            // SOP §11: Static styles use utility classes instead of inline styles
+            // Find a wrapper with flex utility class
+            const wrapper = container.querySelector('.flex');
             expect(wrapper).toBeInTheDocument();
         });
 

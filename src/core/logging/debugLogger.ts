@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import type { CommandResult } from '@/core/shell/types';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging } from '@/core/validation';
 
 /**
@@ -204,8 +205,8 @@ export class DebugLogger {
         if (result.duration) {
             this.debugChannel.info(`[debug] Duration: ${result.duration}ms`);
 
-            // Warn about slow commands (>3s) - goes to Logs channel for visibility
-            if (result.duration > 3000) {
+            // Warn about slow commands - goes to Logs channel for visibility
+            if (result.duration > TIMEOUTS.SLOW_COMMAND_THRESHOLD) {
                 this.logsChannel.warn(`Slow command detected - ${command} took ${result.duration}ms`);
             }
         }

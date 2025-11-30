@@ -15,7 +15,7 @@ import {
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
 import { AdobeConfig } from '@/types/base';
-import { parseJSON, hasEntries, getEntryCount, getComponentIds } from '@/types/typeGuards';
+import { parseJSON, hasEntries, getEntryCount, getComponentIds, getProjectFrontendPort, getComponentConfigPort } from '@/types/typeGuards';
 import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { TransformedComponentDefinition } from '@/types';
@@ -94,9 +94,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const existingProject = await context.stateManager.getCurrentProject();
     if (existingProject && existingProject.status === 'running') {
         // Check if the running demo is using a port that would conflict
-        const runningPort = existingProject.componentInstances?.['citisignal-nextjs']?.port;
+        const runningPort = getProjectFrontendPort(existingProject);
         const defaultPort = vscode.workspace.getConfiguration('demoBuilder').get<number>('defaultPort', 3000);
-        const targetPort = typedConfig.componentConfigs?.['citisignal-nextjs']?.PORT || defaultPort;
+        const targetPort = getComponentConfigPort(typedConfig.componentConfigs, 'citisignal-nextjs') || defaultPort;
 
         if (runningPort === targetPort) {
             context.logger.debug(`[Project Creation] Stopping running demo on port ${runningPort} before creating new project`);
@@ -203,7 +203,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         const frontends = await registryManager.getFrontends();
         const frontendDef = frontends.find((f: { id: string }) => f.id === typedConfig.components?.frontend);
         if (frontendDef?.submodules) {
-            Object.keys(frontendDef.submodules).forEach(id => frontendSubmoduleIds.add(id));
+            // SOP §4: Extract Object.keys to named variable
+            const submoduleIds = Object.keys(frontendDef.submodules);
+            submoduleIds.forEach(id => frontendSubmoduleIds.add(id));
         }
     }
 

@@ -384,7 +384,7 @@ function buildStatusPayload(
         name: project.name,
         path: project.path,
         status: project.status || 'ready',
-        port: project.componentInstances?.['citisignal-nextjs']?.port,
+        port: getProjectFrontendPort(project),
         adobeOrg: project.adobe?.organization,
         adobeProject: project.adobe?.projectName,
         frontendConfigChanged,

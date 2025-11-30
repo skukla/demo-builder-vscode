@@ -1,5 +1,6 @@
 import type { CommandResult, CommandConfig } from './types';
 import { getLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Extract error code from NodeJS.ErrnoException (SOP §3 compliance)
@@ -76,7 +77,7 @@ export class CommandSequencer {
                 this.logger.debug(`[Command Sequencer] Completed: ${config.name || config.command} (${duration}ms)`);
 
                 // Warn if command is slow
-                if (duration > 3000) {
+                if (duration > TIMEOUTS.SLOW_COMMAND_THRESHOLD) {
                     this.logger.debug(`[Command Sequencer] WARNING: Slow command detected - ${config.name || config.command} took ${duration}ms`);
                 }
 

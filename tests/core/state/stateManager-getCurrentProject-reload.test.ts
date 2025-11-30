@@ -216,9 +216,10 @@ describe('StateManager - getCurrentProject Reload Behavior', () => {
 
             await stateManager.getCurrentProject();
 
-            // Should log warning about fallback via Logger (Phase A migrated console.warn to Logger)
-            expect(mockLoggerInstance.warn).toHaveBeenCalledWith(
-                expect.stringContaining('Failed to reload project from disk')
+            // Should log debug message about fallback (uses debug for non-critical fallback)
+            // When fs.access fails, loadProjectFromPath returns null (caught internally)
+            expect(mockLoggerInstance.debug).toHaveBeenCalledWith(
+                expect.stringContaining('using cached version')
             );
         });
     });

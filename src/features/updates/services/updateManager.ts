@@ -6,7 +6,7 @@ import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project, SubmoduleConfig } from '@/types';
-import { getComponentIds } from '@/types/typeGuards';
+import { getComponentIds, getComponentVersion } from '@/types/typeGuards';
 import { DEFAULT_SHELL } from '@/types/shell';
 
 export type { UpdateCheckResult };
@@ -65,7 +65,7 @@ export class UpdateManager {
             const repoPath = this.COMPONENT_REPOS[componentId];
             if (!repoPath) continue; // Skip components without repos
       
-            const currentVersion = project.componentVersions?.[componentId]?.version || 'unknown';
+            const currentVersion = getComponentVersion(project, componentId) || 'unknown';
             const latestRelease = await this.fetchLatestRelease(repoPath, channel);
       
             if (!latestRelease) {

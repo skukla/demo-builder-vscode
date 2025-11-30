@@ -399,3 +399,38 @@ export function getComponentInstancesByType(
     return Object.values(project.componentInstances).filter(c => c.type === type);
 }
 
+/**
+ * Get the installed version of a component from a project
+ *
+ * Replaces inline: `project?.componentVersions?.[componentId]?.version`
+ * SOP §4: Extracted deep optional chain to named getter
+ *
+ * @param project - The project to check (can be undefined/null)
+ * @param componentId - The component ID to look up
+ * @returns The version string or undefined if not found
+ */
+export function getComponentVersion(
+    project: Project | undefined | null,
+    componentId: string,
+): string | undefined {
+    return project?.componentVersions?.[componentId]?.version;
+}
+
+/**
+ * Get the PORT configuration for a component
+ *
+ * Replaces inline: `componentConfigs?.[componentId]?.PORT`
+ * SOP §4: Extracted deep optional chain to named getter
+ *
+ * @param componentConfigs - The component configs object (can be undefined)
+ * @param componentId - The component ID to look up
+ * @returns The port number or undefined if not found
+ */
+export function getComponentConfigPort(
+    componentConfigs: Record<string, unknown> | undefined,
+    componentId: string,
+): number | undefined {
+    const config = componentConfigs?.[componentId] as { PORT?: number } | undefined;
+    return config?.PORT;
+}
+

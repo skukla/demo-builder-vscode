@@ -148,8 +148,8 @@ export class RetryStrategyManager {
                 const result = await executeFn();
 
                 const duration = Date.now() - startTime;
-                // Only log if retried or took > 5 seconds
-                if (attempt > 1 || duration > 5000) {
+                // Only log if retried or took longer than slow threshold
+                if (attempt > 1 || duration > TIMEOUTS.SLOW_COMMAND_THRESHOLD) {
                     this.logger.debug(`[Retry Strategy] Command succeeded after ${formatDuration(duration)} (attempt ${attempt}/${strategy.maxAttempts})`);
                 }
 

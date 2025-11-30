@@ -64,30 +64,22 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     gap = '0' as DimensionValue,
     className
 }) => {
+    // SOP §11: Static styles use utility classes, dynamic styles stay inline
+    const containerClasses = ['flex', 'h-full', 'w-full', 'flex-1', 'min-h-0', 'items-stretch', className].filter(Boolean).join(' ');
+    const leftColumnClasses = 'flex flex-column w-full min-w-0 overflow-hidden';
+    const rightColumnClasses = 'flex-1 flex flex-column overflow-hidden';
+
     return (
         <div
-            style={{
-                display: 'flex',
-                height: '100%',
-                width: '100%',
-                flex: '1',      // Take remaining space when in flex parent
-                minHeight: 0,   // Allow shrinking below content size for proper scrolling
-                gap: translateSpectrumToken(gap),
-                alignItems: 'stretch' // Ensure both columns stretch to full height
-            }}
-            className={className}
+            className={containerClasses}
+            style={{ gap: translateSpectrumToken(gap) }}
         >
             {/* Left Column: Main Content (constrained width) */}
             <div
+                className={leftColumnClasses}
                 style={{
                     maxWidth: translateSpectrumToken(leftMaxWidth),
-                    width: '100%',
                     padding: translateSpectrumToken(leftPadding),
-                    minWidth: 0, // Prevent flex shrinking issues
-                    // Enable scrolling for children with flex: 1 + overflowY: auto
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden'
                 }}
             >
                 {leftContent}
@@ -95,17 +87,13 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
 
             {/* Right Column: Sidebar/Summary (flexible width) */}
             <div
+                className={rightColumnClasses}
                 style={{
-                    flex: '1',
                     padding: translateSpectrumToken(rightPadding),
                     backgroundColor: rightBackgroundColor,
                     borderLeft: showBorder
                         ? '1px solid var(--spectrum-global-color-gray-200)'
                         : undefined,
-                    // Enable scrolling for children with flex: 1 + overflowY: auto
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden'
                 }}
             >
                 {rightContent}

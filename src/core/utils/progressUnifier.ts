@@ -537,8 +537,8 @@ export class ProgressUnifier {
         
         return new Promise((resolve, reject) => {
             const child = this.spawnCommand(command);
-            const estimatedDuration = step.estimatedDuration || 500;
-            const minDuration = Math.min(estimatedDuration, 1000); // Cap at 1 second for immediate operations
+            const estimatedDuration = step.estimatedDuration || TIMEOUTS.PROGRESS_ESTIMATED_DEFAULT_SHORT;
+            const minDuration = Math.min(estimatedDuration, TIMEOUTS.PROGRESS_MIN_DURATION_CAP);
             const startTime = this.dateProvider.now();
             let commandCompleted = false;
             let commandExitCode: number | null = null;

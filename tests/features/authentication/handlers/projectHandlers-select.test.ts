@@ -61,7 +61,7 @@ describe('projectHandlers - Selection', () => {
             // selectProject requires orgId for context guard
             expect(mockContext.authManager.selectProject).toHaveBeenCalledWith(projectId, 'org-123');
             expect(mockContext.sendMessage).toHaveBeenCalledWith('projectSelected', { projectId });
-            expect(mockContext.logger.info).toHaveBeenCalledWith(`Selected project: ${projectId}`);
+            // Note: Selection logging moved to adobeEntityService (logs with project name)
         });
 
         it('should validate project ID before selection', async () => {

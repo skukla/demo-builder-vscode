@@ -54,17 +54,18 @@ export const GridLayout: React.FC<GridLayoutProps> = ({
     padding,
     className
 }) => {
+    // SOP §11: Static styles use utility classes, dynamic styles stay inline
+    const containerClasses = ['grid', 'w-full', className].filter(Boolean).join(' ');
+
     return (
         <div
+            className={containerClasses}
             style={{
-                display: 'grid',
                 gridTemplateColumns: `repeat(${columns}, 1fr)`,
                 gap: translateSpectrumToken(gap),
                 maxWidth: translateSpectrumToken(maxWidth),
                 padding: translateSpectrumToken(padding),
-                width: '100%'
             }}
-            className={className}
         >
             {children}
         </div>
