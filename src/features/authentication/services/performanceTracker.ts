@@ -1,4 +1,5 @@
 import { getLogger } from '@/core/logging';
+import { formatDuration } from '@/core/utils';
 import type { PerformanceMetric } from '@/features/authentication/services/types';
 
 /**
@@ -54,9 +55,9 @@ export class PerformanceTracker {
 
         // Log performance metrics to debug channel only when slow (exceeded expected time)
         const expected = this.expectedTimes[operation];
-        const warning = expected && duration > expected ? ` ⚠️ SLOW (expected <${expected}ms)` : '';
+        const warning = expected && duration > expected ? ` ⚠️ SLOW (expected <${formatDuration(expected)})` : '';
         if (warning) {
-            this.logger.debug(`[Performance] ${operation} took ${duration}ms${warning}`);
+            this.logger.debug(`[Performance] ${operation} took ${formatDuration(duration)}${warning}`);
         }
 
         return duration;

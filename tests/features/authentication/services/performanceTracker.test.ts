@@ -85,7 +85,7 @@ describe('PerformanceTracker', () => {
 
             expect(duration).toBe(3000);
             expect(mockDebug).toHaveBeenCalledWith(
-                expect.stringContaining('[Performance] isAuthenticated took 3000ms'),
+                expect.stringContaining('[Performance] isAuthenticated took 3.0s'),
             );
         });
 
@@ -111,7 +111,7 @@ describe('PerformanceTracker', () => {
 
             expect(duration).toBe(5000);
             expect(mockDebug).toHaveBeenCalledWith(
-                expect.stringContaining('⚠️ SLOW (expected <3000ms)'),
+                expect.stringContaining('⚠️ SLOW (expected <3.0s)'),
             );
         });
 
@@ -125,11 +125,13 @@ describe('PerformanceTracker', () => {
         });
 
         it('should use correct expected times for different operations', () => {
+            // Operations with actual durations that exceed expected thresholds
+            // formatDuration converts: 4000ms → "4.0s", 3000ms → "3.0s", etc.
             const operations = [
-                { name: 'isFullyAuthenticated', expected: 3000, actual: 4000 },
-                { name: 'isAuthenticated', expected: 2500, actual: 3000 },
-                { name: 'getOrganizations', expected: 5000, actual: 6000 },
-                { name: 'login', expected: 30000, actual: 31000 },
+                { name: 'isFullyAuthenticated', expectedFormatted: '3.0s', actualFormatted: '4.0s', actual: 4000 },
+                { name: 'isAuthenticated', expectedFormatted: '2.5s', actualFormatted: '3.0s', actual: 3000 },
+                { name: 'getOrganizations', expectedFormatted: '5.0s', actualFormatted: '6.0s', actual: 6000 },
+                { name: 'login', expectedFormatted: '30.0s', actualFormatted: '31.0s', actual: 31000 },
             ];
 
             operations.forEach(({ name, actual }) => {
@@ -139,9 +141,9 @@ describe('PerformanceTracker', () => {
             });
 
             expect(mockDebug).toHaveBeenCalledTimes(4);
-            operations.forEach(({ name, actual, expected }) => {
+            operations.forEach(({ name, actualFormatted, expectedFormatted }) => {
                 expect(mockDebug).toHaveBeenCalledWith(
-                    expect.stringContaining(`${name} took ${actual}ms ⚠️ SLOW (expected <${expected}ms)`),
+                    expect.stringContaining(`${name} took ${actualFormatted} ⚠️ SLOW (expected <${expectedFormatted})`),
                 );
             });
         });
@@ -163,7 +165,7 @@ describe('PerformanceTracker', () => {
 
             expect(duration).toBe(3000);
             expect(mockDebug).toHaveBeenCalledWith(
-                expect.stringContaining('⚠️ SLOW (expected <2500ms)'),
+                expect.stringContaining('⚠️ SLOW (expected <2.5s)'),
             );
         });
     });

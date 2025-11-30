@@ -1,7 +1,7 @@
 import { RateLimiter } from './rateLimiter';
 import type { RetryStrategy, CommandResult } from './types';
 import { getLogger } from '@/core/logging';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { toAppError, isTimeout, isNetwork } from '@/types/errors';
 
 /**
@@ -150,7 +150,7 @@ export class RetryStrategyManager {
                 const duration = Date.now() - startTime;
                 // Only log if retried or took > 5 seconds
                 if (attempt > 1 || duration > 5000) {
-                    this.logger.debug(`[Retry Strategy] Command succeeded after ${duration}ms (attempt ${attempt}/${strategy.maxAttempts})`);
+                    this.logger.debug(`[Retry Strategy] Command succeeded after ${formatDuration(duration)} (attempt ${attempt}/${strategy.maxAttempts})`);
                 }
 
                 return result;
