@@ -263,7 +263,8 @@ export class StateManager {
             const data = await fs.readFile(this.recentProjectsFile, 'utf-8');
             const parsed = parseJSON<RecentProject[]>(data);
             if (!parsed) {
-                this.logger.warn('Failed to parse recent projects file, using empty list');
+                // Debug level: expected on first run or if file is empty/corrupted
+                this.logger.debug('Recent projects file empty or invalid, using empty list');
                 this.recentProjects = [];
                 return;
             }

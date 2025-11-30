@@ -309,11 +309,9 @@ export class StartDemoCommand extends BaseCommand {
                 
                 // Update status bar
                 this.statusBar.updateProject(project);
-
-                this.logger.info(`Demo started at http://localhost:${port}`);
             });
-            
-            // Show auto-dismissing success notification
+
+            // Show auto-dismissing success notification (also logs to info channel)
             this.showSuccessMessage(`Demo started at http://localhost:${port}`);
             
             // Reset restart notification flag (user has restarted)

@@ -29,7 +29,8 @@ export class AutoUpdater {
     public async checkForUpdates(): Promise<UpdateInfo | undefined> {
         try {
             const currentVersion = this.context.extension.packageJSON.version;
-            this.logger.info(`[Updates] Checking for updates (current: ${currentVersion})...`);
+            // Debug level for background checks (only log to info when update found)
+            this.logger.debug(`[Updates] Background check starting (current: ${currentVersion})`);
 
             // For development, use mock data
             if (process.env.NODE_ENV === 'development') {
@@ -67,7 +68,8 @@ export class AutoUpdater {
                 }
             }
 
-            this.logger.info('[Updates] ✓ No updates available');
+            // Debug level for background checks (don't spam user logs)
+            this.logger.debug('[Updates] Background check: no updates available');
             return undefined;
 
         } catch (error) {
