@@ -440,12 +440,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // Step 8: Save project state (95%)
     progressTracker('Finalizing Project', 95, 'Saving project state...');
 
-    context.logger.debug('[Project Creation] About to save project state...');
-    context.logger.debug('[Project Creation] Project object:', JSON.stringify({
-        name: project.name,
-        status: 'ready',
-        componentCount: getEntryCount(project.componentInstances),
-    }));
+    context.logger.debug(`[Project Creation] Saving project: ${project.name} (${getEntryCount(project.componentInstances)} components)`);
 
     try {
         project.status = 'ready';
