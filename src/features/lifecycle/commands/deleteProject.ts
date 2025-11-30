@@ -69,12 +69,19 @@ export class DeleteProjectCommand extends BaseCommand {
 
             this.logger.info(`[Delete Project] Completed: ${project.name}`);
             this.showSuccessMessage('Project deleted');
-            
-            // Open Welcome screen to guide user to create a new project
-            await vscode.commands.executeCommand('demoBuilder.showWelcome');
-            
+
         } catch (error) {
             await this.showError('Failed to delete project', error as Error);
+            return;
+        }
+
+        // Open Welcome screen to guide user to create a new project
+        // Outside try-catch: if this fails, deletion still succeeded
+        try {
+            await vscode.commands.executeCommand('demoBuilder.showWelcome');
+        } catch {
+            // Ignore - welcome screen is optional post-deletion
+            this.logger.debug('[Delete Project] Welcome screen failed to open (non-critical)');
         }
     }
 
