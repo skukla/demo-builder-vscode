@@ -8,7 +8,7 @@
  */
 
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
+import { getNodeVersionMapping, checkPerNodeVersionStatus, areDependenciesInstalled, handlePrerequisiteCheckError, determinePrerequisiteStatus, getPrerequisiteDisplayMessage, formatProgressMessage, formatVersionSuffix, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
@@ -108,7 +108,7 @@ export async function handleCheckPrerequisites(
             const prereq = prerequisites?.[i];
             if (!prereq) continue;
 
-            context.stepLogger?.log('prerequisites', `Checking ${prereq.name}...`, 'info');
+            context.stepLogger?.log('prerequisites', formatProgressMessage(prereq, nodeVersionMapping), 'info');
 
             // Send status update
             await context.sendMessage('prerequisite-status', {
@@ -205,9 +205,10 @@ export async function handleCheckPrerequisites(
                 nodeVersionStatus: prereq.id === 'node' ? nodeVersionStatus : perNodeVersionStatus,
             });
 
-            // Log the result
+            // Log the result - for Node.js, show all installed versions (SOP §2)
             if (checkResult.installed) {
-                context.stepLogger?.log('prerequisites', `✓ ${prereq.name} is installed${checkResult.version ? ': ' + checkResult.version : ''}`, 'info');
+                const versionDisplay = formatVersionSuffix(prereq, nodeVersionStatus, checkResult.version);
+                context.stepLogger?.log('prerequisites', `✓ ${prereq.name} is installed${versionDisplay}`, 'info');
             } else {
                 context.stepLogger?.log('prerequisites', `✗ ${prereq.name} is not installed`, 'warn');
             }

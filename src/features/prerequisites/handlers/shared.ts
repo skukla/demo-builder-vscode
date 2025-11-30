@@ -6,7 +6,7 @@
  */
 
 import { ServiceLocator } from '@/core/di';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ComponentSelection } from '@/types/components';
 import { DEFAULT_SHELL } from '@/types/shell';
@@ -40,6 +40,63 @@ export function hasNodeVersions(mapping: NodeVersionMapping): boolean {
  */
 export function getNodeVersionKeys(mapping: NodeVersionMapping): string[] {
     return Object.keys(mapping).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+}
+
+/**
+ * Format progress message for prerequisite checking
+ *
+ * For Node.js with multiple required versions, shows which versions are being checked.
+ * Example: "Checking Node.js (v20, v24)..."
+ *
+ * SOP §2: Extracted helper for progress message generation
+ *
+ * @param prereq - The prerequisite definition
+ * @param nodeVersionMapping - Node version mapping (major version → component name)
+ * @returns Progress message string
+ */
+export function formatProgressMessage(
+    prereq: PrerequisiteDefinition,
+    nodeVersionMapping: NodeVersionMapping,
+): string {
+    // For Node.js with multiple required versions, show which versions
+    if (prereq.id === 'node' && hasNodeVersions(nodeVersionMapping)) {
+        const versions = getNodeVersionKeys(nodeVersionMapping);
+        if (versions.length > 1) {
+            return `Checking ${prereq.name} (v${versions.join(', v')})...`;
+        }
+    }
+    return `Checking ${prereq.name}...`;
+}
+
+/**
+ * Format version suffix for prerequisite installation log
+ *
+ * For Node.js with multiple installed versions, shows all versions.
+ * Example: ": v20.19.5, v24.0.0"
+ *
+ * SOP §2: Extracted helper for version display generation
+ *
+ * @param prereq - The prerequisite definition
+ * @param nodeVersionStatus - Array of node version status entries
+ * @param defaultVersion - Default single version to show if not multi-version
+ * @returns Version suffix string (includes leading colon and space)
+ */
+export function formatVersionSuffix(
+    prereq: PrerequisiteDefinition,
+    nodeVersionStatus: Array<{ version: string; installed: boolean }> | undefined,
+    defaultVersion?: string,
+): string {
+    // For Node.js with multiple versions, show all installed versions
+    if (prereq.id === 'node' && nodeVersionStatus && nodeVersionStatus.length > 1) {
+        const installedVersions = nodeVersionStatus
+            .filter(v => v.installed)
+            .map(v => v.version.replace('Node ', 'v'));
+        if (installedVersions.length > 0) {
+            return `: ${installedVersions.join(', ')}`;
+        }
+    }
+    // Default: show single version
+    return defaultVersion ? `: ${defaultVersion}` : '';
 }
 
 /**
@@ -388,7 +445,7 @@ export async function checkPerNodeVersionStatus(
     // Wait for all checks to complete in parallel
     const results = await Promise.all(checkPromises);
     const duration = Date.now() - startTime;
-    context.logger.debug(`[Prerequisites] Parallel check for ${prereq.name} across ${nodeVersions.length} Node versions completed in ${duration}ms`);
+    context.logger.debug(`[Prerequisites] Parallel check for ${prereq.name} across ${nodeVersions.length} Node versions completed in ${formatDuration(duration)}`);
 
     // Process results to build status arrays
     for (const result of results) {
