@@ -86,7 +86,7 @@ describe('ExtensionUpdater', () => {
             await updater.updateExtension(downloadUrl, newVersion);
 
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                `[Update] Starting extension update to v${newVersion}`,
+                `[Updates] Starting extension update to v${newVersion}`,
             );
             expect(global.fetch).toHaveBeenCalledWith(
                 downloadUrl,
@@ -132,7 +132,7 @@ describe('ExtensionUpdater', () => {
             );
 
             expect(mockLogger.error).toHaveBeenCalledWith(
-                '[Update] Download URL validation failed',
+                '[Updates] Download URL validation failed',
                 expect.any(Error),
             );
             expect(global.fetch).not.toHaveBeenCalled();
@@ -189,7 +189,7 @@ describe('ExtensionUpdater', () => {
                 'workbench.action.reloadWindow',
             );
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                '[Update] Reloading window to apply extension update',
+                '[Updates] Reloading window to apply extension update',
             );
         });
 
@@ -201,7 +201,7 @@ describe('ExtensionUpdater', () => {
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith(
                 'workbench.action.reloadWindow',
             );
-            expect(mockLogger.debug).toHaveBeenCalledWith('[Update] User chose to reload later');
+            expect(mockLogger.debug).toHaveBeenCalledWith('[Updates] User chose to reload later');
         });
 
         it('should write VSIX to temp directory', async () => {
@@ -216,7 +216,7 @@ describe('ExtensionUpdater', () => {
         it('should log successful installation', async () => {
             await updater.updateExtension(downloadUrl, newVersion);
 
-            expect(mockLogger.info).toHaveBeenCalledWith('[Update] ✓ Extension installed successfully');
+            expect(mockLogger.info).toHaveBeenCalledWith('[Updates] ✓ Extension installed successfully');
         });
 
         it('should handle download timeout', async () => {

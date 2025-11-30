@@ -235,6 +235,7 @@ export class ComponentManager {
         if (tagResult.code === 0 && tagResult.stdout.trim()) {
             // On a tagged commit (e.g., "v1.0.0" or "1.0.0")
             detectedVersion = tagResult.stdout.trim().replace(/^v/, ''); // Remove 'v' prefix
+            this.logger.debug(`[ComponentManager] Detected version from git tag: ${detectedVersion}`);
         } else {
             // Strategy 2: Try reading package.json version
             const packageJsonPath = path.join(componentPath, 'package.json');
@@ -245,9 +246,11 @@ export class ComponentManager {
 
                 if (packageJson.version) {
                     detectedVersion = packageJson.version;
+                    this.logger.debug(`[ComponentManager] Detected version from package.json: ${detectedVersion}`);
                 }
             } catch {
                 // package.json not readable, will try commit hash
+                this.logger.debug(`[ComponentManager] Could not read package.json version, falling back to commit hash`);
             }
         }
 
@@ -264,12 +267,14 @@ export class ComponentManager {
 
             if (commitResult.code === 0) {
                 detectedVersion = commitResult.stdout.trim().substring(0, 8); // Short hash
+                this.logger.debug(`[ComponentManager] Using commit hash as version: ${detectedVersion}`);
             }
         }
 
         // Set the detected version (or leave undefined if all strategies failed)
         if (detectedVersion) {
             componentInstance.version = detectedVersion;
+            this.logger.debug(`[ComponentManager] ${componentDef.name} version: ${detectedVersion}`);
         } else {
             this.logger.warn(`[ComponentManager] Could not detect version for ${componentDef.name}`);
         }

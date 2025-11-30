@@ -26,6 +26,7 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
     return {
         sendMessage: jest.fn().mockResolvedValue(undefined),
         logger: {
+            trace: jest.fn(),
             info: jest.fn(),
             error: jest.fn(),
             warn: jest.fn(),

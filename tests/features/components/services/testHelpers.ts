@@ -32,6 +32,7 @@ export function createMockCommandExecutor(): CommandExecutor {
  */
 export function createMockLogger(): Logger {
     return {
+        trace: jest.fn(),
         debug: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),

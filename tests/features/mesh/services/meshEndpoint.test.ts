@@ -363,7 +363,7 @@ describe('meshEndpoint', () => {
             );
 
             expect(mockLogger.warn).toHaveBeenCalledWith(
-                '[Mesh Endpoint] Failed to parse mesh data',
+                '[Mesh] Failed to parse mesh data from describe',
             );
         });
 

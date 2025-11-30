@@ -62,6 +62,7 @@ describe('checkHandler - Security Tests (Step 2)', () => {
                 debug: jest.fn(),
             } as any,
             debugLogger: {
+                trace: jest.fn(),
                 debug: jest.fn(),
             } as any,
             sharedState: {

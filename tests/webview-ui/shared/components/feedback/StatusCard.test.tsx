@@ -107,14 +107,13 @@ describe('StatusCard', () => {
             const wrapper = textSpan?.parentElement;
             expect(wrapper).toBeInTheDocument();
 
-            // The wrapper should have display: flex with default flex-direction (row = horizontal)
+            // The wrapper should have Tailwind flex class (horizontal layout by default)
             // This verifies the bug fix: StatusCard bundle rebuilt with correct horizontal layout
-            expect(wrapper).toHaveStyle({ display: 'flex' });
+            // Note: jsdom doesn't process Tailwind CSS, so we check class presence instead of computed style
+            expect(wrapper).toHaveClass('flex');
 
-            // Key assertion: NOT vertical/stacked (flex-direction: column)
-            // Note: In jsdom, flexDirection defaults to empty string (which means 'row')
-            const computedStyle = window.getComputedStyle(wrapper as HTMLElement);
-            expect(computedStyle.flexDirection).not.toBe('column');
+            // Key assertion: NOT vertical/stacked (should NOT have flex-col class)
+            expect(wrapper).not.toHaveClass('flex-col');
         });
 
         it('shows label with status when provided', () => {
