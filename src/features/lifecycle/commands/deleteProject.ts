@@ -67,8 +67,8 @@ export class DeleteProjectCommand extends BaseCommand {
                 // to prevent race condition with timer-based getCurrentProject() calls
             });
 
-            this.logger.info(`[Delete Project] Completed: ${project.name}`);
-            this.showSuccessMessage('Project deleted');
+            // Show auto-dismissing success notification (also logs to info channel)
+            this.showSuccessMessage(`Project "${project.name}" deleted`);
 
         } catch (error) {
             await this.showError('Failed to delete project', error as Error);

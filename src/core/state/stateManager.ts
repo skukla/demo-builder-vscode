@@ -111,8 +111,9 @@ export class StateManager {
                 const freshProject = await this.loadProjectFromPath(this.state.currentProject.path);
 
                 // Check if reload failed (returns null on error)
+                // Debug level: expected during project deletion or if files moved
                 if (freshProject === null) {
-                    this.logger.warn('Failed to reload project from disk, using cached version');
+                    this.logger.debug('Project files not found on disk, using cached version');
                     return this.state.currentProject;
                 }
 
@@ -121,7 +122,7 @@ export class StateManager {
                 return freshProject;
             } catch (error) {
                 // Fallback for unexpected errors (loadProjectFromPath normally returns null, not throws)
-                this.logger.warn('Failed to reload project from disk, using cached version');
+                this.logger.debug('Failed to reload project from disk, using cached version');
                 return this.state.currentProject;
             }
         }

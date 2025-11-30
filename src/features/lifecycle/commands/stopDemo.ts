@@ -176,11 +176,10 @@ export class StopDemoCommand extends BaseCommand {
                 this.statusBar.updateProject(project);
 
                 progress.report({ message: 'Demo stopped successfully!' });
-                this.logger.info('Demo stopped');
             });
 
-            // Show auto-dismissing success notification
-            this.showSuccessMessage('Demo stopped successfully');
+            // Show auto-dismissing success notification (also logs to info channel)
+            this.showSuccessMessage('Demo stopped');
 
         } catch (error) {
             await this.showError('Failed to stop demo', error as Error);
