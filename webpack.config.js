@@ -9,7 +9,8 @@ module.exports = {
     wizard: './src/features/project-creation/ui/wizard/index.tsx',
     welcome: './src/features/welcome/ui/index.tsx',
     dashboard: './src/features/dashboard/ui/index.tsx',
-    configure: './src/features/dashboard/ui/configure/index.tsx'
+    configure: './src/features/dashboard/ui/configure/index.tsx',
+    sidebar: './src/features/sidebar/ui/index.tsx'
   },
   output: {
     path: path.resolve(__dirname, 'dist', 'webview'),

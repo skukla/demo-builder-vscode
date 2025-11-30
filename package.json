@@ -129,6 +129,11 @@
     "views": {
       "demoBuilder": [
         {
+          "id": "demoBuilder.sidebar",
+          "name": "Demo Builder",
+          "type": "webview"
+        },
+        {
           "id": "demoBuilder.components",
           "name": "Components"
         }

@@ -1,0 +1,162 @@
+# Projects Dashboard Feature
+
+## Overview
+
+The Projects Dashboard is the main entry point for the Demo Builder extension. It displays all projects in a card grid layout, replacing the previous Welcome Screen.
+
+## Purpose
+
+- Provide a "home screen" for users to see all their projects
+- Enable quick project selection and creation
+- Show project status at a glance (running/stopped, port, components)
+- Support filtering when users have many projects
+
+## Architecture
+
+```
+projects-dashboard/
+├── index.ts                    # Public exports
+├── ui/
+│   ├── index.tsx               # Webview entry point
+│   ├── ProjectsDashboard.tsx   # Main dashboard component
+│   └── components/
+│       ├── index.ts            # Component exports
+│       ├── ProjectCard.tsx     # Single project card
+│       ├── ProjectsGrid.tsx    # Responsive card grid
+│       └── DashboardEmptyState.tsx  # Empty state with CTA
+├── handlers/
+│   └── dashboardHandlers.ts    # Message handlers
+└── CLAUDE.md                   # This file
+```
+
+## Components
+
+### ProjectsDashboard
+
+Main container component that orchestrates the dashboard UI.
+
+**Props:**
+- `projects: Project[]` - Array of all projects
+- `onSelectProject: (project: Project) => void` - Called when a card is clicked
+- `onCreateProject: () => void` - Called when "+ New" is clicked
+- `isLoading?: boolean` - Shows loading spinner when true
+
+**Features:**
+- Shows empty state when no projects
+- Shows search field when > 5 projects
+- "+ New" button in header
+
+### ProjectCard
+
+Displays a single project as a clickable card.
+
+**Props:**
+- `project: Project` - The project to display
+- `onSelect: (project: Project) => void` - Click handler
+
+**Displays:**
+- Project name (title)
+- Status indicator (● Running / ○ Stopped)
+- Port number (if running)
+- Component list (stacked)
+
+### ProjectsGrid
+
+Responsive grid layout for project cards.
+
+**Props:**
+- `projects: Project[]` - Array of projects
+- `onSelectProject: (project: Project) => void` - Card click handler
+
+**Layout:**
+- Uses CSS Grid with `auto-fill, minmax(280px, 1fr)`
+- 2-3 columns depending on viewport
+
+### DashboardEmptyState
+
+Empty state for first-time users.
+
+**Props:**
+- `onCreate: () => void` - Create button click handler
+- `title?: string` - Custom title (default: "No projects yet")
+- `buttonText?: string` - Custom button text (default: "Create Demo")
+- `autoFocus?: boolean` - Auto-focus the button
+
+## Handlers
+
+All handlers follow **Pattern B** (return values, not sendMessage):
+
+### handleGetProjects
+
+Returns all projects with full data.
+
+```typescript
+const result = await handleGetProjects(context);
+// { success: true, data: { projects: Project[] } }
+```
+
+### handleSelectProject
+
+Selects a project by path.
+
+```typescript
+const result = await handleSelectProject(context, { projectPath: '/path/to/project' });
+// { success: true, data: { project: Project } }
+```
+
+### handleCreateProject
+
+Triggers the project creation wizard.
+
+```typescript
+const result = await handleCreateProject(context);
+// { success: true }
+```
+
+## Message Types
+
+| Message | Direction | Payload | Response |
+|---------|-----------|---------|----------|
+| `getProjects` | UI → Extension | - | `{ success, data: { projects } }` |
+| `selectProject` | UI → Extension | `{ projectPath }` | `{ success, data: { project } }` |
+| `createProject` | UI → Extension | - | `{ success }` |
+| `projectsUpdated` | Extension → UI | `{ projects }` | - |
+
+## Styling
+
+Uses existing design system:
+- React Spectrum components (Flex, Text, Button, SearchField)
+- Spectrum design tokens (size-100, size-200, etc.)
+- Custom CSS for cards (`project-card` class)
+- VS Code theme variables
+
+## Testing
+
+Tests located in `tests/features/projects-dashboard/`:
+
+```
+tests/features/projects-dashboard/
+├── testUtils.ts                          # Shared test utilities
+├── handlers/
+│   └── dashboardHandlers.test.ts         # Handler tests
+└── ui/
+    ├── ProjectsDashboard.test.tsx        # Main component tests
+    └── components/
+        ├── ProjectCard.test.tsx          # Card tests
+        ├── ProjectsGrid.test.tsx         # Grid tests
+        └── DashboardEmptyState.test.tsx  # Empty state tests
+```
+
+## Dependencies
+
+- `@/core/ui/components/ui/StatusDot` - Status indicator
+- `@/core/ui/components/WebviewApp` - Root wrapper
+- `@/core/ui/utils/WebviewClient` - Extension communication
+- `@/core/state/stateManager` - Project data
+- `@/types/base` - Project interface
+
+## Related Features
+
+- **sidebar** - Provides navigation context
+- **project-detail** - Destination when project card is clicked
+- **project-creation** - Wizard triggered by "+ New" button
