@@ -694,18 +694,18 @@ export class AdobeEntityService {
             );
 
             if (result.code === 0) {
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.organization-selected', { name: orgId });
-
                 // Clear validation failure flag since new org was successfully selected
                 this.cacheManager.setOrgClearedDueToValidation(false);
 
-                // Smart caching: populate org cache directly
+                // Smart caching: populate org cache directly and get name for logging
+                let orgName = orgId; // Fallback to ID if name lookup fails
                 try {
                     const orgs = await this.getOrganizations();
                     const selectedOrg = orgs.find(o => o.id === orgId);
 
                     if (selectedOrg) {
                         this.cacheManager.setCachedOrganization(selectedOrg);
+                        orgName = selectedOrg.name;
                     } else {
                         this.cacheManager.setCachedOrganization(undefined);
                         this.debugLogger.warn(`[Entity Service] Could not find org ${orgId} in list`);
@@ -714,6 +714,9 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] Failed to cache org after selection:', error);
                     this.cacheManager.setCachedOrganization(undefined);
                 }
+
+                // Log with org name (or ID as fallback)
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.organization-selected', { name: orgName });
 
                 // Clear downstream caches
                 this.cacheManager.setCachedProject(undefined);
@@ -783,15 +786,15 @@ export class AdobeEntityService {
             );
 
             if (result.code === 0) {
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectId });
-
                 // Smart caching - use silent mode to avoid duplicate log messages
+                let projectName = projectId; // Fallback to ID if name lookup fails
                 try {
                     const projects = await this.getProjects({ silent: true });
                     const selectedProject = projects.find(p => p.id === projectId);
 
                     if (selectedProject) {
                         this.cacheManager.setCachedProject(selectedProject);
+                        projectName = selectedProject.title || selectedProject.name || projectId;
                     } else {
                         this.cacheManager.setCachedProject(undefined);
                         this.debugLogger.warn(`[Entity Service] Could not find project ${projectId} in list`);
@@ -800,6 +803,9 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] Failed to cache project after selection:', error);
                     this.cacheManager.setCachedProject(undefined);
                 }
+
+                // Log with project name (or ID as fallback)
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectName });
 
                 // Clear downstream caches
                 this.cacheManager.setCachedWorkspace(undefined);
@@ -815,20 +821,24 @@ export class AdobeEntityService {
             const err = error as AdobeCLIError;
             if (err.stdout?.includes('Project selected :')) {
                 this.debugLogger.debug('[Entity Service] Project selection succeeded despite timeout');
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectId });
 
                 // Smart caching even on timeout success - use silent mode
+                let projectName = projectId; // Fallback to ID if name lookup fails
                 try {
                     const projects = await this.getProjects({ silent: true });
                     const selectedProject = projects.find(p => p.id === projectId);
 
                     if (selectedProject) {
                         this.cacheManager.setCachedProject(selectedProject);
+                        projectName = selectedProject.title || selectedProject.name || projectId;
                     }
                 } catch (cacheError) {
                     this.debugLogger.debug('[Entity Service] Failed to cache project after timeout success:', cacheError);
                     this.cacheManager.setCachedProject(undefined);
                 }
+
+                // Log with project name (or ID as fallback)
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.project-selected', { name: projectName });
 
                 // Clear downstream caches
                 this.cacheManager.setCachedWorkspace(undefined);
@@ -879,15 +889,15 @@ export class AdobeEntityService {
             );
 
             if (result.code === 0) {
-                this.stepLogger.logTemplate('adobe-setup', 'statuses.workspace-selected', { name: workspaceId });
-
-                // Smart caching
+                // Smart caching and get name for logging
+                let workspaceName = workspaceId; // Fallback to ID if name lookup fails
                 try {
                     const workspaces = await this.getWorkspaces();
                     const selectedWorkspace = workspaces.find(w => w.id === workspaceId);
 
                     if (selectedWorkspace) {
                         this.cacheManager.setCachedWorkspace(selectedWorkspace);
+                        workspaceName = selectedWorkspace.name || workspaceId;
                     } else {
                         this.cacheManager.setCachedWorkspace(undefined);
                         this.debugLogger.warn(`[Entity Service] Could not find workspace ${workspaceId} in list`);
@@ -896,6 +906,9 @@ export class AdobeEntityService {
                     this.debugLogger.debug('[Entity Service] Failed to cache workspace after selection:', error);
                     this.cacheManager.setCachedWorkspace(undefined);
                 }
+
+                // Log with workspace name (or ID as fallback)
+                this.stepLogger.logTemplate('adobe-setup', 'statuses.workspace-selected', { name: workspaceName });
 
                 // Invalidate console.where cache
                 this.cacheManager.clearConsoleWhereCache();

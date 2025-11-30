@@ -98,7 +98,7 @@ export async function handleSelectWorkspace(
         // Select workspace with project context guard to protect against context drift
         const success = await context.authManager?.selectWorkspace(workspaceId, currentProject.id);
         if (success) {
-            context.logger.info(`[Workspace] Selected workspace: ${workspaceId}`);
+            // Note: Selection already logged by adobeEntityService with workspace name
 
             // Cache invalidation is handled in authManager.selectWorkspace
 

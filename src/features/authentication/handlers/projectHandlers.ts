@@ -124,7 +124,7 @@ export async function handleSelectProject(
         const success = await context.authManager?.selectProject(projectId, currentOrg.id);
 
         if (success) {
-            context.logger.info(`Selected project: ${projectId}`);
+            // Note: Selection already logged by adobeEntityService with project name
 
             // Ensure fresh workspace data after project change
             // (selectProject already clears workspace cache)
