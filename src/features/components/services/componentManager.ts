@@ -153,7 +153,7 @@ export class ComponentManager {
         }
         
         const cloneCommand = `git clone ${cloneFlags.join(' ')} "${componentDef.source.url}" "${componentPath}"`.trim();
-        
+
         this.logger.trace(`[ComponentManager] Executing: ${cloneCommand}`);
 
         // Use configurable timeout or default
@@ -164,16 +164,23 @@ export class ComponentManager {
         // - Path constructed internally via path.join() (no user input)
         // - Command structure is hardcoded (no injection risk)
         // Shell is REQUIRED to parse quoted arguments correctly
+        const cloneStart = Date.now();
         const result = await commandManager.execute(cloneCommand, {
             timeout: cloneTimeout,
             enhancePath: true,
             shell: DEFAULT_SHELL,
         });
+        const cloneDuration = Date.now() - cloneStart;
 
         if (result.code !== 0) {
-            this.logger.error(`[ComponentManager] Git clone failed for ${componentDef.name}`, new Error(result.stderr));
+            this.logger.error(`[ComponentManager] Git clone failed for ${componentDef.name}`);
+            this.logger.debug(`[ComponentManager] Clone failed: code=${result.code}, duration=${cloneDuration}ms`);
+            this.logger.trace(`[ComponentManager] Clone stderr: ${result.stderr}`);
+            this.logger.trace(`[ComponentManager] Clone stdout: ${result.stdout}`);
             throw new Error(`Git clone failed: ${result.stderr}`);
         }
+
+        this.logger.debug(`[ComponentManager] Clone completed for ${componentDef.name} in ${cloneDuration}ms`);
 
         // Selectively initialize submodules based on user selection
         // (only if component has submodules defined AND some are selected)
@@ -192,8 +199,13 @@ export class ComponentManager {
 
                 // Initialize each selected submodule
                 for (const submodulePath of submodulesToInit) {
+                    const submoduleCommand = `git submodule update --init "${submodulePath}"`;
+                    this.logger.trace(`[ComponentManager] Executing submodule command: ${submoduleCommand}`);
+                    this.logger.trace(`[ComponentManager] Working directory: ${componentPath}`);
+
+                    const submoduleStart = Date.now();
                     const submoduleResult = await commandManager.execute(
-                        `git submodule update --init "${submodulePath}"`,
+                        submoduleCommand,
                         {
                             cwd: componentPath,
                             timeout: TIMEOUTS.COMPONENT_CLONE,
@@ -201,10 +213,16 @@ export class ComponentManager {
                             shell: DEFAULT_SHELL,
                         },
                     );
+                    const submoduleDuration = Date.now() - submoduleStart;
 
                     if (submoduleResult.code !== 0) {
-                        this.logger.warn(`[ComponentManager] Failed to initialize submodule ${submodulePath}: ${submoduleResult.stderr}`);
+                        this.logger.warn(`[ComponentManager] Failed to initialize submodule ${submodulePath}`);
+                        this.logger.debug(`[ComponentManager] Submodule init failed: code=${submoduleResult.code}, duration=${submoduleDuration}ms`);
+                        this.logger.trace(`[ComponentManager] Submodule stderr: ${submoduleResult.stderr}`);
+                        this.logger.trace(`[ComponentManager] Submodule stdout: ${submoduleResult.stdout}`);
                         // Continue with other submodules even if one fails
+                    } else {
+                        this.logger.debug(`[ComponentManager] Submodule ${submodulePath} initialized in ${submoduleDuration}ms`);
                     }
                 }
 
