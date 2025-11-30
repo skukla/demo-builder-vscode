@@ -255,6 +255,8 @@ export class ComponentManager {
             detectedVersion = tagResult.stdout.trim().replace(/^v/, ''); // Remove 'v' prefix
             this.logger.debug(`[ComponentManager] Detected version from git tag: ${detectedVersion}`);
         } else {
+            // No git tag found (expected for repos without tags) - try other strategies
+            this.logger.trace(`[ComponentManager] No git tag found, checking package.json`);
             // Strategy 2: Try reading package.json version
             const packageJsonPath = path.join(componentPath, 'package.json');
             try {
