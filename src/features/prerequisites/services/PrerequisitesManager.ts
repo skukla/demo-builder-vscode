@@ -14,7 +14,7 @@ import type {
 } from './types';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { ServiceLocator } from '@/core/di';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { Logger } from '@/types/logger';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { toError } from '@/types/typeGuards';
@@ -215,7 +215,7 @@ export class PrerequisitesManager {
                 }
 
                 const totalDuration = Date.now() - startTime;
-                this.logger.debug(`[Prerequisites] ${prereq.id}: ✓ Complete in ${totalDuration}ms, installed=${status.installed}`);
+                this.logger.debug(`[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`);
 
                 // Cache result
                 this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
@@ -269,14 +269,14 @@ export class PrerequisitesManager {
             }
             
             const totalDuration = Date.now() - startTime;
-            this.logger.debug(`[Prerequisites] ${prereq.id}: ✓ Complete in ${totalDuration}ms, installed=${status.installed}`);
+            this.logger.debug(`[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`);
 
             // Cache successful result (Step 2: Prerequisite Caching)
             this.cacheManager.setCachedResult(prereq.id, status, undefined, nodeVersion);
 
         } catch (error) {
             const totalDuration = Date.now() - startTime;
-            this.logger.debug(`[Prerequisites] ${prereq.id}: ✗ Failed after ${totalDuration}ms`);
+            this.logger.debug(`[Prerequisites] ${prereq.id}: ✗ Failed after ${formatDuration(totalDuration)}`);
 
             // Check if this is a timeout error
             const errorMessage = toError(error).message;
@@ -286,7 +286,7 @@ export class PrerequisitesManager {
             if (isTimeoutErr) {
                 // Re-throw timeout errors so they can be handled at the command level
                 // Step 1: Reduced timeout from 60s to 10s for faster failure feedback
-                this.logger.warn(`${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK}ms`);
+                this.logger.warn(`${prereq.name} check timed out after ${formatDuration(TIMEOUTS.PREREQUISITE_CHECK)}`);
                 throw new Error(`${prereq.name} check timed out after ${TIMEOUTS.PREREQUISITE_CHECK / 1000} seconds`);
             }
 
@@ -545,15 +545,15 @@ export class PrerequisitesManager {
 
             const duration = Date.now() - startTime;
             if (satisfied) {
-                this.logger.debug(`[Version Satisfaction] ✓ Node ${requiredFamily}.x satisfied in ${duration}ms`);
+                this.logger.debug(`[Version Satisfaction] ✓ Node ${requiredFamily}.x satisfied in ${formatDuration(duration)}`);
             } else {
-                this.logger.debug(`[Version Satisfaction] ✗ Node ${requiredFamily}.x NOT satisfied (${duration}ms) - installed: ${installedVersions.join(', ')}`);
+                this.logger.debug(`[Version Satisfaction] ✗ Node ${requiredFamily}.x NOT satisfied (${formatDuration(duration)}) - installed: ${installedVersions.join(', ')}`);
             }
 
             return satisfied;
         } catch (error) {
             const duration = Date.now() - startTime;
-            this.logger.warn(`[Version Satisfaction] Error checking Node ${requiredFamily}.x after ${duration}ms: ${error}`);
+            this.logger.warn(`[Version Satisfaction] Error checking Node ${requiredFamily}.x after ${formatDuration(duration)}: ${error}`);
             return false; // Safe default: not satisfied
         }
     }

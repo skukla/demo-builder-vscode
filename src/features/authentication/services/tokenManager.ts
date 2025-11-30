@@ -2,7 +2,7 @@ import type { AuthCacheManager } from './authCacheManager';
 import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TIMEOUTS, formatMinutes } from '@/core/utils';
 import type { AuthToken } from '@/features/authentication/services/types';
 import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';
@@ -144,7 +144,7 @@ export class TokenManager {
                 }
 
                 const expiresIn = Math.floor((expiry - now) / 1000 / 60);
-                this.logger.debug(`[Token] Token valid, expires in ${expiresIn} minutes`);
+                this.logger.debug(`[Token] Token valid, expires in ${formatMinutes(expiresIn)}`);
 
                 const result = { valid: true, expiresIn, token };
 

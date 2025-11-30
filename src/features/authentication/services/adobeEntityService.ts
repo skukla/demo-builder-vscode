@@ -1,6 +1,6 @@
 import { getLogger, Logger, StepLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { validateOrgId, validateProjectId, validateWorkspaceId } from '@/core/validation';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
@@ -139,7 +139,7 @@ export class AdobeEntityService {
                     if (sdkResult.body && Array.isArray(sdkResult.body)) {
                         mappedOrgs = this.mapOrganizations(sdkResult.body);
 
-                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedOrgs.length} organizations via SDK in ${sdkDuration}ms`);
+                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedOrgs.length} organizations via SDK in ${formatDuration(sdkDuration)}`);
                     } else {
                         throw new Error('Invalid SDK response format');
                     }
@@ -172,7 +172,7 @@ export class AdobeEntityService {
 
                 mappedOrgs = this.mapOrganizations(orgs);
 
-                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedOrgs.length} organizations via CLI in ${cliDuration}ms`);
+                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedOrgs.length} organizations via CLI in ${formatDuration(cliDuration)}`);
             }
 
             // Clear stale CLI context if no orgs accessible
@@ -233,7 +233,7 @@ export class AdobeEntityService {
                     if (sdkResult.body && Array.isArray(sdkResult.body)) {
                         mappedProjects = this.mapProjects(sdkResult.body);
 
-                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedProjects.length} projects via SDK in ${sdkDuration}ms`);
+                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedProjects.length} projects via SDK in ${formatDuration(sdkDuration)}`);
                     } else {
                         throw new Error('Invalid SDK response format');
                     }
@@ -272,7 +272,7 @@ export class AdobeEntityService {
 
                 mappedProjects = this.mapProjects(projects);
 
-                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedProjects.length} projects via CLI in ${cliDuration}ms`);
+                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedProjects.length} projects via CLI in ${formatDuration(cliDuration)}`);
             }
 
             if (!silent) {
@@ -325,7 +325,7 @@ export class AdobeEntityService {
                     if (sdkResult.body && Array.isArray(sdkResult.body)) {
                         mappedWorkspaces = this.mapWorkspaces(sdkResult.body);
 
-                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedWorkspaces.length} workspaces via SDK in ${sdkDuration}ms`);
+                        this.debugLogger.debug(`[Entity Service] Retrieved ${mappedWorkspaces.length} workspaces via SDK in ${formatDuration(sdkDuration)}`);
                     } else {
                         throw new Error('Invalid SDK response format');
                     }
@@ -359,7 +359,7 @@ export class AdobeEntityService {
 
                 mappedWorkspaces = this.mapWorkspaces(workspaces);
 
-                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedWorkspaces.length} workspaces via CLI in ${cliDuration}ms`);
+                this.debugLogger.debug(`[Entity Service] Retrieved ${mappedWorkspaces.length} workspaces via CLI in ${formatDuration(cliDuration)}`);
             }
 
             this.stepLogger.logTemplate('adobe-setup', 'statuses.workspaces-loaded', {

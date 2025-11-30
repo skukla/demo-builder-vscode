@@ -7,6 +7,7 @@
  */
 
 import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
+import { formatDuration, formatMinutes } from '@/core/utils';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
 import type { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ErrorCode } from '@/types/errorCodes';
@@ -44,7 +45,7 @@ async function checkTokenExpiry(context: HandlerContext): Promise<boolean> {
             return false;
         }
 
-        context.logger.debug(`[Auth] Token valid, expires in ${tokenInspection?.expiresIn || 0} minutes`);
+        context.logger.debug(`[Auth] Token valid, expires in ${formatMinutes(tokenInspection?.expiresIn || 0)}`);
         return true;
     } catch (error) {
         // Token inspection failed - log warning but continue (graceful degradation)
@@ -90,7 +91,7 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
                         tokenExpiringSoon = tokenInspection.expiresIn < 5; // Less than 5 minutes
 
                         if (tokenExpiringSoon) {
-                            context.logger.warn(`[Auth] Token expires in ${tokenExpiresIn} minutes - user should re-authenticate`);
+                            context.logger.warn(`[Auth] Token expires in ${formatMinutes(tokenExpiresIn)} - user should re-authenticate`);
                         }
                     }
                 }
@@ -99,7 +100,7 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
             }
         }
 
-        context.logger.debug(`[Auth] Check complete in ${checkDuration}ms: authenticated=${isAuthenticated}${tokenExpiresIn ? `, expires in ${tokenExpiresIn}min` : ''}`);
+        context.logger.debug(`[Auth] Check complete in ${formatDuration(checkDuration)}: authenticated=${isAuthenticated}${tokenExpiresIn ? `, expires in ${formatMinutes(tokenExpiresIn)}` : ''}`);
 
         // Get org/project context (check cache first, then Adobe CLI if cache miss)
         let currentOrg: AdobeOrg | undefined;
@@ -173,7 +174,7 @@ export async function handleCheckAuth(context: HandlerContext): Promise<SimpleRe
         return { success: true };
     } catch (error) {
         const checkDuration = Date.now() - checkStartTime;
-        context.logger.error(`[Auth] Failed to check auth after ${checkDuration}ms:`, error as Error);
+        context.logger.error(`[Auth] Failed to check auth after ${formatDuration(checkDuration)}:`, error as Error);
 
         await context.sendMessage('auth-status', {
             authenticated: false,
@@ -279,7 +280,7 @@ export async function handleAuthenticate(
         context.sharedState.isAuthenticating = false;
 
         if (loginSuccess) {
-            context.logger.info(`[Auth] Authentication completed successfully after ${loginDuration}ms`);
+            context.logger.info(`[Auth] Authentication completed successfully after ${formatDuration(loginDuration)}`);
 
             const setupStart = Date.now();
             let currentOrg: AdobeOrg | undefined;
@@ -360,7 +361,7 @@ export async function handleAuthenticate(
 
             // Log total post-login setup time
             const totalSetupTime = Date.now() - setupStart;
-            context.logger.debug(`[Auth] Post-login setup completed in ${totalSetupTime}ms`);
+            context.logger.debug(`[Auth] Post-login setup completed in ${formatDuration(totalSetupTime)}`);
 
             // Send appropriate status message based on org selection outcome
             if (orgLacksAccess) {
@@ -404,7 +405,7 @@ export async function handleAuthenticate(
 
             return { success: true };
         } else {
-            context.logger.warn(`[Auth] Authentication timed out after ${loginDuration}ms`);
+            context.logger.warn(`[Auth] Authentication timed out after ${formatDuration(loginDuration)}`);
 
             await context.sendMessage('auth-status', {
                 authenticated: false,
@@ -423,7 +424,7 @@ export async function handleAuthenticate(
         const failDuration = Date.now() - authStartTime;
         context.sharedState.isAuthenticating = false;
 
-        context.logger.error(`[Auth] Failed to start authentication after ${failDuration}ms:`, error as Error);
+        context.logger.error(`[Auth] Failed to start authentication after ${formatDuration(failDuration)}:`, error as Error);
 
         // SECURITY: Never expose internal state details to UI - use generic message
         await context.sendMessage('authError', {
