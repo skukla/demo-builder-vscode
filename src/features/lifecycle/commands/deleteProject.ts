@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
-import { BaseCommand } from '@/core/base';
+import { BaseCommand, BaseWebviewCommand } from '@/core/base';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { toError } from '@/types/typeGuards';
 
@@ -75,6 +75,9 @@ export class DeleteProjectCommand extends BaseCommand {
             return;
         }
 
+        // Close project-related panels (dashboard, configure) before opening welcome
+        this.closeProjectPanels();
+
         // Open Welcome screen to guide user to create a new project
         // Outside try-catch: if this fails, deletion still succeeded
         try {
@@ -82,6 +85,28 @@ export class DeleteProjectCommand extends BaseCommand {
         } catch {
             // Ignore - welcome screen is optional post-deletion
             this.logger.debug('[Delete Project] Welcome screen failed to open (non-critical)');
+        }
+    }
+
+    /**
+     * Close project-related webview panels
+     *
+     * Disposes dashboard and configure panels so they don't show stale
+     * project data after deletion.
+     */
+    private closeProjectPanels(): void {
+        const panelIds = ['demoBuilder.projectDashboard', 'demoBuilder.configureProject'];
+
+        for (const panelId of panelIds) {
+            try {
+                const panel = BaseWebviewCommand.getActivePanel(panelId);
+                if (panel) {
+                    panel.dispose();
+                    this.logger.debug(`[Delete Project] Closed ${panelId} panel`);
+                }
+            } catch {
+                // Ignore - panel may already be disposed
+            }
         }
     }
 
