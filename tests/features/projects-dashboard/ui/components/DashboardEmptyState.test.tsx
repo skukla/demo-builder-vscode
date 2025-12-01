@@ -26,12 +26,12 @@ describe('DashboardEmptyState', () => {
             expect(screen.getByText(/no projects yet/i)).toBeInTheDocument();
         });
 
-        it('should render "Create Demo" CTA button', () => {
+        it('should render "New Project" CTA button', () => {
             renderWithProvider(
                 <DashboardEmptyState onCreate={jest.fn()} />
             );
 
-            const button = screen.getByRole('button', { name: /create demo/i });
+            const button = screen.getByRole('button', { name: /new project/i });
             expect(button).toBeInTheDocument();
         });
 
@@ -77,7 +77,7 @@ describe('DashboardEmptyState', () => {
             const onCreate = jest.fn();
             renderWithProvider(<DashboardEmptyState onCreate={onCreate} />);
 
-            const button = screen.getByRole('button', { name: /create demo/i });
+            const button = screen.getByRole('button', { name: /new project/i });
             fireEvent.click(button);
 
             expect(onCreate).toHaveBeenCalledTimes(1);
@@ -87,12 +87,56 @@ describe('DashboardEmptyState', () => {
             const onCreate = jest.fn();
             renderWithProvider(<DashboardEmptyState onCreate={onCreate} />);
 
-            const button = screen.getByRole('button', { name: /create demo/i });
+            const button = screen.getByRole('button', { name: /new project/i });
             // React Spectrum buttons handle keyboard via onPress, test via click
             // The button itself handles Enter/Space internally
             fireEvent.click(button);
 
             expect(onCreate).toHaveBeenCalled();
+        });
+
+        it('should call onOpenDocs when Documentation icon is clicked', () => {
+            const onOpenDocs = jest.fn();
+            renderWithProvider(
+                <DashboardEmptyState onCreate={jest.fn()} onOpenDocs={onOpenDocs} />
+            );
+
+            const button = screen.getByRole('button', { name: /documentation/i });
+            fireEvent.click(button);
+
+            expect(onOpenDocs).toHaveBeenCalledTimes(1);
+        });
+
+        it('should call onOpenHelp when Help icon is clicked', () => {
+            const onOpenHelp = jest.fn();
+            renderWithProvider(
+                <DashboardEmptyState onCreate={jest.fn()} onOpenHelp={onOpenHelp} />
+            );
+
+            const button = screen.getByRole('button', { name: /get help/i });
+            fireEvent.click(button);
+
+            expect(onOpenHelp).toHaveBeenCalledTimes(1);
+        });
+
+        it('should call onOpenSettings when Settings icon is clicked', () => {
+            const onOpenSettings = jest.fn();
+            renderWithProvider(
+                <DashboardEmptyState onCreate={jest.fn()} onOpenSettings={onOpenSettings} />
+            );
+
+            const button = screen.getByRole('button', { name: /settings/i });
+            fireEvent.click(button);
+
+            expect(onOpenSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('should not render icon row when no icon callbacks provided', () => {
+            renderWithProvider(<DashboardEmptyState onCreate={jest.fn()} />);
+
+            // Only the main CTA button should exist
+            const buttons = screen.getAllByRole('button');
+            expect(buttons).toHaveLength(1);
         });
     });
 

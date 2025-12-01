@@ -134,3 +134,62 @@ export const handleCreateProject: MessageHandler = async (
         };
     }
 };
+
+/**
+ * Open documentation URL
+ */
+export const handleOpenDocs: MessageHandler = async (
+    context: HandlerContext,
+): Promise<HandlerResponse> => {
+    try {
+        // TODO: Replace with actual documentation URL when available
+        const docsUrl = 'https://github.com/anthropics/demo-builder-vscode#readme';
+        await vscode.env.openExternal(vscode.Uri.parse(docsUrl));
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to open documentation', error instanceof Error ? error : undefined);
+        return {
+            success: false,
+            error: 'Failed to open documentation',
+        };
+    }
+};
+
+/**
+ * Open help/support URL
+ */
+export const handleOpenHelp: MessageHandler = async (
+    context: HandlerContext,
+): Promise<HandlerResponse> => {
+    try {
+        // TODO: Replace with actual help URL when available
+        const helpUrl = 'https://github.com/anthropics/demo-builder-vscode/issues';
+        await vscode.env.openExternal(vscode.Uri.parse(helpUrl));
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to open help', error instanceof Error ? error : undefined);
+        return {
+            success: false,
+            error: 'Failed to open help',
+        };
+    }
+};
+
+/**
+ * Open VS Code settings for this extension
+ */
+export const handleOpenSettings: MessageHandler = async (
+    context: HandlerContext,
+): Promise<HandlerResponse> => {
+    try {
+        // Open VS Code settings filtered to this extension
+        await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:adobe.demo-builder');
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to open settings', error instanceof Error ? error : undefined);
+        return {
+            success: false,
+            error: 'Failed to open settings',
+        };
+    }
+};
