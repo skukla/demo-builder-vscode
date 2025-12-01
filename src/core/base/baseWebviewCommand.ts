@@ -204,20 +204,24 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     protected async createOrRevealPanel(): Promise<vscode.WebviewPanel> {
         const webviewId = this.getWebviewId();
 
+        // Reset disposable store if previously disposed (singleton reuse pattern)
+        // This ensures new listeners can be registered after a previous dispose
+        if (this.disposables.disposed) {
+            this.disposables.reset();
+        }
+
         // Check if this webview type already has an active panel
         const existingPanel = BaseWebviewCommand.activePanels.get(webviewId);
         const existingCommManager = BaseWebviewCommand.activeCommunicationManagers.get(webviewId);
 
         if (existingPanel && existingCommManager) {
             try {
-                this.logger.debug(`[Webview] Revealing existing ${webviewId} panel`);
                 existingPanel.reveal();
                 this.panel = existingPanel;
                 this.communicationManager = existingCommManager;
                 return existingPanel;
             } catch {
                 // Panel was disposed - clean up stale references and create new one
-                this.logger.debug(`[Webview] Existing ${webviewId} panel was disposed, creating new one`);
                 BaseWebviewCommand.activePanels.delete(webviewId);
                 BaseWebviewCommand.activeCommunicationManagers.delete(webviewId);
             }
@@ -226,12 +230,10 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         // Check instance panel (legacy support)
         if (this.panel) {
             try {
-                this.logger.debug(`[Webview] Revealing instance panel for ${webviewId}`);
                 this.panel.reveal();
                 return this.panel;
             } catch {
                 // Panel was disposed - clear reference and create new one
-                this.logger.debug(`[Webview] Instance panel for ${webviewId} was disposed, creating new one`);
                 this.panel = undefined;
             }
         }
@@ -255,9 +257,9 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         BaseWebviewCommand.activePanels.set(webviewId, this.panel);
 
         // Set up disposal handling - call dispose() to ensure full cleanup
-        const panelDisposalListener = this.panel.onDidDispose(
-            () => this.dispose(),
-        );
+        const panelDisposalListener = this.panel.onDidDispose(() => {
+            this.dispose();
+        });
         this.disposables.add(panelDisposalListener);
 
         return this.panel;

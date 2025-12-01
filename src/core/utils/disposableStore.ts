@@ -132,4 +132,26 @@ export class DisposableStore implements vscode.Disposable {
     public get count(): number {
         return this.disposables.length;
     }
+
+    /**
+     * Reset the store for reuse after disposal
+     *
+     * Required for singleton command instances that may be executed multiple times.
+     * Clears disposed state so new disposables can be added.
+     *
+     * NOTE: Does NOT dispose existing items - call dispose() first if needed.
+     *
+     * @example
+     * ```typescript
+     * // In a reusable command
+     * async execute() {
+     *   this.disposables.reset(); // Allow new disposables after previous dispose
+     *   const panel = this.disposables.add(createPanel());
+     * }
+     * ```
+     */
+    public reset(): void {
+        this.isDisposed = false;
+        this.disposables = [];
+    }
 }
