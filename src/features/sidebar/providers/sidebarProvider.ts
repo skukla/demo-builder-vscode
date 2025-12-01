@@ -83,7 +83,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             return;
         }
 
-        await this.view.webview.postMessage({ type, data });
+        try {
+            await this.view.webview.postMessage({ type, data });
+        } catch (error) {
+            // Webview may be disposed during cleanup - this is expected
+            this.logger.debug(`Cannot send message '${type}' - webview may be disposed`);
+        }
     }
 
     /**
@@ -103,9 +108,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     /**
      * Clear wizard context (call when wizard closes)
+     * Sends updated context to webview to refresh the sidebar view
      */
-    public clearWizardContext(): void {
+    public async clearWizardContext(): Promise<void> {
+        this.logger.info('Clearing wizard context from sidebar');
         this.wizardContext = undefined;
+
+        // Get the new context (will be 'projects' or 'project' based on state)
+        const newContext = await this.getCurrentContext();
+        this.logger.info(`New sidebar context: ${newContext.type}`);
+        await this.sendMessage('contextUpdate', { context: newContext });
     }
 
     /**
@@ -231,12 +243,21 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     /**
      * Handle back navigation
+     * Context-aware: closes wizard when in wizard context, otherwise navigates back
      */
     private async handleBack(): Promise<void> {
         this.logger.info('Sidebar back navigation');
 
         try {
-            await vscode.commands.executeCommand('demoBuilder.navigateBack');
+            // If in wizard context, close the active editor (wizard panel)
+            if (this.wizardContext) {
+                // Close the active editor which will trigger the wizard's dispose()
+                // The dispose() method will call clearWizardContext() to update sidebar
+                await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+            } else {
+                // For other contexts, navigate back (future implementation)
+                this.logger.debug('Back navigation: no wizard context, no-op for now');
+            }
         } catch (error) {
             this.logger.error(
                 'Back navigation failed',

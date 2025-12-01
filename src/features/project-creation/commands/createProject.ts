@@ -396,6 +396,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     // Override dispose to clean up polling intervals and sidebar context
     public dispose(): void {
+        this.logger.info('[Wizard] dispose() called - cleaning up sidebar context');
+
         // Clear wizard context from sidebar
         this.clearSidebarWizardContext();
 
@@ -444,11 +446,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     /**
      * Clear wizard context from sidebar (called when wizard closes)
+     * Note: Fire-and-forget since dispose() is synchronous
      */
     private clearSidebarWizardContext(): void {
         if (ServiceLocator.isSidebarInitialized()) {
             const sidebarProvider = ServiceLocator.getSidebarProvider();
-            sidebarProvider.clearWizardContext();
+            // Don't await - dispose is synchronous, but message will still be sent
+            sidebarProvider.clearWizardContext().catch(err => {
+                this.logger.warn('Failed to clear sidebar wizard context', err);
+            });
         }
     }
 
