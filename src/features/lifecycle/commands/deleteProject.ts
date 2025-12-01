@@ -51,7 +51,8 @@ export class DeleteProjectCommand extends BaseCommand {
                     // Wait for OS to release file handles (watchers, etc.)
                     await new Promise(resolve => setTimeout(resolve, this.HANDLE_RELEASE_DELAY));
 
-                    // Delete with retry logic for ENOTEMPTY/EBUSY errors
+                    // Delete with retry logic for transient filesystem errors
+                    // No post-deletion verification needed - fs.rm() success means deletion complete
                     await this.deleteWithRetry(projectPath);
                 }
 
@@ -75,16 +76,16 @@ export class DeleteProjectCommand extends BaseCommand {
             return;
         }
 
-        // Close project-related panels (dashboard, configure) before opening welcome
+        // Close project-related panels (dashboard, configure) before navigation
         this.closeProjectPanels();
 
-        // Open Welcome screen to guide user to create a new project
+        // Navigate to Projects List (sidebar shows all projects)
         // Outside try-catch: if this fails, deletion still succeeded
         try {
-            await vscode.commands.executeCommand('demoBuilder.showWelcome');
+            await vscode.commands.executeCommand('demoBuilder.showProjectsList');
         } catch {
-            // Ignore - welcome screen is optional post-deletion
-            this.logger.debug('[Delete Project] Welcome screen failed to open (non-critical)');
+            // Ignore - projects list is optional post-deletion
+            this.logger.debug('[Delete Project] Projects List failed to open (non-critical)');
         }
     }
 
@@ -111,7 +112,7 @@ export class DeleteProjectCommand extends BaseCommand {
     }
 
     /**
-     * Delete directory with exponential backoff retry on ENOTEMPTY/EBUSY errors
+     * Delete directory with exponential backoff retry on transient filesystem errors
      *
      * Retries up to MAX_RETRIES times with exponential backoff delays:
      * 100ms, 200ms, 400ms, 800ms, 1600ms
@@ -120,38 +121,40 @@ export class DeleteProjectCommand extends BaseCommand {
      * - File watchers releasing handles
      * - Running processes closing files
      * - OS completing async file operations
+     * - Antivirus/cloud sync temporary locks
+     *
+     * Retryable error codes (per Node.js fs.rm documentation):
+     * - EBUSY: Resource busy (file in use)
+     * - ENOTEMPTY: Directory not empty (async unlink not complete)
+     * - EPERM: Permission error (temporary lock from antivirus/sync)
+     * - EMFILE: Too many open files in system
+     * - ENFILE: Too many open files
      *
      * @param path Directory path to delete
      * @throws Error if deletion fails after all retries
      */
     private async deleteWithRetry(path: string): Promise<void> {
+        const RETRYABLE_CODES = ['EBUSY', 'ENOTEMPTY', 'EPERM', 'EMFILE', 'ENFILE'];
+
         for (let attempt = 0; attempt < this.MAX_RETRIES; attempt++) {
             try {
+                this.logger.debug(`[Delete Project] Attempt ${attempt + 1}/${this.MAX_RETRIES}: calling fs.rm`);
                 await fs.rm(path, { recursive: true, force: true });
-
-                // Verify deletion succeeded
-                try {
-                    await fs.access(path);
-                    // Directory still exists - treat as retryable error
-                    throw new Error('ENOTEMPTY: Project directory still exists after deletion attempt');
-                } catch (accessError: unknown) {
-                    const err = accessError as { code?: string; message?: string };
-                    if (err.code === 'ENOENT') {
-                        // ENOENT is good - directory is gone
-                        return;
-                    }
-                    // Other error during verification - re-throw to be handled
-                    throw accessError;
-                }
+                // fs.rm() success means deletion complete - no verification needed
+                this.logger.debug(`[Delete Project] Deletion successful`);
+                return;
 
             } catch (error) {
                 const err = toError(error);
-                const isRetryable = err.message.includes('ENOTEMPTY') || err.message.includes('EBUSY');
+                const code = (error as NodeJS.ErrnoException).code;
+                const isRetryable = code !== undefined && RETRYABLE_CODES.includes(code);
+
+                this.logger.debug(`[Delete Project] Error: ${code} - ${err.message} (retryable: ${isRetryable})`);
 
                 if (isRetryable && attempt < this.MAX_RETRIES - 1) {
                     // Exponential backoff: 100ms, 200ms, 400ms, 800ms, 1600ms
                     const delay = this.BASE_DELAY * Math.pow(2, attempt);
-                    this.logger.debug('[Delete Project] Waiting for files to be released...');
+                    this.logger.debug(`[Delete Project] Waiting ${delay}ms before retry...`);
                     await new Promise(resolve => setTimeout(resolve, delay));
                 } else if (isRetryable) {
                     // Last retry failed
@@ -160,7 +163,7 @@ export class DeleteProjectCommand extends BaseCommand {
                         `Failed to delete project directory after ${this.MAX_RETRIES} attempts: ${err.message}`
                     );
                 } else {
-                    // Non-retryable error (permission denied, etc.)
+                    // Non-retryable error (e.g., EACCES - actual permission denied)
                     this.logger.error('[Delete Project] Failed to delete project files', err);
                     throw new Error(`Failed to delete project directory: ${err.message}`);
                 }

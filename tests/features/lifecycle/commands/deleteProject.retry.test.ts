@@ -1,9 +1,10 @@
 /**
  * DeleteProjectCommand - Retry Logic Tests
  *
- * Tests for exponential backoff retry on ENOTEMPTY/EBUSY errors:
- * - Retry on ENOTEMPTY error (first attempt fails, retry succeeds)
+ * Tests for exponential backoff retry on transient filesystem errors:
+ * - Retry on ENOTEMPTY, EBUSY, EPERM errors
  * - Exponential backoff timing (100ms, 200ms, 400ms, 800ms, 1600ms)
+ * - Error code-based detection (not message-based)
  */
 
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
@@ -31,11 +32,9 @@ jest.mock('vscode', () => ({
 // Mock fs/promises with explicit exports
 jest.mock('fs/promises', () => ({
     rm: jest.fn().mockResolvedValue(undefined),
-    access: jest.fn().mockRejectedValue({ code: 'ENOENT' }),
 }));
 import * as fs from 'fs/promises';
 const mockRm = fs.rm as jest.Mock;
-const mockAccess = fs.access as jest.Mock;
 
 // Mock logging
 jest.mock('@/core/logging', () => ({
@@ -71,9 +70,7 @@ describe('DeleteProjectCommand - Retry Logic', () => {
 
         // Reset fs mocks
         mockRm.mockClear();
-        mockAccess.mockClear();
         mockRm.mockResolvedValue(undefined);
-        mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
         // Mock extension context
         mockContext = {
@@ -137,7 +134,7 @@ describe('DeleteProjectCommand - Retry Logic', () => {
         jest.restoreAllMocks();
     });
 
-    describe('Test 3: Retry on ENOTEMPTY error', () => {
+    describe('Test 3: Retry on transient filesystem errors', () => {
         it('should retry when first attempt fails with ENOTEMPTY', async () => {
             // Use fake timers for this test
             jest.useFakeTimers();
@@ -147,12 +144,12 @@ describe('DeleteProjectCommand - Retry Logic', () => {
             mockRm.mockImplementation(async () => {
                 attemptCount++;
                 if (attemptCount === 1) {
-                    const error = new Error('ENOTEMPTY: directory not empty');
+                    const error = new Error('directory not empty') as NodeJS.ErrnoException;
+                    error.code = 'ENOTEMPTY';
                     throw error;
                 }
                 // Second attempt succeeds
             });
-            mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
             // When: Deletion attempted
             const executePromise = command.execute();
@@ -180,11 +177,41 @@ describe('DeleteProjectCommand - Retry Logic', () => {
             mockRm.mockImplementation(async () => {
                 attemptCount++;
                 if (attemptCount === 1) {
-                    const error = new Error('EBUSY: resource busy or locked');
+                    const error = new Error('resource busy or locked') as NodeJS.ErrnoException;
+                    error.code = 'EBUSY';
                     throw error;
                 }
             });
-            mockAccess.mockRejectedValue({ code: 'ENOENT' });
+
+            // When: Deletion attempted
+            const executePromise = command.execute();
+
+            // Advance timers to allow retries
+            await jest.runAllTimersAsync();
+
+            await executePromise;
+
+            // Then: Should have retried and succeeded
+            expect(mockRm).toHaveBeenCalledTimes(2);
+            expect(mockStateManager.clearProject).toHaveBeenCalled();
+
+            jest.useRealTimers();
+        });
+
+        it('should retry when first attempt fails with EPERM', async () => {
+            // Use fake timers for this test
+            jest.useFakeTimers();
+
+            // Given: Permission error (antivirus/sync lock) on first attempt
+            let attemptCount = 0;
+            mockRm.mockImplementation(async () => {
+                attemptCount++;
+                if (attemptCount === 1) {
+                    const error = new Error('operation not permitted') as NodeJS.ErrnoException;
+                    error.code = 'EPERM';
+                    throw error;
+                }
+            });
 
             // When: Deletion attempted
             const executePromise = command.execute();
@@ -210,12 +237,12 @@ describe('DeleteProjectCommand - Retry Logic', () => {
             mockRm.mockImplementation(async () => {
                 attemptCount++;
                 if (attemptCount <= 3) {
-                    const error = new Error('ENOTEMPTY: directory not empty');
+                    const error = new Error('directory not empty') as NodeJS.ErrnoException;
+                    error.code = 'ENOTEMPTY';
                     throw error;
                 }
                 // Fourth attempt succeeds
             });
-            mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
             // When: Deletion attempted
             const executePromise = command.execute();
@@ -246,11 +273,11 @@ describe('DeleteProjectCommand - Retry Logic', () => {
                 attemptTimes.push(Date.now());
                 attemptCount++;
                 if (attemptCount <= 4) {
-                    const error = new Error('ENOTEMPTY: directory not empty');
+                    const error = new Error('directory not empty') as NodeJS.ErrnoException;
+                    error.code = 'ENOTEMPTY';
                     throw error;
                 }
             });
-            mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
             // When: Deletion attempted
             const executePromise = command.execute();
@@ -283,11 +310,11 @@ describe('DeleteProjectCommand - Retry Logic', () => {
             mockRm.mockImplementation(async () => {
                 attemptCount++;
                 if (attemptCount === 1) {
-                    const error = new Error('ENOTEMPTY: directory not empty');
+                    const error = new Error('directory not empty') as NodeJS.ErrnoException;
+                    error.code = 'ENOTEMPTY';
                     throw error;
                 }
             });
-            mockAccess.mockRejectedValue({ code: 'ENOENT' });
 
             // When: Deletion attempted
             const executePromise = command.execute();
@@ -299,63 +326,45 @@ describe('DeleteProjectCommand - Retry Logic', () => {
 
             // Then: Logger should have been called with waiting message
             expect(mockLogger.debug).toHaveBeenCalledWith(
-                expect.stringContaining('Waiting for files')
+                expect.stringContaining('Waiting')
             );
 
             jest.useRealTimers();
         });
     });
 
-    describe('Verification after deletion', () => {
-        it('should verify directory is deleted by checking ENOENT', async () => {
-            // Ensure real timers for this test (no fake timer needed)
-            jest.useRealTimers();
-
-            // Given: fs.rm succeeds
-            mockRm.mockResolvedValue(undefined);
-
-            // And: fs.access throws ENOENT (directory gone)
-            mockAccess.mockRejectedValue({ code: 'ENOENT' });
+    describe('Non-retryable errors', () => {
+        it('should not retry on EACCES (actual permission denied)', async () => {
+            // Given: Permission denied error (not transient)
+            mockRm.mockImplementation(async () => {
+                const error = new Error('permission denied') as NodeJS.ErrnoException;
+                error.code = 'EACCES';
+                throw error;
+            });
 
             // When: Deletion attempted
             await command.execute();
 
-            // Then: Should verify deletion by calling fs.access
-            expect(mockAccess).toHaveBeenCalledWith(testProjectPath);
+            // Then: Should NOT have retried (only 1 attempt)
+            expect(mockRm).toHaveBeenCalledTimes(1);
 
-            // And: Should have succeeded
-            expect(mockStateManager.clearProject).toHaveBeenCalled();
+            // And: Should show error
+            expect(vscode.window.showErrorMessage).toHaveBeenCalled();
         });
 
-        it('should retry if directory still exists after rm', async () => {
-            // Use fake timers for this test
-            jest.useFakeTimers();
-
-            // Given: rm succeeds but access shows directory still exists
-            let accessCount = 0;
-            mockRm.mockResolvedValue(undefined);
-            mockAccess.mockImplementation(async () => {
-                accessCount++;
-                if (accessCount === 1) {
-                    // First check: directory still exists (access succeeds)
-                    return undefined;
-                }
-                // Second check: directory gone
-                throw { code: 'ENOENT' };
+        it('should not retry on unknown error codes', async () => {
+            // Given: Unknown error
+            mockRm.mockImplementation(async () => {
+                const error = new Error('something went wrong') as NodeJS.ErrnoException;
+                error.code = 'UNKNOWN';
+                throw error;
             });
 
             // When: Deletion attempted
-            const executePromise = command.execute();
+            await command.execute();
 
-            // Advance timers to allow retries
-            await jest.runAllTimersAsync();
-
-            await executePromise;
-
-            // Then: Should have retried
-            expect(mockRm).toHaveBeenCalledTimes(2);
-
-            jest.useRealTimers();
+            // Then: Should NOT have retried (only 1 attempt)
+            expect(mockRm).toHaveBeenCalledTimes(1);
         });
     });
 });

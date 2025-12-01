@@ -112,7 +112,7 @@ export const TIMEOUTS = {
 
     // File operations
     FILE_DELETE_RETRY_BASE: 100,    // Base delay for delete retry backoff (100ms)
-    FILE_HANDLE_RELEASE: 100,       // Wait for OS to release file handles (100ms)
+    FILE_HANDLE_RELEASE: 500,       // Wait for OS to release file handles (increased from 100ms for reliability)
     FILE_WATCH_TIMEOUT: 10000,      // Default timeout for file watcher operations (10 seconds)
     FILE_WATCH_INITIAL: 100,        // Initial delay for file watcher polling (100ms)
     FILE_WATCH_MAX: 1000,           // Max delay for file watcher polling (1 second)

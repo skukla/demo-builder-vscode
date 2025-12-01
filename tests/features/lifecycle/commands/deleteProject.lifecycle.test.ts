@@ -214,8 +214,8 @@ describe('DeleteProjectCommand - Lifecycle', () => {
             // Then: stopDemo should NOT be called
             expect(vscode.commands.executeCommand).not.toHaveBeenCalledWith('demoBuilder.stopDemo');
 
-            // But showWelcome should still be called at the end
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.showWelcome');
+            // But showProjectsList should still be called at the end
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.showProjectsList');
         });
     });
 
@@ -248,13 +248,13 @@ describe('DeleteProjectCommand - Lifecycle', () => {
             expect(mockStatusBar.reset).toHaveBeenCalled();
         });
 
-        it('should open Welcome screen after successful deletion', async () => {
+        it('should open Projects List after successful deletion', async () => {
             // Given: Project exists
             // When: Deletion succeeds
             await command.execute();
 
-            // Then: Welcome screen should be opened
-            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.showWelcome');
+            // Then: Projects List should be opened
+            expect(vscode.commands.executeCommand).toHaveBeenCalledWith('demoBuilder.showProjectsList');
         });
     });
 
