@@ -91,6 +91,36 @@ function SidebarApp(): React.ReactElement {
         sendMessage('openSettings');
     }, []);
 
+    // Handle start demo
+    const handleStartDemo = useCallback(() => {
+        sendMessage('startDemo');
+    }, []);
+
+    // Handle stop demo
+    const handleStopDemo = useCallback(() => {
+        sendMessage('stopDemo');
+    }, []);
+
+    // Handle open dashboard
+    const handleOpenDashboard = useCallback(() => {
+        sendMessage('openDashboard');
+    }, []);
+
+    // Handle open configure
+    const handleOpenConfigure = useCallback(() => {
+        sendMessage('openConfigure');
+    }, []);
+
+    // Handle check updates
+    const handleCheckUpdates = useCallback(() => {
+        sendMessage('checkUpdates');
+    }, []);
+
+    // Handle wizard step click (for back navigation)
+    const handleWizardStepClick = useCallback((stepIndex: number) => {
+        sendMessage('wizardStepClick', { stepIndex });
+    }, []);
+
     // Determine color scheme from VS Code theme
     const colorScheme = document.body.classList.contains('vscode-light') ? 'light' : 'dark';
 
@@ -118,6 +148,12 @@ function SidebarApp(): React.ReactElement {
                 onOpenDocs={handleOpenDocs}
                 onOpenHelp={handleOpenHelp}
                 onOpenSettings={handleOpenSettings}
+                onStartDemo={handleStartDemo}
+                onStopDemo={handleStopDemo}
+                onOpenDashboard={handleOpenDashboard}
+                onOpenConfigure={handleOpenConfigure}
+                onCheckUpdates={handleCheckUpdates}
+                onWizardStepClick={handleWizardStepClick}
             />
         </Provider>
     );

@@ -9,9 +9,9 @@ import React from 'react';
 import { Flex, Text, ActionButton, Divider } from '@adobe/react-spectrum';
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import { SidebarNav } from './components/SidebarNav';
-import { WizardProgress } from './components/WizardProgress';
-import { WelcomeView } from './views';
-import type { SidebarContext, NavItem, WizardStep } from '../types';
+import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
+import { WelcomeView, ProjectView } from './views';
+import type { SidebarContext, NavItem } from '../types';
 
 export interface SidebarProps {
     /** Current sidebar context */
@@ -28,17 +28,19 @@ export interface SidebarProps {
     onOpenHelp?: () => void;
     /** Callback for opening settings */
     onOpenSettings?: () => void;
+    /** Callback to start demo */
+    onStartDemo?: () => void;
+    /** Callback to stop demo */
+    onStopDemo?: () => void;
+    /** Callback to open dashboard */
+    onOpenDashboard?: () => void;
+    /** Callback to open configure */
+    onOpenConfigure?: () => void;
+    /** Callback to check for updates */
+    onCheckUpdates?: () => void;
+    /** Callback when wizard step is clicked (for back navigation) */
+    onWizardStepClick?: (stepIndex: number) => void;
 }
-
-// Default wizard steps (without Welcome)
-const WIZARD_STEPS: WizardStep[] = [
-    { id: 'auth', label: 'Sign In' },
-    { id: 'project', label: 'Project' },
-    { id: 'workspace', label: 'Workspace' },
-    { id: 'components', label: 'Components' },
-    { id: 'mesh', label: 'API Mesh' },
-    { id: 'review', label: 'Review' },
-];
 
 /**
  * Sidebar - Main sidebar container
@@ -51,6 +53,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenDocs,
     onOpenHelp,
     onOpenSettings,
+    onStartDemo,
+    onStopDemo,
+    onOpenDashboard,
+    onOpenConfigure,
+    onCheckUpdates,
+    onWizardStepClick,
 }) => {
     // For 'projects' context (no project loaded), show WelcomeView
     if (context.type === 'projects') {
@@ -64,7 +72,59 @@ export const Sidebar: React.FC<SidebarProps> = ({
         );
     }
 
-    // For other contexts, show navigation-based UI
+    // For 'project' context (project loaded), show ProjectView with controls
+    if (context.type === 'project' && onStartDemo && onStopDemo && onOpenDashboard && onOpenConfigure && onCheckUpdates) {
+        return (
+            <ProjectView
+                project={context.project}
+                onStartDemo={onStartDemo}
+                onStopDemo={onStopDemo}
+                onOpenDashboard={onOpenDashboard}
+                onOpenConfigure={onOpenConfigure}
+                onCheckUpdates={onCheckUpdates}
+            />
+        );
+    }
+
+    // For wizard context, show wizard progress using shared TimelineNav
+    if (context.type === 'wizard') {
+        // Convert steps to TimelineStep format (id, name)
+        const timelineSteps: TimelineStep[] = context.steps?.map(s => ({
+            id: s.id,
+            name: s.label,
+        })) || [];
+
+        return (
+            <Flex
+                direction="column"
+                height="100%"
+                UNSAFE_className="sidebar-wizard-view"
+            >
+                {/* Cancel button - padding matches TimelineNav compact padding */}
+                {onBack && (
+                    <Flex UNSAFE_style={{ padding: '16px 16px 0 16px' }}>
+                        <ActionButton isQuiet onPress={onBack}>
+                            <ChevronLeft />
+                            <Text>Cancel</Text>
+                        </ActionButton>
+                    </Flex>
+                )}
+
+                {/* Wizard progress using shared TimelineNav */}
+                <TimelineNav
+                    steps={timelineSteps}
+                    currentStepIndex={context.step - 1}
+                    completedStepIndices={context.completedSteps || []}
+                    onStepClick={onWizardStepClick}
+                    compact={true}
+                    showHeader={true}
+                    headerText="Setup Progress"
+                />
+            </Flex>
+        );
+    }
+
+    // For configure context, show navigation-based UI
     return (
         <Flex
             direction="column"
@@ -72,13 +132,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             UNSAFE_className="p-2"
             height="100%"
         >
-            {/* Back button (when applicable) */}
+            {/* Back button */}
             {onBack && (
                 <ActionButton isQuiet onPress={onBack}>
                     <ChevronLeft />
-                    <Text>
-                        {context.type === 'wizard' ? 'Cancel' : 'Projects'}
-                    </Text>
+                    <Text>Projects</Text>
                 </ActionButton>
             )}
 
@@ -100,12 +158,6 @@ function renderHeader(context: SidebarContext): React.ReactNode {
             return (
                 <Text UNSAFE_className="font-semibold text-sm truncate">
                     {context.project.name}
-                </Text>
-            );
-        case 'wizard':
-            return (
-                <Text UNSAFE_className="font-semibold text-sm">
-                    NEW DEMO
                 </Text>
             );
         default:
@@ -132,14 +184,6 @@ function renderContent(
                     onNavigate={onNavigate}
                 />
             );
-        case 'wizard':
-            return (
-                <WizardProgress
-                    steps={WIZARD_STEPS}
-                    currentStep={context.step}
-                    completedSteps={getCompletedSteps(context.step)}
-                />
-            );
         default:
             return null;
     }
@@ -151,8 +195,4 @@ function getProjectDetailNavItems(activeId: string): NavItem[] {
         { id: 'configure', label: 'Configure', active: activeId === 'configure' },
         { id: 'updates', label: 'Updates', active: activeId === 'updates' },
     ];
-}
-
-function getCompletedSteps(currentStep: number): number[] {
-    return Array.from({ length: currentStep }, (_, i) => i);
 }

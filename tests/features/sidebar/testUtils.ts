@@ -40,12 +40,19 @@ export function createProjectContext(project?: Partial<Project>): SidebarContext
 
 /**
  * Creates a Wizard context
+ * @param step - Current step (1-indexed for display)
+ * @param total - Total number of steps
+ * @param completedSteps - Array of completed step indices (0-indexed)
  */
-export function createWizardContext(step = 1, total = 6): SidebarContext {
+export function createWizardContext(step = 1, total = 6, completedSteps?: number[]): SidebarContext {
+    // If completedSteps not provided, compute from step (all steps before current are completed)
+    const completed = completedSteps ?? Array.from({ length: step - 1 }, (_, i) => i);
     return {
         type: 'wizard',
         step,
         total,
+        completedSteps: completed,
+        steps: DEFAULT_WIZARD_STEPS,
     };
 }
 

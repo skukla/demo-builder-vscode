@@ -143,6 +143,30 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 await this.handleOpenSettings();
                 break;
 
+            case 'startDemo':
+                await this.handleStartDemo();
+                break;
+
+            case 'stopDemo':
+                await this.handleStopDemo();
+                break;
+
+            case 'openDashboard':
+                await this.handleOpenDashboard();
+                break;
+
+            case 'openConfigure':
+                await this.handleOpenConfigure();
+                break;
+
+            case 'checkUpdates':
+                await this.handleCheckUpdates();
+                break;
+
+            case 'wizardStepClick':
+                await this.handleWizardStepClick(message.payload as { stepIndex: number } | undefined);
+                break;
+
             default:
                 this.logger.warn(`Unknown sidebar message: ${message.type}`);
         }
@@ -291,6 +315,107 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     /**
+     * Handle start demo request
+     */
+    private async handleStartDemo(): Promise<void> {
+        this.logger.info('Sidebar: Start demo');
+
+        try {
+            await vscode.commands.executeCommand('demoBuilder.startDemo');
+        } catch (error) {
+            this.logger.error(
+                'Start demo failed',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    /**
+     * Handle stop demo request
+     */
+    private async handleStopDemo(): Promise<void> {
+        this.logger.info('Sidebar: Stop demo');
+
+        try {
+            await vscode.commands.executeCommand('demoBuilder.stopDemo');
+        } catch (error) {
+            this.logger.error(
+                'Stop demo failed',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    /**
+     * Handle open dashboard request
+     */
+    private async handleOpenDashboard(): Promise<void> {
+        this.logger.info('Sidebar: Open dashboard');
+
+        try {
+            await vscode.commands.executeCommand('demoBuilder.showDashboard');
+        } catch (error) {
+            this.logger.error(
+                'Open dashboard failed',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    /**
+     * Handle open configure request
+     */
+    private async handleOpenConfigure(): Promise<void> {
+        this.logger.info('Sidebar: Open configure');
+
+        try {
+            await vscode.commands.executeCommand('demoBuilder.configure');
+        } catch (error) {
+            this.logger.error(
+                'Open configure failed',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    /**
+     * Handle check updates request
+     */
+    private async handleCheckUpdates(): Promise<void> {
+        this.logger.info('Sidebar: Check updates');
+
+        try {
+            await vscode.commands.executeCommand('demoBuilder.checkUpdates');
+        } catch (error) {
+            this.logger.error(
+                'Check updates failed',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    /**
+     * Handle wizard step click (for back navigation)
+     */
+    private async handleWizardStepClick(payload?: { stepIndex: number }): Promise<void> {
+        if (payload?.stepIndex === undefined) {
+            this.logger.warn('Wizard step click: stepIndex not provided');
+            return;
+        }
+
+        this.logger.info(`Sidebar: Navigate wizard to step ${payload.stepIndex}`);
+
+        try {
+            await vscode.commands.executeCommand('demoBuilder.internal.wizardNavigate', payload.stepIndex);
+        } catch (error) {
+            this.logger.error(
+                'Wizard navigation failed',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    /**
      * Generate HTML content for the webview
      * Uses the 4-bundle pattern for webpack code splitting
      * Includes inline spinner that shows until React mounts
@@ -322,12 +447,21 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     ">
     <title>Demo Builder</title>
     <style>
-        /* Inline spinner styles - replaced when React mounts */
+        /* Immediate background colors - prevents flash before CSS loads
+         * Uses --spectrum-global-color-gray-75 which is defined by React Spectrum
+         * and matches the wizard header/footer background (#0e0e0e in dark mode) */
+        html, body, #root {
+            background: var(--spectrum-global-color-gray-75) !important;
+            margin: 0;
+            padding: 0;
+        }
+        /* Inline spinner styles - shows until React mounts */
         .initial-spinner {
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100vh;
+            background: var(--spectrum-global-color-gray-75);
         }
         .spinner {
             width: 24px;
@@ -343,7 +477,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         }
     </style>
 </head>
-<body style="margin: 0;">
+<body>
     <div id="root">
         <div class="initial-spinner">
             <div class="spinner"></div>

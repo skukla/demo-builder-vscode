@@ -167,10 +167,9 @@ describe('SidebarProvider Registration', () => {
     });
 });
 
-describe('Welcome Screen Removal Verification', () => {
-    it('should not have WelcomeStep import in WizardContainer', async () => {
-        // This test verifies the import was removed
-        // Read the actual file and check for the import
+describe('Wizard Step Configuration', () => {
+    it('should have WelcomeStep support in WizardContainer', async () => {
+        // This test verifies WelcomeStep is properly supported
         const fs = require('fs').promises;
         const path = require('path');
 
@@ -181,14 +180,14 @@ describe('Welcome Screen Removal Verification', () => {
 
         const content = await fs.readFile(wizardContainerPath, 'utf-8');
 
-        // Should NOT have WelcomeStep import
-        expect(content).not.toMatch(/import.*WelcomeStep.*from/);
+        // Should have WelcomeStep import
+        expect(content).toMatch(/import.*WelcomeStep.*from/);
 
-        // Should NOT have welcome case in switch
-        expect(content).not.toMatch(/case\s+['"]welcome['"]/);
+        // Should have welcome case in switch
+        expect(content).toMatch(/case\s+['"]welcome['"]/);
     });
 
-    it('should start wizard at first enabled step (not welcome)', async () => {
+    it('should start wizard at first enabled step from config', async () => {
         // This test verifies the initial step logic
         const fs = require('fs').promises;
         const path = require('path');

@@ -6,3 +6,6 @@
 
 export { WelcomeView } from './WelcomeView';
 export type { WelcomeViewProps } from './WelcomeView';
+
+export { ProjectView } from './ProjectView';
+export type { ProjectViewProps } from './ProjectView';

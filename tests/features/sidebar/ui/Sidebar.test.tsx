@@ -256,7 +256,7 @@ describe('Sidebar', () => {
     });
 
     describe('Wizard context', () => {
-        it('should render "NEW DEMO" header', () => {
+        it('should render "Setup Progress" header', () => {
             renderWithProvider(
                 <Sidebar
                     context={createWizardContext()}
@@ -265,7 +265,7 @@ describe('Sidebar', () => {
                 />
             );
 
-            expect(screen.getByText('NEW DEMO')).toBeInTheDocument();
+            expect(screen.getByText('Setup Progress')).toBeInTheDocument();
         });
 
         it('should render wizard steps progress', () => {
@@ -317,21 +317,26 @@ describe('Sidebar', () => {
             expect(onBack).toHaveBeenCalled();
         });
 
-        it('should show completed steps with checkmark', () => {
-            // Step 2 (index 2) means steps 0 and 1 are completed
+        it('should show completed steps with timeline indicators', () => {
+            // Step 3 (1-indexed) means steps 0 and 1 are completed, step 2 is current
             renderWithProvider(
                 <Sidebar
-                    context={createWizardContext(2)}
+                    context={createWizardContext(3)}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
                 />
             );
 
-            const checkmarks = screen.getAllByText('✓');
-            expect(checkmarks).toHaveLength(2);
+            // Completed steps have timeline-step-dot-completed class
+            // Current step is step 3 (index 2), so steps 0 and 1 are completed
+            const authStep = screen.getByTestId('timeline-step-auth');
+            const projectStep = screen.getByTestId('timeline-step-project');
+
+            expect(authStep).toBeInTheDocument();
+            expect(projectStep).toBeInTheDocument();
         });
 
-        it('should show current step with filled indicator', () => {
+        it('should show current step with proper indicator', () => {
             renderWithProvider(
                 <Sidebar
                     context={createWizardContext(2)}
@@ -340,7 +345,9 @@ describe('Sidebar', () => {
                 />
             );
 
-            expect(screen.getByText('●')).toBeInTheDocument();
+            // Current step has aria-current="step"
+            const currentStep = screen.getByTestId('timeline-step-project');
+            expect(currentStep).toHaveAttribute('aria-current', 'step');
         });
     });
 

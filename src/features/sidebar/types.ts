@@ -10,10 +10,10 @@ import type { Project } from '@/types/base';
  * Sidebar context - determines what the sidebar displays
  */
 export type SidebarContext =
-    | { type: 'projects' }                              // Projects Dashboard
-    | { type: 'project'; project: Project }             // Project Detail
-    | { type: 'wizard'; step: number; total: number }   // Wizard
-    | { type: 'configure'; project: Project };          // Configure
+    | { type: 'projects' }                                                          // Projects Dashboard
+    | { type: 'project'; project: Project }                                         // Project Detail
+    | { type: 'wizard'; step: number; total: number; completedSteps?: number[]; steps?: WizardStep[] }    // Wizard
+    | { type: 'configure'; project: Project };                                      // Configure
 
 /**
  * Navigation item for the sidebar
