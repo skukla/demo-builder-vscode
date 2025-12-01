@@ -60,6 +60,8 @@ demo-builder-vscode/
 │   │   ├── mesh/             # API Mesh deployment
 │   │   ├── prerequisites/    # Prerequisites system
 │   │   ├── project-creation/ # Project creation
+│   │   ├── projects-dashboard/ # Projects home screen (card grid)
+│   │   ├── sidebar/          # Sidebar navigation (WebviewViewProvider)
 │   │   └── updates/          # Auto-update system
 │   ├── shared/            # Shared infrastructure (→ see src/shared/CLAUDE.md)
 │   │   ├── base/             # Base types & utilities
@@ -183,7 +185,8 @@ demo-builder-vscode/
   - `src/features/components/ui/steps/` - Component selection steps
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
   - `src/features/mesh/ui/steps/` - API Mesh step
-  - `src/features/project-creation/ui/steps/` - Wizard-specific steps (Welcome, Review, ProjectCreation)
+  - `src/features/project-creation/ui/steps/` - Wizard-specific steps (Review, ProjectCreation)
+→ Note: Welcome step removed - wizard now starts at adobe-auth step
 → See feature documentation for wizard orchestration details
 
 ### Debugging Width Issues

@@ -23,11 +23,13 @@ features/
 │   ├── services/        # Authentication services
 │   └── README.md        # Feature documentation
 ├── components/          # Component management
-├── dashboard/           # Project dashboard
+├── dashboard/           # Project dashboard (detail view)
 ├── lifecycle/           # Project lifecycle
 ├── mesh/                # API Mesh deployment
 ├── prerequisites/       # Prerequisites system
 ├── project-creation/    # Project creation workflow
+├── projects-dashboard/  # Projects home screen (card grid)
+├── sidebar/             # Sidebar navigation (WebviewViewProvider)
 └── updates/             # Auto-update system
 ```
 
@@ -193,6 +195,43 @@ features/my-feature/
 - Initial project configuration
 
 **Path Alias**: `@/features/project-creation`
+
+### projects-dashboard
+
+**Purpose**: Main entry point showing all projects in a card grid layout
+
+**Key Services:**
+- `ProjectsDashboard` - Main dashboard component with search/filter
+- `ProjectCard` - Individual project card display
+- `ProjectsGrid` - Responsive grid layout
+- `DashboardEmptyState` - First-time user empty state
+
+**Responsibilities:**
+- Display all projects in responsive card grid
+- Project search/filtering (when > 5 projects)
+- Project selection to navigate to detail view
+- Create new project CTA
+- Loading states and empty states
+
+**Path Alias**: `@/features/projects-dashboard`
+
+### sidebar
+
+**Purpose**: Contextual sidebar navigation using WebviewViewProvider
+
+**Key Services:**
+- `SidebarProvider` - VS Code WebviewViewProvider implementation
+- `Sidebar` - Main sidebar component
+- `SidebarNav` - Navigation list component
+- `WizardProgress` - Wizard step progress display
+
+**Responsibilities:**
+- Context-aware navigation (projects, project detail, wizard, configure)
+- Wizard step progress display
+- Back navigation
+- Project-specific navigation (Overview, Configure, Updates)
+
+**Path Alias**: `@/features/sidebar`
 
 ### updates
 
