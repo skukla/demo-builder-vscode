@@ -16,6 +16,7 @@ import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
+import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project } from '@/types';
 
 export class CommandManager {
@@ -56,6 +57,23 @@ export class CommandManager {
             await this.welcomeScreen.execute();
         });
 
+        // Projects List (Home screen)
+        const projectsList = new ShowProjectsListCommand(
+            this.context,
+            this.stateManager,
+            this.statusBar,
+            this.logger,
+        );
+        this.registerCommand('demoBuilder.showProjectsList', async () => {
+            // Close other webviews when showing Projects List (tab replacement)
+            ProjectDashboardWebviewCommand.disposeActivePanel();
+            ConfigureProjectWebviewCommand.disposeActivePanel();
+            WelcomeWebviewCommand.disposeActivePanel();
+            // Hide sidebar on projects grid (redundant with main UI)
+            await vscode.commands.executeCommand('workbench.action.closeSidebar');
+            await projectsList.execute();
+        });
+
         // Create Project (Webview version)
         this.createProjectWebview = new CreateProjectWebviewCommand(
             this.context,
@@ -64,9 +82,16 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.createProject', async () => {
+            // Close other webviews when starting project creation (tab replacement)
+            ShowProjectsListCommand.disposeActivePanel();
+            ProjectDashboardWebviewCommand.disposeActivePanel();
+            ConfigureProjectWebviewCommand.disposeActivePanel();
+            WelcomeWebviewCommand.disposeActivePanel();
             // Port conflicts are automatically handled during project creation
             // (see executeProjectCreation in createProjectWebview.ts)
             await this.createProjectWebview.execute();
+            // Show sidebar for wizard progress (after webview is loaded)
+            await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
         });
 
         // Project Dashboard (Post-creation guide)
@@ -77,8 +102,11 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.showProjectDashboard', async () => {
-            // Close Welcome when opening Dashboard (prevent confusion)
+            // Close other webviews when opening Dashboard (tab replacement)
             WelcomeWebviewCommand.disposeActivePanel();
+            ShowProjectsListCommand.disposeActivePanel();
+            // Hide sidebar on project dashboard (user can show via button)
+            await vscode.commands.executeCommand('workbench.action.closeSidebar');
             await projectDashboard.execute();
         });
 
@@ -276,6 +304,16 @@ export class CommandManager {
         // Diagnostics
         const diagnostics = new DiagnosticsCommand();
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
+
+        // Toggle Sidebar (show/hide Demo Builder sidebar)
+        this.registerCommand('demoBuilder.toggleSidebar', async () => {
+            await vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
+        });
+
+        // Show Sidebar (explicit show command - used by dashboard button)
+        this.registerCommand('demoBuilder.showSidebar', async () => {
+            await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
+        });
 
         // Open Component (reveal in Explorer)
         this.registerCommand('demoBuilder.openComponent', async (...args: unknown[]) => {

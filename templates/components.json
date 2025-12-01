@@ -10,7 +10,7 @@
   "selectionGroups": {
     "frontends": ["citisignal-nextjs"],
     "backends": ["adobe-commerce-paas"],
-    "dependencies": ["commerce-mesh"],
+    "dependencies": ["commerce-mesh", "demo-inspector"],
     "appBuilderApps": ["integration-service"],
     "integrations": ["experience-platform"]
   },
@@ -63,6 +63,12 @@
         "nodeVersion": "20",
         "requiredServices": ["catalog-service", "live-search"]
       }
+    },
+    "demo-inspector": {
+      "name": "Demo Inspector",
+      "description": "Interactive inspector overlay for demos",
+      "subType": "inspector",
+      "icon": "eye"
     },
     "commerce-mesh": {
       "name": "Adobe Commerce API Mesh",

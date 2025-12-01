@@ -14,6 +14,7 @@ import type { Project } from '@/types/base';
 
 // Import global styles
 import '@/core/ui/styles/index.css';
+import '@/core/ui/styles/custom-spectrum.css';
 
 /**
  * ProjectsDashboardApp - Wrapper component that handles data fetching

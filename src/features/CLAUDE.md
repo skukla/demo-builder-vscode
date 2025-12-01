@@ -201,6 +201,8 @@ features/my-feature/
 **Purpose**: Main entry point showing all projects in a card grid layout
 
 **Key Services:**
+- `ShowProjectsListCommand` - Main webview command (home screen)
+- `ProjectsListHandlerRegistry` - Message handler registry
 - `ProjectsDashboard` - Main dashboard component with search/filter
 - `ProjectCard` - Individual project card display
 - `ProjectsGrid` - Responsive grid layout
@@ -212,6 +214,7 @@ features/my-feature/
 - Project selection to navigate to detail view
 - Create new project CTA
 - Loading states and empty states
+- Auto-show on extension activation (home screen)
 
 **Path Alias**: `@/features/projects-dashboard`
 

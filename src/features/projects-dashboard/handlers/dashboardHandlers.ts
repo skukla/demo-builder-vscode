@@ -6,9 +6,9 @@
  */
 
 import * as vscode from 'vscode';
-import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
-import type { Project } from '@/types/base';
 import { validateProjectPath } from '@/core/validation/securityValidation';
+import type { Project } from '@/types/base';
+import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /**
  * Get all projects from StateManager
@@ -16,7 +16,7 @@ import { validateProjectPath } from '@/core/validation/securityValidation';
  * Loads the list of projects and enriches with full project data.
  */
 export const handleGetProjects: MessageHandler = async (
-    context: HandlerContext
+    context: HandlerContext,
 ): Promise<HandlerResponse> => {
     try {
         // Get list of project paths
@@ -51,7 +51,7 @@ export const handleGetProjects: MessageHandler = async (
  */
 export const handleSelectProject: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
-    payload?: { projectPath: string }
+    payload?: { projectPath: string },
 ): Promise<HandlerResponse> => {
     try {
         if (!payload?.projectPath) {
@@ -68,7 +68,7 @@ export const handleSelectProject: MessageHandler<{ projectPath: string }> = asyn
         } catch (validationError) {
             context.logger.error(
                 'Path validation failed',
-                validationError instanceof Error ? validationError : undefined
+                validationError instanceof Error ? validationError : undefined,
             );
             return {
                 success: false,
@@ -89,6 +89,18 @@ export const handleSelectProject: MessageHandler<{ projectPath: string }> = asyn
         await context.stateManager.saveProject(project);
         context.logger.info(`Selected project: ${project.name}`);
 
+        // Navigate to project dashboard
+        try {
+            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+        } catch (navError) {
+            // Log navigation failure but don't fail the selection
+            // Project was successfully selected, navigation is non-critical
+            context.logger.error(
+                'Failed to navigate to dashboard',
+                navError instanceof Error ? navError : undefined,
+            );
+        }
+
         return {
             success: true,
             data: { project },
@@ -106,7 +118,7 @@ export const handleSelectProject: MessageHandler<{ projectPath: string }> = asyn
  * Trigger project creation wizard
  */
 export const handleCreateProject: MessageHandler = async (
-    context: HandlerContext
+    context: HandlerContext,
 ): Promise<HandlerResponse> => {
     try {
         context.logger.info('Creating new project from dashboard');

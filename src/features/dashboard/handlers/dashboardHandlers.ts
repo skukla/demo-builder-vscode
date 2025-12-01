@@ -260,10 +260,12 @@ export const handleOpenBrowser: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'viewLogs' message - Show Logs output channel (user-facing)
+ * Handle 'viewLogs' message - Toggle the output panel (shows Logs channel)
  */
 export const handleViewLogs: MessageHandler = async () => {
-    await vscode.commands.executeCommand('demoBuilder.showLogs');
+    // Just toggle the panel visibility
+    // VS Code remembers which output channel was last shown
+    await vscode.commands.executeCommand('workbench.action.togglePanel');
     return { success: true };
 };
 
@@ -486,14 +488,21 @@ async function checkMeshStatusAsync(
         if (project.componentConfigs) {
             const authManager = ServiceLocator.getAuthenticationService();
 
-            const isAuthenticated = await authManager.isAuthenticated();
+            const tokenStatus = await authManager.getTokenStatus();
 
-            if (!isAuthenticated) {
+            if (!tokenStatus.isAuthenticated) {
+                // Calculate how long ago the session expired
+                const expiredMinutesAgo = Math.abs(tokenStatus.expiresInMinutes);
+                const expiredMessage = expiredMinutesAgo > 0
+                    ? `Session expired ${expiredMinutesAgo} minute${expiredMinutesAgo !== 1 ? 's' : ''} ago`
+                    : 'Session expired';
+
+                context.logger.debug(`[Dashboard] Auth check failed: ${expiredMessage}`);
                 context.panel?.webview.postMessage({
                     type: 'statusUpdate',
                     payload: buildStatusPayload(project, frontendConfigChanged, {
                         status: 'needs-auth',
-                        message: 'Sign in to verify mesh status',
+                        message: expiredMessage,
                     }),
                 });
                 return;
@@ -620,9 +629,17 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
     const verificationResult = await verify(project);
 
     if (!verificationResult.success || !verificationResult.data?.exists) {
-        context.logger.warn('[Dashboard] Mesh verification failed - mesh may not exist in Adobe I/O', {
-            error: verificationResult.success ? undefined : verificationResult.error,
-        });
+        // Distinguish between verification errors and actual "mesh not found"
+        const isVerificationError = !verificationResult.success;
+        const errorMessage = verificationResult.error || '';
+
+        if (isVerificationError) {
+            context.logger.warn('[Dashboard] Cannot verify mesh - verification failed', {
+                error: errorMessage,
+            });
+        } else {
+            context.logger.warn('[Dashboard] Mesh not found in Adobe I/O - may have been deleted externally');
+        }
 
         await syncMeshStatus(project, verificationResult);
         await context.stateManager.saveProject(project);
@@ -634,7 +651,9 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
                 type: 'meshStatusUpdate',
                 payload: {
                     status: 'not-deployed',
-                    message: 'Mesh not found in Adobe I/O - may have been deleted externally',
+                    message: isVerificationError
+                        ? 'Cannot verify mesh status'
+                        : 'Mesh not found in Adobe I/O - may have been deleted externally',
                 },
             });
         }
@@ -643,3 +662,36 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
         await context.stateManager.saveProject(project);
     }
 }
+
+/**
+ * Handle 'viewComponents' message - Toggle the sidebar to show/hide component tree
+ */
+export const handleViewComponents: MessageHandler = async () => {
+    await vscode.commands.executeCommand('demoBuilder.toggleSidebar');
+    return { success: true };
+};
+
+/**
+ * Handle 'navigateBack' message - Navigate back to projects list
+ *
+ * Clears the current project and shows the projects list view.
+ */
+export const handleNavigateBack: MessageHandler = async (context) => {
+    try {
+        context.logger.info('Navigating back to projects list');
+
+        // Clear current project from state
+        await context.stateManager.clearProject();
+
+        // Navigate to projects list
+        await vscode.commands.executeCommand('demoBuilder.showProjectsList');
+
+        return { success: true };
+    } catch (error) {
+        context.logger.error('Failed to navigate back', error as Error);
+        return {
+            success: false,
+            error: 'Failed to navigate back to projects list',
+        };
+    }
+};

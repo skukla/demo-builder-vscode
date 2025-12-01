@@ -115,6 +115,17 @@ The dashboard is designed for at-a-glance status monitoring and one-click action
 1. Execute demoBuilder.deleteProject command
 2. Close dashboard after deletion
 
+### handleNavigateBack
+
+**Purpose**: Navigate back to projects list from project dashboard
+
+**Operations**:
+1. Clear current project from state
+2. Execute `demoBuilder.showProjectsList` command
+3. Return success response
+
+**Usage**: Called when user clicks "All Projects" back link in dashboard header
+
 ## Architecture
 
 **Directory Structure**:
@@ -185,7 +196,7 @@ Mesh deployed? → YES → checkMeshStatusAsync()
 ### Example 1: Open Dashboard
 ```typescript
 // From extension.ts or command
-await vscode.commands.executeCommand('demoBuilder.showDashboard');
+await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
 
 // Dashboard webview opens, sends 'ready' message
 // handleReady responds with init data
@@ -305,6 +316,7 @@ if (meshComponent && meshComponent.status !== 'deploying' && meshComponent.statu
 - `openDevConsole` - Open Adobe Developer Console
 - `deleteProject` - Delete current project
 - `re-authenticate` - Trigger browser authentication
+- `navigateBack` - Navigate back to projects list
 
 ### Extension → Webview
 - `init` - Initial dashboard data (theme, project)

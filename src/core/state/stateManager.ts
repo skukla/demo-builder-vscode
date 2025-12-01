@@ -132,10 +132,13 @@ export class StateManager {
     public async saveProject(project: Project): Promise<void> {
         this.state.currentProject = project;
         await this.saveState();
-        
+
         // Save project-specific config
         await this.saveProjectConfig(project);
-        
+
+        // Update context variable for view switching
+        await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', true);
+
         // Notify listeners
         this._onProjectChanged.fire(project);
     }
@@ -213,6 +216,10 @@ export class StateManager {
         this.state.currentProject = undefined;
         this.state.processes.clear();
         await this.saveState();
+
+        // Update context variable for view switching
+        await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', false);
+
         this._onProjectChanged.fire(undefined);
     }
 
@@ -224,17 +231,20 @@ export class StateManager {
             processes: new Map(),
             lastUpdated: new Date(),
         };
-        
+
         // Clear context state
         await this.context.workspaceState.update('demoBuilder.state', undefined);
-        
+
         // Delete state file
         try {
             await fs.unlink(this.stateFile);
         } catch {
             // Ignore if file doesn't exist
         }
-        
+
+        // Update context variable for view switching
+        await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', false);
+
         this._onProjectChanged.fire(undefined);
     }
 

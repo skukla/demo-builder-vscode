@@ -35,6 +35,8 @@ export class DashboardHandlerRegistry extends BaseHandlerRegistry {
         this.handlers.set('viewDebugLogs', handlers.handleViewDebugLogs);
         this.handlers.set('configure', handlers.handleConfigure);
         this.handlers.set('openDevConsole', handlers.handleOpenDevConsole);
+        this.handlers.set('navigateBack', handlers.handleNavigateBack);
+        this.handlers.set('viewComponents', handlers.handleViewComponents);
 
         // Mesh handlers
         this.handlers.set('deployMesh', handlers.handleDeployMesh);

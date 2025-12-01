@@ -10,7 +10,9 @@ module.exports = {
     welcome: './src/features/welcome/ui/index.tsx',
     dashboard: './src/features/dashboard/ui/index.tsx',
     configure: './src/features/dashboard/ui/configure/index.tsx',
-    sidebar: './src/features/sidebar/ui/index.tsx'
+    sidebar: './src/features/sidebar/ui/index.tsx',
+    // Projects list home screen (card grid view)
+    projectsList: './src/features/projects-dashboard/ui/index.tsx'
   },
   output: {
     path: path.resolve(__dirname, 'dist', 'webview'),

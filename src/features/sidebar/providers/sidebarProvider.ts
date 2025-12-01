@@ -27,7 +27,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     private extensionUri: vscode.Uri;
 
     // Local context state (for wizard tracking)
-    private wizardContext?: { step: number; total: number };
+    // Stores the full wizard context including steps array
+    private wizardContext?: { step: number; total: number; completedSteps?: number[]; steps?: { id: string; label: string }[] };
 
     constructor(
         private context: vscode.ExtensionContext,
@@ -96,9 +97,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
      * Call this from wizard or other commands to update the sidebar
      */
     public async updateContext(context: SidebarContext): Promise<void> {
-        // Store wizard context locally
+        // Store wizard context locally (including steps array for getContext requests)
         if (context.type === 'wizard') {
-            this.wizardContext = { step: context.step, total: context.total };
+            this.wizardContext = {
+                step: context.step,
+                total: context.total,
+                completedSteps: context.completedSteps,
+                steps: context.steps,
+            };
         } else {
             this.wizardContext = undefined;
         }
@@ -202,6 +208,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 type: 'wizard',
                 step: this.wizardContext.step,
                 total: this.wizardContext.total,
+                completedSteps: this.wizardContext.completedSteps,
+                steps: this.wizardContext.steps,
             };
         }
 
@@ -374,7 +382,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         this.logger.info('Sidebar: Open dashboard');
 
         try {
-            await vscode.commands.executeCommand('demoBuilder.showDashboard');
+            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
         } catch (error) {
             this.logger.error(
                 'Open dashboard failed',

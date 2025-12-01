@@ -9,6 +9,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StatusBarManager, WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
 import { SidebarProvider } from '@/features/sidebar';
 import { AuthenticationService } from '@/features/authentication';
+import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
 import { parseJSON, getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
 
@@ -18,6 +19,8 @@ let stateManager: StateManager;
 let autoUpdater: AutoUpdater;
 let externalCommandManager: CommandExecutor;
 let authenticationService: AuthenticationService;
+let componentTreeProvider: ComponentTreeProvider;
+let componentTreeView: vscode.TreeView<any>;
 
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
@@ -56,6 +59,11 @@ export async function activate(context: vscode.ExtensionContext) {
         stateManager = new StateManager(context);
         await stateManager.initialize();
 
+        // Initialize context variables for view switching
+        const hasProject = await stateManager.hasProject();
+        await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', hasProject);
+        await vscode.commands.executeCommand('setContext', 'demoBuilder.wizardActive', false);
+
         // Register Sidebar WebviewView EARLY to minimize blank sidebar time
         // The sidebar only needs stateManager and logger to render
         const sidebarProvider = new SidebarProvider(context, stateManager, logger);
@@ -74,6 +82,42 @@ export async function activate(context: vscode.ExtensionContext) {
         // Register SidebarProvider with ServiceLocator (for wizard/command access)
         ServiceLocator.setSidebarProvider(sidebarProvider);
         logger.debug('[Extension] Sidebar provider registered');
+
+        // Register Component TreeView
+        // This displays the component file browser when a project is loaded
+        componentTreeProvider = new ComponentTreeProvider(stateManager, context.extensionPath);
+        componentTreeView = vscode.window.createTreeView('demoBuilder.components', {
+            treeDataProvider: componentTreeProvider,
+            showCollapseAll: true,
+        });
+
+        // Update TreeView title when project changes
+        const projectChangeSubscription = stateManager.onProjectChanged((project) => {
+            if (project) {
+                componentTreeView.title = project.name;
+            }
+            // Note: When project is undefined, we keep the TreeView (visibility is controlled
+            // by the "when" clause in package.json: demoBuilder.projectLoaded && !demoBuilder.wizardActive)
+        });
+
+        // When user clicks the activity bar icon and no main webview is open,
+        // auto-open the projects list as the home screen
+        let isOpeningProjectsList = false;
+        const treeViewVisibilitySubscription = componentTreeView.onDidChangeVisibility(async (e) => {
+            if (e.visible && BaseWebviewCommand.getActivePanelCount() === 0 && !isOpeningProjectsList) {
+                isOpeningProjectsList = true;
+                logger.debug('[Extension] User clicked icon with no main webview - opening projects list');
+                await vscode.commands.executeCommand('demoBuilder.showProjectsList');
+                isOpeningProjectsList = false;
+            }
+        });
+
+        // Add to subscriptions for proper disposal
+        context.subscriptions.push(componentTreeView);
+        context.subscriptions.push(componentTreeProvider);
+        context.subscriptions.push(projectChangeSubscription);
+        context.subscriptions.push(treeViewVisibilitySubscription);
+        logger.debug('[Extension] Component TreeView registered');
 
         // Initialize external command manager
         externalCommandManager = new CommandExecutor();
@@ -196,7 +240,8 @@ export async function activate(context: vscode.ExtensionContext) {
                 const project = await stateManager.getCurrentProject();
                 if (project) {
                     statusBar.updateProject(project);
-                    
+                    componentTreeView.title = project.name;
+
                     // Small delay to ensure extension is fully initialized
                     setTimeout(() => {
                         logger.debug('[Extension] Executing showProjectDashboard command...');
@@ -215,24 +260,21 @@ export async function activate(context: vscode.ExtensionContext) {
             logger.debug('[Extension] No dashboard reopen flag found or error reading it');
         }
 
-        // Normal startup - load project state for status bar (sidebar handles navigation)
+        // Normal startup - load project state for status bar and TreeView
+        // Don't auto-open UI - wait for user to click the activity bar icon
         if (!openingDashboardAfterRestart) {
-            // Load existing project if available (for status bar)
+            // Load existing project if available (for status bar and TreeView title)
             const hasExistingProject = await stateManager.hasProject();
             if (hasExistingProject) {
                 const project = await stateManager.getCurrentProject();
                 if (project) {
                     statusBar.updateProject(project);
+                    componentTreeView.title = project.name;
                     logger.debug(`[Extension] Loaded existing project: ${project.name}`);
                 }
             }
-
-            // Note: We no longer auto-show Welcome screen
-            // The sidebar (Mission Control) is now the primary entry point
-            // It displays contextual navigation based on current state:
-            // - 'projects' context: Shows projects list navigation
-            // - 'project' context: Shows project-specific navigation
-            // - 'wizard' context: Shows wizard progress
+            // Projects list opens when user clicks the activity bar icon
+            // (handled by tree view visibility handler)
         }
 
         // Auto-check for updates on startup (if enabled)
@@ -269,6 +311,8 @@ export function deactivate() {
     // Clean up resources
     statusBar?.dispose();
     autoUpdater?.dispose();
+    componentTreeView?.dispose();
+    componentTreeProvider?.dispose();
     stateManager?.dispose();
     externalCommandManager?.dispose();
     // Note: authenticationService has no dispose method

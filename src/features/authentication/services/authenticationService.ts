@@ -105,6 +105,20 @@ export class AuthenticationService {
     }
 
     /**
+     * Get token status including expiry time
+     * Returns whether authenticated and how many minutes until/since expiry
+     *
+     * @returns Object with isAuthenticated and expiresInMinutes (negative if expired)
+     */
+    async getTokenStatus(): Promise<{ isAuthenticated: boolean; expiresInMinutes: number }> {
+        const inspection = await this.tokenManager.inspectToken();
+        return {
+            isAuthenticated: inspection.valid,
+            expiresInMinutes: inspection.expiresIn,
+        };
+    }
+
+    /**
      * Token-only authentication check - verifies token existence and expiry
      * Does NOT validate org access or call getCurrentOrganization()
      * Does NOT initialize SDK - SDK will be initialized on-demand when needed

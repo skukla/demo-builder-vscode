@@ -2,13 +2,22 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
-import { CustomIconPaths } from '@/types';
+import { CustomIconPaths, Project } from '@/types';
 import { getComponentInstanceEntries } from '@/types/typeGuards';
 
 type FileSystemItem = ComponentFolder | FileItem | ProjectItem;
 
+interface RecentProject {
+    name: string;
+    path: string;
+    lastModified: Date;
+}
+
 /**
  * Tree provider for displaying project components as a file browser
+ *
+ * Uses cached project data to avoid async getChildren() calls that cause
+ * VS Code's TreeView loading indicator to blink.
  */
 export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystemItem> {
     private _onDidChangeTreeData = new vscode.EventEmitter<FileSystemItem | undefined | null | void>();
@@ -18,14 +27,33 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
     private extensionPath: string;
     private projectChangeSubscription: vscode.Disposable;
 
+    // Cached data to avoid async calls in getChildren()
+    private cachedProject: Project | undefined;
+    private cachedAllProjects: RecentProject[] = [];
+    private cacheInitialized = false;
+
     constructor(stateManager: StateManager, extensionPath: string) {
         this.stateManager = stateManager;
         this.extensionPath = extensionPath;
 
-        // Refresh tree when project state changes
-        this.projectChangeSubscription = stateManager.onProjectChanged(() => {
-            this.refresh();
+        // Update cache when project state changes
+        this.projectChangeSubscription = stateManager.onProjectChanged((project) => {
+            this.cachedProject = project;
+            this._onDidChangeTreeData.fire();
         });
+
+        // Initialize cache asynchronously
+        this.initializeCache();
+    }
+
+    /**
+     * Initialize the cache with current state
+     */
+    private async initializeCache(): Promise<void> {
+        this.cachedProject = await this.stateManager.getCurrentProject();
+        this.cachedAllProjects = await this.stateManager.getAllProjects();
+        this.cacheInitialized = true;
+        this._onDidChangeTreeData.fire();
     }
 
     dispose(): void {
@@ -34,21 +62,30 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
     }
 
     refresh(): void {
-        this._onDidChangeTreeData.fire();
+        // Re-fetch all projects on manual refresh
+        this.stateManager.getAllProjects().then(projects => {
+            this.cachedAllProjects = projects;
+            this._onDidChangeTreeData.fire();
+        });
     }
 
     getTreeItem(element: FileSystemItem): vscode.TreeItem {
         return element;
     }
 
-    async getChildren(element?: FileSystemItem): Promise<FileSystemItem[]> {
-        const project = await this.stateManager.getCurrentProject();
-        
+    /**
+     * Get children - synchronous using cached data to avoid loading indicator
+     */
+    getChildren(element?: FileSystemItem): FileSystemItem[] {
+        // If cache not initialized yet, return empty (will refresh once loaded)
+        if (!this.cacheInitialized) {
+            return [];
+        }
+
+        const project = this.cachedProject;
+
         if (!project) {
-            // No current project - check if any projects exist
-            const allProjects = await this.stateManager.getAllProjects();
-            
-            if (allProjects.length === 0) {
+            if (this.cachedAllProjects.length === 0) {
                 // No projects at all - show welcome message
                 return [
                     new FileItem(
@@ -58,9 +95,9 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
                     ),
                 ];
             }
-            
+
             // Show list of available projects
-            return allProjects.map((proj: { name: string; path: string; lastModified: Date }) => 
+            return this.cachedAllProjects.map((proj) =>
                 new ProjectItem(proj.name, proj.path, proj.lastModified),
             );
         }
@@ -68,7 +105,7 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
         // Root level: show component folders
         if (!element) {
             const items: FileSystemItem[] = [];
-            
+
             // SOP §4: Using helper instead of inline Object.entries
             for (const [, component] of getComponentInstanceEntries(project)) {
                 if (component?.path) {
@@ -78,7 +115,7 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
                     items.push(new ComponentFolder(component.name, component.path, icon, subType, this.extensionPath));
                 }
             }
-            
+
             return items;
         }
 
@@ -86,7 +123,7 @@ export class ComponentTreeProvider implements vscode.TreeDataProvider<FileSystem
         if (element instanceof ComponentFolder) {
             return this.getFileSystemChildren(element.fsPath);
         }
-        
+
         return [];
     }
 

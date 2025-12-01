@@ -16,6 +16,8 @@ The Projects Dashboard is the main entry point for the Demo Builder extension. I
 ```
 projects-dashboard/
 ├── index.ts                    # Public exports
+├── commands/
+│   └── showProjectsList.ts     # Projects List webview command (home screen)
 ├── ui/
 │   ├── index.tsx               # Webview entry point
 │   ├── ProjectsDashboard.tsx   # Main dashboard component
@@ -25,7 +27,9 @@ projects-dashboard/
 │       ├── ProjectsGrid.tsx    # Responsive card grid
 │       └── DashboardEmptyState.tsx  # Empty state with CTA
 ├── handlers/
-│   └── dashboardHandlers.ts    # Message handlers
+│   ├── index.ts                # Handler exports (dashboardHandlers + registry)
+│   ├── dashboardHandlers.ts    # Message handlers
+│   └── ProjectsListHandlerRegistry.ts  # Handler registry for Projects List
 └── CLAUDE.md                   # This file
 ```
 
@@ -81,6 +85,46 @@ Empty state for first-time users.
 - `title?: string` - Custom title (default: "No projects yet")
 - `buttonText?: string` - Custom button text (default: "Create Demo")
 - `autoFocus?: boolean` - Auto-focus the button
+
+## Command
+
+### ShowProjectsListCommand
+
+The main command for displaying the Projects List as the home screen.
+
+**Command ID:** `demoBuilder.showProjectsList`
+
+**File:** `commands/showProjectsList.ts`
+
+**Features:**
+- Extends `BaseWebviewCommand` for standardized webview management
+- Uses `ProjectsListHandlerRegistry` for message handling
+- Loads the `projectsList` webpack bundle (4-bundle pattern)
+- Auto-shows on extension activation when no current project
+
+**Usage:**
+```typescript
+await vscode.commands.executeCommand('demoBuilder.showProjectsList');
+```
+
+## Handler Registry
+
+### ProjectsListHandlerRegistry
+
+Centralized message dispatcher for the Projects List view.
+
+**File:** `handlers/ProjectsListHandlerRegistry.ts`
+
+**Registered Handlers:**
+- `getProjects` - Load all projects
+- `selectProject` - Select a project and navigate to dashboard
+- `createProject` - Trigger project creation wizard
+
+**Usage:**
+```typescript
+const registry = new ProjectsListHandlerRegistry();
+const result = await registry.handle(context, 'getProjects', {});
+```
 
 ## Handlers
 
@@ -158,5 +202,5 @@ tests/features/projects-dashboard/
 ## Related Features
 
 - **sidebar** - Provides navigation context
-- **project-detail** - Destination when project card is clicked
+- **dashboard** - Project detail view shown when project card is clicked
 - **project-creation** - Wizard triggered by "+ New" button

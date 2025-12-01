@@ -131,7 +131,14 @@
         {
           "id": "demoBuilder.sidebar",
           "name": "Demo Builder",
-          "type": "webview"
+          "type": "webview",
+          "when": "!demoBuilder.projectLoaded || demoBuilder.wizardActive"
+        },
+        {
+          "id": "demoBuilder.components",
+          "name": "Components",
+          "type": "tree",
+          "when": "demoBuilder.projectLoaded && !demoBuilder.wizardActive"
         }
       ]
     }

@@ -8,6 +8,7 @@ import {
     Divider,
     ProgressCircle
 } from '@adobe/react-spectrum';
+import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import Settings from '@spectrum-icons/workflow/Settings';
@@ -15,7 +16,7 @@ import Refresh from '@spectrum-icons/workflow/Refresh';
 import Globe from '@spectrum-icons/workflow/Globe';
 import Delete from '@spectrum-icons/workflow/Delete';
 import ViewList from '@spectrum-icons/workflow/ViewList';
-import DataMapping from '@spectrum-icons/workflow/DataMapping';
+import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Data from '@spectrum-icons/workflow/Data';
 import Login from '@spectrum-icons/workflow/Login';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
@@ -153,6 +154,8 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     const handleConfigure = useCallback(() => webviewClient.postMessage('configure'), []);
     const handleOpenDevConsole = useCallback(() => webviewClient.postMessage('openDevConsole'), []);
     const handleDeleteProject = useCallback(() => webviewClient.postMessage('deleteProject'), []);
+    const handleNavigateBack = useCallback(() => webviewClient.postMessage('navigateBack'), []);
+    const handleViewComponents = useCallback(() => webviewClient.postMessage('viewComponents'), []);
 
     const displayName = projectStatus?.name || project?.name || 'Demo Project';
     const status = projectStatus?.status || 'ready';
@@ -233,6 +236,14 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
         >
         <View>
             <Flex direction="column" gap="size-200" UNSAFE_className="w-full">
+                {/* Back Navigation */}
+                <Flex alignItems="center" marginBottom="size-100">
+                    <ActionButton isQuiet onPress={handleNavigateBack}>
+                        <ChevronLeft size="S" />
+                        <Text>All Projects</Text>
+                    </ActionButton>
+                </Flex>
+
                 {/* Project Header */}
                 <View marginBottom="size-200">
                     <Heading level={1} marginBottom="size-50" UNSAFE_className="text-xl font-semibold">
@@ -261,7 +272,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                                 <ActionButton
                                     isQuiet
                                     onPress={handleReAuthenticate}
-                                    UNSAFE_className="ml-1"
+                                    UNSAFE_style={{ minHeight: 'auto', height: 'auto', padding: '2px 6px' }}
                                 >
                                     <Login size="XS" />
                                     <Text>Sign in</Text>
@@ -358,14 +369,14 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         <Text UNSAFE_className="icon-label">Dev Console</Text>
                     </ActionButton>
 
-                    {/* Mesh Designer (Coming Soon) */}
+                    {/* View Components */}
                     <ActionButton
+                        onPress={handleViewComponents}
                         isQuiet
-                        isDisabled
                         UNSAFE_className="dashboard-action-button"
                     >
-                        <DataMapping size="L" />
-                        <Text UNSAFE_className="icon-label">Mesh Designer</Text>
+                        <FolderOpen size="L" />
+                        <Text UNSAFE_className="icon-label">Components</Text>
                     </ActionButton>
 
                     {/* Data Manager (Coming Soon) */}

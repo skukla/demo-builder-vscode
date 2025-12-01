@@ -26,3 +26,9 @@ export {
     handleSelectProject,
     handleCreateProject,
 } from './handlers/dashboardHandlers';
+
+// Handler Registry
+export { ProjectsListHandlerRegistry } from './handlers/ProjectsListHandlerRegistry';
+
+// Commands
+export { ShowProjectsListCommand } from './commands/showProjectsList';

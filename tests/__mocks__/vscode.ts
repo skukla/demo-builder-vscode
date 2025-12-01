@@ -65,6 +65,19 @@ export const window = {
         hide: jest.fn(),
         dispose: jest.fn(),
     })),
+    createTreeView: jest.fn(() => ({
+        title: '',
+        description: '',
+        message: '',
+        visible: true,
+        selection: [],
+        onDidChangeSelection: jest.fn(),
+        onDidChangeVisibility: jest.fn(),
+        onDidCollapseElement: jest.fn(),
+        onDidExpandElement: jest.fn(),
+        reveal: jest.fn(),
+        dispose: jest.fn(),
+    })),
     showQuickPick: jest.fn(),
     terminals: [],
     activeColorTheme: {
@@ -80,6 +93,7 @@ export const window = {
         show: jest.fn(),
         sendText: jest.fn(),
     })),
+    registerWebviewViewProvider: jest.fn(),
 };
 
 export const FileType = {
@@ -165,3 +179,32 @@ export class EventEmitter {
 export const Disposable = jest.fn().mockImplementation(() => ({
     dispose: jest.fn(),
 }));
+
+export const TreeItemCollapsibleState = {
+    None: 0,
+    Collapsed: 1,
+    Expanded: 2,
+};
+
+export class TreeItem {
+    label: string | { label: string };
+    collapsibleState?: number;
+    resourceUri?: any;
+    iconPath?: any;
+    contextValue?: string;
+    command?: any;
+    description?: string;
+    tooltip?: string;
+
+    constructor(label: string | { label: string }, collapsibleState?: number) {
+        this.label = label;
+        this.collapsibleState = collapsibleState;
+    }
+}
+
+export class ThemeIcon {
+    static File = new ThemeIcon('file');
+    static Folder = new ThemeIcon('folder');
+
+    constructor(public readonly id: string) {}
+}

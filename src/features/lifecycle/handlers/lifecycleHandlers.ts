@@ -9,6 +9,7 @@
  * - cancel-auth-polling: User cancels authentication
  */
 
+import * as vscode from 'vscode';
 import { validateProjectPath, validateURL } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
@@ -35,11 +36,15 @@ export async function handleReady(context: HandlerContext): Promise<SimpleResult
 /**
  * cancel - User cancels wizard
  *
- * Disposes the wizard panel and logs cancellation.
+ * Disposes the wizard panel and navigates back to the projects list.
  */
 export async function handleCancel(context: HandlerContext): Promise<SimpleResult> {
     context.panel?.dispose();
     context.logger.info('Wizard cancelled by user');
+
+    // Always return to projects list with sidebar closed
+    await vscode.commands.executeCommand('demoBuilder.showProjectsList');
+
     return { success: true };
 }
 
