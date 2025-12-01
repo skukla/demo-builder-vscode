@@ -3,6 +3,8 @@
  *
  * Tests that the ErrorBoundary catches step rendering errors.
  * Uses default ErrorBoundary fallback - no custom UI needed.
+ *
+ * Updated in Step 3 - Welcome step removed, tests use AdobeAuthStep.
  */
 
 import React from 'react';
@@ -27,18 +29,11 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
 }));
 
 // Store mock implementations so we can change them per test
-let welcomeStepImpl: (props: { setCanProceed: (val: boolean) => void }) => React.ReactElement;
+let authStepImpl: (props: { setCanProceed: (val: boolean) => void }) => React.ReactElement;
 
-// Mock step components
-jest.mock('@/features/project-creation/ui/steps/WelcomeStep', () => ({
-    WelcomeStep: (props: { setCanProceed: (val: boolean) => void }) => welcomeStepImpl(props),
-}));
-
+// Mock step components - AdobeAuthStep is now the first step (welcome removed)
 jest.mock('@/features/authentication/ui/steps/AdobeAuthStep', () => ({
-    AdobeAuthStep: ({ setCanProceed }: { setCanProceed: (val: boolean) => void }) => {
-        React.useEffect(() => setCanProceed(true), [setCanProceed]);
-        return <div data-testid="auth-step">Auth Step</div>;
-    },
+    AdobeAuthStep: (props: { setCanProceed: (val: boolean) => void }) => authStepImpl(props),
 }));
 
 jest.mock('@/features/components/ui/steps/ComponentSelectionStep', () => ({
@@ -82,11 +77,12 @@ jest.mock('@/features/project-creation/ui/steps/ProjectCreationStep', () => ({
 // Import after mocks are set up
 import { WizardContainer } from '@/features/project-creation/ui/wizard/WizardContainer';
 
+// Note: Welcome step removed in Step 3 - wizard starts at adobe-auth
 const defaultWizardSteps = [
-    { id: 'welcome', name: 'Welcome', enabled: true },
+    { id: 'adobe-auth', name: 'Adobe Auth', enabled: true },
     { id: 'component-selection', name: 'Components', enabled: true },
     { id: 'prerequisites', name: 'Prerequisites', enabled: true },
-    { id: 'adobe-auth', name: 'Adobe Auth', enabled: true },
+    { id: 'review', name: 'Review', enabled: true },
 ];
 
 describe('WizardContainer ErrorBoundary', () => {
@@ -101,21 +97,21 @@ describe('WizardContainer ErrorBoundary', () => {
 
     beforeEach(() => {
         setupTest();
-        // Reset WelcomeStep to normal behavior
-        welcomeStepImpl = ({ setCanProceed }) => {
+        // Reset AdobeAuthStep to normal behavior
+        authStepImpl = ({ setCanProceed }) => {
             React.useEffect(() => setCanProceed(true), [setCanProceed]);
-            return <div data-testid="welcome-step">Welcome Step</div>;
+            return <div data-testid="adobe-auth-step">Adobe Auth Step</div>;
         };
     });
 
     it('renders step content when no error', () => {
         render(<WizardContainer wizardSteps={defaultWizardSteps} />);
 
-        expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
+        expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
     });
 
     it('catches error and shows fallback UI when step throws', async () => {
-        welcomeStepImpl = () => {
+        authStepImpl = () => {
             throw new Error('Step render failed');
         };
 
@@ -130,7 +126,7 @@ describe('WizardContainer ErrorBoundary', () => {
     it('logs error to console via onError callback', async () => {
         const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-        welcomeStepImpl = () => {
+        authStepImpl = () => {
             throw new Error('Test error for logging');
         };
 

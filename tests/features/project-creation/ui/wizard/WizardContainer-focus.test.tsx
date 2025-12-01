@@ -38,17 +38,11 @@ describe('WizardContainer - Focus Management', () => {
                 />
             );
 
-            // Initially on welcome step
-            expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
+            // Initially on adobe-auth step (welcome removed in Step 3)
+            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
 
             // Navigate through steps inline (same as WizardContainer-navigation.test.tsx)
             const continueButton = screen.getByRole('button', { name: /continue/i });
-
-            // welcome → adobe-auth
-            await user.click(continueButton);
-            await waitFor(() => {
-                expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
-            }, { timeout: 500 });
 
             // adobe-auth → adobe-project
             await user.click(continueButton);

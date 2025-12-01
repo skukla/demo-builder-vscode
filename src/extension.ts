@@ -70,6 +70,9 @@ export async function activate(context: vscode.ExtensionContext) {
                 }
             )
         );
+
+        // Register SidebarProvider with ServiceLocator (for wizard/command access)
+        ServiceLocator.setSidebarProvider(sidebarProvider);
         logger.debug('[Extension] Sidebar provider registered');
 
         // Initialize external command manager

@@ -22,8 +22,8 @@ export const createMockComponentDefaults = (): ComponentSelection => ({
     appBuilderApps: [],
 });
 
+// Note: Welcome step removed in Step 3 - wizard starts at adobe-auth
 export const createMockWizardSteps = () => [
-    { id: 'welcome', name: 'Welcome', enabled: true },
     { id: 'adobe-auth', name: 'Adobe Authentication', enabled: true },
     { id: 'adobe-project', name: 'Adobe Project', enabled: true },
     { id: 'adobe-workspace', name: 'Adobe Workspace', enabled: true },

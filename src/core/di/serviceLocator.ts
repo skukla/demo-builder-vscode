@@ -19,6 +19,7 @@
 
 import { CommandExecutor } from '@/core/shell';
 import type { AuthenticationService } from '@/features/authentication';
+import type { SidebarProvider } from '@/features/sidebar';
 
 /**
  * Centralized service registry for dependency injection
@@ -26,6 +27,7 @@ import type { AuthenticationService } from '@/features/authentication';
 export class ServiceLocator {
     private static commandExecutor: CommandExecutor | null = null;
     private static authenticationService: AuthenticationService | null = null;
+    private static sidebarProvider: SidebarProvider | null = null;
 
     /**
      * Register CommandExecutor instance
@@ -67,6 +69,7 @@ export class ServiceLocator {
     static reset(): void {
         this.commandExecutor = null;
         this.authenticationService = null;
+        this.sidebarProvider = null;
     }
 
     /**
@@ -107,5 +110,45 @@ export class ServiceLocator {
             );
         }
         return this.authenticationService;
+    }
+
+    /**
+     * Register SidebarProvider instance
+     *
+     * **Called by**: extension.ts during activation
+     *
+     * @param provider - SidebarProvider singleton
+     */
+    static setSidebarProvider(provider: SidebarProvider): void {
+        if (this.sidebarProvider) {
+            throw new Error('SidebarProvider already registered. Cannot register twice.');
+        }
+        this.sidebarProvider = provider;
+    }
+
+    /**
+     * Get SidebarProvider instance
+     *
+     * **Called by**: Commands that need to update sidebar context (e.g., wizard)
+     *
+     * @returns SidebarProvider singleton
+     * @throws Error if SidebarProvider not initialized
+     */
+    static getSidebarProvider(): SidebarProvider {
+        if (!this.sidebarProvider) {
+            throw new Error(
+                'SidebarProvider not initialized. Ensure extension.ts has activated.',
+            );
+        }
+        return this.sidebarProvider;
+    }
+
+    /**
+     * Check if SidebarProvider is initialized
+     *
+     * @returns true if SidebarProvider is available
+     */
+    static isSidebarInitialized(): boolean {
+        return this.sidebarProvider !== null;
     }
 }

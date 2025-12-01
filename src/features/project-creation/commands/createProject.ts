@@ -70,6 +70,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private stepLoggerInitPromise: Promise<StepLogger> | null = null;
     private templatesPath: string;
     private handlerRegistry: HandlerRegistry;  // Handler registry for message dispatch
+    private wizardNavigateCommand: vscode.Disposable | null = null;  // Command for sidebar navigation
+    private wizardSteps: WizardStep[] | null = null;  // Loaded wizard steps for sidebar
 
     // Shared state object (passed by reference to handlers for automatic synchronization)
     private sharedState: SharedState;
@@ -255,6 +257,8 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 const stepsConfig = parseJSON<{ steps: WizardStep[] }>(stepsContent);
                 if (stepsConfig) {
                     wizardSteps = stepsConfig.steps;
+                    // Store for sidebar updates
+                    this.wizardSteps = wizardSteps;
                     // Extract step IDs for logging (show first 3 + count of remaining)
                     const stepCount = wizardSteps?.length ?? 0;
                     const stepPreview = wizardSteps?.slice(0, 3).map((s) => s.id).join(', ') ?? '';
@@ -313,6 +317,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     }
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
+        // Handle wizard step changes (update sidebar progress)
+        comm.on('wizardStepChanged', (data: unknown) => {
+            const payload = data as { step: number; completedSteps?: number[] };
+            if (payload?.step) {
+                this.updateSidebarWizardContext(payload.step, payload.completedSteps);
+            }
+            return { success: true };
+        });
+
         // Auto-register all handlers from HandlerRegistry
         // This eliminates boilerplate by automatically discovering and registering
         // all message handlers. Special cases (like progress callbacks) are handled
@@ -359,6 +372,17 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 await this.initializeCommunication();
             }
 
+            // Register command for sidebar navigation (if not already registered)
+            if (!this.wizardNavigateCommand) {
+                this.wizardNavigateCommand = vscode.commands.registerCommand(
+                    'demoBuilder.internal.wizardNavigate',
+                    (stepIndex: number) => this.navigateToStep(stepIndex)
+                );
+            }
+
+            // Notify sidebar that wizard is active (start at step 1)
+            this.updateSidebarWizardContext(1);
+
             // End webview transition (wizard successfully opened)
             BaseWebviewCommand.endWebviewTransition();
 
@@ -370,10 +394,62 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
-    // Override dispose to clean up polling intervals
+    // Override dispose to clean up polling intervals and sidebar context
     public dispose(): void {
+        // Clear wizard context from sidebar
+        this.clearSidebarWizardContext();
+
+        // Dispose navigation command
+        if (this.wizardNavigateCommand) {
+            this.wizardNavigateCommand.dispose();
+            this.wizardNavigateCommand = null;
+        }
+
         // Call parent dispose
         super.dispose();
+    }
+
+    /**
+     * Update sidebar to show wizard progress
+     */
+    private updateSidebarWizardContext(step: number, completedSteps?: number[]): void {
+        if (ServiceLocator.isSidebarInitialized()) {
+            const sidebarProvider = ServiceLocator.getSidebarProvider();
+            // Filter to enabled steps and convert to sidebar format (id, label)
+            const enabledSteps = this.wizardSteps?.filter(s => s.enabled !== false) || [];
+            const sidebarSteps = enabledSteps.map(s => ({
+                id: s.id,
+                label: s.name,  // Convert 'name' to 'label' for sidebar
+            }));
+            sidebarProvider.updateContext({
+                type: 'wizard',
+                step,
+                total: sidebarSteps.length,
+                completedSteps,
+                steps: sidebarSteps,
+            });
+        }
+    }
+
+    /**
+     * Navigate wizard to a specific step (called from sidebar)
+     */
+    public navigateToStep(stepIndex: number): void {
+        if (this.communicationManager) {
+            this.communicationManager.sendMessage('navigateToStep', { stepIndex }).catch(err => {
+                this.logger.warn('Failed to navigate wizard to step', err);
+            });
+        }
+    }
+
+    /**
+     * Clear wizard context from sidebar (called when wizard closes)
+     */
+    private clearSidebarWizardContext(): void {
+        if (ServiceLocator.isSidebarInitialized()) {
+            const sidebarProvider = ServiceLocator.getSidebarProvider();
+            sidebarProvider.clearWizardContext();
+        }
     }
 
     // Helper method to send feedback messages

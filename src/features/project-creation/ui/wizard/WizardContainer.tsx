@@ -6,7 +6,6 @@ import {
     Text,
 } from '@adobe/react-spectrum';
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { TimelineNav } from './TimelineNav';
 import { getNextButtonText } from './wizardHelpers';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
@@ -127,16 +126,22 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
             : [];
     }, [wizardSteps]);
 
-    const [state, setState] = useState<WizardState>({
-        currentStep: 'welcome',
-        projectName: '',
-        projectTemplate: 'citisignal',
-        componentConfigs: {},
-        adobeAuth: {
-            isAuthenticated: false,  // Start as false, will be checked on auth step
-            isChecking: false,  // Allow the check to proceed
-        },
-        components: componentDefaults || undefined,
+    // Note: Welcome step removed in Step 3 - wizard now starts at first enabled step
+    // Compute initial step inside lazy initializer to use prop value on mount
+    const [state, setState] = useState<WizardState>(() => {
+        const enabledSteps = wizardSteps?.filter(step => step.enabled) || [];
+        const firstStep = (enabledSteps.length > 0 ? enabledSteps[0].id : 'adobe-auth') as WizardStep;
+        return {
+            currentStep: firstStep,
+            projectName: '',
+            projectTemplate: 'citisignal',
+            componentConfigs: {},
+            adobeAuth: {
+                isAuthenticated: false,  // Start as false, will be checked on auth step
+                isChecking: false,  // Allow the check to proceed
+            },
+            components: componentDefaults || undefined,
+        };
     });
 
     const [canProceed, setCanProceed] = useState(false);
@@ -259,6 +264,18 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         };
     }, []);
 
+    // Notify sidebar of step changes (for wizard progress display)
+    useEffect(() => {
+        const stepIndex = WIZARD_STEPS.findIndex(step => step.id === state.currentStep);
+        if (stepIndex >= 0) {
+            // Step numbers are 1-indexed for display, also send completed steps for clickability
+            vscode.postMessage('wizardStepChanged', {
+                step: stepIndex + 1,
+                completedSteps: completedSteps.map(s => WIZARD_STEPS.findIndex(ws => ws.id === s)),
+            });
+        }
+    }, [state.currentStep, completedSteps, WIZARD_STEPS]);
+
     // Note: We no longer auto-close the wizard on success
     // The ProjectCreationStep has Browse Files and Close buttons instead
 
@@ -372,18 +389,22 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
         }
     }, [WIZARD_STEPS]);
 
-    // Timeline navigation (backward only)
-    const goToStepViaTimeline = useCallback((step: WizardStep) => {
-        const currentIndex = getCurrentStepIndex();
-        const targetIndex = WIZARD_STEPS.findIndex(s => s.id === step);
+    // Listen for navigation requests from sidebar (must be after getCurrentStepIndex and navigateToStep)
+    useEffect(() => {
+        const unsubscribe = vscode.onMessage('navigateToStep', (data: { stepIndex: number }) => {
+            const targetIndex = data.stepIndex;
+            const currentIndex = getCurrentStepIndex();
 
-        // Only allow backward navigation via timeline
-        if (targetIndex > currentIndex) {
-            return;
-        }
+            // Only allow backward navigation (to completed steps)
+            if (targetIndex < currentIndex && targetIndex >= 0) {
+                const targetStep = WIZARD_STEPS[targetIndex];
+                if (targetStep) {
+                    navigateToStep(targetStep.id, targetIndex, currentIndex);
+                }
+            }
+        });
 
-        // Use internal navigation function
-        navigateToStep(step, targetIndex, currentIndex);
+        return unsubscribe;
     }, [getCurrentStepIndex, navigateToStep, WIZARD_STEPS]);
 
     const goNext = useCallback(async () => {
@@ -490,29 +511,14 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
     const currentStepName = WIZARD_STEPS[currentStepIndex]?.name;
 
     return (
-        <View 
+        <View
             backgroundColor="gray-50"
             width="100%"
             height="100vh"
             UNSAFE_className={cn('flex', 'overflow-hidden')}
         >
             <div ref={wizardContainerRef} className="flex h-full w-full">
-                {/* Timeline Navigation */}
-                <View 
-                    width="size-3000" 
-                    height="100%"
-                    UNSAFE_className={cn('min-w-240', 'max-w-240')}
-                >
-                    <TimelineNav
-                        steps={WIZARD_STEPS}
-                        currentStep={state.currentStep}
-                        completedSteps={completedSteps}
-                        highestCompletedStepIndex={highestCompletedStepIndex}
-                        onStepClick={goToStepViaTimeline}
-                    />
-                </View>
-
-                {/* Content Area */}
+                {/* Content Area - Timeline moved to sidebar */}
                 <div className="flex-column flex-1 h-full w-full">
                     {/* Header */}
                     <View 

@@ -38,18 +38,24 @@ describe('WizardContainer - State Management', () => {
             // Navigate forward through project and workspace selection
             const continueButton = screen.getByRole('button', { name: /continue/i });
 
-            // Welcome -> Adobe Auth -> Adobe Project -> Adobe Workspace
-            for (let i = 0; i < 3; i++) {
+            // Adobe Auth -> Adobe Project -> Adobe Workspace (no welcome step)
+            for (let i = 0; i < 2; i++) {
                 await user.click(continueButton);
                 await waitFor(() => {}, { timeout: 400 });
             }
 
-            // Now navigate back to Welcome (should clear project and workspace state)
-            const welcomeTimelineButton = screen.getByTestId('timeline-step-welcome');
-            await user.click(welcomeTimelineButton);
+            // Now navigate back using Back button (should clear dependent state)
+            // Timeline navigation has been moved to the sidebar
+            const backButton = screen.getByRole('button', { name: /back/i });
+            await user.click(backButton);
+
+            await waitFor(() => {}, { timeout: 400 });
+
+            // Click back again to get to adobe-auth
+            await user.click(backButton);
 
             await waitFor(() => {
-                expect(screen.getByTestId('welcome-step')).toBeInTheDocument();
+                expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
             // State should be cleared (verified through component logic)
@@ -115,12 +121,8 @@ describe('WizardContainer - State Management', () => {
                 />
             );
 
-            // Navigate to adobe-project step
+            // Navigate to adobe-project step (starts at adobe-auth, no welcome)
             const getButton = () => screen.getByRole('button', { name: /continue/i });
-
-            // Click to navigate from welcome to adobe-auth
-            await user.click(getButton());
-            await screen.findByTestId('adobe-auth-step', {}, { timeout: 1000 });
 
             // Click to navigate from adobe-auth to adobe-project
             await user.click(getButton());
