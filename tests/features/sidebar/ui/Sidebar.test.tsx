@@ -286,37 +286,6 @@ describe('Sidebar', () => {
             expect(screen.getByText('Review')).toBeInTheDocument();
         });
 
-        it('should show back button with "Cancel" text', () => {
-            renderWithProvider(
-                <Sidebar
-                    context={createWizardContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onBack={jest.fn()}
-                />
-            );
-
-            const backButton = screen.getByRole('button', { name: /cancel/i });
-            expect(backButton).toBeInTheDocument();
-        });
-
-        it('should call onBack when Cancel clicked', () => {
-            const onBack = jest.fn();
-            renderWithProvider(
-                <Sidebar
-                    context={createWizardContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onBack={onBack}
-                />
-            );
-
-            const cancelButton = screen.getByRole('button', { name: /cancel/i });
-            fireEvent.click(cancelButton);
-
-            expect(onBack).toHaveBeenCalled();
-        });
-
         it('should show completed steps with timeline indicators', () => {
             // Step 3 (1-indexed) means steps 0 and 1 are completed, step 2 is current
             renderWithProvider(

@@ -100,16 +100,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 height="100%"
                 UNSAFE_className="sidebar-wizard-view"
             >
-                {/* Cancel button - padding matches TimelineNav compact padding */}
-                {onBack && (
-                    <Flex UNSAFE_style={{ padding: '16px 16px 0 16px' }}>
-                        <ActionButton isQuiet onPress={onBack}>
-                            <ChevronLeft />
-                            <Text>Cancel</Text>
-                        </ActionButton>
-                    </Flex>
-                )}
-
                 {/* Wizard progress using shared TimelineNav */}
                 <TimelineNav
                     steps={timelineSteps}
