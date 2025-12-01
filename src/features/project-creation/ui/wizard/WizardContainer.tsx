@@ -30,6 +30,7 @@ const log = webviewLogger('WizardContainer');
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;
     wizardSteps?: { id: string; name: string; enabled: boolean }[];
+    existingProjectNames?: string[];
 }
 
 const LOADING_OVERLAY_STYLES = {
@@ -116,7 +117,7 @@ const handleStepBackendCalls = async (currentStep: string, nextStepId: string, w
     }
 };
 
-export function WizardContainer({ componentDefaults, wizardSteps }: WizardContainerProps) {
+export function WizardContainer({ componentDefaults, wizardSteps, existingProjectNames }: WizardContainerProps) {
     // Use the provided configuration, filtering out disabled steps
     // NOTE: Must filter before using in hooks to avoid conditional hook calls
     // Wrapped in useMemo to prevent changing on every render
@@ -472,7 +473,7 @@ export function WizardContainer({ componentDefaults, wizardSteps }: WizardContai
 
         switch (state.currentStep) {
             case 'welcome':
-                return <WelcomeStep {...props} />;
+                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} />;
             case 'component-selection':
                 return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':

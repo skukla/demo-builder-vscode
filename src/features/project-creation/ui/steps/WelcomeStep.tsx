@@ -6,25 +6,39 @@ import {
     Heading,
     Text,
 } from '@adobe/react-spectrum';
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { BaseStepProps } from '@/types/wizard';
 import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
 
-export function WelcomeStep({ state, updateState, setCanProceed }: BaseStepProps) {
+interface WelcomeStepProps extends BaseStepProps {
+    existingProjectNames?: string[];
+}
+
+export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [] }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
-    
-    const validateProjectName = (value: string): string | undefined => {
+
+    // Custom validator for duplicate project name check
+    const notDuplicate = useCallback(
+        (message: string) => (value: string) => ({
+            value,
+            error: existingProjectNames.includes(value) ? message : undefined,
+        }),
+        [existingProjectNames]
+    );
+
+    const validateProjectName = useCallback((value: string): string | undefined => {
         const validator = compose(
             required('Project name is required'),
             pattern(/^[a-z0-9-]+$/, 'Use lowercase letters, numbers, and hyphens only'),
             minLength(3, 'Name must be at least 3 characters'),
-            maxLength(30, 'Name must be less than 30 characters')
+            maxLength(30, 'Name must be less than 30 characters'),
+            notDuplicate('A project with this name already exists')
         );
         return validator(value).error;
-    };
+    }, [notDuplicate]);
 
     /**
      * Get validation state for project name field
@@ -57,11 +71,11 @@ export function WelcomeStep({ state, updateState, setCanProceed }: BaseStepProps
     }, []); // Only run on mount
 
     useEffect(() => {
-        const isValid = 
-            state.projectName.length >= 3 && 
+        const isValid =
+            state.projectName.length >= 3 &&
             validateProjectName(state.projectName) === undefined;
         setCanProceed(isValid);
-    }, [state.projectName, setCanProceed]);
+    }, [state.projectName, setCanProceed, validateProjectName]);
 
     return (
         <div className="container-wizard">

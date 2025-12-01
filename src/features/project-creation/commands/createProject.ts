@@ -56,6 +56,7 @@ interface InitialWizardData {
     workspacePath: string | undefined;
     componentDefaults: ComponentDefaults | null;
     wizardSteps: WizardStep[] | null;
+    existingProjectNames: string[];
 }
 
 export class CreateProjectWebviewCommand extends BaseWebviewCommand {
@@ -270,11 +271,16 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.logger.error('Failed to load wizard steps configuration:', error as Error);
         }
 
+        // Get existing project names for duplicate validation
+        const allProjects = await this.stateManager.getAllProjects();
+        const existingProjectNames = allProjects.map(p => p.name);
+
         return {
             theme: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
             workspacePath: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
             componentDefaults,
             wizardSteps,
+            existingProjectNames,
         };
     }
 
@@ -380,6 +386,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 );
             }
 
+            // Update context variables for view switching
+            await vscode.commands.executeCommand('setContext', 'demoBuilder.wizardActive', true);
+
             // Notify sidebar that wizard is active (start at step 1)
             this.updateSidebarWizardContext(1);
 
@@ -398,6 +407,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     public dispose(): void {
         this.logger.info('[Wizard] dispose() called - cleaning up sidebar context');
 
+        // Update context variable for view switching (fire-and-forget since dispose is synchronous)
+        vscode.commands.executeCommand('setContext', 'demoBuilder.wizardActive', false);
+
         // Clear wizard context from sidebar
         this.clearSidebarWizardContext();
 
@@ -406,6 +418,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.wizardNavigateCommand.dispose();
             this.wizardNavigateCommand = null;
         }
+
+        // Navigate to projects list with sidebar closed (fire-and-forget)
+        vscode.commands.executeCommand('demoBuilder.showProjectsList');
 
         // Call parent dispose
         super.dispose();

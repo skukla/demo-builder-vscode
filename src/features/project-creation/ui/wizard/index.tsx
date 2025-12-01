@@ -12,6 +12,7 @@ import '@/core/ui/styles/custom-spectrum.css';
 interface WizardInitData extends WebviewInitData {
     componentDefaults?: ComponentSelection;
     wizardSteps?: { id: string; name: string; enabled: boolean }[];
+    existingProjectNames?: string[];
 }
 
 // Get root element
@@ -40,6 +41,7 @@ root.render(
                     <WizardContainer
                         componentDefaults={data?.componentDefaults}
                         wizardSteps={data?.wizardSteps}
+                        existingProjectNames={data?.existingProjectNames}
                     />
                 );
             }}
