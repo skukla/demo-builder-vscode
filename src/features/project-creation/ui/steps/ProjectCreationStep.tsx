@@ -69,9 +69,9 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                 <>
                     {isOpeningProject ? (
                         <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
-                            <LoadingDisplay 
+                            <LoadingDisplay
                                 size="L"
-                                message="Opening your project..."
+                                message="Loading your projects..."
                             />
                         </Flex>
                     ) : (
@@ -83,7 +83,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                                         Project Created Successfully
                                     </Text>
                                     <Text UNSAFE_className="text-sm text-gray-600 text-center">
-                                        Click below to open your demo project
+                                        Click below to view your projects
                                     </Text>
                                 </Flex>
                             </Flex>
@@ -146,7 +146,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                 </div>
             )}
             
-            {/* Show Open Project button on success */}
+            {/* Show View Projects button on success */}
             {showOpenButton && (
                 <div className="footer-bar">
                     <div className="max-w-800 w-full">
@@ -155,7 +155,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                                 variant="cta"
                                 onPress={handleOpenProject}
                             >
-                                Open Project
+                                View Projects
                             </Button>
                         </Flex>
                     </div>

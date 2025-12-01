@@ -158,10 +158,10 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
         // context.logger.info('[Project Creation] Adding project to workspace...');
         // const added = vscode.workspace.updateWorkspaceFolders(0, 0, workspaceFolder);
 
-        // Open dashboard directly (no workspace manipulation)
-        context.logger.debug('[Project Creation] Opening project dashboard...');
+        // Navigate to projects list (home screen) so user can see and select their new project
+        context.logger.debug('[Project Creation] Opening projects list...');
         await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DASHBOARD_OPEN_DELAY));
-        await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+        await vscode.commands.executeCommand('demoBuilder.showProjectsList');
 
     } catch (error) {
         context.logger.error('[Project Creation] Error opening project', error as Error);
