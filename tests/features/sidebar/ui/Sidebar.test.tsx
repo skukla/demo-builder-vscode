@@ -23,9 +23,9 @@ const renderWithProvider = (ui: React.ReactElement) => {
 };
 
 describe('Sidebar', () => {
-    describe('Projects context (WelcomeView)', () => {
-        it('should render "New Project" button', () => {
-            renderWithProvider(
+    describe('Projects context (WelcomeView - utility strip)', () => {
+        it('should render nothing when no icon callbacks provided', () => {
+            const { container } = renderWithProvider(
                 <Sidebar
                     context={createProjectsContext()}
                     onNavigate={jest.fn()}
@@ -33,22 +33,9 @@ describe('Sidebar', () => {
                 />
             );
 
-            expect(screen.getByRole('button', { name: /new project/i })).toBeInTheDocument();
-        });
-
-        it('should call onCreateProject when "New Project" button clicked', () => {
-            const onCreateProject = jest.fn();
-            renderWithProvider(
-                <Sidebar
-                    context={createProjectsContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={onCreateProject}
-                />
-            );
-
-            fireEvent.click(screen.getByRole('button', { name: /new project/i }));
-
-            expect(onCreateProject).toHaveBeenCalled();
+            // WelcomeView returns null when no icons
+            // The sidebar-welcome class should not be present
+            expect(container.querySelector('.sidebar-welcome')).not.toBeInTheDocument();
         });
 
         it('should render Documentation icon button when onOpenDocs provided', () => {

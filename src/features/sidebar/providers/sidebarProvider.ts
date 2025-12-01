@@ -72,7 +72,41 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             this.logger.debug('Sidebar view disposed');
         });
 
+        // When sidebar is revealed (user clicks extension icon), auto-open the main dashboard
+        // Only if not in wizard mode
+        webviewView.onDidChangeVisibility(() => {
+            if (webviewView.visible && !this.wizardContext) {
+                this.openMainDashboard();
+            }
+        });
+
+        // Also open on initial resolve (first time sidebar is shown)
+        if (!this.wizardContext) {
+            this.openMainDashboard();
+        }
+
         this.logger.debug('Sidebar view resolved');
+    }
+
+    /**
+     * Open the appropriate main dashboard based on current state
+     */
+    private async openMainDashboard(): Promise<void> {
+        try {
+            const currentProject = await this.stateManager.getCurrentProject();
+            if (currentProject) {
+                // Project is selected - show project dashboard
+                await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
+            } else {
+                // No project - show projects list
+                await vscode.commands.executeCommand('demoBuilder.showProjectsList');
+            }
+        } catch (error) {
+            this.logger.error(
+                'Failed to open main dashboard',
+                error instanceof Error ? error : undefined
+            );
+        }
     }
 
     /**
