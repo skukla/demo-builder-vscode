@@ -506,6 +506,57 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 .max-w-600 { max-width: 600px !important; }
 .max-w-800 { max-width: 800px !important; }
 .max-w-900 { max-width: 900px !important; }
+.max-w-400 { max-width: 400px !important; }
+
+/* ===========================================
+   Projects Dashboard Specific
+   =========================================== */
+.projects-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 16px !important;
+    padding: 4px !important; /* Small padding for hover shadow overflow */
+}
+
+/* Sidebar loading state */
+.sidebar-loading {
+    padding: 16px !important;
+    color: var(--vscode-foreground) !important;
+}
+
+/* Sidebar nav item base styles (static parts) */
+.sidebar-nav-item {
+    padding: 8px 12px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+}
+
+/* Wizard progress list */
+.wizard-progress-list {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Wizard progress step item */
+.wizard-step-item {
+    padding: 6px 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+/* Wizard step indicator */
+.wizard-step-indicator {
+    font-size: 12px !important;
+    width: 16px !important;
+    text-align: center !important;
+}
+
+/* Border top with gray-200 */
+.border-t-gray-200 {
+    border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+}
 
 .min-h-0 { min-height: 0 !important; }
 .min-h-120 { min-height: 120px !important; }
@@ -700,6 +751,27 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     border-color: var(--spectrum-global-color-gray-400) !important;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
     outline: none !important;
+}
+
+/* Sidebar provider - transparent background to match VS Code */
+.sidebar-provider {
+    background: transparent !important;
+}
+
+/* Sidebar welcome container - vertically centered */
+.sidebar-welcome {
+    padding: 16px !important;
+    min-height: calc(100vh - 40px) !important;
+    justify-content: center !important;
+}
+
+/* Sidebar icon buttons - no background */
+.sidebar-icon-btn {
+    background: transparent !important;
+}
+
+.sidebar-icon-btn:hover {
+    background: var(--spectrum-global-color-gray-200) !important;
 }
 
 /* ===========================================

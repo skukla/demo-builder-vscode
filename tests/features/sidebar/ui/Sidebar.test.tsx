@@ -23,42 +23,119 @@ const renderWithProvider = (ui: React.ReactElement) => {
 };
 
 describe('Sidebar', () => {
-    describe('Projects context', () => {
-        it('should render "Demo Builder" header', () => {
+    describe('Projects context (WelcomeView)', () => {
+        it('should render "New Project" button', () => {
             renderWithProvider(
                 <Sidebar
                     context={createProjectsContext()}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                 />
             );
 
-            expect(screen.getByText('Demo Builder')).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /new project/i })).toBeInTheDocument();
         });
 
-        it('should render Projects navigation item', () => {
+        it('should call onCreateProject when "New Project" button clicked', () => {
+            const onCreateProject = jest.fn();
             renderWithProvider(
                 <Sidebar
                     context={createProjectsContext()}
                     onNavigate={jest.fn()}
+                    onCreateProject={onCreateProject}
                 />
             );
 
-            expect(screen.getByText('Projects')).toBeInTheDocument();
+            fireEvent.click(screen.getByRole('button', { name: /new project/i }));
+
+            expect(onCreateProject).toHaveBeenCalled();
         });
 
-        it('should not show back button on Projects context', () => {
-            const onBack = jest.fn();
+        it('should render Documentation icon button when onOpenDocs provided', () => {
             renderWithProvider(
                 <Sidebar
                     context={createProjectsContext()}
                     onNavigate={jest.fn()}
-                    onBack={onBack}
+                    onCreateProject={jest.fn()}
+                    onOpenDocs={jest.fn()}
                 />
             );
 
-            // Back button should not be rendered for projects context
-            expect(screen.queryByText('Projects', { selector: 'button' })).not.toBeInTheDocument();
-            expect(screen.queryByText('Cancel')).not.toBeInTheDocument();
+            expect(screen.getByRole('button', { name: /documentation/i })).toBeInTheDocument();
+        });
+
+        it('should render Get Help icon button when onOpenHelp provided', () => {
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectsContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenHelp={jest.fn()}
+                />
+            );
+
+            expect(screen.getByRole('button', { name: /get help/i })).toBeInTheDocument();
+        });
+
+        it('should render Settings icon button when onOpenSettings provided', () => {
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectsContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenSettings={jest.fn()}
+                />
+            );
+
+            expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument();
+        });
+
+        it('should call onOpenDocs when Documentation icon clicked', () => {
+            const onOpenDocs = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectsContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenDocs={onOpenDocs}
+                />
+            );
+
+            fireEvent.click(screen.getByRole('button', { name: /documentation/i }));
+
+            expect(onOpenDocs).toHaveBeenCalled();
+        });
+
+        it('should call onOpenHelp when Get Help icon clicked', () => {
+            const onOpenHelp = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectsContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenHelp={onOpenHelp}
+                />
+            );
+
+            fireEvent.click(screen.getByRole('button', { name: /get help/i }));
+
+            expect(onOpenHelp).toHaveBeenCalled();
+        });
+
+        it('should call onOpenSettings when Settings icon clicked', () => {
+            const onOpenSettings = jest.fn();
+            renderWithProvider(
+                <Sidebar
+                    context={createProjectsContext()}
+                    onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    onOpenSettings={onOpenSettings}
+                />
+            );
+
+            fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+
+            expect(onOpenSettings).toHaveBeenCalled();
         });
     });
 
@@ -68,6 +145,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createProjectContext({ name: 'My Demo Project' })}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                 />
             );
 
@@ -79,6 +157,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createProjectContext()}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                 />
             );
 
@@ -93,6 +172,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createProjectContext()}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                     onBack={onBack}
                 />
             );
@@ -107,6 +187,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createProjectContext()}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                     onBack={onBack}
                 />
             );
@@ -123,6 +204,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createProjectContext()}
                     onNavigate={onNavigate}
+                    onCreateProject={jest.fn()}
                 />
             );
 
@@ -138,6 +220,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createConfigureContext({ name: 'Config Project' })}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                 />
             );
 
@@ -149,6 +232,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createConfigureContext()}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                 />
             );
 
@@ -161,6 +245,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createConfigureContext()}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                     onBack={jest.fn()}
                 />
             );
@@ -176,6 +261,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createWizardContext()}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                 />
             );
 
@@ -187,6 +273,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createWizardContext(2)}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                 />
             );
 
@@ -204,6 +291,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createWizardContext()}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                     onBack={jest.fn()}
                 />
             );
@@ -218,6 +306,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createWizardContext()}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                     onBack={onBack}
                 />
             );
@@ -234,6 +323,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createWizardContext(2)}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                 />
             );
 
@@ -246,6 +336,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createWizardContext(2)}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                 />
             );
 
@@ -259,6 +350,7 @@ describe('Sidebar', () => {
                 <Sidebar
                     context={createProjectContext()}
                     onNavigate={jest.fn()}
+                    onCreateProject={jest.fn()}
                 />
             );
 

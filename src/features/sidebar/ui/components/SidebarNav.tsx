@@ -4,7 +4,7 @@
  * Navigation list for the sidebar.
  */
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
 import type { NavItem } from '../../types';
 
@@ -38,31 +38,22 @@ interface NavItemButtonProps {
 }
 
 const NavItemButton: React.FC<NavItemButtonProps> = ({ item, onClick }) => {
-    const handleClick = useCallback(() => {
-        onClick();
-    }, [onClick]);
-
-    const handleKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onClick();
-            }
-        },
-        [onClick]
-    );
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick();
+        }
+    };
 
     return (
         <div
             role="button"
             tabIndex={0}
             data-active={item.active || undefined}
-            onClick={handleClick}
+            onClick={onClick}
             onKeyDown={handleKeyDown}
+            className="sidebar-nav-item"
             style={{
-                padding: '8px 12px',
-                borderRadius: '4px',
-                cursor: 'pointer',
                 background: item.active
                     ? 'var(--spectrum-global-color-gray-200)'
                     : 'transparent',

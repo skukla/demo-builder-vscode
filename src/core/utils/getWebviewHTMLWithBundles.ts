@@ -118,7 +118,7 @@ export function getWebviewHTMLWithBundles(options: WebviewHTMLWithBundlesOptions
     ">
     <title>${title}</title>
 </head>
-<body>
+<body style="margin: 0;">
     <div id="root"></div>
     <script nonce="${nonce}" src="${bundleUris.runtime}"></script>
     <script nonce="${nonce}" src="${bundleUris.vendors}"></script>

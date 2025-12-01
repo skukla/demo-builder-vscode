@@ -27,7 +27,7 @@
   },
   "author": "Steve Kukla",
   "activationEvents": [
-    "workspaceContains:.demo-builder"
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "capabilities": {
@@ -132,10 +132,6 @@
           "id": "demoBuilder.sidebar",
           "name": "Demo Builder",
           "type": "webview"
-        },
-        {
-          "id": "demoBuilder.components",
-          "name": "Components"
         }
       ]
     }

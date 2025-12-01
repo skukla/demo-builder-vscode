@@ -1,7 +1,8 @@
 /**
  * Sidebar Component
  *
- * Main sidebar container that renders contextual navigation.
+ * Main sidebar container that renders contextual content based on state.
+ * Shows different views depending on whether user has a project, is in wizard, etc.
  */
 
 import React from 'react';
@@ -9,6 +10,7 @@ import { Flex, Text, ActionButton, Divider } from '@adobe/react-spectrum';
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import { SidebarNav } from './components/SidebarNav';
 import { WizardProgress } from './components/WizardProgress';
+import { WelcomeView } from './views';
 import type { SidebarContext, NavItem, WizardStep } from '../types';
 
 export interface SidebarProps {
@@ -18,6 +20,14 @@ export interface SidebarProps {
     onNavigate: (target: string) => void;
     /** Callback for back navigation */
     onBack?: () => void;
+    /** Callback for creating a new project */
+    onCreateProject: () => void;
+    /** Callback for opening documentation */
+    onOpenDocs?: () => void;
+    /** Callback for opening help */
+    onOpenHelp?: () => void;
+    /** Callback for opening settings */
+    onOpenSettings?: () => void;
 }
 
 // Default wizard steps (without Welcome)
@@ -37,7 +47,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
     context,
     onNavigate,
     onBack,
+    onCreateProject,
+    onOpenDocs,
+    onOpenHelp,
+    onOpenSettings,
 }) => {
+    // For 'projects' context (no project loaded), show WelcomeView
+    if (context.type === 'projects') {
+        return (
+            <WelcomeView
+                onCreateProject={onCreateProject}
+                onOpenDocs={onOpenDocs}
+                onOpenHelp={onOpenHelp}
+                onOpenSettings={onOpenSettings}
+            />
+        );
+    }
+
+    // For other contexts, show navigation-based UI
     return (
         <Flex
             direction="column"
@@ -46,7 +73,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             height="100%"
         >
             {/* Back button (when applicable) */}
-            {context.type !== 'projects' && onBack && (
+            {onBack && (
                 <ActionButton isQuiet onPress={onBack}>
                     <ChevronLeft />
                     <Text>
@@ -68,12 +95,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
 function renderHeader(context: SidebarContext): React.ReactNode {
     switch (context.type) {
-        case 'projects':
-            return (
-                <Text UNSAFE_className="font-semibold">
-                    Demo Builder
-                </Text>
-            );
         case 'project':
         case 'configure':
             return (
@@ -97,13 +118,6 @@ function renderContent(
     onNavigate: (target: string) => void
 ): React.ReactNode {
     switch (context.type) {
-        case 'projects':
-            return (
-                <SidebarNav
-                    items={getProjectsNavItems()}
-                    onNavigate={onNavigate}
-                />
-            );
         case 'project':
             return (
                 <SidebarNav
@@ -129,12 +143,6 @@ function renderContent(
         default:
             return null;
     }
-}
-
-function getProjectsNavItems(): NavItem[] {
-    return [
-        { id: 'projects', label: 'Projects', active: true },
-    ];
 }
 
 function getProjectDetailNavItems(activeId: string): NavItem[] {

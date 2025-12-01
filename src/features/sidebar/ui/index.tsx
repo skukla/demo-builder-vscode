@@ -7,7 +7,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Provider, defaultTheme } from '@adobe/react-spectrum';
+import { Provider, defaultTheme, Flex, ProgressCircle } from '@adobe/react-spectrum';
+import '@/core/ui/styles/custom-spectrum.css';
 import { Sidebar } from './Sidebar';
 import type { SidebarContext } from '../types';
 
@@ -70,25 +71,53 @@ function SidebarApp(): React.ReactElement {
         sendMessage('back');
     }, []);
 
+    // Handle create project
+    const handleCreateProject = useCallback(() => {
+        sendMessage('createProject');
+    }, []);
+
+    // Handle open documentation
+    const handleOpenDocs = useCallback(() => {
+        sendMessage('openDocs');
+    }, []);
+
+    // Handle open help
+    const handleOpenHelp = useCallback(() => {
+        sendMessage('openHelp');
+    }, []);
+
+    // Handle open settings
+    const handleOpenSettings = useCallback(() => {
+        sendMessage('openSettings');
+    }, []);
+
     // Determine color scheme from VS Code theme
     const colorScheme = document.body.classList.contains('vscode-light') ? 'light' : 'dark';
 
     if (isLoading) {
         return (
-            <Provider theme={defaultTheme} colorScheme={colorScheme}>
-                <div style={{ padding: '16px', color: 'var(--vscode-foreground)' }}>
-                    Loading...
-                </div>
+            <Provider theme={defaultTheme} colorScheme={colorScheme} UNSAFE_className="sidebar-provider">
+                <Flex
+                    alignItems="center"
+                    justifyContent="center"
+                    UNSAFE_className="sidebar-welcome"
+                >
+                    <ProgressCircle size="M" isIndeterminate aria-label="Loading" />
+                </Flex>
             </Provider>
         );
     }
 
     return (
-        <Provider theme={defaultTheme} colorScheme={colorScheme}>
+        <Provider theme={defaultTheme} colorScheme={colorScheme} UNSAFE_className="sidebar-provider">
             <Sidebar
                 context={context}
                 onNavigate={handleNavigate}
                 onBack={handleBack}
+                onCreateProject={handleCreateProject}
+                onOpenDocs={handleOpenDocs}
+                onOpenHelp={handleOpenHelp}
+                onOpenSettings={handleOpenSettings}
             />
         </Provider>
     );

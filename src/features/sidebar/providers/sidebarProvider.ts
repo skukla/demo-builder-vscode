@@ -5,6 +5,7 @@
  * Renders contextual navigation based on current screen.
  */
 
+import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/core/logging/logger';
@@ -126,6 +127,22 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 await this.handleBack();
                 break;
 
+            case 'createProject':
+                await this.handleCreateProject();
+                break;
+
+            case 'openDocs':
+                await this.handleOpenDocs();
+                break;
+
+            case 'openHelp':
+                await this.handleOpenHelp();
+                break;
+
+            case 'openSettings':
+                await this.handleOpenSettings();
+                break;
+
             default:
                 this.logger.warn(`Unknown sidebar message: ${message.type}`);
         }
@@ -205,27 +222,92 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     /**
+     * Handle create project request
+     */
+    private async handleCreateProject(): Promise<void> {
+        this.logger.info('Sidebar: Create new project');
+
+        try {
+            await vscode.commands.executeCommand('demoBuilder.createProject');
+        } catch (error) {
+            this.logger.error(
+                'Create project failed',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    /**
+     * Handle open documentation request
+     */
+    private async handleOpenDocs(): Promise<void> {
+        this.logger.info('Sidebar: Open documentation');
+
+        try {
+            // Open documentation URL in browser
+            const docsUrl = 'https://github.com/skukla/demo-builder-vscode#readme';
+            await vscode.env.openExternal(vscode.Uri.parse(docsUrl));
+        } catch (error) {
+            this.logger.error(
+                'Open docs failed',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    /**
+     * Handle open help request
+     */
+    private async handleOpenHelp(): Promise<void> {
+        this.logger.info('Sidebar: Open help');
+
+        try {
+            // Open GitHub issues page for help
+            const helpUrl = 'https://github.com/skukla/demo-builder-vscode/issues';
+            await vscode.env.openExternal(vscode.Uri.parse(helpUrl));
+        } catch (error) {
+            this.logger.error(
+                'Open help failed',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    /**
+     * Handle open settings request
+     */
+    private async handleOpenSettings(): Promise<void> {
+        this.logger.info('Sidebar: Open settings');
+
+        try {
+            // Open VS Code settings filtered to Demo Builder
+            await vscode.commands.executeCommand('workbench.action.openSettings', 'demoBuilder');
+        } catch (error) {
+            this.logger.error(
+                'Open settings failed',
+                error instanceof Error ? error : undefined
+            );
+        }
+    }
+
+    /**
      * Generate HTML content for the webview
+     * Uses the 4-bundle pattern for webpack code splitting
+     * Includes inline spinner that shows until React mounts
      */
     private getHtmlContent(webview: vscode.Webview): string {
-        // Get URIs for scripts and styles
-        const scriptUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview', 'sidebar-bundle.js')
-        );
-
-        const codiconsUri = webview.asWebviewUri(
-            vscode.Uri.joinPath(
-                this.extensionUri,
-                'node_modules',
-                '@vscode/codicons',
-                'dist',
-                'codicon.css'
-            )
-        );
+        // Build URIs for all 4 bundles (webpack code splitting)
+        const webviewDir = vscode.Uri.joinPath(this.extensionUri, 'dist', 'webview');
+        const runtimeUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'runtime-bundle.js'));
+        const vendorsUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'vendors-bundle.js'));
+        const commonUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'common-bundle.js'));
+        const featureUri = webview.asWebviewUri(vscode.Uri.joinPath(webviewDir, 'sidebar-bundle.js'));
 
         // Generate nonce for CSP
         const nonce = this.getNonce();
+        const cspSource = webview.cspSource;
 
+        // Custom HTML with inline spinner that shows until React mounts
         return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -233,44 +315,53 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Content-Security-Policy" content="
         default-src 'none';
-        style-src ${webview.cspSource} 'unsafe-inline';
-        font-src ${webview.cspSource};
-        script-src 'nonce-${nonce}';
+        style-src ${cspSource} 'unsafe-inline';
+        script-src 'nonce-${nonce}' ${cspSource};
+        img-src https: data:;
+        font-src ${cspSource};
     ">
-    <link href="${codiconsUri}" rel="stylesheet" />
     <title>Demo Builder</title>
     <style>
-        html, body {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            overflow: hidden;
-            font-family: var(--vscode-font-family);
-            font-size: var(--vscode-font-size);
-            color: var(--vscode-foreground);
-            background-color: var(--vscode-sideBar-background);
+        /* Inline spinner styles - replaced when React mounts */
+        .initial-spinner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
         }
-        #root {
-            height: 100%;
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--vscode-foreground, #ccc);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            opacity: 0.6;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
-<body>
-    <div id="root"></div>
-    <script nonce="${nonce}" src="${scriptUri}"></script>
+<body style="margin: 0;">
+    <div id="root">
+        <div class="initial-spinner">
+            <div class="spinner"></div>
+        </div>
+    </div>
+    <script nonce="${nonce}" src="${runtimeUri}"></script>
+    <script nonce="${nonce}" src="${vendorsUri}"></script>
+    <script nonce="${nonce}" src="${commonUri}"></script>
+    <script nonce="${nonce}" src="${featureUri}"></script>
 </body>
 </html>`;
     }
 
     /**
      * Generate a nonce for CSP
+     * Uses cryptographically secure random bytes to prevent CSP bypass attacks
      */
     private getNonce(): string {
-        let text = '';
-        const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        for (let i = 0; i < 32; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-        }
-        return text;
+        return crypto.randomBytes(16).toString('base64');
     }
 }

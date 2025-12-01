@@ -4,8 +4,8 @@
  * Displays wizard step progress with completed/current/future indicators.
  */
 
-import React, { useCallback } from 'react';
-import { Flex, Text } from '@adobe/react-spectrum';
+import React from 'react';
+import { Text } from '@adobe/react-spectrum';
 import type { WizardStep } from '../../types';
 
 export interface WizardProgressProps {
@@ -32,17 +32,12 @@ export const WizardProgress: React.FC<WizardProgressProps> = ({
         <ul
             role="list"
             aria-label="Wizard progress"
-            style={{
-                listStyle: 'none',
-                padding: 0,
-                margin: 0,
-            }}
+            className="wizard-progress-list"
         >
             {steps.map((step, index) => (
                 <WizardStepItem
                     key={step.id}
                     step={step}
-                    index={index}
                     isCompleted={completedSteps.includes(index)}
                     isCurrent={index === currentStep}
                     onClick={onStepClick ? () => onStepClick(index) : undefined}
@@ -54,7 +49,6 @@ export const WizardProgress: React.FC<WizardProgressProps> = ({
 
 interface WizardStepItemProps {
     step: WizardStep;
-    index: number;
     isCompleted: boolean;
     isCurrent: boolean;
     onClick?: () => void;
@@ -62,24 +56,16 @@ interface WizardStepItemProps {
 
 const WizardStepItem: React.FC<WizardStepItemProps> = ({
     step,
-    index,
     isCompleted,
     isCurrent,
     onClick,
 }) => {
-    const handleClick = useCallback(() => {
-        onClick?.();
-    }, [onClick]);
-
-    const handleKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if ((e.key === 'Enter' || e.key === ' ') && onClick) {
-                e.preventDefault();
-                onClick();
-            }
-        },
-        [onClick]
-    );
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if ((e.key === 'Enter' || e.key === ' ') && onClick) {
+            e.preventDefault();
+            onClick();
+        }
+    };
 
     // Determine indicator
     let indicator: string;
@@ -100,23 +86,14 @@ const WizardStepItem: React.FC<WizardStepItemProps> = ({
         <li
             role={onClick ? 'button' : undefined}
             tabIndex={onClick ? 0 : undefined}
-            onClick={handleClick}
+            onClick={onClick}
             onKeyDown={onClick ? handleKeyDown : undefined}
-            style={{
-                padding: '6px 12px',
-                cursor: onClick ? 'pointer' : 'default',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-            }}
+            className="wizard-step-item"
+            style={{ cursor: onClick ? 'pointer' : 'default' }}
         >
             <span
-                style={{
-                    color: indicatorColor,
-                    fontSize: '12px',
-                    width: '16px',
-                    textAlign: 'center',
-                }}
+                className="wizard-step-indicator"
+                style={{ color: indicatorColor }}
             >
                 {indicator}
             </span>

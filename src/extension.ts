@@ -7,7 +7,7 @@ import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StatusBarManager, WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
-import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
+import { SidebarProvider } from '@/features/sidebar';
 import { AuthenticationService } from '@/features/authentication';
 import { parseJSON, getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
@@ -52,9 +52,25 @@ export async function activate(context: vscode.ExtensionContext) {
     logger.debug(`[Extension] Adobe Demo Builder v${version} starting...`);
 
     try {
-        // Initialize state manager
+        // Initialize state manager FIRST (needed by sidebar)
         stateManager = new StateManager(context);
         await stateManager.initialize();
+
+        // Register Sidebar WebviewView EARLY to minimize blank sidebar time
+        // The sidebar only needs stateManager and logger to render
+        const sidebarProvider = new SidebarProvider(context, stateManager, logger);
+        context.subscriptions.push(
+            vscode.window.registerWebviewViewProvider(
+                sidebarProvider.viewId,
+                sidebarProvider,
+                {
+                    webviewOptions: {
+                        retainContextWhenHidden: true, // Keep state when sidebar hidden
+                    },
+                }
+            )
+        );
+        logger.debug('[Extension] Sidebar provider registered');
 
         // Initialize external command manager
         externalCommandManager = new CommandExecutor();
@@ -92,51 +108,10 @@ export async function activate(context: vscode.ExtensionContext) {
         // This ensures the initializeFileHashes command exists when we need it
         registerFileWatchers(context);
 
-        // Initialize Components view (file browser)
-        const componentTreeProvider = new ComponentTreeProvider(stateManager, context.extensionPath);
-        const componentsView = vscode.window.createTreeView('demoBuilder.components', {
-            treeDataProvider: componentTreeProvider,
-            showCollapseAll: false,
-        });
-        context.subscriptions.push(componentsView);
-        
-        // Auto-show Welcome when appropriate
-        // 1. When Components view becomes visible (sidebar opened)
-        componentsView.onDidChangeVisibility(async (e) => {
-            if (e.visible) {
-                const hasProject = await stateManager.hasProject();
-                const isWizardOpen = commandManager.createProjectWebview?.isVisible() || false;
-                const isWelcomeOpen = commandManager.welcomeScreen?.isVisible() || false;
-                
-                // Only show Welcome if:
-                // - No project exists
-                // - Welcome isn't already open
-                // - Wizard isn't currently in progress
-                if (!hasProject && !isWelcomeOpen && !isWizardOpen) {
-                    vscode.commands.executeCommand('demoBuilder.showWelcome');
-                }
-            }
-        });
-        
-        // 2. When a webview closes, ensure user isn't left with no webviews
-        BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
-            // Small delay to let disposal complete before checking
-            await new Promise(resolve => setTimeout(resolve, TIMEOUTS.UI_UPDATE_DELAY));
-
-            // Check if any webviews are still open using the singleton map
-            const activeWebviewCount = BaseWebviewCommand.getActivePanelCount();
-
-            // Don't auto-reopen Welcome if we're transitioning between webviews
-            if (BaseWebviewCommand.isWebviewTransitionInProgress()) {
-                return;
-            }
-
-            // If no webviews are open, show Welcome to prevent user being stuck
-            if (activeWebviewCount === 0) {
-                logger.debug('[Extension] No webviews open after disposal - opening Welcome');
-                await vscode.commands.executeCommand('demoBuilder.showWelcome');
-            }
-        });
+        // Note: Auto-show Welcome logic removed
+        // The sidebar now serves as the main navigation hub (Mission Control)
+        // Users interact with the sidebar to navigate to Projects Dashboard, project details, etc.
+        // The old TreeView-based welcome/components behavior is replaced by the WebviewView sidebar
         
         // Note: Controls view removed - using Status Bar + Project Dashboard instead
 
@@ -237,9 +212,9 @@ export async function activate(context: vscode.ExtensionContext) {
             logger.debug('[Extension] No dashboard reopen flag found or error reading it');
         }
 
-        // Normal startup - show Welcome screen if not opening dashboard
+        // Normal startup - load project state for status bar (sidebar handles navigation)
         if (!openingDashboardAfterRestart) {
-            // Load existing project if available (for status bar), but don't auto-open dashboard
+            // Load existing project if available (for status bar)
             const hasExistingProject = await stateManager.hasProject();
             if (hasExistingProject) {
                 const project = await stateManager.getCurrentProject();
@@ -248,21 +223,13 @@ export async function activate(context: vscode.ExtensionContext) {
                     logger.debug(`[Extension] Loaded existing project: ${project.name}`);
                 }
             }
-            
-            // Show Welcome screen on startup
-            const isWelcomeVisible = commandManager.welcomeScreen?.isVisible() || false;
-            
-            if (!isWelcomeVisible) {
-                vscode.commands.executeCommand('demoBuilder.showWelcome').then(
-                    () => logger.info('[Extension] Welcome screen shown successfully'),
-                    (err) => {
-                        logger.error('[Extension] Failed to show welcome screen:', err);
-                        vscode.window.showErrorMessage(`Failed to show welcome screen: ${err?.message || err}`);
-                    },
-                );
-            } else {
-                logger.debug('[Extension] Welcome screen already visible, not showing duplicate');
-            }
+
+            // Note: We no longer auto-show Welcome screen
+            // The sidebar (Mission Control) is now the primary entry point
+            // It displays contextual navigation based on current state:
+            // - 'projects' context: Shows projects list navigation
+            // - 'project' context: Shows project-specific navigation
+            // - 'wizard' context: Shows wizard progress
         }
 
         // Auto-check for updates on startup (if enabled)
