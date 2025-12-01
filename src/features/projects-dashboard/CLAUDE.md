@@ -78,13 +78,18 @@ Responsive grid layout for project cards.
 
 ### DashboardEmptyState
 
-Empty state for first-time users.
+Empty state for first-time users with CTA and utility icons.
 
 **Props:**
 - `onCreate: () => void` - Create button click handler
 - `title?: string` - Custom title (default: "No projects yet")
-- `buttonText?: string` - Custom button text (default: "Create Demo")
+- `buttonText?: string` - Custom button text (default: "New Project")
 - `autoFocus?: boolean` - Auto-focus the button
+- `onOpenDocs?: () => void` - Documentation icon click handler
+- `onOpenHelp?: () => void` - Help icon click handler
+- `onOpenSettings?: () => void` - Settings icon click handler
+
+**Note:** The utility icons only render if at least one icon callback is provided.
 
 ## Command
 
@@ -164,6 +169,9 @@ const result = await handleCreateProject(context);
 | `getProjects` | UI → Extension | - | `{ success, data: { projects } }` |
 | `selectProject` | UI → Extension | `{ projectPath }` | `{ success, data: { project } }` |
 | `createProject` | UI → Extension | - | `{ success }` |
+| `openDocs` | UI → Extension | - | `{ success }` |
+| `openHelp` | UI → Extension | - | `{ success }` |
+| `openSettings` | UI → Extension | - | `{ success }` |
 | `projectsUpdated` | Extension → UI | `{ projects }` | - |
 
 ## Styling

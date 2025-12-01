@@ -2,19 +2,19 @@
  * WelcomeView Component
  *
  * Displayed in the sidebar when no project is loaded.
- * Minimal action-first design: CTA button + icon row.
+ * Minimal utility strip design: only quick-access icons.
+ * The main "New Project" CTA lives in the main dashboard view.
  */
 
 import React from 'react';
-import { Flex, Text, Button, ActionButton, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
-import Add from '@spectrum-icons/workflow/Add';
+import { Flex, ActionButton, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import Book from '@spectrum-icons/workflow/Book';
 import Help from '@spectrum-icons/workflow/Help';
 import Settings from '@spectrum-icons/workflow/Settings';
 
 export interface WelcomeViewProps {
-    /** Callback when user clicks "New Project" */
-    onCreateProject: () => void;
+    /** @deprecated No longer used - CTA moved to main view */
+    onCreateProject?: () => void;
     /** Callback when user clicks Documentation link */
     onOpenDocs?: () => void;
     /** Callback when user clicks Help link */
@@ -24,14 +24,23 @@ export interface WelcomeViewProps {
 }
 
 /**
- * WelcomeView - Sidebar content for first-time users / no project state
+ * WelcomeView - Minimal sidebar utility strip for no-project state
+ *
+ * The "New Project" CTA now lives in the main Projects Dashboard view.
+ * This sidebar shows only quick-access utility icons.
  */
 export const WelcomeView: React.FC<WelcomeViewProps> = ({
-    onCreateProject,
     onOpenDocs,
     onOpenHelp,
     onOpenSettings,
 }) => {
+    const hasIcons = onOpenDocs || onOpenHelp || onOpenSettings;
+
+    // If no icons are provided, render nothing
+    if (!hasIcons) {
+        return null;
+    }
+
     return (
         <Flex
             direction="column"
@@ -39,12 +48,6 @@ export const WelcomeView: React.FC<WelcomeViewProps> = ({
             alignItems="center"
             UNSAFE_className="sidebar-welcome"
         >
-            {/* Primary CTA */}
-            <Button variant="accent" onPress={onCreateProject}>
-                <Add size="S" />
-                <Text>New Project</Text>
-            </Button>
-
             {/* Quick Links - Icon Row */}
             <Flex direction="row" gap="size-100">
                 {onOpenDocs && (
