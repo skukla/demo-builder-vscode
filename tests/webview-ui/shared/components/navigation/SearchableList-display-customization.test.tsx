@@ -19,7 +19,8 @@ describe('SearchableList - Display Customization', () => {
                 <SearchableList {...defaultProps} />
             );
 
-            expect(screen.getByText('Showing 4 of 4 items')).toBeInTheDocument();
+            // When not filtering, shows just count (not "Showing X of Y")
+            expect(screen.getByText('4 items')).toBeInTheDocument();
         });
 
         it('shows singular "item" for single item', () => {
@@ -32,7 +33,8 @@ describe('SearchableList - Display Customization', () => {
                 />
             );
 
-            expect(screen.getByText('Showing 1 of 1 item')).toBeInTheDocument();
+            // When not filtering, shows just count (not "Showing X of Y")
+            expect(screen.getByText('1 item')).toBeInTheDocument();
         });
 
         it('shows filtered count vs total', () => {
@@ -120,7 +122,8 @@ describe('SearchableList - Display Customization', () => {
                 />
             );
 
-            expect(screen.getByText('Showing 0 of 0 items')).toBeInTheDocument();
+            // When not filtering, shows just count (not "Showing X of Y")
+            expect(screen.getByText('0 items')).toBeInTheDocument();
         });
 
         it('handles items without descriptions', () => {

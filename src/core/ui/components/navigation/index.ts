@@ -7,6 +7,9 @@
  * Migration from atomic design: organisms/ → navigation/
  */
 
+export { SearchHeader } from './SearchHeader';
+export type { SearchHeaderProps } from './SearchHeader';
+
 export { SearchableList } from './SearchableList';
 export type { SearchableListProps, SearchableListItem } from './SearchableList';
 

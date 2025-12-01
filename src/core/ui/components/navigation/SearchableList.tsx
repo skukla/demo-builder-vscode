@@ -1,14 +1,10 @@
 import React from 'react';
 import {
-    Flex,
     Text,
-    SearchField,
-    ActionButton,
     ListView,
     Item
 } from '@adobe/react-spectrum';
-import Refresh from '@spectrum-icons/workflow/Refresh';
-import { Spinner } from '../ui/Spinner';
+import { SearchHeader } from './SearchHeader';
 
 export interface SearchableListItem {
     id: string;
@@ -103,9 +99,6 @@ export function SearchableList<T extends SearchableListItem>({
     searchPlaceholder = 'Type to filter...',
     refreshAriaLabel = 'Refresh list',
 }: SearchableListProps<T>) {
-    const showSearch = items.length > searchThreshold;
-    const plural = items.length !== 1 ? 's' : '';
-
     // Default item renderer
     const defaultRenderItem = (item: T) => (
         <Item key={item.id} textValue={item.title || item.name}>
@@ -124,59 +117,22 @@ export function SearchableList<T extends SearchableListItem>({
 
     return (
         <div className="searchable-list-container">
-            {/* Search + Refresh Bar (conditional) */}
-            {showSearch && (
-                <Flex gap="size-100" marginBottom="size-200" alignItems="end">
-                    <SearchField
-                        placeholder={searchPlaceholder}
-                        value={searchQuery}
-                        onChange={onSearchQueryChange}
-                        width="100%"
-                        isQuiet
-                        autoFocus={autoFocus && !selectedKeys.length}
-                        UNSAFE_className="searchable-list-search-field flex-1"
-                    />
-                    {onRefresh && (
-                        <ActionButton
-                            isQuiet
-                            onPress={onRefresh}
-                            aria-label={refreshAriaLabel}
-                            isDisabled={isLoading}
-                            UNSAFE_className="cursor-pointer"
-                        >
-                            {isLoading ? (
-                                <Spinner size="S" />
-                            ) : (
-                                <Refresh />
-                            )}
-                        </ActionButton>
-                    )}
-                </Flex>
-            )}
-
-            {/* Item Count + Refresh (when no search shown) */}
-            {hasLoadedOnce && (
-                <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-                    <Text UNSAFE_className="text-sm text-gray-700">
-                        Showing {filteredItems.length} of {items.length} {itemNoun}{plural}
-                    </Text>
-                    {!showSearch && onRefresh && (
-                        <ActionButton
-                            isQuiet
-                            onPress={onRefresh}
-                            aria-label={refreshAriaLabel}
-                            isDisabled={isLoading}
-                            UNSAFE_className="cursor-pointer"
-                        >
-                            {isLoading ? (
-                                <Spinner size="S" />
-                            ) : (
-                                <Refresh />
-                            )}
-                        </ActionButton>
-                    )}
-                </Flex>
-            )}
+            {/* Search Header (search field + refresh + count) */}
+            <SearchHeader
+                searchQuery={searchQuery}
+                onSearchQueryChange={onSearchQueryChange}
+                searchPlaceholder={searchPlaceholder}
+                searchThreshold={searchThreshold}
+                totalCount={items.length}
+                filteredCount={filteredItems.length}
+                itemNoun={itemNoun}
+                onRefresh={onRefresh}
+                isRefreshing={isLoading}
+                refreshAriaLabel={refreshAriaLabel}
+                hasLoadedOnce={hasLoadedOnce}
+                autoFocus={autoFocus && !selectedKeys.length}
+                alwaysShowCount={true}
+            />
 
             {/* List Container (with refresh opacity) */}
             <div

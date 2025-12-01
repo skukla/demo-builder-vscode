@@ -1,7 +1,7 @@
 /**
  * Tests for selectProject handler navigation enhancement
  *
- * Tests that selectProject navigates to dashboard after selecting a project.
+ * Tests that selectProject navigates to project dashboard after selecting a project.
  */
 
 // Mock vscode - must be before imports due to hoisting
@@ -27,8 +27,8 @@ describe('handleSelectProject - Navigation', () => {
         jest.clearAllMocks();
     });
 
-    describe('showDashboard command execution', () => {
-        it('should execute demoBuilder.showDashboard command after saving project', async () => {
+    describe('showProjectDashboard command execution', () => {
+        it('should execute demoBuilder.showProjectDashboard command after saving project', async () => {
             // Given: A valid project exists
             const project = createMockProject({ name: 'Navigation Test Project' });
             const context = createMockHandlerContext([project]);
@@ -38,11 +38,11 @@ describe('handleSelectProject - Navigation', () => {
                 projectPath: project.path,
             });
 
-            // Then: showDashboard command should be executed
-            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showDashboard');
+            // Then: showProjectDashboard command should be executed
+            expect(mockExecuteCommand).toHaveBeenCalledWith('demoBuilder.showProjectDashboard');
         });
 
-        it('should execute showDashboard after saveProject completes', async () => {
+        it('should execute showProjectDashboard after saveProject completes', async () => {
             // Given: A valid project
             const project = createMockProject({ name: 'Order Test Project' });
             const context = createMockHandlerContext([project]);
@@ -60,14 +60,14 @@ describe('handleSelectProject - Navigation', () => {
                 projectPath: project.path,
             });
 
-            // Then: saveProject should be called before showDashboard
+            // Then: saveProject should be called before showProjectDashboard
             expect(callOrder).toEqual([
                 'saveProject',
-                'command:demoBuilder.showDashboard',
+                'command:demoBuilder.showProjectDashboard',
             ]);
         });
 
-        it('should NOT execute showDashboard if project not found', async () => {
+        it('should NOT execute showProjectDashboard if project not found', async () => {
             // Given: No projects exist at the valid path
             const context = createMockHandlerContext([]);
             const os = require('os');
@@ -79,12 +79,12 @@ describe('handleSelectProject - Navigation', () => {
                 projectPath: validPath,
             });
 
-            // Then: showDashboard should NOT be executed
+            // Then: showProjectDashboard should NOT be executed
             expect(mockExecuteCommand).not.toHaveBeenCalled();
             expect(result.success).toBe(false);
         });
 
-        it('should NOT execute showDashboard if path validation fails', async () => {
+        it('should NOT execute showProjectDashboard if path validation fails', async () => {
             // Given: An invalid path (security violation)
             const context = createMockHandlerContext([]);
 
@@ -93,13 +93,13 @@ describe('handleSelectProject - Navigation', () => {
                 projectPath: '/etc/passwd',
             });
 
-            // Then: showDashboard should NOT be executed
+            // Then: showProjectDashboard should NOT be executed
             expect(mockExecuteCommand).not.toHaveBeenCalled();
             expect(result.success).toBe(false);
         });
 
-        it('should return success even if showDashboard fails', async () => {
-            // Given: A valid project but showDashboard command fails
+        it('should return success even if showProjectDashboard fails', async () => {
+            // Given: A valid project but showProjectDashboard command fails
             const project = createMockProject({ name: 'Error Test Project' });
             const context = createMockHandlerContext([project]);
             mockExecuteCommand.mockRejectedValue(new Error('Command failed'));

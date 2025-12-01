@@ -22,27 +22,37 @@ import '@/core/ui/styles/custom-spectrum.css';
 const ProjectsDashboardApp: React.FC = () => {
     const [projects, setProjects] = useState<Project[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+    // Fetch projects (reusable for initial load and refresh)
+    const fetchProjects = useCallback(async (isRefresh = false) => {
+        if (isRefresh) {
+            setIsRefreshing(true);
+        } else {
+            setIsLoading(true);
+        }
+
+        try {
+            const response = await webviewClient.request<{
+                success: boolean;
+                data?: { projects: Project[] };
+            }>('getProjects');
+            if (response?.success && response.data?.projects) {
+                setProjects(response.data.projects);
+                setHasLoadedOnce(true);
+            }
+        } catch (error) {
+            console.error('Failed to fetch projects:', error);
+        } finally {
+            setIsLoading(false);
+            setIsRefreshing(false);
+        }
+    }, []);
 
     // Fetch projects on mount
     useEffect(() => {
-        const fetchProjects = async () => {
-            setIsLoading(true);
-            try {
-                const response = await webviewClient.request<{
-                    success: boolean;
-                    data?: { projects: Project[] };
-                }>('getProjects');
-                if (response?.success && response.data?.projects) {
-                    setProjects(response.data.projects);
-                }
-            } catch (error) {
-                console.error('Failed to fetch projects:', error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchProjects();
+        fetchProjects(false);
 
         // Subscribe to project updates
         const unsubscribe = webviewClient.onMessage('projectsUpdated', (data) => {
@@ -55,7 +65,12 @@ const ProjectsDashboardApp: React.FC = () => {
         return () => {
             unsubscribe();
         };
-    }, []);
+    }, [fetchProjects]);
+
+    // Handle refresh
+    const handleRefresh = useCallback(() => {
+        fetchProjects(true);
+    }, [fetchProjects]);
 
     // Handle project selection
     const handleSelectProject = useCallback(async (project: Project) => {
@@ -79,12 +94,45 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
+    // Handle open documentation
+    const handleOpenDocs = useCallback(async () => {
+        try {
+            await webviewClient.postMessage('openDocs');
+        } catch (error) {
+            console.error('Failed to open docs:', error);
+        }
+    }, []);
+
+    // Handle open help
+    const handleOpenHelp = useCallback(async () => {
+        try {
+            await webviewClient.postMessage('openHelp');
+        } catch (error) {
+            console.error('Failed to open help:', error);
+        }
+    }, []);
+
+    // Handle open settings
+    const handleOpenSettings = useCallback(async () => {
+        try {
+            await webviewClient.postMessage('openSettings');
+        } catch (error) {
+            console.error('Failed to open settings:', error);
+        }
+    }, []);
+
     return (
         <ProjectsDashboard
             projects={projects}
             onSelectProject={handleSelectProject}
             onCreateProject={handleCreateProject}
             isLoading={isLoading}
+            isRefreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            hasLoadedOnce={hasLoadedOnce}
+            onOpenDocs={handleOpenDocs}
+            onOpenHelp={handleOpenHelp}
+            onOpenSettings={handleOpenSettings}
         />
     );
 };

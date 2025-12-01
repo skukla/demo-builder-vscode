@@ -3,6 +3,8 @@
  *
  * Main dashboard screen showing all projects with search/filter capabilities.
  * Matches the design system used in WelcomeScreen and wizard steps.
+ *
+ * Uses shared SearchHeader component for consistent search/refresh/count UI.
  */
 
 import React, { useState, useMemo } from 'react';
@@ -11,13 +13,13 @@ import {
     Flex,
     Text,
     Button,
-    SearchField,
     Heading,
     ProgressCircle,
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { DashboardEmptyState } from './components/DashboardEmptyState';
+import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { cn } from '@/core/ui/utils/classNames';
 import type { Project } from '@/types/base';
 
@@ -28,8 +30,20 @@ export interface ProjectsDashboardProps {
     onSelectProject: (project: Project) => void;
     /** Callback to create a new project */
     onCreateProject: () => void;
-    /** Whether projects are loading */
+    /** Whether projects are loading (initial load) */
     isLoading?: boolean;
+    /** Whether projects are refreshing (background refresh) */
+    isRefreshing?: boolean;
+    /** Callback to refresh projects list */
+    onRefresh?: () => void;
+    /** Whether data has loaded at least once */
+    hasLoadedOnce?: boolean;
+    /** Callback when Documentation icon is clicked */
+    onOpenDocs?: () => void;
+    /** Callback when Help icon is clicked */
+    onOpenHelp?: () => void;
+    /** Callback when Settings icon is clicked */
+    onOpenSettings?: () => void;
 }
 
 /**
@@ -46,6 +60,12 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     onSelectProject,
     onCreateProject,
     isLoading = false,
+    isRefreshing = false,
+    onRefresh,
+    hasLoadedOnce = true,
+    onOpenDocs,
+    onOpenHelp,
+    onOpenSettings,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -92,7 +112,12 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                     justifyContent="center"
                     height="100%"
                 >
-                    <DashboardEmptyState onCreate={onCreateProject} />
+                    <DashboardEmptyState
+                        onCreate={onCreateProject}
+                        onOpenDocs={onOpenDocs}
+                        onOpenHelp={onOpenHelp}
+                        onOpenSettings={onOpenSettings}
+                    />
                 </Flex>
             </View>
         );
@@ -127,21 +152,21 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                 {/* Content Area */}
                 <div className="flex-1 overflow-y-auto">
                     <div className="max-w-800 mx-auto px-4 pt-8 pb-6">
-                        {/* Search - always visible for filtering */}
-                        <View marginBottom="size-400">
-                            <SearchField
-                                aria-label="Filter projects"
-                                placeholder="Filter projects..."
-                                value={searchQuery}
-                                onChange={setSearchQuery}
-                                width="100%"
-                            />
-                            {isFiltering && (
-                                <Text UNSAFE_className={cn('text-sm', 'text-gray-500', 'mt-2')}>
-                                    Showing {filteredProjects.length} of {projects.length} projects
-                                </Text>
-                            )}
-                        </View>
+                        {/* Search Header - consistent with wizard selection steps */}
+                        <SearchHeader
+                            searchQuery={searchQuery}
+                            onSearchQueryChange={setSearchQuery}
+                            searchPlaceholder="Filter projects..."
+                            searchThreshold={0}
+                            totalCount={projects.length}
+                            filteredCount={filteredProjects.length}
+                            itemNoun="project"
+                            onRefresh={onRefresh}
+                            isRefreshing={isRefreshing}
+                            refreshAriaLabel="Refresh projects"
+                            hasLoadedOnce={hasLoadedOnce}
+                            alwaysShowCount={true}
+                        />
 
                         {/* Projects Grid - responsive auto-fill layout */}
                         <ProjectsGrid

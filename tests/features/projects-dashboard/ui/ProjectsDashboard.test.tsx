@@ -47,7 +47,7 @@ describe('ProjectsDashboard', () => {
 
             expect(screen.getByText(/no projects yet/i)).toBeInTheDocument();
             expect(
-                screen.getByRole('button', { name: /create demo/i })
+                screen.getByRole('button', { name: /new project/i })
             ).toBeInTheDocument();
         });
 
@@ -62,7 +62,7 @@ describe('ProjectsDashboard', () => {
             );
 
             fireEvent.click(
-                screen.getByRole('button', { name: /create demo/i })
+                screen.getByRole('button', { name: /new project/i })
             );
 
             expect(onCreateProject).toHaveBeenCalledTimes(1);
@@ -139,8 +139,8 @@ describe('ProjectsDashboard', () => {
     });
 
     describe('search and filter', () => {
-        it('should show search field when > 5 projects', () => {
-            const projects = createMockProjects(6);
+        it('should always show search field regardless of project count', () => {
+            const projects = createMockProjects(2);
             renderWithProvider(
                 <ProjectsDashboard
                     projects={projects}
@@ -152,21 +152,6 @@ describe('ProjectsDashboard', () => {
             expect(
                 screen.getByPlaceholderText(/filter projects/i)
             ).toBeInTheDocument();
-        });
-
-        it('should not show search field when <= 5 projects', () => {
-            const projects = createMockProjects(5);
-            renderWithProvider(
-                <ProjectsDashboard
-                    projects={projects}
-                    onSelectProject={jest.fn()}
-                    onCreateProject={jest.fn()}
-                />
-            );
-
-            expect(
-                screen.queryByPlaceholderText(/filter projects/i)
-            ).not.toBeInTheDocument();
         });
 
         it('should filter projects based on search query', async () => {
