@@ -25,12 +25,7 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
     return (
         <div
             data-testid="projects-grid"
-            style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: '16px',
-                padding: '4px', // Small padding for hover shadow overflow
-            }}
+            className="projects-grid"
         >
             {projects.map((project) => (
                 <ProjectCard

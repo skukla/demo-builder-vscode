@@ -2,18 +2,30 @@
  * Test utilities for Projects Dashboard feature
  */
 
+import * as os from 'os';
+import * as path from 'path';
 import type { Project, ComponentInstance, ProjectStatus } from '@/types/base';
+
+/**
+ * Get valid demo-builder projects base path
+ * Uses the actual path structure expected by validateProjectPath
+ */
+function getProjectsBasePath(): string {
+    return path.join(os.homedir(), '.demo-builder', 'projects');
+}
 
 /**
  * Creates a mock Project for testing
  */
 export function createMockProject(overrides?: Partial<Project>): Project {
     const now = new Date();
+    // Use valid demo-builder path for security validation compliance
+    const basePath = getProjectsBasePath();
     return {
         name: 'Test Project',
         created: now,
         lastModified: now,
-        path: '/test/path',
+        path: path.join(basePath, 'test-project'),
         status: 'stopped' as ProjectStatus,
         organization: 'Test Org',
         componentInstances: {
@@ -73,10 +85,11 @@ export function createRunningProject(overrides?: Partial<Project>): Project {
  * Creates multiple mock projects for testing grid layouts
  */
 export function createMockProjects(count: number): Project[] {
+    const basePath = getProjectsBasePath();
     return Array.from({ length: count }, (_, i) =>
         createMockProject({
             name: `Project ${i + 1}`,
-            path: `/test/path/project-${i + 1}`,
+            path: path.join(basePath, `project-${i + 1}`),
             status: i % 2 === 0 ? 'stopped' : 'running',
         })
     );

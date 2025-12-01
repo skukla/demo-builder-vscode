@@ -43,7 +43,7 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
             height="100%"
             minHeight="350px"
         >
-            <Well UNSAFE_style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <Well UNSAFE_className="max-w-400 text-center">
                 <Flex
                     direction="column"
                     alignItems="center"

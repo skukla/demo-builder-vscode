@@ -52,14 +52,14 @@ describe('ProjectsGrid', () => {
             expect(screen.getByText('Project 3')).toBeInTheDocument();
         });
 
-        it('should apply grid layout styles', () => {
+        it('should apply grid layout class', () => {
             const projects = createMockProjects(2);
             const { container } = renderWithProvider(
                 <ProjectsGrid projects={projects} onSelectProject={jest.fn()} />
             );
 
             const grid = container.querySelector('[data-testid="projects-grid"]');
-            expect(grid).toHaveStyle({ display: 'grid' });
+            expect(grid).toHaveClass('projects-grid');
         });
     });
 
@@ -103,16 +103,15 @@ describe('ProjectsGrid', () => {
     });
 
     describe('responsiveness', () => {
-        it('should have responsive grid template columns', () => {
+        it('should use responsive grid class for auto-fit columns', () => {
             const projects = createMockProjects(4);
             const { container } = renderWithProvider(
                 <ProjectsGrid projects={projects} onSelectProject={jest.fn()} />
             );
 
             const grid = container.querySelector('[data-testid="projects-grid"]');
-            // Grid should use auto-fit for responsive columns
-            const styles = window.getComputedStyle(grid as Element);
-            expect(styles.display).toBe('grid');
+            // Grid class provides responsive layout via CSS (auto-fill, minmax(280px, 1fr))
+            expect(grid).toHaveClass('projects-grid');
         });
     });
 

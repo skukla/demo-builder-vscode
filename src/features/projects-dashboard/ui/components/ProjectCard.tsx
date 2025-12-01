@@ -114,14 +114,6 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             onClick={handleClick}
             onKeyDown={handleKeyDown}
             className="project-card"
-            style={{
-                background: 'var(--spectrum-global-color-gray-75)',
-                border: '1px solid var(--spectrum-global-color-gray-200)',
-                borderRadius: '8px',
-                padding: '16px',
-                cursor: 'pointer',
-                transition: 'transform 150ms ease, box-shadow 150ms ease',
-            }}
         >
             {/* Project Name */}
             <Text UNSAFE_className="text-lg font-semibold">
@@ -150,12 +142,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                     marginTop="size-200"
                     gap="size-50"
                 >
-                    <div
-                        style={{
-                            borderTop: '1px solid var(--spectrum-global-color-gray-200)',
-                            paddingTop: '8px',
-                        }}
-                    >
+                    <div className="border-t-gray-200 pt-2">
                         {components.map((name) => (
                             <Text
                                 key={name}

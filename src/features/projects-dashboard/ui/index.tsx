@@ -27,7 +27,10 @@ const ProjectsDashboardApp: React.FC = () => {
         const fetchProjects = async () => {
             setIsLoading(true);
             try {
-                const response = await webviewClient.postMessage('getProjects');
+                const response = await webviewClient.request<{
+                    success: boolean;
+                    data?: { projects: Project[] };
+                }>('getProjects');
                 if (response?.success && response.data?.projects) {
                     setProjects(response.data.projects);
                 }
@@ -42,8 +45,9 @@ const ProjectsDashboardApp: React.FC = () => {
 
         // Subscribe to project updates
         const unsubscribe = webviewClient.onMessage('projectsUpdated', (data) => {
-            if (data?.projects) {
-                setProjects(data.projects);
+            const typedData = data as { projects?: Project[] } | undefined;
+            if (typedData?.projects) {
+                setProjects(typedData.projects);
             }
         });
 

@@ -4,7 +4,7 @@
  * Main dashboard screen showing all projects with search/filter capabilities.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     Flex,
     Text,
@@ -58,10 +58,6 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     const hasProjects = projects.length > 0;
     const isFiltering = searchQuery.trim().length > 0;
 
-    const handleSearchChange = useCallback((value: string) => {
-        setSearchQuery(value);
-    }, []);
-
     // Loading state
     if (isLoading) {
         return (
@@ -108,7 +104,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         aria-label="Filter projects"
                         placeholder="Filter projects..."
                         value={searchQuery}
-                        onChange={handleSearchChange}
+                        onChange={setSearchQuery}
                         width="size-3000"
                     />
                     {isFiltering && (

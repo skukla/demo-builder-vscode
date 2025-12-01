@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { Project } from '@/types/base';
+import { validateProjectPath } from '@/core/validation/securityValidation';
 
 /**
  * Get all projects from StateManager
@@ -48,7 +49,7 @@ export const handleGetProjects: MessageHandler = async (
  *
  * Loads the project and sets it as the current project.
  */
-export const handleSelectProject: MessageHandler = async (
+export const handleSelectProject: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
     payload?: { projectPath: string }
 ): Promise<HandlerResponse> => {
@@ -57,6 +58,21 @@ export const handleSelectProject: MessageHandler = async (
             return {
                 success: false,
                 error: 'Project path is required',
+            };
+        }
+
+        // SECURITY: Validate path is within demo-builder projects directory
+        // Prevents path traversal attacks (CWE-22)
+        try {
+            validateProjectPath(payload.projectPath);
+        } catch (validationError) {
+            context.logger.error(
+                'Path validation failed',
+                validationError instanceof Error ? validationError : undefined
+            );
+            return {
+                success: false,
+                error: 'Invalid project path',
             };
         }
 

@@ -92,11 +92,29 @@ describe('dashboardHandlers', () => {
             expect((result.data as any).project.name).toBe('Selected Project');
         });
 
-        it('should return error if project not found', async () => {
+        it('should return error if project path is outside demo-builder directory', async () => {
             const context = createMockHandlerContext([]);
 
             const result = await handleSelectProject(context as any, {
                 projectPath: '/nonexistent/path',
+            });
+
+            // Path validation fails before project lookup
+            expect(result).toEqual({
+                success: false,
+                error: 'Invalid project path',
+            });
+            expect(context.logger.error).toHaveBeenCalled();
+        });
+
+        it('should return error if project not found at valid path', async () => {
+            const context = createMockHandlerContext([]);
+            const os = require('os');
+            const path = require('path');
+            const validButEmptyPath = path.join(os.homedir(), '.demo-builder', 'projects', 'nonexistent');
+
+            const result = await handleSelectProject(context as any, {
+                projectPath: validButEmptyPath,
             });
 
             expect(result).toEqual({
@@ -138,6 +156,32 @@ describe('dashboardHandlers', () => {
             });
 
             expect(context.sendMessage).not.toHaveBeenCalled();
+        });
+
+        describe('path traversal prevention (CWE-22)', () => {
+            const PATH_TRAVERSAL_PAYLOADS = [
+                '../../../etc/passwd',
+                '..\\..\\..\\Windows\\System32\\config\\SAM',
+                '/etc/passwd',
+                'C:\\Windows\\System32',
+                '/tmp/../etc/shadow',
+                '....//....//etc/passwd',
+            ];
+
+            PATH_TRAVERSAL_PAYLOADS.forEach((payload) => {
+                it(`should block path traversal attempt: ${payload}`, async () => {
+                    const context = createMockHandlerContext([]);
+
+                    const result = await handleSelectProject(context as any, {
+                        projectPath: payload,
+                    });
+
+                    expect(result.success).toBe(false);
+                    expect(result.error).toBe('Invalid project path');
+                    // Should NOT attempt to load from filesystem
+                    expect(context.stateManager.loadProjectFromPath).not.toHaveBeenCalled();
+                });
+            });
         });
     });
 
