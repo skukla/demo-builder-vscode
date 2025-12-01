@@ -631,6 +631,12 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     background: var(--spectrum-global-color-gray-75) !important;
 }
 
+/* Timeline in sidebar - no border, use Spectrum gray-75 for consistency */
+.timeline-container.timeline-sidebar {
+    border-right: none !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+}
+
 .timeline-step-dot {
     border-radius: 50% !important;
     display: flex !important;
@@ -753,9 +759,10 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     outline: none !important;
 }
 
-/* Sidebar provider - transparent background to match VS Code */
+/* Sidebar provider - use Spectrum gray-75 for consistency */
 .sidebar-provider {
-    background: transparent !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+    min-height: 100vh !important;
 }
 
 /* Sidebar welcome container - vertically centered */
@@ -772,6 +779,91 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 
 .sidebar-icon-btn:hover {
     background: var(--spectrum-global-color-gray-200) !important;
+}
+
+/* Sidebar project view - full height with padding */
+.sidebar-project-view {
+    padding: 12px !important;
+    min-height: calc(100vh - 40px) !important;
+}
+
+/* Sidebar project card - compact status display */
+.sidebar-project-card {
+    padding: 12px !important;
+    background: var(--spectrum-global-color-gray-100) !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 6px !important;
+}
+
+/* Project name in sidebar */
+.sidebar-project-name {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    margin-bottom: 4px !important;
+    display: block !important;
+}
+
+/* Status indicator dot */
+.sidebar-status-dot {
+    width: 8px !important;
+    height: 8px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+}
+
+/* Status text */
+.sidebar-status-text {
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+}
+
+/* Section header in sidebar */
+.sidebar-section-header {
+    font-size: 11px !important;
+    text-transform: uppercase !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Sidebar wizard view - use Spectrum gray-75 for consistency */
+.sidebar-wizard-view {
+    min-height: calc(100vh - 40px) !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+    /* No padding here - TimelineNav handles its own padding */
+}
+
+/* Wizard progress list */
+.wizard-progress-list {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Wizard step item */
+.wizard-step-item {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    padding: 8px 4px !important;
+    border-radius: 4px !important;
+    transition: background-color 0.15s ease !important;
+}
+
+.wizard-step-item:hover {
+    background-color: var(--spectrum-global-color-gray-200) !important;
+}
+
+.wizard-step-item[role="button"]:focus {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: -2px !important;
+}
+
+/* Wizard step indicator */
+.wizard-step-indicator {
+    font-size: 12px !important;
+    width: 16px !important;
+    text-align: center !important;
 }
 
 /* ===========================================
