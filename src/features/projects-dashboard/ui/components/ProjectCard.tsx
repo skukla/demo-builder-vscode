@@ -2,12 +2,30 @@
  * ProjectCard Component
  *
  * Displays a single project as a clickable card with status, port, and components.
+ * Styled to match the design system used in WelcomeScreen (welcome-action-card pattern).
  */
 
 import React, { useCallback } from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { cn } from '@/core/ui/utils/classNames';
 import type { Project } from '@/types/base';
+
+/**
+ * Adobe "A" icon - matches the extension's sidebar icon
+ */
+const AdobeIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="28"
+        height="26"
+        viewBox="0 0 24 22"
+        fill="currentColor"
+        className={className}
+    >
+        <path d="M14.2353 21.6209L12.4925 16.7699H8.11657L11.7945 7.51237L17.3741 21.6209H24L15.1548 0.379395H8.90929L0 21.6209H14.2353Z" />
+    </svg>
+);
 
 export interface ProjectCardProps {
     /** The project to display */
@@ -78,7 +96,12 @@ function getComponentNames(project: Project): string[] {
 }
 
 /**
- * ProjectCard - Displays a project as a clickable card
+ * ProjectCard - Displays a project as a compact clickable card
+ *
+ * Design inspired by Adobe Demo System cards:
+ * - Compact layout with left-aligned text
+ * - Small icon header area
+ * - Stacked metadata
  */
 export const ProjectCard: React.FC<ProjectCardProps> = ({
     project,
@@ -113,47 +136,36 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             aria-label={ariaLabel}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className="project-card"
+            className="project-card-compact"
         >
-            {/* Project Name */}
-            <Text UNSAFE_className="text-lg font-semibold">
-                {project.name}
-            </Text>
+            {/* Icon Header */}
+            <div className="project-card-header">
+                <AdobeIcon className={isRunning ? 'text-green-600' : 'text-white'} />
+            </div>
 
-            {/* Status Row */}
-            <Flex
-                alignItems="center"
-                gap="size-100"
-                marginTop="size-100"
-            >
-                <StatusDot variant={statusVariant} />
-                <Text UNSAFE_className="text-sm">
-                    {statusText}
-                    {isRunning && port && (
-                        <span className="text-gray-500"> :{port}</span>
-                    )}
+            {/* Content */}
+            <div className="project-card-content">
+                {/* Project Name */}
+                <Text UNSAFE_className={cn('text-sm', 'font-semibold', 'mb-1')}>
+                    {project.name}
                 </Text>
-            </Flex>
 
-            {/* Components List */}
-            {components.length > 0 && (
-                <Flex
-                    direction="column"
-                    marginTop="size-200"
-                    gap="size-50"
-                >
-                    <div className="border-t-gray-200 pt-2">
-                        {components.map((name) => (
-                            <Text
-                                key={name}
-                                UNSAFE_className="text-sm text-gray-600"
-                            >
-                                {name}
-                            </Text>
-                        ))}
-                    </div>
+                {/* Status Row */}
+                <Flex alignItems="center" gap="size-75">
+                    <StatusDot variant={statusVariant} size={6} />
+                    <Text UNSAFE_className={cn('text-xs', 'text-gray-600')}>
+                        {statusText}
+                        {isRunning && port && ` :${port}`}
+                    </Text>
                 </Flex>
-            )}
+
+                {/* Components Count */}
+                {components.length > 0 && (
+                    <Text UNSAFE_className={cn('text-xs', 'text-gray-500', 'mt-1')}>
+                        {components.length} component{components.length !== 1 ? 's' : ''}
+                    </Text>
+                )}
+            </div>
         </div>
     );
 };

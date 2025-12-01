@@ -513,8 +513,8 @@ button[class*="spectrum-Button"][class*="cta"]:active {
    =========================================== */
 .projects-grid {
     display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
-    gap: 16px !important;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+    gap: 12px !important;
     padding: 4px !important; /* Small padding for hover shadow overflow */
 }
 
@@ -909,6 +909,78 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Polished project card - matches welcome-action-card pattern */
+.project-card-polished {
+    background: var(--spectrum-global-color-gray-100) !important;
+    border-radius: 8px !important;
+    padding: 24px !important;
+    transition: all 0.15s ease !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    text-align: center !important;
+    min-height: 140px !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    cursor: pointer !important;
+}
+
+.project-card-polished:hover,
+.project-card-polished:focus {
+    background: var(--spectrum-global-color-gray-200) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    outline: none !important;
+}
+
+.project-card-polished:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+/* Compact project card - inspired by Adobe Demo System cards */
+.project-card-compact {
+    background: var(--spectrum-global-color-gray-100) !important;
+    border-radius: 6px !important;
+    overflow: hidden !important;
+    transition: all 0.15s ease !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    cursor: pointer !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.project-card-compact:hover,
+.project-card-compact:focus {
+    border-color: var(--spectrum-global-color-blue-400) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    outline: none !important;
+}
+
+.project-card-compact:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+/* Card header - dark icon area (works in light and dark mode) */
+.project-card-header {
+    background: #0d0d0d !important;
+    padding: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-bottom: 1px solid #333 !important;
+}
+
+/* Card content - left-aligned text area */
+.project-card-content {
+    padding: 12px 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    text-align: left !important;
+}
+
 /* ===========================================
    Selection Summary Styles
    =========================================== */
@@ -1106,8 +1178,13 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 .pt-1 { padding-top: 4px !important; }
 .pt-2 { padding-top: 8px !important; }
 .pt-3 { padding-top: 12px !important; }
+.pt-4 { padding-top: 16px !important; }
+.pt-6 { padding-top: 24px !important; }
+.pt-8 { padding-top: 32px !important; }
 .pb-1 { padding-bottom: 4px !important; }
 .pb-2 { padding-bottom: 8px !important; }
+.pb-4 { padding-bottom: 16px !important; }
+.pb-6 { padding-bottom: 24px !important; }
 .pb-15 { padding-bottom: 60px !important; }
 .pl-5 { padding-left: 20px !important; }
 .p-6 { padding: 24px !important; }

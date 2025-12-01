@@ -2,10 +2,12 @@
  * ProjectsDashboard Component
  *
  * Main dashboard screen showing all projects with search/filter capabilities.
+ * Matches the design system used in WelcomeScreen and wizard steps.
  */
 
 import React, { useState, useMemo } from 'react';
 import {
+    View,
     Flex,
     Text,
     Button,
@@ -16,6 +18,7 @@ import {
 import Add from '@spectrum-icons/workflow/Add';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { DashboardEmptyState } from './components/DashboardEmptyState';
+import { cn } from '@/core/ui/utils/classNames';
 import type { Project } from '@/types/base';
 
 export interface ProjectsDashboardProps {
@@ -29,11 +32,14 @@ export interface ProjectsDashboardProps {
     isLoading?: boolean;
 }
 
-/** Threshold for showing search field */
-const SEARCH_THRESHOLD = 5;
-
 /**
  * ProjectsDashboard - Main dashboard showing all projects
+ *
+ * Design follows wizard pattern:
+ * - Fixed header with bg-gray-75 and border
+ * - Constrained content width (max-w-800)
+ * - Always-visible search/filter
+ * - Responsive card grid with breathing room
  */
 export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     projects,
@@ -54,86 +60,110 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
         );
     }, [projects, searchQuery]);
 
-    const showSearch = projects.length > SEARCH_THRESHOLD;
     const hasProjects = projects.length > 0;
     const isFiltering = searchQuery.trim().length > 0;
 
-    // Loading state
+    // Loading state - full screen centered
     if (isLoading) {
         return (
-            <Flex
-                justifyContent="center"
-                alignItems="center"
-                height="100%"
-                minHeight="350px"
-            >
-                <ProgressCircle
-                    aria-label="Loading projects"
-                    isIndeterminate
-                    size="L"
-                />
-            </Flex>
-        );
-    }
-
-    // Empty state
-    if (!hasProjects) {
-        return <DashboardEmptyState onCreate={onCreateProject} />;
-    }
-
-    return (
-        <Flex direction="column" gap="size-300" UNSAFE_className="p-4">
-            {/* Header */}
-            <Flex
-                justifyContent="space-between"
-                alignItems="center"
-            >
-                <Heading level={1} UNSAFE_className="text-xl">
-                    Your Projects
-                </Heading>
-                <Button variant="primary" onPress={onCreateProject}>
-                    <Add />
-                    <Text>New</Text>
-                </Button>
-            </Flex>
-
-            {/* Search (only when > threshold projects) */}
-            {showSearch && (
-                <Flex direction="column" gap="size-100">
-                    <SearchField
-                        aria-label="Filter projects"
-                        placeholder="Filter projects..."
-                        value={searchQuery}
-                        onChange={setSearchQuery}
-                        width="size-3000"
-                    />
-                    {isFiltering && (
-                        <Text UNSAFE_className="text-sm text-gray-500">
-                            Showing {filteredProjects.length} of{' '}
-                            {projects.length} projects
-                        </Text>
-                    )}
-                </Flex>
-            )}
-
-            {/* Projects Grid */}
-            <ProjectsGrid
-                projects={filteredProjects}
-                onSelectProject={onSelectProject}
-            />
-
-            {/* No results message */}
-            {isFiltering && filteredProjects.length === 0 && (
+            <View height="100vh" backgroundColor="gray-50">
                 <Flex
                     justifyContent="center"
                     alignItems="center"
-                    height="size-2000"
+                    height="100%"
                 >
-                    <Text UNSAFE_className="text-gray-500">
-                        No projects match "{searchQuery}"
-                    </Text>
+                    <ProgressCircle
+                        aria-label="Loading projects"
+                        isIndeterminate
+                        size="L"
+                    />
                 </Flex>
-            )}
-        </Flex>
+            </View>
+        );
+    }
+
+    // Empty state - full screen centered
+    if (!hasProjects) {
+        return (
+            <View height="100vh" backgroundColor="gray-50">
+                <Flex
+                    direction="column"
+                    alignItems="center"
+                    justifyContent="center"
+                    height="100%"
+                >
+                    <DashboardEmptyState onCreate={onCreateProject} />
+                </Flex>
+            </View>
+        );
+    }
+
+    return (
+        <View height="100vh" backgroundColor="gray-50">
+            <Flex direction="column" height="100%">
+                {/* Header - matches wizard style, constrained width */}
+                <View
+                    padding="size-400"
+                    UNSAFE_className={cn('border-b', 'bg-gray-75')}
+                >
+                    <div className="max-w-800 mx-auto">
+                        <Flex justifyContent="space-between" alignItems="center">
+                            <View>
+                                <Heading level={1} marginBottom="size-100">
+                                    Your Projects
+                                </Heading>
+                                <Heading level={3} UNSAFE_className={cn('font-normal', 'text-gray-600')}>
+                                    Select a project to manage or create a new one
+                                </Heading>
+                            </View>
+                            <Button variant="accent" onPress={onCreateProject}>
+                                <Add size="S" />
+                                <Text>New Project</Text>
+                            </Button>
+                        </Flex>
+                    </div>
+                </View>
+
+                {/* Content Area */}
+                <div className="flex-1 overflow-y-auto">
+                    <div className="max-w-800 mx-auto px-4 pt-8 pb-6">
+                        {/* Search - always visible for filtering */}
+                        <View marginBottom="size-400">
+                            <SearchField
+                                aria-label="Filter projects"
+                                placeholder="Filter projects..."
+                                value={searchQuery}
+                                onChange={setSearchQuery}
+                                width="100%"
+                            />
+                            {isFiltering && (
+                                <Text UNSAFE_className={cn('text-sm', 'text-gray-500', 'mt-2')}>
+                                    Showing {filteredProjects.length} of {projects.length} projects
+                                </Text>
+                            )}
+                        </View>
+
+                        {/* Projects Grid - responsive auto-fill layout */}
+                        <ProjectsGrid
+                            projects={filteredProjects}
+                            onSelectProject={onSelectProject}
+                        />
+
+                        {/* No results message */}
+                        {isFiltering && filteredProjects.length === 0 && (
+                            <Flex
+                                justifyContent="center"
+                                alignItems="center"
+                                UNSAFE_className="py-8"
+                            >
+                                <Text UNSAFE_className="text-gray-500">
+                                    No projects match "{searchQuery}"
+                                </Text>
+                            </Flex>
+                        )}
+                    </div>
+                </div>
+            </Flex>
+        </View>
     );
 };
