@@ -236,13 +236,33 @@ interface ContextUpdateMessage {
 - [ ] Extension activates without Welcome Screen
 - [ ] SidebarProvider registered correctly
 - [ ] Projects Dashboard opens on activation
-- [ ] Wizard starts at Sign In (no Welcome step)
+- [x] Wizard starts at Sign In (no Welcome step) ✅ **COMPLETED**
 - [ ] Dashboard renamed to project-detail
 - [ ] TreeView provider removed
 - [ ] All navigation commands work
 - [ ] Sidebar-dashboard communication works
 - [ ] No broken imports
-- [ ] All tests pass
+- [x] All tests pass (3,979 tests passing) ✅ **COMPLETED**
+
+## Progress Notes
+
+### Wizard Welcome Step Removal (Completed)
+
+**Files Modified:**
+- `src/features/project-creation/ui/wizard/WizardContainer.tsx` - Removed WelcomeStep import, changed initial state to compute first enabled step from config, removed 'welcome' case from renderStep
+- `tests/features/project-creation/ui/wizard/WizardContainer.testUtils.tsx` - Removed welcome from mock steps (9 steps, starts at adobe-auth)
+- `tests/features/project-creation/ui/wizard/WizardContainer-noWelcome.test.tsx` - NEW: 7 tests verifying no-welcome behavior
+- `tests/features/project-creation/ui/wizard/WizardContainer-initialization.test.tsx` - Updated to expect adobe-auth as first step
+- `tests/features/project-creation/ui/wizard/WizardContainer-navigation.test.tsx` - Updated navigation flow tests
+- `tests/features/project-creation/ui/wizard/WizardContainer-focus.test.tsx` - Updated initial step expectations
+- `tests/features/project-creation/ui/wizard/WizardContainer-state.test.tsx` - Updated backward navigation tests
+- `tests/features/project-creation/ui/wizard/WizardContainer-errorBoundary.test.tsx` - Rewritten to use AdobeAuthStep instead of WelcomeStep
+
+**New Test Files:**
+- `tests/features/sidebar/integration/extensionActivation.test.ts` - Tests SidebarProvider registration
+- `tests/features/sidebar/integration/navigationCommands.test.ts` - Tests navigation commands
+
+**Test Results:** 114 WizardContainer tests + 16 sidebar integration tests = All passing
 
 ## Dependencies
 
