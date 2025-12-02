@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import {
     Heading,
     Text,
-    Flex,
     Form,
     Button,
     View
@@ -13,8 +12,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { hasEntries } from '@/types/typeGuards';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { useFocusTrap } from '@/core/ui/hooks';
-import { cn } from '@/core/ui/utils/classNames';
-import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import { TwoColumnLayout, PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
 import { NavigationPanel, NavigationSection, NavigationField } from '@/core/ui/components/navigation';
 import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
@@ -678,17 +676,10 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             <View width="100%" height="100%">
             <div className="content-area">
                 {/* Header */}
-                <View
-                    padding="size-400"
-                    UNSAFE_className={cn('border-b', 'bg-gray-75')}
-                >
-                    <Heading level={1} marginBottom="size-100">
-                        Configure Project
-                    </Heading>
-                    <Heading level={3} UNSAFE_className={cn('font-normal', 'text-gray-600')}>
-                        {project.name}
-                    </Heading>
-                </View>
+                <PageHeader
+                    title="Configure Project"
+                    subtitle={project.name}
+                />
 
                 {/* Content */}
                 <TwoColumnLayout
@@ -744,30 +735,27 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 />
 
                 {/* Footer */}
-                <View
-                    padding="size-400"
-                    UNSAFE_className={cn('border-t', 'bg-gray-75')}
-                >
-                    <div className="max-w-800 w-full">
-                        <Flex justifyContent="space-between" width="100%">
-                            <Button
-                                variant="secondary"
-                                onPress={handleCancel}
-                                isQuiet
-                                isDisabled={isSaving}
-                            >
-                                Close
-                            </Button>
-                            <Button
-                                variant="accent"
-                                onPress={handleSave}
-                                isDisabled={!canSave || isSaving}
-                            >
-                                {isSaving ? 'Saving...' : 'Save Changes'}
-                            </Button>
-                        </Flex>
-                    </div>
-                </View>
+                <PageFooter
+                    leftContent={
+                        <Button
+                            variant="secondary"
+                            onPress={handleCancel}
+                            isQuiet
+                            isDisabled={isSaving}
+                        >
+                            Close
+                        </Button>
+                    }
+                    rightContent={
+                        <Button
+                            variant="accent"
+                            onPress={handleSave}
+                            isDisabled={!canSave || isSaving}
+                        >
+                            {isSaving ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                    }
+                />
             </div>
             </View>
         </div>

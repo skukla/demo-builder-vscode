@@ -24,7 +24,29 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     },
 }));
 
-// Mock TwoColumnLayout
+// Mock layout components
+jest.mock('@/core/ui/components/layout', () => ({
+    TwoColumnLayout: ({ leftContent, rightContent }: any) => (
+        <div>
+            <div data-testid="left-column">{leftContent}</div>
+            <div data-testid="right-column">{rightContent}</div>
+        </div>
+    ),
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header" className="border-b bg-gray-75">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
+        </div>
+    ),
+    PageFooter: ({ leftContent, rightContent }: any) => (
+        <div data-testid="page-footer" className="border-t bg-gray-75 max-w-800">
+            <div data-testid="footer-left">{leftContent}</div>
+            <div data-testid="footer-right">{rightContent}</div>
+        </div>
+    ),
+}));
+
+// Also mock the TwoColumnLayout separately for backward compatibility
 jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
     TwoColumnLayout: ({ leftContent, rightContent }: any) => (
         <div>
@@ -156,6 +178,66 @@ describe('ConfigureScreen - Rendering', () => {
             // Should show section labels in navigation
             expect(screen.getAllByText('Adobe Commerce').length).toBeGreaterThan(0);
             expect(screen.getAllByText('Catalog Service').length).toBeGreaterThan(0);
+        });
+    });
+
+    describe('PageHeader Integration', () => {
+        it('should render PageHeader with "Configure Project" title', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                />
+            );
+
+            const header = screen.getByTestId('page-header');
+            expect(header).toBeInTheDocument();
+            expect(screen.getByText('Configure Project')).toBeInTheDocument();
+        });
+
+        it('should render PageHeader with project name as subtitle', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                />
+            );
+
+            const header = screen.getByTestId('page-header');
+            expect(header).toBeInTheDocument();
+            expect(screen.getByText('Test Project')).toBeInTheDocument();
+        });
+    });
+
+    describe('PageFooter Integration', () => {
+        it('should render PageFooter with Close button on left', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                />
+            );
+
+            const footer = screen.getByTestId('page-footer');
+            expect(footer).toBeInTheDocument();
+
+            const footerLeft = screen.getByTestId('footer-left');
+            expect(footerLeft).toContainElement(screen.getByText('Close'));
+        });
+
+        it('should render PageFooter with Save Changes button on right', () => {
+            renderWithProvider(
+                <ConfigureScreen
+                    project={mockProject as any}
+                    componentsData={mockComponentsData}
+                />
+            );
+
+            const footer = screen.getByTestId('page-footer');
+            expect(footer).toBeInTheDocument();
+
+            const footerRight = screen.getByTestId('footer-right');
+            expect(footerRight).toContainElement(screen.getByText('Save Changes'));
         });
     });
 

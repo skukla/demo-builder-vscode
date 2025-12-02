@@ -8,7 +8,6 @@ import {
     Divider,
     ProgressCircle
 } from '@adobe/react-spectrum';
-import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
 import StopCircle from '@spectrum-icons/workflow/StopCircle';
 import Settings from '@spectrum-icons/workflow/Settings';
@@ -23,6 +22,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { StatusCard } from '@/core/ui/components/feedback';
 import { GridLayout } from '@/core/ui/components/layout';
+import { BackButton } from '@/core/ui/components/navigation';
 import { isStartActionDisabled } from './dashboardPredicates';
 
 type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'error';
@@ -245,10 +245,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
             <Flex direction="column" gap="size-200" UNSAFE_className="w-full">
                 {/* Back Navigation */}
                 <Flex alignItems="center" marginBottom="size-100">
-                    <ActionButton isQuiet onPress={handleNavigateBack}>
-                        <ChevronLeft size="S" />
-                        <Text>All Projects</Text>
-                    </ActionButton>
+                    <BackButton label="All Projects" onPress={handleNavigateBack} />
                 </Flex>
 
                 {/* Project Header */}

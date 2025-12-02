@@ -5,6 +5,8 @@ import {
     Button,
     Text,
 } from '@adobe/react-spectrum';
+import { PageHeader, PageFooter } from '@/core/ui/components/layout';
+import { LoadingOverlay } from '@/core/ui/components/feedback';
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { getNextButtonText } from './wizardHelpers';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
@@ -33,38 +35,6 @@ interface WizardContainerProps {
     existingProjectNames?: string[];
 }
 
-const LOADING_OVERLAY_STYLES = {
-    container: {
-        position: 'absolute' as const,
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        borderRadius: '4px',
-    },
-    innerCircle: {
-        backgroundColor: 'var(--spectrum-global-color-gray-50)',
-        padding: '24px',
-        borderRadius: '50%',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    spinner: {
-        width: '32px',
-        height: '32px',
-        borderRadius: '50%',
-        border: '3px solid var(--spectrum-global-color-blue-400)',
-        borderTopColor: 'transparent',
-        animation: 'spin 1s linear infinite',
-    },
-};
 
 // Helper: Build project configuration from wizard state
 const buildProjectConfig = (wizardState: WizardState) => {
@@ -522,17 +492,10 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
                 {/* Content Area - Timeline moved to sidebar */}
                 <div className="flex-column flex-1 h-full w-full">
                     {/* Header */}
-                    <View 
-                        padding="size-400"
-                        UNSAFE_className={cn('border-b', 'bg-gray-75')}
-                    >
-                        <Heading level={1} marginBottom="size-100">
-                            Create Demo Project
-                        </Heading>
-                        <Heading level={3} UNSAFE_className={cn('font-normal', 'text-gray-600')}>
-                            {currentStepName}
-                        </Heading>
-                    </View>
+                    <PageHeader
+                        title="Create Demo Project"
+                        subtitle={currentStepName}
+                    />
 
                     {/* Step Content */}
                     <div
@@ -558,51 +521,43 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
                         </div>
 
                         {/* Confirmation overlay during backend calls */}
-                        {isConfirmingSelection && (
-                            <div style={LOADING_OVERLAY_STYLES.container}>
-                                <div style={LOADING_OVERLAY_STYLES.innerCircle}>
-                                    <div style={LOADING_OVERLAY_STYLES.spinner} />
-                                </div>
-                            </div>
-                        )}
+                        <LoadingOverlay isVisible={isConfirmingSelection} />
                     </div>
 
                     {/* Footer */}
                     {!isLastStep && (
-                        <View
-                            padding="size-400"
-                            UNSAFE_className={cn('border-t', 'bg-gray-75')}
-                        >
-                            <div className="max-w-800 w-full">
-                                <Flex justifyContent="space-between" width="100%">
+                        <PageFooter
+                            leftContent={
+                                <Button
+                                    variant="secondary"
+                                    onPress={handleCancel}
+                                    isQuiet
+                                    isDisabled={isConfirmingSelection}
+                                >
+                                    Cancel
+                                </Button>
+                            }
+                            rightContent={
+                                <Flex gap="size-100">
                                     <Button
                                         variant="secondary"
-                                        onPress={handleCancel}
+                                        onPress={goBack}
                                         isQuiet
                                         isDisabled={isConfirmingSelection}
                                     >
-                                        Cancel
+                                        Back
                                     </Button>
-                                    <Flex gap="size-100">
-                                        <Button
-                                            variant="secondary"
-                                            onPress={goBack}
-                                            isQuiet
-                                            isDisabled={isConfirmingSelection}
-                                        >
-                                            Back
-                                        </Button>
-                                        <Button
-                                            variant="accent"
-                                            onPress={goNext}
-                                            isDisabled={!canProceed || isConfirmingSelection}
-                                        >
-                                            {getNextButtonText(isConfirmingSelection, currentStepIndex, WIZARD_STEPS.length)}
-                                        </Button>
-                                    </Flex>
+                                    <Button
+                                        variant="accent"
+                                        onPress={goNext}
+                                        isDisabled={!canProceed || isConfirmingSelection}
+                                    >
+                                        {getNextButtonText(isConfirmingSelection, currentStepIndex, WIZARD_STEPS.length)}
+                                    </Button>
                                 </Flex>
-                            </div>
-                        </View>
+                            }
+                            constrainWidth={true}
+                        />
                     )}
                 </div>
             </div>

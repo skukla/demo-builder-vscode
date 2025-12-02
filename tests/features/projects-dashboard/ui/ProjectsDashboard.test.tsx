@@ -242,6 +242,123 @@ describe('ProjectsDashboard', () => {
 
             expect(screen.getByText(/your projects/i)).toBeInTheDocument();
         });
+
+        it('should display subtitle in PageHeader', () => {
+            // Given: ProjectsDashboard with projects
+            const projects = createMockProjects(2);
+
+            // When: Component renders
+            renderWithProvider(
+                <ProjectsDashboard
+                    projects={projects}
+                    onSelectProject={jest.fn()}
+                    onCreateProject={jest.fn()}
+                />
+            );
+
+            // Then: Subtitle text is visible
+            expect(
+                screen.getByText(/select a project to manage or create a new one/i)
+            ).toBeInTheDocument();
+        });
+
+        it('should use PageHeader with constrained width', () => {
+            // Given: ProjectsDashboard with projects
+            const projects = createMockProjects(2);
+
+            // When: Component renders
+            const { container } = renderWithProvider(
+                <ProjectsDashboard
+                    projects={projects}
+                    onSelectProject={jest.fn()}
+                    onCreateProject={jest.fn()}
+                />
+            );
+
+            // Then: Header area has max-w-800 class for width constraint
+            // PageHeader with constrainWidth={true} adds max-w-800 mx-auto wrapper
+            const constrainedHeaderContent = container.querySelector('.max-w-800.mx-auto');
+            expect(constrainedHeaderContent).toBeInTheDocument();
+        });
+    });
+
+    describe('layout structure', () => {
+        it('should wrap normal state with PageLayout (100vh flex column container)', () => {
+            // Given: ProjectsDashboard with projects (normal state)
+            const projects = createMockProjects(2);
+
+            // When: Component renders
+            const { container } = renderWithProvider(
+                <ProjectsDashboard
+                    projects={projects}
+                    onSelectProject={jest.fn()}
+                    onCreateProject={jest.fn()}
+                />
+            );
+
+            // Then: PageLayout provides 100vh flex column container via inline styles
+            // PageLayout uses a plain div with inline styles (not Spectrum View)
+            const layoutContainer = container.querySelector('[style*="height: 100vh"]');
+            expect(layoutContainer).toBeInTheDocument();
+            // PageLayout sets display: flex and flex-direction: column via inline style
+            expect(layoutContainer).toHaveStyle({
+                display: 'flex',
+                flexDirection: 'column',
+            });
+        });
+
+        it('should have scrollable content area provided by PageLayout', () => {
+            // Given: ProjectsDashboard with projects
+            const projects = createMockProjects(2);
+
+            // When: Component renders
+            const { container } = renderWithProvider(
+                <ProjectsDashboard
+                    projects={projects}
+                    onSelectProject={jest.fn()}
+                    onCreateProject={jest.fn()}
+                />
+            );
+
+            // Then: PageLayout provides scrollable content area with overflow-y: auto
+            const scrollableArea = container.querySelector('[style*="overflow-y: auto"]');
+            expect(scrollableArea).toBeInTheDocument();
+        });
+
+        it('should NOT use PageLayout for loading state (keeps original View-based layout)', () => {
+            // Given: ProjectsDashboard in loading state
+            // When: Component renders
+            const { container } = renderWithProvider(
+                <ProjectsDashboard
+                    projects={[]}
+                    onSelectProject={jest.fn()}
+                    onCreateProject={jest.fn()}
+                    isLoading={true}
+                />
+            );
+
+            // Then: Loading state does NOT have scrollable area (no overflow-y: auto)
+            // because it doesn't use PageLayout - it uses original View/Flex structure
+            const scrollableArea = container.querySelector('[style*="overflow-y: auto"]');
+            expect(scrollableArea).not.toBeInTheDocument();
+        });
+
+        it('should NOT use PageLayout for empty state (keeps original View-based layout)', () => {
+            // Given: ProjectsDashboard with no projects (empty state)
+            // When: Component renders
+            const { container } = renderWithProvider(
+                <ProjectsDashboard
+                    projects={[]}
+                    onSelectProject={jest.fn()}
+                    onCreateProject={jest.fn()}
+                />
+            );
+
+            // Then: Empty state does NOT have scrollable area (no overflow-y: auto)
+            // because it doesn't use PageLayout - it uses original View/Flex structure
+            const scrollableArea = container.querySelector('[style*="overflow-y: auto"]');
+            expect(scrollableArea).not.toBeInTheDocument();
+        });
     });
 
     describe('accessibility', () => {

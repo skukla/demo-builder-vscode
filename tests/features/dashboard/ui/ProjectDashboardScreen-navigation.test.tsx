@@ -102,6 +102,16 @@ jest.mock('@/core/ui/components/layout', () => ({
     GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
 }));
 
+// Mock BackButton from navigation components (Step 8: using extracted component)
+jest.mock('@/core/ui/components/navigation', () => ({
+    BackButton: ({ label, onPress }: { label?: string; onPress: () => void }) => (
+        <button onClick={onPress} data-testid="back-button">
+            <span data-testid="chevron-left-icon">{'<'}</span>
+            <span>{label || 'Back'}</span>
+        </button>
+    ),
+}));
+
 // Mock dashboardPredicates
 jest.mock('@/features/dashboard/ui/dashboardPredicates', () => ({
     isStartActionDisabled: () => false,
@@ -206,6 +216,26 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
             // Then: Back button should be focusable and clickable via keyboard
             const backButton = screen.getByText('All Projects').closest('button');
             expect(backButton).not.toBeDisabled();
+        });
+    });
+
+    describe('BackButton component usage', () => {
+        it('should use BackButton component for back navigation', () => {
+            // Given: A project dashboard screen
+            render(<ProjectDashboardScreen project={mockProject} />);
+
+            // Then: BackButton component should be rendered (identified by data-testid)
+            const backButton = screen.getByTestId('back-button');
+            expect(backButton).toBeInTheDocument();
+        });
+
+        it('should pass "All Projects" label to BackButton', () => {
+            // Given: A project dashboard screen
+            render(<ProjectDashboardScreen project={mockProject} />);
+
+            // Then: BackButton should display "All Projects" label
+            const backButton = screen.getByTestId('back-button');
+            expect(backButton).toHaveTextContent('All Projects');
         });
     });
 });

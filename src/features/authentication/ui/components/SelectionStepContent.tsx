@@ -17,10 +17,9 @@ import {
 } from '@adobe/react-spectrum';
 import React from 'react';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
-import { ErrorDisplay } from '@/core/ui/components/feedback/ErrorDisplay';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { SearchableList } from '@/core/ui/components/navigation/SearchableList';
-import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
 
 /**
  * Props for a selectable item (must have id and display text)
@@ -143,13 +142,12 @@ export function SelectionStepContent<T extends SelectableItem>({
         return (
             <>
                 <Heading level={2} marginBottom="size-300">{labels.heading}</Heading>
-                <FadeTransition show={true}>
-                    <ErrorDisplay
-                        title={labels.errorTitle}
-                        message={error}
-                        onRetry={onLoad}
-                    />
-                </FadeTransition>
+                <StatusDisplay
+                    variant="error"
+                    title={labels.errorTitle}
+                    message={error}
+                    actions={[{ label: 'Try Again', onPress: onLoad, variant: 'accent' }]}
+                />
             </>
         );
     }

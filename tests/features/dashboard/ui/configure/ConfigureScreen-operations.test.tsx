@@ -25,7 +25,29 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     },
 }));
 
-// Mock TwoColumnLayout
+// Mock layout components
+jest.mock('@/core/ui/components/layout', () => ({
+    TwoColumnLayout: ({ leftContent, rightContent }: any) => (
+        <div>
+            <div data-testid="left-column">{leftContent}</div>
+            <div data-testid="right-column">{rightContent}</div>
+        </div>
+    ),
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header" className="border-b bg-gray-75">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
+        </div>
+    ),
+    PageFooter: ({ leftContent, rightContent }: any) => (
+        <div data-testid="page-footer" className="border-t bg-gray-75 max-w-800">
+            <div data-testid="footer-left">{leftContent}</div>
+            <div data-testid="footer-right">{rightContent}</div>
+        </div>
+    ),
+}));
+
+// Also mock the TwoColumnLayout separately for backward compatibility
 jest.mock('@/core/ui/components/layout/TwoColumnLayout', () => ({
     TwoColumnLayout: ({ leftContent, rightContent }: any) => (
         <div>
