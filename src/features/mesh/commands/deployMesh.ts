@@ -15,6 +15,9 @@ import { formatAdobeCliError, extractMeshErrorSummary } from '../utils/errorForm
  * Deploy (or redeploy) API Mesh using the mesh.json from the mesh component
  */
 export class DeployMeshCommand extends BaseCommand {
+    /** Execution lock to prevent duplicate concurrent execution */
+    private static isExecuting = false;
+
     constructor(
         context: vscode.ExtensionContext,
         stateManager: StateManager,
@@ -25,6 +28,13 @@ export class DeployMeshCommand extends BaseCommand {
     }
 
     async execute(): Promise<void> {
+        // Prevent duplicate concurrent execution
+        if (DeployMeshCommand.isExecuting) {
+            this.logger.debug('[Mesh Deployment] Skipping duplicate execution - already in progress');
+            return;
+        }
+
+        DeployMeshCommand.isExecuting = true;
         try {
             // Get current project
             const project = await this.stateManager.getCurrentProject();
@@ -298,6 +308,8 @@ export class DeployMeshCommand extends BaseCommand {
             if (selection === 'View Logs') {
                 vscode.commands.executeCommand('demoBuilder.showLogs');
             }
+        } finally {
+            DeployMeshCommand.isExecuting = false;
         }
     }
 

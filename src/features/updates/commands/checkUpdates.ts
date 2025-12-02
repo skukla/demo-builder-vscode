@@ -13,7 +13,17 @@ import { Project } from '@/types';
  * RESILIENCE: Checks if demo is running before updating (prevents file lock issues)
  */
 export class CheckUpdatesCommand extends BaseCommand {
+    /** Execution lock to prevent duplicate concurrent execution */
+    private static isExecuting = false;
+
     async execute(): Promise<void> {
+        // Prevent duplicate concurrent execution
+        if (CheckUpdatesCommand.isExecuting) {
+            this.logger.debug('[Updates] Skipping duplicate execution - already in progress');
+            return;
+        }
+
+        CheckUpdatesCommand.isExecuting = true;
         try {
             // Run update check with visible progress notification
             const { extensionUpdate, componentUpdates, project, hasUpdates } = await vscode.window.withProgress(
@@ -96,6 +106,8 @@ export class CheckUpdatesCommand extends BaseCommand {
       
         } catch (error) {
             await this.showError('Failed to check for updates', error as Error);
+        } finally {
+            CheckUpdatesCommand.isExecuting = false;
         }
     }
 
