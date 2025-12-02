@@ -117,18 +117,28 @@ export async function handleContinuePrerequisites(
 
                         try {
                             // Node version is installed - now check if the tool is installed for it
-                            const { stdout } = await commandManager.execute(prereq.check.command, { useNodeVersion: major, timeout: TIMEOUTS.PREREQUISITE_CHECK });
-                            // Parse CLI version if regex provided
-                            let cliVersion = '';
-                            if (prereq.check.parseVersion) {
-                                try {
-                                    const match = new RegExp(prereq.check.parseVersion).exec(stdout);
-                                    if (match) cliVersion = match[1] || '';
-                                } catch {
-                                    // Ignore regex parse errors
+                            const result = await commandManager.execute(prereq.check.command, { useNodeVersion: major, timeout: TIMEOUTS.PREREQUISITE_CHECK });
+
+                            // CRITICAL: Check exit code to determine command success
+                            // Exit code 0 = success, non-zero = failure (e.g., 127 = command not found)
+                            if (result.code === 0) {
+                                // Parse CLI version if regex provided
+                                let cliVersion = '';
+                                if (prereq.check.parseVersion) {
+                                    try {
+                                        const match = new RegExp(prereq.check.parseVersion).exec(result.stdout);
+                                        if (match) cliVersion = match[1] || '';
+                                    } catch {
+                                        // Ignore regex parse errors
+                                    }
                                 }
+                                perNodeVersionStatus.push({ version: `Node ${major}`, major, component: cliVersion, installed: true });
+                            } else {
+                                // Non-zero exit code means tool is not installed for this Node version
+                                perNodeVariantMissing = true;
+                                missingVariantMajors.push(major);
+                                perNodeVersionStatus.push({ version: `Node ${major}`, major, component: '', installed: false });
                             }
-                            perNodeVersionStatus.push({ version: `Node ${major}`, major, component: cliVersion, installed: true });
                         } catch {
                             perNodeVariantMissing = true;
                             missingVariantMajors.push(major);
@@ -151,7 +161,9 @@ export async function handleContinuePrerequisites(
             if (prereq.perNodeVersion && perNodeVariantMissing) overallStatus = 'error';
 
             // Persist nodeVersionStatus to state for downstream gating
-            context.sharedState.currentPrerequisiteStates.set(i, { prereq, result: checkResult, nodeVersionStatus });
+            // For Node.js: use nodeVersionStatus; for perNodeVersion prereqs: use perNodeVersionStatus
+            const versionStatusForState = prereq.id === 'node' ? nodeVersionStatus : perNodeVersionStatus;
+            context.sharedState.currentPrerequisiteStates.set(i, { prereq, result: checkResult, nodeVersionStatus: versionStatusForState });
 
             await context.sendMessage('prerequisite-status', {
                 index: i,
@@ -175,7 +187,8 @@ export async function handleContinuePrerequisites(
                     || (!checkResult.installed && checkResult.canInstall)
                 ),
                 plugins: checkResult.plugins,
-                nodeVersionStatus,
+                // For Node.js: show nodeVersionStatus; for perNodeVersion prereqs: show perNodeVersionStatus
+                nodeVersionStatus: prereq.id === 'node' ? nodeVersionStatus : perNodeVersionStatus,
             });
         }
 
