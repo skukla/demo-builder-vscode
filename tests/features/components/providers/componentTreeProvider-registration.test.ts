@@ -99,6 +99,16 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
     let provider: ComponentTreeProvider;
     let mockStateManager: StateManager;
 
+    /**
+     * Wait for cache initialization to complete.
+     * The ComponentTreeProvider initializes its cache asynchronously in the constructor.
+     * We need to wait for this to complete before testing getChildren().
+     */
+    async function waitForCacheInit(): Promise<void> {
+        // Allow microtasks to process (async cache initialization)
+        await new Promise(resolve => setImmediate(resolve));
+    }
+
     beforeEach(() => {
         jest.clearAllMocks();
         mockOnProjectChangedListeners.length = 0;
@@ -108,17 +118,17 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
         mockGetAllProjects.mockResolvedValue([]);
 
         mockStateManager = new StateManager({} as vscode.ExtensionContext);
-        provider = new ComponentTreeProvider(mockStateManager, '/test/extension/path');
     });
 
     afterEach(() => {
-        provider.dispose();
+        if (provider) {
+            provider.dispose();
+        }
     });
 
     describe('getChildren() with project loaded', () => {
         it('should return component tree items when a project is loaded', async () => {
-            // Given: ComponentTreeProvider is instantiated
-            // When: A project is loaded in state with components
+            // Given: A project is loaded in state with components
             const project = createMockProjectWithComponents('Acme Corp', {
                 'citisignal-nextjs': {
                     name: 'CitiSignal NextJS',
@@ -131,7 +141,12 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
                     subType: 'inspector',
                 },
             });
+            // Set up mocks BEFORE creating provider (cache reads during constructor)
             mockGetCurrentProject.mockResolvedValue(project);
+
+            // When: ComponentTreeProvider is instantiated
+            provider = new ComponentTreeProvider(mockStateManager, '/test/extension/path');
+            await waitForCacheInit();
 
             // Then: getChildren() should return component tree items
             const children = await provider.getChildren();
@@ -141,8 +156,7 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
         });
 
         it('should return items with appropriate icons and labels', async () => {
-            // Given: ComponentTreeProvider is instantiated
-            // When: A project with components is loaded
+            // Given: A project with components is loaded
             const project = createMockProjectWithComponents('Acme Corp', {
                 'citisignal-nextjs': {
                     name: 'CitiSignal NextJS',
@@ -150,7 +164,12 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
                     icon: 'symbol-color',
                 },
             });
+            // Set up mocks BEFORE creating provider (cache reads during constructor)
             mockGetCurrentProject.mockResolvedValue(project);
+
+            // When: ComponentTreeProvider is instantiated
+            provider = new ComponentTreeProvider(mockStateManager, '/test/extension/path');
+            await waitForCacheInit();
 
             // Then: Each item should have appropriate icon and label
             const children = await provider.getChildren();
@@ -164,13 +183,17 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
 
     describe('getChildren() without project loaded', () => {
         it('should return project list when no project is loaded but projects exist', async () => {
-            // Given: ComponentTreeProvider is instantiated
-            // When: No project is loaded but projects exist
+            // Given: No project is loaded but projects exist
+            // Set up mocks BEFORE creating provider (cache reads during constructor)
             mockGetCurrentProject.mockResolvedValue(null);
             mockGetAllProjects.mockResolvedValue([
                 { name: 'Project 1', path: '/projects/1', lastModified: new Date() },
                 { name: 'Project 2', path: '/projects/2', lastModified: new Date() },
             ]);
+
+            // When: ComponentTreeProvider is instantiated
+            provider = new ComponentTreeProvider(mockStateManager, '/test/extension/path');
+            await waitForCacheInit();
 
             // Then: getChildren() should return project list
             const children = await provider.getChildren();
@@ -180,10 +203,14 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
         });
 
         it('should return empty state message when no projects exist', async () => {
-            // Given: ComponentTreeProvider is instantiated
-            // When: No project is loaded and no projects exist
+            // Given: No project is loaded and no projects exist
+            // Set up mocks BEFORE creating provider (cache reads during constructor)
             mockGetCurrentProject.mockResolvedValue(null);
             mockGetAllProjects.mockResolvedValue([]);
+
+            // When: ComponentTreeProvider is instantiated
+            provider = new ComponentTreeProvider(mockStateManager, '/test/extension/path');
+            await waitForCacheInit();
 
             // Then: getChildren() should return empty state (welcome message)
             const children = await provider.getChildren();
@@ -202,6 +229,8 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
                 'citisignal-nextjs': { name: 'CitiSignal NextJS' },
             });
             mockGetCurrentProject.mockResolvedValue(project);
+            provider = new ComponentTreeProvider(mockStateManager, '/test/extension/path');
+            await waitForCacheInit();
 
             // Spy on the onDidChangeTreeData event
             const fireSpy = provider['_onDidChangeTreeData'].fire;
@@ -215,6 +244,8 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
 
         it('should auto-refresh when project changes via stateManager', async () => {
             // Given: ComponentTreeProvider subscribed to stateManager.onProjectChanged
+            provider = new ComponentTreeProvider(mockStateManager, '/test/extension/path');
+            await waitForCacheInit();
             const fireSpy = provider['_onDidChangeTreeData'].fire;
 
             // When: Project changes in state
@@ -231,6 +262,8 @@ describe('ComponentTreeProvider - Registration Behavior', () => {
     describe('getTreeItem()', () => {
         it('should return the element as TreeItem', async () => {
             // Given: A tree element
+            provider = new ComponentTreeProvider(mockStateManager, '/test/extension/path');
+            await waitForCacheInit();
             const mockElement = {
                 label: 'Test Component',
                 collapsibleState: 1,
