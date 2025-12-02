@@ -20,10 +20,14 @@ import { getComponentIds, getComponentInstanceValues } from '@/types/typeGuards'
  * - Waits for demo to actually start (polls until port is in use)
  * - Graceful timeout handling (30 seconds) with user warning
  * - State updates reflect actual process state, not just "commands were sent"
+ * - Execution lock prevents duplicate concurrent execution
  */
 export class StartDemoCommand extends BaseCommand {
     /** ProcessCleanup instance for event-driven process termination */
     private _processCleanup: ProcessCleanup | null = null;
+
+    /** Execution lock to prevent duplicate concurrent execution */
+    private static isExecuting = false;
 
     /** Maximum time to wait for demo to start */
     private readonly STARTUP_TIMEOUT = TIMEOUTS.DEMO_STARTUP_TIMEOUT;
@@ -113,6 +117,13 @@ export class StartDemoCommand extends BaseCommand {
         return true;
     }
     public async execute(): Promise<void> {
+        // Prevent duplicate concurrent execution
+        if (StartDemoCommand.isExecuting) {
+            this.logger.debug('[Start Demo] Skipping duplicate execution - already in progress');
+            return;
+        }
+
+        StartDemoCommand.isExecuting = true;
         try {
             const project = await this.stateManager.getCurrentProject();
             if (!project) {
@@ -317,9 +328,11 @@ export class StartDemoCommand extends BaseCommand {
 
             // Reset restart notification flag (user has restarted)
             await vscode.commands.executeCommand('demoBuilder._internal.restartActionTaken');
-            
+
         } catch (error) {
             await this.showError('Failed to start demo', error as Error);
+        } finally {
+            StartDemoCommand.isExecuting = false;
         }
     }
 }

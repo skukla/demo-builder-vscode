@@ -12,7 +12,17 @@ export class DeleteProjectCommand extends BaseCommand {
     /** Delay for OS to release file handles (watchers, etc.) */
     private readonly HANDLE_RELEASE_DELAY = TIMEOUTS.FILE_HANDLE_RELEASE;
 
+    /** Execution lock to prevent duplicate concurrent execution */
+    private static isExecuting = false;
+
     public async execute(): Promise<void> {
+        // Prevent duplicate concurrent execution
+        if (DeleteProjectCommand.isExecuting) {
+            this.logger.debug('[Delete Project] Skipping duplicate execution - already in progress');
+            return;
+        }
+
+        DeleteProjectCommand.isExecuting = true;
         try {
             const project = await this.stateManager.getCurrentProject();
             if (!project) {
@@ -74,6 +84,8 @@ export class DeleteProjectCommand extends BaseCommand {
         } catch (error) {
             await this.showError('Failed to delete project', error as Error);
             return;
+        } finally {
+            DeleteProjectCommand.isExecuting = false;
         }
 
         // Close project-related panels (dashboard, configure) before navigation

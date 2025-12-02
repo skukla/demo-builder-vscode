@@ -23,6 +23,9 @@ import { DEFAULT_SHELL } from '@/types/shell';
 export class StopDemoCommand extends BaseCommand {
     private _processCleanup: ProcessCleanup | null = null;
 
+    /** Execution lock to prevent duplicate concurrent execution */
+    private static isExecuting = false;
+
     /**
      * Get ProcessCleanup instance (lazy initialization)
      *
@@ -95,6 +98,13 @@ export class StopDemoCommand extends BaseCommand {
     }
 
     public async execute(): Promise<void> {
+        // Prevent duplicate concurrent execution
+        if (StopDemoCommand.isExecuting) {
+            this.logger.debug('[Stop Demo] Skipping duplicate execution - already in progress');
+            return;
+        }
+
+        StopDemoCommand.isExecuting = true;
         try {
             const project = await this.stateManager.getCurrentProject();
             if (!project) {
@@ -185,6 +195,8 @@ export class StopDemoCommand extends BaseCommand {
 
         } catch (error) {
             await this.showError('Failed to stop demo', error as Error);
+        } finally {
+            StopDemoCommand.isExecuting = false;
         }
     }
 }
