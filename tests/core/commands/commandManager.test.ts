@@ -110,11 +110,11 @@ describe('CommandManager', () => {
             );
         });
 
-        it('should register all 16 commands (17 total, but resetAll only in dev mode)', () => {
+        it('should register all 18 commands (19 total, but resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 16 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(16);
+            // Verify registerCommand was called 18 times (resetAll excluded - dev mode only)
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(18);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
@@ -133,6 +133,8 @@ describe('CommandManager', () => {
                 'demoBuilder.deployMesh',
                 'demoBuilder.checkForUpdates',
                 'demoBuilder.diagnostics',
+                'demoBuilder.toggleSidebar',
+                'demoBuilder.showSidebar',
                 'demoBuilder.openComponent',
                 // Note: resetAll not included - only registers in Development mode
             ];
