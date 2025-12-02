@@ -104,7 +104,13 @@ export async function activate(context: vscode.ExtensionContext) {
         // auto-open the projects list as the home screen
         let isOpeningProjectsList = false;
         const treeViewVisibilitySubscription = componentTreeView.onDidChangeVisibility(async (e) => {
-            if (e.visible && BaseWebviewCommand.getActivePanelCount() === 0 && !isOpeningProjectsList) {
+            // Guard against opening during webview transitions (prevents duplicate panels)
+            // When switching from Projects List → Dashboard, there's a brief moment where
+            // getActivePanelCount() === 0, which would incorrectly trigger this handler
+            if (e.visible &&
+                BaseWebviewCommand.getActivePanelCount() === 0 &&
+                !isOpeningProjectsList &&
+                !BaseWebviewCommand.isWebviewTransitionInProgress()) {
                 isOpeningProjectsList = true;
                 logger.debug('[Extension] User clicked icon with no main webview - opening projects list');
                 await vscode.commands.executeCommand('demoBuilder.showProjectsList');

@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import { BaseWebviewCommand } from '@/core/base';
 import { validateProjectPath } from '@/core/validation/securityValidation';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -91,6 +92,8 @@ export const handleSelectProject: MessageHandler<{ projectPath: string }> = asyn
 
         // Navigate to project dashboard
         // Note: The dashboard command handles disposing the Projects List panel
+        // Start transition to prevent auto-open handler from firing during panel disposal
+        BaseWebviewCommand.startWebviewTransition();
         try {
             await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
         } catch (navError) {
@@ -100,6 +103,8 @@ export const handleSelectProject: MessageHandler<{ projectPath: string }> = asyn
                 'Failed to navigate to dashboard',
                 navError instanceof Error ? navError : undefined,
             );
+        } finally {
+            BaseWebviewCommand.endWebviewTransition();
         }
 
         return {
