@@ -197,8 +197,8 @@ describe('StartDemoCommand - Port Conflict', () => {
 
             // Port availability flow:
             // 1. Initial check: not available (triggers conflict dialog)
-            // 2. After kill, before waitForPortInUse: available
-            // 3. First waitForPortInUse check: not available (demo "started")
+            // 2. After kill in waitForPortInUse: first check returns true (port freed)
+            // 3. Second check in waitForPortInUse: returns false (demo "started" on port)
             mockCommandExecutor.isPortAvailable.mockImplementation(async () => {
                 checkCount++;
                 if (checkCount === 1) {
@@ -215,8 +215,13 @@ describe('StartDemoCommand - Port Conflict', () => {
             // When: Port conflict detected and user chooses to stop
             const executePromise = command.execute();
 
-            // Advance timers to allow port polling after terminal sends text
-            await jest.advanceTimersByTimeAsync(2000);
+            // Advance timers incrementally to allow async operations to complete
+            // waitForPortInUse polls every 1 second, needs at least 2 iterations
+            for (let i = 0; i < 5; i++) {
+                await jest.advanceTimersByTimeAsync(1000);
+                // Allow microtasks to process between timer advancements
+                await Promise.resolve();
+            }
             await executePromise;
 
             // Then: ProcessCleanup.killProcessTree called with PID
