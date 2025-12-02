@@ -171,7 +171,7 @@ describe('ProjectCreationStep', () => {
             expect(screen.getByText('Project Created Successfully')).toBeInTheDocument();
         });
 
-        it('should display Browse Files button when complete', () => {
+        it('should display View Projects button when complete', () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -181,11 +181,11 @@ describe('ProjectCreationStep', () => {
                 </Provider>
             );
 
-            // Component shows "Open Project" button, not "Browse Files"
-            expect(screen.getByRole('button', { name: /Open Project/i })).toBeInTheDocument();
+            // Component shows "View Projects" button for navigating to projects list
+            expect(screen.getByRole('button', { name: /View Projects/i })).toBeInTheDocument();
         });
 
-        it('should only show Open Project button when complete', () => {
+        it('should only show View Projects button when complete', () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ProjectCreationStep
@@ -195,12 +195,12 @@ describe('ProjectCreationStep', () => {
                 </Provider>
             );
 
-            // Success state only shows "Open Project" button, no "Close" button
-            expect(screen.getByRole('button', { name: /Open Project/i })).toBeInTheDocument();
+            // Success state only shows "View Projects" button, no "Close" button
+            expect(screen.getByRole('button', { name: /View Projects/i })).toBeInTheDocument();
             expect(screen.queryByRole('button', { name: /Close/i })).not.toBeInTheDocument();
         });
 
-        it('should send openProject message when Open Project is clicked', async () => {
+        it('should show loading transition when View Projects is clicked', async () => {
             const user = userEvent.setup();
             render(
                 <Provider theme={defaultTheme}>
@@ -211,11 +211,11 @@ describe('ProjectCreationStep', () => {
                 </Provider>
             );
 
-            const openButton = screen.getByRole('button', { name: /Open Project/i });
+            const openButton = screen.getByRole('button', { name: /View Projects/i });
             await user.click(openButton);
 
-            // After clicking, button is replaced with loading state ("Opening your project...")
-            expect(screen.getByText('Opening your project...')).toBeInTheDocument();
+            // After clicking, shows loading state while transitioning
+            expect(screen.getByText('Loading your projects...')).toBeInTheDocument();
         });
     });
 
@@ -469,8 +469,8 @@ describe('ProjectCreationStep', () => {
                 </Provider>
             );
 
-            // Success state shows Open Project button
-            const openButton = screen.getByRole('button', { name: /Open Project/i });
+            // Success state shows View Projects button
+            const openButton = screen.getByRole('button', { name: /View Projects/i });
             expect(openButton).toBeInTheDocument();
         });
     });
