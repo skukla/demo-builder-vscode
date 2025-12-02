@@ -15,9 +15,29 @@ import {
     handleCancelAuthPolling
 } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
-import { createMockContext, mockVSCode } from './lifecycleHandlers.testUtils';
+import { createMockContext } from './lifecycleHandlers.testUtils';
 
-jest.mock('vscode', () => mockVSCode, { virtual: true });
+// Mock vscode inline to avoid hoisting issues
+jest.mock('vscode', () => ({
+    Uri: {
+        file: jest.fn((path: string) => ({ fsPath: path, path })),
+        parse: jest.fn((uri: string) => ({ fsPath: uri, path: uri }))
+    },
+    window: {
+        showErrorMessage: jest.fn(),
+        showInformationMessage: jest.fn(),
+        showWarningMessage: jest.fn()
+    },
+    workspace: {
+        updateWorkspaceFolders: jest.fn()
+    },
+    commands: {
+        executeCommand: jest.fn()
+    },
+    env: {
+        openExternal: jest.fn()
+    }
+}), { virtual: true });
 jest.mock('@/core/validation/securityValidation');
 
 describe('lifecycleHandlers - Cancellation', () => {
