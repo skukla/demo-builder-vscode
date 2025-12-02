@@ -76,6 +76,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         const { ServiceLocator } = require('@/core/di');
         const mockAuthManager = {
             isAuthenticated: jest.fn().mockResolvedValue(true),
+            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
             ensureSDKInitialized: jest.fn().mockResolvedValue(undefined),
             getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org123', name: 'Test Org' }),
         };
@@ -157,6 +158,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         const { ServiceLocator } = require('@/core/di');
         const mockAuthManager = {
             isAuthenticated: jest.fn().mockResolvedValue(true),
+            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
             ensureSDKInitialized: jest.fn().mockResolvedValue(undefined),
             getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org123', name: 'Test Org' }),
         };
@@ -220,6 +222,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         const { ServiceLocator } = require('@/core/di');
         const mockAuthManager = {
             isAuthenticated: jest.fn().mockResolvedValue(true),
+            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
             ensureSDKInitialized: jest.fn().mockResolvedValue(undefined),
             getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org123', name: 'Test Org' }),
         };
@@ -292,6 +295,7 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         const { ServiceLocator } = require('@/core/di');
         const mockAuthManager = {
             isAuthenticated: jest.fn().mockResolvedValue(true),
+            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
             ensureSDKInitialized: jest.fn().mockResolvedValue(undefined),
             getCurrentOrganization: jest.fn().mockResolvedValue({ id: 'org123', name: 'Test Org' }),
         };
