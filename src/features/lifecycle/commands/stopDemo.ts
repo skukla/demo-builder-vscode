@@ -175,11 +175,13 @@ export class StopDemoCommand extends BaseCommand {
                 // Update status bar
                 this.statusBar.updateProject(project);
 
-                progress.report({ message: 'Demo stopped successfully!' });
+                // Update notification in place and pause briefly so user can see success
+                progress.report({ message: '✓ Demo stopped' });
+                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.LOADING_MIN_DISPLAY));
             });
 
-            // Show auto-dismissing success notification (also logs to info channel)
-            this.showSuccessMessage('Demo stopped');
+            // Status bar update only (notification already shown above)
+            this.showStatusMessage('Demo stopped');
 
         } catch (error) {
             await this.showError('Failed to stop demo', error as Error);

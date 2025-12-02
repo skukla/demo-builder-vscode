@@ -309,11 +309,12 @@ export class StartDemoCommand extends BaseCommand {
                 
                 // Update status bar
                 this.statusBar.updateProject(project);
+
+                // Update notification in place and pause briefly so user can see success
+                progress.report({ message: `✓ Started at http://localhost:${port}` });
+                await new Promise(resolve => setTimeout(resolve, TIMEOUTS.LOADING_MIN_DISPLAY));
             });
 
-            // Show auto-dismissing success notification (also logs to info channel)
-            this.showSuccessMessage(`Demo started at http://localhost:${port}`);
-            
             // Reset restart notification flag (user has restarted)
             await vscode.commands.executeCommand('demoBuilder._internal.restartActionTaken');
             
