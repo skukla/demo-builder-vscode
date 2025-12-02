@@ -99,6 +99,19 @@ export class StateManager {
         }
     }
 
+    /**
+     * Check if a path exists on the filesystem
+     * Used as a guard to prevent recreating deleted projects
+     */
+    private async checkPathExists(pathToCheck: string): Promise<boolean> {
+        try {
+            await fs.access(pathToCheck);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     public async hasProject(): Promise<boolean> {
         return this.state.currentProject !== undefined;
     }
@@ -130,6 +143,20 @@ export class StateManager {
     }
 
     public async saveProject(project: Project): Promise<void> {
+        // GUARD: Prevent stale background saves from recreating deleted projects
+        // When a project is deleted:
+        //   1. Files are deleted from disk
+        //   2. clearProject() sets this.state.currentProject = undefined
+        // If a background async operation (like mesh status check) tries to save
+        // after deletion, we should skip it rather than recreate the project.
+        const projectPathExists = await this.checkPathExists(project.path);
+        if (!projectPathExists && !this.state.currentProject) {
+            this.logger.debug(
+                `[StateManager] Blocking save for deleted project: ${project.name}`,
+            );
+            return;
+        }
+
         this.state.currentProject = project;
         await this.saveState();
 
@@ -144,7 +171,26 @@ export class StateManager {
     }
 
     private async saveProjectConfig(project: Project): Promise<void> {
-        // Ensure directory exists
+        // GUARD: Prevent recreating deleted project directories
+        // Background async operations (like mesh status checks) may call saveProject()
+        // after a project has been deleted. Without this guard, fs.mkdir() would
+        // recreate the deleted directory, causing "ghost" projects to reappear.
+        try {
+            await fs.access(project.path);
+        } catch {
+            // Directory doesn't exist - check if this is expected (project was deleted)
+            // If current project is undefined or different, this is a stale save - skip it
+            if (!this.state.currentProject || this.state.currentProject.path !== project.path) {
+                this.logger.debug(
+                    `[StateManager] Skipping save for deleted project: ${project.name} (path: ${project.path})`,
+                );
+                return;
+            }
+            // Directory doesn't exist but this IS the current project - create it
+            // This handles the case of a new project being created
+        }
+
+        // Ensure directory exists (only for active projects)
         try {
             await fs.mkdir(project.path, { recursive: true });
         } catch (error) {
