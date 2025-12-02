@@ -156,6 +156,38 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
         if (!this.communicationManager) {
             await this.initializeCommunication();
         }
+
+        // Always send fresh project list after revealing panel
+        // This ensures the UI is up-to-date after operations like delete
+        await this.refreshProjectsList();
+    }
+
+    /**
+     * Send fresh projects list to webview
+     * Called after reveal to ensure UI is up-to-date
+     */
+    private async refreshProjectsList(): Promise<void> {
+        if (!this.communicationManager) {
+            return;
+        }
+
+        try {
+            // Load all projects
+            const projectList = await this.stateManager.getAllProjects();
+            const projects = [];
+            for (const item of projectList) {
+                const project = await this.stateManager.loadProjectFromPath(item.path);
+                if (project) {
+                    projects.push(project);
+                }
+            }
+
+            // Send to webview
+            await this.sendMessage('projectsUpdated', { projects });
+            this.logger.debug(`[ProjectsList] Sent ${projects.length} projects to webview`);
+        } catch (error) {
+            this.logger.error('[ProjectsList] Failed to refresh projects list', error as Error);
+        }
     }
 
     // ============================================================================
