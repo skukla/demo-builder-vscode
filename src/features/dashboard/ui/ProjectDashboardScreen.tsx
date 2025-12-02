@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
     View,
     Flex,
@@ -64,6 +64,8 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     const [isTransitioning, setIsTransitioning] = useState(false); // Local state for immediate button disable
     // Temporarily suppress hover after click to prevent stuck state during layout shift
     const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
+    // Track whether status was requested (prevent StrictMode double-request)
+    const statusRequestedRef = useRef(false);
 
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
@@ -72,7 +74,11 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     });
 
     useEffect(() => {
-        webviewClient.postMessage('requestStatus');
+        // Guard against StrictMode double-request (only send message once)
+        if (!statusRequestedRef.current) {
+            statusRequestedRef.current = true;
+            webviewClient.postMessage('requestStatus');
+        }
 
         const unsubscribeStatus = webviewClient.onMessage('statusUpdate', (data: unknown) => {
             const projectData = data as ProjectStatus;

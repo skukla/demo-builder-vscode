@@ -5,7 +5,7 @@
  * Renders the main dashboard with project cards.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { ProjectsDashboard } from './ProjectsDashboard';
@@ -24,6 +24,8 @@ const ProjectsDashboardApp: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+    // Track whether initial fetch was triggered (prevent StrictMode double-fetch)
+    const initialFetchTriggeredRef = useRef(false);
 
     // Fetch projects (reusable for initial load and refresh)
     const fetchProjects = useCallback(async (isRefresh = false) => {
@@ -52,7 +54,11 @@ const ProjectsDashboardApp: React.FC = () => {
 
     // Fetch projects on mount
     useEffect(() => {
-        fetchProjects(false);
+        // Guard against StrictMode double-fetch (only fetch once)
+        if (!initialFetchTriggeredRef.current) {
+            initialFetchTriggeredRef.current = true;
+            fetchProjects(false);
+        }
 
         // Subscribe to project updates
         const unsubscribe = webviewClient.onMessage('projectsUpdated', (data) => {
