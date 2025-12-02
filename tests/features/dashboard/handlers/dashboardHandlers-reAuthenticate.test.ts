@@ -30,6 +30,8 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
         const defaultMockAuthManager = {
             login: jest.fn().mockResolvedValue(undefined),
             selectOrganization: jest.fn().mockResolvedValue(undefined),
+            selectProject: jest.fn().mockResolvedValue(undefined),
+            selectWorkspace: jest.fn().mockResolvedValue(undefined),
             isAuthenticated: jest.fn().mockResolvedValue(true),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(defaultMockAuthManager);
@@ -41,6 +43,8 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
         const mockAuthManager = {
             login: jest.fn().mockResolvedValue(undefined),
             selectOrganization: jest.fn().mockResolvedValue(undefined),
+            selectProject: jest.fn().mockResolvedValue(undefined),
+            selectWorkspace: jest.fn().mockResolvedValue(undefined),
             isAuthenticated: jest.fn().mockResolvedValue(true),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
@@ -55,9 +59,11 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
             success: true,
         });
 
-        // Verify authentication flow was called
+        // Verify full Adobe context selection (org → project → workspace)
         expect(mockAuthManager.login).toHaveBeenCalled();
         expect(mockAuthManager.selectOrganization).toHaveBeenCalledWith('org123');
+        expect(mockAuthManager.selectProject).toHaveBeenCalledWith('project123', 'org123');
+        expect(mockAuthManager.selectWorkspace).toHaveBeenCalledWith('workspace123', 'project123');
 
         // CRITICAL: Verify sendMessage was NOT called for final response
         // (postMessage may be called for progress updates, but final response is returned)
@@ -115,12 +121,14 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
         );
     });
 
-    it('should auto-select organization from project context', async () => {
+    it('should auto-select full Adobe context from project (org → project → workspace)', async () => {
         // Arrange: Mock authentication flow
         const { ServiceLocator } = require('@/core/di');
         const mockAuthManager = {
             login: jest.fn().mockResolvedValue(undefined),
             selectOrganization: jest.fn().mockResolvedValue(undefined),
+            selectProject: jest.fn().mockResolvedValue(undefined),
+            selectWorkspace: jest.fn().mockResolvedValue(undefined),
             isAuthenticated: jest.fn().mockResolvedValue(true),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
@@ -130,10 +138,20 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
         // Act: Call handler
         await handleReAuthenticate(mockContext);
 
-        // Assert: Verify organization selection
+        // Assert: Verify full context selection chain
         expect(mockAuthManager.selectOrganization).toHaveBeenCalledWith('org123');
+        expect(mockAuthManager.selectProject).toHaveBeenCalledWith('project123', 'org123');
+        expect(mockAuthManager.selectWorkspace).toHaveBeenCalledWith('workspace123', 'project123');
+
+        // Verify debug logging
         expect(mockContext.logger.debug).toHaveBeenCalledWith(
             expect.stringContaining('Auto-selecting project org: org123')
+        );
+        expect(mockContext.logger.debug).toHaveBeenCalledWith(
+            expect.stringContaining('Auto-selecting project: project123')
+        );
+        expect(mockContext.logger.debug).toHaveBeenCalledWith(
+            expect.stringContaining('Auto-selecting workspace: workspace123')
         );
     });
 
@@ -144,6 +162,8 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
         const mockAuthManager = {
             login: jest.fn().mockResolvedValue(undefined),
             selectOrganization: jest.fn().mockRejectedValue(orgError),
+            selectProject: jest.fn().mockResolvedValue(undefined),
+            selectWorkspace: jest.fn().mockResolvedValue(undefined),
             isAuthenticated: jest.fn().mockResolvedValue(true),
         };
         (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
@@ -153,7 +173,7 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
         // Act: Call handler (should not throw)
         const result = await handleReAuthenticate(mockContext);
 
-        // Assert: Verify handler still succeeds (org selection is optional)
+        // Assert: Verify handler still succeeds (context selection errors are non-fatal)
         expect(result.success).toBe(true);
 
         // Verify warning was logged
@@ -161,5 +181,93 @@ describe('dashboardHandlers - handleReAuthenticate', () => {
             '[Dashboard] Could not select project organization',
             orgError
         );
+    });
+
+    it('should handle project selection failure gracefully', async () => {
+        // Arrange: Mock project selection failure
+        const { ServiceLocator } = require('@/core/di');
+        const projectError = new Error('Project not found');
+        const mockAuthManager = {
+            login: jest.fn().mockResolvedValue(undefined),
+            selectOrganization: jest.fn().mockResolvedValue(undefined),
+            selectProject: jest.fn().mockRejectedValue(projectError),
+            selectWorkspace: jest.fn().mockResolvedValue(undefined),
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+        };
+        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
+
+        const { mockContext } = setupMocks();
+
+        // Act: Call handler (should not throw)
+        const result = await handleReAuthenticate(mockContext);
+
+        // Assert: Verify handler still succeeds (context selection errors are non-fatal)
+        expect(result.success).toBe(true);
+
+        // Verify warning was logged
+        expect(mockContext.logger.warn).toHaveBeenCalledWith(
+            '[Dashboard] Could not select project',
+            projectError
+        );
+    });
+
+    it('should handle workspace selection failure gracefully', async () => {
+        // Arrange: Mock workspace selection failure
+        const { ServiceLocator } = require('@/core/di');
+        const workspaceError = new Error('Workspace not found');
+        const mockAuthManager = {
+            login: jest.fn().mockResolvedValue(undefined),
+            selectOrganization: jest.fn().mockResolvedValue(undefined),
+            selectProject: jest.fn().mockResolvedValue(undefined),
+            selectWorkspace: jest.fn().mockRejectedValue(workspaceError),
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+        };
+        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
+
+        const { mockContext } = setupMocks();
+
+        // Act: Call handler (should not throw)
+        const result = await handleReAuthenticate(mockContext);
+
+        // Assert: Verify handler still succeeds (context selection errors are non-fatal)
+        expect(result.success).toBe(true);
+
+        // Verify warning was logged
+        expect(mockContext.logger.warn).toHaveBeenCalledWith(
+            '[Dashboard] Could not select workspace',
+            workspaceError
+        );
+    });
+
+    it('should skip project/workspace selection if IDs not available', async () => {
+        // Arrange: Project without projectId/workspace
+        const { ServiceLocator } = require('@/core/di');
+        const mockAuthManager = {
+            login: jest.fn().mockResolvedValue(undefined),
+            selectOrganization: jest.fn().mockResolvedValue(undefined),
+            selectProject: jest.fn().mockResolvedValue(undefined),
+            selectWorkspace: jest.fn().mockResolvedValue(undefined),
+            isAuthenticated: jest.fn().mockResolvedValue(true),
+        };
+        (ServiceLocator.getAuthenticationService as jest.Mock).mockReturnValue(mockAuthManager);
+
+        const { mockContext } = setupMocks({
+            adobe: {
+                organization: 'org123',
+                projectName: 'Test Project',
+                // projectId and workspace intentionally missing
+            } as any,
+        });
+
+        // Act: Call handler
+        const result = await handleReAuthenticate(mockContext);
+
+        // Assert: Verify handler succeeds
+        expect(result.success).toBe(true);
+
+        // Verify only org was selected (project/workspace skipped)
+        expect(mockAuthManager.selectOrganization).toHaveBeenCalledWith('org123');
+        expect(mockAuthManager.selectProject).not.toHaveBeenCalled();
+        expect(mockAuthManager.selectWorkspace).not.toHaveBeenCalled();
     });
 });

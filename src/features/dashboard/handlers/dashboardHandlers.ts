@@ -17,6 +17,9 @@ import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
 
+// Track components view toggle state (for toggle behavior)
+let isComponentsViewShown = false;
+
 /**
  * Handle 'ready' message - Send initialization data
  */
@@ -190,7 +193,8 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
 
         context.logger.info('[Dashboard] Browser authentication completed');
 
-        // Auto-select project's organization if available
+        // Auto-select project's Adobe context (org → project → workspace)
+        // This ensures mesh commands have the required context and don't prompt interactively
         if (project.adobe?.organization) {
             context.logger.debug(`[Dashboard] Auto-selecting project org: ${project.adobe.organization}`);
 
@@ -199,6 +203,30 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
                 context.logger.info('[Dashboard] Organization selected successfully');
             } catch (orgError) {
                 context.logger.warn('[Dashboard] Could not select project organization', orgError as Error);
+            }
+        }
+
+        // Auto-select project (requires org context)
+        if (project.adobe?.projectId && project.adobe?.organization) {
+            context.logger.debug(`[Dashboard] Auto-selecting project: ${project.adobe.projectId}`);
+
+            try {
+                await authManager.selectProject(project.adobe.projectId, project.adobe.organization);
+                context.logger.info('[Dashboard] Project selected successfully');
+            } catch (projectError) {
+                context.logger.warn('[Dashboard] Could not select project', projectError as Error);
+            }
+        }
+
+        // Auto-select workspace (requires project context)
+        if (project.adobe?.workspace && project.adobe?.projectId) {
+            context.logger.debug(`[Dashboard] Auto-selecting workspace: ${project.adobe.workspace}`);
+
+            try {
+                await authManager.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
+                context.logger.info('[Dashboard] Workspace selected successfully');
+            } catch (workspaceError) {
+                context.logger.warn('[Dashboard] Could not select workspace', workspaceError as Error);
             }
         }
 
@@ -664,12 +692,27 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
 }
 
 /**
- * Handle 'viewComponents' message - Toggle the sidebar to show/hide component tree
+ * Handle 'viewComponents' message - Toggle the components tree view in the sidebar
  */
 export const handleViewComponents: MessageHandler = async () => {
-    await vscode.commands.executeCommand('demoBuilder.toggleSidebar');
+    if (isComponentsViewShown) {
+        // Close the sidebar
+        await vscode.commands.executeCommand('workbench.action.closeSidebar');
+        isComponentsViewShown = false;
+    } else {
+        // Focus the components tree view (this also opens the sidebar if closed)
+        await vscode.commands.executeCommand('demoBuilder.components.focus');
+        isComponentsViewShown = true;
+    }
     return { success: true };
 };
+
+/**
+ * Reset components view toggle state (called when navigating away from dashboard)
+ */
+export function resetComponentsViewState(): void {
+    isComponentsViewShown = false;
+}
 
 /**
  * Handle 'navigateBack' message - Navigate back to projects list
@@ -679,6 +722,9 @@ export const handleViewComponents: MessageHandler = async () => {
 export const handleNavigateBack: MessageHandler = async (context) => {
     try {
         context.logger.info('Navigating back to projects list');
+
+        // Reset components view toggle state
+        resetComponentsViewState();
 
         // Clear current project from state
         await context.stateManager.clearProject();
