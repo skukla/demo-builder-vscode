@@ -17,8 +17,9 @@ import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
 
-// Track components view toggle state (for toggle behavior)
+// Track toggle states for sidebar views (for toggle behavior)
 let isComponentsViewShown = false;
+let isLogsViewShown = false;
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -288,12 +289,18 @@ export const handleOpenBrowser: MessageHandler = async (context) => {
 };
 
 /**
- * Handle 'viewLogs' message - Toggle the output panel (shows Logs channel)
+ * Handle 'viewLogs' message - Toggle the logs output panel
  */
 export const handleViewLogs: MessageHandler = async () => {
-    // Just toggle the panel visibility
-    // VS Code remembers which output channel was last shown
-    await vscode.commands.executeCommand('workbench.action.togglePanel');
+    if (isLogsViewShown) {
+        // Close the panel
+        await vscode.commands.executeCommand('workbench.action.closePanel');
+        isLogsViewShown = false;
+    } else {
+        // Show the logs output channel (this also opens the panel if closed)
+        await vscode.commands.executeCommand('demoBuilder.showLogs');
+        isLogsViewShown = true;
+    }
     return { success: true };
 };
 
@@ -708,10 +715,11 @@ export const handleViewComponents: MessageHandler = async () => {
 };
 
 /**
- * Reset components view toggle state (called when navigating away from dashboard)
+ * Reset toggle states (called when navigating away from dashboard)
  */
-export function resetComponentsViewState(): void {
+export function resetToggleStates(): void {
     isComponentsViewShown = false;
+    isLogsViewShown = false;
 }
 
 /**
@@ -723,8 +731,8 @@ export const handleNavigateBack: MessageHandler = async (context) => {
     try {
         context.logger.info('Navigating back to projects list');
 
-        // Reset components view toggle state
-        resetComponentsViewState();
+        // Reset toggle states (components, logs)
+        resetToggleStates();
 
         // Clear current project from state
         await context.stateManager.clearProject();

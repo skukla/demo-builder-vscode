@@ -62,6 +62,8 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
     const [isRunning, setIsRunning] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false); // Local state for immediate button disable
+    // Temporarily suppress hover after click to prevent stuck state during layout shift
+    const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
 
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
@@ -136,13 +138,12 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     const handleReAuthenticate = useCallback(() => webviewClient.postMessage('re-authenticate'), []);
 
     const handleViewLogs = useCallback(() => {
+        // Suppress hover styles during layout shift
+        setIsLogsHoverSuppressed(true);
+        (document.activeElement as HTMLElement)?.blur();
         webviewClient.postMessage('viewLogs');
-        setTimeout(() => {
-            const logsButton = document.querySelector('[data-action="logs"]') as HTMLElement;
-            if (logsButton) {
-                logsButton.focus();
-            }
-        }, 50);
+        // Re-enable hover after layout stabilizes
+        setTimeout(() => setIsLogsHoverSuppressed(false), 500);
     }, []);
 
     const handleDeployMesh = useCallback(() => {
@@ -329,8 +330,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                     <ActionButton
                         onPress={handleViewLogs}
                         isQuiet
-                        UNSAFE_className="dashboard-action-button"
-                        data-action="logs"
+                        UNSAFE_className={`dashboard-action-button ${isLogsHoverSuppressed ? 'hover-suppressed' : ''}`}
                     >
                         <ViewList size="L" />
                         <Text UNSAFE_className="icon-label">Logs</Text>

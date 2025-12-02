@@ -759,6 +759,15 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     outline: none !important;
 }
 
+/* Temporarily suppress hover/focus after click to prevent stuck state during layout shift */
+.dashboard-action-button.hover-suppressed,
+.dashboard-action-button.hover-suppressed:hover,
+.dashboard-action-button.hover-suppressed:focus {
+    background: var(--spectrum-global-color-gray-100) !important;
+    border-color: var(--spectrum-global-color-gray-300) !important;
+    box-shadow: none !important;
+}
+
 /* Sidebar provider - use Spectrum gray-75 for consistency */
 .sidebar-provider {
     background: var(--spectrum-global-color-gray-75) !important;
