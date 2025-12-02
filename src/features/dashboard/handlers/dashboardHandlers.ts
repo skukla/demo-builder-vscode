@@ -382,11 +382,13 @@ export const handleOpenDevConsole: MessageHandler = async (context) => {
 
 /**
  * Handle 'deleteProject' message - Delete current project
+ *
+ * Note: Panel disposal is handled by the deleteProject command itself
+ * (via closeProjectPanels) only when deletion succeeds. We don't dispose
+ * here because the user might cancel the confirmation dialog.
  */
-export const handleDeleteProject: MessageHandler = async (context) => {
+export const handleDeleteProject: MessageHandler = async () => {
     await vscode.commands.executeCommand('demoBuilder.deleteProject');
-    // Close dashboard after delete
-    context.panel?.dispose();
     return { success: true };
 };
 
