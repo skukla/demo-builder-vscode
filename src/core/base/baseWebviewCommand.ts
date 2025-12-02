@@ -267,6 +267,14 @@ export abstract class BaseWebviewCommand extends BaseCommand {
             throw new Error('Panel must be created before initializing communication');
         }
 
+        // GUARD: Dispose any existing communication manager to prevent duplicate listeners
+        // This can happen if the panel was revealed but comm manager was somehow orphaned
+        if (this.communicationManager) {
+            this.logger.warn(`[BaseWebviewCommand] Disposing orphaned comm manager before creating new one`);
+            this.communicationManager.dispose();
+            this.communicationManager = undefined;
+        }
+
         // Set loading state while initializing
         await setLoadingState(
             this.panel,
