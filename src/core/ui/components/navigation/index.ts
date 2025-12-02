@@ -15,3 +15,6 @@ export type { SearchableListProps, SearchableListItem } from './SearchableList';
 
 export { NavigationPanel } from './NavigationPanel';
 export type { NavigationPanelProps, NavigationSection, NavigationField } from './NavigationPanel';
+
+export { BackButton } from './BackButton';
+export type { BackButtonProps } from './BackButton';

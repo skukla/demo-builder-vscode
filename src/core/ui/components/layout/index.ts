@@ -12,3 +12,12 @@ export type { TwoColumnLayoutProps } from './TwoColumnLayout';
 
 export { GridLayout } from './GridLayout';
 export type { GridLayoutProps } from './GridLayout';
+
+export { PageHeader } from './PageHeader';
+export type { PageHeaderProps, BackButtonConfig } from './PageHeader';
+
+export { PageFooter } from './PageFooter';
+export type { PageFooterProps } from './PageFooter';
+
+export { PageLayout } from './PageLayout';
+export type { PageLayoutProps } from './PageLayout';

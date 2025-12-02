@@ -18,3 +18,9 @@ export type { ErrorDisplayProps } from './ErrorDisplay';
 
 export { EmptyState } from './EmptyState';
 export type { EmptyStateProps } from './EmptyState';
+
+export { StatusDisplay } from './StatusDisplay';
+export type { StatusDisplayProps, StatusAction, StatusVariant } from './StatusDisplay';
+
+export { LoadingOverlay } from './LoadingOverlay';
+export type { LoadingOverlayProps } from './LoadingOverlay';
