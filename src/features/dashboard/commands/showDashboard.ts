@@ -7,6 +7,7 @@ import {
     type BundleUris,
 } from '@/core/utils/getWebviewHTMLWithBundles';
 import { DashboardHandlerRegistry } from '@/features/dashboard/handlers';
+import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project, ComponentInstance } from '@/types';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import { getComponentInstanceValues } from '@/types/typeGuards';
@@ -136,10 +137,13 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
      * but we keep this for backward compatibility with external callers.
      */
     public static disposeActivePanel(): void {
-        const activePanels = BaseWebviewCommand['activePanels'] as Map<string, vscode.WebviewPanel>;
-        const dashboardPanel = activePanels.get('demoBuilder.projectDashboard');
-        if (dashboardPanel) {
-            dashboardPanel.dispose();
+        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+        if (panel) {
+            try {
+                panel.dispose();
+            } catch {
+                // Panel may already be disposed - this is OK
+            }
         }
     }
 
@@ -151,10 +155,9 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         message?: string,
         endpoint?: string,
     ): Promise<void> {
-        const activePanels = BaseWebviewCommand['activePanels'] as Map<string, vscode.WebviewPanel>;
-        const dashboardPanel = activePanels.get('demoBuilder.projectDashboard');
-        if (dashboardPanel) {
-            await dashboardPanel.webview.postMessage({
+        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+        if (panel) {
+            await panel.webview.postMessage({
                 type: 'meshStatusUpdate',
                 payload: {
                     status,
@@ -192,6 +195,10 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         }
 
         this.logger.debug(`[Dashboard] Showing dashboard for project: ${project.name}`);
+
+        // Dispose Projects List if open (replace it with this dashboard)
+        // This must happen BEFORE creating our panel, not from within the Projects List message handler
+        ShowProjectsListCommand.disposeActivePanel();
 
         // If demo is already running, initialize file hashes for change detection
         if (project.status === 'running') {

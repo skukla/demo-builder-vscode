@@ -30,17 +30,18 @@ interface ConfigureInitialData {
 }
 
 export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
-    // Singleton: Track the active Configure panel
-    private static activePanel: vscode.WebviewPanel | undefined;
-
     /**
      * Static method to dispose any active Configure panel
      * Useful for cleanup during navigation
      */
     public static disposeActivePanel(): void {
-        if (ConfigureProjectWebviewCommand.activePanel) {
-            ConfigureProjectWebviewCommand.activePanel.dispose();
-            ConfigureProjectWebviewCommand.activePanel = undefined;
+        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.configureProject');
+        if (panel) {
+            try {
+                panel.dispose();
+            } catch {
+                // Panel may already be disposed - this is OK
+            }
         }
     }
 

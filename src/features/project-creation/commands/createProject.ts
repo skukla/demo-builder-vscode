@@ -14,6 +14,7 @@ import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
+import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 // Extracted helper functions
 import { HandlerContext, SharedState } from '@/commands/handlers/HandlerContext';
 import { HandlerRegistry } from '@/features/project-creation/handlers/HandlerRegistry';
@@ -368,6 +369,9 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     public async execute(): Promise<void> {
         try {
             this.logger.debug('[Project Creation] Initializing wizard interface...');
+
+            // Dispose Projects List if open (replace it with the wizard)
+            ShowProjectsListCommand.disposeActivePanel();
 
             // Create or reveal panel
             await this.createOrRevealPanel();

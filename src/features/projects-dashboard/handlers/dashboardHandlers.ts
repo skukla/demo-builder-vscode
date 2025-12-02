@@ -90,6 +90,7 @@ export const handleSelectProject: MessageHandler<{ projectPath: string }> = asyn
         context.logger.info(`Selected project: ${project.name}`);
 
         // Navigate to project dashboard
+        // Note: The dashboard command handles disposing the Projects List panel
         try {
             await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
         } catch (navError) {
@@ -122,6 +123,7 @@ export const handleCreateProject: MessageHandler = async (
 ): Promise<HandlerResponse> => {
     try {
         context.logger.info('Creating new project from dashboard');
+        // Note: The wizard command handles disposing the Projects List panel
         await vscode.commands.executeCommand('demoBuilder.createProject');
         return {
             success: true,
