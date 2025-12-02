@@ -99,6 +99,7 @@ describe('SidebarProvider', () => {
                 asWebviewUri: jest.Mock;
             };
             onDidDispose: jest.Mock;
+            onDidChangeVisibility: jest.Mock;
             visible: boolean;
         };
 
@@ -112,6 +113,7 @@ describe('SidebarProvider', () => {
                     asWebviewUri: jest.fn((uri) => uri),
                 },
                 onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
+                onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
                 visible: true,
             };
         });
@@ -171,6 +173,7 @@ describe('SidebarProvider', () => {
                 asWebviewUri: jest.Mock;
             };
             onDidDispose: jest.Mock;
+            onDidChangeVisibility: jest.Mock;
             visible: boolean;
         };
         let messageHandler: (message: unknown) => void;
@@ -188,6 +191,7 @@ describe('SidebarProvider', () => {
                     asWebviewUri: jest.fn((uri) => uri),
                 },
                 onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
+                onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
                 visible: true,
             };
 
@@ -249,6 +253,7 @@ describe('SidebarProvider', () => {
                 asWebviewUri: jest.Mock;
             };
             onDidDispose: jest.Mock;
+            onDidChangeVisibility: jest.Mock;
             visible: boolean;
         };
 
@@ -262,6 +267,7 @@ describe('SidebarProvider', () => {
                     asWebviewUri: jest.fn((uri) => uri),
                 },
                 onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
+                onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
                 visible: true,
             };
 
@@ -311,6 +317,7 @@ describe('SidebarProvider', () => {
                 asWebviewUri: jest.Mock;
             };
             onDidDispose: jest.Mock;
+            onDidChangeVisibility: jest.Mock;
             visible: boolean;
         };
 
@@ -324,6 +331,7 @@ describe('SidebarProvider', () => {
                     asWebviewUri: jest.fn((uri) => uri),
                 },
                 onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
+                onDidChangeVisibility: jest.fn(() => ({ dispose: jest.fn() })),
                 visible: true,
             };
 
