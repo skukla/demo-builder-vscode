@@ -11,6 +11,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import {
     getWebviewHTMLWithBundles,
     type BundleUris,
@@ -124,10 +125,13 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
      * Useful for cleanup during reset or navigation
      */
     public static disposeActivePanel(): void {
-        const activePanels = BaseWebviewCommand['activePanels'] as Map<string, vscode.WebviewPanel>;
-        const projectsListPanel = activePanels.get('demoBuilder.projectsList');
-        if (projectsListPanel) {
-            projectsListPanel.dispose();
+        const panel = BaseWebviewCommand.getActivePanel('demoBuilder.projectsList');
+        if (panel) {
+            try {
+                panel.dispose();
+            } catch {
+                // Panel may already be disposed - this is OK
+            }
         }
     }
 
@@ -137,6 +141,15 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
 
     public async execute(): Promise<void> {
         this.logger.debug('[ProjectsList] Showing projects list');
+
+        // Set context to show webview sidebar instead of tree view
+        await vscode.commands.executeCommand('setContext', 'demoBuilder.showingProjectsList', true);
+
+        // Update sidebar context to show ProjectsListView
+        if (ServiceLocator.isSidebarInitialized()) {
+            const sidebarProvider = ServiceLocator.getSidebarProvider();
+            await sidebarProvider.setShowingProjectsList(true);
+        }
 
         // Create or reveal panel and initialize communication
         await this.createOrRevealPanel();

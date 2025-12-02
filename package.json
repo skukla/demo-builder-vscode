@@ -132,13 +132,13 @@
           "id": "demoBuilder.sidebar",
           "name": "Demo Builder",
           "type": "webview",
-          "when": "!demoBuilder.projectLoaded || demoBuilder.wizardActive"
+          "when": "!demoBuilder.projectLoaded || demoBuilder.wizardActive || demoBuilder.showingProjectsList"
         },
         {
           "id": "demoBuilder.components",
           "name": "Components",
           "type": "tree",
-          "when": "demoBuilder.projectLoaded && !demoBuilder.wizardActive"
+          "when": "demoBuilder.projectLoaded && !demoBuilder.wizardActive && !demoBuilder.showingProjectsList"
         }
       ]
     }

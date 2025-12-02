@@ -121,6 +121,7 @@ function SidebarApp(): React.ReactElement {
         sendMessage('wizardStepClick', { stepIndex });
     }, []);
 
+
     // Determine color scheme from VS Code theme
     const colorScheme = document.body.classList.contains('vscode-light') ? 'light' : 'dark';
 

@@ -30,6 +30,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     // Stores the full wizard context including steps array
     private wizardContext?: { step: number; total: number; completedSteps?: number[]; steps?: { id: string; label: string }[] };
 
+    // Track when we're showing the Projects List (vs Project Dashboard)
+    private showingProjectsList = false;
+
     constructor(
         private context: vscode.ExtensionContext,
         private stateManager: StateManager,
@@ -73,15 +76,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         });
 
         // When sidebar is revealed (user clicks extension icon), auto-open the main dashboard
-        // Only if not in wizard mode
+        // Only if not in wizard mode and not already showing projects list
         webviewView.onDidChangeVisibility(() => {
-            if (webviewView.visible && !this.wizardContext) {
+            if (webviewView.visible && !this.wizardContext && !this.showingProjectsList) {
                 this.openMainDashboard();
             }
         });
 
         // Also open on initial resolve (first time sidebar is shown)
-        if (!this.wizardContext) {
+        // Skip if already showing projects list
+        if (!this.wizardContext && !this.showingProjectsList) {
             this.openMainDashboard();
         }
 
@@ -157,6 +161,19 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         // Get the new context (will be 'projects' or 'project' based on state)
         const newContext = await this.getCurrentContext();
         this.logger.info(`New sidebar context: ${newContext.type}`);
+        await this.sendMessage('contextUpdate', { context: newContext });
+    }
+
+    /**
+     * Set Projects List state and update sidebar context
+     * Call this when showing/hiding the Projects List
+     */
+    public async setShowingProjectsList(showing: boolean): Promise<void> {
+        this.logger.info(`Setting showingProjectsList: ${showing}`);
+        this.showingProjectsList = showing;
+
+        // Update sidebar context
+        const newContext = await this.getCurrentContext();
         await this.sendMessage('contextUpdate', { context: newContext });
     }
 
@@ -249,6 +266,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         // Check for current project
         const currentProject = await this.stateManager.getCurrentProject();
+
+        // If showing projects list, return that context
+        if (this.showingProjectsList) {
+            return { type: 'projectsList' };
+        }
+
+        // If project is loaded, show project context
         if (currentProject) {
             return {
                 type: 'project',
@@ -256,7 +280,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             };
         }
 
-        // Default to projects list
+        // Default to projects list (no project loaded)
         return { type: 'projects' };
     }
 
@@ -513,10 +537,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         /* Immediate background colors - prevents flash before CSS loads
          * Uses --spectrum-global-color-gray-75 which is defined by React Spectrum
          * and matches the wizard header/footer background (#0e0e0e in dark mode) */
-        html, body, #root {
+        html, body, #root, .sidebar-provider {
             background: var(--spectrum-global-color-gray-75) !important;
             margin: 0;
             padding: 0;
+            height: 100%;
         }
         /* Inline spinner styles - shows until React mounts */
         .initial-spinner {

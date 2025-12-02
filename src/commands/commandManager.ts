@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
+import { ServiceLocator } from '@/core/di/serviceLocator';
 import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 import { ViewStatusCommand } from '@/features/lifecycle/commands/viewStatus';
 import { Logger } from '@/core/logging';
@@ -69,8 +70,6 @@ export class CommandManager {
             ProjectDashboardWebviewCommand.disposeActivePanel();
             ConfigureProjectWebviewCommand.disposeActivePanel();
             WelcomeWebviewCommand.disposeActivePanel();
-            // Hide sidebar on projects grid (redundant with main UI)
-            await vscode.commands.executeCommand('workbench.action.closeSidebar');
             await projectsList.execute();
         });
 
@@ -105,7 +104,14 @@ export class CommandManager {
             // Close other webviews when opening Dashboard (tab replacement)
             WelcomeWebviewCommand.disposeActivePanel();
             ShowProjectsListCommand.disposeActivePanel();
-            // Hide sidebar on project dashboard (user can show via button)
+            // Clear projects list context to show components tree in sidebar
+            await vscode.commands.executeCommand('setContext', 'demoBuilder.showingProjectsList', false);
+            // Update sidebar context
+            if (ServiceLocator.isSidebarInitialized()) {
+                const sidebarProvider = ServiceLocator.getSidebarProvider();
+                await sidebarProvider.setShowingProjectsList(false);
+            }
+            // Hide sidebar on project dashboard (user can show via button to see components tree)
             await vscode.commands.executeCommand('workbench.action.closeSidebar');
             await projectDashboard.execute();
         });
