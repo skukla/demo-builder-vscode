@@ -54,8 +54,7 @@ export interface WebviewHTMLWithBundlesOptions {
 /**
  * Generates HTML for VS Code webview with webpack 4-bundle pattern.
  *
- * This helper extracts the working pattern from showWelcome.ts (lines 72-116)
- * into a reusable function to eliminate single-bundle timeout issues.
+ * This helper provides a reusable function to eliminate single-bundle timeout issues.
  *
  * Bundle loading order is critical:
  * 1. runtime-bundle.js - Webpack runtime and chunk loading logic

@@ -16,7 +16,6 @@ import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
 import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
 import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
-import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project } from '@/types';
 
@@ -26,7 +25,6 @@ export class CommandManager {
     private statusBar: StatusBarManager;
     private logger: Logger;
     private commands: Map<string, vscode.Disposable>;
-    public welcomeScreen!: WelcomeWebviewCommand;
     public createProjectWebview!: CreateProjectWebviewCommand;
 
     constructor(
@@ -44,20 +42,6 @@ export class CommandManager {
 
     public registerCommands(): void {
 
-        // Welcome Screen
-        this.welcomeScreen = new WelcomeWebviewCommand(
-            this.context,
-            this.stateManager,
-            this.statusBar,
-            this.logger,
-        );
-        this.registerCommand('demoBuilder.showWelcome', async () => {
-            // Close other webviews when going "home" to Welcome
-            ProjectDashboardWebviewCommand.disposeActivePanel();
-            ConfigureProjectWebviewCommand.disposeActivePanel();
-            await this.welcomeScreen.execute();
-        });
-
         // Projects List (Home screen)
         const projectsList = new ShowProjectsListCommand(
             this.context,
@@ -69,7 +53,6 @@ export class CommandManager {
             // Close other webviews when showing Projects List (tab replacement)
             ProjectDashboardWebviewCommand.disposeActivePanel();
             ConfigureProjectWebviewCommand.disposeActivePanel();
-            WelcomeWebviewCommand.disposeActivePanel();
             await projectsList.execute();
         });
 
@@ -85,7 +68,6 @@ export class CommandManager {
             ShowProjectsListCommand.disposeActivePanel();
             ProjectDashboardWebviewCommand.disposeActivePanel();
             ConfigureProjectWebviewCommand.disposeActivePanel();
-            WelcomeWebviewCommand.disposeActivePanel();
             // Port conflicts are automatically handled during project creation
             // (see executeProjectCreation in createProjectWebview.ts)
             await this.createProjectWebview.execute();
@@ -102,7 +84,6 @@ export class CommandManager {
         );
         this.registerCommand('demoBuilder.showProjectDashboard', async () => {
             // Close other webviews when opening Dashboard (tab replacement)
-            WelcomeWebviewCommand.disposeActivePanel();
             ShowProjectsListCommand.disposeActivePanel();
             // Clear projects list context to show components tree in sidebar
             await vscode.commands.executeCommand('setContext', 'demoBuilder.showingProjectsList', false);
@@ -128,11 +109,11 @@ export class CommandManager {
                 );
                 
                 if (action !== 'Stop & Switch') {
-                    // User cancelled - reopen Welcome screen if no project exists
+                    // User cancelled - reopen Projects List if no project exists
                     const hasProject = await this.stateManager.hasProject();
                     if (!hasProject) {
-                        this.logger.debug('[SwitchProject] User cancelled, reopening Welcome screen');
-                        await vscode.commands.executeCommand('demoBuilder.showWelcome');
+                        this.logger.debug('[SwitchProject] User cancelled, reopening Projects List');
+                        await vscode.commands.executeCommand('demoBuilder.showProjectsList');
                     }
                     return;
                 }
@@ -196,11 +177,11 @@ export class CommandManager {
                 );
 
                 if (action !== 'Stop & Switch') {
-                    // User cancelled - reopen Welcome screen if no project exists
+                    // User cancelled - reopen Projects List if no project exists
                     const hasProject = await this.stateManager.hasProject();
                     if (!hasProject) {
-                        this.logger.debug('[LoadProject] User cancelled, reopening Welcome screen');
-                        await vscode.commands.executeCommand('demoBuilder.showWelcome');
+                        this.logger.debug('[LoadProject] User cancelled, reopening Projects List');
+                        await vscode.commands.executeCommand('demoBuilder.showProjectsList');
                     }
                     return;
                 }
@@ -273,8 +254,6 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.configureProject', async () => {
-            // Close Welcome when opening Configure (prevent confusion)
-            WelcomeWebviewCommand.disposeActivePanel();
             await configureProject.execute();
         });
 

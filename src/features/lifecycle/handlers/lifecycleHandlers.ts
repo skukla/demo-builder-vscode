@@ -143,10 +143,10 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
             context.logger.warn('[Project Creation] Could not set reopen flag', toError(flagError).message);
         }
 
-        // Close any existing Welcome webview before opening project
-        const { WelcomeWebviewCommand } = await import('../../welcome/commands/showWelcome');
-        WelcomeWebviewCommand.disposeActivePanel();
-        context.logger.debug('[Project Creation] Closed Welcome webview if it was open');
+        // Close any existing Projects List webview before opening project
+        const { ShowProjectsListCommand } = await import('../../projects-dashboard/commands/showProjectsList');
+        ShowProjectsListCommand.disposeActivePanel();
+        context.logger.debug('[Project Creation] Closed Projects List webview if it was open');
 
         // Dispose this panel
         context.panel?.dispose();

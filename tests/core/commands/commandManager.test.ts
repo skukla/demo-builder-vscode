@@ -1,8 +1,7 @@
 /**
  * CommandManager Tests
  *
- * Tests command registration, welcome command import path, and panel disposal logic.
- * Created as part of welcome webview handshake refactor.
+ * Tests command registration and panel disposal logic.
  *
  * Target Coverage: 75%+
  */
@@ -12,22 +11,22 @@ import * as vscode from 'vscode';
 import { StateManager } from '@/core/state';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Logger } from '@/core/logging';
-import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
+import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 
 // Mock VS Code API
 jest.mock('vscode');
 
 // Mock all command classes with proper implementations
-jest.mock('@/features/welcome/commands/showWelcome', () => {
-    // Create a mock constructor that works with both jest.fn() tracking AND instanceof
-    const MockWelcomeWebviewCommand = jest.fn().mockImplementation(function(this: any) {
+jest.mock('@/features/projects-dashboard/commands/showProjectsList', () => {
+    const MockShowProjectsListCommand = jest.fn().mockImplementation(function(this: any) {
         this.execute = jest.fn().mockResolvedValue(undefined);
     });
+    (MockShowProjectsListCommand as any).disposeActivePanel = jest.fn();
 
     return {
-        WelcomeWebviewCommand: MockWelcomeWebviewCommand,
+        ShowProjectsListCommand: MockShowProjectsListCommand,
     };
 });
 jest.mock('@/features/project-creation/commands/createProject');
@@ -92,11 +91,11 @@ describe('CommandManager', () => {
     });
 
     describe('Command Registration', () => {
-        it('should register welcome command with feature-based import', () => {
+        it('should register showProjectsList command', () => {
             commandManager.registerCommands();
 
-            // Verify WelcomeWebviewCommand was instantiated from correct path
-            expect(WelcomeWebviewCommand).toHaveBeenCalledWith(
+            // Verify ShowProjectsListCommand was instantiated
+            expect(ShowProjectsListCommand).toHaveBeenCalledWith(
                 mockContext,
                 mockStateManager,
                 mockStatusBar,
@@ -105,20 +104,19 @@ describe('CommandManager', () => {
 
             // Verify command was registered
             expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
-                'demoBuilder.showWelcome',
+                'demoBuilder.showProjectsList',
                 expect.any(Function)
             );
         });
 
-        it('should register all 18 commands (19 total, but resetAll only in dev mode)', () => {
+        it('should register all 17 commands (18 total, but resetAll only in dev mode)', () => {
             commandManager.registerCommands();
 
-            // Verify registerCommand was called 18 times (resetAll excluded - dev mode only)
-            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(18);
+            // Verify registerCommand was called 17 times (resetAll excluded - dev mode only)
+            expect(vscode.commands.registerCommand).toHaveBeenCalledTimes(17);
 
             // Verify all commands are registered (in order of registration)
             const expectedCommands = [
-                'demoBuilder.showWelcome',
                 'demoBuilder.showProjectsList',
                 'demoBuilder.createProject',
                 'demoBuilder.showProjectDashboard',
@@ -156,47 +154,28 @@ describe('CommandManager', () => {
         });
     });
 
-    describe('Welcome Command Disposal', () => {
+    describe('Projects List Command Disposal', () => {
         beforeEach(() => {
             // Mock static disposeActivePanel methods
             (ProjectDashboardWebviewCommand.disposeActivePanel as jest.Mock) = jest.fn();
             (ConfigureProjectWebviewCommand.disposeActivePanel as jest.Mock) = jest.fn();
         });
 
-        it('should dispose dashboard and configure panels when showing welcome', async () => {
+        it('should dispose dashboard and configure panels when showing projects list', async () => {
             commandManager.registerCommands();
 
-            // Get the welcome command handler
-            const welcomeHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
-                .find(call => call[0] === 'demoBuilder.showWelcome')?.[1];
+            // Get the showProjectsList command handler
+            const projectsListHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
+                .find(call => call[0] === 'demoBuilder.showProjectsList')?.[1];
 
-            expect(welcomeHandler).toBeDefined();
+            expect(projectsListHandler).toBeDefined();
 
-            // Execute welcome command
-            await welcomeHandler();
+            // Execute showProjectsList command
+            await projectsListHandler();
 
             // Verify panels were disposed
             expect(ProjectDashboardWebviewCommand.disposeActivePanel).toHaveBeenCalled();
             expect(ConfigureProjectWebviewCommand.disposeActivePanel).toHaveBeenCalled();
-        });
-
-        it('should execute welcome command after disposing panels', async () => {
-            commandManager.registerCommands();
-
-            // Get the welcome command handler
-            const welcomeHandler = (vscode.commands.registerCommand as jest.Mock).mock.calls
-                .find(call => call[0] === 'demoBuilder.showWelcome')?.[1];
-
-            expect(welcomeHandler).toBeDefined();
-
-            // Get the welcomeScreen instance that was created
-            const welcomeScreenInstance = commandManager.welcomeScreen;
-
-            // Execute welcome command
-            await welcomeHandler();
-
-            // Verify execute was called on the instance
-            expect(welcomeScreenInstance.execute).toHaveBeenCalled();
         });
     });
 
@@ -211,11 +190,6 @@ describe('CommandManager', () => {
         it('should initialize empty commands map', () => {
             // Commands map should exist (private field)
             expect(commandManager).toBeDefined();
-        });
-
-        it('should expose welcomeScreen property', () => {
-            commandManager.registerCommands();
-            expect(commandManager.welcomeScreen).toBeInstanceOf(WelcomeWebviewCommand);
         });
 
         it('should expose createProjectWebview property', () => {

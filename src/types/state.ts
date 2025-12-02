@@ -166,7 +166,6 @@ export interface WizardStateData {
 export interface UserPreferences {
     updateChannel?: 'stable' | 'beta';
     autoUpdate?: boolean;
-    showWelcomeOnStartup?: boolean;
     defaultTemplate?: string;
     [key: string]: unknown;
 }

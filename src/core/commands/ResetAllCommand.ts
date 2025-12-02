@@ -9,7 +9,7 @@ import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { sanitizeErrorForLogging, validatePathSafety } from '@/core/validation/securityValidation';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
-import { WelcomeWebviewCommand } from '@/features/welcome/commands/showWelcome';
+import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 
 export class ResetAllCommand extends BaseCommand {
     public async execute(): Promise<void> {
@@ -43,9 +43,9 @@ export class ResetAllCommand extends BaseCommand {
                 // Ignore errors if no demo is running
             }
 
-            // 2. Close all open webview panels (Welcome, Project Dashboard, Create Project wizard)
+            // 2. Close all open webview panels (Projects List, Project Dashboard, Create Project wizard)
             try {
-                WelcomeWebviewCommand.disposeActivePanel();
+                ShowProjectsListCommand.disposeActivePanel();
                 ProjectDashboardWebviewCommand.disposeActivePanel();
                 BaseWebviewCommand.disposeAllActivePanels();
 

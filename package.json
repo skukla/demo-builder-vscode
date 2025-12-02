@@ -58,12 +58,6 @@
         "category": "Demo Builder"
       },
       {
-        "command": "demoBuilder.showWelcome",
-        "title": "Show Welcome Screen",
-        "category": "Demo Builder",
-        "icon": "$(home)"
-      },
-      {
         "command": "demoBuilder.showProjectDashboard",
         "title": "Open Project Dashboard",
         "category": "Demo Builder",

@@ -250,7 +250,7 @@ const disposable = stateManager.onProjectChanged(async (project) => {
         await updateUI(project);
     } else {
         // Project cleared
-        await showWelcomeScreen();
+        await showProjectsList();
     }
 });
 

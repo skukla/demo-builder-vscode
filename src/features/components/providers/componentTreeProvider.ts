@@ -264,8 +264,8 @@ class FileItem extends vscode.TreeItem {
         } else {
             this.iconPath = new vscode.ThemeIcon('info');
             this.command = {
-                command: 'demoBuilder.showWelcome',
-                title: 'Show Welcome',
+                command: 'demoBuilder.showProjectsList',
+                title: 'Show Projects',
             };
         }
     }
