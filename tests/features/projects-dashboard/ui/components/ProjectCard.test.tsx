@@ -79,14 +79,15 @@ describe('ProjectCard', () => {
             expect(screen.queryByText(/:3000/)).not.toBeInTheDocument();
         });
 
-        it('should display component count', () => {
+        it('should display component names stacked', () => {
             const project = createMockProject();
             renderWithProvider(
                 <ProjectCard project={project} onSelect={jest.fn()} />
             );
 
-            // New design shows count instead of individual names
-            expect(screen.getByText('2 components')).toBeInTheDocument();
+            // Components should be listed individually
+            expect(screen.getByText('CitiSignal')).toBeInTheDocument();
+            expect(screen.getByText('API Mesh')).toBeInTheDocument();
         });
 
         it('should handle project with no components gracefully', () => {

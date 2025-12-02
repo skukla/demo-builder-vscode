@@ -2,7 +2,7 @@
  * ProjectCard Component
  *
  * Displays a single project as a clickable card with status, port, and components.
- * Styled to match the design system used in WelcomeScreen (welcome-action-card pattern).
+ * Uses Demo System Next card dimensions with centered Adobe icon design.
  */
 
 import React, { useCallback } from 'react';
@@ -17,8 +17,8 @@ import type { Project } from '@/types/base';
 const AdobeIcon: React.FC<{ className?: string }> = ({ className }) => (
     <svg
         xmlns="http://www.w3.org/2000/svg"
-        width="28"
-        height="26"
+        width="32"
+        height="30"
         viewBox="0 0 24 22"
         fill="currentColor"
         className={className}
@@ -96,12 +96,11 @@ function getComponentNames(project: Project): string[] {
 }
 
 /**
- * ProjectCard - Displays a project as a compact clickable card
+ * ProjectCard - Displays a project as a clickable card
  *
- * Design inspired by Adobe Demo System cards:
- * - Compact layout with left-aligned text
- * - Small icon header area
- * - Stacked metadata
+ * Layout:
+ * - Large dark header with centered Adobe icon
+ * - Light content area with project name, status, and components
  */
 export const ProjectCard: React.FC<ProjectCardProps> = ({
     project,
@@ -159,11 +158,18 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                     </Text>
                 </Flex>
 
-                {/* Components Count */}
+                {/* Components List */}
                 {components.length > 0 && (
-                    <Text UNSAFE_className={cn('text-xs', 'text-gray-500', 'mt-1')}>
-                        {components.length} component{components.length !== 1 ? 's' : ''}
-                    </Text>
+                    <Flex direction="column" marginTop="size-100">
+                        {components.map((name) => (
+                            <Text
+                                key={name}
+                                UNSAFE_className={cn('text-xs', 'text-gray-500')}
+                            >
+                                {name}
+                            </Text>
+                        ))}
+                    </Flex>
                 )}
             </div>
         </div>
