@@ -211,30 +211,24 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         }
 
         // Check if this webview type already has an active panel
+        // Important: Check panel first regardless of comm manager state
+        // to prevent orphaning panels when only one reference exists
         const existingPanel = BaseWebviewCommand.activePanels.get(webviewId);
-        const existingCommManager = BaseWebviewCommand.activeCommunicationManagers.get(webviewId);
 
-        if (existingPanel && existingCommManager) {
+        if (existingPanel) {
             try {
                 existingPanel.reveal();
                 this.panel = existingPanel;
-                this.communicationManager = existingCommManager;
+                // Reuse existing comm manager if available
+                const existingCommManager = BaseWebviewCommand.activeCommunicationManagers.get(webviewId);
+                if (existingCommManager) {
+                    this.communicationManager = existingCommManager;
+                }
                 return existingPanel;
             } catch {
                 // Panel was disposed - clean up stale references and create new one
                 BaseWebviewCommand.activePanels.delete(webviewId);
                 BaseWebviewCommand.activeCommunicationManagers.delete(webviewId);
-            }
-        }
-
-        // Check instance panel (legacy support)
-        if (this.panel) {
-            try {
-                this.panel.reveal();
-                return this.panel;
-            } catch {
-                // Panel was disposed - clear reference and create new one
-                this.panel = undefined;
             }
         }
 
