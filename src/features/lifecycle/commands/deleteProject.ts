@@ -90,16 +90,21 @@ export class DeleteProjectCommand extends BaseCommand {
 
         // Post-work only runs on successful deletion
         if (deleted) {
-            // Close project-related panels (dashboard, configure) before navigation
-            this.closeProjectPanels();
-
-            // Navigate to Projects List (sidebar shows all projects)
-            // Outside try-catch: if this fails, deletion still succeeded
+            // Use webview transition lock to prevent disposal callbacks from firing
+            // This prevents race condition where Dashboard disposal interferes with
+            // Projects List initialization (causes blank webview)
+            await BaseWebviewCommand.startWebviewTransition();
             try {
+                // Close project-related panels (dashboard, configure) before navigation
+                this.closeProjectPanels();
+
+                // Navigate to Projects List (sidebar shows all projects)
                 await vscode.commands.executeCommand('demoBuilder.showProjectsList');
             } catch {
                 // Ignore - projects list is optional post-deletion
                 this.logger.debug('[Delete Project] Projects List failed to open (non-critical)');
+            } finally {
+                BaseWebviewCommand.endWebviewTransition();
             }
         }
     }
