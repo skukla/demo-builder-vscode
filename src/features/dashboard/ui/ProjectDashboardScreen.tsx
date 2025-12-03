@@ -157,7 +157,6 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
 
     const handleOpenBrowser = useCallback(() => webviewClient.postMessage('openBrowser'), []);
     const handleConfigure = useCallback(() => webviewClient.postMessage('configure'), []);
-    const handleOpenDevConsole = useCallback(() => webviewClient.postMessage('openDevConsole'), []);
     const handleDeleteProject = useCallback(() => webviewClient.postMessage('deleteProject'), []);
     const handleNavigateBack = useCallback(() => webviewClient.postMessage('navigateBack'), []);
     const handleViewComponents = useCallback(() => webviewClient.postMessage('viewComponents'), []);
@@ -301,7 +300,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
 
                     {/* Center the grid of fixed-width buttons */}
                     <div className="dashboard-grid-container">
-                    <GridLayout columns={3} gap="size-400" className="dashboard-grid">
+                    <GridLayout columns={4} gap="size-400" className="dashboard-grid">
                         {/* Start/Stop */}
                         {!isRunning && (
                             <ActionButton
@@ -368,16 +367,6 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         >
                             <Settings size="L" />
                             <Text UNSAFE_className="icon-label">Configure</Text>
-                        </ActionButton>
-
-                        {/* Developer Console */}
-                        <ActionButton
-                            onPress={handleOpenDevConsole}
-                            isQuiet
-                            UNSAFE_className="dashboard-action-button"
-                        >
-                            <Globe size="L" />
-                            <Text UNSAFE_className="icon-label">Dev Console</Text>
                         </ActionButton>
 
                         {/* View Components */}

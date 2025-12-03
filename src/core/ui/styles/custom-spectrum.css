@@ -759,9 +759,9 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     align-items: center !important;
 }
 
-/* Match grid width so button aligns with grid: 3 × 187px + 2 × 102px = 765px */
+/* Match grid width so button aligns with grid: 4 × 152px + 3 × 52px = 764px */
 .dashboard-status-content {
-    width: 765px;
+    width: 764px;
     margin: 0 auto;
 }
 
@@ -774,20 +774,20 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 
 .dashboard-grid {
     width: auto !important; /* Override w-full from GridLayout */
-    grid-template-columns: repeat(3, auto) !important; /* Auto-size columns to content */
-    gap: 102px !important; /* Override to fill container width with generous spacing */
+    grid-template-columns: repeat(4, auto) !important; /* 4 columns for 8 buttons */
+    gap: 52px !important; /* Fill container width: 4 × 152px + 3 × 52px = 764px */
 }
 
-/* Dashboard action buttons - 20% smaller with generous gaps */
+/* Dashboard action buttons - 4-column layout */
 .dashboard-action-button {
     background: var(--spectrum-global-color-gray-100) !important;
     border-radius: 6px !important;
-    padding: 20px !important;
+    padding: 16px !important;
     transition: all 0.15s ease !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     text-align: center !important;
-    /* 187px width (80% of 234px) with 102px gaps fills 765px */
-    width: 187px !important;
+    /* 152px width for 4-column grid: 4 × 152px + 3 × 52px = 764px */
+    width: 152px !important;
     height: auto !important;
     aspect-ratio: 4 / 3 !important;
     box-sizing: border-box !important;
@@ -798,10 +798,10 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     cursor: pointer !important;
 }
 
-/* Scale icons to 80% (32px from 40px) */
+/* Scale icons for 4-column layout */
 .dashboard-action-button svg {
-    width: 32px !important;
-    height: 32px !important;
+    width: 26px !important;
+    height: 26px !important;
 }
 
 .dashboard-action-button:hover,
@@ -1432,10 +1432,10 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     margin-top: 8px !important;
 }
 
-/* Labels for dashboard buttons (80% of 16px/12px) */
+/* Labels for dashboard buttons (4-column layout) */
 .dashboard-action-button .icon-label {
-    font-size: 13px !important;
-    margin-top: 10px !important;
+    font-size: 11px !important;
+    margin-top: 8px !important;
 }
 
 /* ===========================================
