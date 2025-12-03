@@ -2,9 +2,9 @@
  * ProjectsDashboard Component
  *
  * Main dashboard screen showing all projects with search/filter capabilities.
- * Includes layout toggle for comparing two design options:
- * - Cards: Simplified cards (no dark header)
- * - Rows: Full-width horizontal rows
+ * Users can toggle between two view modes via icons in the search header:
+ * - Cards: Grid of project cards
+ * - Rows: Full-width horizontal list
  */
 
 import React, { useState, useMemo } from 'react';
@@ -14,20 +14,15 @@ import {
     Text,
     Button,
     ProgressCircle,
-    ActionGroup,
-    Item,
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { ProjectRowList } from './components/ProjectRowList';
 import { DashboardEmptyState } from './components/DashboardEmptyState';
-import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import type { Project } from '@/types/base';
-
-/** Layout mode for project display */
-type LayoutMode = 'cards' | 'rows';
 
 export interface ProjectsDashboardProps {
     /** Array of all projects */
@@ -66,15 +61,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     hasLoadedOnce = true,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [layoutMode, setLayoutMode] = useState<LayoutMode>('cards');
-
-    // Handle layout mode change from ActionGroup
-    const handleLayoutChange = (keys: 'all' | Set<React.Key>) => {
-        if (keys !== 'all' && keys.size > 0) {
-            const selectedKey = Array.from(keys)[0] as LayoutMode;
-            setLayoutMode(selectedKey);
-        }
-    };
+    const [viewMode, setViewMode] = useState<ViewMode>('cards');
 
     // Filter projects based on search query
     const filteredProjects = useMemo(() => {
@@ -145,10 +132,10 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             }
             backgroundColor="var(--spectrum-global-color-gray-50)"
         >
-            {/* Sticky controls - search and layout toggle */}
+            {/* Sticky controls - search and view toggle */}
             <div className="projects-sticky-header">
                 <div className="max-w-800 mx-auto px-4 pt-6 pb-4">
-                    {/* Search Header - consistent with wizard selection steps */}
+                    {/* Search Header with view mode toggle */}
                     <SearchHeader
                         searchQuery={searchQuery}
                         onSearchQueryChange={setSearchQuery}
@@ -160,35 +147,24 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         onRefresh={onRefresh}
                         isRefreshing={isRefreshing}
                         refreshAriaLabel="Refresh projects"
+                        viewMode={viewMode}
+                        onViewModeChange={setViewMode}
                         hasLoadedOnce={hasLoadedOnce}
                         alwaysShowCount={true}
                     />
-
-                    {/* Layout Toggle - for prototype comparison */}
-                    <Flex justifyContent="center">
-                        <ActionGroup
-                            selectionMode="single"
-                            selectedKeys={[layoutMode]}
-                            onSelectionChange={handleLayoutChange}
-                            density="compact"
-                        >
-                            <Item key="cards">Cards</Item>
-                            <Item key="rows">Rows</Item>
-                        </ActionGroup>
-                    </Flex>
                 </div>
             </div>
 
             {/* Freely scrolling content */}
             <div className="max-w-800 mx-auto px-4 pb-6">
-                {/* Render active layout */}
-                {layoutMode === 'cards' && (
+                {/* Render active view */}
+                {viewMode === 'cards' && (
                     <ProjectsGrid
                         projects={filteredProjects}
                         onSelectProject={onSelectProject}
                     />
                 )}
-                {layoutMode === 'rows' && (
+                {viewMode === 'rows' && (
                     <ProjectRowList
                         projects={filteredProjects}
                         onSelectProject={onSelectProject}

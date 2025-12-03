@@ -7,14 +7,20 @@
  * Features:
  * - Search field (shown when items exceed threshold)
  * - Refresh button with loading state
+ * - View mode toggle (cards/rows)
  * - Item count display ("Showing X of Y items")
  * - Configurable visibility and behavior
  */
 
 import React from 'react';
-import { Flex, Text, SearchField, ActionButton } from '@adobe/react-spectrum';
+import { Flex, Text, SearchField, ActionButton, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import Refresh from '@spectrum-icons/workflow/Refresh';
+import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
+import ViewList from '@spectrum-icons/workflow/ViewList';
 import { Spinner } from '../ui/Spinner';
+
+/** Available view modes */
+export type ViewMode = 'cards' | 'rows';
 
 export interface SearchHeaderProps {
     /** Current search query */
@@ -39,6 +45,11 @@ export interface SearchHeaderProps {
     isRefreshing?: boolean;
     /** Aria label for refresh button */
     refreshAriaLabel?: string;
+
+    /** Current view mode (if not provided, no view toggle shown) */
+    viewMode?: ViewMode;
+    /** View mode change handler */
+    onViewModeChange?: (mode: ViewMode) => void;
 
     /** Whether data has loaded at least once (shows count when true) */
     hasLoadedOnce: boolean;
@@ -79,12 +90,15 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
     onRefresh,
     isRefreshing = false,
     refreshAriaLabel = 'Refresh list',
+    viewMode,
+    onViewModeChange,
     hasLoadedOnce,
     autoFocus = false,
     alwaysShowCount = false,
 }) => {
     const showSearch = totalCount > searchThreshold;
     const showCount = hasLoadedOnce && (alwaysShowCount || totalCount > 0);
+    const showViewToggle = viewMode !== undefined && onViewModeChange !== undefined;
     const plural = totalCount !== 1 ? 's' : '';
     const isFiltering = searchQuery.trim().length > 0;
 
@@ -101,9 +115,55 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
         </ActionButton>
     ) : null;
 
+    // View toggle buttons (cards/rows)
+    const ViewToggle = showViewToggle ? (
+        <Flex gap="size-50">
+            <TooltipTrigger delay={300}>
+                <ActionButton
+                    isQuiet
+                    onPress={() => onViewModeChange('cards')}
+                    aria-label="Card view"
+                    aria-pressed={viewMode === 'cards'}
+                    UNSAFE_className={`cursor-pointer ${viewMode === 'cards' ? 'is-selected' : ''}`}
+                    UNSAFE_style={{
+                        backgroundColor: viewMode === 'cards' ? 'var(--spectrum-global-color-gray-200)' : undefined,
+                        borderRadius: '4px',
+                    }}
+                >
+                    <ViewGrid />
+                </ActionButton>
+                <Tooltip>Card view</Tooltip>
+            </TooltipTrigger>
+            <TooltipTrigger delay={300}>
+                <ActionButton
+                    isQuiet
+                    onPress={() => onViewModeChange('rows')}
+                    aria-label="List view"
+                    aria-pressed={viewMode === 'rows'}
+                    UNSAFE_className={`cursor-pointer ${viewMode === 'rows' ? 'is-selected' : ''}`}
+                    UNSAFE_style={{
+                        backgroundColor: viewMode === 'rows' ? 'var(--spectrum-global-color-gray-200)' : undefined,
+                        borderRadius: '4px',
+                    }}
+                >
+                    <ViewList />
+                </ActionButton>
+                <Tooltip>List view</Tooltip>
+            </TooltipTrigger>
+        </Flex>
+    ) : null;
+
+    // Action buttons (view toggle + refresh)
+    const ActionButtons = (RefreshButton || ViewToggle) ? (
+        <Flex gap="size-100" alignItems="center">
+            {ViewToggle}
+            {RefreshButton}
+        </Flex>
+    ) : null;
+
     return (
         <div className="search-header">
-            {/* Search + Refresh Bar (when search is shown) */}
+            {/* Search + Actions Bar (when search is shown) */}
             {showSearch && (
                 <Flex gap="size-100" marginBottom="size-200" alignItems="end">
                     <SearchField
@@ -116,11 +176,11 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                         aria-label={`Filter ${itemNoun}s`}
                         UNSAFE_className="flex-1"
                     />
-                    {RefreshButton}
+                    {ActionButtons}
                 </Flex>
             )}
 
-            {/* Item Count + Refresh (always shown when data loaded) */}
+            {/* Item Count + Actions (always shown when data loaded) */}
             {showCount && (
                 <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
                     <Text UNSAFE_className="text-sm text-gray-600">
@@ -128,8 +188,8 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                             ? `Showing ${filteredCount} of ${totalCount} ${itemNoun}${plural}`
                             : `${totalCount} ${itemNoun}${plural}`}
                     </Text>
-                    {/* Show refresh here only if search bar not shown */}
-                    {!showSearch && RefreshButton}
+                    {/* Show actions here only if search bar not shown */}
+                    {!showSearch && ActionButtons}
                 </Flex>
             )}
         </div>
