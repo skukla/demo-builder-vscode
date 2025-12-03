@@ -26,7 +26,12 @@ jest.mock('@/core/logging', () => ({
     })),
 }));
 
-jest.mock('@/core/di');
+jest.mock('@/core/di', () => ({
+    ServiceLocator: {
+        getCommandExecutor: jest.fn(),
+        getAuthenticationService: jest.fn(),
+    },
+}));
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         API_CALL: 5000,
@@ -72,15 +77,18 @@ describe('detectMeshChanges - Timeout Handling', () => {
         };
 
         const { ServiceLocator } = require('@/core/di');
-        ServiceLocator.getCommandExecutor = jest.fn().mockReturnValue(mockCommandExecutor);
+        ServiceLocator.getCommandExecutor.mockReturnValue(mockCommandExecutor);
+
+        // Mock auth service - default to authenticated
+        ServiceLocator.getAuthenticationService.mockReturnValue({
+            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
+        });
     });
 
     // Test 1: Timeout during fetch
     it('should return hasChanges: false when fetch times out', async () => {
-        // Given: Auth check succeeds but mesh fetch times out
-        mockCommandExecutor.execute
-            .mockResolvedValueOnce({ code: 0, stdout: '{}' }) // Auth check success
-            .mockRejectedValueOnce(new Error('Command timeout')); // Mesh fetch timeout
+        // Given: Auth check succeeds (default mock) but mesh fetch times out
+        mockCommandExecutor.execute.mockRejectedValueOnce(new Error('Command timeout'));
 
         // When: detectMeshChanges is called
         const result = await detectMeshChanges(mockProject, {});
@@ -93,11 +101,13 @@ describe('detectMeshChanges - Timeout Handling', () => {
         expect(result.changedEnvVars).toEqual([]);
     });
 
-    // Test 2: Network error during fetch
-    it('should return hasChanges: false on network error', async () => {
-        // Given: Auth check fails with network error
-        const networkError = new Error('Network error');
-        mockCommandExecutor.execute.mockRejectedValue(networkError);
+    // Test 2: Token expired (auth service returns not authenticated)
+    it('should return hasChanges: false when token expired', async () => {
+        // Given: Auth check returns not authenticated (token expired)
+        const { ServiceLocator } = require('@/core/di');
+        ServiceLocator.getAuthenticationService.mockReturnValue({
+            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: false, expiresInMinutes: -5 }),
+        });
 
         // When: detectMeshChanges is called
         const result = await detectMeshChanges(mockProject, {});
@@ -110,26 +120,24 @@ describe('detectMeshChanges - Timeout Handling', () => {
 
     // Test 3: Successful fetch with no changes
     it('should return hasChanges: false when configs match', async () => {
-        // Given: Auth check succeeds and mesh fetch returns deployed config
-        mockCommandExecutor.execute
-            .mockResolvedValueOnce({ code: 0, stdout: '{}' }) // Auth check success
-            .mockResolvedValueOnce({
-                code: 0,
-                stdout: JSON.stringify({
-                    meshConfig: {
-                        sources: [
-                            {
-                                name: 'magento',
-                                handler: {
-                                    graphql: {
-                                        endpoint: 'https://example.com/graphql'
-                                    }
+        // Given: Auth check succeeds (default mock) and mesh fetch returns deployed config
+        mockCommandExecutor.execute.mockResolvedValueOnce({
+            code: 0,
+            stdout: JSON.stringify({
+                meshConfig: {
+                    sources: [
+                        {
+                            name: 'magento',
+                            handler: {
+                                graphql: {
+                                    endpoint: 'https://example.com/graphql'
                                 }
                             }
-                        ]
-                    }
-                })
-            });
+                        }
+                    ]
+                }
+            })
+        });
 
         const { parseJSON } = require('@/types/typeGuards');
         parseJSON.mockImplementation((json: string) => JSON.parse(json));

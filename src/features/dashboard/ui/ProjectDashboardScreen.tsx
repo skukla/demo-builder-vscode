@@ -271,14 +271,12 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                                         />
 
                                         {meshStatus === 'needs-auth' && (
-                                            <ActionButton
-                                                isQuiet
-                                                onPress={handleReAuthenticate}
-                                                UNSAFE_style={{ minHeight: 'auto', height: 'auto', padding: '2px 6px' }}
+                                            <button
+                                                onClick={handleReAuthenticate}
+                                                className="action-pill"
                                             >
-                                                <Login size="XS" />
-                                                <Text>Sign in</Text>
-                                            </ActionButton>
+                                                Sign in
+                                            </button>
                                         )}
 
                                         {meshStatus === 'authenticating' && (

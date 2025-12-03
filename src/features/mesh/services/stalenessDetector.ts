@@ -67,14 +67,13 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         logger.debug('[Mesh Staleness] Fetching deployed mesh config from Adobe I/O...');
 
         // Pre-check: Verify authentication status without triggering browser auth
-        // Use a fast command that doesn't trigger interactive login
+        // Use getTokenStatus() which reads token file directly (no CLI call, no browser popup)
         try {
-            const authCheckResult = await commandManager.execute('aio console where --json', {
-                timeout: TIMEOUTS.API_CALL,
-            });
+            const authService = ServiceLocator.getAuthenticationService();
+            const tokenStatus = await authService.getTokenStatus();
 
-            if (authCheckResult.code !== 0) {
-                logger.debug('[Mesh Staleness] Not authenticated or no org selected, skipping mesh fetch');
+            if (!tokenStatus.isAuthenticated) {
+                logger.debug('[Mesh Staleness] Token expired or invalid, skipping mesh fetch');
                 return null;
             }
         } catch (authError) {

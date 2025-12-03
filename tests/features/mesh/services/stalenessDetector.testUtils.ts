@@ -12,6 +12,9 @@ jest.mock('@/core/di', () => ({
         getCommandExecutor: jest.fn(() => ({
             execute: jest.fn(),
         })),
+        getAuthenticationService: jest.fn(() => ({
+            getTokenStatus: jest.fn().mockResolvedValue({ isAuthenticated: true, expiresInMinutes: 30 }),
+        })),
     },
 }));
 
@@ -144,18 +147,24 @@ export function setupMockCommandExecutor(
         execute: jest.fn(),
     };
 
+    // Determine if auth should succeed based on the authResponse code
+    // code: 0 = authenticated, code: 1 = not authenticated
+    const isAuthenticated = authResponse.code === 0;
+    const mockAuthService = {
+        getTokenStatus: jest.fn().mockResolvedValue({
+            isAuthenticated,
+            expiresInMinutes: isAuthenticated ? 30 : -5,
+        }),
+    };
+    ServiceLocator.getAuthenticationService.mockReturnValue(mockAuthService);
+
+    // Only set up command executor mock for mesh response (auth is now handled by authService)
     if (meshResponse) {
         if (meshResponse instanceof Error) {
-            mockCommandManager.execute
-                .mockResolvedValueOnce(authResponse)
-                .mockRejectedValueOnce(meshResponse);
+            mockCommandManager.execute.mockRejectedValueOnce(meshResponse);
         } else {
-            mockCommandManager.execute
-                .mockResolvedValueOnce(authResponse)
-                .mockResolvedValueOnce(meshResponse);
+            mockCommandManager.execute.mockResolvedValueOnce(meshResponse);
         }
-    } else {
-        mockCommandManager.execute.mockResolvedValueOnce(authResponse);
     }
 
     ServiceLocator.getCommandExecutor.mockReturnValue(mockCommandManager);

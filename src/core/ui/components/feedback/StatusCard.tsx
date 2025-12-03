@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { ReactNode } from 'react';
 import { StatusDot } from '../ui/StatusDot';
 
 export interface StatusCardProps {
-    /** Status text */
-    status: string;
+    /** Status text or element */
+    status: string | ReactNode;
     /** Status color */
     color: 'gray' | 'green' | 'yellow' | 'red' | 'blue' | 'orange';
     /** Optional label */
@@ -68,14 +68,20 @@ export const StatusCard = React.memo<StatusCardProps>(({
         }
     };
 
-    // Format text as "Label: Status" for inline display
-    const displayText = label ? `${label}: ${status}` : status;
+    // Format as "Label: Status" for inline display
+    // Handle both string and ReactNode status values
+    const renderContent = () => {
+        if (label) {
+            return <>{label}: {status}</>;
+        }
+        return status;
+    };
 
     return (
         <div className={className ? `flex items-center gap-2 ${className}` : 'flex items-center gap-2'}>
             <StatusDot variant={getVariant()} size={getSizeInPixels()} />
             <span className="text-md text-gray-800 font-normal">
-                {displayText}
+                {renderContent()}
             </span>
         </div>
     );
