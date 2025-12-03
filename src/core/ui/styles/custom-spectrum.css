@@ -775,19 +775,19 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 .dashboard-grid {
     width: auto !important; /* Override w-full from GridLayout */
     grid-template-columns: repeat(4, auto) !important; /* 4 columns for 8 buttons */
-    gap: 52px !important; /* Fill container width: 4 × 152px + 3 × 52px = 764px */
+    gap: 32px !important; /* Fill container width: 4 × 167px + 3 × 32px = 764px */
 }
 
 /* Dashboard action buttons - 4-column layout */
 .dashboard-action-button {
     background: var(--spectrum-global-color-gray-100) !important;
     border-radius: 6px !important;
-    padding: 16px !important;
+    padding: 18px !important;
     transition: all 0.15s ease !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     text-align: center !important;
-    /* 152px width for 4-column grid: 4 × 152px + 3 × 52px = 764px */
-    width: 152px !important;
+    /* 167px width for 4-column grid: 4 × 167px + 3 × 32px = 764px */
+    width: 167px !important;
     height: auto !important;
     aspect-ratio: 4 / 3 !important;
     box-sizing: border-box !important;
@@ -800,8 +800,8 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 
 /* Scale icons for 4-column layout */
 .dashboard-action-button svg {
-    width: 26px !important;
-    height: 26px !important;
+    width: 30px !important;
+    height: 30px !important;
 }
 
 .dashboard-action-button:hover,
@@ -1434,7 +1434,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 
 /* Labels for dashboard buttons (4-column layout) */
 .dashboard-action-button .icon-label {
-    font-size: 11px !important;
+    font-size: 12px !important;
     margin-top: 8px !important;
 }
 
