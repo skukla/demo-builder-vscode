@@ -6,6 +6,7 @@
  */
 
 import * as vscode from 'vscode';
+import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -702,15 +703,16 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
 
 /**
  * Handle 'viewComponents' message - Toggle the components tree view in the sidebar
+ * Switches between UtilityBar (default) and Components tree
  */
 export const handleViewComponents: MessageHandler = async () => {
     if (isComponentsViewShown) {
-        // Close the sidebar
-        await vscode.commands.executeCommand('workbench.action.closeSidebar');
+        // Hide components, show UtilityBar
+        await vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', false);
         isComponentsViewShown = false;
     } else {
-        // Focus the components tree view (this also opens the sidebar if closed)
-        await vscode.commands.executeCommand('demoBuilder.components.focus');
+        // Show components, hide UtilityBar
+        await vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', true);
         isComponentsViewShown = true;
     }
     return { success: true };
@@ -722,12 +724,15 @@ export const handleViewComponents: MessageHandler = async () => {
 export function resetToggleStates(): void {
     isComponentsViewShown = false;
     isLogsViewShown = false;
+    // Also hide the components panel
+    vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', false);
 }
 
 /**
  * Handle 'navigateBack' message - Navigate back to projects list
  *
  * Clears the current project and shows the projects list view.
+ * Disposes the Dashboard panel before opening Projects List to prevent blank webview.
  */
 export const handleNavigateBack: MessageHandler = async (context) => {
     try {
@@ -739,8 +744,25 @@ export const handleNavigateBack: MessageHandler = async (context) => {
         // Clear current project from state
         await context.stateManager.clearProject();
 
-        // Navigate to projects list
-        await vscode.commands.executeCommand('demoBuilder.showProjectsList');
+        // Start transition BEFORE disposing to prevent disposal callback from firing
+        BaseWebviewCommand.startWebviewTransition();
+        try {
+            // Dispose Dashboard panel before opening Projects List
+            // This prevents the blank webview issue during transition
+            const dashboardPanel = BaseWebviewCommand.getActivePanel('demoBuilder.projectDashboard');
+            if (dashboardPanel) {
+                try {
+                    dashboardPanel.dispose();
+                } catch {
+                    // Panel may already be disposed - this is OK
+                }
+            }
+
+            // Navigate to projects list
+            await vscode.commands.executeCommand('demoBuilder.showProjectsList');
+        } finally {
+            BaseWebviewCommand.endWebviewTransition();
+        }
 
         return { success: true };
     } catch (error) {

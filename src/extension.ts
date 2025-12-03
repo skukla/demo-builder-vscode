@@ -91,13 +91,10 @@ export async function activate(context: vscode.ExtensionContext) {
             showCollapseAll: true,
         });
 
-        // Update TreeView title when project changes
-        const projectChangeSubscription = stateManager.onProjectChanged((project) => {
-            if (project) {
-                componentTreeView.title = project.name;
-            }
-            // Note: When project is undefined, we keep the TreeView (visibility is controlled
-            // by the "when" clause in package.json: demoBuilder.projectLoaded && !demoBuilder.wizardActive)
+        // Listen for project changes (for potential future use)
+        const projectChangeSubscription = stateManager.onProjectChanged(() => {
+            // TreeView title is set via package.json "name" field
+            // Visibility is controlled by "when" clause: demoBuilder.showComponents
         });
 
         // When user clicks the activity bar icon and no main webview is open,
@@ -124,6 +121,22 @@ export async function activate(context: vscode.ExtensionContext) {
         context.subscriptions.push(projectChangeSubscription);
         context.subscriptions.push(treeViewVisibilitySubscription);
         logger.debug('[Extension] Component TreeView registered');
+
+        // Set up disposal callback to open Projects List when Dashboard closes
+        // Only fires for non-transition closures (e.g., user clicking X, not Back button)
+        BaseWebviewCommand.setDisposalCallback(async (webviewId: string) => {
+            logger.debug(`[Extension] Webview disposed: ${webviewId}`);
+            // Skip if we're in a transition (back button navigation handles this itself)
+            if (BaseWebviewCommand.isWebviewTransitionInProgress()) {
+                logger.debug('[Extension] Skipping disposal callback during transition');
+                return;
+            }
+            // When Project Dashboard closes, open Projects List
+            if (webviewId === 'demoBuilder.projectDashboard') {
+                logger.debug('[Extension] Dashboard closed, opening Projects List');
+                await vscode.commands.executeCommand('demoBuilder.showProjectsList');
+            }
+        });
 
         // Initialize external command manager
         externalCommandManager = new CommandExecutor();
@@ -246,7 +259,6 @@ export async function activate(context: vscode.ExtensionContext) {
                 const project = await stateManager.getCurrentProject();
                 if (project) {
                     statusBar.updateProject(project);
-                    componentTreeView.title = project.name;
 
                     // Small delay to ensure extension is fully initialized
                     setTimeout(() => {
@@ -269,13 +281,12 @@ export async function activate(context: vscode.ExtensionContext) {
         // Normal startup - load project state for status bar and TreeView
         // Don't auto-open UI - wait for user to click the activity bar icon
         if (!openingDashboardAfterRestart) {
-            // Load existing project if available (for status bar and TreeView title)
+            // Load existing project if available (for status bar)
             const hasExistingProject = await stateManager.hasProject();
             if (hasExistingProject) {
                 const project = await stateManager.getCurrentProject();
                 if (project) {
                     statusBar.updateProject(project);
-                    componentTreeView.title = project.name;
                     logger.debug(`[Extension] Loaded existing project: ${project.name}`);
                 }
             }
