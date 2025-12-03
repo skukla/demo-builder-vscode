@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
     View,
     Flex,
-    Heading,
     Text,
     Button,
     ActionButton,
@@ -21,7 +20,7 @@ import Login from '@spectrum-icons/workflow/Login';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { StatusCard } from '@/core/ui/components/feedback';
-import { GridLayout, PageLayout } from '@/core/ui/components/layout';
+import { GridLayout, PageLayout, PageHeader } from '@/core/ui/components/layout';
 import { isStartActionDisabled } from './dashboardPredicates';
 
 type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'error';
@@ -239,24 +238,23 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
         <div ref={containerRef}>
             <PageLayout
                 header={
-                    <View
-                        padding="size-400"
-                        UNSAFE_className="border-b bg-gray-75"
-                    >
-                        <div className="max-w-800 mx-auto">
-                            <Heading level={1}>{displayName}</Heading>
-                        </div>
-                    </View>
+                    <PageHeader
+                        title={displayName}
+                        action={
+                            <Button variant="secondary" onPress={handleNavigateBack}>
+                                All Projects
+                            </Button>
+                        }
+                        constrainWidth
+                    />
                 }
                 backgroundColor="var(--spectrum-global-color-gray-50)"
             >
                 {/* Status Header - matches Projects List header design */}
                 <div className="dashboard-status-header">
                     <div className="max-w-800 mx-auto px-4 pt-6 pb-4">
-                        {/* Status Section - Two columns: statuses left, nav button right */}
-                        <Flex justifyContent="space-between" alignItems="center">
-                            {/* Left: Status indicators */}
-                            <View>
+                        {/* Status indicators */}
+                        <View>
                                 {/* Demo Status */}
                                 <StatusCard
                                     label="Demo"
@@ -291,13 +289,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                                         )}
                                     </Flex>
                                 )}
-                            </View>
-
-                            {/* Right: Navigation button */}
-                            <Button variant="secondary" onPress={handleNavigateBack}>
-                                All Projects
-                            </Button>
-                        </Flex>
+                        </View>
                     </div>
                 </div>
 
