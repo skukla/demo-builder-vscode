@@ -518,7 +518,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     top: 0 !important;
     z-index: 10 !important;
     background-color: var(--spectrum-global-color-gray-50) !important;
-    box-shadow: 0 4px 8px -2px rgba(0, 0, 0, 0.15) !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-200) !important;
 }
 
 .projects-grid {
