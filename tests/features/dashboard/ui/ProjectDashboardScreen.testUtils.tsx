@@ -20,6 +20,90 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
     },
 }));
 
+// Mock layout components
+jest.mock('@/core/ui/components/layout', () => ({
+    GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
+    PageLayout: ({ header, children }: any) => (
+        <div data-testid="page-layout">
+            <div data-testid="page-layout-header">{header}</div>
+            <div data-testid="page-layout-content">{children}</div>
+        </div>
+    ),
+}));
+
+// Mock feedback components
+jest.mock('@/core/ui/components/feedback', () => ({
+    StatusCard: ({ label, status, color }: any) => (
+        <div data-testid={`status-card-${label}`} data-color={color}>{label}: {status}</div>
+    ),
+}));
+
+// Mock dashboard predicates
+jest.mock('@/features/dashboard/ui/dashboardPredicates', () => ({
+    isStartActionDisabled: () => false,
+}));
+
+// Mock Adobe React Spectrum components
+jest.mock('@adobe/react-spectrum', () => ({
+    View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
+    Heading: ({ children, level, ...props }: any) => {
+        const Tag = `h${level || 1}` as keyof JSX.IntrinsicElements;
+        return <Tag {...props}>{children}</Tag>;
+    },
+    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
+        <button onClick={onPress} disabled={isDisabled} data-variant={variant} data-testid="back-button" {...props}>{children}</button>
+    ),
+    ActionButton: ({ children, onPress, isQuiet, isDisabled, ...props }: any) => (
+        <button onClick={onPress} disabled={isDisabled} {...props}>{children}</button>
+    ),
+    Divider: () => <hr />,
+    ProgressCircle: () => <div data-testid="progress-circle" />,
+}));
+
+// Mock Spectrum icons
+jest.mock('@spectrum-icons/workflow/PlayCircle', () => ({
+    __esModule: true,
+    default: () => <span data-testid="play-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/StopCircle', () => ({
+    __esModule: true,
+    default: () => <span data-testid="stop-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/Settings', () => ({
+    __esModule: true,
+    default: () => <span data-testid="settings-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/Refresh', () => ({
+    __esModule: true,
+    default: () => <span data-testid="refresh-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/Globe', () => ({
+    __esModule: true,
+    default: () => <span data-testid="globe-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/Delete', () => ({
+    __esModule: true,
+    default: () => <span data-testid="delete-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/ViewList', () => ({
+    __esModule: true,
+    default: () => <span data-testid="viewlist-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/FolderOpen', () => ({
+    __esModule: true,
+    default: () => <span data-testid="folderopen-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/Data', () => ({
+    __esModule: true,
+    default: () => <span data-testid="data-icon" />,
+}));
+jest.mock('@spectrum-icons/workflow/Login', () => ({
+    __esModule: true,
+    default: () => <span data-testid="login-icon" />,
+}));
+
 export interface TestContext {
     mockPostMessage: jest.Mock;
     mockOnMessage: jest.Mock;

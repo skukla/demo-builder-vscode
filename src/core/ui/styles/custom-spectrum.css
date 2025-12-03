@@ -503,10 +503,11 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 .min-w-200 { min-width: 200px !important; }
 .min-w-240 { min-width: 240px !important; }
 .max-w-240 { max-width: 240px !important; }
+.max-w-400 { max-width: 400px !important; }
+.max-w-500 { max-width: 500px !important; }
 .max-w-600 { max-width: 600px !important; }
 .max-w-800 { max-width: 800px !important; }
 .max-w-900 { max-width: 900px !important; }
-.max-w-400 { max-width: 400px !important; }
 
 /* ===========================================
    Projects Dashboard Specific
@@ -734,7 +735,18 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     outline: none !important;
 }
 
-/* Dashboard action buttons - match welcome card style */
+/* Dashboard grid - center fixed-width buttons */
+.dashboard-grid-container {
+    display: flex;
+    justify-content: center;
+}
+
+.dashboard-grid {
+    width: auto !important; /* Override w-full from GridLayout */
+    grid-template-columns: repeat(3, auto) !important; /* Auto-size columns to content */
+}
+
+/* Dashboard action buttons - square buttons */
 .dashboard-action-button {
     background: var(--spectrum-global-color-gray-100) !important;
     border-radius: 6px !important;
@@ -742,8 +754,11 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     transition: all 0.15s ease !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     text-align: center !important;
-    height: 80px !important;
-    width: 100% !important;
+    /* Slightly wider than tall to fit labels and fill space */
+    width: 140px !important;
+    height: auto !important;
+    aspect-ratio: 4 / 3 !important;
+    box-sizing: border-box !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;

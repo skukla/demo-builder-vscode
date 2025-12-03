@@ -13,22 +13,23 @@ jest.mock('@/core/ui/utils/WebviewClient', () => ({
 }));
 
 // Mock React Spectrum Provider context (required for Spectrum components)
-jest.mock('@adobe/react-spectrum', () => {
-    return {
-        View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-        Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
-        Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
-        Heading: ({ children, level, ...props }: any) => {
-            const Tag = `h${level || 1}` as keyof JSX.IntrinsicElements;
-            return <Tag {...props}>{children}</Tag>;
-        },
-        ActionButton: ({ children, onPress, isQuiet, isDisabled, ...props }: any) => (
-            <button onClick={onPress} disabled={isDisabled} {...props}>{children}</button>
-        ),
-        Divider: () => <hr />,
-        ProgressCircle: () => <div data-testid="progress-circle" />,
-    };
-});
+jest.mock('@adobe/react-spectrum', () => ({
+    View: ({ children, ...props }: any) => <div {...props}>{children}</div>,
+    Flex: ({ children, ...props }: any) => <div style={{ display: 'flex' }} {...props}>{children}</div>,
+    Heading: ({ children, level, ...props }: any) => {
+        const Tag = `h${level || 1}` as keyof JSX.IntrinsicElements;
+        return <Tag {...props}>{children}</Tag>;
+    },
+    Text: ({ children, ...props }: any) => <span {...props}>{children}</span>,
+    Button: ({ children, onPress, variant, isDisabled, ...props }: any) => (
+        <button onClick={onPress} disabled={isDisabled} data-variant={variant} data-testid="back-button" {...props}>{children}</button>
+    ),
+    ActionButton: ({ children, onPress, isQuiet, isDisabled, ...props }: any) => (
+        <button onClick={onPress} disabled={isDisabled} {...props}>{children}</button>
+    ),
+    Divider: () => <hr />,
+    ProgressCircle: () => <div data-testid="progress-circle" />,
+}));
 
 // Mock Spectrum icons
 jest.mock('@spectrum-icons/workflow/ChevronLeft', () => ({
@@ -100,15 +101,11 @@ jest.mock('@/core/ui/components/feedback', () => ({
 
 jest.mock('@/core/ui/components/layout', () => ({
     GridLayout: ({ children }: any) => <div data-testid="grid-layout">{children}</div>,
-}));
-
-// Mock BackButton from navigation components (Step 8: using extracted component)
-jest.mock('@/core/ui/components/navigation', () => ({
-    BackButton: ({ label, onPress }: { label?: string; onPress: () => void }) => (
-        <button onClick={onPress} data-testid="back-button">
-            <span data-testid="chevron-left-icon">{'<'}</span>
-            <span>{label || 'Back'}</span>
-        </button>
+    PageLayout: ({ header, children }: any) => (
+        <div data-testid="page-layout">
+            <div data-testid="page-layout-header">{header}</div>
+            <div data-testid="page-layout-content">{children}</div>
+        </div>
     ),
 }));
 
@@ -145,28 +142,23 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
             expect(backLink).toBeInTheDocument();
         });
 
-        it('should render back link with ChevronLeft icon', () => {
+        it('should render back button in status section', () => {
             // Given: A project dashboard screen
             render(<ProjectDashboardScreen project={mockProject} />);
 
-            // Then: ChevronLeft icon should be present
-            const chevronIcon = screen.getByTestId('chevron-left-icon');
-            expect(chevronIcon).toBeInTheDocument();
+            // Then: Back button should be in the content area (status section)
+            const content = screen.getByTestId('page-layout-content');
+            const backButton = screen.getByTestId('back-button');
+            expect(content).toContainElement(backButton);
         });
 
-        it('should render back link before project header', () => {
+        it('should render back button with secondary variant', () => {
             // Given: A project dashboard screen
             render(<ProjectDashboardScreen project={mockProject} />);
 
-            // Then: Back link should appear before the project name
-            const backLink = screen.getByText('All Projects');
-            const projectName = screen.getByRole('heading', { level: 1 });
-
-            // Check DOM order: back link should come before heading
-            const backLinkPosition = document.body.innerHTML.indexOf('All Projects');
-            const headingPosition = document.body.innerHTML.indexOf(mockProject.name);
-
-            expect(backLinkPosition).toBeLessThan(headingPosition);
+            // Then: Back button should use secondary variant (matching design system)
+            const backButton = screen.getByTestId('back-button');
+            expect(backButton).toHaveAttribute('data-variant', 'secondary');
         });
     });
 
@@ -219,21 +211,22 @@ describe('ProjectDashboardScreen - Back Navigation', () => {
         });
     });
 
-    describe('BackButton component usage', () => {
-        it('should use BackButton component for back navigation', () => {
+    describe('Status section back button', () => {
+        it('should render back button in status section', () => {
             // Given: A project dashboard screen
             render(<ProjectDashboardScreen project={mockProject} />);
 
-            // Then: BackButton component should be rendered (identified by data-testid)
+            // Then: Back button should be rendered in content area
+            const content = screen.getByTestId('page-layout-content');
             const backButton = screen.getByTestId('back-button');
-            expect(backButton).toBeInTheDocument();
+            expect(content).toContainElement(backButton);
         });
 
-        it('should pass "All Projects" label to BackButton', () => {
+        it('should display "All Projects" label on back button', () => {
             // Given: A project dashboard screen
             render(<ProjectDashboardScreen project={mockProject} />);
 
-            // Then: BackButton should display "All Projects" label
+            // Then: Back button should display "All Projects" label
             const backButton = screen.getByTestId('back-button');
             expect(backButton).toHaveTextContent('All Projects');
         });

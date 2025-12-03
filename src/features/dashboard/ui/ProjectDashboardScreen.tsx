@@ -4,6 +4,7 @@ import {
     Flex,
     Heading,
     Text,
+    Button,
     ActionButton,
     Divider,
     ProgressCircle
@@ -21,8 +22,7 @@ import Login from '@spectrum-icons/workflow/Login';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { useFocusTrap } from '@/core/ui/hooks';
 import { StatusCard } from '@/core/ui/components/feedback';
-import { GridLayout } from '@/core/ui/components/layout';
-import { BackButton } from '@/core/ui/components/navigation';
+import { GridLayout, PageLayout } from '@/core/ui/components/layout';
 import { isStartActionDisabled } from './dashboardPredicates';
 
 type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'error';
@@ -237,173 +237,182 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     }, [meshStatus, meshMessage, hasMesh, projectStatus]);
 
     return (
-        <div
-            ref={containerRef}
-            className="container-dashboard"
-        >
-        <View>
-            <Flex direction="column" gap="size-200" UNSAFE_className="w-full">
-                {/* Back Navigation */}
-                <Flex alignItems="center" marginBottom="size-100">
-                    <BackButton label="All Projects" onPress={handleNavigateBack} />
-                </Flex>
-
-                {/* Project Header */}
-                <View marginBottom="size-200">
-                    <Heading level={1} marginBottom="size-50" UNSAFE_className="text-xl font-semibold">
-                        {displayName}
-                    </Heading>
-
-                    {/* Demo Status */}
-                    <StatusCard
-                        label="Demo"
-                        status={demoStatusDisplay.text}
-                        color={demoStatusDisplay.color}
-                        size="S"
-                    />
-
-                    {/* Mesh Status */}
-                    {meshStatusDisplay && (
-                        <Flex direction="row" alignItems="center" gap="size-100" marginTop="size-50">
+        <div ref={containerRef}>
+            <PageLayout
+                header={
+                    <View
+                        padding="size-400"
+                        UNSAFE_className="border-b bg-gray-75"
+                    >
+                        <div className="max-w-800 mx-auto">
+                            <Heading level={1}>{displayName}</Heading>
+                        </div>
+                    </View>
+                }
+                backgroundColor="var(--spectrum-global-color-gray-50)"
+            >
+                <div className="w-full max-w-800 mx-auto px-4 pt-6 pb-4">
+                    {/* Status Section - Two columns: statuses left, nav button right */}
+                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
+                        {/* Left: Status indicators */}
+                        <View>
+                            {/* Demo Status */}
                             <StatusCard
-                                label="API Mesh"
-                                status={meshStatusDisplay.text}
-                                color={meshStatusDisplay.color}
+                                label="Demo"
+                                status={demoStatusDisplay.text}
+                                color={demoStatusDisplay.color}
                                 size="S"
                             />
 
-                            {meshStatus === 'needs-auth' && (
-                                <ActionButton
-                                    isQuiet
-                                    onPress={handleReAuthenticate}
-                                    UNSAFE_style={{ minHeight: 'auto', height: 'auto', padding: '2px 6px' }}
-                                >
-                                    <Login size="XS" />
-                                    <Text>Sign in</Text>
-                                </ActionButton>
+                            {/* Mesh Status */}
+                            {meshStatusDisplay && (
+                                <Flex direction="row" alignItems="center" gap="size-100" marginTop="size-50">
+                                    <StatusCard
+                                        label="API Mesh"
+                                        status={meshStatusDisplay.text}
+                                        color={meshStatusDisplay.color}
+                                        size="S"
+                                    />
+
+                                    {meshStatus === 'needs-auth' && (
+                                        <ActionButton
+                                            isQuiet
+                                            onPress={handleReAuthenticate}
+                                            UNSAFE_style={{ minHeight: 'auto', height: 'auto', padding: '2px 6px' }}
+                                        >
+                                            <Login size="XS" />
+                                            <Text>Sign in</Text>
+                                        </ActionButton>
+                                    )}
+
+                                    {meshStatus === 'authenticating' && (
+                                        <ProgressCircle size="S" isIndeterminate UNSAFE_className="w-4 h-4" />
+                                    )}
+                                </Flex>
                             )}
+                        </View>
 
-                            {meshStatus === 'authenticating' && (
-                                <ProgressCircle size="S" isIndeterminate UNSAFE_className="w-4 h-4" />
-                            )}
-                        </Flex>
-                    )}
-                </View>
+                        {/* Right: Navigation button */}
+                        <Button variant="secondary" onPress={handleNavigateBack}>
+                            All Projects
+                        </Button>
+                    </Flex>
+                    <Divider size="S" marginBottom="size-200" />
 
-                <Divider size="S" marginBottom="size-100" />
+                    {/* Center the grid of fixed-width buttons */}
+                    <div className="dashboard-grid-container">
+                    <GridLayout columns={3} gap="size-300" className="dashboard-grid">
+                        {/* Start/Stop */}
+                        {!isRunning && (
+                            <ActionButton
+                                onPress={handleStartDemo}
+                                isQuiet
+                                isDisabled={isStartDisabled}
+                                UNSAFE_className="dashboard-action-button"
+                            >
+                                <PlayCircle size="L" />
+                                <Text UNSAFE_className="icon-label">Start</Text>
+                            </ActionButton>
+                        )}
+                        {isRunning && (
+                            <ActionButton
+                                onPress={handleStopDemo}
+                                isQuiet
+                                isDisabled={isStopDisabled}
+                                UNSAFE_className="dashboard-action-button"
+                            >
+                                <StopCircle size="L" />
+                                <Text UNSAFE_className="icon-label">Stop</Text>
+                            </ActionButton>
+                        )}
 
-                {/* Action Grid - 3 columns */}
-                <GridLayout columns={3} gap="8px">
-                    {/* Start/Stop */}
-                    {!isRunning && (
+                        {/* Open Browser */}
                         <ActionButton
-                            onPress={handleStartDemo}
+                            onPress={handleOpenBrowser}
                             isQuiet
-                            isDisabled={isStartDisabled}
+                            isDisabled={!isRunning}
                             UNSAFE_className="dashboard-action-button"
                         >
-                            <PlayCircle size="L" />
-                            <Text UNSAFE_className="icon-label">Start</Text>
+                            <Globe size="L" />
+                            <Text UNSAFE_className="icon-label">Open</Text>
                         </ActionButton>
-                    )}
-                    {isRunning && (
+
+                        {/* Logs */}
                         <ActionButton
-                            onPress={handleStopDemo}
+                            onPress={handleViewLogs}
                             isQuiet
-                            isDisabled={isStopDisabled}
+                            UNSAFE_className={`dashboard-action-button ${isLogsHoverSuppressed ? 'hover-suppressed' : ''}`}
+                        >
+                            <ViewList size="L" />
+                            <Text UNSAFE_className="icon-label">Logs</Text>
+                        </ActionButton>
+
+                        {/* Deploy Mesh */}
+                        <ActionButton
+                            onPress={handleDeployMesh}
+                            isQuiet
+                            isDisabled={isMeshActionDisabled}
+                            UNSAFE_className="dashboard-action-button"
+                            data-action="deploy-mesh"
+                        >
+                            <Refresh size="L" />
+                            <Text UNSAFE_className="icon-label">Deploy Mesh</Text>
+                        </ActionButton>
+
+                        {/* Configure */}
+                        <ActionButton
+                            onPress={handleConfigure}
+                            isQuiet
+                            isDisabled={isMeshActionDisabled}
                             UNSAFE_className="dashboard-action-button"
                         >
-                            <StopCircle size="L" />
-                            <Text UNSAFE_className="icon-label">Stop</Text>
+                            <Settings size="L" />
+                            <Text UNSAFE_className="icon-label">Configure</Text>
                         </ActionButton>
-                    )}
 
-                    {/* Open Browser */}
-                    <ActionButton
-                        onPress={handleOpenBrowser}
-                        isQuiet
-                        isDisabled={!isRunning}
-                        UNSAFE_className="dashboard-action-button"
-                    >
-                        <Globe size="L" />
-                        <Text UNSAFE_className="icon-label">Open</Text>
-                    </ActionButton>
+                        {/* Developer Console */}
+                        <ActionButton
+                            onPress={handleOpenDevConsole}
+                            isQuiet
+                            UNSAFE_className="dashboard-action-button"
+                        >
+                            <Globe size="L" />
+                            <Text UNSAFE_className="icon-label">Dev Console</Text>
+                        </ActionButton>
 
-                    {/* Logs */}
-                    <ActionButton
-                        onPress={handleViewLogs}
-                        isQuiet
-                        UNSAFE_className={`dashboard-action-button ${isLogsHoverSuppressed ? 'hover-suppressed' : ''}`}
-                    >
-                        <ViewList size="L" />
-                        <Text UNSAFE_className="icon-label">Logs</Text>
-                    </ActionButton>
+                        {/* View Components */}
+                        <ActionButton
+                            onPress={handleViewComponents}
+                            isQuiet
+                            UNSAFE_className="dashboard-action-button"
+                        >
+                            <FolderOpen size="L" />
+                            <Text UNSAFE_className="icon-label">Components</Text>
+                        </ActionButton>
 
-                    {/* Deploy Mesh */}
-                    <ActionButton
-                        onPress={handleDeployMesh}
-                        isQuiet
-                        isDisabled={isMeshActionDisabled}
-                        UNSAFE_className="dashboard-action-button"
-                        data-action="deploy-mesh"
-                    >
-                        <Refresh size="L" />
-                        <Text UNSAFE_className="icon-label">Deploy Mesh</Text>
-                    </ActionButton>
+                        {/* Data Manager (Coming Soon) */}
+                        <ActionButton
+                            isQuiet
+                            isDisabled
+                            UNSAFE_className="dashboard-action-button"
+                        >
+                            <Data size="L" />
+                            <Text UNSAFE_className="icon-label">Data Manager</Text>
+                        </ActionButton>
 
-                    {/* Configure */}
-                    <ActionButton
-                        onPress={handleConfigure}
-                        isQuiet
-                        isDisabled={isMeshActionDisabled}
-                        UNSAFE_className="dashboard-action-button"
-                    >
-                        <Settings size="L" />
-                        <Text UNSAFE_className="icon-label">Configure</Text>
-                    </ActionButton>
-
-                    {/* Developer Console */}
-                    <ActionButton
-                        onPress={handleOpenDevConsole}
-                        isQuiet
-                        UNSAFE_className="dashboard-action-button"
-                    >
-                        <Globe size="L" />
-                        <Text UNSAFE_className="icon-label">Dev Console</Text>
-                    </ActionButton>
-
-                    {/* View Components */}
-                    <ActionButton
-                        onPress={handleViewComponents}
-                        isQuiet
-                        UNSAFE_className="dashboard-action-button"
-                    >
-                        <FolderOpen size="L" />
-                        <Text UNSAFE_className="icon-label">Components</Text>
-                    </ActionButton>
-
-                    {/* Data Manager (Coming Soon) */}
-                    <ActionButton
-                        isQuiet
-                        isDisabled
-                        UNSAFE_className="dashboard-action-button"
-                    >
-                        <Data size="L" />
-                        <Text UNSAFE_className="icon-label">Data Manager</Text>
-                    </ActionButton>
-
-                    {/* Delete Project */}
-                    <ActionButton
-                        onPress={handleDeleteProject}
-                        isQuiet
-                        UNSAFE_className="dashboard-action-button"
-                    >
-                        <Delete size="L" />
-                        <Text UNSAFE_className="icon-label">Delete</Text>
-                    </ActionButton>
-                </GridLayout>
-            </Flex>
-        </View>
+                        {/* Delete Project */}
+                        <ActionButton
+                            onPress={handleDeleteProject}
+                            isQuiet
+                            UNSAFE_className="dashboard-action-button"
+                        >
+                            <Delete size="L" />
+                            <Text UNSAFE_className="icon-label">Delete</Text>
+                        </ActionButton>
+                    </GridLayout>
+                    </div>
+                </div>
+            </PageLayout>
         </div>
     );
 }
