@@ -62,12 +62,6 @@
         "title": "Open Project Dashboard",
         "category": "Demo Builder",
         "icon": "$(dashboard)"
-      },
-      {
-        "command": "demoBuilder.switchProject",
-        "title": "Switch Project",
-        "category": "Demo Builder",
-        "icon": "$(folder-opened)"
       }
     ],
     "configuration": {
