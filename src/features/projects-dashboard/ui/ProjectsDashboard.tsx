@@ -2,9 +2,9 @@
  * ProjectsDashboard Component
  *
  * Main dashboard screen showing all projects with search/filter capabilities.
- * Matches the design system used in WelcomeScreen and wizard steps.
- *
- * Uses shared SearchHeader component for consistent search/refresh/count UI.
+ * Includes layout toggle for comparing two design options:
+ * - Cards: Simplified cards (no dark header)
+ * - Rows: Full-width horizontal rows
  */
 
 import React, { useState, useMemo } from 'react';
@@ -14,14 +14,20 @@ import {
     Text,
     Button,
     ProgressCircle,
+    ActionGroup,
+    Item,
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import { ProjectsGrid } from './components/ProjectsGrid';
+import { ProjectRowList } from './components/ProjectRowList';
 import { DashboardEmptyState } from './components/DashboardEmptyState';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import type { Project } from '@/types/base';
+
+/** Layout mode for project display */
+type LayoutMode = 'cards' | 'rows';
 
 export interface ProjectsDashboardProps {
     /** Array of all projects */
@@ -60,6 +66,15 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     hasLoadedOnce = true,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
+    const [layoutMode, setLayoutMode] = useState<LayoutMode>('cards');
+
+    // Handle layout mode change from ActionGroup
+    const handleLayoutChange = (keys: 'all' | Set<React.Key>) => {
+        if (keys !== 'all' && keys.size > 0) {
+            const selectedKey = Array.from(keys)[0] as LayoutMode;
+            setLayoutMode(selectedKey);
+        }
+    };
 
     // Filter projects based on search query
     const filteredProjects = useMemo(() => {
@@ -130,29 +145,55 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
             }
             backgroundColor="var(--spectrum-global-color-gray-50)"
         >
-            {/* Content area - scrollable via PageLayout */}
-            <div className="max-w-800 mx-auto px-4 pt-8 pb-6">
-                {/* Search Header - consistent with wizard selection steps */}
-                <SearchHeader
-                    searchQuery={searchQuery}
-                    onSearchQueryChange={setSearchQuery}
-                    searchPlaceholder="Filter projects..."
-                    searchThreshold={0}
-                    totalCount={projects.length}
-                    filteredCount={filteredProjects.length}
-                    itemNoun="project"
-                    onRefresh={onRefresh}
-                    isRefreshing={isRefreshing}
-                    refreshAriaLabel="Refresh projects"
-                    hasLoadedOnce={hasLoadedOnce}
-                    alwaysShowCount={true}
-                />
+            {/* Sticky controls - search and layout toggle */}
+            <div className="projects-sticky-header">
+                <div className="max-w-800 mx-auto px-4 pt-6 pb-4">
+                    {/* Search Header - consistent with wizard selection steps */}
+                    <SearchHeader
+                        searchQuery={searchQuery}
+                        onSearchQueryChange={setSearchQuery}
+                        searchPlaceholder="Filter projects..."
+                        searchThreshold={0}
+                        totalCount={projects.length}
+                        filteredCount={filteredProjects.length}
+                        itemNoun="project"
+                        onRefresh={onRefresh}
+                        isRefreshing={isRefreshing}
+                        refreshAriaLabel="Refresh projects"
+                        hasLoadedOnce={hasLoadedOnce}
+                        alwaysShowCount={true}
+                    />
 
-                {/* Projects Grid - responsive auto-fill layout */}
-                <ProjectsGrid
-                    projects={filteredProjects}
-                    onSelectProject={onSelectProject}
-                />
+                    {/* Layout Toggle - for prototype comparison */}
+                    <Flex justifyContent="center">
+                        <ActionGroup
+                            selectionMode="single"
+                            selectedKeys={[layoutMode]}
+                            onSelectionChange={handleLayoutChange}
+                            density="compact"
+                        >
+                            <Item key="cards">Cards</Item>
+                            <Item key="rows">Rows</Item>
+                        </ActionGroup>
+                    </Flex>
+                </div>
+            </div>
+
+            {/* Freely scrolling content */}
+            <div className="max-w-800 mx-auto px-4 pb-6">
+                {/* Render active layout */}
+                {layoutMode === 'cards' && (
+                    <ProjectsGrid
+                        projects={filteredProjects}
+                        onSelectProject={onSelectProject}
+                    />
+                )}
+                {layoutMode === 'rows' && (
+                    <ProjectRowList
+                        projects={filteredProjects}
+                        onSelectProject={onSelectProject}
+                    />
+                )}
 
                 {/* No results message */}
                 {isFiltering && filteredProjects.length === 0 && (

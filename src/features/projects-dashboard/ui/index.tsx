@@ -16,6 +16,97 @@ import type { Project } from '@/types/base';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/custom-spectrum.css';
 
+// Mock data for layout prototyping
+// When true: loads real projects AND adds mock projects for scale testing
+const USE_MOCK_DATA = true;
+
+const MOCK_PROJECTS: Project[] = [
+    {
+        name: 'acme-storefront',
+        path: '/Users/demo/projects/acme-storefront',
+        status: 'stopped',
+    },
+    {
+        name: 'test-project',
+        path: '/Users/demo/projects/test-project',
+        status: 'stopped',
+    },
+    {
+        name: 'client-demo-march',
+        path: '/Users/demo/projects/client-demo-march',
+        status: 'running',
+        componentInstances: {
+            frontend: { id: 'citisignal', status: 'running', port: 3001 },
+        },
+    },
+    {
+        name: 'edge-delivery-poc',
+        path: '/Users/demo/projects/edge-delivery-poc',
+        status: 'error',
+    },
+    {
+        name: 'summit-2025-demo',
+        path: '/Users/demo/projects/summit-2025-demo',
+        status: 'stopped',
+    },
+    {
+        name: 'partner-integration',
+        path: '/Users/demo/projects/partner-integration',
+        status: 'running',
+        componentInstances: {
+            frontend: { id: 'citisignal', status: 'running', port: 3002 },
+        },
+    },
+    {
+        name: 'sandbox-testing',
+        path: '/Users/demo/projects/sandbox-testing',
+        status: 'stopped',
+    },
+    {
+        name: 'headless-commerce-v2',
+        path: '/Users/demo/projects/headless-commerce-v2',
+        status: 'stopped',
+    },
+    {
+        name: 'mobile-app-backend',
+        path: '/Users/demo/projects/mobile-app-backend',
+        status: 'starting',
+    },
+    {
+        name: 'analytics-dashboard',
+        path: '/Users/demo/projects/analytics-dashboard',
+        status: 'stopped',
+    },
+    {
+        name: 'customer-portal',
+        path: '/Users/demo/projects/customer-portal',
+        status: 'running',
+        componentInstances: {
+            frontend: { id: 'citisignal', status: 'running', port: 3003 },
+        },
+    },
+    {
+        name: 'b2b-marketplace',
+        path: '/Users/demo/projects/b2b-marketplace',
+        status: 'stopped',
+    },
+    {
+        name: 'loyalty-program',
+        path: '/Users/demo/projects/loyalty-program',
+        status: 'error',
+    },
+    {
+        name: 'inventory-sync',
+        path: '/Users/demo/projects/inventory-sync',
+        status: 'stopped',
+    },
+    {
+        name: 'checkout-optimization',
+        path: '/Users/demo/projects/checkout-optimization',
+        status: 'stopped',
+    },
+];
+
 /**
  * ProjectsDashboardApp - Wrapper component that handles data fetching
  */
@@ -40,12 +131,27 @@ const ProjectsDashboardApp: React.FC = () => {
                 success: boolean;
                 data?: { projects: Project[] };
             }>('getProjects');
+
+            let projectList: Project[] = [];
+
             if (response?.success && response.data?.projects) {
-                setProjects(response.data.projects);
-                setHasLoadedOnce(true);
+                projectList = response.data.projects;
             }
+
+            // Add mock projects for scale testing (real projects come first)
+            if (USE_MOCK_DATA) {
+                projectList = [...projectList, ...MOCK_PROJECTS];
+            }
+
+            setProjects(projectList);
+            setHasLoadedOnce(true);
         } catch (error) {
             console.error('Failed to fetch projects:', error);
+            // Still show mock data if real fetch fails
+            if (USE_MOCK_DATA) {
+                setProjects(MOCK_PROJECTS);
+                setHasLoadedOnce(true);
+            }
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);

@@ -79,15 +79,21 @@ describe('ProjectCard', () => {
             expect(screen.queryByText(/:3000/)).not.toBeInTheDocument();
         });
 
-        it('should display component names stacked', () => {
+        it('should display simplified card with name and status only (no component list)', () => {
+            // The simplified card design shows only name and status (Standard info density)
+            // Component names are intentionally NOT displayed to keep the card clean
             const project = createMockProject();
             renderWithProvider(
                 <ProjectCard project={project} onSelect={jest.fn()} />
             );
 
-            // Components should be listed individually
-            expect(screen.getByText('CitiSignal')).toBeInTheDocument();
-            expect(screen.getByText('API Mesh')).toBeInTheDocument();
+            // Should show project name
+            expect(screen.getByText('Test Project')).toBeInTheDocument();
+            // Should show status
+            expect(screen.getByText('Stopped')).toBeInTheDocument();
+            // Should NOT show component names (simplified design)
+            expect(screen.queryByText('CitiSignal')).not.toBeInTheDocument();
+            expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
         });
 
         it('should handle project with no components gracefully', () => {

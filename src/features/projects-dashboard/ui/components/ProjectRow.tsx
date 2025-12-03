@@ -1,20 +1,20 @@
 /**
- * ProjectCard Component
+ * ProjectRow Component
  *
- * Displays a single project as a simplified clickable card.
- * No dark header - just a gray-100 background matching dashboard buttons.
- * Part of the layout prototype comparison (Option C: Simplified Cards).
+ * Displays a project as a full-width horizontal row (file browser style).
+ * Part of the layout prototype comparison.
  */
 
 import React, { useCallback } from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
+import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { Project } from '@/types/base';
 
-export interface ProjectCardProps {
+export interface ProjectRowProps {
     /** The project to display */
     project: Project;
-    /** Callback when the card is selected */
+    /** Callback when the row is selected */
     onSelect: (project: Project) => void;
 }
 
@@ -72,11 +72,9 @@ function getFrontendPort(project: Project): number | undefined {
 }
 
 /**
- * ProjectCard - Displays a project as a simplified clickable card
- *
- * Layout: Single gray-100 background with name and status (no dark header)
+ * ProjectRow - Displays a project as a clickable row
  */
-export const ProjectCard: React.FC<ProjectCardProps> = ({
+export const ProjectRow: React.FC<ProjectRowProps> = ({
     project,
     onSelect,
 }) => {
@@ -107,19 +105,24 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             aria-label={ariaLabel}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className="project-card-simple"
+            className="project-row"
         >
-            {/* Project Name */}
-            <Text UNSAFE_className="project-card-simple-name">
-                {project.name}
-            </Text>
+            <Flex alignItems="center" justifyContent="space-between" width="100%">
+                {/* Left: Status dot + Name */}
+                <Flex alignItems="center" gap="size-150">
+                    <StatusDot variant={statusVariant} size={8} />
+                    <Text UNSAFE_className="project-row-name">
+                        {project.name}
+                    </Text>
+                </Flex>
 
-            {/* Status Row */}
-            <Flex alignItems="center" gap="size-100" marginTop="size-50">
-                <StatusDot variant={statusVariant} size={6} />
-                <Text UNSAFE_className="project-card-simple-status">
-                    {statusText}
-                </Text>
+                {/* Right: Status text + Chevron */}
+                <Flex alignItems="center" gap="size-150">
+                    <Text UNSAFE_className="project-row-status">
+                        {statusText}
+                    </Text>
+                    <ChevronRight size="S" UNSAFE_className="project-row-chevron" />
+                </Flex>
             </Flex>
         </div>
     );

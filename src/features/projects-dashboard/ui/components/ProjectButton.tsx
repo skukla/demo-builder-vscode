@@ -1,9 +1,9 @@
 /**
- * ProjectCard Component
+ * ProjectButton Component
  *
- * Displays a single project as a simplified clickable card.
- * No dark header - just a gray-100 background matching dashboard buttons.
- * Part of the layout prototype comparison (Option C: Simplified Cards).
+ * Displays a project as a fixed-size button matching the Project Dashboard style.
+ * 140px wide, 4:3 aspect ratio, centered Adobe icon.
+ * Part of the layout prototype comparison.
  */
 
 import React, { useCallback } from 'react';
@@ -11,10 +11,26 @@ import { Flex, Text } from '@adobe/react-spectrum';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { Project } from '@/types/base';
 
-export interface ProjectCardProps {
+/**
+ * Adobe "A" icon - sized to match Spectrum size="L" icons (36px)
+ */
+const AdobeIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="36"
+        height="33"
+        viewBox="0 0 24 22"
+        fill="currentColor"
+        className={className}
+    >
+        <path d="M14.2353 21.6209L12.4925 16.7699H8.11657L11.7945 7.51237L17.3741 21.6209H24L15.1548 0.379395H8.90929L0 21.6209H14.2353Z" />
+    </svg>
+);
+
+export interface ProjectButtonProps {
     /** The project to display */
     project: Project;
-    /** Callback when the card is selected */
+    /** Callback when the button is selected */
     onSelect: (project: Project) => void;
 }
 
@@ -26,9 +42,9 @@ function getStatusText(status: Project['status'], port?: number): string {
         case 'running':
             return port ? `Running on port ${port}` : 'Running';
         case 'starting':
-            return 'Starting...';
+            return 'Starting';
         case 'stopping':
-            return 'Stopping...';
+            return 'Stopping';
         case 'stopped':
         case 'ready':
             return 'Stopped';
@@ -72,11 +88,17 @@ function getFrontendPort(project: Project): number | undefined {
 }
 
 /**
- * ProjectCard - Displays a project as a simplified clickable card
- *
- * Layout: Single gray-100 background with name and status (no dark header)
+ * Truncate project name if too long
  */
-export const ProjectCard: React.FC<ProjectCardProps> = ({
+function truncateName(name: string, maxLength: number = 18): string {
+    if (name.length <= maxLength) return name;
+    return name.substring(0, maxLength - 1) + '…';
+}
+
+/**
+ * ProjectButton - Displays a project as a clickable button (dashboard style)
+ */
+export const ProjectButton: React.FC<ProjectButtonProps> = ({
     project,
     onSelect,
 }) => {
@@ -94,9 +116,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         [project, onSelect]
     );
 
+    const isRunning = project.status === 'running';
     const port = getFrontendPort(project);
     const statusText = getStatusText(project.status, port);
     const statusVariant = getStatusVariant(project.status);
+    const displayName = truncateName(project.name);
 
     const ariaLabel = `${project.name}, ${statusText}`;
 
@@ -107,17 +131,20 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             aria-label={ariaLabel}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className="project-card-simple"
+            className="project-button"
         >
-            {/* Project Name */}
-            <Text UNSAFE_className="project-card-simple-name">
-                {project.name}
+            {/* Icon */}
+            <AdobeIcon className={isRunning ? 'text-green-500' : 'text-gray-400'} />
+
+            {/* Name */}
+            <Text UNSAFE_className="project-button-name">
+                {displayName}
             </Text>
 
-            {/* Status Row */}
-            <Flex alignItems="center" gap="size-100" marginTop="size-50">
+            {/* Status */}
+            <Flex alignItems="center" gap="size-50">
                 <StatusDot variant={statusVariant} size={6} />
-                <Text UNSAFE_className="project-card-simple-status">
+                <Text UNSAFE_className="project-button-status">
                     {statusText}
                 </Text>
             </Flex>
