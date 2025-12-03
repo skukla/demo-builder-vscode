@@ -759,6 +759,12 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     align-items: center !important;
 }
 
+/* Match grid width so button aligns with grid: 3 × 140px + 2 × 24px = 468px */
+.dashboard-status-content {
+    width: 468px;
+    margin: 0 auto;
+}
+
 /* Dashboard grid - center fixed-width buttons */
 .dashboard-grid-container {
     display: flex;

@@ -248,9 +248,11 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                 {/* Status Header - matches Projects List header design */}
                 <div className="dashboard-status-header">
                     <div className="max-w-800 mx-auto px-4 pt-6 pb-4">
-                        <Flex alignItems="center" gap="size-300">
-                            {/* Status indicators */}
-                            <View flex>
+                        {/* Content wrapper matches grid width for alignment */}
+                        <div className="dashboard-status-content">
+                            <Flex alignItems="center" gap="size-300">
+                                {/* Status indicators */}
+                                <View flex>
                                 {/* Demo Status */}
                                 <StatusCard
                                     label="Demo"
@@ -286,11 +288,12 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                                     </Flex>
                                 )}
                             </View>
-                            {/* All Projects button */}
-                            <Button variant="secondary" onPress={handleNavigateBack}>
-                                All Projects
-                            </Button>
-                        </Flex>
+                                {/* All Projects button */}
+                                <Button variant="secondary" onPress={handleNavigateBack}>
+                                    All Projects
+                                </Button>
+                            </Flex>
+                        </div>
                     </div>
                 </div>
 
