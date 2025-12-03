@@ -51,6 +51,9 @@ yarn-error.log*
 # Workflows and analysis are temporary - valuable docs extracted to docs/architecture/
 .claude/
 
+# RPTC workflow temporary files
+.rptc/prompt.md
+
 # Analysis artifacts
 report/
 jscpd-output/
