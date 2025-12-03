@@ -10,7 +10,7 @@ import { Flex, Text, ActionButton, Divider } from '@adobe/react-spectrum';
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import { SidebarNav } from './components/SidebarNav';
 import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
-import { WelcomeView, ProjectView, ProjectsListView } from './views';
+import { UtilityBar } from './views';
 import type { SidebarContext, NavItem } from '../types';
 
 export interface SidebarProps {
@@ -60,39 +60,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onCheckUpdates,
     onWizardStepClick,
 }) => {
-    // For 'projects' context (no project loaded), show WelcomeView
-    if (context.type === 'projects') {
+    // For projects, projectsList, or project context, show UtilityBar
+    // (The detailed project controls are in the Project Dashboard main panel)
+    if (context.type === 'projects' || context.type === 'projectsList' || context.type === 'project') {
         return (
-            <WelcomeView
-                onCreateProject={onCreateProject}
+            <UtilityBar
                 onOpenDocs={onOpenDocs}
                 onOpenHelp={onOpenHelp}
                 onOpenSettings={onOpenSettings}
-            />
-        );
-    }
-
-    // For 'projectsList' context (viewing Projects List), show ProjectsListView with utility icons
-    if (context.type === 'projectsList') {
-        return (
-            <ProjectsListView
-                onOpenDocs={onOpenDocs}
-                onOpenHelp={onOpenHelp}
-                onOpenSettings={onOpenSettings}
-            />
-        );
-    }
-
-    // For 'project' context (project loaded), show ProjectView with controls
-    if (context.type === 'project' && onStartDemo && onStopDemo && onOpenDashboard && onOpenConfigure && onCheckUpdates) {
-        return (
-            <ProjectView
-                project={context.project}
-                onStartDemo={onStartDemo}
-                onStopDemo={onStopDemo}
-                onOpenDashboard={onOpenDashboard}
-                onOpenConfigure={onOpenConfigure}
-                onCheckUpdates={onCheckUpdates}
             />
         );
     }

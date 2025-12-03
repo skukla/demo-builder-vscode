@@ -1,8 +1,8 @@
 /**
- * ProjectsListView Component
+ * UtilityBar Component
  *
- * Displayed in the sidebar when viewing the Projects List.
- * Shows utility icons in a row with labels beneath each icon.
+ * Minimal sidebar content showing quick-access utility icons.
+ * Displayed in all contexts except wizard mode.
  */
 
 import React from 'react';
@@ -11,7 +11,7 @@ import Book from '@spectrum-icons/workflow/Book';
 import Help from '@spectrum-icons/workflow/Help';
 import Settings from '@spectrum-icons/workflow/Settings';
 
-export interface ProjectsListViewProps {
+export interface UtilityBarProps {
     /** Callback when user clicks Documentation link */
     onOpenDocs?: () => void;
     /** Callback when user clicks Help link */
@@ -21,11 +21,11 @@ export interface ProjectsListViewProps {
 }
 
 /**
- * ProjectsListView - Sidebar content when viewing Projects List
+ * UtilityBar - Quick-access utility icons for the sidebar
  *
- * Shows utility icons in a horizontal row with labels beneath.
+ * Shows Docs, Help, and Settings icons in a horizontal row with labels.
  */
-export const ProjectsListView: React.FC<ProjectsListViewProps> = ({
+export const UtilityBar: React.FC<UtilityBarProps> = ({
     onOpenDocs,
     onOpenHelp,
     onOpenSettings,
@@ -37,7 +37,7 @@ export const ProjectsListView: React.FC<ProjectsListViewProps> = ({
             alignItems="center"
             justifyContent="center"
             height="100%"
-            UNSAFE_className="sidebar-projects-list"
+            UNSAFE_className="sidebar-utility-bar"
         >
             {onOpenDocs && (
                 <Flex direction="column" alignItems="center" gap="size-75">
