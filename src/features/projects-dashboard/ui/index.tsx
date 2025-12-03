@@ -20,90 +20,123 @@ import '@/core/ui/styles/custom-spectrum.css';
 // When true: loads real projects AND adds mock projects for scale testing
 const USE_MOCK_DATA = true;
 
+// Helper to create mock dates
+const mockDate = (daysAgo: number) => new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+
 const MOCK_PROJECTS: Project[] = [
     {
         name: 'acme-storefront',
         path: '/Users/demo/projects/acme-storefront',
         status: 'stopped',
+        created: mockDate(30),
+        lastModified: mockDate(5),
     },
     {
         name: 'test-project',
         path: '/Users/demo/projects/test-project',
         status: 'stopped',
+        created: mockDate(20),
+        lastModified: mockDate(10),
     },
     {
         name: 'client-demo-march',
         path: '/Users/demo/projects/client-demo-march',
         status: 'running',
+        created: mockDate(15),
+        lastModified: mockDate(1),
         componentInstances: {
-            frontend: { id: 'citisignal', status: 'running', port: 3001 },
+            frontend: { id: 'citisignal', name: 'CitiSignal', status: 'running', port: 3001 },
         },
     },
     {
         name: 'edge-delivery-poc',
         path: '/Users/demo/projects/edge-delivery-poc',
         status: 'error',
+        created: mockDate(45),
+        lastModified: mockDate(3),
     },
     {
         name: 'summit-2025-demo',
         path: '/Users/demo/projects/summit-2025-demo',
         status: 'stopped',
+        created: mockDate(60),
+        lastModified: mockDate(14),
     },
     {
         name: 'partner-integration',
         path: '/Users/demo/projects/partner-integration',
         status: 'running',
+        created: mockDate(25),
+        lastModified: mockDate(0),
         componentInstances: {
-            frontend: { id: 'citisignal', status: 'running', port: 3002 },
+            frontend: { id: 'citisignal', name: 'CitiSignal', status: 'running', port: 3002 },
         },
     },
     {
         name: 'sandbox-testing',
         path: '/Users/demo/projects/sandbox-testing',
         status: 'stopped',
+        created: mockDate(7),
+        lastModified: mockDate(2),
     },
     {
         name: 'headless-commerce-v2',
         path: '/Users/demo/projects/headless-commerce-v2',
         status: 'stopped',
+        created: mockDate(90),
+        lastModified: mockDate(30),
     },
     {
         name: 'mobile-app-backend',
         path: '/Users/demo/projects/mobile-app-backend',
         status: 'starting',
+        created: mockDate(10),
+        lastModified: mockDate(0),
     },
     {
         name: 'analytics-dashboard',
         path: '/Users/demo/projects/analytics-dashboard',
         status: 'stopped',
+        created: mockDate(50),
+        lastModified: mockDate(20),
     },
     {
         name: 'customer-portal',
         path: '/Users/demo/projects/customer-portal',
         status: 'running',
+        created: mockDate(35),
+        lastModified: mockDate(1),
         componentInstances: {
-            frontend: { id: 'citisignal', status: 'running', port: 3003 },
+            frontend: { id: 'citisignal', name: 'CitiSignal', status: 'running', port: 3003 },
         },
     },
     {
         name: 'b2b-marketplace',
         path: '/Users/demo/projects/b2b-marketplace',
         status: 'stopped',
+        created: mockDate(40),
+        lastModified: mockDate(15),
     },
     {
         name: 'loyalty-program',
         path: '/Users/demo/projects/loyalty-program',
         status: 'error',
+        created: mockDate(55),
+        lastModified: mockDate(7),
     },
     {
         name: 'inventory-sync',
         path: '/Users/demo/projects/inventory-sync',
         status: 'stopped',
+        created: mockDate(70),
+        lastModified: mockDate(25),
     },
     {
         name: 'checkout-optimization',
         path: '/Users/demo/projects/checkout-optimization',
         status: 'stopped',
+        created: mockDate(80),
+        lastModified: mockDate(40),
     },
 ];
 
@@ -206,33 +239,6 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
-    // Handle open documentation
-    const handleOpenDocs = useCallback(async () => {
-        try {
-            await webviewClient.postMessage('openDocs');
-        } catch (error) {
-            console.error('Failed to open docs:', error);
-        }
-    }, []);
-
-    // Handle open help
-    const handleOpenHelp = useCallback(async () => {
-        try {
-            await webviewClient.postMessage('openHelp');
-        } catch (error) {
-            console.error('Failed to open help:', error);
-        }
-    }, []);
-
-    // Handle open settings
-    const handleOpenSettings = useCallback(async () => {
-        try {
-            await webviewClient.postMessage('openSettings');
-        } catch (error) {
-            console.error('Failed to open settings:', error);
-        }
-    }, []);
-
     return (
         <ProjectsDashboard
             projects={projects}
@@ -242,9 +248,6 @@ const ProjectsDashboardApp: React.FC = () => {
             isRefreshing={isRefreshing}
             onRefresh={handleRefresh}
             hasLoadedOnce={hasLoadedOnce}
-            onOpenDocs={handleOpenDocs}
-            onOpenHelp={handleOpenHelp}
-            onOpenSettings={handleOpenSettings}
         />
     );
 };
