@@ -121,37 +121,40 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                 <PageHeader
                     title="Your Projects"
                     subtitle="Select a project to manage or create a new one"
-                    action={
-                        <Button variant="accent" onPress={onCreateProject}>
-                            <Add size="S" />
-                            <Text>New Project</Text>
-                        </Button>
-                    }
                     constrainWidth
                 />
             }
             backgroundColor="var(--spectrum-global-color-gray-50)"
         >
-            {/* Sticky controls - search and view toggle */}
+            {/* Sticky controls - search, view toggle, and new project button */}
             <div className="projects-sticky-header">
                 <div className="max-w-800 mx-auto px-4 pt-6 pb-4">
-                    {/* Search Header with view mode toggle */}
-                    <SearchHeader
-                        searchQuery={searchQuery}
-                        onSearchQueryChange={setSearchQuery}
-                        searchPlaceholder="Filter projects..."
-                        searchThreshold={0}
-                        totalCount={projects.length}
-                        filteredCount={filteredProjects.length}
-                        itemNoun="project"
-                        onRefresh={onRefresh}
-                        isRefreshing={isRefreshing}
-                        refreshAriaLabel="Refresh projects"
-                        viewMode={viewMode}
-                        onViewModeChange={setViewMode}
-                        hasLoadedOnce={hasLoadedOnce}
-                        alwaysShowCount={true}
-                    />
+                    <Flex alignItems="start" gap="size-300">
+                        {/* Search Header with view mode toggle */}
+                        <View flex>
+                            <SearchHeader
+                                searchQuery={searchQuery}
+                                onSearchQueryChange={setSearchQuery}
+                                searchPlaceholder="Filter projects..."
+                                searchThreshold={0}
+                                totalCount={projects.length}
+                                filteredCount={filteredProjects.length}
+                                itemNoun="project"
+                                onRefresh={onRefresh}
+                                isRefreshing={isRefreshing}
+                                refreshAriaLabel="Refresh projects"
+                                viewMode={viewMode}
+                                onViewModeChange={setViewMode}
+                                hasLoadedOnce={hasLoadedOnce}
+                                alwaysShowCount={true}
+                            />
+                        </View>
+                        {/* New Project button */}
+                        <Button variant="accent" onPress={onCreateProject}>
+                            <Add size="S" />
+                            <Text>New Project</Text>
+                        </Button>
+                    </Flex>
                 </div>
             </div>
 

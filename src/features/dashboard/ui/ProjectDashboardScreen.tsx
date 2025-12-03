@@ -240,11 +240,6 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                 header={
                     <PageHeader
                         title={displayName}
-                        action={
-                            <Button variant="secondary" onPress={handleNavigateBack}>
-                                All Projects
-                            </Button>
-                        }
                         constrainWidth
                     />
                 }
@@ -253,8 +248,9 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                 {/* Status Header - matches Projects List header design */}
                 <div className="dashboard-status-header">
                     <div className="max-w-800 mx-auto px-4 pt-6 pb-4">
-                        {/* Status indicators */}
-                        <View>
+                        <Flex alignItems="center" gap="size-300">
+                            {/* Status indicators */}
+                            <View flex>
                                 {/* Demo Status */}
                                 <StatusCard
                                     label="Demo"
@@ -289,7 +285,12 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                                         )}
                                     </Flex>
                                 )}
-                        </View>
+                            </View>
+                            {/* All Projects button */}
+                            <Button variant="secondary" onPress={handleNavigateBack}>
+                                All Projects
+                            </Button>
+                        </Flex>
                     </div>
                 </div>
 
