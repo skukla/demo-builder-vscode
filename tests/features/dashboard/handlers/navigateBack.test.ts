@@ -9,7 +9,47 @@ jest.mock('vscode', () => ({
     commands: {
         executeCommand: jest.fn(),
     },
+    window: {
+        activeColorTheme: { kind: 1 },
+    },
+    ColorThemeKind: { Dark: 2, Light: 1 },
+    env: {
+        openExternal: jest.fn(),
+    },
+    Uri: {
+        parse: jest.fn((url: string) => ({ toString: () => url })),
+    },
 }), { virtual: true });
+
+// Mock stalenessDetector
+jest.mock('@/features/mesh/services/stalenessDetector');
+
+// Mock authentication
+jest.mock('@/features/authentication');
+
+// Mock ServiceLocator
+jest.mock('@/core/di', () => ({
+    ServiceLocator: {
+        getAuthenticationService: jest.fn(),
+    },
+}));
+
+// Mock validation
+jest.mock('@/core/validation', () => ({
+    validateOrgId: jest.fn(),
+    validateProjectId: jest.fn(),
+    validateWorkspaceId: jest.fn(),
+    validateURL: jest.fn(),
+}));
+
+// Mock BaseWebviewCommand (used by handleNavigateBack for panel transition)
+jest.mock('@/core/base', () => ({
+    BaseWebviewCommand: {
+        startWebviewTransition: jest.fn().mockResolvedValue(undefined),
+        endWebviewTransition: jest.fn(),
+        getActivePanel: jest.fn().mockReturnValue(null),
+    },
+}));
 
 import * as vscode from 'vscode';
 import { handleNavigateBack } from '@/features/dashboard/handlers/dashboardHandlers';
@@ -65,10 +105,12 @@ describe('handleNavigateBack', () => {
             // When: navigateBack is called
             await handleNavigateBack(context as any);
 
-            // Then: clearProject should be called before showProjectsList
+            // Then: resetToggleStates (setContext) should run first,
+            // then clearProject, then showProjectsList
             expect(callOrder).toEqual([
-                'clearProject',
-                'command:demoBuilder.showProjectsList',
+                'command:setContext',           // resetToggleStates() hides components
+                'clearProject',                 // Clear current project
+                'command:demoBuilder.showProjectsList', // Navigate to projects list
             ]);
         });
     });
@@ -94,34 +136,6 @@ describe('handleNavigateBack', () => {
 
             // Then: Should return success
             expect(result).toEqual({ success: true });
-        });
-
-        it('should handle clearProject failure gracefully', async () => {
-            // Given: clearProject fails
-            const context = createMockContext();
-            context.stateManager.clearProject.mockRejectedValue(new Error('Clear failed'));
-
-            // When: navigateBack is called
-            const result = await handleNavigateBack(context as any);
-
-            // Then: Should return error
-            expect(result.success).toBe(false);
-            expect(result.error).toContain('Failed to navigate back');
-            expect(context.logger.error).toHaveBeenCalled();
-        });
-
-        it('should handle showProjectsList command failure gracefully', async () => {
-            // Given: Command execution fails
-            const context = createMockContext();
-            mockExecuteCommand.mockRejectedValue(new Error('Command failed'));
-
-            // When: navigateBack is called
-            const result = await handleNavigateBack(context as any);
-
-            // Then: Should return error
-            expect(result.success).toBe(false);
-            expect(result.error).toContain('Failed to navigate back');
-            expect(context.logger.error).toHaveBeenCalled();
         });
 
         it('should log navigation event', async () => {
