@@ -6,7 +6,6 @@ import {
     Text,
     Button,
     ActionButton,
-    Divider,
     ProgressCircle
 } from '@adobe/react-spectrum';
 import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
@@ -251,53 +250,58 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                 }
                 backgroundColor="var(--spectrum-global-color-gray-50)"
             >
-                <div className="w-full max-w-800 mx-auto px-4 pt-6 pb-4">
-                    {/* Status Section - Two columns: statuses left, nav button right */}
-                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
-                        {/* Left: Status indicators */}
-                        <View>
-                            {/* Demo Status */}
-                            <StatusCard
-                                label="Demo"
-                                status={demoStatusDisplay.text}
-                                color={demoStatusDisplay.color}
-                                size="S"
-                            />
+                {/* Status Header - matches Projects List header design */}
+                <div className="dashboard-status-header">
+                    <div className="max-w-800 mx-auto px-4 pt-6 pb-4">
+                        {/* Status Section - Two columns: statuses left, nav button right */}
+                        <Flex justifyContent="space-between" alignItems="center">
+                            {/* Left: Status indicators */}
+                            <View>
+                                {/* Demo Status */}
+                                <StatusCard
+                                    label="Demo"
+                                    status={demoStatusDisplay.text}
+                                    color={demoStatusDisplay.color}
+                                    size="S"
+                                />
 
-                            {/* Mesh Status */}
-                            {meshStatusDisplay && (
-                                <Flex direction="row" alignItems="center" gap="size-100" marginTop="size-50">
-                                    <StatusCard
-                                        label="API Mesh"
-                                        status={meshStatusDisplay.text}
-                                        color={meshStatusDisplay.color}
-                                        size="S"
-                                    />
+                                {/* Mesh Status */}
+                                {meshStatusDisplay && (
+                                    <Flex direction="row" alignItems="center" gap="size-100" marginTop="size-50">
+                                        <StatusCard
+                                            label="API Mesh"
+                                            status={meshStatusDisplay.text}
+                                            color={meshStatusDisplay.color}
+                                            size="S"
+                                        />
 
-                                    {meshStatus === 'needs-auth' && (
-                                        <ActionButton
-                                            isQuiet
-                                            onPress={handleReAuthenticate}
-                                            UNSAFE_style={{ minHeight: 'auto', height: 'auto', padding: '2px 6px' }}
-                                        >
-                                            <Login size="XS" />
-                                            <Text>Sign in</Text>
-                                        </ActionButton>
-                                    )}
+                                        {meshStatus === 'needs-auth' && (
+                                            <ActionButton
+                                                isQuiet
+                                                onPress={handleReAuthenticate}
+                                                UNSAFE_style={{ minHeight: 'auto', height: 'auto', padding: '2px 6px' }}
+                                            >
+                                                <Login size="XS" />
+                                                <Text>Sign in</Text>
+                                            </ActionButton>
+                                        )}
 
-                                    {meshStatus === 'authenticating' && (
-                                        <ProgressCircle size="S" isIndeterminate UNSAFE_className="w-4 h-4" />
-                                    )}
-                                </Flex>
-                            )}
-                        </View>
+                                        {meshStatus === 'authenticating' && (
+                                            <ProgressCircle size="S" isIndeterminate UNSAFE_className="w-4 h-4" />
+                                        )}
+                                    </Flex>
+                                )}
+                            </View>
 
-                        {/* Right: Navigation button */}
-                        <Button variant="secondary" onPress={handleNavigateBack}>
-                            All Projects
-                        </Button>
-                    </Flex>
-                    <Divider size="S" marginBottom="size-200" />
+                            {/* Right: Navigation button */}
+                            <Button variant="secondary" onPress={handleNavigateBack}>
+                                All Projects
+                            </Button>
+                        </Flex>
+                    </div>
+                </div>
+
+                <div className="w-full max-w-800 mx-auto px-4 pb-4">
 
                     {/* Center the grid of fixed-width buttons */}
                     <div className="dashboard-grid-container">

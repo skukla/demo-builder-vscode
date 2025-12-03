@@ -745,6 +745,13 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     outline: none !important;
 }
 
+/* Dashboard status header - matches Projects List header design */
+.dashboard-status-header {
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
+    margin-bottom: 16px !important;
+}
+
 /* Dashboard grid - center fixed-width buttons */
 .dashboard-grid-container {
     display: flex;
