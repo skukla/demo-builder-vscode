@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
@@ -14,17 +14,17 @@ import { Project } from '@/types';
  */
 export class CheckUpdatesCommand extends BaseCommand {
     /** Execution lock to prevent duplicate concurrent execution */
-    private static isExecuting = false;
+    private static lock = new ExecutionLock('CheckUpdates');
 
     async execute(): Promise<void> {
         // Prevent duplicate concurrent execution
-        if (CheckUpdatesCommand.isExecuting) {
-            this.logger.debug('[Updates] Skipping duplicate execution - already in progress');
+        if (CheckUpdatesCommand.lock.isLocked()) {
+            this.logger.debug('[Updates] Already in progress');
             return;
         }
 
-        CheckUpdatesCommand.isExecuting = true;
-        try {
+        await CheckUpdatesCommand.lock.run(async () => {
+            try {
             // Run update check with visible progress notification
             const { extensionUpdate, componentUpdates, project, hasUpdates } = await vscode.window.withProgress(
                 {
@@ -104,11 +104,10 @@ export class CheckUpdatesCommand extends BaseCommand {
                 await this.performUpdates(extensionUpdate, componentUpdates, project || null);
             }
       
-        } catch (error) {
-            await this.showError('Failed to check for updates', error as Error);
-        } finally {
-            CheckUpdatesCommand.isExecuting = false;
-        }
+            } catch (error) {
+                await this.showError('Failed to check for updates', error as Error);
+            }
+        });
     }
 
     /**

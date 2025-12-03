@@ -24,3 +24,5 @@ export { TIMEOUTS } from './timeoutConfig';
 export { formatDuration, formatMinutes } from './timeFormatting';
 
 export * from './promiseUtils';
+
+export { ExecutionLock } from './executionLock';

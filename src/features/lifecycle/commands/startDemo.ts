@@ -5,7 +5,7 @@ import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { updateFrontendState } from '@/core/state';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { validateNodeVersion } from '@/core/validation/securityValidation';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentIds, getComponentInstanceValues } from '@/types/typeGuards';
@@ -27,7 +27,7 @@ export class StartDemoCommand extends BaseCommand {
     private _processCleanup: ProcessCleanup | null = null;
 
     /** Execution lock to prevent duplicate concurrent execution */
-    private static isExecuting = false;
+    private static lock = new ExecutionLock('StartDemo');
 
     /** Maximum time to wait for demo to start */
     private readonly STARTUP_TIMEOUT = TIMEOUTS.DEMO_STARTUP_TIMEOUT;
@@ -118,13 +118,13 @@ export class StartDemoCommand extends BaseCommand {
     }
     public async execute(): Promise<void> {
         // Prevent duplicate concurrent execution
-        if (StartDemoCommand.isExecuting) {
-            this.logger.debug('[Start Demo] Skipping duplicate execution - already in progress');
+        if (StartDemoCommand.lock.isLocked()) {
+            this.logger.debug('[Start Demo] Already in progress');
             return;
         }
 
-        StartDemoCommand.isExecuting = true;
-        try {
+        await StartDemoCommand.lock.run(async () => {
+            try {
             const project = await this.stateManager.getCurrentProject();
             if (!project) {
                 await this.showWarning('No project found. Create a project first.');
@@ -329,10 +329,9 @@ export class StartDemoCommand extends BaseCommand {
             // Reset restart notification flag (user has restarted)
             await vscode.commands.executeCommand('demoBuilder._internal.restartActionTaken');
 
-        } catch (error) {
-            await this.showError('Failed to start demo', error as Error);
-        } finally {
-            StartDemoCommand.isExecuting = false;
-        }
+            } catch (error) {
+                await this.showError('Failed to start demo', error as Error);
+            }
+        });
     }
 }

@@ -3,8 +3,7 @@ import * as crypto from 'crypto';
 import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
 import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication';
-import { setLoadingState } from '@/core/utils/loadingHTML';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { ExecutionLock, setLoadingState, TIMEOUTS } from '@/core/utils';
 
 /**
  * Base class for commands that use webviews with robust communication
@@ -60,7 +59,8 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     private static disposalCallback?: (webviewId: string) => Promise<void>;
 
     // Track when we're transitioning between webviews to prevent auto-welcome
-    private static webviewTransitionInProgress = false;
+    private static transitionLock = new ExecutionLock('WebviewTransition');
+    private static transitionRelease: (() => void) | undefined;
     private static transitionTimeout?: NodeJS.Timeout;
 
     protected panel: vscode.WebviewPanel | undefined;
@@ -77,18 +77,24 @@ export abstract class BaseWebviewCommand extends BaseCommand {
     /**
      * Start a webview transition (prevents auto-welcome during transition)
      */
-    public static startWebviewTransition(): void {
+    public static async startWebviewTransition(): Promise<void> {
         // Clear existing timeout if present (safety for double-start)
         if (BaseWebviewCommand.transitionTimeout) {
             clearTimeout(BaseWebviewCommand.transitionTimeout);
         }
 
-        BaseWebviewCommand.webviewTransitionInProgress = true;
+        // Release existing lock if held
+        if (BaseWebviewCommand.transitionRelease) {
+            BaseWebviewCommand.transitionRelease();
+            BaseWebviewCommand.transitionRelease = undefined;
+        }
+
+        // Acquire lock
+        BaseWebviewCommand.transitionRelease = await BaseWebviewCommand.transitionLock.acquire();
 
         // Auto-clear after 3 seconds (safety timeout)
         BaseWebviewCommand.transitionTimeout = setTimeout(() => {
-            BaseWebviewCommand.webviewTransitionInProgress = false;
-            BaseWebviewCommand.transitionTimeout = undefined;
+            BaseWebviewCommand.endWebviewTransition();
         }, TIMEOUTS.WEBVIEW_TRANSITION);
     }
 
@@ -102,14 +108,18 @@ export abstract class BaseWebviewCommand extends BaseCommand {
             BaseWebviewCommand.transitionTimeout = undefined;
         }
 
-        BaseWebviewCommand.webviewTransitionInProgress = false;
+        // Release lock if held
+        if (BaseWebviewCommand.transitionRelease) {
+            BaseWebviewCommand.transitionRelease();
+            BaseWebviewCommand.transitionRelease = undefined;
+        }
     }
 
     /**
      * Check if a webview transition is in progress
      */
     public static isWebviewTransitionInProgress(): boolean {
-        return BaseWebviewCommand.webviewTransitionInProgress;
+        return BaseWebviewCommand.transitionLock.isLocked();
     }
 
     /**

@@ -93,7 +93,7 @@ export const handleSelectProject: MessageHandler<{ projectPath: string }> = asyn
         // Navigate to project dashboard
         // Note: The dashboard command handles disposing the Projects List panel
         // Start transition to prevent auto-open handler from firing during panel disposal
-        BaseWebviewCommand.startWebviewTransition();
+        await BaseWebviewCommand.startWebviewTransition();
         try {
             await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
         } catch (navError) {

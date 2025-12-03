@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { BaseCommand, BaseWebviewCommand } from '@/core/base';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { toError } from '@/types/typeGuards';
 
 export class DeleteProjectCommand extends BaseCommand {
@@ -13,91 +13,94 @@ export class DeleteProjectCommand extends BaseCommand {
     private readonly HANDLE_RELEASE_DELAY = TIMEOUTS.FILE_HANDLE_RELEASE;
 
     /** Execution lock to prevent duplicate concurrent execution */
-    private static isExecuting = false;
+    private static lock = new ExecutionLock('DeleteProject');
 
     public async execute(): Promise<void> {
         // Prevent duplicate concurrent execution
-        if (DeleteProjectCommand.isExecuting) {
-            this.logger.debug('[Delete Project] Skipping duplicate execution - already in progress');
+        if (DeleteProjectCommand.lock.isLocked()) {
+            this.logger.debug('[Delete Project] Already in progress');
             return;
         }
 
-        DeleteProjectCommand.isExecuting = true;
-        try {
-            const project = await this.stateManager.getCurrentProject();
-            if (!project) {
-                await this.showWarning('No project found to delete.');
-                return;
+        let deleted = false;
+        await DeleteProjectCommand.lock.run(async () => {
+            try {
+                const project = await this.stateManager.getCurrentProject();
+                if (!project) {
+                    await this.showWarning('No project found to delete.');
+                    return;
+                }
+
+                const confirm = await this.confirm(
+                    `Are you sure you want to delete project "${project.name}"?`,
+                    'This will remove all project files and configuration. This action cannot be undone.',
+                );
+
+                if (!confirm) {
+                    return;
+                }
+
+                await this.withProgress('Deleting project', async (_progress) => {
+                    // STEP 1: Stop demo if running
+                    if (project.status === 'running') {
+                        await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                        // No fixed grace period - stopDemo now waits for actual process exit
+                    }
+
+                    // Save project path before clearing state
+                    const projectPath = project.path;
+
+                    // STEP 1.5: Stop status bar timer BEFORE deleting files
+                    // This prevents race condition where timer calls getCurrentProject()
+                    // while files are being deleted, causing spurious reload warnings
+                    this.statusBar.reset();
+
+                    // STEP 2: Delete project files with retry logic
+                    if (projectPath) {
+                        this.logger.debug(`[Delete Project] Deleting directory: ${projectPath}`);
+
+                        // Wait for OS to release file handles (watchers, etc.)
+                        await new Promise(resolve => setTimeout(resolve, this.HANDLE_RELEASE_DELAY));
+
+                        // Delete with retry logic for transient filesystem errors
+                        // No post-deletion verification needed - fs.rm() success means deletion complete
+                        await this.deleteWithRetry(projectPath);
+                    }
+
+                    // STEP 3: Remove from recent projects list
+                    if (projectPath) {
+                        await this.stateManager.removeFromRecentProjects(projectPath);
+                    }
+
+                    // STEP 4: Clear state
+                    await this.stateManager.clearProject();
+
+                    // Note: Status bar already reset in step 1.5 (before file deletion)
+                    // to prevent race condition with timer-based getCurrentProject() calls
+                });
+
+                // Show auto-dismissing success notification (also logs to info channel)
+                this.showSuccessMessage(`Project "${project.name}" deleted`);
+                deleted = true;
+
+            } catch (error) {
+                await this.showError('Failed to delete project', error as Error);
             }
+        });
 
-            const confirm = await this.confirm(
-                `Are you sure you want to delete project "${project.name}"?`,
-                'This will remove all project files and configuration. This action cannot be undone.',
-            );
+        // Post-work only runs on successful deletion
+        if (deleted) {
+            // Close project-related panels (dashboard, configure) before navigation
+            this.closeProjectPanels();
 
-            if (!confirm) {
-                return;
+            // Navigate to Projects List (sidebar shows all projects)
+            // Outside try-catch: if this fails, deletion still succeeded
+            try {
+                await vscode.commands.executeCommand('demoBuilder.showProjectsList');
+            } catch {
+                // Ignore - projects list is optional post-deletion
+                this.logger.debug('[Delete Project] Projects List failed to open (non-critical)');
             }
-
-            await this.withProgress('Deleting project', async (_progress) => {
-                // STEP 1: Stop demo if running
-                if (project.status === 'running') {
-                    await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                    // No fixed grace period - stopDemo now waits for actual process exit
-                }
-
-                // Save project path before clearing state
-                const projectPath = project.path;
-
-                // STEP 1.5: Stop status bar timer BEFORE deleting files
-                // This prevents race condition where timer calls getCurrentProject()
-                // while files are being deleted, causing spurious reload warnings
-                this.statusBar.reset();
-
-                // STEP 2: Delete project files with retry logic
-                if (projectPath) {
-                    this.logger.debug(`[Delete Project] Deleting directory: ${projectPath}`);
-
-                    // Wait for OS to release file handles (watchers, etc.)
-                    await new Promise(resolve => setTimeout(resolve, this.HANDLE_RELEASE_DELAY));
-
-                    // Delete with retry logic for transient filesystem errors
-                    // No post-deletion verification needed - fs.rm() success means deletion complete
-                    await this.deleteWithRetry(projectPath);
-                }
-
-                // STEP 3: Remove from recent projects list
-                if (projectPath) {
-                    await this.stateManager.removeFromRecentProjects(projectPath);
-                }
-
-                // STEP 4: Clear state
-                await this.stateManager.clearProject();
-
-                // Note: Status bar already reset in step 1.5 (before file deletion)
-                // to prevent race condition with timer-based getCurrentProject() calls
-            });
-
-            // Show auto-dismissing success notification (also logs to info channel)
-            this.showSuccessMessage(`Project "${project.name}" deleted`);
-
-        } catch (error) {
-            await this.showError('Failed to delete project', error as Error);
-            return;
-        } finally {
-            DeleteProjectCommand.isExecuting = false;
-        }
-
-        // Close project-related panels (dashboard, configure) before navigation
-        this.closeProjectPanels();
-
-        // Navigate to Projects List (sidebar shows all projects)
-        // Outside try-catch: if this fails, deletion still succeeded
-        try {
-            await vscode.commands.executeCommand('demoBuilder.showProjectsList');
-        } catch {
-            // Ignore - projects list is optional post-deletion
-            this.logger.debug('[Delete Project] Projects List failed to open (non-critical)');
         }
     }
 

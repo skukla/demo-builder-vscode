@@ -5,7 +5,7 @@ import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Project } from '@/types/base';
 import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
@@ -16,7 +16,7 @@ import { formatAdobeCliError, extractMeshErrorSummary } from '../utils/errorForm
  */
 export class DeployMeshCommand extends BaseCommand {
     /** Execution lock to prevent duplicate concurrent execution */
-    private static isExecuting = false;
+    private static lock = new ExecutionLock('DeployMesh');
 
     constructor(
         context: vscode.ExtensionContext,
@@ -29,13 +29,13 @@ export class DeployMeshCommand extends BaseCommand {
 
     async execute(): Promise<void> {
         // Prevent duplicate concurrent execution
-        if (DeployMeshCommand.isExecuting) {
-            this.logger.debug('[Mesh Deployment] Skipping duplicate execution - already in progress');
+        if (DeployMeshCommand.lock.isLocked()) {
+            this.logger.debug('[Mesh Deployment] Already in progress');
             return;
         }
 
-        DeployMeshCommand.isExecuting = true;
-        try {
+        await DeployMeshCommand.lock.run(async () => {
+            try {
             // Get current project
             const project = await this.stateManager.getCurrentProject();
             if (!project) {
@@ -298,19 +298,18 @@ export class DeployMeshCommand extends BaseCommand {
                     vscode.commands.executeCommand('demoBuilder.showLogs');
                 }
             }
-        } catch (error) {
-            // Outer catch for any unexpected errors during validation/setup
-            this.logger.error('[Mesh Deployment] Unexpected error', error as Error);
-            const selection = await vscode.window.showErrorMessage(
-                'Failed to deploy API Mesh. Check logs for details.',
-                'View Logs'
-            );
-            if (selection === 'View Logs') {
-                vscode.commands.executeCommand('demoBuilder.showLogs');
+            } catch (error) {
+                // Outer catch for any unexpected errors during validation/setup
+                this.logger.error('[Mesh Deployment] Unexpected error', error as Error);
+                const selection = await vscode.window.showErrorMessage(
+                    'Failed to deploy API Mesh. Check logs for details.',
+                    'View Logs'
+                );
+                if (selection === 'View Logs') {
+                    vscode.commands.executeCommand('demoBuilder.showLogs');
+                }
             }
-        } finally {
-            DeployMeshCommand.isExecuting = false;
-        }
+        });
     }
 
     /**

@@ -17,14 +17,14 @@ import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { DEFAULT_SHELL } from '@/types/shell';
 
 export class StopDemoCommand extends BaseCommand {
     private _processCleanup: ProcessCleanup | null = null;
 
     /** Execution lock to prevent duplicate concurrent execution */
-    private static isExecuting = false;
+    private static lock = new ExecutionLock('StopDemo');
 
     /**
      * Get ProcessCleanup instance (lazy initialization)
@@ -99,13 +99,13 @@ export class StopDemoCommand extends BaseCommand {
 
     public async execute(): Promise<void> {
         // Prevent duplicate concurrent execution
-        if (StopDemoCommand.isExecuting) {
-            this.logger.debug('[Stop Demo] Skipping duplicate execution - already in progress');
+        if (StopDemoCommand.lock.isLocked()) {
+            this.logger.debug('[Stop Demo] Already in progress');
             return;
         }
 
-        StopDemoCommand.isExecuting = true;
-        try {
+        await StopDemoCommand.lock.run(async () => {
+            try {
             const project = await this.stateManager.getCurrentProject();
             if (!project) {
                 // Silently return - no project means nothing to stop
@@ -193,10 +193,9 @@ export class StopDemoCommand extends BaseCommand {
             // Status bar update only (notification already shown above)
             this.showStatusMessage('Demo stopped');
 
-        } catch (error) {
-            await this.showError('Failed to stop demo', error as Error);
-        } finally {
-            StopDemoCommand.isExecuting = false;
-        }
+            } catch (error) {
+                await this.showError('Failed to stop demo', error as Error);
+            }
+        });
     }
 }

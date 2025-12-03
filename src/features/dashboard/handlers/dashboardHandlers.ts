@@ -745,7 +745,7 @@ export const handleNavigateBack: MessageHandler = async (context) => {
         await context.stateManager.clearProject();
 
         // Start transition BEFORE disposing to prevent disposal callback from firing
-        BaseWebviewCommand.startWebviewTransition();
+        await BaseWebviewCommand.startWebviewTransition();
         try {
             // Dispose Dashboard panel before opening Projects List
             // This prevents the blank webview issue during transition
