@@ -38,12 +38,6 @@ export interface ProjectsDashboardProps {
     onRefresh?: () => void;
     /** Whether data has loaded at least once */
     hasLoadedOnce?: boolean;
-    /** Callback when Documentation icon is clicked */
-    onOpenDocs?: () => void;
-    /** Callback when Help icon is clicked */
-    onOpenHelp?: () => void;
-    /** Callback when Settings icon is clicked */
-    onOpenSettings?: () => void;
 }
 
 /**
@@ -64,9 +58,6 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     isRefreshing = false,
     onRefresh,
     hasLoadedOnce = true,
-    onOpenDocs,
-    onOpenHelp,
-    onOpenSettings,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -115,9 +106,6 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                 >
                     <DashboardEmptyState
                         onCreate={onCreateProject}
-                        onOpenDocs={onOpenDocs}
-                        onOpenHelp={onOpenHelp}
-                        onOpenSettings={onOpenSettings}
                     />
                 </Flex>
             </View>

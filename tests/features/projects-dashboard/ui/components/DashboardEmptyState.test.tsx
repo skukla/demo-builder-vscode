@@ -95,46 +95,10 @@ describe('DashboardEmptyState', () => {
             expect(onCreate).toHaveBeenCalled();
         });
 
-        it('should call onOpenDocs when Documentation icon is clicked', () => {
-            const onOpenDocs = jest.fn();
-            renderWithProvider(
-                <DashboardEmptyState onCreate={jest.fn()} onOpenDocs={onOpenDocs} />
-            );
-
-            const button = screen.getByRole('button', { name: /documentation/i });
-            fireEvent.click(button);
-
-            expect(onOpenDocs).toHaveBeenCalledTimes(1);
-        });
-
-        it('should call onOpenHelp when Help icon is clicked', () => {
-            const onOpenHelp = jest.fn();
-            renderWithProvider(
-                <DashboardEmptyState onCreate={jest.fn()} onOpenHelp={onOpenHelp} />
-            );
-
-            const button = screen.getByRole('button', { name: /get help/i });
-            fireEvent.click(button);
-
-            expect(onOpenHelp).toHaveBeenCalledTimes(1);
-        });
-
-        it('should call onOpenSettings when Settings icon is clicked', () => {
-            const onOpenSettings = jest.fn();
-            renderWithProvider(
-                <DashboardEmptyState onCreate={jest.fn()} onOpenSettings={onOpenSettings} />
-            );
-
-            const button = screen.getByRole('button', { name: /settings/i });
-            fireEvent.click(button);
-
-            expect(onOpenSettings).toHaveBeenCalledTimes(1);
-        });
-
-        it('should not render icon row when no icon callbacks provided', () => {
+        it('should only render the main CTA button', () => {
             renderWithProvider(<DashboardEmptyState onCreate={jest.fn()} />);
 
-            // Only the main CTA button should exist
+            // Only the main CTA button should exist (utility icons are in the sidebar)
             const buttons = screen.getAllByRole('button');
             expect(buttons).toHaveLength(1);
         });
