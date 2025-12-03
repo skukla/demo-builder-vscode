@@ -95,6 +95,9 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
 
+        // Note: projectsViewMode is included in getProjects response
+        // to avoid race condition with init message
+
         return {
             theme,
         };
@@ -114,6 +117,16 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
                 return this.handlerRegistry.handle(context, messageType, data);
             });
         }
+
+        // Listen for configuration changes and notify webview
+        const configListener = vscode.workspace.onDidChangeConfiguration((e) => {
+            if (e.affectsConfiguration('demoBuilder.projectsViewMode')) {
+                const config = vscode.workspace.getConfiguration('demoBuilder');
+                const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
+                this.sendMessage('configChanged', { projectsViewMode });
+            }
+        });
+        this.disposables.add(configListener);
     }
 
     // ============================================================================
@@ -157,9 +170,24 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
             await this.initializeCommunication();
         }
 
-        // Always send fresh project list after revealing panel
-        // This ensures the UI is up-to-date after operations like delete
+        // Always send fresh data after revealing panel
+        // This ensures the UI is up-to-date after operations like delete or config changes
         await this.refreshProjectsList();
+        await this.refreshConfig();
+    }
+
+    /**
+     * Send current config to webview
+     * Called after reveal to ensure config is up-to-date
+     */
+    private async refreshConfig(): Promise<void> {
+        if (!this.communicationManager) {
+            return;
+        }
+
+        const config = vscode.workspace.getConfiguration('demoBuilder');
+        const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
+        await this.sendMessage('configChanged', { projectsViewMode });
     }
 
     /**

@@ -15,6 +15,7 @@ import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/ha
  * Get all projects from StateManager
  *
  * Loads the list of projects and enriches with full project data.
+ * Also includes current config for initial render.
  */
 export const handleGetProjects: MessageHandler = async (
     context: HandlerContext,
@@ -32,9 +33,13 @@ export const handleGetProjects: MessageHandler = async (
             }
         }
 
+        // Include config in response (avoids race condition with init message)
+        const config = vscode.workspace.getConfiguration('demoBuilder');
+        const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
+
         return {
             success: true,
-            data: { projects },
+            data: { projects, projectsViewMode },
         };
     } catch (error) {
         context.logger.error('Failed to load projects', error instanceof Error ? error : undefined);

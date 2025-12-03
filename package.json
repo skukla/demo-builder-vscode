@@ -108,6 +108,15 @@
           ],
           "default": "debug",
           "description": "Log level for Demo Builder Debug Logs channel: debug (normal) or trace (verbose with stack traces)"
+        },
+        "demoBuilder.projectsViewMode": {
+          "type": "string",
+          "enum": [
+            "cards",
+            "rows"
+          ],
+          "default": "cards",
+          "description": "Default view mode for the projects list: cards (grid layout) or rows (list layout)"
         }
       }
     },

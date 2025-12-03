@@ -18,11 +18,21 @@ jest.mock('vscode', () => ({
     commands: {
         executeCommand: jest.fn(),
     },
+    workspace: {
+        getConfiguration: jest.fn().mockReturnValue({
+            get: jest.fn().mockReturnValue('cards'),
+        }),
+    },
 }), { virtual: true });
 
 describe('dashboardHandlers', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        // Reset vscode config mock to default
+        const vscode = require('vscode');
+        vscode.workspace.getConfiguration.mockReturnValue({
+            get: jest.fn().mockReturnValue('cards'),
+        });
     });
 
     describe('handleGetProjects', () => {
@@ -39,6 +49,19 @@ describe('dashboardHandlers', () => {
             expect((result.data as any).projects).toHaveLength(3);
         });
 
+        it('should include projectsViewMode from config', async () => {
+            const vscode = require('vscode');
+            vscode.workspace.getConfiguration.mockReturnValue({
+                get: jest.fn().mockReturnValue('rows'),
+            });
+            const context = createMockHandlerContext([]);
+
+            const result = await handleGetProjects(context as any);
+
+            expect(result.success).toBe(true);
+            expect((result.data as any).projectsViewMode).toBe('rows');
+        });
+
         it('should return empty array when no projects exist', async () => {
             const context = createMockHandlerContext([]);
 
@@ -46,7 +69,7 @@ describe('dashboardHandlers', () => {
 
             expect(result).toEqual({
                 success: true,
-                data: { projects: [] },
+                data: { projects: [], projectsViewMode: 'cards' },
             });
         });
 

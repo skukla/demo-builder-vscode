@@ -7,7 +7,7 @@
  * - Rows: Full-width horizontal list
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
     View,
     Flex,
@@ -39,6 +39,8 @@ export interface ProjectsDashboardProps {
     onRefresh?: () => void;
     /** Whether data has loaded at least once */
     hasLoadedOnce?: boolean;
+    /** Initial view mode from user settings */
+    initialViewMode?: ViewMode;
 }
 
 /**
@@ -59,9 +61,26 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     isRefreshing = false,
     onRefresh,
     hasLoadedOnce = true,
+    initialViewMode = 'cards',
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [viewMode, setViewMode] = useState<ViewMode>('cards');
+    const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
+    // Track if user has manually overridden view mode this session
+    const userOverrodeViewModeRef = useRef(false);
+
+    // Sync viewMode when initialViewMode changes (from settings)
+    // Only sync if user hasn't manually overridden during this session
+    useEffect(() => {
+        if (!userOverrodeViewModeRef.current) {
+            setViewMode(initialViewMode);
+        }
+    }, [initialViewMode]);
+
+    // Handle view mode change - temporary session override (no persist)
+    const handleViewModeChange = (mode: ViewMode) => {
+        userOverrodeViewModeRef.current = true;
+        setViewMode(mode);
+    };
 
     // Filter projects based on search query
     const filteredProjects = useMemo(() => {
@@ -144,7 +163,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                                 isRefreshing={isRefreshing}
                                 refreshAriaLabel="Refresh projects"
                                 viewMode={viewMode}
-                                onViewModeChange={setViewMode}
+                                onViewModeChange={handleViewModeChange}
                                 hasLoadedOnce={hasLoadedOnce}
                                 alwaysShowCount={true}
                             />
@@ -152,7 +171,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         {/* New Project button */}
                         <Button variant="accent" onPress={onCreateProject}>
                             <Add size="S" />
-                            <Text>New Project</Text>
+                            <Text>New</Text>
                         </Button>
                     </Flex>
                 </div>
