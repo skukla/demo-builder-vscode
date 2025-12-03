@@ -759,9 +759,9 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     align-items: center !important;
 }
 
-/* Match grid width so button aligns with grid: 3 × 140px + 2 × 24px = 468px */
+/* Match grid width so button aligns with grid: 3 × 234px + 2 × 32px = 766px */
 .dashboard-status-content {
-    width: 468px;
+    width: 766px;
     margin: 0 auto;
 }
 
@@ -777,16 +777,16 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     grid-template-columns: repeat(3, auto) !important; /* Auto-size columns to content */
 }
 
-/* Dashboard action buttons - square buttons */
+/* Dashboard action buttons - scaled to fill container width */
 .dashboard-action-button {
     background: var(--spectrum-global-color-gray-100) !important;
-    border-radius: 6px !important;
-    padding: 16px !important;
+    border-radius: 8px !important;
+    padding: 24px !important;
     transition: all 0.15s ease !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     text-align: center !important;
-    /* Slightly wider than tall to fit labels and fill space */
-    width: 140px !important;
+    /* Scaled up: 234px width maintains proportion with 766px grid */
+    width: 234px !important;
     height: auto !important;
     aspect-ratio: 4 / 3 !important;
     box-sizing: border-box !important;
@@ -795,6 +795,12 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     justify-content: center !important;
     align-items: center !important;
     cursor: pointer !important;
+}
+
+/* Scale up icons inside dashboard buttons */
+.dashboard-action-button svg {
+    width: 40px !important;
+    height: 40px !important;
 }
 
 .dashboard-action-button:hover,
@@ -1421,8 +1427,14 @@ button[class*="spectrum-Button"][class*="cta"]:active {
    Used for consistent styling of icon labels
    =========================================== */
 .icon-label {
-    font-size: 12px !important;
-    margin-top: 4px !important;
+    font-size: 14px !important;
+    margin-top: 8px !important;
+}
+
+/* Larger labels for dashboard buttons */
+.dashboard-action-button .icon-label {
+    font-size: 16px !important;
+    margin-top: 12px !important;
 }
 
 /* ===========================================

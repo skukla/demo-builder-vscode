@@ -301,7 +301,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
 
                     {/* Center the grid of fixed-width buttons */}
                     <div className="dashboard-grid-container">
-                    <GridLayout columns={3} gap="size-300" className="dashboard-grid">
+                    <GridLayout columns={3} gap="size-400" className="dashboard-grid">
                         {/* Start/Stop */}
                         {!isRunning && (
                             <ActionButton
