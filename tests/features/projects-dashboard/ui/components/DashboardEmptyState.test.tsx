@@ -26,12 +26,12 @@ describe('DashboardEmptyState', () => {
             expect(screen.getByText(/no projects yet/i)).toBeInTheDocument();
         });
 
-        it('should render "New Project" CTA button', () => {
+        it('should render "New" CTA button', () => {
             renderWithProvider(
                 <DashboardEmptyState onCreate={jest.fn()} />
             );
 
-            const button = screen.getByRole('button', { name: /new project/i });
+            const button = screen.getByRole('button', { name: /^new$/i });
             expect(button).toBeInTheDocument();
         });
 
@@ -77,7 +77,7 @@ describe('DashboardEmptyState', () => {
             const onCreate = jest.fn();
             renderWithProvider(<DashboardEmptyState onCreate={onCreate} />);
 
-            const button = screen.getByRole('button', { name: /new project/i });
+            const button = screen.getByRole('button', { name: /^new$/i });
             fireEvent.click(button);
 
             expect(onCreate).toHaveBeenCalledTimes(1);
@@ -87,7 +87,7 @@ describe('DashboardEmptyState', () => {
             const onCreate = jest.fn();
             renderWithProvider(<DashboardEmptyState onCreate={onCreate} />);
 
-            const button = screen.getByRole('button', { name: /new project/i });
+            const button = screen.getByRole('button', { name: /^new$/i });
             // React Spectrum buttons handle keyboard via onPress, test via click
             // The button itself handles Enter/Space internally
             fireEvent.click(button);

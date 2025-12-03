@@ -19,7 +19,7 @@
  *   title="Your Projects"
  *   subtitle="Select a project to manage or create a new one"
  *   backButton={{ label: "Back", onPress: handleBack }}
- *   action={<Button variant="accent">New Project</Button>}
+ *   action={<Button variant="accent">New</Button>}
  *   constrainWidth={true}
  * />
  * ```

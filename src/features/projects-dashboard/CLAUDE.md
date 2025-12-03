@@ -83,7 +83,7 @@ Empty state for first-time users with CTA and utility icons.
 **Props:**
 - `onCreate: () => void` - Create button click handler
 - `title?: string` - Custom title (default: "No projects yet")
-- `buttonText?: string` - Custom button text (default: "New Project")
+- `buttonText?: string` - Custom button text (default: "New")
 - `autoFocus?: boolean` - Auto-focus the button
 - `onOpenDocs?: () => void` - Documentation icon click handler
 - `onOpenHelp?: () => void` - Help icon click handler

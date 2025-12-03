@@ -13,7 +13,7 @@ export interface DashboardEmptyStateProps {
     onCreate: () => void;
     /** Custom title (defaults to "No projects yet") */
     title?: string;
-    /** Custom button text (defaults to "New Project") */
+    /** Custom button text (defaults to "New") */
     buttonText?: string;
     /** Whether to auto-focus the button */
     autoFocus?: boolean;
@@ -25,7 +25,7 @@ export interface DashboardEmptyStateProps {
 export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
     onCreate,
     title = 'No projects yet',
-    buttonText = 'New Project',
+    buttonText = 'New',
     autoFocus = false,
 }) => {
     const buttonRef = useRef<HTMLButtonElement>(null);

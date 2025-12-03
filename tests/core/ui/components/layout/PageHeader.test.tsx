@@ -90,12 +90,12 @@ describe('PageHeader', () => {
             renderWithProvider(
                 <PageHeader
                     title="Page Title"
-                    action={<Button variant="accent">New Project</Button>}
+                    action={<Button variant="accent">New</Button>}
                 />
             );
 
             // Then: Action button appears
-            expect(screen.getByRole('button', { name: 'New Project' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
         });
 
         it('should render any React node as action', () => {
@@ -252,7 +252,7 @@ describe('PageHeader', () => {
                     title="Your Projects"
                     subtitle="Select a project to manage"
                     backButton={{ label: 'Back', onPress: mockBack }}
-                    action={<Button variant="accent" onPress={mockAction}>New Project</Button>}
+                    action={<Button variant="accent" onPress={mockAction}>New</Button>}
                     constrainWidth={true}
                 />
             );
@@ -261,7 +261,7 @@ describe('PageHeader', () => {
             expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Your Projects');
             expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Select a project to manage');
             expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: 'New Project' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
         });
 
         it('should handle interactions correctly when all features present', () => {
