@@ -752,6 +752,11 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     margin-bottom: 16px !important;
 }
 
+/* Match the height of the Projects List search header so content aligns */
+.dashboard-status-header > div {
+    min-height: 84px !important;
+}
+
 /* Dashboard grid - center fixed-width buttons */
 .dashboard-grid-container {
     display: flex;
