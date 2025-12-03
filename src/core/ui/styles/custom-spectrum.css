@@ -1027,7 +1027,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 .project-row-list {
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px !important;
+    gap: 12px !important; /* Match .projects-grid gap for consistent view switching */
 }
 
 .project-row {
