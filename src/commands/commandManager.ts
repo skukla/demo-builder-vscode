@@ -92,8 +92,6 @@ export class CommandManager {
                 const sidebarProvider = ServiceLocator.getSidebarProvider();
                 await sidebarProvider.setShowingProjectsList(false);
             }
-            // Hide sidebar on project dashboard (user can show via button to see components tree)
-            await vscode.commands.executeCommand('workbench.action.closeSidebar');
             await projectDashboard.execute();
         });
 

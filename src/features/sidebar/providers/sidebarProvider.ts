@@ -7,6 +7,7 @@
 
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
+import { BaseWebviewCommand } from '@/core/base';
 import type { StateManager } from '@/core/state/stateManager';
 import type { Logger } from '@/core/logging/logger';
 import type { SidebarContext } from '../types';
@@ -76,16 +77,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         });
 
         // When sidebar is revealed (user clicks extension icon), auto-open the main dashboard
-        // Only if not in wizard mode and not already showing projects list
+        // Only if not in wizard mode and no webview panels are currently open
         webviewView.onDidChangeVisibility(() => {
-            if (webviewView.visible && !this.wizardContext && !this.showingProjectsList) {
+            if (webviewView.visible && !this.wizardContext && !this.hasOpenWebview()) {
                 this.openMainDashboard();
             }
         });
 
         // Also open on initial resolve (first time sidebar is shown)
-        // Skip if already showing projects list
-        if (!this.wizardContext && !this.showingProjectsList) {
+        // Skip if a webview panel is already open
+        if (!this.wizardContext && !this.hasOpenWebview()) {
             this.openMainDashboard();
         }
 
@@ -93,21 +94,22 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     /**
-     * Open the appropriate main dashboard based on current state
+     * Check if any webview panel is currently open
+     */
+    private hasOpenWebview(): boolean {
+        return BaseWebviewCommand.getActivePanelCount() > 0;
+    }
+
+    /**
+     * Open the Projects List as the home screen
+     * Always opens Projects List regardless of whether a project is loaded
      */
     private async openMainDashboard(): Promise<void> {
         try {
-            const currentProject = await this.stateManager.getCurrentProject();
-            if (currentProject) {
-                // Project is selected - show project dashboard
-                await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
-            } else {
-                // No project - show projects list
-                await vscode.commands.executeCommand('demoBuilder.showProjectsList');
-            }
+            await vscode.commands.executeCommand('demoBuilder.showProjectsList');
         } catch (error) {
             this.logger.error(
-                'Failed to open main dashboard',
+                'Failed to open projects list',
                 error instanceof Error ? error : undefined
             );
         }
