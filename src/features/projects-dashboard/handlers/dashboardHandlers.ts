@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
+import { sessionUIState } from '@/core/state/sessionUIState';
 import { validateProjectPath } from '@/core/validation/securityValidation';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -34,8 +35,10 @@ export const handleGetProjects: MessageHandler = async (
         }
 
         // Include config in response (avoids race condition with init message)
+        // Session override takes precedence over VS Code setting
         const config = vscode.workspace.getConfiguration('demoBuilder');
-        const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
+        const configViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
+        const projectsViewMode = sessionUIState.viewModeOverride ?? configViewMode;
 
         return {
             success: true,
@@ -205,3 +208,28 @@ export const handleOpenSettings: MessageHandler = async (
         };
     }
 };
+
+/**
+ * Set view mode override for the session
+ *
+ * Persists the user's view mode preference for this session,
+ * overriding the VS Code setting until extension is reloaded.
+ */
+export const handleSetViewModeOverride: MessageHandler<{ viewMode: 'cards' | 'rows' }> = async (
+    _context: HandlerContext,
+    payload?: { viewMode: 'cards' | 'rows' },
+): Promise<HandlerResponse> => {
+    if (payload?.viewMode) {
+        sessionUIState.viewModeOverride = payload.viewMode;
+    }
+    return { success: true };
+};
+
+/**
+ * Reset view mode session state - for testing
+ * @internal
+ * @deprecated Use sessionUIState.reset() instead
+ */
+export function resetViewModeOverride(): void {
+    sessionUIState.viewModeOverride = undefined;
+}

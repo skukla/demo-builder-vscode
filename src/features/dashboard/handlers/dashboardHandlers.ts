@@ -9,6 +9,7 @@ import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
+import { sessionUIState } from '@/core/state/sessionUIState';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
 import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
@@ -17,10 +18,7 @@ import { Project, ComponentInstance } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
-import { toggleLogsPanel, resetLogsViewState } from '@/features/lifecycle/handlers/lifecycleHandlers';
-
-// Track toggle state for components view
-let isComponentsViewShown = false;
+import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -698,14 +696,14 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
  * Switches between UtilityBar (default) and Components tree
  */
 export const handleViewComponents: MessageHandler = async () => {
-    if (isComponentsViewShown) {
+    if (sessionUIState.isComponentsViewShown) {
         // Hide components, show UtilityBar
         await vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', false);
-        isComponentsViewShown = false;
+        sessionUIState.isComponentsViewShown = false;
     } else {
         // Show components, hide UtilityBar
         await vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', true);
-        isComponentsViewShown = true;
+        sessionUIState.isComponentsViewShown = true;
     }
     return { success: true };
 };
@@ -714,8 +712,7 @@ export const handleViewComponents: MessageHandler = async () => {
  * Reset toggle states (called when navigating away from dashboard)
  */
 export function resetToggleStates(): void {
-    isComponentsViewShown = false;
-    resetLogsViewState();
+    sessionUIState.resetPanelState();
     // Also hide the components panel
     vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', false);
 }

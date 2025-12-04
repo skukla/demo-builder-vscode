@@ -46,7 +46,7 @@ const ProjectsDashboardApp: React.FC = () => {
 
             if (response?.success && response.data?.projects) {
                 projectList = response.data.projects;
-                // Set view mode from config (included in response to avoid race condition)
+                // View mode comes from backend (includes session override if set)
                 if (response.data.projectsViewMode) {
                     setInitialViewMode(response.data.projectsViewMode);
                 }
@@ -71,10 +71,13 @@ const ProjectsDashboardApp: React.FC = () => {
         }
 
         // Subscribe to configuration changes (live updates from VS Code settings)
+        // Note: Session overrides are handled on the backend, so we can apply config changes here
+        // The backend will continue to return the session override until it's cleared
         const unsubscribeConfig = webviewClient.onMessage('configChanged', (data) => {
             const configData = data as { projectsViewMode?: 'cards' | 'rows' } | undefined;
             if (configData?.projectsViewMode) {
-                setInitialViewMode(configData.projectsViewMode);
+                // Re-fetch to get the proper view mode (backend handles override logic)
+                fetchProjects(true);
             }
         });
 
@@ -119,6 +122,13 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
+    // Handle view mode override - saves to backend for session persistence
+    const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
+        setInitialViewMode(mode);
+        // Persist to backend so it survives webview recreations
+        webviewClient.postMessage('setViewModeOverride', { viewMode: mode });
+    }, []);
+
     return (
         <ProjectsDashboard
             projects={projects}
@@ -129,6 +139,7 @@ const ProjectsDashboardApp: React.FC = () => {
             onRefresh={handleRefresh}
             hasLoadedOnce={hasLoadedOnce}
             initialViewMode={initialViewMode}
+            onViewModeOverride={handleViewModeOverride}
         />
     );
 };

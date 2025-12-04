@@ -7,7 +7,7 @@
  * - Rows: Full-width horizontal list
  */
 
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     View,
     Flex,
@@ -39,8 +39,10 @@ export interface ProjectsDashboardProps {
     onRefresh?: () => void;
     /** Whether data has loaded at least once */
     hasLoadedOnce?: boolean;
-    /** Initial view mode from user settings */
+    /** Initial view mode from user settings or session override */
     initialViewMode?: ViewMode;
+    /** Callback when user overrides view mode (persists for session) */
+    onViewModeOverride?: (mode: ViewMode) => void;
 }
 
 /**
@@ -62,24 +64,21 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     onRefresh,
     hasLoadedOnce = true,
     initialViewMode = 'cards',
+    onViewModeOverride,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
-    // Track if user has manually overridden view mode this session
-    const userOverrodeViewModeRef = useRef(false);
 
-    // Sync viewMode when initialViewMode changes (from settings)
-    // Only sync if user hasn't manually overridden during this session
+    // Sync viewMode when initialViewMode changes (from parent/settings)
     useEffect(() => {
-        if (!userOverrodeViewModeRef.current) {
-            setViewMode(initialViewMode);
-        }
+        setViewMode(initialViewMode);
     }, [initialViewMode]);
 
-    // Handle view mode change - temporary session override (no persist)
+    // Handle view mode change - notify parent for session persistence
     const handleViewModeChange = (mode: ViewMode) => {
-        userOverrodeViewModeRef.current = true;
         setViewMode(mode);
+        // Notify parent to persist override for session
+        onViewModeOverride?.(mode);
     };
 
     // Filter projects based on search query

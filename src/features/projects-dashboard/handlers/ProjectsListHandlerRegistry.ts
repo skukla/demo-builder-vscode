@@ -34,5 +34,8 @@ export class ProjectsListHandlerRegistry extends BaseHandlerRegistry {
         this.handlers.set('openDocs', handlers.handleOpenDocs);
         this.handlers.set('openHelp', handlers.handleOpenHelp);
         this.handlers.set('openSettings', handlers.handleOpenSettings);
+
+        // View mode override (session persistence)
+        this.handlers.set('setViewModeOverride', handlers.handleSetViewModeOverride as MessageHandler);
     }
 }

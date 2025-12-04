@@ -12,6 +12,7 @@
 import * as vscode from 'vscode';
 import { validateProjectPath, validateURL } from '@/core/validation';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { sessionUIState } from '@/core/state/sessionUIState';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult, DataResult } from '@/types/results';
@@ -281,9 +282,6 @@ export async function handleOpenAdobeConsole(
     }
 }
 
-// Track logs panel visibility state for toggle behavior (shared across all handlers)
-let isLogsViewShown = false;
-
 /**
  * Toggle the logs output panel
  *
@@ -291,22 +289,23 @@ let isLogsViewShown = false;
  * Returns the new visibility state.
  */
 export async function toggleLogsPanel(): Promise<boolean> {
-    if (isLogsViewShown) {
+    if (sessionUIState.isLogsViewShown) {
         await vscode.commands.executeCommand('workbench.action.closePanel');
-        isLogsViewShown = false;
+        sessionUIState.isLogsViewShown = false;
     } else {
         await vscode.commands.executeCommand('demoBuilder.showLogs');
-        isLogsViewShown = true;
+        sessionUIState.isLogsViewShown = true;
     }
-    return isLogsViewShown;
+    return sessionUIState.isLogsViewShown;
 }
 
 /**
  * Reset logs view state - for testing only
  * @internal
+ * @deprecated Use sessionUIState.reset() instead
  */
 export function resetLogsViewState(): void {
-    isLogsViewShown = false;
+    sessionUIState.isLogsViewShown = false;
 }
 
 /**
