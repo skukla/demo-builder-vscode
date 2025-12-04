@@ -35,6 +35,7 @@ export class HandlerRegistry extends BaseHandlerRegistry {
         this.handlers.set('cancel-mesh-creation', lifecycle.handleCancelMeshCreation as MessageHandler);
         this.handlers.set('cancel-auth-polling', lifecycle.handleCancelAuthPolling as MessageHandler);
         this.handlers.set('open-adobe-console', lifecycle.handleOpenAdobeConsole as MessageHandler);
+        this.handlers.set('show-logs', lifecycle.handleShowLogs as MessageHandler);
 
         // Prerequisite handlers
         this.handlers.set('check-prerequisites', prerequisites.handleCheckPrerequisites as MessageHandler);

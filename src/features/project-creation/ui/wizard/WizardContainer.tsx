@@ -416,6 +416,10 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
         vscode.postMessage('cancel');
     }, []);
 
+    const handleShowLogs = useCallback(() => {
+        vscode.postMessage('show-logs');
+    }, []);
+
     const goBack = useCallback(() => {
         const currentIndex = getCurrentStepIndex();
         if (currentIndex === 0) {
@@ -535,6 +539,15 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
                                     isDisabled={isConfirmingSelection}
                                 >
                                     Cancel
+                                </Button>
+                            }
+                            centerContent={
+                                <Button
+                                    variant="secondary"
+                                    onPress={handleShowLogs}
+                                    isQuiet
+                                >
+                                    Logs
                                 </Button>
                             }
                             rightContent={

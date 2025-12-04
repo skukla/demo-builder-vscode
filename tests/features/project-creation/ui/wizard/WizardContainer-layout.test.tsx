@@ -169,6 +169,51 @@ describe('WizardContainer - Layout Components', () => {
         });
     });
 
+    describe('PageFooter - Logs Button (centerContent)', () => {
+        it('should display Logs button in footer center content', () => {
+            renderWithTheme(
+                <WizardContainer
+                    componentDefaults={createMockComponentDefaults()}
+                    wizardSteps={createMockWizardSteps()}
+                />
+            );
+
+            // Logs button should be present in the footer
+            expect(screen.getByRole('button', { name: /logs/i })).toBeInTheDocument();
+        });
+
+        it('should trigger show-logs message when Logs button is clicked', async () => {
+            const user = userEvent.setup();
+            const { mockPostMessage } = require('./WizardContainer.testUtils');
+
+            renderWithTheme(
+                <WizardContainer
+                    componentDefaults={createMockComponentDefaults()}
+                    wizardSteps={createMockWizardSteps()}
+                />
+            );
+
+            const logsButton = screen.getByRole('button', { name: /logs/i });
+            await user.click(logsButton);
+
+            expect(mockPostMessage).toHaveBeenCalledWith('show-logs');
+        });
+
+        it('should not be disabled during confirmation (utility button)', async () => {
+            // Logs button is a utility action that should remain enabled
+            // even during backend calls (isConfirmingSelection = true)
+            renderWithTheme(
+                <WizardContainer
+                    componentDefaults={createMockComponentDefaults()}
+                    wizardSteps={createMockWizardSteps()}
+                />
+            );
+
+            const logsButton = screen.getByRole('button', { name: /logs/i });
+            expect(logsButton).not.toBeDisabled();
+        });
+    });
+
     describe('Loading Overlay', () => {
         it('should still display loading overlay during backend calls', async () => {
             // The loading overlay is rendered in step content area, not in footer

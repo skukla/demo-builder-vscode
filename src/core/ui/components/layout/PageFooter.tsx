@@ -1,19 +1,20 @@
 /**
  * PageFooter Component
  *
- * Provides a consistent page footer pattern with left/right content composition.
+ * Provides a consistent page footer pattern with left/center/right content composition.
  * Uses the same composition pattern as TwoColumnLayout (leftContent/rightContent).
  *
  * Used in:
- * - WizardContainer (Cancel | Back + Continue buttons)
+ * - WizardContainer (Cancel | Logs | Back + Continue buttons)
  * - ConfigureScreen (Close | Save Changes buttons)
  * - Page-level screens requiring consistent footer styling
  *
  * @example
  * ```tsx
- * // Wizard footer pattern
+ * // Wizard footer pattern with center content
  * <PageFooter
  *   leftContent={<Button variant="secondary" isQuiet>Cancel</Button>}
+ *   centerContent={<ActionButton isQuiet><ViewList /><Text>Logs</Text></ActionButton>}
  *   rightContent={
  *     <Flex gap="size-100">
  *       <Button variant="secondary" isQuiet>Back</Button>
@@ -23,7 +24,7 @@
  *   constrainWidth={true}
  * />
  *
- * // Configure screen pattern
+ * // Configure screen pattern (no center content)
  * <PageFooter
  *   leftContent={<Button variant="secondary" isQuiet>Close</Button>}
  *   rightContent={<Button variant="accent">Save Changes</Button>}
@@ -38,6 +39,8 @@ import { cn } from '@/core/ui/utils/classNames';
 export interface PageFooterProps {
     /** Content for the left side of the footer (typically Cancel/Close button) */
     leftContent?: React.ReactNode;
+    /** Content for the center of the footer (typically utility buttons like Logs) */
+    centerContent?: React.ReactNode;
     /** Content for the right side of the footer (typically action buttons) */
     rightContent?: React.ReactNode;
     /** Whether to constrain content to max-w-800 (default: true) */
@@ -57,13 +60,15 @@ export interface PageFooterProps {
  */
 export const PageFooter: React.FC<PageFooterProps> = ({
     leftContent,
+    centerContent,
     rightContent,
     constrainWidth = true,
     className,
 }) => {
     const footerContent = (
-        <Flex justifyContent="space-between" width="100%">
+        <Flex justifyContent="space-between" alignItems="center" width="100%">
             <View>{leftContent}</View>
+            {centerContent && <View>{centerContent}</View>}
             <View>{rightContent}</View>
         </Flex>
     );

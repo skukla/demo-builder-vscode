@@ -281,6 +281,52 @@ export async function handleOpenAdobeConsole(
     }
 }
 
+// Track logs panel visibility state for toggle behavior (shared across all handlers)
+let isLogsViewShown = false;
+
+/**
+ * Toggle the logs output panel
+ *
+ * Shared utility for toggling the logs panel. Used by both wizard and dashboard.
+ * Returns the new visibility state.
+ */
+export async function toggleLogsPanel(): Promise<boolean> {
+    if (isLogsViewShown) {
+        await vscode.commands.executeCommand('workbench.action.closePanel');
+        isLogsViewShown = false;
+    } else {
+        await vscode.commands.executeCommand('demoBuilder.showLogs');
+        isLogsViewShown = true;
+    }
+    return isLogsViewShown;
+}
+
+/**
+ * Reset logs view state - for testing only
+ * @internal
+ */
+export function resetLogsViewState(): void {
+    isLogsViewShown = false;
+}
+
+/**
+ * show-logs - Toggle the VS Code output panel with Demo Builder logs
+ *
+ * Toggles the output panel: shows logs if hidden, closes panel if shown.
+ * This is a non-critical action - we return success even if command fails.
+ */
+export async function handleShowLogs(context: HandlerContext): Promise<SimpleResult> {
+    try {
+        const isNowShown = await toggleLogsPanel();
+        context.logger.debug(`[Logs] ${isNowShown ? 'Opening' : 'Closing'} output panel`);
+    } catch (error) {
+        // Non-critical action - log but don't fail
+        context.logger.warn('[Logs] Failed to toggle output panel', error as Error);
+    }
+
+    return { success: true };
+}
+
 /**
  * Helper: Load components
  *

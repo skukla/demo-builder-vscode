@@ -209,6 +209,55 @@ describe('PageFooter', () => {
         });
     });
 
+    describe('center content', () => {
+        it('should render centerContent when provided', () => {
+            // Given: PageFooter with centerContent provided
+            // When: Component renders
+            renderWithProvider(
+                <PageFooter
+                    leftContent={<Button variant="secondary">Cancel</Button>}
+                    centerContent={<Button variant="secondary" isQuiet>Logs</Button>}
+                    rightContent={<Button variant="accent">Continue</Button>}
+                />
+            );
+
+            // Then: Center content is visible alongside left and right
+            expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Logs' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Continue' })).toBeInTheDocument();
+        });
+
+        it('should render centerContent without left or right content', () => {
+            // Given: PageFooter with only centerContent
+            renderWithProvider(
+                <PageFooter
+                    centerContent={<span data-testid="center-only">Center Only</span>}
+                />
+            );
+
+            // Then: Center content is rendered
+            expect(screen.getByTestId('center-only')).toBeInTheDocument();
+        });
+
+        it('should render any React node as center content', () => {
+            // Given: Custom React node as centerContent
+            renderWithProvider(
+                <PageFooter
+                    centerContent={
+                        <Flex gap="size-100">
+                            <Button isQuiet>Action 1</Button>
+                            <Button isQuiet>Action 2</Button>
+                        </Flex>
+                    }
+                />
+            );
+
+            // Then: Complex center content is rendered
+            expect(screen.getByRole('button', { name: 'Action 1' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Action 2' })).toBeInTheDocument();
+        });
+    });
+
     describe('combined features', () => {
         it('should render typical wizard footer pattern', () => {
             // Given: PageFooter with typical wizard footer content

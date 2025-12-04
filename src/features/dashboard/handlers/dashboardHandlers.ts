@@ -17,10 +17,10 @@ import { Project, ComponentInstance } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
+import { toggleLogsPanel, resetLogsViewState } from '@/features/lifecycle/handlers/lifecycleHandlers';
 
-// Track toggle states for sidebar views (for toggle behavior)
+// Track toggle state for components view
 let isComponentsViewShown = false;
-let isLogsViewShown = false;
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -293,15 +293,7 @@ export const handleOpenBrowser: MessageHandler = async (context) => {
  * Handle 'viewLogs' message - Toggle the logs output panel
  */
 export const handleViewLogs: MessageHandler = async () => {
-    if (isLogsViewShown) {
-        // Close the panel
-        await vscode.commands.executeCommand('workbench.action.closePanel');
-        isLogsViewShown = false;
-    } else {
-        // Show the logs output channel (this also opens the panel if closed)
-        await vscode.commands.executeCommand('demoBuilder.showLogs');
-        isLogsViewShown = true;
-    }
+    await toggleLogsPanel();
     return { success: true };
 };
 
@@ -723,7 +715,7 @@ export const handleViewComponents: MessageHandler = async () => {
  */
 export function resetToggleStates(): void {
     isComponentsViewShown = false;
-    isLogsViewShown = false;
+    resetLogsViewState();
     // Also hide the components panel
     vscode.commands.executeCommand('setContext', 'demoBuilder.showComponents', false);
 }

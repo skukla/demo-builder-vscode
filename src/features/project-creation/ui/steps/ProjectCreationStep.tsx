@@ -33,6 +33,10 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
         }, TIMEOUTS.PROJECT_OPEN_TRANSITION);
     };
 
+    const handleShowLogs = () => {
+        vscode.postMessage('show-logs');
+    };
+
     const isCancelled = progress?.currentOperation === 'Cancelled';
     const isFailed = progress?.currentOperation === 'Failed';
     const isCompleted = progress?.currentOperation === 'Project Created';
@@ -132,7 +136,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
             {isActive && (
                 <div className="footer-bar">
                     <div className="max-w-800 w-full">
-                        <Flex justifyContent="start" width="100%">
+                        <Flex justifyContent="space-between" alignItems="center" width="100%">
                             <Button
                                 variant="secondary"
                                 onPress={handleCancel}
@@ -141,6 +145,15 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                             >
                                 {isCancelling ? 'Cancelling...' : 'Cancel'}
                             </Button>
+                            <Button
+                                variant="secondary"
+                                onPress={handleShowLogs}
+                                isQuiet
+                            >
+                                Logs
+                            </Button>
+                            {/* Spacer for right side to balance layout */}
+                            <div style={{ width: '80px' }} />
                         </Flex>
                     </div>
                 </div>
@@ -150,7 +163,16 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
             {showOpenButton && (
                 <div className="footer-bar">
                     <div className="max-w-800 w-full">
-                        <Flex justifyContent="end" width="100%">
+                        <Flex justifyContent="space-between" alignItems="center" width="100%">
+                            {/* Spacer for left side to balance layout */}
+                            <div style={{ width: '80px' }} />
+                            <Button
+                                variant="secondary"
+                                onPress={handleShowLogs}
+                                isQuiet
+                            >
+                                Logs
+                            </Button>
                             <Button
                                 variant="cta"
                                 onPress={handleOpenProject}
