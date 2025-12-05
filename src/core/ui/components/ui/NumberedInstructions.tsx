@@ -18,11 +18,11 @@ export interface NumberedInstructionsProps {
 const CODE_SNIPPET_STYLES: React.CSSProperties = {
     fontFamily: 'var(--spectrum-alias-body-text-font-family, monospace)',
     fontSize: '0.9em',
-    backgroundColor: '#1a1a1a',
+    backgroundColor: 'var(--db-code-background)',
     padding: '4px 10px',
     borderRadius: '4px',
     color: 'var(--spectrum-global-color-blue-700)',
-    border: '1px solid rgba(255, 255, 255, 0.25)',
+    border: '1px solid var(--db-code-border)',
     fontWeight: 600,
     whiteSpace: 'nowrap',
 };

@@ -101,7 +101,7 @@ const WizardStepItem: React.FC<WizardStepItemProps> = ({
                 UNSAFE_className={`text-sm ${isCurrent ? 'font-medium' : ''}`}
                 UNSAFE_style={{
                     color: isCurrent
-                        ? 'var(--vscode-foreground)'
+                        ? 'var(--spectrum-global-color-gray-800)'
                         : 'var(--spectrum-global-color-gray-600)',
                 }}
             >

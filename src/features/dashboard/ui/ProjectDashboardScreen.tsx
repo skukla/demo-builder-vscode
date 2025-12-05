@@ -81,12 +81,17 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
         const unsubscribeStatus = webviewClient.onMessage('statusUpdate', (data: unknown) => {
             const projectData = data as ProjectStatus;
             // Merge status update, preserving mesh status only during active deployment
+            // AND only if the new status is a transient 'checking' state.
             // This prevents update checks from resetting mesh button state mid-deployment
-            // but allows async 'checking' status to resolve to final state
-            setProjectStatus(prev => ({
-                ...projectData,
-                mesh: isMeshDeploying(prev?.mesh?.status) ? prev?.mesh : projectData.mesh
-            }));
+            // but allows completion statuses (deployed, error, etc.) to come through.
+            setProjectStatus(prev => {
+                const shouldPreserveMeshStatus =
+                    isMeshDeploying(prev?.mesh?.status) && projectData.mesh?.status === 'checking';
+                return {
+                    ...projectData,
+                    mesh: shouldPreserveMeshStatus ? prev?.mesh : projectData.mesh
+                };
+            });
             setIsRunning(projectData.status === 'running');
             // Clear transitioning state when we receive a definitive status
             if (projectData.status === 'running' || projectData.status === 'ready' || projectData.status === 'stopped') {

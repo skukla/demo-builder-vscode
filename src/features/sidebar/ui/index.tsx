@@ -121,13 +121,14 @@ function SidebarApp(): React.ReactElement {
         sendMessage('wizardStepClick', { stepIndex });
     }, []);
 
-
-    // Determine color scheme from VS Code theme
-    const colorScheme = document.body.classList.contains('vscode-light') ? 'light' : 'dark';
+    // Apply VSCode dark theme class to body (unified theme system ignores user preferences)
+    useEffect(() => {
+        document.body.classList.add('vscode-dark');
+    }, []);
 
     if (isLoading) {
         return (
-            <Provider theme={defaultTheme} colorScheme={colorScheme} UNSAFE_className="sidebar-provider">
+            <Provider theme={defaultTheme} colorScheme="dark" UNSAFE_className="sidebar-provider">
                 <Flex
                     alignItems="center"
                     justifyContent="center"
@@ -140,7 +141,7 @@ function SidebarApp(): React.ReactElement {
     }
 
     return (
-        <Provider theme={defaultTheme} colorScheme={colorScheme} UNSAFE_className="sidebar-provider">
+        <Provider theme={defaultTheme} colorScheme="dark" UNSAFE_className="sidebar-provider">
             <Sidebar
                 context={context}
                 onNavigate={handleNavigate}

@@ -62,11 +62,14 @@ function renderStepIndicator(status: TimelineStatus): React.ReactNode {
         return <CheckmarkCircle size="XS" UNSAFE_className={cn('text-white', 'icon-xs')} />;
     }
     if (status === 'current') {
+        // White inner dot creates contrast against the blue outer ring
+        // Use inline style for true white since bg-white maps to gray-100 in dark theme
         return (
             <View
                 width="size-100"
                 height="size-100"
-                UNSAFE_className={cn('rounded-full', 'bg-white', 'animate-pulse')}
+                UNSAFE_className={cn('rounded-full', 'animate-pulse')}
+                UNSAFE_style={{ backgroundColor: '#ffffff' }}
             />
         );
     }

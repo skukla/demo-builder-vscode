@@ -31,17 +31,17 @@ export const StatusDot: React.FC<StatusDotProps> = ({
     const getColor = (): string => {
         switch (variant) {
             case 'success':
-                return '#10b981'; // green-500
+                return 'var(--db-status-dot-success)';
             case 'error':
-                return '#ef4444'; // red-500
+                return 'var(--db-status-dot-error)';
             case 'warning':
-                return '#f59e0b'; // amber-500
+                return 'var(--db-status-dot-warning)';
             case 'info':
-                return '#3b82f6'; // blue-500
+                return 'var(--db-status-dot-info)';
             case 'neutral':
-                return '#6b7280'; // gray-500
+                return 'var(--db-status-dot-neutral)';
             default:
-                return '#6b7280';
+                return 'var(--db-status-dot-neutral)';
         }
     };
 

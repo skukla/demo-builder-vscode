@@ -556,7 +556,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         .spinner {
             width: 24px;
             height: 24px;
-            border: 2px solid var(--vscode-foreground, #ccc);
+            border: 2px solid var(--spectrum-global-color-gray-400);
             border-top-color: transparent;
             border-radius: 50%;
             animation: spin 1s linear infinite;

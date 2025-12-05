@@ -44,33 +44,33 @@ export const Badge: React.FC<BadgeProps> = ({
             case 'success':
                 return {
                     ...baseStyles,
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    color: '#10b981'
+                    backgroundColor: 'var(--db-badge-success-bg)',
+                    color: 'var(--db-badge-success-text)'
                 };
             case 'error':
                 return {
                     ...baseStyles,
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    color: '#ef4444'
+                    backgroundColor: 'var(--db-badge-error-bg)',
+                    color: 'var(--db-badge-error-text)'
                 };
             case 'warning':
                 return {
                     ...baseStyles,
-                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                    color: '#f59e0b'
+                    backgroundColor: 'var(--db-badge-warning-bg)',
+                    color: 'var(--db-badge-warning-text)'
                 };
             case 'info':
                 return {
                     ...baseStyles,
-                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                    color: '#3b82f6'
+                    backgroundColor: 'var(--db-badge-info-bg)',
+                    color: 'var(--db-badge-info-text)'
                 };
             case 'neutral':
             default:
                 return {
                     ...baseStyles,
-                    backgroundColor: 'rgba(107, 114, 128, 0.1)',
-                    color: '#6b7280'
+                    backgroundColor: 'var(--db-badge-neutral-bg)',
+                    color: 'var(--db-badge-neutral-text)'
                 };
         }
     };

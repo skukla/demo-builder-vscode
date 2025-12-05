@@ -19,20 +19,20 @@ export function Tip({ children, icon = '💡', variant = 'default' }: TipProps) 
     const getBackgroundColor = () => {
         switch (variant) {
             case 'info':
-                return 'rgba(20, 115, 230, 0.08)'; // Blue tint
+                return 'var(--db-tip-info-bg)';
             case 'success':
-                return 'rgba(75, 175, 79, 0.08)'; // Green tint
+                return 'var(--db-tip-success-bg)';
             default:
-                return 'var(--spectrum-global-color-gray-75)'; // Neutral
+                return 'var(--spectrum-global-color-gray-75)';
         }
     };
 
     const getBorderColor = () => {
         switch (variant) {
             case 'info':
-                return 'rgba(20, 115, 230, 0.2)';
+                return 'var(--db-tip-info-border)';
             case 'success':
-                return 'rgba(75, 175, 79, 0.2)';
+                return 'var(--db-tip-success-border)';
             default:
                 return 'var(--spectrum-global-color-gray-200)';
         }

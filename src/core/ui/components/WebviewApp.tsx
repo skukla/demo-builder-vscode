@@ -12,17 +12,11 @@ import React, { useEffect, useState, useRef, ReactNode } from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
 import { webviewClient } from '../utils/WebviewClient';
 import { webviewLogger } from '../utils/webviewLogger';
-import { ThemeMode } from '@/types/webview';
 
 const log = webviewLogger('WebviewApp');
 
 export interface WebviewInitData {
-    theme?: ThemeMode;
     [key: string]: unknown;
-}
-
-export interface ThemeChangeData {
-    theme: ThemeMode;
 }
 
 export interface WebviewAppProps {
@@ -81,7 +75,6 @@ export function WebviewApp({
     loadingContent = null,
     className = 'app-container'
 }: WebviewAppProps) {
-    const [theme, setTheme] = useState<ThemeMode>('light');
     const [isReady, setIsReady] = useState(false);
     const [initData, setInitData] = useState<WebviewInitData | null>(null);
 
@@ -91,7 +84,7 @@ export function WebviewApp({
     useEffect(() => {
         log.debug('Component mounted');
 
-        // Apply VSCode theme class to body
+        // Apply VSCode dark theme class to body (unified theme system ignores user preferences)
         document.body.classList.add('vscode-dark');
 
         // Listen for initialization from extension (set up listener BEFORE sending ready)
@@ -99,12 +92,6 @@ export function WebviewApp({
             log.debug('Received init message:', data);
 
             const initData = data as WebviewInitData;
-            if (initData.theme) {
-                log.debug('Setting theme:', initData.theme);
-                setTheme(initData.theme);
-                document.body.classList.remove('vscode-light', 'vscode-dark');
-                document.body.classList.add(initData.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
-            }
 
             // Store initialization data for render props
             setInitData(initData);
@@ -116,14 +103,6 @@ export function WebviewApp({
 
             log.debug('Setting isReady = true');
             setIsReady(true);
-        });
-
-        // Listen for theme changes
-        const unsubscribeTheme = webviewClient.onMessage('theme-changed', (data) => {
-            const themeData = data as ThemeChangeData;
-            setTheme(themeData.theme);
-            document.body.classList.remove('vscode-light', 'vscode-dark');
-            document.body.classList.add(themeData.theme === 'dark' ? 'vscode-dark' : 'vscode-light');
         });
 
         // Wait for handshake, then send ready message to trigger init (guard prevents StrictMode double-send)
@@ -140,7 +119,6 @@ export function WebviewApp({
 
         return () => {
             unsubscribeInit();
-            unsubscribeTheme();
         };
     }, [onInit]);
 
@@ -149,7 +127,7 @@ export function WebviewApp({
         return loadingContent;
     }
 
-    log.debug('Ready! Rendering Provider with theme:', theme);
+    log.debug('Ready! Rendering Provider with dark theme (unified theme system)');
 
     // Support render props pattern
     const content: ReactNode = typeof children === 'function' ? children(initData) : children;
@@ -159,7 +137,7 @@ export function WebviewApp({
     return (
         <Provider
             theme={defaultTheme}
-            colorScheme={theme}
+            colorScheme="dark"
             isQuiet
             UNSAFE_className={className}
         >

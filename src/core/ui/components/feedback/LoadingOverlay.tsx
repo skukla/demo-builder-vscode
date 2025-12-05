@@ -15,7 +15,7 @@ const styles = {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        backgroundColor: 'var(--db-loading-overlay-bg)',
         display: 'flex',
         flexDirection: 'column' as const,
         alignItems: 'center',
@@ -28,7 +28,7 @@ const styles = {
         backgroundColor: 'var(--spectrum-global-color-gray-50)',
         padding: '24px',
         borderRadius: '50%',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        boxShadow: '0 4px 12px var(--db-loading-overlay-shadow)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -83,7 +83,7 @@ export function LoadingOverlay({ isVisible, message }: LoadingOverlayProps): Rea
                 </div>
                 {message && (
                     <Text
-                        UNSAFE_style={{ color: 'white', fontWeight: 500 }}
+                        UNSAFE_style={{ color: 'var(--db-loading-text)', fontWeight: 500 }}
                         data-testid="loading-message"
                     >
                         {message}
