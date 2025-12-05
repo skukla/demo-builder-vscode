@@ -552,14 +552,16 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
                             }
                             rightContent={
                                 <Flex gap="size-100">
-                                    <Button
-                                        variant="secondary"
-                                        onPress={goBack}
-                                        isQuiet
-                                        isDisabled={isConfirmingSelection}
-                                    >
-                                        Back
-                                    </Button>
+                                    {currentStepIndex > 0 && (
+                                        <Button
+                                            variant="secondary"
+                                            onPress={goBack}
+                                            isQuiet
+                                            isDisabled={isConfirmingSelection}
+                                        >
+                                            Back
+                                        </Button>
+                                    )}
                                     <Button
                                         variant="accent"
                                         onPress={goNext}
