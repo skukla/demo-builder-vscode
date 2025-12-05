@@ -1,57 +1,69 @@
-/* Base styles for the webview */
-* {
-    box-sizing: border-box;
-}
+/* ============================================
+   UNIFIED THEME SYSTEM - Entry Point
+   Layer order controls cascade priority
+   ============================================ */
 
-body, html {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100vh;
-    overflow: hidden;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-    background: var(--spectrum-global-color-gray-75);
-}
+/* Layer order declaration - MUST be first */
+@layer reset, theme, overrides;
 
-#root {
-    width: 100%;
-    height: 100%;
-    background: var(--spectrum-global-color-gray-75);
-}
+/* Import design system files */
+@import './reset.css';
+@import './tokens.css';
 
-/* Spectrum overrides for quiet mode */
-.spectrum--quiet {
-    --spectrum-textfield-border-width: 0;
-    --spectrum-textfield-border-width-focused: 1px;
-    --spectrum-picker-border-width: 0;
-    --spectrum-picker-border-width-hover: 1px;
-}
+/* Base styles wrapped in theme layer */
+@layer theme {
+    /* Note: box-sizing: border-box is set globally in reset.css */
 
-/* Custom scrollbar styles */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
+    body, html {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        background: var(--spectrum-global-color-gray-75);
+    }
 
-::-webkit-scrollbar-track {
-    background: transparent;
-}
+    #root {
+        width: 100%;
+        height: 100%;
+        background: var(--spectrum-global-color-gray-75);
+    }
 
-::-webkit-scrollbar-thumb {
-    background: var(--spectrum-global-color-gray-500);
-    border-radius: 4px;
-}
+    /* Spectrum overrides for quiet mode */
+    .spectrum--quiet {
+        --spectrum-textfield-border-width: 0;
+        --spectrum-textfield-border-width-focused: 1px;
+        --spectrum-picker-border-width: 0;
+        --spectrum-picker-border-width-hover: 1px;
+    }
 
-::-webkit-scrollbar-thumb:hover {
-    background: var(--spectrum-global-color-gray-600);
+    /* Custom scrollbar styles */
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--spectrum-global-color-gray-500);
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--spectrum-global-color-gray-600);
+    }
 }
 
 /* Terminal output styles */
 .terminal-output {
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
     font-size: 12px;
-    background: #0d0d0d;
-    color: #d4d4d4;
+    background: var(--db-terminal-background);
+    color: var(--db-terminal-foreground);
     padding: var(--spectrum-global-dimension-size-200);
     border-radius: var(--spectrum-global-dimension-size-50);
     max-height: 300px;
@@ -63,19 +75,19 @@ body, html {
 
 /* Terminal colors for different output types */
 .terminal-output .command {
-    color: #569cd6; /* Blue for commands */
+    color: var(--db-terminal-command);
 }
 
 .terminal-output .success {
-    color: #4ec9b0; /* Green for success */
+    color: var(--db-terminal-success);
 }
 
 .terminal-output .error {
-    color: #f48771; /* Red for errors */
+    color: var(--db-terminal-error);
 }
 
 .terminal-output .warning {
-    color: #dcdcaa; /* Yellow for warnings */
+    color: var(--db-terminal-warning);
 }
 
 /* Step animation */
@@ -124,11 +136,22 @@ body, html {
     color: var(--spectrum-global-color-blue-600);
 }
 
+/* ===========================================
+   Canonical Animation Keyframes
+   Other CSS files reference these definitions
+   =========================================== */
+
 /* Pulse animation for checking status */
 @keyframes pulse {
     0% { opacity: 1; }
     50% { opacity: 0.6; }
     100% { opacity: 1; }
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .pulse {

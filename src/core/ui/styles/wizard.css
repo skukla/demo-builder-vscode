@@ -1,15 +1,6 @@
-/* Timeline Animation Styles */
-@keyframes pulse {
-    0% {
-        box-shadow: 0 0 0 0 rgba(29, 117, 222, 0.4);
-    }
-    70% {
-        box-shadow: 0 0 0 10px rgba(29, 117, 222, 0);
-    }
-    100% {
-        box-shadow: 0 0 0 0 rgba(29, 117, 222, 0);
-    }
-}
+/* Timeline Animation Styles
+   Note: @keyframes pulse and fadeIn are defined in index.css
+   This file only contains wizard-specific spin animation */
 
 @keyframes spin {
     0% {
@@ -20,289 +11,290 @@
     }
 }
 
-/* Prerequisites Container */
-.prerequisites-container {
-    max-height: 360px;
-    overflow-y: auto;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    padding: 12px;
-    margin-top: 20px;
-    margin-bottom: 30px;
-}
-
-/* Smooth transition for prerequisite cards when content expands/collapses */
-.prerequisite-content {
-    transition: all 0.3s ease-in-out;
-}
-
-/* Smooth transition for progress bar appearance */
-.prerequisites-container .animate-fade-in {
-    animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
+/* ============================================
+   WIZARD STRUCTURAL STYLES
+   Wrapped in @layer theme for cascade control
+   ============================================ */
+@layer theme {
+    /* Prerequisites Container */
+    .prerequisites-container {
+        max-height: 360px;
+        overflow-y: auto;
+        border: 1px solid var(--spectrum-global-color-gray-400);
+        border-radius: 4px;
+        padding: 12px;
+        margin-top: 20px;
+        margin-bottom: 30px;
     }
-    to {
+
+    /* Smooth transition for prerequisite cards when content expands/collapses */
+    .prerequisite-content {
+        transition: all 0.3s ease-in-out;
+    }
+
+    /* Smooth transition for progress bar appearance */
+    .prerequisites-container .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    /* Circular Number Badge */
+    .number-badge {
+        min-width: 32px;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: var(--db-surface-background);
+        color: var(--db-surface-foreground);
+        border: 1px solid var(--db-code-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+}
+
+/* ============================================
+   WIZARD COMPONENT OVERRIDES
+   Wrapped in @layer theme for cascade control
+   ============================================ */
+@layer theme {
+    /* Step Content Animations */
+    .step-content {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateX(0);
     }
-}
 
-/* Circular Number Badge */
-.number-badge {
-    min-width: 32px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background-color: #1a1a1a;
-    color: #e0e0e0;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 16px;
-    flex-shrink: 0;
-}
+    .step-content.transitioning {
+        opacity: 0;
+    }
 
-/* Step Content Animations */
-.step-content {
-    opacity: 1;
-    transform: translateX(0);
-}
+    .step-content.transitioning.forward {
+        transform: translateX(-20px);
+    }
 
-.step-content.transitioning {
-    opacity: 0;
-}
+    .step-content.transitioning.backward {
+        transform: translateX(20px);
+    }
 
-.step-content.transitioning.forward {
-    transform: translateX(-20px);
-}
+    /* Input Field Styling */
+    .spectrum-Textfield {
+        min-height: 42px !important;
+    }
 
-.step-content.transitioning.backward {
-    transform: translateX(20px);
-}
+    /* Target the actual input element with high specificity */
+    .spectrum-Textfield .spectrum-Textfield-input,
+    .spectrum-Textfield input.spectrum-Textfield-input,
+    input.spectrum-Textfield-input {
+        padding: 10px 14px !important;
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+        box-sizing: border-box !important;
+    }
 
-/* Input Field Styling */
-.spectrum-Textfield {
-    min-height: 42px !important;
-}
+    /* Ensure padding is visible on focus */
+    .spectrum-Textfield-input:focus,
+    .spectrum-Textfield input:focus {
+        padding: 10px 14px !important;
+    }
 
-/* Target the actual input element with high specificity */
-.spectrum-Textfield .spectrum-Textfield-input,
-.spectrum-Textfield input.spectrum-Textfield-input,
-input.spectrum-Textfield-input {
-    padding: 10px 14px !important;
-    font-size: 14px !important;
-    line-height: 1.5 !important;
-    box-sizing: border-box !important;
-}
+    /* Apply to all text inputs including textarea */
+    .spectrum-Textfield input,
+    .spectrum-Textfield textarea,
+    div[class*="spectrum-Textfield"] input {
+        padding: 10px 14px !important;
+        box-sizing: border-box !important;
+    }
 
-/* Ensure padding is visible on focus */
-.spectrum-Textfield-input:focus,
-.spectrum-Textfield input:focus {
-    padding: 10px 14px !important;
-}
+    /* Muted Placeholder Styling */
+    .spectrum-Textfield-input::placeholder {
+        color: var(--spectrum-global-color-gray-500) !important;
+        opacity: 0.5 !important;
+        font-style: italic;
+    }
 
-/* Apply to all text inputs including textarea */
-.spectrum-Textfield input,
-.spectrum-Textfield textarea,
-div[class*="spectrum-Textfield"] input {
-    padding: 10px 14px !important;
-    box-sizing: border-box !important;
-}
+    input::placeholder {
+        color: var(--spectrum-global-color-gray-500) !important;
+        opacity: 0.5 !important;
+    }
 
-/* Muted Placeholder Styling */
-.spectrum-Textfield-input::placeholder {
-    color: var(--spectrum-global-color-gray-500) !important;
-    opacity: 0.5 !important;
-    font-style: italic;
-}
+    .spectrum-Picker-label::placeholder {
+        color: var(--spectrum-global-color-gray-500) !important;
+        opacity: 0.5 !important;
+    }
 
-input::placeholder {
-    color: var(--spectrum-global-color-gray-500) !important;
-    opacity: 0.5 !important;
-}
+    /* SearchField Input Padding - Account for magnifying glass icon */
+    .spectrum-SearchField-input,
+    .spectrum-SearchField input {
+        padding-left: 36px !important;  /* Space for magnifying glass icon */
+        padding-right: 14px !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+    }
 
-.spectrum-Picker-label::placeholder {
-    color: var(--spectrum-global-color-gray-500) !important;
-    opacity: 0.5 !important;
-}
+    /* SearchField Placeholder */
+    .spectrum-SearchField-input::placeholder {
+        color: var(--spectrum-global-color-gray-500) !important;
+        opacity: 0.5 !important;
+    }
 
-/* SearchField Input Padding - Account for magnifying glass icon */
-.spectrum-SearchField-input,
-.spectrum-SearchField input {
-    padding-left: 36px !important;  /* Space for magnifying glass icon */
-    padding-right: 14px !important;
-    padding-top: 10px !important;
-    padding-bottom: 10px !important;
-}
+    /* Form Field Spacing */
+    .spectrum-Form-item {
+        margin-bottom: 20px !important;
+    }
 
-/* SearchField Placeholder */
-.spectrum-SearchField-input::placeholder {
-    color: var(--spectrum-global-color-gray-500) !important;
-    opacity: 0.5 !important;
-}
+    /* Compact Button Styles */
+    .wizard-compact-button {
+        height: 32px !important;
+        padding: 0 16px !important;
+        font-size: 13px !important;
+    }
 
-/* Form Field Spacing */
-.spectrum-Form-item {
-    margin-bottom: 20px !important;
-}
+    /* Timeline Step Hover Effect */
+    .timeline-step {
+        transition: background-color 0.2s ease;
+        padding: 4px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+    }
 
-/* Compact Button Styles */
-.wizard-compact-button {
-    height: 32px !important;
-    padding: 0 16px !important;
-    font-size: 13px !important;
-}
+    .timeline-step:hover {
+        background-color: var(--spectrum-global-color-gray-200);
+    }
 
-/* Timeline Step Hover Effect */
-.timeline-step {
-    transition: background-color 0.2s ease;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
-}
+    .timeline-step.disabled {
+        cursor: default;
+        opacity: 0.5;
+    }
 
-.timeline-step:hover {
-    background-color: var(--spectrum-global-color-gray-200);
-}
+    .timeline-step.disabled:hover {
+        background-color: transparent;
+    }
 
-.timeline-step.disabled {
-    cursor: default;
-    opacity: 0.5;
-}
+    /* Well Component Compact Styling */
+    .spectrum-Well {
+        padding: 12px !important;
+    }
 
-.timeline-step.disabled:hover {
-    background-color: transparent;
-}
+    /* ListView Compact Items */
+    .spectrum-ListView-item {
+        padding: 8px 12px !important;
+        min-height: 36px !important;
+    }
 
-/* Well Component Compact Styling */
-.spectrum-Well {
-    padding: 12px !important;
-}
+    /* Compact TextField Description */
+    .spectrum-FieldLabel + .spectrum-HelpText {
+        margin-top: 4px !important;
+        font-size: 12px !important;
+        color: var(--spectrum-global-color-gray-600) !important;
+    }
 
-/* ListView Compact Items */
-.spectrum-ListView-item {
-    padding: 8px 12px !important;
-    min-height: 36px !important;
-}
+    /* Error Message Styling */
+    .spectrum-FieldLabel--invalid + .spectrum-HelpText {
+        color: var(--spectrum-global-color-red-600) !important;
+    }
 
-/* Compact TextField Description */
-.spectrum-FieldLabel + .spectrum-HelpText {
-    margin-top: 4px !important;
-    font-size: 12px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-}
+    /* Smooth Transitions */
+    * {
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
 
-/* Error Message Styling */
-.spectrum-FieldLabel--invalid + .spectrum-HelpText {
-    color: var(--spectrum-global-color-red-600) !important;
-}
+    /* Remove default focus outlines for cleaner look */
+    .spectrum-Textfield-input:focus {
+        box-shadow: 0 0 0 1px var(--spectrum-global-color-blue-500) !important;
+    }
 
-/* Smooth Transitions */
-* {
-    transition: opacity 0.2s ease, transform 0.2s ease;
-}
+    /* Compact Headers */
+    h1, h2, h3 {
+        margin-bottom: 12px !important;
+    }
 
-/* Remove default focus outlines for cleaner look */
-.spectrum-Textfield-input:focus {
-    box-shadow: 0 0 0 1px var(--spectrum-global-color-blue-500) !important;
-}
+    /* Ensure fixed height for wizard container */
+    .wizard-container {
+        height: 100vh;
+        overflow: hidden;
+    }
 
-/* Compact Headers */
-h1, h2, h3 {
-    margin-bottom: 12px !important;
-}
+    /* Step content should not scroll unless explicitly allowed */
+    .step-content-wrapper {
+        height: 100%;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
 
-/* Ensure fixed height for wizard container */
-.wizard-container {
-    height: 100vh;
-    overflow: hidden;
-}
+    /* Ensure Picker takes full width of container */
+    .spectrum-Picker {
+        width: 100% !important;
+        cursor: pointer !important;
+    }
 
-/* Step content should not scroll unless explicitly allowed */
-.step-content-wrapper {
-    height: 100%;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
+    /* All Picker elements should have pointer cursor */
+    .spectrum-Picker,
+    .spectrum-Picker *,
+    button[class*="spectrum-Picker"],
+    div[class*="spectrum-Picker"],
+    button[class*="Picker"],
+    button[aria-haspopup="listbox"] {
+        cursor: pointer !important;
+    }
 
-/* Ensure Picker takes full width of container */
-.spectrum-Picker {
-    width: 100% !important;
-    cursor: pointer !important;
-}
+    /* Dropdown Menu Item Styling */
+    .spectrum-Menu-item {
+        padding: 8px 12px !important;
+        cursor: pointer !important;
+    }
 
-/* All Picker elements should have pointer cursor */
-.spectrum-Picker,
-.spectrum-Picker *,
-button[class*="spectrum-Picker"],
-div[class*="spectrum-Picker"],
-button[class*="Picker"],
-button[aria-haspopup="listbox"] {
-    cursor: pointer !important;
-}
+    /* All menu items and their children - more specific targeting */
+    .spectrum-Menu-item,
+    .spectrum-Menu-item *,
+    li[role="option"],
+    li[role="option"] *,
+    ul[role="listbox"] li,
+    ul[role="listbox"] li *,
+    [role="option"],
+    [role="option"] * {
+        cursor: pointer !important;
+    }
 
-/* Dropdown Menu Item Styling */
-.spectrum-Menu-item {
-    padding: 8px 12px !important;
-    cursor: pointer !important;
-}
+    /* Checkbox cursor styling - target all checkbox-related elements */
+    .spectrum-Checkbox,
+    .spectrum-Checkbox *,
+    .spectrum-Checkbox-input,
+    .spectrum-Checkbox-box,
+    .spectrum-Checkbox-label,
+    label[class*="spectrum-Checkbox"],
+    label[class*="spectrum-Checkbox"] *,
+    input[type="checkbox"],
+    input[type="checkbox"] + label {
+        cursor: pointer !important;
+    }
 
-/* All menu items and their children - more specific targeting */
-.spectrum-Menu-item,
-.spectrum-Menu-item *,
-li[role="option"],
-li[role="option"] *,
-ul[role="listbox"] li,
-ul[role="listbox"] li *,
-[role="option"],
-[role="option"] * {
-    cursor: pointer !important;
-}
+    /* Force dropdown descriptions to appear on separate lines */
+    .spectrum-Menu-itemGrid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        grid-template-rows: auto auto !important;
+        gap: 2px !important;
+    }
 
-/* Checkbox cursor styling - target all checkbox-related elements */
-.spectrum-Checkbox,
-.spectrum-Checkbox *,
-.spectrum-Checkbox-input,
-.spectrum-Checkbox-box,
-.spectrum-Checkbox-label,
-label[class*="spectrum-Checkbox"],
-label[class*="spectrum-Checkbox"] *,
-input[type="checkbox"],
-input[type="checkbox"] + label {
-    cursor: pointer !important;
-}
+    .spectrum-Menu-itemLabel {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
 
-/* Force dropdown descriptions to appear on separate lines */
-.spectrum-Menu-itemGrid {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    grid-template-rows: auto auto !important;
-    gap: 2px !important;
-}
-
-.spectrum-Menu-itemLabel {
-    grid-column: 1 !important;
-    grid-row: 1 !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-
-.spectrum-Menu-description {
-    grid-column: 1 !important;
-    grid-row: 2 !important;
-    display: block !important;
-    white-space: normal !important;
-    font-size: 11px !important;
-    color: var(--spectrum-global-color-gray-600) !important;
-    margin: 0 !important;
-    padding: 0 !important;
+    .spectrum-Menu-description {
+        grid-column: 1 !important;
+        grid-row: 2 !important;
+        display: block !important;
+        white-space: normal !important;
+        font-size: 11px !important;
+        color: var(--spectrum-global-color-gray-600) !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
 }

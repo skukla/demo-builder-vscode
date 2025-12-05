@@ -2,10 +2,10 @@
    CUSTOM SPECTRUM OVERRIDES
    Warning: These styles override React Spectrum defaults
    and may break with future Spectrum updates.
-   
+
    This file provides a pragmatic solution for customizing
    React Spectrum components while maintaining reusability.
-   
+
    IMPORTANT NOTE ON UNSAFE_className:
    React Spectrum components require UNSAFE_className for custom styling.
    This is the OFFICIAL way to apply custom CSS classes to React Spectrum components.
@@ -14,9 +14,14 @@
    There is NO "safe" className prop in React Spectrum.
    ============================================ */
 
-/* ===========================================
-   Typography Classes
-   =========================================== */
+/* ============================================
+   UTILITY & COMPONENT CLASSES
+   Wrapped in @layer theme for cascade control
+   ============================================ */
+@layer theme {
+    /* ===========================================
+       Typography Classes
+       =========================================== */
 .text-xs { font-size: 11px !important; }
 .text-sm { font-size: 12px !important; }
 .text-base { font-size: 13px !important; }
@@ -160,40 +165,52 @@ button[class*="spectrum-Button"][disabled],
 }
 
 .btn-large {
-    height: 40px !important;
-    font-size: 14px !important;
-    padding: 0 20px !important;
+        height: 40px !important;
+        font-size: 14px !important;
+        padding: 0 20px !important;
+    }
+} /* End of first @layer theme block */
+
+/* ============================================
+   CTA BUTTON OVERRIDES
+   Wrapped in @layer overrides for cascade control
+   ============================================ */
+@layer overrides {
+    /* Override React Spectrum CTA button variant to use Tangerine Orange */
+    .spectrum-Button--cta,
+    .spectrum-Button[data-variant="cta"],
+    button[class*="spectrum-Button"][class*="cta"] {
+        background-color: var(--db-cta-background) !important;
+        border-color: var(--db-cta-background) !important;
+    }
+
+    .spectrum-Button--cta:hover,
+    .spectrum-Button--cta:focus,
+    .spectrum-Button[data-variant="cta"]:hover,
+    .spectrum-Button[data-variant="cta"]:focus,
+    button[class*="spectrum-Button"][class*="cta"]:hover,
+    button[class*="spectrum-Button"][class*="cta"]:focus {
+        background-color: var(--db-cta-background-hover) !important;
+        border-color: var(--db-cta-background-hover) !important;
+    }
+
+    .spectrum-Button--cta:active,
+    .spectrum-Button[data-variant="cta"]:active,
+    button[class*="spectrum-Button"][class*="cta"]:active {
+        background-color: var(--db-cta-background-active) !important;
+        border-color: var(--db-cta-background-active) !important;
+    }
 }
 
-/* Override React Spectrum CTA button variant to use Tangerine Orange (Option 3 palette) */
-.spectrum-Button--cta,
-.spectrum-Button[data-variant="cta"],
-button[class*="spectrum-Button"][class*="cta"] {
-    background-color: #f97316 !important; /* Tangerine Orange */
-    border-color: #f97316 !important;
-}
-
-.spectrum-Button--cta:hover,
-.spectrum-Button--cta:focus,
-.spectrum-Button[data-variant="cta"]:hover,
-.spectrum-Button[data-variant="cta"]:focus,
-button[class*="spectrum-Button"][class*="cta"]:hover,
-button[class*="spectrum-Button"][class*="cta"]:focus {
-    background-color: #ea580c !important; /* Tangerine Dark */
-    border-color: #ea580c !important;
-}
-
-.spectrum-Button--cta:active,
-.spectrum-Button[data-variant="cta"]:active,
-button[class*="spectrum-Button"][class*="cta"]:active {
-    background-color: #c2410c !important; /* Tangerine Darker */
-    border-color: #c2410c !important;
-}
-
-/* ===========================================
-   Container Classes
-   =========================================== */
-.bordered-container {
+/* ============================================
+   REMAINING UTILITY & COMPONENT CLASSES
+   Wrapped in @layer theme for cascade control
+   ============================================ */
+@layer theme {
+    /* ===========================================
+       Container Classes
+       =========================================== */
+    .bordered-container {
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     border-radius: 4px !important;
     background-color: var(--spectrum-global-color-gray-50) !important;
@@ -372,7 +389,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     padding: 3px 9px;
     font-size: 12px;
     font-weight: 400;
-    color: white;
+    color: var(--spectrum-global-color-gray-900);
     cursor: pointer;
     transition: background 0.15s ease;
 }
@@ -451,10 +468,10 @@ button[class*="spectrum-Button"][class*="cta"]:active {
    Border Styles
    =========================================== */
 .border-none { border: none !important; }
-.border-t { border-top: 1px solid var(--spectrum-global-color-gray-300) !important; }
-.border-r { border-right: 1px solid var(--spectrum-global-color-gray-300) !important; }
-.border-b { border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important; }
-.border-l { border-left: 1px solid var(--spectrum-global-color-gray-300) !important; }
+.border-t { border-top: 1px solid #1a1a1a !important; }
+.border-r { border-right: 1px solid #1a1a1a !important; }
+.border-b { border-bottom: 1px solid #1a1a1a !important; }
+.border-l { border-left: 1px solid #1a1a1a !important; }
 
 .border-2 { border-width: 2px !important; }
 .border-3 { border-width: 3px !important; }
@@ -468,7 +485,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 /* ===========================================
    Background Color Extensions
    =========================================== */
-.bg-white { background-color: white !important; }
+.bg-white { background-color: var(--spectrum-global-color-gray-100) !important; }
 .bg-transparent { background-color: transparent !important; }
 .bg-gray-200 { background-color: var(--spectrum-global-color-gray-200) !important; }
 .bg-gray-300 { background-color: var(--spectrum-global-color-gray-300) !important; }
@@ -484,7 +501,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 /* ===========================================
    Text Color Extensions
    =========================================== */
-.text-white { color: white !important; }
+.text-white { color: var(--spectrum-global-color-gray-900) !important; }
 .text-gray-800 { color: var(--spectrum-global-color-gray-800) !important; }
 .text-blue-700 { color: var(--spectrum-global-color-blue-700) !important; }
 
@@ -531,13 +548,13 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 /* ===========================================
    Projects Dashboard Specific
    =========================================== */
-/* Sticky header for search/filter controls - floats above content */
+/* Sticky header for search/filter controls - middle layer between header and content */
 .projects-sticky-header {
     position: sticky !important;
     top: 0 !important;
     z-index: 10 !important;
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
+    background-color: #050505 !important;
+    border-bottom: 1px solid #2a2a2a !important;
     margin-bottom: 16px !important;
 }
 
@@ -551,7 +568,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 /* Sidebar loading state */
 .sidebar-loading {
     padding: 16px !important;
-    color: var(--vscode-foreground) !important;
+    color: var(--spectrum-global-color-gray-800) !important;
 }
 
 /* Sidebar nav item base styles (static parts) */
@@ -603,16 +620,8 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 
 /* ===========================================
    Animation Classes
+   Note: @keyframes pulse is defined in index.css (canonical location)
    =========================================== */
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
-}
-
-@keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
 
 @keyframes slide-down {
     from { transform: translateY(-10px); opacity: 0; }
@@ -620,7 +629,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 }
 
 .animate-pulse { animation: pulse 2s infinite !important; }
-.animate-fade-in { animation: fade-in 0.3s ease !important; }
+.animate-fade-in { animation: fadeIn 0.3s ease !important; }
 .animate-slide-down { animation: slide-down 0.3s ease !important; }
 
 /* ===========================================
@@ -764,10 +773,10 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     outline: none !important;
 }
 
-/* Dashboard status header - matches Projects List header design */
+/* Dashboard status header - middle layer between header and content for depth */
 .dashboard-status-header {
-    background-color: var(--spectrum-global-color-gray-50) !important;
-    border-bottom: 1px solid var(--spectrum-global-color-gray-300) !important;
+    background-color: #050505 !important;
+    border-bottom: 1px solid #2a2a2a !important;
     margin-bottom: 16px !important;
 }
 
@@ -825,10 +834,16 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 
 .dashboard-action-button:hover,
 .dashboard-action-button:focus {
-    background: var(--spectrum-global-color-gray-200) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
     border-color: var(--spectrum-global-color-gray-400) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
     outline: none !important;
+}
+
+/* Prevent internal Spectrum elements from showing their own hover states */
+.dashboard-action-button:hover *,
+.dashboard-action-button:focus * {
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
 /* Temporarily suppress hover/focus after click to prevent stuck state during layout shift */
@@ -837,7 +852,6 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 .dashboard-action-button.hover-suppressed:focus {
     background: var(--spectrum-global-color-gray-100) !important;
     border-color: var(--spectrum-global-color-gray-300) !important;
-    box-shadow: none !important;
 }
 
 /* Sidebar provider - use Spectrum gray-75 for consistency */
@@ -978,7 +992,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
    =========================================== */
 .project-card {
     padding: 16px !important;
-    background: white !important;
+    background: var(--spectrum-global-color-gray-100) !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     border-radius: 8px !important;
     transition: all 0.2s ease !important;
@@ -1049,13 +1063,13 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 
 /* Card header - Dark area with icon (slightly darker than content) */
 .project-card-header {
-    background: var(--vscode-sideBar-background) !important;
+    background: var(--spectrum-global-color-gray-100) !important;
     padding: 24px 16px !important;
     min-height: 90px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    border-bottom: 1px solid var(--vscode-widget-border) !important;
+    border-bottom: 1px solid var(--spectrum-global-color-gray-400) !important;
 }
 
 /* Card content - Slightly lighter area with metadata */
@@ -1064,7 +1078,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     display: flex !important;
     flex-direction: column !important;
     text-align: left !important;
-    background: var(--vscode-editor-background) !important;
+    background: var(--spectrum-global-color-gray-75) !important;
 }
 
 /* ===========================================
@@ -1250,7 +1264,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     height: 100vh !important;
     margin: 0 !important;
     padding: 0 !important;
-    background: var(--vscode-editor-background) !important;
+    background: var(--spectrum-global-color-gray-75) !important;
 }
 
 /* ===========================================
@@ -1258,9 +1272,9 @@ button[class*="spectrum-Button"][class*="cta"]:active {
    =========================================== */
 .empty-state-container {
     text-align: center !important;
-    background: var(--vscode-sideBar-background) !important;
+    background: var(--spectrum-global-color-gray-100) !important;
     border-radius: 8px !important;
-    border: 1px solid var(--vscode-widget-border) !important;
+    border: 1px solid var(--spectrum-global-color-gray-400) !important;
 }
 
 /* ===========================================
@@ -1334,7 +1348,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 }
 
 .project-card-default {
-    border: 1px solid var(--vscode-widget-border) !important;
+    border: 1px solid var(--spectrum-global-color-gray-400) !important;
 }
 
 .project-card-title {
@@ -1574,7 +1588,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
 /* Footer bar pattern */
 .footer-bar {
     padding: 16px !important;
-    border-top: 1px solid var(--vscode-panel-border) !important;
+    border-top: 1px solid var(--spectrum-global-color-gray-400) !important;
     background-color: var(--spectrum-global-color-gray-75) !important;
 }
 
@@ -1634,19 +1648,7 @@ button[class*="spectrum-Button"][class*="cta"]:active {
     transition: all 0.3s ease !important;
 }
 
-/* Fade in animation class */
-.animate-fade-in {
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { 
-        opacity: 0;
-    }
-    to { 
-        opacity: 1;
-    }
-}
+/* Note: .animate-fade-in and @keyframes fadeIn defined in utility section above */
 
 /* Ensure smooth transitions for dynamically added content */
 .prerequisite-item [role="progressbar"],
@@ -1897,8 +1899,9 @@ div[class*="spectrum"] input[type="search"] {
     padding-left: 32px !important;
 }
 
-/* Also target via the icon positioning wrapper */
-.search-field-custom [class*="icon"] + input,
-.search-field-custom [class*="Icon"] + input {
-    padding-left: 32px !important;
-}
+    /* Also target via the icon positioning wrapper */
+    .search-field-custom [class*="icon"] + input,
+    .search-field-custom [class*="Icon"] + input {
+        padding-left: 32px !important;
+    }
+} /* End of second @layer theme block */

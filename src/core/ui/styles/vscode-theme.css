@@ -1,187 +1,176 @@
-/* VSCode Theme Integration for Adobe Spectrum */
+/* ============================================
+   UNIFIED THEME SYSTEM - VS Code Integration
 
-/* Apply VSCode theme colors when in VSCode environment */
-body.vscode-dark,
-body.vscode-light {
-    /* Use VSCode's native colors */
-    background: var(--vscode-editor-background);
-    color: var(--vscode-editor-foreground);
-}
+   This file ensures CONSISTENT appearance regardless
+   of VS Code theme. We override VS Code's theme
+   variables with our own design tokens.
 
-/* Dark theme overrides for Adobe Spectrum components */
-body.vscode-dark .spectrum--dark {
-    /* Background colors */
-    --spectrum-global-color-gray-50: var(--vscode-editor-background);
-    --spectrum-global-color-gray-75: var(--vscode-editor-background);
-    --spectrum-global-color-gray-100: var(--vscode-sideBar-background);
-    --spectrum-global-color-gray-200: var(--vscode-sideBarSectionHeader-background);
-    
-    /* Input and interactive element backgrounds */
-    --spectrum-alias-background-color-default: var(--vscode-editor-background);
-    --spectrum-alias-background-color-modal: var(--vscode-sideBar-background);
-    --spectrum-alias-background-color-overlay: var(--vscode-dropdown-background);
-    
-    /* Text colors */
-    --spectrum-alias-text-color: var(--vscode-editor-foreground);
-    --spectrum-alias-text-color-secondary: var(--vscode-descriptionForeground);
-    --spectrum-alias-label-text-color: var(--vscode-foreground);
-    
-    /* Border colors */
-    --spectrum-alias-border-color: var(--vscode-panel-border);
-    --spectrum-alias-border-color-hover: var(--vscode-focusBorder);
-    --spectrum-alias-border-color-focus: var(--vscode-focusBorder);
-    
-    /* Selection colors */
-    --spectrum-alias-highlight-hover: var(--vscode-list-hoverBackground);
-    --spectrum-alias-highlight-active: var(--vscode-list-activeSelectionBackground);
-    --spectrum-alias-highlight-selected: var(--vscode-list-activeSelectionBackground);
-}
+   Philosophy: Extension looks the same whether user
+   has light, dark, or high-contrast VS Code theme.
+   ============================================ */
 
-/* View component backgrounds */
-body.vscode-dark .spectrum--dark [class*="spectrum-View"] {
-    background-color: var(--vscode-editor-background) !important;
-}
+@layer theme {
+    /* Force consistent body styling regardless of VS Code theme */
+    body.vscode-dark,
+    body.vscode-light,
+    body.vscode-high-contrast,
+    body.vscode-high-contrast-light {
+        /* Use our design tokens, NOT VS Code variables */
+        /* Background: dark gray, Text: light gray for proper contrast */
+        background: var(--spectrum-global-color-gray-75);
+        color: var(--spectrum-global-color-gray-800);
+    }
 
-/* Well component styling to match VSCode panels */
-body.vscode-dark .spectrum--dark [class*="spectrum-Well"] {
-    background-color: var(--vscode-sideBar-background) !important;
-    border: 1px solid var(--vscode-panel-border);
-}
+    /* =========================================
+       SPECTRUM TOKEN OVERRIDES
+       Force dark theme tokens for consistency
+       ========================================= */
 
-/* ListView and Item styling */
-body.vscode-dark .spectrum--dark [class*="spectrum-ListView"] {
-    background-color: var(--vscode-dropdown-background) !important;
-    border: 1px solid var(--vscode-widget-border) !important;
-}
+    body .spectrum--dark,
+    body .spectrum--light {
+        /* Background colors - use Spectrum dark theme values */
+        /* Depth layering: gray-50 is deepest (content), gray-75 is elevated (sticky bars) */
+        --spectrum-global-color-gray-50: #000000;
+        --spectrum-global-color-gray-75: #0d0d0d;
+        --spectrum-global-color-gray-100: #2d2d2d;
+        --spectrum-global-color-gray-200: #3d3d3d;
 
-body.vscode-dark .spectrum--dark [class*="spectrum-ListView-item"]:hover {
-    background-color: var(--vscode-list-hoverBackground) !important;
-}
+        /* Input and interactive element backgrounds */
+        --spectrum-alias-background-color-default: var(--spectrum-global-color-gray-75);
+        --spectrum-alias-background-color-modal: var(--spectrum-global-color-gray-100);
+        --spectrum-alias-background-color-overlay: var(--spectrum-global-color-gray-100);
 
-body.vscode-dark .spectrum--dark [class*="spectrum-ListView-item"][aria-selected="true"] {
-    background-color: var(--vscode-list-activeSelectionBackground) !important;
-    color: var(--vscode-list-activeSelectionForeground) !important;
-}
+        /* Text colors - consistent light text on dark background */
+        --spectrum-alias-text-color: var(--spectrum-global-color-gray-800);
+        --spectrum-alias-text-color-secondary: var(--spectrum-global-color-gray-600);
+        --spectrum-alias-label-text-color: var(--spectrum-global-color-gray-800);
 
-/* TextField and SearchField styling */
-body.vscode-dark .spectrum--dark [class*="spectrum-Textfield"],
-body.vscode-dark .spectrum--dark [class*="spectrum-SearchField"] input {
-    background-color: var(--vscode-input-background) !important;
-    color: var(--vscode-input-foreground) !important;
-    border-color: var(--vscode-input-border) !important;
-}
+        /* Border colors - subtle borders for dark theme */
+        --spectrum-alias-border-color: var(--spectrum-global-color-gray-400);
+        --spectrum-alias-border-color-hover: var(--spectrum-global-color-blue-500);
+        --spectrum-alias-border-color-focus: var(--spectrum-global-color-blue-500);
 
-body.vscode-dark .spectrum--dark [class*="spectrum-Textfield"]:focus,
-body.vscode-dark .spectrum--dark [class*="spectrum-SearchField"] input:focus {
-    border-color: var(--vscode-focusBorder) !important;
-}
+        /* Selection colors */
+        --spectrum-alias-highlight-hover: rgba(255, 255, 255, 0.06);
+        --spectrum-alias-highlight-active: rgba(255, 255, 255, 0.1);
+        --spectrum-alias-highlight-selected: rgba(255, 255, 255, 0.1);
+    }
 
-/* Button styling */
-body.vscode-dark .spectrum--dark [class*="spectrum-Button"]:not([class*="quiet"]) {
-    background-color: var(--vscode-button-background) !important;
-    color: var(--vscode-button-foreground) !important;
-    border-color: var(--vscode-button-border) !important;
-}
+    /* =========================================
+       COMPONENT OVERRIDES
+       Ensure consistent component styling
+       ========================================= */
 
-body.vscode-dark .spectrum--dark [class*="spectrum-Button"]:not([class*="quiet"]):hover {
-    background-color: var(--vscode-button-hoverBackground) !important;
-}
+    /* Well component - transparent, no border (used for form grouping) */
+    body [class*="spectrum-Well"] {
+        background-color: transparent !important;
+        border: none !important;
+    }
 
-body.vscode-dark .spectrum--dark [class*="spectrum-Button"][class*="accent"] {
-    background-color: var(--vscode-button-background) !important;
-    color: var(--vscode-button-foreground) !important;
-}
+    /* ListView - Let Spectrum handle styling natively (uses alias tokens above) */
 
-body.vscode-dark .spectrum--dark [class*="spectrum-Button"][class*="secondary"] {
-    background-color: var(--vscode-button-secondaryBackground) !important;
-    color: var(--vscode-button-secondaryForeground) !important;
-}
+    /* TextField and SearchField styling - transparent background to blend with page */
+    body [class*="spectrum-Textfield"] input,
+    body [class*="spectrum-SearchField"] input {
+        background-color: transparent !important;
+        color: var(--spectrum-global-color-gray-900) !important;
+        border-color: var(--spectrum-global-color-gray-400) !important;
+    }
 
-/* Picker/Dropdown styling */
-body.vscode-dark .spectrum--dark [class*="spectrum-Picker"] {
-    background-color: var(--vscode-dropdown-background) !important;
-    color: var(--vscode-dropdown-foreground) !important;
-    border-color: var(--vscode-dropdown-border) !important;
-}
+    body [class*="spectrum-Textfield"] input:focus,
+    body [class*="spectrum-SearchField"] input:focus {
+        border-color: var(--spectrum-global-color-blue-500) !important;
+    }
 
-/* ProgressBar and ProgressCircle */
-body.vscode-dark .spectrum--dark [class*="spectrum-ProgressBar-fill"],
-body.vscode-dark .spectrum--dark [class*="spectrum-ProgressCircle-fill"] {
-    background-color: var(--vscode-progressBar-background) !important;
-}
+    /* Button styling - use light text on dark backgrounds */
+    /* Use precise class matching to avoid targeting internal elements like spectrum-Button-label */
+    body button[class*="spectrum-Button"]:not([class*="quiet"]):not([class*="cta"]):not(.dashboard-action-button) {
+        background-color: var(--spectrum-global-color-gray-200) !important;
+        color: var(--spectrum-global-color-gray-800) !important;
+        border-color: var(--spectrum-global-color-gray-400) !important;
+    }
 
-/* Badge styling */
-body.vscode-dark .spectrum--dark [class*="spectrum-Badge"] {
-    background-color: var(--vscode-badge-background) !important;
-    color: var(--vscode-badge-foreground) !important;
-}
+    body button[class*="spectrum-Button"]:not([class*="quiet"]):not([class*="cta"]):not(.dashboard-action-button):hover {
+        background-color: var(--spectrum-global-color-gray-300) !important;
+    }
 
-/* Divider */
-body.vscode-dark .spectrum--dark [class*="spectrum-Divider"] {
-    background-color: var(--vscode-panel-border) !important;
-}
+    body button[class*="spectrum-Button"][class*="accent"] {
+        background-color: var(--spectrum-global-color-blue-500) !important;
+        color: var(--spectrum-global-color-gray-900) !important;
+    }
 
-/* Heading and text colors */
-body.vscode-dark .spectrum--dark [class*="spectrum-Heading"] {
-    color: var(--vscode-editor-foreground) !important;
-}
+    body button[class*="spectrum-Button"][class*="secondary"]:not(.dashboard-action-button) {
+        background-color: var(--spectrum-global-color-gray-200) !important;
+        color: var(--spectrum-global-color-gray-800) !important;
+    }
 
-body.vscode-dark .spectrum--dark [class*="spectrum-Body"],
-body.vscode-dark .spectrum--dark [class*="spectrum-Detail"] {
-    color: var(--vscode-foreground) !important;
-}
+    /* Ensure internal button elements don't get background overrides */
+    body [class*="spectrum-Button-label"],
+    body [class*="spectrum-Button-icon"] {
+        background-color: transparent !important;
+    }
 
-/* Status colors (preserve these for semantic meaning) */
-body.vscode-dark .spectrum--dark [color="positive"] {
-    color: var(--vscode-testing-iconPassed) !important;
-}
+    /* Picker/Dropdown styling */
+    body [class*="spectrum-Picker"] {
+        background-color: var(--spectrum-global-color-gray-100) !important;
+        color: var(--spectrum-global-color-gray-900) !important;
+        border-color: var(--spectrum-global-color-gray-400) !important;
+    }
 
-body.vscode-dark .spectrum--dark [color="negative"] {
-    color: var(--vscode-testing-iconFailed) !important;
-}
+    /* ProgressBar and ProgressCircle */
+    body [class*="spectrum-ProgressBar-fill"],
+    body [class*="spectrum-ProgressCircle-fill"] {
+        background-color: var(--spectrum-global-color-blue-500) !important;
+    }
 
-body.vscode-dark .spectrum--dark [color="notice"] {
-    color: var(--vscode-editorWarning-foreground) !important;
-}
+    /* Badge styling - use our design tokens */
+    body [class*="spectrum-Badge"] {
+        background-color: var(--spectrum-global-color-gray-200) !important;
+        color: var(--spectrum-global-color-gray-900) !important;
+    }
 
-/* Light theme overrides */
-body.vscode-light .spectrum--light {
-    /* Background colors */
-    --spectrum-global-color-gray-50: var(--vscode-editor-background);
-    --spectrum-global-color-gray-75: var(--vscode-editor-background);
-    --spectrum-global-color-gray-100: var(--vscode-sideBar-background);
-    
-    /* Text colors */
-    --spectrum-alias-text-color: var(--vscode-editor-foreground);
-    --spectrum-alias-text-color-secondary: var(--vscode-descriptionForeground);
-    
-    /* Borders */
-    --spectrum-alias-border-color: var(--vscode-panel-border);
-    --spectrum-alias-border-color-focus: var(--vscode-focusBorder);
-}
+    /* Divider */
+    body [class*="spectrum-Divider"] {
+        background-color: var(--spectrum-global-color-gray-400) !important;
+    }
 
-/* Apply similar overrides for light theme components */
-body.vscode-light .spectrum--light [class*="spectrum-View"] {
-    background-color: var(--vscode-editor-background) !important;
-}
+    /* Heading and text colors */
+    body [class*="spectrum-Heading"] {
+        color: var(--spectrum-global-color-gray-900) !important;
+    }
 
-body.vscode-light .spectrum--light [class*="spectrum-Well"] {
-    background-color: var(--vscode-sideBar-background) !important;
-    border: 1px solid var(--vscode-panel-border);
-}
+    body [class*="spectrum-Body"],
+    body [class*="spectrum-Detail"] {
+        color: var(--spectrum-global-color-gray-700) !important;
+    }
 
-/* ScrollBar styling to match VSCode */
-body.vscode-dark ::-webkit-scrollbar-thumb,
-body.vscode-light ::-webkit-scrollbar-thumb {
-    background: var(--vscode-scrollbarSlider-background);
-}
+    /* Status colors - preserve semantic meaning with our tokens */
+    body [color="positive"] {
+        color: var(--db-status-success) !important;
+    }
 
-body.vscode-dark ::-webkit-scrollbar-thumb:hover,
-body.vscode-light ::-webkit-scrollbar-thumb:hover {
-    background: var(--vscode-scrollbarSlider-hoverBackground);
-}
+    body [color="negative"] {
+        color: var(--db-status-error) !important;
+    }
 
-body.vscode-dark ::-webkit-scrollbar-thumb:active,
-body.vscode-light ::-webkit-scrollbar-thumb:active {
-    background: var(--vscode-scrollbarSlider-activeBackground);
+    body [color="notice"] {
+        color: var(--db-status-warning) !important;
+    }
+
+    /* =========================================
+       SCROLLBAR STYLING
+       Consistent scrollbars regardless of theme
+       ========================================= */
+
+    body ::-webkit-scrollbar-thumb {
+        background: var(--spectrum-global-color-gray-500);
+    }
+
+    body ::-webkit-scrollbar-thumb:hover {
+        background: var(--spectrum-global-color-gray-400);
+    }
+
+    body ::-webkit-scrollbar-thumb:active {
+        background: var(--spectrum-global-color-gray-300);
+    }
 }
