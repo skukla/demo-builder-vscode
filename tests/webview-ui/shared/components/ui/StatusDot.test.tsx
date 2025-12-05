@@ -18,43 +18,43 @@ describe('StatusDot', () => {
     });
 
     describe('Variants', () => {
-        it('renders success variant with green color', () => {
+        it('renders success variant with CSS variable', () => {
             renderWithProviders(<StatusDot variant="success" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: '#10b981'
+                backgroundColor: 'var(--db-status-dot-success)'
             });
         });
 
-        it('renders error variant with red color', () => {
+        it('renders error variant with CSS variable', () => {
             renderWithProviders(<StatusDot variant="error" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: '#ef4444'
+                backgroundColor: 'var(--db-status-dot-error)'
             });
         });
 
-        it('renders warning variant with amber color', () => {
+        it('renders warning variant with CSS variable', () => {
             renderWithProviders(<StatusDot variant="warning" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: '#f59e0b'
+                backgroundColor: 'var(--db-status-dot-warning)'
             });
         });
 
-        it('renders info variant with blue color', () => {
+        it('renders info variant with CSS variable', () => {
             renderWithProviders(<StatusDot variant="info" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: '#3b82f6'
+                backgroundColor: 'var(--db-status-dot-info)'
             });
         });
 
-        it('renders neutral variant with gray color', () => {
+        it('renders neutral variant with CSS variable', () => {
             renderWithProviders(<StatusDot variant="neutral" />);
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveStyle({
-                backgroundColor: '#6b7280'
+                backgroundColor: 'var(--db-status-dot-neutral)'
             });
         });
     });
@@ -128,7 +128,7 @@ describe('StatusDot', () => {
             const dot = screen.getByRole('presentation');
             expect(dot).toHaveClass('custom-status');
             expect(dot).toHaveStyle({
-                backgroundColor: '#f59e0b',
+                backgroundColor: 'var(--db-status-dot-warning)',
                 width: '10px',
                 height: '10px'
             });

@@ -103,15 +103,7 @@ describe('WebviewApp', () => {
             expect(mockOnMessage).toHaveBeenCalledWith('init', expect.any(Function));
         });
 
-        it('subscribes to theme-changed message', () => {
-            render(
-                <WebviewApp>
-                    <div>Content</div>
-                </WebviewApp>
-            );
-
-            expect(mockOnMessage).toHaveBeenCalledWith('theme-changed', expect.any(Function));
-        });
+        // Note: theme-changed subscription removed in unified theme system (always dark)
 
         it('sends ready message after handshake', async () => {
             render(
@@ -130,8 +122,10 @@ describe('WebviewApp', () => {
         });
     });
 
-    describe('theme handling', () => {
-        it('applies vscode-dark class to body initially', () => {
+    describe('theme handling (unified theme system)', () => {
+        // Unified theme system: Always uses dark mode, ignores VS Code theme preferences
+
+        it('applies vscode-dark class to body (unified theme always dark)', () => {
             render(
                 <WebviewApp>
                     <div>Content</div>
@@ -141,57 +135,41 @@ describe('WebviewApp', () => {
             expect(document.body.classList.contains('vscode-dark')).toBe(true);
         });
 
-        it('applies dark theme from init message', async () => {
+        it('maintains dark theme regardless of init theme value', async () => {
             render(
                 <WebviewApp>
                     <div>Content</div>
                 </WebviewApp>
             );
 
-            triggerMessage('init', { theme: 'dark' });
-
-            await waitFor(() => {
-                expect(document.body.classList.contains('vscode-dark')).toBe(true);
-                expect(document.body.classList.contains('vscode-light')).toBe(false);
-            });
-        });
-
-        it('applies light theme from init message', async () => {
-            render(
-                <WebviewApp>
-                    <div>Content</div>
-                </WebviewApp>
-            );
-
+            // Even if init sends 'light', we stay dark (unified theme system)
             triggerMessage('init', { theme: 'light' });
-
-            await waitFor(() => {
-                expect(document.body.classList.contains('vscode-light')).toBe(true);
-                expect(document.body.classList.contains('vscode-dark')).toBe(false);
-            });
-        });
-
-        it('updates theme on theme-changed message', async () => {
-            render(
-                <WebviewApp>
-                    <div>Content</div>
-                </WebviewApp>
-            );
-
-            // Initialize with dark theme
-            triggerMessage('init', { theme: 'dark' });
 
             await waitFor(() => {
                 expect(screen.getByText('Content')).toBeInTheDocument();
             });
 
-            // Change to light theme
-            triggerMessage('theme-changed', { theme: 'light' });
+            // Body stays vscode-dark (unified theme ignores user preferences)
+            expect(document.body.classList.contains('vscode-dark')).toBe(true);
+        });
+
+        it('does not respond to theme-changed messages (unified theme system)', async () => {
+            render(
+                <WebviewApp>
+                    <div>Content</div>
+                </WebviewApp>
+            );
+
+            // Initialize
+            triggerMessage('init', {});
 
             await waitFor(() => {
-                expect(document.body.classList.contains('vscode-light')).toBe(true);
-                expect(document.body.classList.contains('vscode-dark')).toBe(false);
+                expect(screen.getByText('Content')).toBeInTheDocument();
             });
+
+            // Verify we stay dark even if theme-changed would be sent
+            // (theme-changed handler was removed, so this is a no-op)
+            expect(document.body.classList.contains('vscode-dark')).toBe(true);
         });
     });
 
@@ -199,14 +177,14 @@ describe('WebviewApp', () => {
         it('supports function children (render props)', async () => {
             render(
                 <WebviewApp>
-                    {(data) => <div>Data: {data?.theme || 'none'}</div>}
+                    {(data) => <div>Data: {data?.customProp || 'none'}</div>}
                 </WebviewApp>
             );
 
-            triggerMessage('init', { theme: 'dark' });
+            triggerMessage('init', { customProp: 'test-value' });
 
             await waitFor(() => {
-                expect(screen.getByText('Data: dark')).toBeInTheDocument();
+                expect(screen.getByText('Data: test-value')).toBeInTheDocument();
             });
         });
 
@@ -217,14 +195,14 @@ describe('WebviewApp', () => {
                 </WebviewApp>
             );
 
-            triggerMessage('init', { theme: 'dark', customProp: 'hello' });
+            triggerMessage('init', { customProp: 'hello' });
 
             await waitFor(() => {
                 expect(screen.getByText('Custom: hello')).toBeInTheDocument();
             });
         });
 
-        it('passes null data initially to render function after init', async () => {
+        it('passes init data to render function after init', async () => {
             const renderFn = jest.fn((data) => <div>Rendered</div>);
 
             render(
@@ -234,10 +212,10 @@ describe('WebviewApp', () => {
             );
 
             // Trigger init
-            triggerMessage('init', { theme: 'dark' });
+            triggerMessage('init', { project: 'test-project' });
 
             await waitFor(() => {
-                expect(renderFn).toHaveBeenCalledWith(expect.objectContaining({ theme: 'dark' }));
+                expect(renderFn).toHaveBeenCalledWith(expect.objectContaining({ project: 'test-project' }));
             });
         });
     });
@@ -252,12 +230,12 @@ describe('WebviewApp', () => {
                 </WebviewApp>
             );
 
-            triggerMessage('init', { theme: 'dark', extra: 'data' });
+            triggerMessage('init', { project: 'test', extra: 'data' });
 
             await waitFor(() => {
                 expect(onInit).toHaveBeenCalledWith(
                     expect.objectContaining({
-                        theme: 'dark',
+                        project: 'test',
                         extra: 'data',
                     })
                 );
@@ -315,13 +293,11 @@ describe('WebviewApp', () => {
     });
 
     describe('cleanup', () => {
-        it('unsubscribes from messages on unmount', () => {
+        it('unsubscribes from init message on unmount', () => {
             const unsubscribeInit = jest.fn();
-            const unsubscribeTheme = jest.fn();
 
             mockOnMessage.mockImplementation((type: string) => {
                 if (type === 'init') return unsubscribeInit;
-                if (type === 'theme-changed') return unsubscribeTheme;
                 return jest.fn();
             });
 
@@ -334,7 +310,6 @@ describe('WebviewApp', () => {
             unmount();
 
             expect(unsubscribeInit).toHaveBeenCalled();
-            expect(unsubscribeTheme).toHaveBeenCalled();
         });
     });
 
@@ -346,7 +321,7 @@ describe('WebviewApp', () => {
                 </WebviewApp>
             );
 
-            triggerMessage('init', { theme: 'dark' });
+            triggerMessage('init', {});
 
             await waitFor(() => {
                 // Content is rendered inside Spectrum Provider
@@ -354,20 +329,20 @@ describe('WebviewApp', () => {
             });
         });
 
-        it('uses dark colorScheme for dark theme', async () => {
+        it('always uses dark colorScheme (unified theme system)', async () => {
             const { container } = render(
                 <WebviewApp>
                     <div>Content</div>
                 </WebviewApp>
             );
 
-            triggerMessage('init', { theme: 'dark' });
+            triggerMessage('init', {});
 
             await waitFor(() => {
                 expect(screen.getByText('Content')).toBeInTheDocument();
             });
 
-            // Spectrum Provider applies colorScheme
+            // Spectrum Provider applies colorScheme="dark" (always dark in unified theme)
             // We verify the Provider rendered by checking for Spectrum classes
             const spectrumContainer = container.querySelector('[class*="spectrum"]');
             expect(spectrumContainer).toBeInTheDocument();
