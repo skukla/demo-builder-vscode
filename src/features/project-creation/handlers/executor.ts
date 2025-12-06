@@ -71,6 +71,12 @@ interface ProjectCreationConfig {
         meshStatus?: string;
         workspace?: string;
     };
+    /**
+     * When true, mesh deployment is handled by a separate MeshDeploymentStep in the wizard.
+     * The executor will skip its internal mesh deployment logic.
+     * PM Decision (2025-12-06): Mesh deployment timeout recovery feature.
+     */
+    meshStepEnabled?: boolean;
 }
 
 /**
@@ -291,8 +297,11 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // Deploy any components that were downloaded and need deployment (e.g., API Mesh)
     context.logger.info('[Project Creation] ✅ All components downloaded and configured');
 
+    // When meshStepEnabled is true, mesh deployment is handled by the separate
+    // MeshDeploymentStep in the wizard. Skip the executor's internal mesh deployment.
+    // PM Decision (2025-12-06): Mesh deployment timeout recovery feature.
     const meshComponent = project.componentInstances?.['commerce-mesh'];
-    if (meshComponent?.path) {
+    if (meshComponent?.path && !typedConfig.meshStepEnabled) {
         progressTracker('Deploying API Mesh', 80, 'Deploying mesh configuration to Adobe I/O...');
 
         try {
@@ -378,7 +387,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     // Alternative: Use existing mesh if user selected one instead of cloning (80%)
     // This happens when user picks an existing deployed mesh in the wizard
-    if (typedConfig.apiMesh?.meshId && typedConfig.apiMesh?.endpoint && !meshComponent) {
+    // Also skip when meshStepEnabled is true (mesh handled by separate wizard step)
+    if (typedConfig.apiMesh?.meshId && typedConfig.apiMesh?.endpoint && !meshComponent && !typedConfig.meshStepEnabled) {
         progressTracker('Configuring API Mesh', 80, 'Adding existing mesh to project...');
 
         // Add mesh as a component instance (deployed, not cloned)

@@ -16,6 +16,7 @@ export type WizardStep =
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
     | 'api-mesh'  // API Mesh verification and setup step
+    | 'mesh-deployment'  // Mesh deployment with timeout recovery (PM Decision 2025-12-06)
     | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config

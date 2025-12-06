@@ -8,13 +8,20 @@ import {
 import { PageHeader, PageFooter } from '@/core/ui/components/layout';
 import { LoadingOverlay } from '@/core/ui/components/feedback';
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { getNextButtonText } from './wizardHelpers';
+import {
+    getNextButtonText,
+    hasMeshComponentSelected,
+    getCompletedStepIndices,
+    getEnabledWizardSteps,
+} from './wizardHelpers';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { ApiMeshStep } from '@/features/mesh/ui/steps/ApiMeshStep';
+import { MeshDeploymentStep } from '@/features/mesh/ui/steps/MeshDeploymentStep';
+import { useMeshDeployment } from '@/features/mesh/ui/steps/useMeshDeployment';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep, ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
@@ -91,11 +98,7 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
     // Use the provided configuration, filtering out disabled steps
     // NOTE: Must filter before using in hooks to avoid conditional hook calls
     // Wrapped in useMemo to prevent changing on every render
-    const WIZARD_STEPS = useMemo(() => {
-        return (wizardSteps && wizardSteps.length > 0)
-            ? wizardSteps.filter(step => step.enabled).map(step => ({ id: step.id as WizardStep, name: step.name }))
-            : [];
-    }, [wizardSteps]);
+    const WIZARD_STEPS = useMemo(() => getEnabledWizardSteps(wizardSteps), [wizardSteps]);
 
     // Note: Welcome step removed in Step 3 - wizard now starts at first enabled step
     // Compute initial step inside lazy initializer to use prop value on mount
@@ -121,6 +124,18 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [isConfirmingSelection, setIsConfirmingSelection] = useState(false);
+
+    // Mesh deployment hook - called unconditionally per Rules of Hooks
+    // Only activates when mesh-deployment step is enabled AND mesh component selected
+    const hasMeshComponent = useMemo(
+        () => hasMeshComponentSelected(state.components),
+        [state.components]
+    );
+
+    const meshDeployment = useMeshDeployment({
+        hasMeshComponent: hasMeshComponent && state.currentStep === 'mesh-deployment',
+        workspaceId: state.adobeWorkspace?.id,
+    });
 
     // Focus trap for keyboard navigation (replaces manual implementation)
     const wizardContainerRef = useFocusTrap<HTMLDivElement>({
@@ -242,7 +257,7 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
             // Step numbers are 1-indexed for display, also send completed steps for clickability
             vscode.postMessage('wizardStepChanged', {
                 step: stepIndex + 1,
-                completedSteps: completedSteps.map(s => WIZARD_STEPS.findIndex(ws => ws.id === s)),
+                completedSteps: getCompletedStepIndices(completedSteps, WIZARD_STEPS),
             });
         }
     }, [state.currentStep, completedSteps, WIZARD_STEPS]);
@@ -435,6 +450,27 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
         setState(prev => ({ ...prev, ...updates }));
     }, []);
 
+    // Handle cancel from mesh deployment step
+    // This triggers project cleanup and returns to wizard start
+    const handleMeshDeploymentCancel = useCallback(() => {
+        // Send cancel message to extension for cleanup
+        vscode.postMessage('cancel-project-creation');
+        // Also trigger standard cancel to close wizard
+        handleCancel();
+    }, [handleCancel]);
+
+    // Render mesh deployment step with hook state
+    const renderMeshDeploymentStep = useCallback(() => {
+        return (
+            <MeshDeploymentStep
+                state={meshDeployment.state}
+                onRetry={meshDeployment.retry}
+                onCancel={handleMeshDeploymentCancel}
+                onContinue={goNext}
+            />
+        );
+    }, [meshDeployment.state, meshDeployment.retry, handleMeshDeploymentCancel, goNext]);
+
     const renderStep = () => {
         const props = {
             state,
@@ -460,6 +496,11 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
                 return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
             case 'api-mesh':
                 return <ApiMeshStep {...props} completedSteps={completedSteps} />;
+            case 'mesh-deployment':
+                // Mesh deployment step with timeout recovery (PM Decision 2025-12-06)
+                // Note: This step is disabled by default in wizard-steps.json
+                // When enabled, uses useMeshDeployment hook for state management
+                return renderMeshDeploymentStep();
             case 'settings':
                 return <ComponentConfigStep {...props} />;
             case 'review':
@@ -528,8 +569,8 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
                         <LoadingOverlay isVisible={isConfirmingSelection} />
                     </div>
 
-                    {/* Footer */}
-                    {!isLastStep && (
+                    {/* Footer - hidden on project-creation and mesh-deployment (they have their own buttons) */}
+                    {!isLastStep && state.currentStep !== 'mesh-deployment' && (
                         <PageFooter
                             leftContent={
                                 <Button
