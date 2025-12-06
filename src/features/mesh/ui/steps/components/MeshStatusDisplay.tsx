@@ -2,6 +2,7 @@ import React from 'react';
 import { Flex, Text, Button } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
 
 interface MeshData {
@@ -21,7 +22,7 @@ export function MeshStatusDisplay({ meshData, onRecreateMesh, onBack }: MeshStat
 
     return (
         <FadeTransition show={true}>
-            <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+            <CenteredFeedbackContainer>
                 <Flex direction="column" gap="size-200" alignItems="center">
                     {isError ? (
                         <>
@@ -55,7 +56,7 @@ export function MeshStatusDisplay({ meshData, onRecreateMesh, onBack }: MeshStat
                         </Flex>
                     )}
                 </Flex>
-            </Flex>
+            </CenteredFeedbackContainer>
         </FadeTransition>
     );
 }

@@ -3,6 +3,7 @@ import Info from '@spectrum-icons/workflow/Info';
 import React, { useCallback } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { WizardStep } from '@/types/webview';
@@ -53,14 +54,14 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
 
                     {/* Checking state */}
                     {isChecking && (
-                        <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+                        <CenteredFeedbackContainer>
                             <LoadingDisplay
                                 size="L"
                                 message={message}
                                 subMessage={subMessage}
                                 helperText={helperText}
                             />
-                        </Flex>
+                        </CenteredFeedbackContainer>
                     )}
 
                     {/* Error state - API not enabled */}
@@ -85,7 +86,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
 
                     {/* API enabled, no mesh - ready to create */}
                     {showCreateMesh && (
-                        <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+                        <CenteredFeedbackContainer>
                             <Flex direction="column" gap="size-200" alignItems="center">
                                 <Info size="L" UNSAFE_className="text-blue-600" />
                                 <Flex direction="column" gap="size-100" alignItems="center">
@@ -98,7 +99,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                                     Create Mesh
                                 </Button>
                             </Flex>
-                        </Flex>
+                        </CenteredFeedbackContainer>
                     )}
                 </>
             }

@@ -10,6 +10,11 @@ import React, { useCallback } from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { Project } from '@/types/base';
+import {
+    getStatusText,
+    getStatusVariant,
+    getFrontendPort,
+} from '../../utils/projectStatusUtils';
 
 /**
  * Adobe "A" icon - sized to match Spectrum size="L" icons (36px)
@@ -32,59 +37,6 @@ export interface ProjectButtonProps {
     project: Project;
     /** Callback when the button is selected */
     onSelect: (project: Project) => void;
-}
-
-/**
- * Gets the display status text for a project
- */
-function getStatusText(status: Project['status'], port?: number): string {
-    switch (status) {
-        case 'running':
-            return port ? `Running on port ${port}` : 'Running';
-        case 'starting':
-            return 'Starting';
-        case 'stopping':
-            return 'Stopping';
-        case 'stopped':
-        case 'ready':
-            return 'Stopped';
-        case 'error':
-            return 'Error';
-        default:
-            return 'Stopped';
-    }
-}
-
-/**
- * Gets the StatusDot variant for a project status
- */
-function getStatusVariant(
-    status: Project['status']
-): 'success' | 'neutral' | 'warning' | 'error' {
-    switch (status) {
-        case 'running':
-            return 'success';
-        case 'starting':
-        case 'stopping':
-            return 'warning';
-        case 'error':
-            return 'error';
-        default:
-            return 'neutral';
-    }
-}
-
-/**
- * Gets the frontend port from a project (if running)
- */
-function getFrontendPort(project: Project): number | undefined {
-    if (project.status !== 'running' || !project.componentInstances) {
-        return undefined;
-    }
-    const frontend = Object.values(project.componentInstances).find(
-        (c) => c.port !== undefined
-    );
-    return frontend?.port;
 }
 
 /**

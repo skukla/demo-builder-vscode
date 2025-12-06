@@ -155,16 +155,6 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             expect(ctx.mockPostMessage).toHaveBeenCalledWith('openBrowser');
         });
 
-        it('should send openDevConsole message when Dev Console clicked', async () => {
-            const user = userEvent.setup();
-            renderDashboard();
-
-            const devConsoleButton = screen.getByText('Dev Console');
-            await user.click(devConsoleButton);
-
-            expect(ctx.mockPostMessage).toHaveBeenCalledWith('openDevConsole');
-        });
-
         it('should send deleteProject message when Delete clicked', async () => {
             const user = userEvent.setup();
             renderDashboard();

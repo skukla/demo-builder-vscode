@@ -10,6 +10,7 @@ import { useComponentConfig } from '../hooks/useComponentConfig';
 import { useConfigNavigation } from '../hooks/useConfigNavigation';
 import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { BaseStepProps } from '@/types/wizard';
@@ -46,22 +47,22 @@ export function ComponentConfigStep({ state, updateState, setCanProceed }: BaseS
     const renderContent = (): React.ReactNode => {
         if (loadError) {
             return (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+                <CenteredFeedbackContainer>
                     <Text UNSAFE_className="text-red-700">
                         {loadError}
                     </Text>
-                </Flex>
+                </CenteredFeedbackContainer>
             );
         }
 
         if (isLoading) {
             return (
-                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+                <CenteredFeedbackContainer>
                     <LoadingDisplay
                         size="L"
                         message="Loading component configurations..."
                     />
-                </Flex>
+                </CenteredFeedbackContainer>
             );
         }
 

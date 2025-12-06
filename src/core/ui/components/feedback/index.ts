@@ -24,3 +24,6 @@ export type { StatusDisplayProps, StatusAction, StatusVariant } from './StatusDi
 
 export { LoadingOverlay } from './LoadingOverlay';
 export type { LoadingOverlayProps } from './LoadingOverlay';
+
+export { SuccessStateDisplay } from './SuccessStateDisplay';
+export type { SuccessStateDisplayProps } from './SuccessStateDisplay';

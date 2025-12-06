@@ -127,8 +127,11 @@ describe('Sidebar', () => {
     });
 
     describe('Project Detail context', () => {
-        it('should render project name as header', () => {
-            renderWithProvider(
+        // Note: Project context now renders UtilityBar (same as projects context)
+        // The detailed project controls are in the Project Dashboard main panel
+
+        it('should render utility bar for project context', () => {
+            const { container } = renderWithProvider(
                 <Sidebar
                     context={createProjectContext({ name: 'My Demo Project' })}
                     onNavigate={jest.fn()}
@@ -136,68 +139,23 @@ describe('Sidebar', () => {
                 />
             );
 
-            expect(screen.getByText('My Demo Project')).toBeInTheDocument();
+            // Project context now renders UtilityBar, not project details
+            // With no icon callbacks, it renders an empty utility bar
+            expect(container.querySelector('.sidebar-utility-bar')).toBeInTheDocument();
         });
 
-        it('should render navigation items: Overview, Configure, Updates', () => {
+        it('should render Documentation icon when onOpenDocs provided (project context)', () => {
             renderWithProvider(
                 <Sidebar
                     context={createProjectContext()}
                     onNavigate={jest.fn()}
                     onCreateProject={jest.fn()}
+                    onOpenDocs={jest.fn()}
                 />
             );
 
-            expect(screen.getByText('Overview')).toBeInTheDocument();
-            expect(screen.getByText('Configure')).toBeInTheDocument();
-            expect(screen.getByText('Updates')).toBeInTheDocument();
-        });
-
-        it('should show back button with "Projects" text', () => {
-            const onBack = jest.fn();
-            renderWithProvider(
-                <Sidebar
-                    context={createProjectContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onBack={onBack}
-                />
-            );
-
-            const backButton = screen.getByRole('button', { name: /projects/i });
-            expect(backButton).toBeInTheDocument();
-        });
-
-        it('should call onBack when back button clicked', () => {
-            const onBack = jest.fn();
-            renderWithProvider(
-                <Sidebar
-                    context={createProjectContext()}
-                    onNavigate={jest.fn()}
-                    onCreateProject={jest.fn()}
-                    onBack={onBack}
-                />
-            );
-
-            const backButton = screen.getByRole('button', { name: /projects/i });
-            fireEvent.click(backButton);
-
-            expect(onBack).toHaveBeenCalled();
-        });
-
-        it('should call onNavigate when navigation item clicked', () => {
-            const onNavigate = jest.fn();
-            renderWithProvider(
-                <Sidebar
-                    context={createProjectContext()}
-                    onNavigate={onNavigate}
-                    onCreateProject={jest.fn()}
-                />
-            );
-
-            fireEvent.click(screen.getByText('Configure'));
-
-            expect(onNavigate).toHaveBeenCalledWith('configure');
+            // Project context uses UtilityBar with icons
+            expect(screen.getByRole('button', { name: /documentation/i })).toBeInTheDocument();
         });
     });
 

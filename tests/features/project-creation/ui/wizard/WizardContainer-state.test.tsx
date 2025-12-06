@@ -35,30 +35,36 @@ describe('WizardContainer - State Management', () => {
                 />
             );
 
-            // Navigate forward through project and workspace selection
+            // Start at adobe-auth step (first step)
+            expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
+
+            // Navigate to adobe-project step (second step)
             const continueButton = screen.getByRole('button', { name: /continue/i });
+            await user.click(continueButton);
+            await screen.findByTestId('adobe-project-step', {}, { timeout: 500 });
 
-            // Adobe Auth -> Adobe Project -> Adobe Workspace (no welcome step)
-            for (let i = 0; i < 2; i++) {
-                await user.click(continueButton);
-                await waitFor(() => {}, { timeout: 400 });
-            }
+            // Navigate to adobe-workspace step (third step)
+            await user.click(screen.getByRole('button', { name: /continue/i }));
+            await screen.findByTestId('adobe-workspace-step', {}, { timeout: 500 });
 
-            // Now navigate back using Back button (should clear dependent state)
-            // Timeline navigation has been moved to the sidebar
+            // Now Back button should be visible (we're on step 3, not step 1)
             const backButton = screen.getByRole('button', { name: /back/i });
             await user.click(backButton);
 
-            await waitFor(() => {}, { timeout: 400 });
+            // Should navigate back to adobe-project
+            await screen.findByTestId('adobe-project-step', {}, { timeout: 500 });
 
-            // Click back again to get to adobe-auth
-            await user.click(backButton);
+            // Back button still visible (we're on step 2, not step 1)
+            const backButton2 = screen.getByRole('button', { name: /back/i });
+            await user.click(backButton2);
 
+            // Should navigate back to adobe-auth (first step)
             await waitFor(() => {
                 expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
             }, { timeout: 500 });
 
-            // State should be cleared (verified through component logic)
+            // Back button hidden on first step (d1b31df)
+            expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
         });
     });
 

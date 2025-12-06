@@ -64,7 +64,8 @@ describe('ProjectCard', () => {
                 <ProjectCard project={project} onSelect={jest.fn()} />
             );
 
-            expect(screen.getByText(/:3000/)).toBeInTheDocument();
+            // Uses getStatusText which returns "Running on port 3000"
+            expect(screen.getByText(/Running on port 3000/)).toBeInTheDocument();
         });
 
         it('should not show port when stopped', () => {
@@ -76,7 +77,8 @@ describe('ProjectCard', () => {
                 <ProjectCard project={project} onSelect={jest.fn()} />
             );
 
-            expect(screen.queryByText(/:3000/)).not.toBeInTheDocument();
+            // Stopped projects show "Stopped" (no port number)
+            expect(screen.queryByText(/on port/)).not.toBeInTheDocument();
         });
 
         it('should display simplified card with name and status only (no component list)', () => {

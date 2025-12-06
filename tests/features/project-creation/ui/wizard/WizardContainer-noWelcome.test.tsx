@@ -124,7 +124,7 @@ describe('WizardContainer - No Welcome Step', () => {
             expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
         });
 
-        it('should show Back button on first step (triggers cancel action)', () => {
+        it('should hide Back button on first step (d1b31df)', () => {
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -132,10 +132,10 @@ describe('WizardContainer - No Welcome Step', () => {
                 />
             );
 
-            // Back button exists and is enabled (clicking it triggers cancel)
-            const backButton = screen.getByRole('button', { name: /back/i });
-            expect(backButton).toBeInTheDocument();
-            expect(backButton).not.toBeDisabled();
+            // Back button is hidden on first step (d1b31df)
+            expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
+            // Continue button should be visible
+            expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
         });
     });
 });

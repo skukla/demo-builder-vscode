@@ -52,7 +52,7 @@ describe('WizardContainer - Initialization', () => {
             expect(screen.queryByTestId('welcome-step')).not.toBeInTheDocument();
         });
 
-        it('should render wizard with all step navigation buttons', () => {
+        it('should render wizard with navigation buttons (Back hidden on first step)', () => {
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -61,15 +61,15 @@ describe('WizardContainer - Initialization', () => {
             );
 
             // Verify navigation buttons are present
-            // Note: Timeline navigation has been moved to the sidebar
-            expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
+            // Note: Back button is hidden on first step (d1b31df)
+            expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
 
             // Verify first step is adobe-auth (welcome removed)
             expect(screen.getByTestId('adobe-auth-step')).toBeInTheDocument();
         });
 
-        it('should display footer buttons (Cancel, Back, Continue) except on last step', () => {
+        it('should display footer buttons (Cancel, Continue) on first step', () => {
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -77,8 +77,9 @@ describe('WizardContainer - Initialization', () => {
                 />
             );
 
+            // Back button is hidden on first step (d1b31df)
             expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
-            expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
         });
     });

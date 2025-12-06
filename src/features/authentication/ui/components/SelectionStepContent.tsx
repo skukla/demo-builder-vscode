@@ -16,6 +16,7 @@ import {
     Flex,
 } from '@adobe/react-spectrum';
 import React from 'react';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
@@ -125,14 +126,14 @@ export function SelectionStepContent<T extends SelectableItem>({
         return (
             <>
                 <Heading level={2} marginBottom="size-300">{labels.heading}</Heading>
-                <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+                <CenteredFeedbackContainer>
                     <LoadingDisplay
                         size="L"
                         message={labels.loadingMessage}
                         subMessage={labels.loadingSubMessage}
                         helperText="This could take up to 30 seconds"
                     />
-                </Flex>
+                </CenteredFeedbackContainer>
             </>
         );
     }

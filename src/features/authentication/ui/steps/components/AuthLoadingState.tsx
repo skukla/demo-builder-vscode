@@ -1,5 +1,5 @@
 import React from 'react';
-import { Flex } from '@adobe/react-spectrum';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 
 interface AuthLoadingStateProps {
@@ -10,13 +10,13 @@ interface AuthLoadingStateProps {
 
 export function AuthLoadingState({ message, subMessage, helperText }: AuthLoadingStateProps) {
     return (
-        <Flex direction="column" justifyContent="center" alignItems="center" height="350px">
+        <CenteredFeedbackContainer>
             <LoadingDisplay
                 size="L"
                 message={message}
                 subMessage={subMessage}
                 helperText={helperText}
             />
-        </Flex>
+        </CenteredFeedbackContainer>
     );
 }

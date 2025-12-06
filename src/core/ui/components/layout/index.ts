@@ -21,3 +21,6 @@ export type { PageFooterProps } from './PageFooter';
 
 export { PageLayout } from './PageLayout';
 export type { PageLayoutProps } from './PageLayout';
+
+export { CenteredFeedbackContainer } from './CenteredFeedbackContainer';
+export type { CenteredFeedbackContainerProps } from './CenteredFeedbackContainer';

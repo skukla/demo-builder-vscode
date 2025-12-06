@@ -91,7 +91,7 @@ describe('WizardContainer - Layout Components', () => {
             expect(cancelButton).toBeInTheDocument();
         });
 
-        it('should display Back and Continue buttons in footer right content', () => {
+        it('should display Continue button in footer right content (Back hidden on first step)', () => {
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -99,7 +99,8 @@ describe('WizardContainer - Layout Components', () => {
                 />
             );
 
-            expect(screen.getByRole('button', { name: /back/i })).toBeInTheDocument();
+            // Back button is hidden on first step (fix from d1b31df)
+            expect(screen.queryByRole('button', { name: /back/i })).not.toBeInTheDocument();
             expect(screen.getByRole('button', { name: /continue/i })).toBeInTheDocument();
         });
 
@@ -120,9 +121,9 @@ describe('WizardContainer - Layout Components', () => {
             expect(mockPostMessage).toHaveBeenCalledWith('cancel');
         });
 
-        it('should disable buttons during confirmation (loading overlay)', async () => {
-            // This test verifies that isConfirmingSelection state disables footer buttons
-            // The loading overlay is shown during backend calls on Continue
+        it('should have enabled Cancel and Continue buttons on first step', async () => {
+            // This test verifies that buttons are enabled initially (not during loading)
+            // Back button is hidden on first step (fix from d1b31df)
             renderWithTheme(
                 <WizardContainer
                     componentDefaults={createMockComponentDefaults()}
@@ -132,10 +133,10 @@ describe('WizardContainer - Layout Components', () => {
 
             // Initially buttons should NOT be disabled
             const cancelButton = screen.getByRole('button', { name: /cancel/i });
-            const backButton = screen.getByRole('button', { name: /back/i });
+            const continueButton = screen.getByRole('button', { name: /continue/i });
 
             expect(cancelButton).not.toBeDisabled();
-            expect(backButton).not.toBeDisabled();
+            expect(continueButton).not.toBeDisabled();
         });
 
         it('should hide footer on last step (project-creation)', async () => {

@@ -29,6 +29,12 @@ jest.mock('@/core/ui/components/layout', () => ({
             <div data-testid="page-layout-content">{children}</div>
         </div>
     ),
+    PageHeader: ({ title, subtitle }: any) => (
+        <div data-testid="page-header">
+            <h1>{title}</h1>
+            {subtitle && <h3>{subtitle}</h3>}
+        </div>
+    ),
 }));
 
 // Mock feedback components

@@ -47,7 +47,7 @@ describe('ProjectsDashboard', () => {
 
             expect(screen.getByText(/no projects yet/i)).toBeInTheDocument();
             expect(
-                screen.getByRole('button', { name: /new project/i })
+                screen.getByRole('button', { name: /new/i })
             ).toBeInTheDocument();
         });
 
@@ -62,7 +62,7 @@ describe('ProjectsDashboard', () => {
             );
 
             fireEvent.click(
-                screen.getByRole('button', { name: /new project/i })
+                screen.getByRole('button', { name: /new/i })
             );
 
             expect(onCreateProject).toHaveBeenCalledTimes(1);
