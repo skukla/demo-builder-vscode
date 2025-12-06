@@ -63,6 +63,7 @@ export const TIMEOUTS = {
     FOCUS_FALLBACK: 1000,           // Fallback timeout for MutationObserver-based focus management
     DASHBOARD_OPEN_DELAY: 500,      // Delay before opening dashboard after project creation
     UI_UPDATE_DELAY: 100,           // Small delay for UI updates before subsequent operations
+    HOVER_SUPPRESSION_DELAY: 500,   // Layout stabilization delay before re-enabling hover styles (SOP §1)
     WEBVIEW_INIT_DELAY: 50,         // Small delay for webview initialization to avoid race conditions (SOP §1)
     PROGRESS_MESSAGE_DELAY: 1000,   // First progress message update timing (SOP §1)
     PROGRESS_MESSAGE_DELAY_LONG: 2000, // Second progress message update timing (SOP §1)
@@ -100,6 +101,14 @@ export const TIMEOUTS = {
 
     // API Mesh specific
     API_MESH_CHECK: 60000,          // Check mesh status - workspace download + describe (60 seconds)
+    /**
+     * Total timeout for mesh deployment step during project creation (180 seconds = 3 minutes)
+     *
+     * PM Decision (2025-12-06): Increased from 120s to 180s per research recommendation.
+     * Adobe mesh deployments commonly take 2-3 minutes.
+     * This timeout covers: deployment command + verification polling.
+     */
+    MESH_DEPLOY_TOTAL: 180000,      // Total mesh deployment timeout (3 minutes)
 
     // Polling service defaults
     POLL_INITIAL_DELAY: 500,        // Initial poll delay (500ms)
@@ -136,6 +145,9 @@ export const TIMEOUTS = {
     SLOW_COMMAND_THRESHOLD: 3000,   // Threshold for slow command warnings (3 seconds)
     PROGRESS_ESTIMATED_DEFAULT_SHORT: 500, // Default estimated step duration for short operations (500ms)
     PROGRESS_MIN_DURATION_CAP: 1000,       // Maximum duration cap for immediate operations (1 second)
+
+    // Project creation workflow (SOP §1 - moved from shared.ts)
+    PROJECT_CREATION_OVERALL: 30 * 60 * 1000, // 30 minutes - complete project creation workflow timeout
 } as const;
 
 /**

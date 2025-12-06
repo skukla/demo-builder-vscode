@@ -236,4 +236,36 @@ describe('Timeout Configuration', () => {
             expect(TIMEOUTS.PROGRESS_MIN_DURATION_CAP).toBeLessThanOrEqual(2000);
         });
     });
+
+    // Mesh Deployment Timeout Recovery - Step 1
+    describe('Mesh deployment total timeout (PM decision 2025-12-06)', () => {
+        it('should have MESH_DEPLOY_TOTAL constant set to 180000ms (180 seconds)', () => {
+            // PM Decision: Increase from 120s to 180s per research recommendation
+            // Adobe mesh deployments commonly take 2-3 minutes
+            expect(TIMEOUTS.MESH_DEPLOY_TOTAL).toBe(180000);
+        });
+
+        it('should be longer than existing API_MESH_UPDATE timeout', () => {
+            // Total deployment timeout should exceed individual operation timeout
+            expect(TIMEOUTS.MESH_DEPLOY_TOTAL).toBeGreaterThan(TIMEOUTS.API_MESH_UPDATE);
+        });
+
+        it('should be 3 minutes for user patience threshold', () => {
+            // 180s = 3 minutes - reasonable for mesh deployment with verification
+            const threeMinutes = 3 * 60 * 1000;
+            expect(TIMEOUTS.MESH_DEPLOY_TOTAL).toBe(threeMinutes);
+        });
+
+        it('should allow sufficient time for verification polling', () => {
+            // Given 10s polling interval and 20s initial wait, 180s allows ~16 verification attempts
+            const initialWait = TIMEOUTS.MESH_VERIFY_INITIAL_WAIT;
+            const pollInterval = TIMEOUTS.MESH_VERIFY_POLL_INTERVAL;
+            const totalTimeout = TIMEOUTS.MESH_DEPLOY_TOTAL;
+
+            const verificationAttempts = Math.floor((totalTimeout - initialWait) / pollInterval);
+
+            // Should allow at least 10 verification attempts
+            expect(verificationAttempts).toBeGreaterThanOrEqual(10);
+        });
+    });
 });
