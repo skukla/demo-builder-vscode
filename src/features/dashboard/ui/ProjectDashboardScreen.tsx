@@ -22,6 +22,7 @@ import { useFocusTrap } from '@/core/ui/hooks';
 import { StatusCard } from '@/core/ui/components/feedback';
 import { GridLayout, PageLayout, PageHeader } from '@/core/ui/components/layout';
 import { isStartActionDisabled } from './dashboardPredicates';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'error';
 
@@ -151,8 +152,8 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
         setIsLogsHoverSuppressed(true);
         (document.activeElement as HTMLElement)?.blur();
         webviewClient.postMessage('viewLogs');
-        // Re-enable hover after layout stabilizes
-        setTimeout(() => setIsLogsHoverSuppressed(false), 500);
+        // Re-enable hover after layout stabilizes (SOP §1: using TIMEOUTS constant)
+        setTimeout(() => setIsLogsHoverSuppressed(false), TIMEOUTS.HOVER_SUPPRESSION_DELAY);
     }, []);
 
     const handleDeployMesh = useCallback(() => {

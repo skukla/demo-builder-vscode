@@ -7,6 +7,7 @@
  */
 
 import type { Project, ProjectStatus } from '@/types/base';
+import { getComponentInstanceValues } from '@/types/typeGuards';
 
 /**
  * StatusDot variant type for visual status indication
@@ -64,6 +65,8 @@ export function getStatusVariant(status: ProjectStatus): StatusVariant {
  * Searches component instances for the first one with a port defined.
  * Returns undefined if project is not running or has no components with ports.
  *
+ * SOP §4: Uses getComponentInstanceValues() helper instead of inline Object.values()
+ *
  * @param project - The project to get the port from
  * @returns The frontend port number, or undefined if not available
  */
@@ -71,8 +74,7 @@ export function getFrontendPort(project: Project): number | undefined {
     if (project.status !== 'running' || !project.componentInstances) {
         return undefined;
     }
-    const frontend = Object.values(project.componentInstances).find(
-        (c) => c.port !== undefined,
-    );
+    const instances = getComponentInstanceValues(project);
+    const frontend = instances.find((c) => c.port !== undefined);
     return frontend?.port;
 }

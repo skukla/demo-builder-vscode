@@ -122,7 +122,7 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         }
         
         logger.debug('[Mesh Staleness] Successfully fetched deployed mesh config', {
-            keysFound: Object.keys(deployedEnvVars),
+            keyCount: Object.keys(deployedEnvVars).length,
         });
         
         return deployedEnvVars;

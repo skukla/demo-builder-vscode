@@ -230,3 +230,41 @@ export function getComponentConfigPort(
     return config?.PORT;
 }
 
+// =============================================================================
+// Authentication Predicate Functions
+// =============================================================================
+// SOP §4/§10: Extracted boolean coercion and validation chain helpers
+
+/**
+ * Check if organization has a valid name
+ *
+ * SOP §4: Extracted `!!state.adobeOrg?.name` boolean coercion
+ *
+ * @param org - Adobe organization object (can be undefined/null)
+ * @returns true if organization has a non-empty name
+ */
+export function hasOrganizationName(org: { name?: string } | undefined | null): boolean {
+    return !!org?.name;
+}
+
+/**
+ * Check if user can proceed from authentication step
+ *
+ * SOP §10: Extracted 3-condition validation chain from useAuthStatus.ts
+ *
+ * @param isAuthenticated - Whether user is authenticated
+ * @param org - Adobe organization with name
+ * @param tokenExpiringSoon - Whether token is expiring soon
+ * @returns true if user can proceed
+ */
+export function canProceedFromAuth(
+    isAuthenticated: boolean,
+    org: { name?: string } | undefined | null,
+    tokenExpiringSoon: boolean | undefined,
+): boolean {
+    if (!isAuthenticated) return false;
+    if (!hasOrganizationName(org)) return false;
+    if (tokenExpiringSoon) return false;
+    return true;
+}
+

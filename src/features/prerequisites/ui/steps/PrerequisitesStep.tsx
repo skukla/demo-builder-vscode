@@ -76,6 +76,31 @@ function isTerminalStatus(status: PrerequisiteCheck['status']): boolean {
 }
 
 /**
+ * Check if plugin details should be shown for a prerequisite
+ *
+ * SOP §10: Extracted 3-condition validation chain from JSX
+ * Plugins are shown when:
+ * 1. Check status is checking/success/error (not pending/warning)
+ * 2. Either no nodeVersionStatus exists, OR all Node versions are installed
+ *
+ * @param status - The prerequisite check status
+ * @param nodeVersionStatus - Optional array of Node version statuses
+ * @returns true if plugin details should be displayed
+ */
+function shouldShowPluginDetails(
+    status: PrerequisiteCheck['status'],
+    nodeVersionStatus: PrerequisiteCheck['nodeVersionStatus'],
+): boolean {
+    // Must be in an active check state
+    const isActiveStatus = status === 'checking' || status === 'success' || status === 'error';
+    if (!isActiveStatus) return false;
+
+    // Show if no node version info, or all versions are installed
+    if (!nodeVersionStatus) return true;
+    return nodeVersionStatus.every(v => v.installed);
+}
+
+/**
  * Transform prerequisite data to initial check state
  *
  * SOP §6: Extracted 8-property callback to named transformation
@@ -564,9 +589,9 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                                                     />
                                                 </View>
                                             )}
+                                            {/* SOP §10: Using shouldShowPluginDetails predicate instead of inline chain */}
                                             {check.plugins && check.plugins.length > 0 &&
-                                                (check.status === 'checking' || check.status === 'success' || check.status === 'error') &&
-                                                (!check.nodeVersionStatus || check.nodeVersionStatus.every(v => v.installed)) && (
+                                                shouldShowPluginDetails(check.status, check.nodeVersionStatus) && (
                                                 <View marginTop={check.nodeVersionStatus ? 'size-50' : 'size-100'} UNSAFE_className="animate-fade-in">
                                                     {(() => {
                                                         // If we have per-version info and a single plugin, condense to one line with versions

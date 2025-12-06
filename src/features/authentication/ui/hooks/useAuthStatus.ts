@@ -3,6 +3,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { WizardState } from '@/types/webview';
 import { ErrorCode } from '@/types/errorCodes';
+import { canProceedFromAuth } from '@/types/typeGuards';
 
 const log = webviewLogger('useAuthStatus');
 
@@ -159,11 +160,14 @@ export function useAuthStatus({
     }, []);
 
     // Update canProceed based on auth state
+    // SOP §10: Uses canProceedFromAuth helper for 3-condition validation chain
     useEffect(() => {
         setCanProceed(
-            state.adobeAuth.isAuthenticated &&
-            !!state.adobeOrg?.name &&
-            !state.adobeAuth.tokenExpiringSoon
+            canProceedFromAuth(
+                state.adobeAuth.isAuthenticated,
+                state.adobeOrg,
+                state.adobeAuth.tokenExpiringSoon
+            )
         );
     }, [state.adobeAuth.isAuthenticated, state.adobeAuth.tokenExpiringSoon, state.adobeOrg, setCanProceed]);
 
