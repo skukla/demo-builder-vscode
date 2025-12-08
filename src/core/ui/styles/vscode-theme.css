@@ -84,22 +84,22 @@
 
     /* Button styling - use light text on dark backgrounds */
     /* Use precise class matching to avoid targeting internal elements like spectrum-Button-label */
-    body button[class*="spectrum-Button"]:not([class*="quiet"]):not([class*="cta"]):not(.dashboard-action-button) {
+    /* Exclude accent buttons (data-variant="accent") - let Spectrum handle their native blue */
+    body button[class*="spectrum-Button"]:not([class*="quiet"]):not([class*="cta"]):not([data-variant="accent"]):not(.dashboard-action-button) {
         background-color: var(--spectrum-global-color-gray-200) !important;
         color: var(--spectrum-global-color-gray-800) !important;
         border-color: var(--spectrum-global-color-gray-400) !important;
     }
 
-    body button[class*="spectrum-Button"]:not([class*="quiet"]):not([class*="cta"]):not(.dashboard-action-button):hover {
+    body button[class*="spectrum-Button"]:not([class*="quiet"]):not([class*="cta"]):not([data-variant="accent"]):not(.dashboard-action-button):hover {
         background-color: var(--spectrum-global-color-gray-300) !important;
     }
 
-    body button[class*="spectrum-Button"][class*="accent"] {
-        background-color: var(--spectrum-global-color-blue-500) !important;
-        color: var(--spectrum-global-color-gray-900) !important;
-    }
+    /* Accent buttons - let Spectrum handle natively (uses --spectrum-accent-background-color-*) */
+    /* No override needed - Spectrum's native accent blue is correct */
 
-    body button[class*="spectrum-Button"][class*="secondary"]:not(.dashboard-action-button) {
+    body button[class*="spectrum-Button"][class*="secondary"]:not(.dashboard-action-button),
+    body button[class*="spectrum-Button"][data-variant="secondary"]:not(.dashboard-action-button) {
         background-color: var(--spectrum-global-color-gray-200) !important;
         color: var(--spectrum-global-color-gray-800) !important;
     }
