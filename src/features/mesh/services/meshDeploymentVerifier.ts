@@ -123,11 +123,17 @@ export async function waitForMeshDeployment(
                         meshDeployed = true;
                         break;
                     } else if (meshStatus === 'error' || meshStatus === 'failed') {
-                        // Return raw error - caller will format for display
-                        // Don't log here to avoid duplication
+                        // Log full response for debugging - Adobe's error field is often truncated
+                        logger?.debug('[Mesh Verification] Full API response:', verifyResult.stdout);
+
+                        // Try to extract more meaningful error from full response
+                        const { extractMeshErrorSummary } = await import('../utils/errorFormatter');
+                        const fullError = meshData.error || verifyResult.stdout || 'Mesh deployment failed with error status';
+                        const userFriendlyError = extractMeshErrorSummary(fullError);
+
                         return {
                             deployed: false,
-                            error: meshData.error || 'Mesh deployment failed with error status',
+                            error: userFriendlyError,
                         };
                     }
                     // Otherwise continue polling (status is pending/building/etc)

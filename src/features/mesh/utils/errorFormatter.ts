@@ -159,6 +159,16 @@ export function extractMeshErrorSummary(error: string): string {
         return 'Adobe API rate limit reached. Please wait a few minutes and try again.';
     }
 
+    // Truncated "Building Mesh with config" error - Adobe returned incomplete error
+    // This happens when mesh build fails but Adobe doesn't return the actual error details
+    if (/Building Mesh with config:.*\/$/.test(error) || /^Building Mesh with config:/.test(error)) {
+        return 'Mesh build failed. This is usually caused by:\n' +
+            '• Invalid Commerce GraphQL endpoint URL\n' +
+            '• Commerce instance not reachable from Adobe I/O\n' +
+            '• Missing or invalid API credentials\n\n' +
+            'Check the Debug logs for more details.';
+    }
+
     // Try to extract the 💥 error line (the actual failure)
     const fatalMatch = /💥[^💥\n]*?(?:Failed|Error)[^💥\n]*/i.exec(error);
     if (fatalMatch) {
