@@ -49,6 +49,9 @@ export interface WebviewHTMLWithBundlesOptions {
 
     /** Optional: Additional image sources for CSP img-src directive */
     additionalImgSources?: string[];
+
+    /** Optional: Base URI for media assets (images, etc.) */
+    baseUri?: vscode.Uri;
 }
 
 /**
@@ -93,6 +96,7 @@ export function getWebviewHTMLWithBundles(options: WebviewHTMLWithBundlesOptions
         cspSource,
         title,
         additionalImgSources = [],
+        baseUri,
     } = options;
 
     // Validate required nonce for CSP
@@ -100,8 +104,13 @@ export function getWebviewHTMLWithBundles(options: WebviewHTMLWithBundlesOptions
         throw new Error('Nonce is required for CSP compliance');
     }
 
-    // Build img-src directive: default sources + additional
-    const imgSources = ['https:', 'data:', ...additionalImgSources].join(' ');
+    // Build img-src directive: cspSource (for local webview resources) + default sources + additional
+    const imgSources = [cspSource, 'https:', 'data:', ...additionalImgSources].join(' ');
+
+    // Optional base URI script for media asset resolution
+    const baseUriScript = baseUri
+        ? `<script nonce="${nonce}">window.__WEBVIEW_BASE_URI__ = "${baseUri.toString()}";</script>`
+        : '';
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -116,6 +125,7 @@ export function getWebviewHTMLWithBundles(options: WebviewHTMLWithBundlesOptions
         font-src ${cspSource};
     ">
     <title>${title}</title>
+    ${baseUriScript}
 </head>
 <body style="margin: 0;">
     <div id="root"></div>

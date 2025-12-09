@@ -224,12 +224,17 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
         const nonce = this.getNonce();
 
+        // Get base URI for media assets
+        const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
+        const baseUri = this.panel!.webview.asWebviewUri(mediaPath);
+
         // Build HTML with 4-bundle pattern
         return getWebviewHTMLWithBundles({
             bundleUris,
             nonce,
             cspSource: this.panel!.webview.cspSource,
             title: 'Adobe Demo Builder',
+            baseUri,
         });
     }
 

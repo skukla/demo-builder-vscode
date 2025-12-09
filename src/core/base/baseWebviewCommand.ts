@@ -252,6 +252,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
                 retainContextWhenHidden: true,
                 localResourceRoots: [
                     vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'webview')),
+                    vscode.Uri.file(path.join(this.context.extensionPath, 'dist', 'media')),
                     vscode.Uri.file(path.join(this.context.extensionPath, 'media')),
                 ],
             },
