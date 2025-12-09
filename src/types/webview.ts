@@ -212,6 +212,30 @@ export interface ComponentConfig {
     [key: string]: string | boolean | number | undefined;
 }
 
+/**
+ * A single step in field help instructions
+ */
+export interface FieldHelpStep {
+    /** Step instruction text */
+    text: string;
+    /** Screenshot image filename (relative to media/help/) */
+    screenshot?: string;
+    /** Alt text for screenshot (for accessibility) */
+    screenshotAlt?: string;
+}
+
+/**
+ * Help content for a field - shown in modal when user clicks info icon
+ */
+export interface FieldHelp {
+    /** Title shown in modal header */
+    title?: string;
+    /** Simple text explanation (for fields without step-by-step instructions) */
+    text?: string;
+    /** Step-by-step instructions with optional screenshots */
+    steps?: FieldHelpStep[];
+}
+
 export interface ComponentEnvVar {
     key: string;
     label: string;
@@ -220,7 +244,8 @@ export interface ComponentEnvVar {
     default?: string | boolean;
     placeholder?: string;
     description?: string;
-    helpText?: string;
+    /** Rich help content with optional screenshot */
+    help?: FieldHelp;
     group?: string;
     providedBy?: string;
     usedBy?: string[];

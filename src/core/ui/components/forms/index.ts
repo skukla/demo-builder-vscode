@@ -12,3 +12,6 @@ export type { FormFieldProps, FormFieldOption } from './FormField';
 
 export { ConfigSection } from './ConfigSection';
 export type { ConfigSectionProps } from './ConfigSection';
+
+export { FieldHelpButton } from './FieldHelpButton';
+export type { FieldHelpButtonProps, FieldHelpContent } from './FieldHelpButton';
