@@ -1,5 +1,6 @@
 import React from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
+import { CopyableText } from './CopyableText';
 
 export interface Instruction {
     step: string;
@@ -13,35 +14,23 @@ export interface NumberedInstructionsProps {
 }
 
 /**
- * Styles for inline code snippets (SOP §6 compliance - extracted style object)
+ * Helper function to render text with copyable code for quoted content
+ * Text wrapped in single quotes becomes clickable to copy
  */
-const CODE_SNIPPET_STYLES: React.CSSProperties = {
-    fontFamily: 'var(--spectrum-alias-body-text-font-family, monospace)',
-    fontSize: '0.9em',
-    backgroundColor: 'var(--db-code-background)',
-    padding: '4px 10px',
-    borderRadius: '4px',
-    color: 'var(--spectrum-global-color-blue-700)',
-    border: '1px solid var(--db-code-border)',
-    fontWeight: 600,
-    whiteSpace: 'nowrap',
-};
-
-// Helper function to render text with code highlighting for quoted content
 const renderInstructionText = (text: string) => {
     // Split by single quotes to find code snippets
     const parts = text.split(/('.*?')/g);
-    
+
     return (
         <>
             {parts.map((part, i) => {
-                // If the part starts and ends with single quotes, it's code
+                // If the part starts and ends with single quotes, it's copyable
                 if (part.startsWith("'") && part.endsWith("'")) {
-                    // Remove the quotes and wrap in styled code element
+                    // Remove the quotes and wrap in CopyableText
                     return (
-                        <code key={i} style={CODE_SNIPPET_STYLES}>
+                        <CopyableText key={i}>
                             {part.slice(1, -1)}
-                        </code>
+                        </CopyableText>
                     );
                 }
                 return <span key={i}>{part}</span>;

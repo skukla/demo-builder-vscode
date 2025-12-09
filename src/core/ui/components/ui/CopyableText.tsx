@@ -17,26 +17,30 @@ const COPYABLE_STYLES: React.CSSProperties = {
     transition: 'background-color 0.15s ease',
 };
 
-const COPIED_STYLES: React.CSSProperties = {
-    ...COPYABLE_STYLES,
-    backgroundColor: 'var(--spectrum-global-color-green-100)',
-    border: '1px solid var(--spectrum-global-color-green-400)',
+const ICON_STYLES: React.CSSProperties = {
+    marginLeft: '6px',
+    fontSize: '1em',
+    opacity: 0.7,
+};
+
+const CHECKMARK_STYLES: React.CSSProperties = {
+    ...ICON_STYLES,
+    color: 'var(--spectrum-global-color-green-600)',
+    opacity: 1,
 };
 
 interface CopyableTextProps {
     /** Text to display and copy */
     children: string;
-    /** Optional tooltip text (defaults to "Click to copy") */
-    tooltip?: string;
 }
 
 /**
  * CopyableText - Inline text that copies to clipboard on click
  *
  * Styled like code snippets with a visual feedback on copy.
- * Shows "Copied!" briefly after clicking.
+ * Shows a copy icon that changes to a checkmark when clicked.
  */
-export function CopyableText({ children, tooltip = 'Click to copy' }: CopyableTextProps) {
+export function CopyableText({ children }: CopyableTextProps) {
     const [copied, setCopied] = useState(false);
 
     const handleClick = useCallback(async (e: React.MouseEvent) => {
@@ -56,8 +60,7 @@ export function CopyableText({ children, tooltip = 'Click to copy' }: CopyableTe
     return (
         <code
             onClick={handleClick}
-            style={copied ? COPIED_STYLES : COPYABLE_STYLES}
-            title={copied ? 'Copied!' : tooltip}
+            style={COPYABLE_STYLES}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
@@ -66,7 +69,10 @@ export function CopyableText({ children, tooltip = 'Click to copy' }: CopyableTe
                 }
             }}
         >
-            {copied ? '✓ Copied!' : children}
+            {children}
+            <span style={copied ? CHECKMARK_STYLES : ICON_STYLES}>
+                {copied ? '✓' : '⧉'}
+            </span>
         </code>
     );
 }
