@@ -175,14 +175,19 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
             return { success: false, error: 'No project found', code: ErrorCode.PROJECT_NOT_FOUND };
         }
 
+        // Helper to send progress updates to UI
+        const sendAuthProgress = (message: string) => {
+            context.panel?.webview.postMessage({
+                type: 'meshStatusUpdate',
+                payload: {
+                    status: 'authenticating',
+                    message,
+                },
+            });
+        };
+
         // Update UI to 'authenticating' state
-        context.panel?.webview.postMessage({
-            type: 'meshStatusUpdate',
-            payload: {
-                status: 'authenticating',
-                message: 'Opening browser for authentication...',
-            },
-        });
+        sendAuthProgress('Opening browser for authentication...');
 
         context.logger.debug('[Dashboard] Starting re-authentication flow');
 
@@ -192,11 +197,13 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
         await authManager.login();
 
         context.logger.info('[Dashboard] Browser authentication completed');
+        sendAuthProgress('Restoring Adobe context...');
 
         // Auto-select project's Adobe context (org → project → workspace)
         // This ensures mesh commands have the required context and don't prompt interactively
         if (project.adobe?.organization) {
             context.logger.debug(`[Dashboard] Auto-selecting project org: ${project.adobe.organization}`);
+            sendAuthProgress('Selecting organization...');
 
             try {
                 await authManager.selectOrganization(project.adobe.organization);
@@ -209,6 +216,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
         // Auto-select project (requires org context)
         if (project.adobe?.projectId && project.adobe?.organization) {
             context.logger.debug(`[Dashboard] Auto-selecting project: ${project.adobe.projectId}`);
+            sendAuthProgress('Selecting project...');
 
             try {
                 await authManager.selectProject(project.adobe.projectId, project.adobe.organization);
@@ -221,6 +229,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
         // Auto-select workspace (requires project context)
         if (project.adobe?.workspace && project.adobe?.projectId) {
             context.logger.debug(`[Dashboard] Auto-selecting workspace: ${project.adobe.workspace}`);
+            sendAuthProgress('Selecting workspace...');
 
             try {
                 await authManager.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
@@ -232,6 +241,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
 
         // Re-check mesh status with fresh authentication
         context.logger.debug('[Dashboard] Re-checking mesh status after authentication');
+        sendAuthProgress('Checking mesh status...');
         await handleRequestStatus(context);
 
         return { success: true };

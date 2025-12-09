@@ -221,7 +221,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
             case 'needs-auth':
                 return { color: 'yellow' as const, text: 'Session expired' };
             case 'authenticating':
-                return { color: 'blue' as const, text: 'Authenticating...' };
+                return { color: 'blue' as const, text: meshMessage || 'Signing in...' };
             case 'deploying':
                 return { color: 'blue' as const, text: meshMessage || 'Deploying...' };
             case 'deployed':

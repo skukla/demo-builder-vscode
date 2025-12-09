@@ -434,12 +434,24 @@ export class WebviewCommunicationManager {
 
 /**
  * Factory function for creating communication manager
+ *
+ * CRITICAL: If initialization fails (e.g., handshake timeout), the manager is
+ * disposed to prevent orphaned message listeners. Without this cleanup, subsequent
+ * calls would create duplicate listeners, causing handlers to fire multiple times.
  */
 export async function createWebviewCommunication(
     panel: vscode.WebviewPanel,
     config?: CommunicationConfig,
 ): Promise<WebviewCommunicationManager> {
     const manager = new WebviewCommunicationManager(panel, config);
-    await manager.initialize();
-    return manager;
+    const logger = getLogger();
+    try {
+        await manager.initialize();
+        return manager;
+    } catch (error) {
+        // Clean up to prevent orphaned listeners that would cause duplicate handler invocations
+        logger.warn('[WebviewComm] Initialization failed, disposing manager to prevent orphaned listeners');
+        manager.dispose();
+        throw error;
+    }
 }
