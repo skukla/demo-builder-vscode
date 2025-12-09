@@ -11,6 +11,7 @@ import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { BaseStepProps } from '@/types/wizard';
 import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
+import { normalizeProjectName } from '@/features/project-creation/helpers/formatters';
 
 interface WelcomeStepProps extends BaseStepProps {
     existingProjectNames?: string[];
@@ -109,7 +110,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                         <TextField
                             label="Name"
                             value={state.projectName}
-                            onChange={(value) => updateState({ projectName: value })}
+                            onChange={(value) => updateState({ projectName: normalizeProjectName(value) })}
                             description="Lowercase letters, numbers, and hyphens only"
                             validationState={getProjectNameValidationState(state.projectName)}
                             errorMessage={
