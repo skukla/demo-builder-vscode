@@ -178,8 +178,7 @@
       "type": "url",
       "required": true,
       "placeholder": "https://edge-sandbox-graph.adobe.io/api/your-mesh-id/graphql",
-      "description": "The GraphQL endpoint for your Adobe Commerce API Mesh",
-      "helpText": "Automatically supplied after API Mesh deployment",
+      "description": "Automatically supplied after API Mesh deployment",
       "group": "mesh"
     },
     "ADOBE_ASSETS_URL": {
@@ -187,8 +186,7 @@
       "type": "url",
       "required": false,
       "placeholder": "https://delivery-p57319-e1619941.adobeaemcloud.com",
-      "description": "Optional URL for Adobe Experience Manager assets delivery",
-      "helpText": "Supply if the storefront should load assets from AEM.",
+      "description": "Supply if the storefront should load assets from AEM",
       "group": "adobe-assets"
     },
     "ADOBE_CATALOG_API_KEY": {
@@ -196,8 +194,7 @@
       "type": "text",
       "required": true,
       "placeholder": "your-sandbox-catalog-api-key",
-      "description": "Your sandbox API key for Adobe Catalog Service",
-      "helpText": "Key used by Catalog Service and Live Search sources in API Mesh.",
+      "description": "Found in Commerce Admin > System > Services > Commerce Services Connector > SaaS Identifier",
       "group": "catalog-service"
     },
     "ADOBE_CATALOG_SERVICE_ENDPOINT": {
@@ -206,8 +203,7 @@
       "required": true,
       "default": "https://catalog-service-sandbox.adobe.io/graphql",
       "placeholder": "https://catalog-service-sandbox.adobe.io/graphql",
-      "description": "Adobe Catalog Service GraphQL endpoint (shared with Live Search)",
-      "helpText": "Public Adobe service endpoint for Catalog Service and Live Search",
+      "description": "Public Adobe service endpoint for Catalog Service and Live Search",
       "group": "catalog-service"
     },
     "ADOBE_COMMERCE_ADMIN_PASSWORD": {
@@ -215,8 +211,7 @@
       "type": "password",
       "required": true,
       "placeholder": "your_admin_password",
-      "description": "Password for Commerce admin panel access",
-      "helpText": "Admin user must have API access permissions.",
+      "description": "Admin user must have API access permissions",
       "group": "adobe-commerce"
     },
     "ADOBE_COMMERCE_ADMIN_USERNAME": {
@@ -224,8 +219,7 @@
       "type": "text",
       "required": true,
       "placeholder": "admin",
-      "description": "Username for Commerce admin panel access",
-      "helpText": "Admin user must have API access permissions.",
+      "description": "Admin user must have API access permissions",
       "group": "adobe-commerce"
     },
     "ADOBE_COMMERCE_CUSTOMER_GROUP": {
@@ -233,8 +227,7 @@
       "type": "text",
       "required": false,
       "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
-      "description": "Defaults to the \"Not Logged In\" customer group",
-      "helpText": "Leave as default for the \"Not Logged In\" customer group, or customize for specific pricing rules",
+      "description": "Leave as default for 'Not Logged In' group, or customize for specific pricing rules",
       "group": "adobe-commerce"
     },
     "ADOBE_COMMERCE_ENVIRONMENT_ID": {
@@ -243,7 +236,26 @@
       "required": true,
       "placeholder": "your-environment-id",
       "description": "Adobe Commerce Catalog Service dataspace identifier",
-      "helpText": "Found in your Commerce Cloud project settings under Catalog Service configuration",
+      "help": {
+        "title": "Finding Your Environment ID",
+        "steps": [
+          {
+            "text": "Open your Adobe Commerce Admin panel and navigate to System > Services > Commerce Services Connector",
+            "screenshot": "help/environment-id-step-1.png",
+            "screenshotAlt": "Commerce Admin navigation to Services"
+          },
+          {
+            "text": "Look for the SaaS Identifier section",
+            "screenshot": "help/environment-id-step-2.png",
+            "screenshotAlt": "SaaS Identifier section in Commerce Services Connector"
+          },
+          {
+            "text": "Copy the Data Space ID value - this is your Environment ID",
+            "screenshot": "help/environment-id-step-3.png",
+            "screenshotAlt": "Data Space ID field showing Environment ID value"
+          }
+        ]
+      },
       "group": "catalog-service"
     },
     "ADOBE_COMMERCE_GRAPHQL_ENDPOINT": {
@@ -251,8 +263,7 @@
       "type": "url",
       "required": true,
       "placeholder": "https://your-instance.adobedemo.com/graphql",
-      "description": "GraphQL endpoint of your Adobe Commerce instance",
-      "helpText": "This is the /graphql endpoint of your Commerce instance.",
+      "description": "The /graphql endpoint of your Commerce instance",
       "group": "adobe-commerce"
     },
     "ADOBE_COMMERCE_STORE_CODE": {
@@ -260,8 +271,7 @@
       "type": "text",
       "required": true,
       "placeholder": "main_website_store",
-      "description": "",
-      "helpText": "Usually 'main_website_store' for default Commerce installations",
+      "description": "Usually 'main_website_store' for default Commerce installations",
       "group": "adobe-commerce"
     },
     "ADOBE_COMMERCE_STORE_VIEW_CODE": {
@@ -269,8 +279,7 @@
       "type": "text",
       "required": true,
       "placeholder": "default",
-      "description": "",
-      "helpText": "Typically 'default' unless you have a custom store view setup",
+      "description": "Typically 'default' unless you have a custom store view setup",
       "group": "adobe-commerce"
     },
     "ADOBE_COMMERCE_URL": {
@@ -278,8 +287,7 @@
       "type": "url",
       "required": true,
       "placeholder": "https://your-instance.adobedemo.com",
-      "description": "The base URL of your Adobe Commerce instance",
-      "helpText": "Shared across mesh, storefront, and integration services",
+      "description": "Base URL shared across mesh, storefront, and integration services",
       "group": "adobe-commerce"
     },
     "ADOBE_COMMERCE_WEBSITE_CODE": {
@@ -287,8 +295,7 @@
       "type": "text",
       "required": true,
       "placeholder": "base",
-      "description": "",
-      "helpText": "Typically 'base' for single-website installations",
+      "description": "Typically 'base' for single-website installations",
       "group": "adobe-commerce"
     },
     "AWS_ACCESS_KEY_ID": {
@@ -296,8 +303,7 @@
       "type": "text",
       "required": false,
       "placeholder": "your_aws_access_key_id",
-      "description": "AWS access key for S3 integration (optional)",
-      "helpText": "Only needed if your integration uses AWS S3 for asset storage.",
+      "description": "Only needed if your integration uses AWS S3 for asset storage",
       "group": "integration-service"
     },
     "AWS_SECRET_ACCESS_KEY": {
@@ -305,8 +311,7 @@
       "type": "password",
       "required": false,
       "placeholder": "your_aws_secret_access_key",
-      "description": "AWS secret key for S3 integration (optional)",
-      "helpText": "Pair this with your AWS Access Key ID for S3 access.",
+      "description": "Pair this with your AWS Access Key ID for S3 access",
       "group": "integration-service"
     },
     "EXPERIENCE_PLATFORM_API_KEY": {
@@ -314,8 +319,7 @@
       "type": "text",
       "required": true,
       "placeholder": "your-platform-api-key",
-      "description": "API key for Adobe Experience Platform access",
-      "helpText": "Generate this in Adobe Developer Console for your Experience Platform project.",
+      "description": "Generate this in Adobe Developer Console for your Experience Platform project",
       "group": "experience-platform"
     },
     "EXPERIENCE_PLATFORM_DATASTREAM_ID": {
@@ -323,8 +327,7 @@
       "type": "text",
       "required": true,
       "placeholder": "your-datastream-id",
-      "description": "Adobe Experience Platform datastream identifier",
-      "helpText": "Create a datastream in the Adobe Experience Platform Data Collection UI.",
+      "description": "Create a datastream in the Adobe Experience Platform Data Collection UI",
       "group": "experience-platform"
     }
   }
