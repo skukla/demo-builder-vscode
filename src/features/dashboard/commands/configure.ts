@@ -109,6 +109,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             ),
         };
 
+        // Get base URI for media assets
+        const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
+        const baseUri = this.panel!.webview.asWebviewUri(mediaPath);
+
         // Generate HTML using 4-bundle helper
         return getWebviewHTMLWithBundles({
             bundleUris,
@@ -116,6 +120,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             cspSource: this.panel!.webview.cspSource,
             title: 'Configure Project',
             additionalImgSources: ['https:', 'data:'],
+            baseUri,
         });
     }
 

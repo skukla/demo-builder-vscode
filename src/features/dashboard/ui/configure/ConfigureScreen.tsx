@@ -139,6 +139,7 @@ function renderFormField(
             showError={!!showError}
             options={field.options}
             selectableDefaultProps={hasDefault ? context.selectableDefaultProps : undefined}
+            help={field.help}
         />
     );
 }
