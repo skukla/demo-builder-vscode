@@ -5,6 +5,8 @@
  * Replaces `any` types with specific component interfaces.
  */
 
+import { FieldHelp } from './webview';
+
 /**
  * EnvVarDefinition - Environment variable definition from registry
  */
@@ -16,7 +18,8 @@ export interface EnvVarDefinition {
     default?: string | boolean | number;
     placeholder?: string;
     description?: string;
-    helpText?: string;
+    /** Rich help content with optional screenshot */
+    help?: FieldHelp;
     group?: string;
     providedBy?: string;
     usedBy?: string[];

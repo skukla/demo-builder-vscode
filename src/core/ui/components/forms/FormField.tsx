@@ -2,8 +2,11 @@ import React, { useCallback } from 'react';
 import {
     TextField,
     Picker,
-    Item
+    Item,
+    Flex,
+    Text,
 } from '@adobe/react-spectrum';
+import { FieldHelpButton, FieldHelpContent } from './FieldHelpButton';
 
 export interface FormFieldOption {
     value: string;
@@ -35,6 +38,12 @@ export interface FormFieldProps {
     options?: FormFieldOption[];
     /** Props for default value auto-selection */
     selectableDefaultProps?: Record<string, unknown>;
+    /** Optional help content (text or screenshot) */
+    help?: FieldHelpContent;
+    /** Help display variant (default: modal) */
+    helpVariant?: 'modal' | 'popover';
+    /** Base URI for help screenshots */
+    baseUri?: string;
 }
 
 /**
@@ -69,7 +78,10 @@ export const FormField = React.memo<FormFieldProps>(({
     error,
     showError = false,
     options,
-    selectableDefaultProps
+    selectableDefaultProps,
+    help,
+    helpVariant = 'modal',
+    baseUri,
 }) => {
     const handleChange = useCallback((val: string) => {
         onChange(val);
@@ -80,6 +92,24 @@ export const FormField = React.memo<FormFieldProps>(({
         scrollMarginTop: '24px'
     };
 
+    // Render label with optional help button
+    const renderLabel = () => {
+        if (!help) {
+            return label;
+        }
+        return (
+            <Flex alignItems="center" gap="size-50">
+                <Text>{label}</Text>
+                <FieldHelpButton
+                    help={help}
+                    variant={helpVariant}
+                    fieldLabel={label}
+                    baseUri={baseUri}
+                />
+            </Flex>
+        );
+    };
+
     switch (type) {
         case 'text':
         case 'url':
@@ -87,7 +117,7 @@ export const FormField = React.memo<FormFieldProps>(({
             return (
                 <div key={fieldKey} id={`field-${fieldKey}`} style={wrapperStyle}>
                     <TextField
-                        label={label}
+                        label={renderLabel()}
                         value={String(value)}
                         onChange={handleChange}
                         description={description || placeholder}
@@ -105,7 +135,7 @@ export const FormField = React.memo<FormFieldProps>(({
             return (
                 <div key={fieldKey} id={`field-${fieldKey}`} style={wrapperStyle}>
                     <TextField
-                        label={label}
+                        label={renderLabel()}
                         type="password"
                         value={value as string}
                         onChange={handleChange}
@@ -124,7 +154,7 @@ export const FormField = React.memo<FormFieldProps>(({
             return (
                 <div key={fieldKey} id={`field-${fieldKey}`} style={wrapperStyle}>
                     <Picker
-                        label={label}
+                        label={renderLabel()}
                         selectedKey={value as string}
                         onSelectionChange={(key) => handleChange(String(key || ''))}
                         width="100%"

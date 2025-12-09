@@ -3,9 +3,12 @@ import {
     Checkbox,
     Picker,
     Item,
+    Flex,
+    Text,
 } from '@adobe/react-spectrum';
 import React from 'react';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
+import { FieldHelpButton } from '@/core/ui/components/forms';
 import { UniqueField } from '../hooks/useComponentConfig';
 
 interface ConfigFieldRendererProps {
@@ -14,11 +17,33 @@ interface ConfigFieldRendererProps {
     error: string | undefined;
     isTouched: boolean;
     onUpdate: (field: UniqueField, value: string | boolean) => void;
+    /** Base URI for resolving help screenshot paths */
+    baseUri?: string;
 }
 
-export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate }: ConfigFieldRendererProps) {
+export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, baseUri }: ConfigFieldRendererProps) {
     const selectableDefaultProps = useSelectableDefault();
     const showError = error && isTouched;
+
+    // Get help content from field definition
+    const helpContent = field.help;
+
+    // Render label with optional help button
+    const renderLabel = () => {
+        if (!helpContent) {
+            return field.label;
+        }
+        return (
+            <Flex alignItems="center" gap="size-50">
+                <Text>{field.label}</Text>
+                <FieldHelpButton
+                    help={helpContent}
+                    fieldLabel={field.label}
+                    baseUri={baseUri}
+                />
+            </Flex>
+        );
+    };
 
     // Special-case: defer MESH_ENDPOINT input
     if (field.key === 'MESH_ENDPOINT') {
@@ -55,7 +80,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate }
             return (
                 <div key={field.key} id={`field-${field.key}`} className="config-field">
                     <TextField
-                        label={field.label}
+                        label={renderLabel()}
                         value={value as string}
                         onChange={(val) => onUpdate(field, val)}
                         placeholder={field.placeholder}
@@ -74,7 +99,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate }
             return (
                 <div key={field.key} id={`field-${field.key}`} className="config-field">
                     <TextField
-                        label={field.label}
+                        label={renderLabel()}
                         type="password"
                         value={value as string}
                         onChange={(val) => onUpdate(field, val)}
@@ -94,7 +119,7 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate }
             return (
                 <div key={field.key} id={`field-${field.key}`} className="config-field">
                     <Picker
-                        label={field.label}
+                        label={renderLabel()}
                         selectedKey={value as string}
                         onSelectionChange={(key) => onUpdate(field, String(key || ''))}
                         width="100%"
