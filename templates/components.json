@@ -194,7 +194,27 @@
       "type": "text",
       "required": true,
       "placeholder": "your-sandbox-catalog-api-key",
-      "description": "Found in Commerce Admin > System > Services > Commerce Services Connector > SaaS Identifier",
+      "description": "Found in the Magento Marketplace API Portal under Sandbox environment",
+      "help": {
+        "title": "Finding Your Catalog API Key",
+        "steps": [
+          {
+            "text": "Go to `https://account.magento.com` and click API Portal in the left navigation",
+            "screenshot": "help/catalog-api-key-step-1.png",
+            "screenshotAlt": "Magento account page with API Portal highlighted"
+          },
+          {
+            "text": "Switch the Environment dropdown to Sandbox",
+            "screenshot": "help/catalog-api-key-step-2.png",
+            "screenshotAlt": "API Keys page with Sandbox environment selected"
+          },
+          {
+            "text": "Click Copy next to your Commerce Services API key",
+            "screenshot": "help/catalog-api-key-step-3.png",
+            "screenshotAlt": "API key row with Copy button highlighted"
+          }
+        ]
+      },
       "group": "catalog-service"
     },
     "ADOBE_CATALOG_SERVICE_ENDPOINT": {
