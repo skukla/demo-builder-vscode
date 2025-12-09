@@ -77,17 +77,18 @@ export class StartDemoCommand extends BaseCommand {
     /**
      * Kill process on port using ProcessCleanup (event-driven)
      *
-     * Uses lsof to find the process PID, then ProcessCleanup.killProcessTree
-     * for reliable, event-driven process termination. No hardcoded delays.
+     * Uses lsof to find the process PID(s), then ProcessCleanup.killProcessTree
+     * for reliable, event-driven process termination. Handles multiple processes
+     * on same port and verifies port is actually free after killing.
      *
      * @param port Port number to find and kill process
-     * @returns true if process was found and killed, false otherwise
+     * @returns true if port is now free, false otherwise
      * @throws Error if ProcessCleanup fails (e.g., EPERM)
      */
     private async killProcessOnPort(port: number): Promise<boolean> {
         const commandManager = ServiceLocator.getCommandExecutor();
 
-        // Find PID using lsof
+        // Find PID(s) using lsof - may return multiple PIDs
         const result = await commandManager.execute(`lsof -ti:${port}`, {
             timeout: TIMEOUTS.PORT_CHECK,
             configureTelemetry: false,
@@ -101,20 +102,47 @@ export class StartDemoCommand extends BaseCommand {
             return false;
         }
 
-        // Parse PID (first line if multiple)
-        const pid = parseInt(result.stdout.trim().split('\n')[0], 10);
-        if (isNaN(pid) || pid <= 0) {
-            this.logger.warn(`[Start Demo] Invalid PID from lsof: ${result.stdout}`);
+        // Parse all PIDs (there may be multiple processes on the same port)
+        const pids = result.stdout.trim().split('\n')
+            .map(line => parseInt(line.trim(), 10))
+            .filter(pid => !isNaN(pid) && pid > 0);
+
+        if (pids.length === 0) {
+            this.logger.warn(`[Start Demo] Invalid PID(s) from lsof: ${result.stdout}`);
             return false;
         }
 
-        this.logger.debug(`[Start Demo] Killing process tree for PID ${pid} on port ${port}`);
+        this.logger.debug(`[Start Demo] Found ${pids.length} process(es) on port ${port}: ${pids.join(', ')}`);
 
-        // Kill with ProcessCleanup (event-driven, no hardcoded delay)
-        await this.processCleanup.killProcessTree(pid, 'SIGTERM');
+        // Kill all processes on the port
+        for (const pid of pids) {
+            this.logger.debug(`[Start Demo] Killing process tree for PID ${pid}`);
+            try {
+                await this.processCleanup.killProcessTree(pid, 'SIGTERM');
+                this.logger.debug(`[Start Demo] Process ${pid} terminated`);
+            } catch (error) {
+                this.logger.warn(`[Start Demo] Failed to kill PID ${pid}:`, error as Error);
+                // Continue trying to kill other processes
+            }
+        }
 
-        this.logger.info(`[Start Demo] Process ${pid} terminated successfully`);
-        return true;
+        // Verify port is actually free now (wait up to 2 seconds)
+        const maxWait = 2000;
+        const checkInterval = 100;
+        const startTime = Date.now();
+
+        while (Date.now() - startTime < maxWait) {
+            const portFree = await commandManager.isPortAvailable(port);
+            if (portFree) {
+                this.logger.info(`[Start Demo] Port ${port} is now free`);
+                return true;
+            }
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+        }
+
+        // Port still not free after waiting
+        this.logger.warn(`[Start Demo] Port ${port} still in use after killing processes`);
+        return false;
     }
     public async execute(): Promise<void> {
         // Prevent duplicate concurrent execution
@@ -207,7 +235,12 @@ export class StartDemoCommand extends BaseCommand {
                 // Kill the process using ProcessCleanup (event-driven, no hardcoded delay)
                 this.logger.debug(`[Start Demo] Stopping process on port ${port}...`);
                 try {
-                    await this.killProcessOnPort(port);
+                    const portFreed = await this.killProcessOnPort(port);
+                    if (!portFreed) {
+                        this.logger.error(`[Start Demo] Could not free port ${port}`);
+                        await this.showError(`Could not stop process on port ${port}. Try stopping it manually.`);
+                        return;
+                    }
                     this.logger.info('[Start Demo] Process stopped successfully');
                 } catch (error) {
                     this.logger.error('[Start Demo] Failed to stop process:', error as Error);
