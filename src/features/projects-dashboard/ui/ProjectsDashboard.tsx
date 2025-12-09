@@ -22,6 +22,7 @@ import { DashboardEmptyState } from './components/DashboardEmptyState';
 import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
+import { useFocusTrap } from '@/core/ui/hooks';
 import type { Project } from '@/types/base';
 
 export interface ProjectsDashboardProps {
@@ -69,6 +70,13 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
 
+    // Focus trap for keyboard navigation (WCAG 2.1 AA)
+    const containerRef = useFocusTrap<HTMLDivElement>({
+        enabled: true,
+        autoFocus: false,  // Don't auto-focus - let user navigate naturally
+        containFocus: true,  // Prevent focus escape
+    });
+
     // Sync viewMode when initialViewMode changes (from parent/settings)
     useEffect(() => {
         setViewMode(initialViewMode);
@@ -98,43 +106,48 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     // Loading state - full screen centered
     if (isLoading) {
         return (
-            <View height="100vh" backgroundColor="gray-50">
-                <Flex
-                    justifyContent="center"
-                    alignItems="center"
-                    height="100%"
-                >
-                    <ProgressCircle
-                        aria-label="Loading projects"
-                        isIndeterminate
-                        size="L"
-                    />
-                </Flex>
-            </View>
+            <div ref={containerRef}>
+                <View height="100vh" backgroundColor="gray-50">
+                    <Flex
+                        justifyContent="center"
+                        alignItems="center"
+                        height="100%"
+                    >
+                        <ProgressCircle
+                            aria-label="Loading projects"
+                            isIndeterminate
+                            size="L"
+                        />
+                    </Flex>
+                </View>
+            </div>
         );
     }
 
     // Empty state - full screen centered
     if (!hasProjects) {
         return (
-            <View height="100vh" backgroundColor="gray-50">
-                <Flex
-                    direction="column"
-                    alignItems="center"
-                    justifyContent="center"
-                    height="100%"
-                >
-                    <DashboardEmptyState
-                        onCreate={onCreateProject}
-                    />
-                </Flex>
-            </View>
+            <div ref={containerRef}>
+                <View height="100vh" backgroundColor="gray-50">
+                    <Flex
+                        direction="column"
+                        alignItems="center"
+                        justifyContent="center"
+                        height="100%"
+                    >
+                        <DashboardEmptyState
+                            onCreate={onCreateProject}
+                        />
+                    </Flex>
+                </View>
+            </div>
         );
     }
 
     // Normal state with projects - uses PageLayout and PageHeader
     return (
-        <PageLayout
+        <div ref={containerRef}>
+            <PageLayout
             header={
                 <PageHeader
                     title="Your Projects"
@@ -206,5 +219,6 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                 )}
             </div>
         </PageLayout>
+        </div>
     );
 };
