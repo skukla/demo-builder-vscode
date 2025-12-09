@@ -186,19 +186,21 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                 
                 // Show success notification after returning (non-blocking)
                 setImmediate(async () => {
-                    this.showSuccessMessage('Configuration saved successfully');
-                    
                     // Refresh Dashboard status (if open) to show amber indicators
                     await ProjectDashboardWebviewCommand.refreshStatus();
-                    
+
                     // Smart notification based on what changed
+                    // Only show generic success if no contextual notification is shown
+                    let contextualNotificationShown = false;
+
                     if (meshChanges.hasChanges && project.status === 'running') {
                         // Check if mesh notification already shown this session
                         const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
                         if (shouldShow) {
+                            contextualNotificationShown = true;
                             await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
                             vscode.window.showWarningMessage(
-                                'API Mesh configuration changed. Redeploy mesh and restart demo to apply changes.',
+                                'Configuration saved. Redeploy mesh and restart demo to apply changes.',
                                 'Redeploy Mesh',
                                 'Later',
                             ).then(async selection => {
@@ -223,9 +225,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                         // Mesh changed, demo not running
                         const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowMeshNotification');
                         if (shouldShow) {
+                            contextualNotificationShown = true;
                             await vscode.commands.executeCommand('demoBuilder._internal.markMeshNotificationShown');
                             vscode.window.showInformationMessage(
-                                'API Mesh configuration changed. Redeploy mesh to apply changes.',
+                                'Configuration saved. Redeploy mesh to apply changes.',
                                 'Redeploy Mesh',
                                 'Later',
                             ).then(async selection => {
@@ -250,9 +253,10 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                         // Only non-mesh configs changed, demo is running
                         const shouldShow = await vscode.commands.executeCommand('demoBuilder._internal.shouldShowRestartNotification');
                         if (shouldShow) {
+                            contextualNotificationShown = true;
                             await vscode.commands.executeCommand('demoBuilder._internal.markRestartNotificationShown');
                             vscode.window.showInformationMessage(
-                                'Restart the demo to apply configuration changes.',
+                                'Configuration saved. Restart the demo to apply changes.',
                                 'Restart Demo',
                             ).then(async selection => {
                                 if (selection === 'Restart Demo') {
@@ -268,6 +272,11 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
                         } else {
                             this.logger.debug('[Configure] Restart notification already shown this session, suppressing');
                         }
+                    }
+
+                    // Show generic success only if no contextual notification was shown
+                    if (!contextualNotificationShown) {
+                        this.showSuccessMessage('Configuration saved successfully');
                     }
                 });
 
