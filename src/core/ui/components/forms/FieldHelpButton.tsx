@@ -17,6 +17,7 @@ import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import { FieldHelp, FieldHelpStep } from '@/types/webview';
 import { getBaseUri } from '@/core/ui/utils/baseUri';
+import { CopyableText } from '@/core/ui/components/ui/CopyableText';
 
 // Re-export types for convenience
 export type { FieldHelp as FieldHelpContent, FieldHelpStep };
@@ -140,6 +141,33 @@ function ImageZoom({
 }
 
 /**
+ * Parses text with backtick-wrapped segments into copyable components
+ * Example: "Go to `account.magento.com` and click" renders the URL as copyable
+ */
+function renderTextWithCopyable(text: string): React.ReactNode {
+    // Split by backticks to find copyable segments
+    const parts = text.split(/(`[^`]+`)/g);
+
+    if (parts.length === 1) {
+        // No backticks found, return plain text
+        return text;
+    }
+
+    return (
+        <>
+            {parts.map((part, i) => {
+                // If the part starts and ends with backticks, it's copyable
+                if (part.startsWith('`') && part.endsWith('`')) {
+                    const copyText = part.slice(1, -1);
+                    return <CopyableText key={i}>{copyText}</CopyableText>;
+                }
+                return <span key={i}>{part}</span>;
+            })}
+        </>
+    );
+}
+
+/**
  * StepContent - Renders a single step with optional screenshot
  */
 function StepContent({
@@ -176,7 +204,7 @@ function StepContent({
                 {/* Fixed height for text prevents layout shift between steps */}
                 <div style={{ minHeight: '48px' }}>
                     <Text UNSAFE_className="instruction-title">
-                        {step.text}
+                        {renderTextWithCopyable(step.text)}
                     </Text>
                 </div>
                 {screenshotSrc && (
