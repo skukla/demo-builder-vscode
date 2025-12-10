@@ -25,6 +25,17 @@ jest.mock('vscode', () => ({
         executeCommand: jest.fn()
     }
 }), { virtual: true });
+jest.mock('@/features/components/services/ComponentRegistryManager', () => ({
+    ComponentRegistryManager: jest.fn().mockImplementation(() => ({
+        getComponentById: jest.fn().mockResolvedValue({
+            id: 'test-component',
+            name: 'Test Component',
+            configuration: {
+                // No buildScript means build step will be skipped
+            }
+        })
+    }))
+}));
 
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
@@ -83,7 +94,7 @@ describe('ComponentUpdater (Step 1)', () => {
             arrayBuffer: jest.fn().mockResolvedValue(new ArrayBuffer(1024))
         }) as any;
 
-        updater = new ComponentUpdater(mockLogger);
+        updater = new ComponentUpdater(mockLogger, '/mock/extension/path');
 
         // Mock project
         mockProject = {
@@ -193,6 +204,89 @@ describe('ComponentUpdater (Step 1)', () => {
             // First should succeed, second should fail
             await expect(update1).resolves.not.toThrow();
             await expect(update2).rejects.toThrow('Update already in progress');
+        });
+    });
+
+    describe('runPostUpdateBuild() - Configuration-driven builds', () => {
+        it('should skip build when component has no buildScript configured', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const newVersion = '1.0.0';
+
+            // Default mock has no buildScript
+            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+
+            // Verify npm install and npm run build were NOT called (only unzip)
+            const executeCalls = mockExecutor.execute.mock.calls;
+            const buildCalls = executeCalls.filter((call: any[]) =>
+                call[0].includes('npm install') || call[0].includes('npm run')
+            );
+            expect(buildCalls.length).toBe(0);
+        });
+
+        it('should run npm install and build script when buildScript is configured', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const newVersion = '1.0.0';
+
+            // Override mock to return component with buildScript
+            const { ComponentRegistryManager } = require('@/features/components/services/ComponentRegistryManager');
+            ComponentRegistryManager.mockImplementation(() => ({
+                getComponentById: jest.fn().mockResolvedValue({
+                    id: 'commerce-mesh',
+                    name: 'Commerce Mesh',
+                    configuration: {
+                        buildScript: 'build',
+                        nodeVersion: '20'
+                    }
+                })
+            }));
+
+            // Create new updater with fresh mock
+            const buildUpdater = new ComponentUpdater(mockLogger, '/mock/extension/path');
+
+            // Add commerce-mesh to project
+            const meshProject = {
+                ...mockProject,
+                componentInstances: {
+                    'commerce-mesh': {
+                        id: 'commerce-mesh',
+                        path: '/path/to/project/components/commerce-mesh',
+                        port: 3000
+                    }
+                }
+            } as any;
+
+            await buildUpdater.updateComponent(meshProject, 'commerce-mesh', downloadUrl, newVersion);
+
+            // Verify npm install was called
+            expect(mockExecutor.execute).toHaveBeenCalledWith(
+                'npm install --no-fund --prefer-offline',
+                expect.objectContaining({
+                    cwd: '/path/to/project/components/commerce-mesh',
+                    useNodeVersion: '20'
+                })
+            );
+
+            // Verify build script was called
+            expect(mockExecutor.execute).toHaveBeenCalledWith(
+                'npm run build -- --force',
+                expect.objectContaining({
+                    cwd: '/path/to/project/components/commerce-mesh',
+                    useNodeVersion: '20'
+                })
+            );
+        });
+
+        it('should clean up GitHub archive root folder after extraction', async () => {
+            const downloadUrl = 'https://github.com/test/repo/archive/v1.0.0.zip';
+            const newVersion = '1.0.0';
+
+            await updater.updateComponent(mockProject, 'test-component', downloadUrl, newVersion);
+
+            // Verify extraction command includes rmdir cleanup
+            expect(mockExecutor.execute).toHaveBeenCalledWith(
+                expect.stringMatching(/unzip.*&&.*mv.*&&.*rmdir/),
+                expect.any(Object)
+            );
         });
     });
 });

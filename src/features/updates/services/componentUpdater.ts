@@ -10,10 +10,12 @@ import { parseJSON } from '@/types/typeGuards';
 
 export class ComponentUpdater {
     private logger: Logger;
+    private extensionPath: string;
     private updatingComponents = new Set<string>(); // Concurrent update lock
 
-    constructor(logger: Logger) {
+    constructor(logger: Logger, extensionPath: string) {
         this.logger = logger;
+        this.extensionPath = extensionPath;
     }
 
     /**
@@ -201,28 +203,38 @@ export class ComponentUpdater {
     /**
      * Run post-update build for components that require compilation/processing
      *
-     * Some components (like commerce-mesh) have source files that need to be
-     * processed into build artifacts before they can be deployed.
+     * Uses component registry configuration (buildScript, nodeVersion) to determine
+     * what build steps are required. This makes the system extensible - any component
+     * with a buildScript in components.json will be built after updates.
      */
     private async runPostUpdateBuild(componentPath: string, componentId: string): Promise<void> {
-        // Only commerce-mesh requires a build step currently
-        if (componentId !== 'commerce-mesh') {
+        // Get component configuration from registry
+        const { ComponentRegistryManager } = await import('@/features/components/services/ComponentRegistryManager');
+        const registryManager = new ComponentRegistryManager(this.extensionPath);
+        const componentDef = await registryManager.getComponentById(componentId);
+
+        // Skip if component has no buildScript configured
+        const buildScript = componentDef?.configuration?.buildScript;
+        if (!buildScript) {
+            this.logger.debug(`[Updates] No buildScript configured for ${componentId}, skipping build`);
             return;
         }
 
-        this.logger.info('[Updates] Running post-update setup for commerce-mesh...');
+        this.logger.info(`[Updates] Running post-update setup for ${componentId}...`);
 
         const { ServiceLocator } = await import('@/core/di');
         const commandManager = ServiceLocator.getCommandExecutor();
+        const nodeVersion = componentDef.configuration?.nodeVersion || null;
 
         try {
-            // 1. Install dependencies (build script requires dotenv)
+            // 1. Install dependencies (build scripts may require dev dependencies)
             this.logger.debug('[Updates] Installing dependencies...');
             const installResult = await commandManager.execute('npm install --no-fund --prefer-offline', {
                 cwd: componentPath,
                 timeout: TIMEOUTS.NPM_INSTALL,
                 shell: DEFAULT_SHELL,
                 enhancePath: true,
+                useNodeVersion: nodeVersion,
             });
 
             if (installResult.code !== 0) {
@@ -230,13 +242,14 @@ export class ComponentUpdater {
             }
             this.logger.debug('[Updates] ✓ Dependencies installed');
 
-            // 2. Run build to process resolvers-src/ into build/resolvers/
-            this.logger.debug('[Updates] Building mesh configuration...');
-            const buildResult = await commandManager.execute('npm run build -- --force', {
+            // 2. Run configured build script (force rebuild for updates)
+            this.logger.debug(`[Updates] Running build script: ${buildScript}`);
+            const buildResult = await commandManager.execute(`npm run ${buildScript} -- --force`, {
                 cwd: componentPath,
                 timeout: TIMEOUTS.NPM_INSTALL,
                 shell: DEFAULT_SHELL,
                 enhancePath: true,
+                useNodeVersion: nodeVersion,
             });
 
             if (buildResult.code !== 0) {

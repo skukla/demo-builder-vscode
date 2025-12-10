@@ -271,7 +271,7 @@ export class CheckUpdatesCommand extends BaseCommand {
                 cancellable: false,
             },
             async (progress) => {
-                const componentUpdater = new ComponentUpdater(this.logger);
+                const componentUpdater = new ComponentUpdater(this.logger, this.context.extensionPath);
                 let successCount = 0;
                 let failCount = 0;
                 let completedCount = 0;
