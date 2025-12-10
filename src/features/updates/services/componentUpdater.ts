@@ -68,6 +68,9 @@ export class ComponentUpdater {
                 // 5. VERIFY component structure (critical files exist)
                 await this.verifyComponentStructure(component.path, componentId);
 
+                // 5.5. Run post-update build for components that require it
+                await this.runPostUpdateBuild(component.path, componentId);
+
                 // 6. Restore and merge .env files (with programmatic write suppression)
                 await this.mergeEnvFiles(component.path, envFiles);
 
@@ -196,6 +199,58 @@ export class ComponentUpdater {
     }
 
     /**
+     * Run post-update build for components that require compilation/processing
+     *
+     * Some components (like commerce-mesh) have source files that need to be
+     * processed into build artifacts before they can be deployed.
+     */
+    private async runPostUpdateBuild(componentPath: string, componentId: string): Promise<void> {
+        // Only commerce-mesh requires a build step currently
+        if (componentId !== 'commerce-mesh') {
+            return;
+        }
+
+        this.logger.info('[Updates] Running post-update setup for commerce-mesh...');
+
+        const { ServiceLocator } = await import('@/core/di');
+        const commandManager = ServiceLocator.getCommandExecutor();
+
+        try {
+            // 1. Install dependencies (build script requires dotenv)
+            this.logger.debug('[Updates] Installing dependencies...');
+            const installResult = await commandManager.execute('npm install --no-fund --prefer-offline', {
+                cwd: componentPath,
+                timeout: TIMEOUTS.NPM_INSTALL,
+                shell: DEFAULT_SHELL,
+                enhancePath: true,
+            });
+
+            if (installResult.code !== 0) {
+                throw new Error(`npm install failed: ${installResult.stderr || installResult.stdout}`);
+            }
+            this.logger.debug('[Updates] ✓ Dependencies installed');
+
+            // 2. Run build to process resolvers-src/ into build/resolvers/
+            this.logger.debug('[Updates] Building mesh configuration...');
+            const buildResult = await commandManager.execute('npm run build -- --force', {
+                cwd: componentPath,
+                timeout: TIMEOUTS.NPM_INSTALL,
+                shell: DEFAULT_SHELL,
+                enhancePath: true,
+            });
+
+            if (buildResult.code !== 0) {
+                throw new Error(`Build failed: ${buildResult.stderr || buildResult.stdout}`);
+            }
+
+            this.logger.info('[Updates] ✓ Post-update build completed successfully');
+        } catch (error) {
+            this.logger.error('[Updates] Post-update build failed', error as Error);
+            throw new Error(`Post-update build failed for ${componentId}: ${(error as Error).message}`);
+        }
+    }
+
+    /**
    * Backup .env files before component removal (simplified - just .env and .env.local)
    */
     private async backupEnvFiles(componentPath: string): Promise<Map<string, string>> {
@@ -266,8 +321,11 @@ export class ComponentUpdater {
             // - tempZip and targetPath are internal paths (not user input)
             // - downloadUrl is validated by validateGitHubDownloadURL() before this point
             // - All paths are controlled by the extension (no user-supplied paths)
+            //
+            // GitHub archives have a root folder (e.g., "skukla-commerce-mesh-abc123/")
+            // We need to: 1) extract, 2) move contents up, 3) remove the empty root folder
             await commandManager.execute(
-                `unzip -q "${tempZip}" -d "${targetPath}" && mv "${targetPath}"/*/* "${targetPath}"/`,
+                `unzip -q "${tempZip}" -d "${targetPath}" && mv "${targetPath}"/*/* "${targetPath}"/ && rmdir "${targetPath}"/*/`,
                 {
                     shell: DEFAULT_SHELL,    // CRITICAL FIX: Required for command chaining (&&) and glob expansion (*/*)
                     timeout: TIMEOUTS.UPDATE_EXTRACT,
