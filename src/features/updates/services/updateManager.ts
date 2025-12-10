@@ -11,6 +11,23 @@ import { DEFAULT_SHELL } from '@/types/shell';
 
 export type { UpdateCheckResult };
 
+/**
+ * Result of checking updates across all projects
+ */
+export interface MultiProjectUpdateResult {
+    /** Component ID */
+    componentId: string;
+    /** Latest available version */
+    latestVersion: string;
+    /** Release info for updates */
+    releaseInfo?: ReleaseInfo;
+    /** Projects that have this component with outdated version */
+    outdatedProjects: Array<{
+        project: Project;
+        currentVersion: string;
+    }>;
+}
+
 export class UpdateManager {
     private logger: Logger;
     private context: vscode.ExtensionContext;
@@ -58,17 +75,29 @@ export class UpdateManager {
     async checkComponentUpdates(project: Project): Promise<Map<string, UpdateCheckResult>> {
         const results = new Map<string, UpdateCheckResult>();
         const channel = this.getUpdateChannel();
-    
-        if (!project.componentInstances) return results;
 
-        for (const componentId of getComponentIds(project.componentInstances)) {
+        if (!project.componentInstances) {
+            this.logger.debug('[Updates] No componentInstances in project');
+            return results;
+        }
+
+        const componentIds = getComponentIds(project.componentInstances);
+        this.logger.debug(`[Updates] Checking ${componentIds.length} components: ${componentIds.join(', ')}`);
+
+        for (const componentId of componentIds) {
             const repoPath = this.COMPONENT_REPOS[componentId];
-            if (!repoPath) continue; // Skip components without repos
-      
+            if (!repoPath) {
+                this.logger.debug(`[Updates] Skipping ${componentId}: no repository mapping`);
+                continue;
+            }
+
             const currentVersion = getComponentVersion(project, componentId) || 'unknown';
+            this.logger.debug(`[Updates] ${componentId}: current=${currentVersion}, channel=${channel}`);
+
             const latestRelease = await this.fetchLatestRelease(repoPath, channel);
-      
+
             if (!latestRelease) {
+                this.logger.debug(`[Updates] ${componentId}: no release found`);
                 results.set(componentId, {
                     hasUpdate: false,
                     current: currentVersion,
@@ -76,10 +105,14 @@ export class UpdateManager {
                 });
                 continue;
             }
-      
-            const hasUpdate = currentVersion === 'unknown' || 
+
+            this.logger.debug(`[Updates] ${componentId}: latest=${latestRelease.version}`);
+
+            const hasUpdate = currentVersion === 'unknown' ||
                         this.isNewerVersion(latestRelease.version, currentVersion);
-      
+
+            this.logger.debug(`[Updates] ${componentId}: hasUpdate=${hasUpdate}`);
+
             results.set(componentId, {
                 hasUpdate,
                 current: currentVersion,
@@ -87,7 +120,73 @@ export class UpdateManager {
                 releaseInfo: hasUpdate ? latestRelease : undefined,
             });
         }
-    
+
+        return results;
+    }
+
+    /**
+     * Check for component updates across ALL projects
+     * Groups results by component with list of outdated projects for each
+     *
+     * @param projects - Array of projects to check
+     * @returns Array of components with updates, each containing list of affected projects
+     */
+    async checkAllProjectsForUpdates(projects: Project[]): Promise<MultiProjectUpdateResult[]> {
+        const channel = this.getUpdateChannel();
+
+        // Collect all unique component IDs across all projects
+        const componentProjectMap = new Map<string, Array<{ project: Project; currentVersion: string }>>();
+
+        for (const project of projects) {
+            if (!project.componentInstances) continue;
+
+            const componentIds = getComponentIds(project.componentInstances);
+            for (const componentId of componentIds) {
+                const currentVersion = getComponentVersion(project, componentId) || 'unknown';
+
+                if (!componentProjectMap.has(componentId)) {
+                    componentProjectMap.set(componentId, []);
+                }
+                componentProjectMap.get(componentId)!.push({ project, currentVersion });
+            }
+        }
+
+        this.logger.debug(`[Updates] Checking ${componentProjectMap.size} unique components across ${projects.length} projects`);
+
+        const results: MultiProjectUpdateResult[] = [];
+
+        // For each unique component, fetch latest version once and check all projects
+        for (const [componentId, projectVersions] of componentProjectMap.entries()) {
+            const repoPath = this.COMPONENT_REPOS[componentId];
+            if (!repoPath) {
+                this.logger.debug(`[Updates] Skipping ${componentId}: no repository mapping`);
+                continue;
+            }
+
+            const latestRelease = await this.fetchLatestRelease(repoPath, channel);
+            if (!latestRelease) {
+                this.logger.debug(`[Updates] ${componentId}: no release found`);
+                continue;
+            }
+
+            // Find projects that are outdated
+            const outdatedProjects = projectVersions.filter(({ currentVersion }) => {
+                return currentVersion === 'unknown' ||
+                    this.isNewerVersion(latestRelease.version, currentVersion);
+            });
+
+            if (outdatedProjects.length > 0) {
+                this.logger.debug(`[Updates] ${componentId}: ${outdatedProjects.length} project(s) have outdated version (latest: ${latestRelease.version})`);
+
+                results.push({
+                    componentId,
+                    latestVersion: latestRelease.version,
+                    releaseInfo: latestRelease,
+                    outdatedProjects,
+                });
+            }
+        }
+
         return results;
     }
 

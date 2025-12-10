@@ -27,9 +27,14 @@ jest.mock('vscode', () => ({
     window: {
         withProgress: jest.fn(),
         showInformationMessage: jest.fn(),
+        showErrorMessage: jest.fn().mockResolvedValue(undefined),
+        showQuickPick: jest.fn(),
     },
     ProgressLocation: {
         Notification: 15,
+    },
+    QuickPickItemKind: {
+        Separator: 1,
     },
 }));
 
@@ -61,10 +66,12 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
             },
         };
 
-        // Create mock state manager
+        // Create mock state manager with all required methods
         mockStateManager = {
             getCurrentProject: jest.fn().mockResolvedValue(null),
             saveProject: jest.fn().mockResolvedValue(undefined),
+            getAllProjects: jest.fn().mockResolvedValue([]),
+            loadProjectFromPath: jest.fn().mockResolvedValue(null),
         } as any;
 
         // Create mock status bar manager
@@ -109,7 +116,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
                 current: '1.0.0',
                 latest: '1.0.0',
             });
-            mockUpdateManager.prototype.checkComponentUpdates = jest.fn().mockResolvedValue(new Map());
+            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
 
             // Act
             const executePromise = command.execute();
@@ -136,7 +143,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
                 latest: '1.0.0',
             });
             mockUpdateManager.prototype.checkExtensionUpdate = checkExtensionUpdateSpy;
-            mockUpdateManager.prototype.checkComponentUpdates = jest.fn().mockResolvedValue(new Map());
+            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
 
             // Act
             const executePromise = command.execute();
@@ -169,7 +176,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
                 current: '1.0.0',
                 latest: '1.0.0',
             });
-            mockUpdateManager.prototype.checkComponentUpdates = jest.fn().mockResolvedValue(new Map());
+            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
 
             // Act
             const executePromise = command.execute();
@@ -211,7 +218,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
             });
 
             mockUpdateManager.prototype.checkExtensionUpdate = checkExtensionUpdateSpy;
-            mockUpdateManager.prototype.checkComponentUpdates = jest.fn().mockResolvedValue(new Map());
+            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
 
             // Act
             const executePromise = command.execute();
@@ -245,7 +252,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
                 current: '1.0.0',
                 latest: '1.0.0',
             });
-            mockUpdateManager.prototype.checkComponentUpdates = jest.fn().mockResolvedValue(new Map());
+            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
 
             // Act
             const executePromise = command.execute();
@@ -272,7 +279,7 @@ describe('CheckUpdatesCommand - Message Visibility Delay (Step 2)', () => {
                 current: '1.0.0',
                 latest: '1.0.0',
             });
-            mockUpdateManager.prototype.checkComponentUpdates = jest.fn().mockResolvedValue(new Map());
+            mockUpdateManager.prototype.checkAllProjectsForUpdates = jest.fn().mockResolvedValue([]);
 
             // Act
             const executePromise = command.execute();
