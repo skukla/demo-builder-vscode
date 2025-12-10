@@ -6,13 +6,12 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import * as vscode from 'vscode';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation';
 import { createProgressCallback, handleMeshAlreadyExists } from '@/features/mesh/handlers/createHandlerHelpers';
-import { getEndpoint } from '@/features/mesh/handlers/shared';
+import { ensureAuthenticated, getEndpoint } from '@/features/mesh/handlers/shared';
 import { getMeshStatusCategory, extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import { parseJSON, toError } from '@/types/typeGuards';
@@ -64,26 +63,12 @@ export async function handleCreateApiMesh(
     context.logger.debug('[API Mesh] Creating new mesh for workspace', { workspaceId });
 
     // PRE-FLIGHT: Check authentication before any Adobe CLI operations
-    const authManager = ServiceLocator.getAuthenticationService();
-    const isAuthenticated = await authManager.isAuthenticated();
-
-    if (!isAuthenticated) {
-        context.logger.warn('[API Mesh] Authentication required to create mesh');
-
-        // Direct user to dashboard for authentication
-        const selection = await vscode.window.showWarningMessage(
-            'Adobe authentication required to create API Mesh. Please sign in via the Project Dashboard.',
-            'Open Dashboard',
-        );
-
-        if (selection === 'Open Dashboard') {
-            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
-        }
-
+    const authResult = await ensureAuthenticated(context.logger, 'create mesh');
+    if (!authResult.authenticated) {
         return {
             success: false,
-            error: 'Adobe authentication required. Please sign in via the Project Dashboard.',
-            code: ErrorCode.AUTH_REQUIRED,
+            error: authResult.error,
+            code: authResult.code,
         };
     }
 

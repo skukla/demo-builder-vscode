@@ -9,12 +9,11 @@
 
 import { promises as fsPromises } from 'fs';
 import * as path from 'path';
-import * as vscode from 'vscode';
 import { checkApiMeshEnabled, checkMeshExistence, fallbackMeshCheck } from './checkHandlerHelpers';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { validateWorkspaceId } from '@/core/validation';
-import { getSetupInstructions, getEndpoint } from '@/features/mesh/handlers/shared';
+import { ensureAuthenticated, getSetupInstructions, getEndpoint } from '@/features/mesh/handlers/shared';
 import { ErrorCode } from '@/types/errorCodes';
 import { parseJSON, toError } from '@/types/typeGuards';
 
@@ -96,28 +95,14 @@ export async function handleCheckApiMesh(
     context.logger.debug(`[API Mesh] Checking workspace ${workspaceId}`);
 
     // PRE-FLIGHT: Check authentication before any Adobe CLI operations
-    const authManager = ServiceLocator.getAuthenticationService();
-    const isAuthenticated = await authManager.isAuthenticated();
-
-    if (!isAuthenticated) {
-        context.logger.warn('[API Mesh] Authentication required to check mesh status');
-
-        // Direct user to dashboard for authentication
-        const selection = await vscode.window.showWarningMessage(
-            'Adobe authentication required to check API Mesh status. Please sign in via the Project Dashboard.',
-            'Open Dashboard',
-        );
-
-        if (selection === 'Open Dashboard') {
-            await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
-        }
-
+    const authResult = await ensureAuthenticated(context.logger, 'check mesh status');
+    if (!authResult.authenticated) {
         return {
             success: false,
             apiEnabled: false,
             meshExists: false,
-            error: 'Adobe authentication required. Please sign in via the Project Dashboard.',
-            code: ErrorCode.AUTH_REQUIRED,
+            error: authResult.error,
+            code: authResult.code,
         };
     }
 
