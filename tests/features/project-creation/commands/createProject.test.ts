@@ -169,9 +169,9 @@ describe('CreateProjectWebviewCommand - Bundle Loading', () => {
         // Act
         const html = await (command as any).getWebviewContent();
 
-        // Assert: All script tags have nonce attribute
+        // Assert: All script tags have nonce attribute (4 bundles + 1 baseUri)
         const scriptMatches = html.match(/<script nonce="([^"]+)"/g);
-        expect(scriptMatches).toHaveLength(4); // 4 bundles = 4 script tags
+        expect(scriptMatches).toHaveLength(5);
 
         // Verify all use same nonce
         const noncePattern = /nonce="([^"]+)"/;

@@ -133,7 +133,8 @@ describe('getWebviewHTMLWithBundles', () => {
             expect(html).toContain(`default-src 'none'`);
             expect(html).toContain(`script-src 'nonce-${nonce}' ${cspSource}`);
             expect(html).toContain(`style-src ${cspSource} 'unsafe-inline'`);
-            expect(html).toContain(`img-src https: data:`);
+            // img-src includes cspSource for local resources plus default sources
+            expect(html).toContain(`img-src ${cspSource} https: data:`);
             expect(html).toContain(`font-src ${cspSource}`);
         });
     });
@@ -170,8 +171,8 @@ describe('getWebviewHTMLWithBundles', () => {
             // Act
             const html = getWebviewHTMLWithBundles(options);
 
-            // Assert: CSP includes default + additional image sources
-            expect(html).toContain('img-src https: data: https://example.com https://cdn.adobe.com');
+            // Assert: CSP includes cspSource + default + additional image sources
+            expect(html).toContain('img-src vscode-resource: https: data: https://example.com https://cdn.adobe.com');
         });
     });
 

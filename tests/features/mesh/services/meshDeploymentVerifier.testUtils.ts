@@ -80,6 +80,7 @@ export function createErrorStatusResponse() {
         code: 0,
         stdout: JSON.stringify({
             meshStatus: 'error',
+            error: 'Mesh deployment failed with error status',
         }),
     };
 }

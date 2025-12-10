@@ -152,8 +152,8 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
             const scriptRegex = /<script[^>]*>/g;
             const scriptTags = html.match(scriptRegex) || [];
 
-            // Verify we have 4 script tags
-            expect(scriptTags).toHaveLength(4);
+            // Verify we have 5 script tags (4 bundles + 1 baseUri)
+            expect(scriptTags).toHaveLength(5);
 
             // Verify each has nonce attribute
             scriptTags.forEach((tag: string) => {
@@ -178,8 +178,8 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
             (command as any).panel = mockPanel;
             await (command as any).getWebviewContent();
 
-            // Verify asWebviewUri was called 4 times (once per bundle)
-            expect(mockWebview.asWebviewUri).toHaveBeenCalledTimes(4);
+            // Verify asWebviewUri was called 5 times (4 bundles + 1 baseUri)
+            expect(mockWebview.asWebviewUri).toHaveBeenCalledTimes(5);
 
             // Verify it was called with correct paths
             const calls = (mockWebview.asWebviewUri as jest.Mock).mock.calls;
@@ -214,7 +214,8 @@ describe('ConfigureProjectWebviewCommand - Bundle Loading', () => {
             // Verify key CSP directives
             expect(html).toMatch(/default-src 'none'/);
             expect(html).toMatch(/style-src [^\s]+ 'unsafe-inline'/);
-            expect(html).toMatch(/img-src https: data:/);
+            // img-src includes cspSource for local resources plus default sources
+            expect(html).toMatch(/img-src [^\s]+ https: data:/);
             expect(html).toMatch(/font-src [^\s]+/);
         });
     });

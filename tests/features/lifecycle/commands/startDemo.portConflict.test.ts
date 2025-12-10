@@ -262,16 +262,25 @@ describe('StartDemoCommand - Port Conflict', () => {
                 new Error('EPERM: operation not permitted')
             );
 
-            // When: Kill attempted
-            await command.execute();
+            // Port stays in use (kill failed)
+            mockCommandExecutor.isPortAvailable.mockResolvedValue(false);
 
-            // Then: Error shown to user
+            // When: Kill attempted - need to advance timers for the port polling loop (2000ms timeout)
+            const executePromise = command.execute();
+
+            // Advance through the killProcessOnPort port-check timeout (2000ms with 100ms intervals)
+            for (let i = 0; i < 25; i++) {
+                await jest.advanceTimersByTimeAsync(100);
+            }
+
+            await executePromise;
+
+            // Then: Error shown to user (port couldn't be freed)
             expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-                expect.stringContaining('Failed to stop'),
+                expect.stringContaining('Could not stop process'),
                 expect.anything()
             );
 
-            // And: Suggests manual intervention (error message contains guidance)
             // And: Returns without starting demo
             expect(mockTerminal.sendText).not.toHaveBeenCalled();
         });
@@ -284,27 +293,36 @@ describe('StartDemoCommand - Port Conflict', () => {
 
             // Track isPortAvailable calls
             let checkCount = 0;
-            let afterKill = false;
+            let killCalled = false;
 
             mockProcessCleanup.killProcessTree.mockImplementation(async () => {
-                afterKill = true;
+                killCalled = true;
             });
 
             // Port flow:
-            // 1. Initial check: not available (conflict)
-            // 2. After kill, waitForPortInUse needs port to become in use (not available)
+            // 1. Initial check (line 192 in execute): not available (conflict) -> triggers dialog
+            // 2. In killProcessOnPort (line 135): check if port is free after kill -> return true (freed)
+            // 3. In waitForPortInUse (line 63): check if demo started -> return false (in use = demo started)
             mockCommandExecutor.isPortAvailable.mockImplementation(async () => {
                 checkCount++;
                 if (checkCount === 1) {
                     return false; // Initial: port in use (conflict)
                 }
-                // After kill, return false to simulate demo starting on the port
-                return !afterKill;
+                if (checkCount === 2 && killCalled) {
+                    return true; // After kill: port is free (killProcessOnPort succeeds)
+                }
+                // waitForPortInUse: port is in use = demo started
+                return false;
             });
 
             // When: Kill completes
             const executePromise = command.execute();
-            await jest.advanceTimersByTimeAsync(2000);
+
+            // Advance timers incrementally for port polling loops
+            for (let i = 0; i < 10; i++) {
+                await jest.advanceTimersByTimeAsync(1000);
+            }
+
             await executePromise;
 
             // Then: isPortAvailable() called to verify port state
