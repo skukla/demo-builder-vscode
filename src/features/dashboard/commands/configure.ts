@@ -4,6 +4,7 @@ import * as vscode from 'vscode';
 import { ProjectDashboardWebviewCommand } from './showDashboard';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
+import { createBundleUris } from '@/core/utils/bundleUri';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
@@ -80,46 +81,24 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
-    /**
-     * Generate webview HTML with webpack 4-bundle pattern.
-     *
-     * Loads bundles in correct order for code splitting:
-     * 1. runtime-bundle.js - Webpack runtime
-     * 2. vendors-bundle.js - Third-party libraries
-     * 3. common-bundle.js - Shared application code
-     * 4. configure-bundle.js - Configure-specific code
-     */
     protected async getWebviewContent(): Promise<string> {
-        const nonce = this.getNonce();
-        const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
+        const bundleUris = createBundleUris({
+            webview: this.panel!.webview,
+            extensionPath: this.context.extensionPath,
+            featureBundleName: 'configure',
+        });
 
-        // Build bundle URIs for webpack code-split bundles
-        const bundleUris = {
-            runtime: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'runtime-bundle.js'))
-            ),
-            vendors: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'vendors-bundle.js'))
-            ),
-            common: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'common-bundle.js'))
-            ),
-            feature: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'configure-bundle.js'))
-            ),
-        };
+        const nonce = this.getNonce();
 
         // Get base URI for media assets
         const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
         const baseUri = this.panel!.webview.asWebviewUri(mediaPath);
 
-        // Generate HTML using 4-bundle helper
         return getWebviewHTMLWithBundles({
             bundleUris,
             nonce,
             cspSource: this.panel!.webview.cspSource,
             title: 'Configure Project',
-            additionalImgSources: ['https:', 'data:'],
             baseUri,
         });
     }

@@ -2,10 +2,8 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
-import {
-    getWebviewHTMLWithBundles,
-    type BundleUris,
-} from '@/core/utils/getWebviewHTMLWithBundles';
+import { createBundleUris } from '@/core/utils/bundleUri';
+import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { DashboardHandlerRegistry } from '@/features/dashboard/handlers';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project, ComponentInstance } from '@/types';
@@ -47,31 +45,11 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
     }
 
     protected async getWebviewContent(): Promise<string> {
-        const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
-
-        /**
-         * Webpack code splitting requires loading bundles in order:
-         * 1. runtime (webpack runtime and chunk loading)
-         * 2. vendors (React, Spectrum, third-party libraries)
-         * 3. common (shared code including WebviewClient)
-         * 4. dashboard (dashboard-specific code)
-         *
-         * This pattern eliminates single-bundle timeout issues in VS Code webviews.
-         */
-        const bundleUris: BundleUris = {
-            runtime: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'runtime-bundle.js')),
-            ),
-            vendors: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'vendors-bundle.js')),
-            ),
-            common: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'common-bundle.js')),
-            ),
-            feature: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'dashboard-bundle.js')),
-            ),
-        };
+        const bundleUris = createBundleUris({
+            webview: this.panel!.webview,
+            extensionPath: this.context.extensionPath,
+            featureBundleName: 'dashboard',
+        });
 
         const nonce = this.getNonce();
 
@@ -81,7 +59,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
             nonce,
             cspSource: this.panel!.webview.cspSource,
             title: 'Project Dashboard',
-            additionalImgSources: ['https:', 'data:'],
         });
     }
 

@@ -12,10 +12,8 @@ import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import {
-    getWebviewHTMLWithBundles,
-    type BundleUris,
-} from '@/core/utils/getWebviewHTMLWithBundles';
+import { createBundleUris } from '@/core/utils/bundleUri';
+import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { ProjectsListHandlerRegistry } from '@/features/projects-dashboard/handlers';
 import { HandlerContext, SharedState } from '@/types/handlers';
 
@@ -51,31 +49,11 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
     }
 
     protected async getWebviewContent(): Promise<string> {
-        const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
-
-        /**
-         * Webpack code splitting requires loading bundles in order:
-         * 1. runtime (webpack runtime and chunk loading)
-         * 2. vendors (React, Spectrum, third-party libraries)
-         * 3. common (shared code including WebviewClient)
-         * 4. projectsList (projects list specific code)
-         *
-         * This pattern eliminates single-bundle timeout issues in VS Code webviews.
-         */
-        const bundleUris: BundleUris = {
-            runtime: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'runtime-bundle.js')),
-            ),
-            vendors: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'vendors-bundle.js')),
-            ),
-            common: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'common-bundle.js')),
-            ),
-            feature: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'projectsList-bundle.js')),
-            ),
-        };
+        const bundleUris = createBundleUris({
+            webview: this.panel!.webview,
+            extensionPath: this.context.extensionPath,
+            featureBundleName: 'projectsList',
+        });
 
         const nonce = this.getNonce();
 
@@ -85,7 +63,6 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
             nonce,
             cspSource: this.panel!.webview.cspSource,
             title: 'Projects',
-            additionalImgSources: ['https:', 'data:'],
         });
     }
 

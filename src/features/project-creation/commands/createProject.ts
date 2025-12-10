@@ -5,11 +5,9 @@ import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di';
 import { getLogger, ErrorLogger, StepLogger } from '@/core/logging';
+import { createBundleUris } from '@/core/utils/bundleUri';
+import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { ProgressUnifier } from '@/core/utils/progressUnifier';
-import {
-    getWebviewHTMLWithBundles,
-    type BundleUris
-} from '@/core/utils/getWebviewHTMLWithBundles';
 import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
@@ -185,42 +183,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         return 'Create Demo Project';
     }
 
-    /**
-     * Generates webview HTML content with webpack 4-bundle pattern.
-     *
-     * Bundle loading order is critical for proper initialization:
-     * 1. runtime-bundle.js - Webpack runtime enables chunk loading
-     * 2. vendors-bundle.js - React/Spectrum must load before application code
-     * 3. common-bundle.js - Shared code (including WebviewClient for handshake)
-     * 4. wizard-bundle.js - Wizard-specific code executes last
-     *
-     * This pattern eliminates race conditions where webview JavaScript
-     * attempts to execute before dependencies are loaded, causing timeout errors.
-     *
-     * @returns HTML string with all 4 bundles in correct order
-     */
     protected async getWebviewContent(): Promise<string> {
-        const webviewPath = path.join(this.context.extensionPath, 'dist', 'webview');
-
-        // Webpack code splitting requires loading bundles in order:
-        // 1. runtime (webpack runtime and chunk loading)
-        // 2. vendors (React, Spectrum, third-party libraries)
-        // 3. common (shared code including WebviewClient)
-        // 4. wizard (wizard-specific code)
-        const bundleUris: BundleUris = {
-            runtime: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'runtime-bundle.js'))
-            ),
-            vendors: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'vendors-bundle.js'))
-            ),
-            common: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'common-bundle.js'))
-            ),
-            feature: this.panel!.webview.asWebviewUri(
-                vscode.Uri.file(path.join(webviewPath, 'wizard-bundle.js'))
-            ),
-        };
+        const bundleUris = createBundleUris({
+            webview: this.panel!.webview,
+            extensionPath: this.context.extensionPath,
+            featureBundleName: 'wizard',
+        });
 
         const nonce = this.getNonce();
 
@@ -228,7 +196,6 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const mediaPath = vscode.Uri.file(path.join(this.context.extensionPath, 'dist'));
         const baseUri = this.panel!.webview.asWebviewUri(mediaPath);
 
-        // Build HTML with 4-bundle pattern
         return getWebviewHTMLWithBundles({
             bundleUris,
             nonce,
