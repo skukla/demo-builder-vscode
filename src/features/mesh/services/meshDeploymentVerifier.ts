@@ -123,8 +123,8 @@ export async function waitForMeshDeployment(
                         meshDeployed = true;
                         break;
                     } else if (meshStatus === 'error' || meshStatus === 'failed') {
-                        // Log full response for debugging - Adobe's error field is often truncated
-                        logger?.debug('[Mesh Verification] Full API response:', verifyResult.stdout);
+                        // Log full response for deep debugging - Adobe's error field is often truncated
+                        logger?.trace('[Mesh Verification] Full API response:', verifyResult.stdout);
 
                         // Try to extract more meaningful error from full response
                         const { extractMeshErrorSummary } = await import('../utils/errorFormatter');
