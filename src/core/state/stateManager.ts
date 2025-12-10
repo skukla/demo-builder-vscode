@@ -426,24 +426,28 @@ export class StateManager {
             }
             
             // Reconstruct componentInstances from components/ directory
-            const componentInstances: Record<string, import('@/types').ComponentInstance> = {};
+            // This ensures components on disk are tracked even if missing from manifest
+            const discoveredComponents: Record<string, import('@/types').ComponentInstance> = {};
             const componentsDir = path.join(projectPath, 'components');
-            
+
             try {
                 const componentDirs = await fs.readdir(componentsDir);
-                
+
                 for (const componentId of componentDirs) {
+                    // Skip snapshot directories (created during component updates)
+                    if (componentId.includes('.snapshot-')) {
+                        continue;
+                    }
+
                     const componentPath = path.join(componentsDir, componentId);
                     const stat = await fs.stat(componentPath);
-                    
+
                     if (stat.isDirectory()) {
-                        // Try to determine component type from manifest
-                        
-                        // Create a basic component instance
-                        componentInstances[componentId] = {
+                        // Create a basic component instance for any component on disk
+                        discoveredComponents[componentId] = {
                             id: componentId,
                             name: componentId,
-                            type: 'dependency', // Default, should be refined
+                            type: 'dependency', // Default, will be overridden by manifest if available
                             status: 'ready',
                             path: componentPath,
                             lastUpdated: new Date(),
@@ -454,7 +458,35 @@ export class StateManager {
                 // No components directory or error reading it
                 this.logger.debug('No components directory found or error reading it');
             }
-            
+
+            // MERGE: Combine manifest data with discovered components
+            // Manifest data takes priority, but discovered components fill in gaps
+            // This ensures components on disk (like commerce-mesh) are always tracked
+            const mergedComponentInstances: Record<string, import('@/types').ComponentInstance> = {
+                ...discoveredComponents, // Start with all discovered components
+                ...(manifest.componentInstances || {}), // Overlay manifest data (takes priority)
+            };
+
+            // For each discovered component not in manifest, ensure it has a path
+            for (const componentId of Object.keys(discoveredComponents)) {
+                if (mergedComponentInstances[componentId] && !mergedComponentInstances[componentId].path) {
+                    mergedComponentInstances[componentId].path = discoveredComponents[componentId].path;
+                }
+            }
+
+            // Merge componentVersions - ensure discovered components have version entries
+            const mergedComponentVersions = { ...(manifest.componentVersions || {}) };
+            for (const componentId of Object.keys(discoveredComponents)) {
+                if (!mergedComponentVersions[componentId]) {
+                    // Component exists on disk but has no version tracking - add placeholder
+                    mergedComponentVersions[componentId] = {
+                        version: 'unknown',
+                        lastUpdated: new Date().toISOString(),
+                    };
+                    this.logger.debug(`[StateManager] Discovered untracked component: ${componentId}`);
+                }
+            }
+
             const project: Project = {
                 name: manifest.name || path.basename(projectPath),
                 path: projectPath,
@@ -463,10 +495,10 @@ export class StateManager {
                 lastModified: manifest.lastModified ? new Date(manifest.lastModified) : new Date(),
                 adobe: manifest.adobe,
                 commerce: manifest.commerce,
-                componentInstances: manifest.componentInstances || componentInstances,
+                componentInstances: mergedComponentInstances,
                 componentSelections: manifest.componentSelections,
                 componentConfigs: manifest.componentConfigs,
-                componentVersions: manifest.componentVersions || {},
+                componentVersions: mergedComponentVersions,
                 meshState: manifest.meshState,
             };
             
