@@ -188,7 +188,7 @@ export async function handleCheckApiMesh(
                 case 'error':
                     context.logger.warn('[API Mesh] Mesh exists but is in error state');
                     if (meshCheck.error) {
-                        context.debugLogger.debug('[API Mesh] Error details:', meshCheck.error.substring(0, 500));
+                        context.debugLogger.trace('[API Mesh] Error details:', meshCheck.error.substring(0, 500));
                     }
                     return {
                         success: true,

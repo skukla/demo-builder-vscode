@@ -66,12 +66,14 @@ describe('createHandler - Security Tests (Step 2)', () => {
                 extensionPath: '/tmp/extension',
             } as any,
             logger: {
+                trace: jest.fn(),
                 info: jest.fn(),
                 warn: jest.fn(),
                 error: jest.fn(),
                 debug: jest.fn(),
             } as any,
             debugLogger: {
+                trace: jest.fn(),
                 debug: jest.fn(),
             } as any,
             sharedState: {} as any,

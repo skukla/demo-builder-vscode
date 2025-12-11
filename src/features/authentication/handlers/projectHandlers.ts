@@ -202,13 +202,13 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
         // Preferred probe: get active mesh (succeeds only if API enabled; returns 404-style when none exists)
         try {
             const { stdout } = await commandManager.execute('aio api-mesh:get --active --json');
-            context.debugLogger.debug('[Adobe Setup] api-mesh:get --active output', { stdout });
+            context.debugLogger.trace('[Adobe Setup] api-mesh:get --active output', { stdout });
             context.logger.debug('[Adobe Setup] API Mesh access confirmed (active mesh or readable config)');
             return { success: true, data: { hasMesh: true } };
         } catch (cliError) {
             const err = cliError as { message?: string; stderr?: string; stdout?: string };
             const combined = `${err.message || ''}\n${err.stderr || ''}\n${err.stdout || ''}`;
-            context.debugLogger.debug('[Adobe Setup] api-mesh:get --active error', { combined });
+            context.debugLogger.trace('[Adobe Setup] api-mesh:get --active error', { combined });
             const forbidden = /403|forbidden|not authorized|not enabled|no access/i.test(combined);
             if (forbidden) {
                 context.logger.warn('[Adobe Setup] API Mesh not enabled for selected project');
@@ -230,14 +230,14 @@ export async function handleCheckProjectApis(context: HandlerContext): Promise<D
         for (const cmd of probes) {
             try {
                 const { stdout } = await commandManager.execute(cmd);
-                context.debugLogger.debug('[Adobe Setup] Mesh probe success', { cmd, stdout });
+                context.debugLogger.trace('[Adobe Setup] Mesh probe success', { cmd, stdout });
                 // If any mesh command runs, assume access exists
                 context.logger.debug('[Adobe Setup] API Mesh access confirmed');
                 return { success: true, data: { hasMesh: true } };
             } catch (cliError) {
                 const err = cliError as { message?: string; stderr?: string; stdout?: string };
                 const combined = `${err.message || ''}\n${err.stderr || ''}\n${err.stdout || ''}`;
-                context.debugLogger.debug('[Adobe Setup] Mesh probe error', { cmd, combined });
+                context.debugLogger.trace('[Adobe Setup] Mesh probe error', { cmd, combined });
                 const forbidden = /403|forbidden|not authorized|not enabled|no access|missing permission/i.test(combined);
                 if (forbidden) {
                     context.logger.warn('[Adobe Setup] API Mesh not enabled for selected project');

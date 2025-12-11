@@ -27,6 +27,7 @@ export function createMockHandlerContext(
     overrides?: Partial<HandlerContext>
 ): jest.Mocked<HandlerContext> {
     const mockLogger = {
+        trace: jest.fn(),
         debug: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),

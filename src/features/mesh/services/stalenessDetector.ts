@@ -128,7 +128,7 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
         return deployedEnvVars;
         
     } catch (error) {
-        logger.debug('[Mesh Staleness] Failed to fetch deployed mesh config:', error);
+        logger.trace('[Mesh Staleness] Failed to fetch deployed mesh config:', error);
         return null;
     }
 }

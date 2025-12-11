@@ -54,12 +54,14 @@ export const createMockContext = () => {
     return {
         authManager: mockAuthManager,
         logger: {
+            trace: jest.fn(),
             info: jest.fn(),
             error: jest.fn(),
             warn: jest.fn(),
             debug: jest.fn()
         } as any,
         debugLogger: {
+            trace: jest.fn(),
             debug: jest.fn()
         } as any,
         sendMessage: jest.fn().mockResolvedValue(undefined),

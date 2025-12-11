@@ -19,6 +19,7 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
 
 jest.mock('@/core/logging', () => ({
     Logger: jest.fn().mockImplementation(() => ({
+        trace: jest.fn(),
         info: jest.fn(),
         debug: jest.fn(),
         warn: jest.fn(),

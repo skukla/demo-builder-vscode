@@ -125,7 +125,7 @@ export class TokenManager {
                     );
 
                     this.logger.error(`[Token] ${formatted.message}`);
-                    this.logger.debug(formatted.technical);
+                    this.logger.trace(formatted.technical);
 
                     return { valid: false, expiresIn: 0, token };
                 }
@@ -254,8 +254,8 @@ export class TokenManager {
             // Verify token matches what Adobe CLI returned
             if (inspection.token !== expectedToken) {
                 this.logger.warn('[Token] Verification failed: token mismatch');
-                this.logger.debug('[Token] Expected length:', expectedToken.length);
-                this.logger.debug('[Token] Stored length:', inspection.token.length);
+                this.logger.trace('[Token] Expected length:', expectedToken.length);
+                this.logger.trace('[Token] Stored length:', inspection.token.length);
                 return false;
             }
 

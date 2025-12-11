@@ -97,7 +97,7 @@ export async function handleCreateApiMesh(
             templatePath,
             outputPath: meshConfigPath,
         });
-        context.debugLogger.debug('[API Mesh] Mesh config content', minimalMeshConfig);
+        context.debugLogger.trace('[API Mesh] Mesh config content', minimalMeshConfig);
 
         // Create mesh with the configuration file
         onProgress?.('Creating API Mesh...', 'Submitting configuration to Adobe');
@@ -137,7 +137,7 @@ export async function handleCreateApiMesh(
         }
 
         context.logger.info('[API Mesh] Mesh created successfully');
-        context.debugLogger.debug('[API Mesh] Create output', { stdout: createResult.stdout });
+        context.debugLogger.trace('[API Mesh] Create output', { stdout: createResult.stdout });
 
         // Mesh creation is asynchronous - poll until it's deployed
         // Typical deployment time: 60-90 seconds, with 2 minute buffer for safety
@@ -193,7 +193,7 @@ export async function handleCreateApiMesh(
                         const meshData = extractAndParseJSON<{ meshId?: string; meshStatus?: string; error?: string }>(verifyResult.stdout);
                         if (!meshData) {
                             context.logger.warn('[API Mesh] Could not parse JSON from get response');
-                            context.debugLogger.debug('[API Mesh] Output:', verifyResult.stdout);
+                            context.debugLogger.trace('[API Mesh] Output:', verifyResult.stdout);
                             continue; // Try next iteration
                         }
                         const rawMeshStatus = meshData.meshStatus || '';
@@ -235,13 +235,13 @@ export async function handleCreateApiMesh(
                         }
                     } catch (parseError) {
                         context.logger.warn('[API Mesh] Failed to parse mesh status JSON', parseError as Error);
-                        context.debugLogger.debug('[API Mesh] Raw output:', verifyResult.stdout);
+                        context.debugLogger.trace('[API Mesh] Raw output:', verifyResult.stdout);
                         // Continue polling
                     }
                 } else {
                     // Non-zero exit code - likely mesh doesn't exist yet or other error
                     context.logger.warn(`[API Mesh] Get command returned exit code ${verifyResult.code}`);
-                    context.debugLogger.debug('[API Mesh] stderr:', verifyResult.stderr);
+                    context.debugLogger.trace('[API Mesh] stderr:', verifyResult.stderr);
                     // Continue polling - mesh might still be initializing
                 }
             } catch (verifyError) {

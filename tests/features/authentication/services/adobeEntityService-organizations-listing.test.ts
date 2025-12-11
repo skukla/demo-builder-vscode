@@ -21,6 +21,7 @@ describe('AdobeEntityService - Organizations - Listing', () => {
     beforeEach(() => {
         // Setup mocked module functions
         (getLogger as jest.Mock).mockReturnValue({
+            trace: jest.fn(),
             debug: jest.fn(),
             info: jest.fn(),
             warn: jest.fn(),

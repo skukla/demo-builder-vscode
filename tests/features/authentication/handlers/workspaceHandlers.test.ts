@@ -48,6 +48,7 @@ describe('workspaceHandlers', () => {
                 debug: jest.fn()
             } as any,
             debugLogger: {
+                trace: jest.fn(),
                 debug: jest.fn()
             } as any,
             sendMessage: jest.fn().mockResolvedValue(undefined),

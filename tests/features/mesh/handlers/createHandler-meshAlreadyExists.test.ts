@@ -32,6 +32,7 @@ describe('handleMeshAlreadyExists', () => {
                 debug: jest.fn(),
             },
             debugLogger: {
+                trace: jest.fn(),
                 debug: jest.fn(),
             },
             context: {

@@ -144,7 +144,7 @@ export class AdobeEntityService {
                         throw new Error('Invalid SDK response format');
                     }
                 } catch (sdkError) {
-                    this.debugLogger.debug('[Entity Service] SDK failed, falling back to CLI:', sdkError);
+                    this.debugLogger.trace('[Entity Service] SDK failed, falling back to CLI:', sdkError);
                     this.debugLogger.warn('[Entity Service] SDK unavailable, using slower CLI fallback for organizations');
                 }
             }
@@ -238,7 +238,7 @@ export class AdobeEntityService {
                         throw new Error('Invalid SDK response format');
                     }
                 } catch (sdkError) {
-                    this.debugLogger.debug('[Entity Service] SDK failed, falling back to CLI:', sdkError);
+                    this.debugLogger.trace('[Entity Service] SDK failed, falling back to CLI:', sdkError);
                     this.debugLogger.warn('[Entity Service] SDK unavailable, using slower CLI fallback for projects');
                 }
             } else if (this.sdkClient.isInitialized() && !hasValidOrgId) {
@@ -330,7 +330,7 @@ export class AdobeEntityService {
                         throw new Error('Invalid SDK response format');
                     }
                 } catch (sdkError) {
-                    this.debugLogger.debug('[Entity Service] SDK failed, falling back to CLI:', sdkError);
+                    this.debugLogger.trace('[Entity Service] SDK failed, falling back to CLI:', sdkError);
                     this.debugLogger.warn('[Entity Service] SDK unavailable, using slower CLI fallback for workspaces');
                 }
             } else if (this.sdkClient.isInitialized() && (!hasValidOrgId || !hasValidProjectId)) {
@@ -421,7 +421,7 @@ export class AdobeEntityService {
                                     };
                                 }
                             } catch (error) {
-                                this.debugLogger.debug('[Entity Service] Failed to fetch org list for ID resolution:', error);
+                                this.debugLogger.trace('[Entity Service] Failed to fetch org list for ID resolution:', error);
                                 // Fallback to name-only (SDK operations will fail, CLI fallback will be used)
                                 orgData = {
                                     id: context.org,
@@ -446,7 +446,7 @@ export class AdobeEntityService {
                                     };
                                 }
                             } catch (error) {
-                                this.debugLogger.debug('[Entity Service] Failed to resolve from cache:', error);
+                                this.debugLogger.trace('[Entity Service] Failed to resolve from cache:', error);
                                 orgData = {
                                     id: context.org,
                                     code: context.org,

@@ -75,6 +75,7 @@ export function createMockHandlerContext(overrides?: Partial<HandlerContext>): j
 			error: jest.fn(),
 		} as any, // Simplified mock
 		debugLogger: {
+			trace: jest.fn(),
 			debug: jest.fn(),
 			info: jest.fn(),
 			warn: jest.fn(),
