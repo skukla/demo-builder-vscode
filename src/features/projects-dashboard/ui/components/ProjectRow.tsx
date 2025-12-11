@@ -1,11 +1,11 @@
 /**
  * ProjectRow Component
  *
- * Displays a project as a full-width horizontal row (file browser style).
- * Part of the layout prototype comparison.
+ * Displays a project as a full-width horizontal row with Spectrum styling.
+ * Shows project name, installed components, and status.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
@@ -15,6 +15,7 @@ import {
     getStatusVariant,
     getFrontendPort,
 } from '../../utils/projectStatusUtils';
+import { getComponentSummary } from '../../utils/componentSummaryUtils';
 
 export interface ProjectRowProps {
     /** The project to display */
@@ -24,7 +25,7 @@ export interface ProjectRowProps {
 }
 
 /**
- * ProjectRow - Displays a project as a clickable row
+ * ProjectRow - Displays a project as a clickable row with Spectrum styling
  */
 export const ProjectRow: React.FC<ProjectRowProps> = ({
     project,
@@ -47,8 +48,9 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
     const port = getFrontendPort(project);
     const statusText = getStatusText(project.status, port);
     const statusVariant = getStatusVariant(project.status);
+    const componentSummary = useMemo(() => getComponentSummary(project), [project]);
 
-    const ariaLabel = `${project.name}, ${statusText}`;
+    const ariaLabel = `${project.name}, ${statusText}${componentSummary ? `, ${componentSummary}` : ''}`;
 
     return (
         <div
@@ -60,12 +62,17 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
             className="project-row"
         >
             <Flex alignItems="center" justifyContent="space-between" width="100%">
-                {/* Left: Status dot + Name */}
+                {/* Left: Status dot + Name + Components */}
                 <Flex alignItems="center" gap="size-150">
                     <StatusDot variant={statusVariant} size={8} />
                     <Text UNSAFE_className="project-row-name">
                         {project.name}
                     </Text>
+                    {componentSummary && (
+                        <Text UNSAFE_className="project-row-components">
+                            {componentSummary}
+                        </Text>
+                    )}
                 </Flex>
 
                 {/* Right: Status text + Chevron */}

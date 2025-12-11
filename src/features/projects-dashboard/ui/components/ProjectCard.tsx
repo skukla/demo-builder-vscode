@@ -1,12 +1,13 @@
 /**
  * ProjectCard Component
  *
- * Displays a single project as a simplified clickable card.
- * No dark header - just a gray-100 background matching dashboard buttons.
- * Part of the layout prototype comparison (Option C: Simplified Cards).
+ * Displays a single project as a clickable card with Spectrum styling.
+ * Uses gray-50/gray-75 layered backgrounds matching the project wizard.
+ * Features lift animation on hover and uppercase status text.
+ * Shows installed components as a text list.
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
 import type { Project } from '@/types/base';
@@ -15,6 +16,7 @@ import {
     getStatusVariant,
     getFrontendPort,
 } from '../../utils/projectStatusUtils';
+import { getComponentSummary } from '../../utils/componentSummaryUtils';
 
 export interface ProjectCardProps {
     /** The project to display */
@@ -24,9 +26,9 @@ export interface ProjectCardProps {
 }
 
 /**
- * ProjectCard - Displays a project as a simplified clickable card
+ * ProjectCard - Displays a project as a clickable card with Spectrum styling
  *
- * Layout: Single gray-100 background with name and status (no dark header)
+ * Layout: Gray-50 base with gray-75 hover, lift animation, and uppercase status
  */
 export const ProjectCard: React.FC<ProjectCardProps> = ({
     project,
@@ -49,8 +51,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     const port = getFrontendPort(project);
     const statusText = getStatusText(project.status, port);
     const statusVariant = getStatusVariant(project.status);
+    const componentSummary = useMemo(() => getComponentSummary(project), [project]);
 
-    const ariaLabel = `${project.name}, ${statusText}`;
+    const ariaLabel = `${project.name}, ${statusText}${componentSummary ? `, ${componentSummary}` : ''}`;
 
     return (
         <div
@@ -59,17 +62,24 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             aria-label={ariaLabel}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
-            className="project-card-simple"
+            className="project-card-spectrum"
         >
             {/* Project Name */}
-            <Text UNSAFE_className="project-card-simple-name">
+            <Text UNSAFE_className="project-card-spectrum-name">
                 {project.name}
             </Text>
 
+            {/* Component Summary */}
+            {componentSummary && (
+                <Text UNSAFE_className="project-card-spectrum-components">
+                    {componentSummary}
+                </Text>
+            )}
+
             {/* Status Row */}
-            <Flex alignItems="center" gap="size-100" marginTop="size-50">
+            <Flex alignItems="center" gap="size-100" marginTop="auto">
                 <StatusDot variant={statusVariant} size={6} />
-                <Text UNSAFE_className="project-card-simple-status">
+                <Text UNSAFE_className="project-card-spectrum-status">
                     {statusText}
                 </Text>
             </Flex>

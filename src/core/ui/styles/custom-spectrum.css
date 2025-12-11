@@ -560,9 +560,12 @@ button[class*="spectrum-Button"][disabled],
 
 .projects-grid {
     display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
-    gap: 12px !important;
-    padding: 4px !important; /* Small padding for hover shadow overflow */
+    /* Larger cards: 240px min for more square appearance */
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+    /* Increased gap: 24px (Spectrum size-300) */
+    gap: 24px !important;
+    /* Padding for shadow overflow */
+    padding: 8px !important;
 }
 
 /* Sidebar loading state */
@@ -787,9 +790,9 @@ button[class*="spectrum-Button"][disabled],
     align-items: center !important;
 }
 
-/* Match grid width so button aligns with grid: 4 × 152px + 3 × 52px = 764px */
+/* Match grid width so status aligns with buttons: 4 × 160px + 3 × 24px = 712px */
 .dashboard-status-content {
-    width: 764px;
+    width: 712px;
     margin: 0 auto;
 }
 
@@ -797,46 +800,67 @@ button[class*="spectrum-Button"][disabled],
 .dashboard-grid-container {
     display: flex;
     justify-content: center;
-    padding: 4px; /* Match .projects-grid padding for consistent header spacing */
+    padding: 8px; /* Shadow overflow padding */
 }
 
 .dashboard-grid {
     width: auto !important; /* Override w-full from GridLayout */
     grid-template-columns: repeat(4, auto) !important; /* 4 columns for 8 buttons */
-    gap: 32px !important; /* Fill container width: 4 × 167px + 3 × 32px = 764px */
+    gap: 24px !important; /* Spectrum size-300 - matches project cards */
 }
 
-/* Dashboard action buttons - 4-column layout */
+/* ===========================================
+   Dashboard Action Buttons - Spectrum Style
+   Matches project-card-spectrum patterns
+   =========================================== */
 .dashboard-action-button {
-    background: var(--spectrum-global-color-gray-100) !important;
-    border-radius: 6px !important;
-    padding: 18px !important;
-    transition: all 0.15s ease !important;
+    /* Base - lighter background matching cards */
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
+
+    /* Smoother transition matching cards */
+    transition: all 0.3s ease !important;
+
+    /* Layout */
     text-align: center !important;
-    /* 167px width for 4-column grid: 4 × 167px + 3 × 32px = 764px */
-    width: 167px !important;
+    width: 160px !important;
     height: auto !important;
-    aspect-ratio: 4 / 3 !important;
+    aspect-ratio: 1 / 1 !important; /* Square buttons */
     box-sizing: border-box !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
     align-items: center !important;
+    gap: 8px !important;
     cursor: pointer !important;
 }
 
-/* Scale icons for 4-column layout */
+/* Scale icons */
 .dashboard-action-button svg {
-    width: 30px !important;
-    height: 30px !important;
+    width: 28px !important;
+    height: 28px !important;
 }
 
 .dashboard-action-button:hover,
 .dashboard-action-button:focus {
-    background: rgba(255, 255, 255, 0.08) !important;
+    /* Layered depth matching cards */
+    background: var(--spectrum-global-color-gray-75) !important;
     border-color: var(--spectrum-global-color-gray-400) !important;
+
+    /* Lift animation matching cards */
+    transform: translateY(-2px) !important;
+
+    /* Shadow matching cards */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+
     outline: none !important;
+}
+
+.dashboard-action-button:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
 }
 
 /* Prevent internal Spectrum elements from showing their own hover states */
@@ -850,8 +874,10 @@ button[class*="spectrum-Button"][disabled],
 .dashboard-action-button.hover-suppressed,
 .dashboard-action-button.hover-suppressed:hover,
 .dashboard-action-button.hover-suppressed:focus {
-    background: var(--spectrum-global-color-gray-100) !important;
+    background: var(--spectrum-global-color-gray-50) !important;
     border-color: var(--spectrum-global-color-gray-300) !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 /* Sidebar provider - use Spectrum gray-75 for consistency */
@@ -1085,21 +1111,25 @@ button[class*="spectrum-Button"][disabled],
    Projects Dashboard Layout Prototypes
    =========================================== */
 
-/* Option A: Row-based list */
+/* Option A: Row-based list - Spectrum aligned */
 .project-row-list {
     display: flex !important;
     flex-direction: column !important;
-    gap: 12px !important; /* Match .projects-grid gap for consistent view switching */
-    padding: 4px !important; /* Match .projects-grid padding for consistent header spacing */
+    /* Match .projects-grid gap for consistent view switching */
+    gap: 16px !important;
+    /* Match .projects-grid padding for shadow overflow */
+    padding: 8px !important;
 }
 
 .project-row {
     display: flex !important;
     align-items: center !important;
-    background: var(--spectrum-global-color-gray-100) !important;
-    border-radius: 6px !important;
-    padding: 12px 16px !important;
-    transition: all 0.15s ease !important;
+    /* Lighter base - matches card gray-50 */
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 8px !important;
+    padding: 16px 20px !important;
+    /* Smoother transition - matches cards */
+    transition: all 0.3s ease !important;
     border: 1px solid var(--spectrum-global-color-gray-300) !important;
     cursor: pointer !important;
     width: 100% !important;
@@ -1107,8 +1137,11 @@ button[class*="spectrum-Button"][disabled],
 
 .project-row:hover,
 .project-row:focus {
-    background: var(--spectrum-global-color-gray-200) !important;
+    /* Layered depth - matches card hover */
+    background: var(--spectrum-global-color-gray-75) !important;
     border-color: var(--spectrum-global-color-gray-400) !important;
+    /* Shadow on hover - matches cards */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
     outline: none !important;
 }
 
@@ -1119,13 +1152,25 @@ button[class*="spectrum-Button"][disabled],
 
 .project-row-name {
     font-size: 14px !important;
-    font-weight: 500 !important;
+    font-weight: 600 !important;
     color: var(--spectrum-global-color-gray-900) !important;
 }
 
-.project-row-status {
+/* Component summary - secondary text between name and status */
+.project-row-components {
     font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-500) !important;
+    padding-left: 12px !important;
+    border-left: 1px solid var(--spectrum-global-color-gray-300) !important;
+    margin-left: 4px !important;
+}
+
+/* Status gets wizard label treatment - uppercase */
+.project-row-status {
+    font-size: 11px !important;
     color: var(--spectrum-global-color-gray-600) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
 }
 
 .project-row-chevron {
@@ -1228,6 +1273,75 @@ button[class*="spectrum-Button"][disabled],
 .project-card-simple-status {
     font-size: 12px !important;
     color: var(--spectrum-global-color-gray-600) !important;
+}
+
+/* ===========================================
+   Project Card Spectrum Style
+   Aligns with wizard component-card patterns
+   =========================================== */
+.project-card-spectrum {
+    /* Base - lighter than current (gray-50 vs gray-100) */
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    cursor: pointer !important;
+
+    /* Smoother transition (0.3s vs 0.15s) */
+    transition: all 0.3s ease !important;
+
+    /* Layout for content */
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+
+    /* Larger, more square cards */
+    min-height: 120px !important;
+    min-width: 200px !important;
+}
+
+.project-card-spectrum:hover,
+.project-card-spectrum:focus {
+    /* Layered depth (gray-75) */
+    background: var(--spectrum-global-color-gray-75) !important;
+
+    /* Lift animation */
+    transform: translateY(-2px) !important;
+
+    /* Stronger shadow */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+
+    border-color: var(--spectrum-global-color-gray-400) !important;
+    outline: none !important;
+}
+
+.project-card-spectrum:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+/* Typography - name stays similar */
+.project-card-spectrum-name {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    line-height: 1.3 !important;
+}
+
+/* Typography - component summary */
+.project-card-spectrum-components {
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-500) !important;
+    line-height: 1.4 !important;
+    flex: 1 !important;
+}
+
+/* Typography - status gets wizard label treatment */
+.project-card-spectrum-status {
+    font-size: 11px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
 }
 
 /* ===========================================
