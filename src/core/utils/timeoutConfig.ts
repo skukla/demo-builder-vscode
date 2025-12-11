@@ -40,6 +40,7 @@ export const TIMEOUTS = {
     COMPONENT_CLONE: 120000,        // Cloning git repository (2 minutes)
     COMPONENT_INSTALL: 300000,      // Installing npm dependencies (5 minutes)
     COMPONENT_BUILD: 180000,        // Running build scripts (3 minutes)
+    NPM_INSTALL: 300000,            // npm install for post-update builds (5 minutes)
 
     // Update system timeouts
     UPDATE_CHECK: 10000,            // GitHub API calls to check releases
