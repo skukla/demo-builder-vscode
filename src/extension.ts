@@ -183,6 +183,16 @@ export async function activate(context: vscode.ExtensionContext) {
             return;
         }
 
+        // Auto-zoom for optimal demo visibility (per-window, not global)
+        const demoBuilderConfig = vscode.workspace.getConfiguration('demoBuilder');
+        const autoZoomEnabled = demoBuilderConfig.get<boolean>('autoZoom', true);
+
+        if (autoZoomEnabled) {
+            // Reset zoom to 100% for consistent demo experience
+            await vscode.commands.executeCommand('workbench.action.zoomReset');
+            logger.debug('[Extension] Reset zoom to 100% for demo visibility');
+        }
+
         // Initialize status bar
         statusBar = new StatusBarManager(context, stateManager);
         statusBar.initialize();

@@ -62,6 +62,16 @@
         "title": "Open Project Dashboard",
         "category": "Demo Builder",
         "icon": "$(dashboard)"
+      },
+      {
+        "command": "demoBuilder.setRecommendedZoom",
+        "title": "Set Recommended Zoom (120%)",
+        "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.resetZoom",
+        "title": "Reset Zoom (100%)",
+        "category": "Demo Builder"
       }
     ],
     "configuration": {
@@ -76,6 +86,11 @@
           "type": "boolean",
           "default": true,
           "description": "Automatically check for updates on startup"
+        },
+        "demoBuilder.autoZoom": {
+          "type": "boolean",
+          "default": true,
+          "description": "Reset zoom to 100% on extension load for consistent demo experience"
         },
         "demoBuilder.updateChannel": {
           "type": "string",

@@ -222,6 +222,20 @@ export class CommandManager {
         const diagnostics = new DiagnosticsCommand();
         this.registerCommand('demoBuilder.diagnostics', () => diagnostics.execute());
 
+        // Set Recommended Zoom (120% for better visibility during demos)
+        this.registerCommand('demoBuilder.setRecommendedZoom', async () => {
+            const config = vscode.workspace.getConfiguration('window');
+            await config.update('zoomLevel', 1, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage('Zoom set to 120% for optimal demo visibility.');
+        });
+
+        // Reset Zoom (back to 100%)
+        this.registerCommand('demoBuilder.resetZoom', async () => {
+            const config = vscode.workspace.getConfiguration('window');
+            await config.update('zoomLevel', 0, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage('Zoom reset to 100%.');
+        });
+
         // Toggle Sidebar (show/hide Demo Builder sidebar)
         this.registerCommand('demoBuilder.toggleSidebar', async () => {
             await vscode.commands.executeCommand('workbench.action.toggleSidebarVisibility');
