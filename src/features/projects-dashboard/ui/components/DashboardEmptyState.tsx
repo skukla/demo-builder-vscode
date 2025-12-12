@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { Flex, Text, Button, Well } from '@adobe/react-spectrum';
+import { Flex, Text, Button } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 
 export interface DashboardEmptyStateProps {
@@ -43,28 +43,27 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
             height="100%"
             minHeight="350px"
         >
-            <Well UNSAFE_className="max-w-400 text-center">
-                <Flex
-                    direction="column"
-                    alignItems="center"
-                    gap="size-300"
+            <Flex
+                direction="column"
+                alignItems="center"
+                gap="size-300"
+                UNSAFE_className="max-w-400 text-center"
+            >
+                <Text UNSAFE_className="text-lg">
+                    <strong>{title}</strong>
+                </Text>
+                <Text UNSAFE_className="text-sm text-gray-600">
+                    Get started by creating your first demo project.
+                </Text>
+                <Button
+                    ref={buttonRef as any}
+                    variant="cta"
+                    onPress={onCreate}
                 >
-                    <Text UNSAFE_className="text-lg">
-                        <strong>{title}</strong>
-                    </Text>
-                    <Text UNSAFE_className="text-sm text-gray-600">
-                        Get started by creating your first demo project.
-                    </Text>
-                    <Button
-                        ref={buttonRef as any}
-                        variant="cta"
-                        onPress={onCreate}
-                    >
-                        <Add />
-                        <Text>{buttonText}</Text>
-                    </Button>
-                </Flex>
-            </Well>
+                    <Add />
+                    <Text>{buttonText}</Text>
+                </Button>
+            </Flex>
         </Flex>
     );
 };
