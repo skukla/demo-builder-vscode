@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
     Text,
     ListView,
@@ -115,6 +115,38 @@ export function SearchableList<T extends SearchableListItem>({
         ? (item: T) => <React.Fragment key={item.id}>{renderItem(item)}</React.Fragment>
         : defaultRenderItem;
 
+    // Ref for the list container to scroll to selected item
+    const listContainerRef = useRef<HTMLDivElement>(null);
+    const hasScrolledRef = useRef(false);
+
+    // Scroll to selected item when list is ready with a pre-selection
+    // Triggers on: initial load, navigation back (component remount), or selection change
+    useEffect(() => {
+        if (!selectedKeys.length || !listContainerRef.current) {
+            hasScrolledRef.current = false;
+            return;
+        }
+
+        // Skip if we've already scrolled for this selection
+        if (hasScrolledRef.current) {
+            return;
+        }
+
+        // Small delay to ensure DOM is rendered
+        const timer = setTimeout(() => {
+            const selectedId = selectedKeys[0];
+            const selectedElement = listContainerRef.current?.querySelector(
+                `[data-key="${selectedId}"]`
+            );
+            if (selectedElement) {
+                selectedElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                hasScrolledRef.current = true;
+            }
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, [selectedKeys]);
+
     return (
         <div className="searchable-list-container">
             {/* Search Header (search field + refresh + count) */}
@@ -136,6 +168,7 @@ export function SearchableList<T extends SearchableListItem>({
 
             {/* List Container (with refresh opacity) */}
             <div
+                ref={listContainerRef}
                 className={`list-refresh-container ${isRefreshing ? 'refreshing' : ''}`}
             >
                 <ListView

@@ -247,6 +247,20 @@ export function useSelectionStep<T extends { id: string }>(
             onSelect(item);
           }
         }
+
+        // Hydrate pre-selected item with full data from loaded list
+        // (e.g., when imported settings only have ID, populate title/name/description)
+        if (selectedItem?.id && onSelect) {
+          const matchingItem = (data as T[]).find(item => item.id === selectedItem.id);
+          if (matchingItem) {
+            // Only update if we have more complete data (e.g., title exists in list but not in selectedItem)
+            const selectedHasTitle = 'title' in selectedItem && selectedItem.title;
+            const matchingHasTitle = 'title' in matchingItem && matchingItem.title;
+            if (!selectedHasTitle && matchingHasTitle) {
+              onSelect(matchingItem);
+            }
+          }
+        }
       } else if (data && typeof data === 'object' && 'error' in data) {
         // Backend sends structured error (including timeout)
         const errorData = data as { error: string; code?: ErrorCode };
