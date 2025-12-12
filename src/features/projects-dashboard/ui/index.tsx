@@ -122,6 +122,38 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
+    // Handle copy from existing project
+    const handleCopyFromExisting = useCallback(async () => {
+        try {
+            await webviewClient.postMessage('copyFromExisting');
+            // QuickPick will show, then wizard opens - handled by extension
+        } catch (error) {
+            console.error('Failed to copy from existing:', error);
+        }
+    }, []);
+
+    // Handle import from file
+    const handleImportFromFile = useCallback(async () => {
+        try {
+            await webviewClient.postMessage('importFromFile');
+            // File picker will show, then wizard opens - handled by extension
+        } catch (error) {
+            console.error('Failed to import from file:', error);
+        }
+    }, []);
+
+    // Handle export project settings
+    const handleExportProject = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('exportProject', {
+                projectPath: project.path,
+            });
+            // Save dialog will show - handled by extension
+        } catch (error) {
+            console.error('Failed to export project:', error);
+        }
+    }, []);
+
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
         setInitialViewMode(mode);
@@ -134,6 +166,9 @@ const ProjectsDashboardApp: React.FC = () => {
             projects={projects}
             onSelectProject={handleSelectProject}
             onCreateProject={handleCreateProject}
+            onCopyFromExisting={handleCopyFromExisting}
+            onImportFromFile={handleImportFromFile}
+            onExportProject={handleExportProject}
             isLoading={isLoading}
             isRefreshing={isRefreshing}
             onRefresh={handleRefresh}

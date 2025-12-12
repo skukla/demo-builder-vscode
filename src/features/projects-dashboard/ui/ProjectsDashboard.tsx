@@ -14,8 +14,14 @@ import {
     Text,
     Button,
     ProgressCircle,
+    MenuTrigger,
+    Menu,
+    Item,
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
+import Copy from '@spectrum-icons/workflow/Copy';
+import Import from '@spectrum-icons/workflow/Import';
+import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import { ProjectsGrid } from './components/ProjectsGrid';
 import { ProjectRowList } from './components/ProjectRowList';
 import { DashboardEmptyState } from './components/DashboardEmptyState';
@@ -32,6 +38,12 @@ export interface ProjectsDashboardProps {
     onSelectProject: (project: Project) => void;
     /** Callback to create a new project */
     onCreateProject: () => void;
+    /** Callback to copy settings from existing project */
+    onCopyFromExisting?: () => void;
+    /** Callback to import settings from file */
+    onImportFromFile?: () => void;
+    /** Callback to export project settings */
+    onExportProject?: (project: Project) => void;
     /** Whether projects are loading (initial load) */
     isLoading?: boolean;
     /** Whether projects are refreshing (background refresh) */
@@ -60,6 +72,9 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     projects,
     onSelectProject,
     onCreateProject,
+    onCopyFromExisting,
+    onImportFromFile,
+    onExportProject,
     isLoading = false,
     isRefreshing = false,
     onRefresh,
@@ -137,6 +152,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                     >
                         <DashboardEmptyState
                             onCreate={onCreateProject}
+                            onImportFromFile={onImportFromFile}
                         />
                     </Flex>
                 </View>
@@ -180,11 +196,38 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                                 alwaysShowCount={true}
                             />
                         </View>
-                        {/* New Project button */}
-                        <Button variant="accent" onPress={onCreateProject}>
-                            <Add size="S" />
-                            <Text>New</Text>
-                        </Button>
+                        {/* New Project dropdown menu */}
+                        <MenuTrigger>
+                            <Button variant="cta">
+                                <Text>New</Text>
+                                <ChevronDown size="S" />
+                            </Button>
+                            <Menu
+                                onAction={(key) => {
+                                    if (key === 'new') {
+                                        onCreateProject();
+                                    } else if (key === 'copy' && onCopyFromExisting) {
+                                        onCopyFromExisting();
+                                    } else if (key === 'import' && onImportFromFile) {
+                                        onImportFromFile();
+                                    }
+                                }}
+                                items={[
+                                    { key: 'new', label: 'New Project', icon: 'add' },
+                                    ...(onCopyFromExisting ? [{ key: 'copy', label: 'Copy from Existing...', icon: 'copy' }] : []),
+                                    ...(onImportFromFile ? [{ key: 'import', label: 'Import from File...', icon: 'import' }] : []),
+                                ]}
+                            >
+                                {(item) => (
+                                    <Item key={item.key} textValue={item.label}>
+                                        {item.icon === 'add' && <Add size="S" />}
+                                        {item.icon === 'copy' && <Copy size="S" />}
+                                        {item.icon === 'import' && <Import size="S" />}
+                                        <Text>{item.label}</Text>
+                                    </Item>
+                                )}
+                            </Menu>
+                        </MenuTrigger>
                     </Flex>
                 </div>
             </div>
@@ -196,12 +239,14 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                     <ProjectsGrid
                         projects={filteredProjects}
                         onSelectProject={onSelectProject}
+                        onExportProject={onExportProject}
                     />
                 )}
                 {viewMode === 'rows' && (
                     <ProjectRowList
                         projects={filteredProjects}
                         onSelectProject={onSelectProject}
+                        onExportProject={onExportProject}
                     />
                 )}
 

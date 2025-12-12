@@ -1,16 +1,20 @@
 /**
  * DashboardEmptyState Component
  *
- * Displays an empty state for the Projects Dashboard with a CTA to create a project.
+ * Displays an empty state for the Projects Dashboard with CTAs to create or import a project.
  */
 
 import React, { useEffect, useRef } from 'react';
 import { Flex, Text, Button } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
+import Import from '@spectrum-icons/workflow/Import';
+import { useFocusTrap } from '@/core/ui/hooks';
 
 export interface DashboardEmptyStateProps {
     /** Callback when the create button is clicked */
     onCreate: () => void;
+    /** Callback when import from file is clicked */
+    onImportFromFile?: () => void;
     /** Custom title (defaults to "No projects yet") */
     title?: string;
     /** Custom button text (defaults to "New") */
@@ -24,11 +28,19 @@ export interface DashboardEmptyStateProps {
  */
 export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
     onCreate,
+    onImportFromFile,
     title = 'No projects yet',
     buttonText = 'New',
     autoFocus = false,
 }) => {
     const buttonRef = useRef<HTMLButtonElement>(null);
+
+    // Focus trap for keyboard navigation (WCAG 2.1 AA)
+    const containerRef = useFocusTrap<HTMLDivElement>({
+        enabled: true,
+        autoFocus: false,
+        containFocus: true,
+    });
 
     useEffect(() => {
         if (autoFocus && buttonRef.current) {
@@ -37,12 +49,13 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
     }, [autoFocus]);
 
     return (
-        <Flex
-            justifyContent="center"
-            alignItems="center"
-            height="100%"
-            minHeight="350px"
-        >
+        <div ref={containerRef}>
+            <Flex
+                justifyContent="center"
+                alignItems="center"
+                height="100%"
+                minHeight="350px"
+            >
             <Flex
                 direction="column"
                 alignItems="center"
@@ -55,15 +68,29 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                 <Text UNSAFE_className="text-sm text-gray-600">
                     Get started by creating your first demo project.
                 </Text>
-                <Button
-                    ref={buttonRef as any}
-                    variant="cta"
-                    onPress={onCreate}
-                >
-                    <Add />
-                    <Text>{buttonText}</Text>
-                </Button>
+                <Flex gap="size-200" alignItems="center">
+                    <Button
+                        ref={buttonRef as any}
+                        variant="cta"
+                        onPress={onCreate}
+                    >
+                        <Add />
+                        <Text>{buttonText}</Text>
+                    </Button>
+
+                    {/* Import option for users with exported settings */}
+                    {onImportFromFile && (
+                        <Button
+                            variant="secondary"
+                            onPress={onImportFromFile}
+                        >
+                            <Import />
+                            <Text>Import</Text>
+                        </Button>
+                    )}
+                </Flex>
             </Flex>
         </Flex>
+        </div>
     );
 };

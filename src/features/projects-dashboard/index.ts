@@ -25,6 +25,9 @@ export {
     handleGetProjects,
     handleSelectProject,
     handleCreateProject,
+    handleImportFromFile,
+    handleCopyFromExisting,
+    handleExportProject,
 } from './handlers/dashboardHandlers';
 
 // Handler Registry
@@ -32,3 +35,32 @@ export { ProjectsListHandlerRegistry } from './handlers/ProjectsListHandlerRegis
 
 // Commands
 export { ShowProjectsListCommand } from './commands/showProjectsList';
+
+// Services
+export {
+    parseSettingsFile,
+    isValidSettingsFile,
+    isNewerVersion,
+    extractSettingsFromProject,
+    createExportSettings,
+    getSuggestedFilename,
+} from './services/settingsSerializer';
+export type { ParseResult, ParseError } from './services/settingsSerializer';
+
+// Types
+export type {
+    SettingsFile,
+    SettingsSelections,
+    SettingsConfigs,
+    SettingsAdobeContext,
+    SettingsSource,
+    ImportResult,
+} from './types/settingsFile';
+export { SETTINGS_FILE_VERSION } from './types/settingsFile';
+
+// Utils
+export {
+    getComponentSummary,
+    getComponentCount,
+    getProjectDescription,
+} from './utils/componentSummaryUtils';

@@ -85,3 +85,34 @@ export function getComponentCount(project: Project): number {
     }
     return getComponentInstanceValues(project).length;
 }
+
+/**
+ * Generates a description string for a project (for QuickPick/list display)
+ *
+ * Combines component summary with Adobe org/workspace context.
+ * Example output: "CitiSignal · API Mesh · Demo Corp / Production"
+ *
+ * @param project - The project to describe
+ * @returns Description string or empty string if no info available
+ */
+export function getProjectDescription(project: Project): string {
+    const parts: string[] = [];
+
+    // Add component summary
+    const componentSummary = getComponentSummary(project, 2);
+    if (componentSummary) {
+        parts.push(componentSummary);
+    }
+
+    // Add Adobe context
+    if (project.adobe) {
+        const adobePart = [project.adobe.organization, project.adobe.workspace]
+            .filter(Boolean)
+            .join(' / ');
+        if (adobePart) {
+            parts.push(adobePart);
+        }
+    }
+
+    return parts.join(' · ');
+}
