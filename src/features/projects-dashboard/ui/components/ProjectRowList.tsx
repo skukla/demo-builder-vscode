@@ -14,6 +14,8 @@ export interface ProjectRowListProps {
     projects: Project[];
     /** Callback when a project is selected */
     onSelectProject: (project: Project) => void;
+    /** Callback to export project settings */
+    onExportProject?: (project: Project) => void;
 }
 
 /**
@@ -22,6 +24,7 @@ export interface ProjectRowListProps {
 export const ProjectRowList: React.FC<ProjectRowListProps> = ({
     projects,
     onSelectProject,
+    onExportProject,
 }) => {
     return (
         <div className="project-row-list">
@@ -30,6 +33,7 @@ export const ProjectRowList: React.FC<ProjectRowListProps> = ({
                     key={project.path}
                     project={project}
                     onSelect={onSelectProject}
+                    onExport={onExportProject}
                 />
             ))}
         </div>

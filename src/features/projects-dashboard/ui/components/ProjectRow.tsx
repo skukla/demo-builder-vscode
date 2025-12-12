@@ -3,12 +3,14 @@
  *
  * Displays a project as a full-width horizontal row with Spectrum styling.
  * Shows project name, installed components, and status.
+ * Includes a kebab menu for additional actions like Export.
  */
 
 import React, { useCallback, useMemo } from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { ProjectActionsMenu } from './ProjectActionsMenu';
 import type { Project } from '@/types/base';
 import {
     getStatusText,
@@ -22,6 +24,8 @@ export interface ProjectRowProps {
     project: Project;
     /** Callback when the row is selected */
     onSelect: (project: Project) => void;
+    /** Callback to export project settings */
+    onExport?: (project: Project) => void;
 }
 
 /**
@@ -30,6 +34,7 @@ export interface ProjectRowProps {
 export const ProjectRow: React.FC<ProjectRowProps> = ({
     project,
     onSelect,
+    onExport,
 }) => {
     const handleClick = useCallback(() => {
         onSelect(project);
@@ -75,8 +80,13 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                     )}
                 </Flex>
 
-                {/* Right: Status text + Chevron */}
+                {/* Right: More menu + Status text + Chevron */}
                 <Flex alignItems="center" gap="size-150">
+                    <ProjectActionsMenu
+                        project={project}
+                        onExport={onExport}
+                        className="project-row-menu-button"
+                    />
                     <Text UNSAFE_className="project-row-status">
                         {statusText}
                     </Text>

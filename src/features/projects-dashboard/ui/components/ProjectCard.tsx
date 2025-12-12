@@ -5,11 +5,13 @@
  * Uses gray-50/gray-75 layered backgrounds matching the project wizard.
  * Features lift animation on hover and uppercase status text.
  * Shows installed components as a text list.
+ * Includes a kebab menu for additional actions like Export.
  */
 
 import React, { useCallback, useMemo } from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
 import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import { ProjectActionsMenu } from './ProjectActionsMenu';
 import type { Project } from '@/types/base';
 import {
     getStatusText,
@@ -23,6 +25,8 @@ export interface ProjectCardProps {
     project: Project;
     /** Callback when the card is selected */
     onSelect: (project: Project) => void;
+    /** Callback to export project settings */
+    onExport?: (project: Project) => void;
 }
 
 /**
@@ -33,6 +37,7 @@ export interface ProjectCardProps {
 export const ProjectCard: React.FC<ProjectCardProps> = ({
     project,
     onSelect,
+    onExport,
 }) => {
     const handleClick = useCallback(() => {
         onSelect(project);
@@ -64,10 +69,17 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             onKeyDown={handleKeyDown}
             className="project-card-spectrum"
         >
-            {/* Project Name */}
-            <Text UNSAFE_className="project-card-spectrum-name">
-                {project.name}
-            </Text>
+            {/* Header Row: Name + More Menu */}
+            <Flex alignItems="center" justifyContent="space-between">
+                <Text UNSAFE_className="project-card-spectrum-name">
+                    {project.name}
+                </Text>
+                <ProjectActionsMenu
+                    project={project}
+                    onExport={onExport}
+                    className="project-card-menu-button"
+                />
+            </Flex>
 
             {/* Component Summary */}
             {componentSummary && (
