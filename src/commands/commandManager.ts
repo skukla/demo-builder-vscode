@@ -63,14 +63,16 @@ export class CommandManager {
             this.statusBar,
             this.logger,
         );
-        this.registerCommand('demoBuilder.createProject', async () => {
+        this.registerCommand('demoBuilder.createProject', async (...args: unknown[]) => {
             // Close other webviews when starting project creation (tab replacement)
             ShowProjectsListCommand.disposeActivePanel();
             ProjectDashboardWebviewCommand.disposeActivePanel();
             ConfigureProjectWebviewCommand.disposeActivePanel();
             // Port conflicts are automatically handled during project creation
             // (see executeProjectCreation in createProjectWebview.ts)
-            await this.createProjectWebview.execute();
+            // args[0] may contain { importedSettings, sourceDescription } when launched from Import
+            const options = args[0] as Parameters<typeof this.createProjectWebview.execute>[0] | undefined;
+            await this.createProjectWebview.execute(options);
             // Show sidebar for wizard progress (after webview is loaded)
             await vscode.commands.executeCommand('workbench.view.extension.demoBuilder');
         });

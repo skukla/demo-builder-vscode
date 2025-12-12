@@ -13,6 +13,7 @@ import { AuthenticationService } from '@/features/authentication';
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
+import type { SettingsFile } from '@/features/projects-dashboard';
 // Extracted helper functions
 import { HandlerContext, SharedState } from '@/commands/handlers/HandlerContext';
 import { HandlerRegistry } from '@/features/project-creation/handlers/HandlerRegistry';
@@ -56,6 +57,7 @@ interface InitialWizardData {
     componentDefaults: ComponentDefaults | null;
     wizardSteps: WizardStep[] | null;
     existingProjectNames: string[];
+    importedSettings: SettingsFile | null;
 }
 
 export class CreateProjectWebviewCommand extends BaseWebviewCommand {
@@ -72,6 +74,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private handlerRegistry: HandlerRegistry;  // Handler registry for message dispatch
     private wizardNavigateCommand: vscode.Disposable | null = null;  // Command for sidebar navigation
     private wizardSteps: WizardStep[] | null = null;  // Loaded wizard steps for sidebar
+    private importedSettings: SettingsFile | null = null;  // Settings imported from file or copied from project
 
     // Shared state object (passed by reference to handlers for automatic synchronization)
     private sharedState: SharedState;
@@ -254,6 +257,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             componentDefaults,
             wizardSteps,
             existingProjectNames,
+            importedSettings: this.importedSettings,
         };
     }
 
@@ -338,9 +342,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
-    public async execute(): Promise<void> {
+    public async execute(options?: { importedSettings?: SettingsFile; sourceDescription?: string }): Promise<void> {
         try {
             this.logger.debug('[Project Creation] Initializing wizard interface...');
+
+            // Store imported settings for use in getInitialData
+            this.importedSettings = options?.importedSettings ?? null;
+            if (this.importedSettings) {
+                this.logger.info(`[Project Creation] Loading wizard with imported settings from: ${options?.sourceDescription ?? 'unknown source'}`);
+            }
 
             // Dispose Projects List if open (replace it with the wizard)
             ShowProjectsListCommand.disposeActivePanel();

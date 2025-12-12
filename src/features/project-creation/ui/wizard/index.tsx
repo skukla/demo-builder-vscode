@@ -2,7 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { View } from '@adobe/react-spectrum';
 import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
-import { WizardContainer } from './WizardContainer';
+import { WizardContainer, ImportedSettings } from './WizardContainer';
 import { ComponentSelection } from '@/types/webview';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
@@ -13,6 +13,7 @@ interface WizardInitData extends WebviewInitData {
     componentDefaults?: ComponentSelection;
     wizardSteps?: { id: string; name: string; enabled: boolean }[];
     existingProjectNames?: string[];
+    importedSettings?: ImportedSettings | null;
 }
 
 // Get root element
@@ -42,6 +43,7 @@ root.render(
                         componentDefaults={data?.componentDefaults}
                         wizardSteps={data?.wizardSteps}
                         existingProjectNames={data?.existingProjectNames}
+                        importedSettings={data?.importedSettings}
                     />
                 );
             }}

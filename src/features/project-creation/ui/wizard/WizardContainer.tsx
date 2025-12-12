@@ -36,10 +36,60 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 const log = webviewLogger('WizardContainer');
 
+/**
+ * Imported settings shape for wizard pre-population
+ * Matches the subset of SettingsFile fields used by the wizard
+ */
+export interface ImportedSettings {
+    source?: {
+        project?: string;
+    };
+    selections?: {
+        frontend?: string;
+        backend?: string;
+        dependencies?: string[];
+        integrations?: string[];
+        appBuilder?: string[];
+    };
+    configs?: Record<string, Record<string, string | boolean | number | undefined>>;
+    adobe?: {
+        orgId?: string;
+        orgName?: string;
+        projectId?: string;
+        projectName?: string;
+        workspaceId?: string;
+        workspaceName?: string;
+    };
+}
+
+/**
+ * Generate a unique project name that doesn't conflict with existing names
+ * Uses lowercase-hyphen format: "name-copy", "name-copy-2", etc.
+ */
+function generateUniqueProjectName(baseName: string, existingNames: string[]): string {
+    if (!existingNames.includes(baseName)) {
+        return baseName;
+    }
+
+    // Try "name-copy"
+    const copyName = `${baseName}-copy`;
+    if (!existingNames.includes(copyName)) {
+        return copyName;
+    }
+
+    // Try "name-copy-2", "name-copy-3", etc.
+    let counter = 2;
+    while (existingNames.includes(`${baseName}-copy-${counter}`)) {
+        counter++;
+    }
+    return `${baseName}-copy-${counter}`;
+}
+
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;
     wizardSteps?: { id: string; name: string; enabled: boolean }[];
     existingProjectNames?: string[];
+    importedSettings?: ImportedSettings | null;
 }
 
 
@@ -94,7 +144,7 @@ const handleStepBackendCalls = async (currentStep: string, nextStepId: string, w
     }
 };
 
-export function WizardContainer({ componentDefaults, wizardSteps, existingProjectNames }: WizardContainerProps) {
+export function WizardContainer({ componentDefaults, wizardSteps, existingProjectNames, importedSettings }: WizardContainerProps) {
     // Use the provided configuration, filtering out disabled steps
     // NOTE: Must filter before using in hooks to avoid conditional hook calls
     // Wrapped in useMemo to prevent changing on every render
@@ -105,16 +155,57 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
     const [state, setState] = useState<WizardState>(() => {
         const enabledSteps = wizardSteps?.filter(step => step.enabled) || [];
         const firstStep = (enabledSteps.length > 0 ? enabledSteps[0].id : 'adobe-auth') as WizardStep;
+
+        // Build initial components from imported settings or defaults
+        const initialComponents: ComponentSelection | undefined = importedSettings?.selections
+            ? {
+                  frontend: importedSettings.selections.frontend,
+                  backend: importedSettings.selections.backend,
+                  dependencies: importedSettings.selections.dependencies || [],
+                  integrations: importedSettings.selections.integrations || [],
+                  appBuilderApps: importedSettings.selections.appBuilder || [],
+              }
+            : componentDefaults || undefined;
+
+        // Build initial Adobe context from imported settings
+        const initialAdobeOrg = importedSettings?.adobe?.orgId
+            ? { id: importedSettings.adobe.orgId, code: '', name: importedSettings.adobe.orgName || '' }
+            : undefined;
+        const initialAdobeProject = importedSettings?.adobe?.projectId
+            ? { id: importedSettings.adobe.projectId, name: importedSettings.adobe.projectName || '' }
+            : undefined;
+        const initialAdobeWorkspace = importedSettings?.adobe?.workspaceId
+            ? { id: importedSettings.adobe.workspaceId, name: importedSettings.adobe.workspaceName || '' }
+            : undefined;
+
+        // Generate unique project name from imported source
+        const initialProjectName = importedSettings?.source?.project
+            ? generateUniqueProjectName(importedSettings.source.project, existingProjectNames || [])
+            : '';
+
+        if (importedSettings) {
+            log.info('Initializing wizard with imported settings', {
+                hasSelections: !!importedSettings.selections,
+                hasAdobe: !!importedSettings.adobe,
+                hasConfigs: !!importedSettings.configs,
+                sourceProject: importedSettings.source?.project,
+                generatedName: initialProjectName,
+            });
+        }
+
         return {
             currentStep: firstStep,
-            projectName: '',
+            projectName: initialProjectName,
             projectTemplate: 'citisignal',
-            componentConfigs: {},
+            componentConfigs: importedSettings?.configs || {},
             adobeAuth: {
                 isAuthenticated: false,  // Start as false, will be checked on auth step
                 isChecking: false,  // Allow the check to proceed
             },
-            components: componentDefaults || undefined,
+            components: initialComponents,
+            adobeOrg: initialAdobeOrg,
+            adobeProject: initialAdobeProject,
+            adobeWorkspace: initialAdobeWorkspace,
         };
     });
 
