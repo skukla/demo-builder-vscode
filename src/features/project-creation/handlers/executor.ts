@@ -52,6 +52,27 @@ function buildInstallationSubmessage(selectedSubmodules?: string[]): string {
 }
 
 /**
+ * Determine if we should configure an existing mesh (vs clone new one)
+ *
+ * SOP §10: Extracted validation chain to named predicate function
+ *
+ * Conditions:
+ * - User selected an existing mesh (has meshId and endpoint)
+ * - Mesh is NOT already installed as a component (meshComponent is undefined)
+ * - Mesh step is NOT enabled (separate wizard step handles deployment)
+ */
+function shouldConfigureExistingMesh(
+    config: { meshId?: string; endpoint?: string } | undefined,
+    meshComponent: unknown,
+    meshStepEnabled: boolean | undefined,
+): boolean {
+    const hasExistingMesh = Boolean(config?.meshId && config?.endpoint);
+    const notAlreadyInstalled = !meshComponent;
+    const notHandledByWizardStep = !meshStepEnabled;
+    return hasExistingMesh && notAlreadyInstalled && notHandledByWizardStep;
+}
+
+/**
  * ProjectCreationConfig - Configuration passed to project creation
  */
 interface ProjectCreationConfig {
@@ -388,7 +409,9 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     // Alternative: Use existing mesh if user selected one instead of cloning (80%)
     // This happens when user picks an existing deployed mesh in the wizard
     // Also skip when meshStepEnabled is true (mesh handled by separate wizard step)
-    if (typedConfig.apiMesh?.meshId && typedConfig.apiMesh?.endpoint && !meshComponent && !typedConfig.meshStepEnabled) {
+    if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent, typedConfig.meshStepEnabled)) {
+        // Safe to assert non-null - shouldConfigureExistingMesh validates these exist
+        const meshConfig = typedConfig.apiMesh!;
         progressTracker('Configuring API Mesh', 80, 'Adding existing mesh to project...');
 
         // Add mesh as a component instance (deployed, not cloned)
@@ -398,11 +421,11 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             type: 'dependency',
             subType: 'mesh',
             status: 'deployed',
-            endpoint: typedConfig.apiMesh.endpoint,
+            endpoint: meshConfig.endpoint,
             lastUpdated: new Date(),
             metadata: {
-                meshId: typedConfig.apiMesh.meshId,
-                meshStatus: typedConfig.apiMesh.meshStatus,
+                meshId: meshConfig.meshId,
+                meshStatus: meshConfig.meshStatus,
             },
         };
 

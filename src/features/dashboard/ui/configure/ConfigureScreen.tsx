@@ -66,6 +66,25 @@ interface SaveConfigurationResponse {
 }
 
 /**
+ * Get all component definitions from componentsData
+ *
+ * SOP §8: Extracted conditional spread chain to named helper
+ *
+ * @param data - Components data containing all category arrays
+ * @returns Flattened array of all component definitions
+ */
+function getAllComponentDefinitions(data: ComponentsData): ComponentData[] {
+    const categories: (ComponentData[] | undefined)[] = [
+        data.frontends,
+        data.backends,
+        data.dependencies,
+        data.integrations,
+        data.appBuilder,
+    ];
+    return categories.flatMap(arr => arr ?? []);
+}
+
+/**
  * Transform a ServiceGroup to a NavigationSection
  *
  * SOP §6: Extracted callback body complexity to named helper
@@ -301,17 +320,9 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
         // Fallback: discover components from componentInstances if no selections
         if (components.length === 0 && project.componentInstances) {
-            const allComponentDefs = [
-                ...(componentsData.frontends || []),
-                ...(componentsData.backends || []),
-                ...(componentsData.dependencies || []),
-                ...(componentsData.integrations || []),
-                ...(componentsData.appBuilder || []),
-            ];
-
             const discovered = discoverComponentsFromInstances(
                 project.componentInstances,
-                allComponentDefs,
+                getAllComponentDefinitions(componentsData),
             );
             components.push(...discovered);
         }

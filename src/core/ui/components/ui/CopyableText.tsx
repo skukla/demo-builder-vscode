@@ -1,6 +1,12 @@
 import React, { useState, useCallback } from 'react';
 
 /**
+ * Copied feedback display duration (matches TIMEOUTS.LOADING_MIN_DISPLAY)
+ * SOP §1: Named constant for UI timing delays
+ */
+const COPIED_FEEDBACK_DURATION = 1500;
+
+/**
  * Styles for copyable text (matches CODE_SNIPPET_STYLES from NumberedInstructions)
  */
 const COPYABLE_STYLES: React.CSSProperties = {
@@ -50,7 +56,7 @@ export function CopyableText({ children }: CopyableTextProps) {
         try {
             await navigator.clipboard.writeText(children);
             setCopied(true);
-            setTimeout(() => setCopied(false), 1500);
+            setTimeout(() => setCopied(false), COPIED_FEEDBACK_DURATION);
         } catch (err) {
             // Fallback for older browsers or restricted contexts
             console.warn('Failed to copy to clipboard:', err);

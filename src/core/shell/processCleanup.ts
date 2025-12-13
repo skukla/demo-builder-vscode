@@ -31,6 +31,7 @@
  */
 
 import { getLogger, DebugLogger } from '@/core/logging';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 // Lazy-initialized logger to avoid calling getLogger() before initializeLogger()
 let _logger: DebugLogger | null = null;
@@ -48,7 +49,7 @@ export interface ProcessCleanupOptions {
 
 export class ProcessCleanup {
     private gracefulTimeout: number;
-    private readonly checkInterval = 100; // Poll every 100ms
+    private readonly checkInterval = TIMEOUTS.PROCESS_CHECK_INTERVAL;
 
     constructor(options: ProcessCleanupOptions = {}) {
         this.gracefulTimeout = options.gracefulTimeout ?? 5000;

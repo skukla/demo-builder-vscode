@@ -118,6 +118,7 @@ export const TIMEOUTS = {
     // Lifecycle management
     DEMO_STARTUP_TIMEOUT: 30000,    // Wait for demo server to start (30 seconds)
     PORT_CHECK_INTERVAL: 1000,      // Interval between port checks (1 second)
+    PROCESS_CHECK_INTERVAL: 100,    // Tight polling for process exit detection (100ms)
     PROCESS_GRACEFUL_SHUTDOWN: 5000, // Graceful shutdown timeout (5 seconds)
 
     // File operations

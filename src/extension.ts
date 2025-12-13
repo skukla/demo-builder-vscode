@@ -298,7 +298,7 @@ export async function activate(context: vscode.ExtensionContext) {
                             () => logger.debug('[Extension] Project Dashboard opened successfully'),
                             (err) => logger.error('[Extension] Failed to open Project Dashboard:', err),
                         );
-                    }, 500);
+                    }, TIMEOUTS.DASHBOARD_OPEN_DELAY);
                 } else {
                     logger.warn(`[Extension] Could not load project from ${projectPath}, showing Welcome instead`);
                     openingDashboardAfterRestart = false;
