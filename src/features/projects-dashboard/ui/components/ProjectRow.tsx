@@ -26,6 +26,8 @@ export interface ProjectRowProps {
     onSelect: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
+    /** Callback to delete project */
+    onDelete?: (project: Project) => void;
 }
 
 /**
@@ -35,6 +37,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
     project,
     onSelect,
     onExport,
+    onDelete,
 }) => {
     const handleClick = useCallback(() => {
         onSelect(project);
@@ -85,6 +88,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                     <ProjectActionsMenu
                         project={project}
                         onExport={onExport}
+                        onDelete={onDelete}
                         className="project-row-menu-button"
                     />
                     <Text UNSAFE_className="project-row-status">

@@ -27,6 +27,8 @@ export interface ProjectCardProps {
     onSelect: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
+    /** Callback to delete project */
+    onDelete?: (project: Project) => void;
 }
 
 /**
@@ -38,6 +40,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     project,
     onSelect,
     onExport,
+    onDelete,
 }) => {
     const handleClick = useCallback(() => {
         onSelect(project);
@@ -77,6 +80,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 <ProjectActionsMenu
                     project={project}
                     onExport={onExport}
+                    onDelete={onDelete}
                     className="project-card-menu-button"
                 />
             </Flex>

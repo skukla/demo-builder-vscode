@@ -15,6 +15,8 @@ export interface ProjectsGridProps {
     onSelectProject: (project: Project) => void;
     /** Callback to export project settings */
     onExportProject?: (project: Project) => void;
+    /** Callback to delete project */
+    onDeleteProject?: (project: Project) => void;
 }
 
 /**
@@ -24,6 +26,7 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
     projects,
     onSelectProject,
     onExportProject,
+    onDeleteProject,
 }) => {
     return (
         <div
@@ -36,6 +39,7 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
                     project={project}
                     onSelect={onSelectProject}
                     onExport={onExportProject}
+                    onDelete={onDeleteProject}
                 />
             ))}
         </div>

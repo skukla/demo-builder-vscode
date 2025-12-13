@@ -154,6 +154,25 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
+    // Handle delete project
+    const handleDeleteProject = useCallback(async (project: Project) => {
+        try {
+            const response = await webviewClient.request<{
+                success: boolean;
+                data?: { success: boolean; error?: string };
+            }>('deleteProject', {
+                projectPath: project.path,
+            });
+
+            // Refresh projects list if deletion was successful
+            if (response?.success && response.data?.success) {
+                fetchProjects(true);
+            }
+        } catch (error) {
+            console.error('Failed to delete project:', error);
+        }
+    }, [fetchProjects]);
+
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
         setInitialViewMode(mode);
@@ -169,6 +188,7 @@ const ProjectsDashboardApp: React.FC = () => {
             onCopyFromExisting={handleCopyFromExisting}
             onImportFromFile={handleImportFromFile}
             onExportProject={handleExportProject}
+            onDeleteProject={handleDeleteProject}
             isLoading={isLoading}
             isRefreshing={isRefreshing}
             onRefresh={handleRefresh}

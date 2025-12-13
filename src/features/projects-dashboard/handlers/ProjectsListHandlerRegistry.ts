@@ -35,6 +35,9 @@ export class ProjectsListHandlerRegistry extends BaseHandlerRegistry {
         this.handlers.set('copyFromExisting', handlers.handleCopyFromExisting);
         this.handlers.set('exportProject', handlers.handleExportProject as MessageHandler);
 
+        // Project deletion handler
+        this.handlers.set('deleteProject', handlers.handleDeleteProject as MessageHandler);
+
         // Utility handlers (docs, help, settings)
         this.handlers.set('openDocs', handlers.handleOpenDocs);
         this.handlers.set('openHelp', handlers.handleOpenHelp);

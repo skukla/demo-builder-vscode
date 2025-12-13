@@ -44,6 +44,8 @@ export interface ProjectsDashboardProps {
     onImportFromFile?: () => void;
     /** Callback to export project settings */
     onExportProject?: (project: Project) => void;
+    /** Callback to delete project */
+    onDeleteProject?: (project: Project) => void;
     /** Whether projects are loading (initial load) */
     isLoading?: boolean;
     /** Whether projects are refreshing (background refresh) */
@@ -75,6 +77,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     onCopyFromExisting,
     onImportFromFile,
     onExportProject,
+    onDeleteProject,
     isLoading = false,
     isRefreshing = false,
     onRefresh,
@@ -240,6 +243,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         projects={filteredProjects}
                         onSelectProject={onSelectProject}
                         onExportProject={onExportProject}
+                        onDeleteProject={onDeleteProject}
                     />
                 )}
                 {viewMode === 'rows' && (
@@ -247,6 +251,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                         projects={filteredProjects}
                         onSelectProject={onSelectProject}
                         onExportProject={onExportProject}
+                        onDeleteProject={onDeleteProject}
                     />
                 )}
 
