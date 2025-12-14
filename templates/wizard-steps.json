@@ -33,7 +33,7 @@
     {
       "id": "api-mesh",
       "name": "API Mesh Setup",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "settings",
