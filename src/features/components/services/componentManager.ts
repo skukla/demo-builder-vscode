@@ -460,6 +460,70 @@ export class ComponentManager {
     }
 
     /**
+     * Install npm dependencies for an already-cloned component
+     * Used in phase-based installation where clone and npm install are separate
+     */
+    public async installNpmDependencies(
+        componentPath: string,
+        componentDef: TransformedComponentDefinition,
+    ): Promise<{ success: boolean; error?: string }> {
+        const packageJsonPath = path.join(componentPath, 'package.json');
+
+        try {
+            await fs.access(packageJsonPath);
+        } catch {
+            // No package.json, nothing to install
+            this.logger.debug(`[ComponentManager] No package.json found for ${componentDef.name}, skipping npm install`);
+            return { success: true };
+        }
+
+        this.logger.debug(`[ComponentManager] Installing dependencies for ${componentDef.name}`);
+
+        const commandManager = ServiceLocator.getCommandExecutor();
+        const nodeVersion = componentDef.configuration?.nodeVersion;
+        const installCommand = 'npm install';
+
+        this.logger.debug(`[ComponentManager] Running: ${installCommand} with Node ${nodeVersion || 'default'} in ${componentPath}`);
+
+        const installTimeout = componentDef.source?.timeouts?.install || TIMEOUTS.COMPONENT_INSTALL;
+
+        const installResult = await commandManager.execute(installCommand, {
+            cwd: componentPath,
+            timeout: installTimeout,
+            enhancePath: true,
+            useNodeVersion: nodeVersion || null,
+            shell: DEFAULT_SHELL,
+        });
+
+        if (installResult.code !== 0) {
+            this.logger.warn(`[ComponentManager] npm install had warnings for ${componentDef.name}`);
+        }
+
+        // Run build script if configured
+        const buildScript = componentDef.configuration?.buildScript;
+        if (buildScript) {
+            const buildCommand = `npm run ${buildScript}`;
+            const buildTimeout = TIMEOUTS.COMPONENT_BUILD;
+
+            const buildResult = await commandManager.execute(buildCommand, {
+                cwd: componentPath,
+                timeout: buildTimeout,
+                enhancePath: true,
+                useNodeVersion: nodeVersion || null,
+                shell: DEFAULT_SHELL,
+            });
+
+            if (buildResult.code !== 0) {
+                this.logger.warn(`[ComponentManager] Build failed for ${componentDef.name}`);
+                this.logger.trace(`[ComponentManager] Build stderr: ${buildResult.stderr?.substring(0, 500)}`);
+            }
+        }
+
+        this.logger.debug(`[ComponentManager] Dependencies installed for ${componentDef.name}`);
+        return { success: true };
+    }
+
+    /**
      * Update a component's status
      */
     public async updateComponentStatus(
