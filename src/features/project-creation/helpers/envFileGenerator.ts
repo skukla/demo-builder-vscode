@@ -11,7 +11,7 @@ import type { Logger } from '@/types/logger';
 /**
  * ProjectConfig interface for .env generation
  */
-interface EnvGenerationConfig {
+export interface EnvGenerationConfig {
     componentConfigs?: Record<string, Record<string, string | number | boolean | undefined>>;
     apiMesh?: {
         endpoint?: string;

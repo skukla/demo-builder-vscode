@@ -48,6 +48,7 @@ jest.mock('@/features/components/services/componentManager', () => ({
                 lastUpdated: new Date(),
             },
         }),
+        installNpmDependencies: jest.fn().mockResolvedValue({ success: true }),
     })),
 }));
 

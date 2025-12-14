@@ -13,6 +13,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import {
     generateComponentEnvFile as generateEnvFile,
     deployMeshComponent as deployMeshHelper,
+    EnvGenerationConfig,
 } from '@/features/project-creation/helpers';
 import { AdobeConfig } from '@/types/base';
 import { parseJSON, hasEntries, getEntryCount, getComponentIds, getProjectFrontendPort, getComponentConfigPort } from '@/types/typeGuards';
@@ -236,7 +237,12 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         }
     }
 
-    // Step 4: Install selected components (25-80%)
+    // ========================================================================
+    // PHASE-BASED COMPONENT INSTALLATION
+    // Optimized order: Clone → Install → Mesh .env → Deploy → Frontend .env
+    // Each .env written exactly once with correct data
+    // ========================================================================
+
     // Filter out submodule IDs from dependencies - they're installed with the frontend
     const filteredDependencies = (typedConfig.components?.dependencies || [])
         .filter((id: string) => !frontendSubmoduleIds.has(id));
@@ -247,8 +253,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         ...(typedConfig.components?.appBuilderApps || []).map((id: string) => ({ id, type: 'app-builder' })),
     ];
 
-    const progressPerComponent = 55 / Math.max(allComponents.length, 1);
-    let currentProgress = 25;
+    // Pre-load all component definitions for phase-based installation
+    const componentDefinitions: Map<string, { definition: TransformedComponentDefinition; type: string; installOptions: { selectedSubmodules?: string[]; skipDependencies?: boolean } }> = new Map();
 
     for (const comp of allComponents) {
         let componentDef;
@@ -270,8 +276,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         }
 
         // For frontend components, determine which submodules to initialize
-        // based on user's dependency selections (compute BEFORE progress message)
-        const installOptions: { selectedSubmodules?: string[] } = {};
+        const installOptions: { selectedSubmodules?: string[]; skipDependencies?: boolean } = { skipDependencies: true };
         if (comp.type === 'frontend' && componentDef.submodules) {
             const allSelectedDeps = typedConfig.components?.dependencies || [];
             const selectedSubmodules = allSelectedDeps.filter(
@@ -283,47 +288,107 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             }
         }
 
-        // Build progress message based on selected submodules (not all defined submodules)
-        const submessage = buildInstallationSubmessage(installOptions.selectedSubmodules);
-        progressTracker(`Installing ${componentDef.name}`, currentProgress, submessage);
-        context.logger.debug(`[Project Creation] Installing component: ${componentDef.name}`);
-
-        const result = await componentManager.installComponent(project, componentDef, installOptions);
-
-        if (result.success && result.component) {
-            project.componentInstances![comp.id] = result.component;
-
-            // Generate component-specific .env file (only for components with a path)
-            if (result.component.path) {
-                await generateEnvFile(
-                    result.component.path,
-                    comp.id,
-                    componentDef,
-                    sharedEnvVars,
-                    config,
-                    context.logger,
-                );
-            }
-
-            // Save project state to trigger sidebar refresh (show component in real-time)
-            await context.stateManager.saveProject(project);
-        } else {
-            throw new Error(`Failed to install ${componentDef.name}: ${result.error}`);
-        }
-
-        currentProgress += progressPerComponent;
+        componentDefinitions.set(comp.id, { definition: componentDef, type: comp.type, installOptions });
     }
 
-    // Step 5: Deploy Components (75-85%)
-    // Deploy any components that were downloaded and need deployment (e.g., API Mesh)
-    context.logger.info('[Project Creation] ✅ All components downloaded and configured');
+    // ========================================================================
+    // PHASE 1: Clone All Components (25-40%) - PARALLEL
+    // Download source code only, no npm install
+    // ========================================================================
+    progressTracker('Downloading Components', 25, 'Cloning repositories...');
+    context.logger.info('[Project Creation] 📥 Phase 1: Downloading components...');
 
-    // When meshStepEnabled is true, mesh deployment is handled by the separate
-    // MeshDeploymentStep in the wizard. Skip the executor's internal mesh deployment.
-    // PM Decision (2025-12-06): Mesh deployment timeout recovery feature.
+    // Clone all components in parallel
+    const clonePromises = Array.from(componentDefinitions.entries()).map(
+        async ([compId, { definition, installOptions }]) => {
+            context.logger.debug(`[Project Creation] Cloning: ${definition.name}`);
+
+            // Clone without npm install (skipDependencies: true)
+            const result = await componentManager.installComponent(project, definition, installOptions);
+
+            if (!result.success || !result.component) {
+                throw new Error(`Failed to clone ${definition.name}: ${result.error}`);
+            }
+
+            return { compId, component: result.component };
+        }
+    );
+
+    const cloneResults = await Promise.all(clonePromises);
+
+    // Update project with all cloned components
+    for (const { compId, component } of cloneResults) {
+        project.componentInstances![compId] = component;
+    }
+
+    // Save project state after all clones (show components in sidebar)
+    await context.stateManager.saveProject(project);
+    progressTracker('Downloading Components', 40, 'All components downloaded');
+    context.logger.info('[Project Creation] ✅ Phase 1 complete: All components downloaded');
+
+    // ========================================================================
+    // PHASE 2: Install All Components (40-70%) - PARALLEL
+    // Run npm install for each component
+    // ========================================================================
+    progressTracker('Installing Components', 40, 'Installing npm packages...');
+    context.logger.info('[Project Creation] 📦 Phase 2: Installing components...');
+
+    // Run npm install for all components in parallel
+    const installPromises = Array.from(componentDefinitions.entries()).map(
+        async ([compId, { definition }]) => {
+            const componentPath = project.componentInstances?.[compId]?.path;
+            if (!componentPath) return { compId, success: true };
+
+            context.logger.debug(`[Project Creation] npm install: ${definition.name}`);
+
+            const installResult = await componentManager.installNpmDependencies(componentPath, definition);
+
+            if (!installResult.success) {
+                throw new Error(`Failed to install ${definition.name}: ${installResult.error}`);
+            }
+
+            return { compId, success: true };
+        }
+    );
+
+    await Promise.all(installPromises);
+
+    // Update all component statuses to ready
+    for (const [compId] of componentDefinitions) {
+        const componentInstance = project.componentInstances![compId];
+        if (componentInstance) {
+            componentInstance.status = 'ready';
+            componentInstance.lastUpdated = new Date();
+        }
+    }
+
+    progressTracker('Installing Components', 70, 'All components installed');
+    context.logger.info('[Project Creation] ✅ Phase 2 complete: All components installed');
+
+    // ========================================================================
+    // PHASE 3: Mesh Configuration (70-85%)
+    // Generate mesh .env (needs commerce URLs) + Deploy mesh
+    // ========================================================================
     const meshComponent = project.componentInstances?.['commerce-mesh'];
-    if (meshComponent?.path && !typedConfig.meshStepEnabled) {
-        progressTracker('Deploying API Mesh', 80, 'Deploying mesh configuration to Adobe I/O...');
+    const meshDefinition = componentDefinitions.get('commerce-mesh')?.definition;
+
+    if (meshComponent?.path && meshDefinition && !typedConfig.meshStepEnabled) {
+        // Generate mesh .env BEFORE deployment (mesh needs commerce URLs from .env)
+        progressTracker('Configuring API Mesh', 70, 'Generating mesh configuration...');
+        context.logger.info('[Project Creation] 🔧 Phase 3: Configuring and deploying API Mesh...');
+
+        await generateEnvFile(
+            meshComponent.path,
+            'commerce-mesh',
+            meshDefinition,
+            sharedEnvVars,
+            config,
+            context.logger,
+        );
+        context.logger.debug('[Project Creation] Mesh .env generated');
+
+        // Now deploy mesh
+        progressTracker('Deploying API Mesh', 75, 'Deploying mesh to Adobe I/O...');
 
         try {
             const commandManager = ServiceLocator.getCommandExecutor();
@@ -348,7 +413,6 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 if (!meshId || !endpoint) {
                     context.logger.debug('[Project Creation] Fetching mesh info via describe...');
                     try {
-                        const commandManager = ServiceLocator.getCommandExecutor();
                         const describeResult = await commandManager.execute('aio api-mesh:describe', {
                             timeout: TIMEOUTS.MESH_DESCRIBE,
                             configureTelemetry: false,
@@ -357,7 +421,6 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                         });
 
                         if (describeResult.code === 0) {
-                            // Extract JSON from output using Step 2 helper (handles mixed CLI output)
                             const meshData = extractAndParseJSON<{ meshId?: string; mesh_id?: string; meshEndpoint?: string; endpoint?: string }>(describeResult.stdout);
                             if (meshData) {
                                 meshId = meshData.meshId || meshData.mesh_id;
@@ -378,43 +441,37 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
                 };
                 project.componentInstances!['commerce-mesh'] = meshComponent;
 
-                // Update meshState to track deployment (required for status detection)
+                // Update meshState to track deployment
                 const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
                 await updateMeshState(project);
                 context.logger.debug('[Project Creation] Updated mesh state after successful deployment');
 
                 // Fetch deployed mesh config to populate meshState.envVars
-                // This ensures dashboard shows correct "Deployed" status immediately
                 const { fetchDeployedMeshConfig } = await import('@/features/mesh/services/stalenessDetector');
                 const deployedConfig = await fetchDeployedMeshConfig();
 
                 if (hasEntries(deployedConfig)) {
                     project.meshState!.envVars = deployedConfig;
                     context.logger.debug('[Project Creation] Populated meshState.envVars with deployed config');
-                    await context.stateManager.saveProject(project);
                 }
 
-                context.logger.info(`[Project Creation] ✅ Mesh configuration updated successfully${endpoint ? ': ' + endpoint : ''}`);
+                context.logger.info(`[Project Creation] ✅ Phase 3 complete: Mesh deployed${endpoint ? ' at ' + endpoint : ''}`);
             } else {
                 throw new Error(meshDeployResult.error || 'Mesh deployment failed');
             }
         } catch (meshError) {
             context.logger.error('[Project Creation] Failed to deploy mesh', meshError as Error);
-
             const { formatMeshDeploymentError } = await import('@/features/mesh/utils/errorFormatter');
             throw new Error(formatMeshDeploymentError(meshError as Error));
         }
     }
 
-    // Alternative: Use existing mesh if user selected one instead of cloning (80%)
-    // This happens when user picks an existing deployed mesh in the wizard
-    // Also skip when meshStepEnabled is true (mesh handled by separate wizard step)
+    // Alternative: Use existing mesh if user selected one instead of cloning
     if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent, typedConfig.meshStepEnabled)) {
-        // Safe to assert non-null - shouldConfigureExistingMesh validates these exist
         const meshConfig = typedConfig.apiMesh!;
-        progressTracker('Configuring API Mesh', 80, 'Adding existing mesh to project...');
+        progressTracker('Configuring API Mesh', 75, 'Adding existing mesh to project...');
+        context.logger.info('[Project Creation] 🔗 Phase 3: Linking existing API Mesh...');
 
-        // Add mesh as a component instance (deployed, not cloned)
         project.componentInstances!['commerce-mesh'] = {
             id: 'commerce-mesh',
             name: 'Commerce API Mesh',
@@ -429,26 +486,64 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             },
         };
 
-        // Update meshState to track deployment (required for status detection)
         const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
         await updateMeshState(project);
         context.logger.debug('[Project Creation] Updated mesh state for existing mesh');
 
-        // Fetch deployed mesh config to populate meshState.envVars
-        // This ensures dashboard shows correct "Deployed" status immediately
         const { fetchDeployedMeshConfig } = await import('@/features/mesh/services/stalenessDetector');
         const deployedConfig = await fetchDeployedMeshConfig();
 
         if (hasEntries(deployedConfig)) {
             project.meshState!.envVars = deployedConfig;
             context.logger.debug('[Project Creation] Populated meshState.envVars with deployed config');
-            await context.stateManager.saveProject(project);
         }
 
-        context.logger.debug('[Project Creation] API Mesh configured');
+        context.logger.info('[Project Creation] ✅ Phase 3 complete: Existing mesh linked');
     }
 
-    // Step 6: Create project manifest (90%)
+    // ========================================================================
+    // PHASE 4: Frontend Configuration (85-90%)
+    // Generate frontend .env with MESH_ENDPOINT (now available)
+    // ========================================================================
+    progressTracker('Configuring Environment', 85, 'Generating environment files...');
+    context.logger.info('[Project Creation] 📝 Phase 4: Generating environment configuration...');
+
+    // Get deployed mesh endpoint (if available)
+    const deployedMeshEndpoint = project.componentInstances?.['commerce-mesh']?.endpoint;
+
+    // Create config with mesh endpoint for .env generation
+    const envConfig: EnvGenerationConfig = {
+        ...config,
+        apiMesh: deployedMeshEndpoint ? {
+            ...typedConfig.apiMesh,
+            endpoint: deployedMeshEndpoint,
+        } : typedConfig.apiMesh,
+    };
+
+    // Generate .env for all non-mesh components (frontend, app-builder, etc.)
+    for (const [compId, { definition }] of componentDefinitions) {
+        // Skip mesh - already generated in Phase 3
+        if (compId === 'commerce-mesh') continue;
+
+        const componentPath = project.componentInstances?.[compId]?.path;
+        if (!componentPath) continue;
+
+        await generateEnvFile(
+            componentPath,
+            compId,
+            definition,
+            sharedEnvVars,
+            envConfig,
+            context.logger,
+        );
+    }
+
+    context.logger.info('[Project Creation] ✅ Phase 4 complete: Environment configured');
+
+    // ========================================================================
+    // PHASE 5: Finalize Project (90-100%)
+    // Create manifest, save state, complete
+    // ========================================================================
     progressTracker('Finalizing Project', 90, 'Creating project manifest...');
 
     const manifest = {
@@ -472,7 +567,6 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 
     context.logger.debug('[Project Creation] Project manifest created');
 
-    // Step 8: Save project state (95%)
     progressTracker('Finalizing Project', 95, 'Saving project state...');
 
     context.logger.debug(`[Project Creation] Saving project: ${project.name} (${getEntryCount(project.componentInstances)} components)`);
@@ -506,10 +600,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         throw saveError; // Re-throw to trigger error handling
     }
 
-    // Step 9: Complete
     progressTracker('Project Created', 100, 'Project creation complete');
-
-    context.logger.info('[Project Creation] Completed successfully!');
+    context.logger.info('[Project Creation] ✅ Phase 5 complete: Project finalized');
 
     // Note: Tree view auto-refreshes via StateManager.onProjectChanged event
     // (triggered by saveProject() above)
