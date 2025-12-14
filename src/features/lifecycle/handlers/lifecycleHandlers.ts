@@ -123,26 +123,9 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
             throw new Error('Project not found');
         }
 
-        // Set flag to reopen dashboard after Extension Host restart
-        try {
-            const os = await import('os');
-            const path = await import('path');
-            const fs = await import('fs/promises');
-
-            const demoBuilderDir = path.join(os.homedir(), '.demo-builder');
-            await fs.mkdir(demoBuilderDir, { recursive: true });
-
-            const flagFile = path.join(demoBuilderDir, '.open-dashboard-after-restart');
-            await fs.writeFile(flagFile, JSON.stringify({
-                projectName: project.name,
-                projectPath: project.path,
-                timestamp: Date.now(),
-            }), 'utf8');
-
-            context.logger.debug('[Project Creation] Set dashboard reopen flag');
-        } catch (flagError) {
-            context.logger.warn('[Project Creation] Could not set reopen flag', toError(flagError).message);
-        }
+        // Note: Flag file for dashboard reopen after Extension Host restart was REMOVED
+        // The workspace folder addition that triggered Extension Host restart was removed in beta.64
+        // Now we simply navigate to the projects list (no restart occurs)
 
         // Close any existing Projects List webview before opening project
         const { ShowProjectsListCommand } = await import('../../projects-dashboard/commands/showProjectsList');
