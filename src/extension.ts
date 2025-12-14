@@ -10,7 +10,7 @@ import { StatusBarManager, WorkspaceWatcherManager, EnvFileWatcherService } from
 import { SidebarProvider } from '@/features/sidebar';
 import { AuthenticationService } from '@/features/authentication';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
-import { parseJSON, getProjectFrontendPort } from '@/types/typeGuards';
+import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
 
 /**
@@ -258,72 +258,31 @@ export async function activate(context: vscode.ExtensionContext) {
             });
         }
 
-        // Check for dashboard reopen flag (after workspace folder addition restart)
-        let openingDashboardAfterRestart = false;
+        // Clean up any stale flag files from previous versions
+        // (The workspace folder addition that used this flag was removed in beta.64)
         try {
             const os = require('os');
             const path = require('path');
             const fs = require('fs').promises;
-            
             const flagFile = path.join(os.homedir(), '.demo-builder', '.open-dashboard-after-restart');
-            const flagExists = await fs.access(flagFile).then(() => true).catch(() => false);
-            
-            if (flagExists) {
-                openingDashboardAfterRestart = true;
-                
-                // Read flag data
-                const flagData = await fs.readFile(flagFile, 'utf8');
-                const parsed = parseJSON<{ projectName: string; projectPath: string }>(flagData);
-                if (!parsed) {
-                    logger.warn('[Extension] Failed to parse dashboard flag file');
-                    await fs.unlink(flagFile).catch(() => {});
-                    return;
-                }
-                const { projectName, projectPath } = parsed;
-                
-                // Remove flag immediately
-                await fs.unlink(flagFile).catch(() => {});
-                
-                logger.debug(`[Extension] Opening Project Dashboard after restart for: ${projectName}`);
-                
-                // Ensure project is loaded
-                const project = await stateManager.getCurrentProject();
-                if (project) {
-                    statusBar.updateProject(project);
-
-                    // Small delay to ensure extension is fully initialized
-                    setTimeout(() => {
-                        logger.debug('[Extension] Executing showProjectDashboard command...');
-                        vscode.commands.executeCommand('demoBuilder.showProjectDashboard').then(
-                            () => logger.debug('[Extension] Project Dashboard opened successfully'),
-                            (err) => logger.error('[Extension] Failed to open Project Dashboard:', err),
-                        );
-                    }, TIMEOUTS.DASHBOARD_OPEN_DELAY);
-                } else {
-                    logger.warn(`[Extension] Could not load project from ${projectPath}, showing Welcome instead`);
-                    openingDashboardAfterRestart = false;
-                }
-            }
-        } catch (error) {
-            // Silently ignore errors
-            logger.debug('[Extension] No dashboard reopen flag found or error reading it');
+            await fs.unlink(flagFile).catch(() => {}); // Silently remove if exists
+        } catch {
+            // Ignore errors
         }
 
-        // Normal startup - load project state for status bar and TreeView
-        // Don't auto-open UI - wait for user to click the activity bar icon
-        if (!openingDashboardAfterRestart) {
-            // Load existing project if available (for status bar)
-            const hasExistingProject = await stateManager.hasProject();
-            if (hasExistingProject) {
-                const project = await stateManager.getCurrentProject();
-                if (project) {
-                    statusBar.updateProject(project);
-                    logger.debug(`[Extension] Loaded existing project: ${project.name}`);
-                }
+        // Load existing project if available (for status bar)
+        const hasExistingProject = await stateManager.hasProject();
+        if (hasExistingProject) {
+            const project = await stateManager.getCurrentProject();
+            if (project) {
+                statusBar.updateProject(project);
+                logger.debug(`[Extension] Loaded existing project: ${project.name}`);
             }
-            // Projects list opens when user clicks the activity bar icon
-            // (handled by tree view visibility handler)
         }
+
+        // Note: Projects List auto-opens via tree view visibility handler (line 128-137)
+        // when the sidebar becomes visible with no active webview panels.
+        // No explicit setTimeout needed here - that would cause double-opening.
 
         // Auto-check for updates on startup (if enabled)
         const autoCheck = vscode.workspace.getConfiguration('demoBuilder')
