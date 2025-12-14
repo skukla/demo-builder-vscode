@@ -100,7 +100,7 @@ describe('ProjectsDashboard', () => {
             ).toBeInTheDocument();
         });
 
-        it('should call onCreateProject when "+ New" button is clicked', () => {
+        it('should call onCreateProject when "New Project" menu item is clicked', async () => {
             const projects = createMockProjects(2);
             const onCreateProject = jest.fn();
             renderWithProvider(
@@ -111,7 +111,12 @@ describe('ProjectsDashboard', () => {
                 />
             );
 
+            // Click the "New" dropdown button to open the menu
             fireEvent.click(screen.getByRole('button', { name: /new/i }));
+
+            // Wait for menu to appear and click "New Project" item
+            const newProjectItem = await screen.findByRole('menuitem', { name: /new project/i });
+            fireEvent.click(newProjectItem);
 
             expect(onCreateProject).toHaveBeenCalledTimes(1);
         });

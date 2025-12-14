@@ -8,7 +8,6 @@ import React, { useEffect, useRef } from 'react';
 import { Flex, Text, Button } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import Import from '@spectrum-icons/workflow/Import';
-import { useFocusTrap } from '@/core/ui/hooks';
 
 export interface DashboardEmptyStateProps {
     /** Callback when the create button is clicked */
@@ -35,12 +34,7 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
 }) => {
     const buttonRef = useRef<HTMLButtonElement>(null);
 
-    // Focus trap for keyboard navigation (WCAG 2.1 AA)
-    const containerRef = useFocusTrap<HTMLDivElement>({
-        enabled: true,
-        autoFocus: false,
-        containFocus: true,
-    });
+    // Note: Focus trap is handled by parent ProjectsDashboard component
 
     useEffect(() => {
         if (autoFocus && buttonRef.current) {
@@ -49,13 +43,12 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
     }, [autoFocus]);
 
     return (
-        <div ref={containerRef}>
-            <Flex
-                justifyContent="center"
-                alignItems="center"
-                height="100%"
-                minHeight="350px"
-            >
+        <Flex
+            justifyContent="center"
+            alignItems="center"
+            height="100%"
+            minHeight="350px"
+        >
             <Flex
                 direction="column"
                 alignItems="center"
@@ -91,6 +84,5 @@ export const DashboardEmptyState: React.FC<DashboardEmptyStateProps> = ({
                 </Flex>
             </Flex>
         </Flex>
-        </div>
     );
 };

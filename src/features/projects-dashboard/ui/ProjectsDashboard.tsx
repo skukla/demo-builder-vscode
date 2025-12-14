@@ -91,7 +91,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     // Focus trap for keyboard navigation (WCAG 2.1 AA)
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
-        autoFocus: false,  // Don't auto-focus - let user navigate naturally
+        autoFocus: true,  // Focus first element on mount so Tab works immediately
         containFocus: true,  // Prevent focus escape
     });
 
