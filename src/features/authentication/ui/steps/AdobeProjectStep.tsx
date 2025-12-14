@@ -31,6 +31,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
         setSearchQuery,
         load: loadProjects,
         refresh,
+        selectItem,
     } = useSelectionStep<AdobeProject>({
         cacheKey: 'projectsCache',
         messageType: 'get-projects',
@@ -75,19 +76,8 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
         setCanProceed(!!state.adobeProject?.id);
     }, [state.adobeProject, setCanProceed]);
 
-    // Handle selection from list
-    const handleSelect = (project: AdobeProject) => {
-        updateState({
-            adobeProject: {
-                id: project.id,
-                name: project.name,
-                title: project.title,
-                description: project.description,
-                org_id: project.org_id,
-            },
-            adobeWorkspace: undefined,
-        });
-    };
+    // Note: handleSelect removed - using selectItem from useSelectionStep hook
+    // The hook's onSelect callback handles the state update with the same logic
 
     return (
         <TwoColumnLayout
@@ -105,7 +95,7 @@ export function AdobeProjectStep({ state, updateState, setCanProceed, completedS
                     onLoad={loadProjects}
                     onRefresh={refresh}
                     selectedId={state.adobeProject?.id}
-                    onSelect={handleSelect}
+                    onSelect={selectItem}
                     labels={{
                         heading: state.adobeOrg?.name ? `Projects in ${state.adobeOrg.name}` : 'Select Adobe Project',
                         loadingMessage: 'Loading your Adobe projects...',

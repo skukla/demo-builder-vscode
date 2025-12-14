@@ -31,6 +31,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
         setSearchQuery,
         load: loadWorkspaces,
         refresh,
+        selectItem,
     } = useSelectionStep<Workspace>({
         cacheKey: 'workspacesCache',
         messageType: 'get-workspaces',
@@ -76,16 +77,8 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
         setCanProceed(!!state.adobeWorkspace?.id);
     }, [state.adobeWorkspace, setCanProceed]);
 
-    // Handle selection from list
-    const handleSelect = (workspace: Workspace) => {
-        updateState({
-            adobeWorkspace: {
-                id: workspace.id,
-                name: workspace.name,
-                title: workspace.title,
-            },
-        });
-    };
+    // Note: handleSelect removed - using selectItem from useSelectionStep hook
+    // The hook's onSelect callback handles the state update with the same logic
 
     return (
         <TwoColumnLayout
@@ -103,7 +96,7 @@ export function AdobeWorkspaceStep({ state, updateState, setCanProceed, complete
                     onLoad={loadWorkspaces}
                     onRefresh={refresh}
                     selectedId={state.adobeWorkspace?.id}
-                    onSelect={handleSelect}
+                    onSelect={selectItem}
                     labels={{
                         heading: 'Select Workspace',
                         loadingMessage: 'Loading workspaces...',
