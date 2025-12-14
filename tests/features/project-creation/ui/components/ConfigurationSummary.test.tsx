@@ -2,7 +2,8 @@
  * ConfigurationSummary Component Tests
  *
  * Tests the wizard configuration summary component that displays
- * organization, project, workspace, and API Mesh status.
+ * organization, project, and workspace status.
+ * Note: API Mesh section was removed - mesh is now deployed during project creation.
  */
 
 import React from 'react';
@@ -247,153 +248,7 @@ describe('ConfigurationSummary', () => {
         });
     });
 
-    describe('API Mesh section', () => {
-        it('renders "Not selected" when no workspace', () => {
-            renderWithProvider(
-                <ConfigurationSummary state={stateWithProject} />
-            );
-
-            expect(screen.getByText('API Mesh')).toBeInTheDocument();
-        });
-
-        it('renders "Checking..." when apiMesh is checking', () => {
-            const stateWithMeshChecking = createBaseState({
-                ...stateWithWorkspace,
-                apiMesh: {
-                    isChecking: true,
-                },
-            });
-
-            renderWithProvider(
-                <ConfigurationSummary
-                    state={stateWithMeshChecking}
-                    currentStep="api-mesh"
-                />
-            );
-
-            expect(screen.getByText('Checking...')).toBeInTheDocument();
-        });
-
-        it('renders "Mesh Deployed" when mesh is deployed', () => {
-            const stateWithMeshDeployed = createBaseState({
-                ...stateWithWorkspace,
-                apiMesh: {
-                    isChecking: false,
-                    apiEnabled: true,
-                    meshExists: true,
-                    meshStatus: 'deployed',
-                },
-            });
-
-            renderWithProvider(
-                <ConfigurationSummary
-                    state={stateWithMeshDeployed}
-                    currentStep="api-mesh"
-                />
-            );
-
-            expect(screen.getByText('Mesh Deployed')).toBeInTheDocument();
-        });
-
-        it('renders "Mesh Error" when mesh has error status', () => {
-            const stateWithMeshError = createBaseState({
-                ...stateWithWorkspace,
-                apiMesh: {
-                    isChecking: false,
-                    apiEnabled: true,
-                    meshExists: true,
-                    meshStatus: 'error',
-                },
-            });
-
-            renderWithProvider(
-                <ConfigurationSummary
-                    state={stateWithMeshError}
-                    currentStep="api-mesh"
-                />
-            );
-
-            expect(screen.getByText('Mesh Error')).toBeInTheDocument();
-        });
-
-        it('renders "Mesh Pending" when mesh exists but not deployed', () => {
-            const stateWithMeshPending = createBaseState({
-                ...stateWithWorkspace,
-                apiMesh: {
-                    isChecking: false,
-                    apiEnabled: true,
-                    meshExists: true,
-                    meshStatus: 'pending',
-                },
-            });
-
-            renderWithProvider(
-                <ConfigurationSummary
-                    state={stateWithMeshPending}
-                    currentStep="api-mesh"
-                />
-            );
-
-            expect(screen.getByText('Mesh Pending')).toBeInTheDocument();
-        });
-
-        it('renders "Ready for creation" when API enabled but no mesh', () => {
-            const stateWithNoMesh = createBaseState({
-                ...stateWithWorkspace,
-                apiMesh: {
-                    isChecking: false,
-                    apiEnabled: true,
-                    meshExists: false,
-                },
-            });
-
-            renderWithProvider(
-                <ConfigurationSummary
-                    state={stateWithNoMesh}
-                    currentStep="api-mesh"
-                />
-            );
-
-            expect(screen.getByText('Ready for creation')).toBeInTheDocument();
-        });
-
-        it('renders "Not enabled" when API is not enabled', () => {
-            const stateWithApiDisabled = createBaseState({
-                ...stateWithWorkspace,
-                apiMesh: {
-                    isChecking: false,
-                    apiEnabled: false,
-                },
-            });
-
-            renderWithProvider(
-                <ConfigurationSummary
-                    state={stateWithApiDisabled}
-                    currentStep="api-mesh"
-                />
-            );
-
-            expect(screen.getByText('Not enabled')).toBeInTheDocument();
-        });
-
-        it('renders "Pending" as default state', () => {
-            const stateWithDefaultMesh = createBaseState({
-                ...stateWithWorkspace,
-                apiMesh: {
-                    isChecking: false,
-                },
-            });
-
-            renderWithProvider(
-                <ConfigurationSummary
-                    state={stateWithDefaultMesh}
-                    currentStep="api-mesh"
-                />
-            );
-
-            expect(screen.getByText('Pending')).toBeInTheDocument();
-        });
-    });
+    // Note: API Mesh section removed - mesh is now deployed automatically during project creation
 
     describe('step completion tracking', () => {
         it('uses completedSteps to determine completion icons', () => {
@@ -434,7 +289,7 @@ describe('ConfigurationSummary', () => {
             expect(screen.getByText('Configuration Summary')).toBeInTheDocument();
         });
 
-        it('renders all four sections', () => {
+        it('renders all three sections (API Mesh removed - deployed during creation)', () => {
             renderWithProvider(
                 <ConfigurationSummary state={createBaseState()} />
             );
@@ -442,7 +297,8 @@ describe('ConfigurationSummary', () => {
             expect(screen.getByText('Organization')).toBeInTheDocument();
             expect(screen.getByText('Project')).toBeInTheDocument();
             expect(screen.getByText('Workspace')).toBeInTheDocument();
-            expect(screen.getByText('API Mesh')).toBeInTheDocument();
+            // API Mesh section removed - mesh is now deployed automatically during project creation
+            expect(screen.queryByText('API Mesh')).not.toBeInTheDocument();
         });
     });
 });

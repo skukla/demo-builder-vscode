@@ -67,6 +67,9 @@
    =========================================== */
 .w-full { width: 100% !important; }
 .h-full { height: 100% !important; }
+
+/* Label width for label/value pairs (ReviewStep, etc.) */
+.review-label-width { min-width: 100px !important; }
 .max-w-full { max-width: 100% !important; }
 .min-w-0 { min-width: 0 !important; }
 

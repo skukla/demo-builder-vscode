@@ -76,7 +76,7 @@ describe('ReviewStep', () => {
     });
 
     describe('Happy Path - Review Display', () => {
-        it('should render review heading', () => {
+        it('should render project name as heading', () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ReviewStep
@@ -87,7 +87,8 @@ describe('ReviewStep', () => {
                 </Provider>
             );
 
-            expect(screen.getByText(/Ready to create/i)).toBeInTheDocument();
+            // Project name should be displayed as the main heading
+            expect(screen.getByRole('heading', { name: 'my-demo-project' })).toBeInTheDocument();
         });
 
         it('should display project name', () => {
@@ -261,7 +262,7 @@ describe('ReviewStep', () => {
     });
 
     describe('Edge Cases - Comprehensive Component List', () => {
-        it('should display all dependencies when multiple are selected', () => {
+        it('should display dependencies when selected (demo-inspector is excluded as it is a submodule)', () => {
             const stateWithMultipleDeps = {
                 ...completeState,
                 components: {
@@ -281,12 +282,11 @@ describe('ReviewStep', () => {
                 </Provider>
             );
 
-            // All dependencies should be visible by their display names
-            expect(screen.getByText('API Mesh for Adobe Developer App Builder')).toBeInTheDocument();
-            expect(screen.getByText('Demo Inspector')).toBeInTheDocument();
+            // Mesh is shown as "Middleware" row, demo-inspector is filtered out (it's a frontend submodule)
+            expect(screen.getByText('Middleware')).toBeInTheDocument();
         });
 
-        it('should display all integrations when multiple are selected', () => {
+        it('should display integrations as comma-separated list', () => {
             const stateWithIntegrations = {
                 ...completeState,
                 components: {
@@ -306,12 +306,11 @@ describe('ReviewStep', () => {
                 </Provider>
             );
 
-            // Integrations should be listed by their display names
-            expect(screen.getByText('Adobe Experience Manager')).toBeInTheDocument();
-            expect(screen.getByText('Adobe Experience Platform')).toBeInTheDocument();
+            // Integrations should be displayed as comma-separated list
+            expect(screen.getByText('Adobe Experience Manager, Adobe Experience Platform')).toBeInTheDocument();
         });
 
-        it('should display App Builder apps when selected', () => {
+        it('should display App Builder apps as comma-separated list', () => {
             const stateWithApps = {
                 ...completeState,
                 components: {
@@ -331,9 +330,8 @@ describe('ReviewStep', () => {
                 </Provider>
             );
 
-            // App Builder apps should be visible by their display names
-            expect(screen.getByText('Custom App 1')).toBeInTheDocument();
-            expect(screen.getByText('Custom App 2')).toBeInTheDocument();
+            // App Builder apps should be displayed as comma-separated list
+            expect(screen.getByText('Custom App 1, Custom App 2')).toBeInTheDocument();
         });
     });
 
@@ -385,7 +383,7 @@ describe('ReviewStep', () => {
     });
 
     describe('Accessibility', () => {
-        it('should have clear status indicator', () => {
+        it('should display Adobe context breadcrumb', () => {
             render(
                 <Provider theme={defaultTheme}>
                     <ReviewStep
@@ -397,8 +395,8 @@ describe('ReviewStep', () => {
                 </Provider>
             );
 
-            // Should have "Ready to create" status text
-            expect(screen.getByText('Ready to create')).toBeInTheDocument();
+            // Should show org, project, workspace as breadcrumb
+            expect(screen.getByText(/Test Organization/)).toBeInTheDocument();
         });
 
         it('should have clear section labels', () => {
@@ -408,12 +406,13 @@ describe('ReviewStep', () => {
                         state={completeState as WizardState}
                         updateState={mockUpdateState}
                         setCanProceed={mockSetCanProceed}
+                        componentsData={mockComponentsData}
                     />
                 </Provider>
             );
 
-            // Review sections should be clearly labeled
-            expect(screen.getByText(/my-demo-project/i)).toBeInTheDocument();
+            // Review sections should be clearly labeled with uppercase titles
+            expect(screen.getByText('COMPONENTS')).toBeInTheDocument();
         });
     });
 });

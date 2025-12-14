@@ -5,7 +5,7 @@ import Clock from '@spectrum-icons/workflow/Clock';
 import React from 'react';
 import { WizardState, WizardStep } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
-import { getStepStatus, renderApiMeshStatus } from './configurationSummaryHelpers';
+import { getStepStatus } from './configurationSummaryHelpers';
 
 interface ConfigurationSummaryProps {
     state: WizardState;
@@ -166,23 +166,7 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
                 status={getStepStatus(!!state.adobeWorkspace, isStepCompleted('adobe-workspace'))}
             />
 
-            <Divider size="S" />
-
-            {/* API Mesh */}
-            <View marginTop="size-200" marginBottom="size-200">
-                <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'text-uppercase', 'letter-spacing-05')}>
-                    API Mesh
-                </Text>
-                <View marginTop="size-100">
-                    {renderApiMeshStatus({
-                        state,
-                        currentStepIndex: getCurrentStepIndex(),
-                        stepOrder,
-                        completedSteps,
-                        isStepCompleted,
-                    })}
-                </View>
-            </View>
+            {/* Note: API Mesh section removed - mesh is now deployed automatically during project creation */}
 
             <style>{`
                 .text-uppercase {
