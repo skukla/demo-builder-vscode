@@ -6,6 +6,8 @@ export interface LoadingOverlayProps {
     isVisible: boolean;
     /** Optional message to display below spinner */
     message?: string;
+    /** Use opaque background instead of semi-transparent (for full-screen transitions) */
+    opaque?: boolean;
 }
 
 const styles = {
@@ -63,16 +65,27 @@ const spinKeyframes = `
  *   <YourContent />
  *   <LoadingOverlay isVisible={isLoading} message="Saving..." />
  * </div>
+ *
+ * @example Opaque overlay for full-screen transitions
+ * <LoadingOverlay isVisible={isTransitioning} message="Loading..." opaque />
  */
-export function LoadingOverlay({ isVisible, message }: LoadingOverlayProps): React.ReactElement | null {
+export function LoadingOverlay({ isVisible, message, opaque = false }: LoadingOverlayProps): React.ReactElement | null {
     if (!isVisible) {
         return null;
     }
 
+    const containerStyle = {
+        ...styles.container,
+        // Use opaque background for full-screen transitions (hides content behind)
+        backgroundColor: opaque
+            ? 'var(--spectrum-global-color-gray-50)'
+            : 'var(--db-loading-overlay-bg)',
+    };
+
     return (
         <>
             <style>{spinKeyframes}</style>
-            <div style={styles.container} data-testid="loading-overlay">
+            <div style={containerStyle} data-testid="loading-overlay">
                 <div
                     style={styles.spinnerContainer}
                     role="status"
