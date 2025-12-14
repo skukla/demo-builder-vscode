@@ -82,10 +82,15 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
   const containerRef = useRef<T>(null);
   const focusableElementsCacheRef = useRef<HTMLElement[]>([]);
   const observerRef = useRef<MutationObserver | null>(null);
+  // Track if we've successfully auto-focused (to handle async component rendering)
+  const hasAutoFocusedRef = useRef(false);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!enabled || !container) return;
+
+    // Reset auto-focus tracking when effect re-runs
+    hasAutoFocusedRef.current = false;
 
     // Get all focusable elements
     const getFocusableElements = (): HTMLElement[] => {
@@ -93,23 +98,39 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       return Array.from(elements) as HTMLElement[];
     };
 
+    // Attempt to auto-focus first element
+    const tryAutoFocus = () => {
+      if (!autoFocus || hasAutoFocusedRef.current) return;
+
+      const elements = focusableElementsCacheRef.current;
+      if (elements.length > 0) {
+        elements[0].focus();
+        hasAutoFocusedRef.current = true;
+      }
+    };
+
     // Update cache
     const updateCache = () => {
+      const prevLength = focusableElementsCacheRef.current.length;
       focusableElementsCacheRef.current = getFocusableElements();
 
       // Development warning (webviewLogger already handles dev-only logging)
       if (focusableElementsCacheRef.current.length === 0) {
         log.warn('No focusable elements found in container');
       }
+
+      // If autoFocus is enabled and we haven't focused yet,
+      // try again when elements become available (handles async Spectrum rendering)
+      if (prevLength === 0 && focusableElementsCacheRef.current.length > 0) {
+        tryAutoFocus();
+      }
     };
 
     // Initial cache update
     updateCache();
 
-    // Auto-focus first element if requested
-    if (autoFocus && focusableElementsCacheRef.current.length > 0) {
-      focusableElementsCacheRef.current[0].focus();
-    }
+    // Initial auto-focus attempt
+    tryAutoFocus();
 
     // Observe DOM changes to invalidate cache
     observerRef.current = new MutationObserver(() => {
