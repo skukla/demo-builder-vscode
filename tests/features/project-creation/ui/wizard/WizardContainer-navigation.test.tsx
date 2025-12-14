@@ -193,7 +193,8 @@ describe('WizardContainer - Navigation', () => {
                 />
             );
 
-            // Navigate through all steps explicitly (no welcome step)
+            // Navigate through all steps explicitly (no welcome step, no api-mesh step)
+            // Note: api-mesh step is now disabled - mesh deployment happens in project-creation
             const getButton = () => screen.getByRole('button', { name: /continue|create project/i });
 
             // Start at adobe-auth (first step after welcome removal)
@@ -215,11 +216,8 @@ describe('WizardContainer - Navigation', () => {
             await user.click(getButton());
             await screen.findByTestId('prerequisites-step', {}, { timeout: 1000 });
 
-            // prerequisites → api-mesh
-            await user.click(getButton());
-            await screen.findByTestId('api-mesh-step', {}, { timeout: 1000 });
-
-            // api-mesh → settings (component-config)
+            // prerequisites → settings (component-config)
+            // Note: api-mesh step is disabled, so we skip directly to settings
             await user.click(getButton());
             await screen.findByTestId('component-config-step', {}, { timeout: 1000 });
 

@@ -68,6 +68,7 @@ export const TIMEOUTS = {
     WEBVIEW_INIT_DELAY: 50,         // Small delay for webview initialization to avoid race conditions (SOP §1)
     PROGRESS_MESSAGE_DELAY: 1000,   // First progress message update timing (SOP §1)
     PROGRESS_MESSAGE_DELAY_LONG: 2000, // Second progress message update timing (SOP §1)
+    IMPORT_TRANSITION_FEEDBACK: 600, // Loading feedback delay before auto-navigating to review in import mode
 
     // UI notification timing (SOP §1 compliance - Round 2)
     STATUS_BAR_SUCCESS: 5000,       // Success message duration in status bar

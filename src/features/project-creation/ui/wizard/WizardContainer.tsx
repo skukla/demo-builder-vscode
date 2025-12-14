@@ -5,14 +5,23 @@ import {
     Button,
     Text,
 } from '@adobe/react-spectrum';
-import { PageHeader, PageFooter } from '@/core/ui/components/layout';
-import { LoadingOverlay } from '@/core/ui/components/feedback';
+import { PageHeader, PageFooter, CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
+import { LoadingOverlay, LoadingDisplay } from '@/core/ui/components/feedback';
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
     getNextButtonText,
     hasMeshComponentSelected,
     getCompletedStepIndices,
     getEnabledWizardSteps,
+    getNavigationDirection,
+    filterCompletedStepsForBackwardNav,
+    getAdobeStepIndices,
+    computeStateUpdatesForBackwardNav,
+    initializeComponentsFromImport,
+    initializeAdobeContextFromImport,
+    initializeProjectName,
+    getFirstEnabledStep,
+    ImportedSettings,
 } from './wizardHelpers';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
@@ -36,54 +45,9 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 const log = webviewLogger('WizardContainer');
 
-/**
- * Imported settings shape for wizard pre-population
- * Matches the subset of SettingsFile fields used by the wizard
- */
-export interface ImportedSettings {
-    source?: {
-        project?: string;
-    };
-    selections?: {
-        frontend?: string;
-        backend?: string;
-        dependencies?: string[];
-        integrations?: string[];
-        appBuilder?: string[];
-    };
-    configs?: Record<string, Record<string, string | boolean | number | undefined>>;
-    adobe?: {
-        orgId?: string;
-        orgName?: string;
-        projectId?: string;
-        projectName?: string;
-        workspaceId?: string;
-        workspaceName?: string;
-    };
-}
-
-/**
- * Generate a unique project name that doesn't conflict with existing names
- * Uses lowercase-hyphen format: "name-copy", "name-copy-2", etc.
- */
-function generateUniqueProjectName(baseName: string, existingNames: string[]): string {
-    if (!existingNames.includes(baseName)) {
-        return baseName;
-    }
-
-    // Try "name-copy"
-    const copyName = `${baseName}-copy`;
-    if (!existingNames.includes(copyName)) {
-        return copyName;
-    }
-
-    // Try "name-copy-2", "name-copy-3", etc.
-    let counter = 2;
-    while (existingNames.includes(`${baseName}-copy-${counter}`)) {
-        counter++;
-    }
-    return `${baseName}-copy-${counter}`;
-}
+// Note: ImportedSettings interface and generateUniqueProjectName moved to wizardHelpers.ts
+// Re-export ImportedSettings for consumers that import from WizardContainer
+export type { ImportedSettings };
 
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;
@@ -153,35 +117,11 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
     // Note: Welcome step removed in Step 3 - wizard now starts at first enabled step
     // Compute initial step inside lazy initializer to use prop value on mount
     const [state, setState] = useState<WizardState>(() => {
-        const enabledSteps = wizardSteps?.filter(step => step.enabled) || [];
-        const firstStep = (enabledSteps.length > 0 ? enabledSteps[0].id : 'adobe-auth') as WizardStep;
-
-        // Build initial components from imported settings or defaults
-        const initialComponents: ComponentSelection | undefined = importedSettings?.selections
-            ? {
-                  frontend: importedSettings.selections.frontend,
-                  backend: importedSettings.selections.backend,
-                  dependencies: importedSettings.selections.dependencies || [],
-                  integrations: importedSettings.selections.integrations || [],
-                  appBuilderApps: importedSettings.selections.appBuilder || [],
-              }
-            : componentDefaults || undefined;
-
-        // Build initial Adobe context from imported settings
-        const initialAdobeOrg = importedSettings?.adobe?.orgId
-            ? { id: importedSettings.adobe.orgId, code: '', name: importedSettings.adobe.orgName || '' }
-            : undefined;
-        const initialAdobeProject = importedSettings?.adobe?.projectId
-            ? { id: importedSettings.adobe.projectId, name: importedSettings.adobe.projectName || '' }
-            : undefined;
-        const initialAdobeWorkspace = importedSettings?.adobe?.workspaceId
-            ? { id: importedSettings.adobe.workspaceId, name: importedSettings.adobe.workspaceName || '' }
-            : undefined;
-
-        // Generate unique project name from imported source
-        const initialProjectName = importedSettings?.source?.project
-            ? generateUniqueProjectName(importedSettings.source.project, existingProjectNames || [])
-            : '';
+        // Use helper functions for cleaner initialization
+        const firstStep = getFirstEnabledStep(wizardSteps);
+        const initialComponents = initializeComponentsFromImport(importedSettings, componentDefaults);
+        const adobeContext = initializeAdobeContextFromImport(importedSettings);
+        const initialProjectName = initializeProjectName(importedSettings, existingProjectNames || []);
 
         if (importedSettings) {
             log.info('Initializing wizard with imported settings', {
@@ -203,9 +143,9 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
                 isChecking: false,  // Allow the check to proceed
             },
             components: initialComponents,
-            adobeOrg: initialAdobeOrg,
-            adobeProject: initialAdobeProject,
-            adobeWorkspace: initialAdobeWorkspace,
+            adobeOrg: adobeContext.org,
+            adobeProject: adobeContext.project,
+            adobeWorkspace: adobeContext.workspace,
         };
     });
 
@@ -215,6 +155,7 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
     const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [isConfirmingSelection, setIsConfirmingSelection] = useState(false);
+    const [isPreparingReview, setIsPreparingReview] = useState(false);
 
     // Mesh deployment hook - called unconditionally per Rules of Hooks
     // Only activates when mesh-deployment step is enabled AND mesh component selected
@@ -240,6 +181,10 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
 
     // Ref for tracking navigation transition timeout (to prevent race conditions)
     const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Ref for import mode auto-navigation timers (cleanup on unmount)
+    const importNavTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const importNavClearTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Store response from get-components-data handler (includes full component data with envVars)
     const [componentsData, setComponentsData] = useState<{
@@ -331,12 +276,20 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
         return () => clearTimeout(timer);
     }, [state.currentStep]);
 
-    // Cleanup transition timer on unmount
+    // Cleanup all timers on unmount (prevents memory leaks and state updates on unmounted component)
     useEffect(() => {
         return () => {
             if (transitionTimerRef.current) {
                 clearTimeout(transitionTimerRef.current);
                 transitionTimerRef.current = null;
+            }
+            if (importNavTimerRef.current) {
+                clearTimeout(importNavTimerRef.current);
+                importNavTimerRef.current = null;
+            }
+            if (importNavClearTimerRef.current) {
+                clearTimeout(importNavClearTimerRef.current);
+                importNavClearTimerRef.current = null;
             }
         };
     }, []);
@@ -389,36 +342,19 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
 
     // Internal navigation function used by both timeline and Continue button
     const navigateToStep = useCallback((step: WizardStep, targetIndex: number, currentIndex: number) => {
-        setAnimationDirection(targetIndex > currentIndex ? 'forward' : 'backward');
+        // Use helper function for direction
+        setAnimationDirection(getNavigationDirection(targetIndex, currentIndex));
         setIsTransitioning(true);
 
         // If moving backward, remove completions for the target step and all steps after it
         if (targetIndex < currentIndex) {
-            // Special case for first step - clear all completions
-            if (targetIndex === 0) {
-                setCompletedSteps([]);
-            } else {
-                // Normal backward navigation logic
-                setCompletedSteps(prev => {
-                    const filtered = prev.filter(completedStep => {
-                        // For the target step, always remove it
-                        if (completedStep === step) {
-                            return false;
-                        }
+            // Use helper function for filtering completed steps
+            setCompletedSteps(prev =>
+                filterCompletedStepsForBackwardNav(prev, step, targetIndex, WIZARD_STEPS)
+            );
 
-                        // For other steps, keep only those before the target
-                        const stepIndex = WIZARD_STEPS.findIndex(ws => ws.id === completedStep);
-                        return stepIndex < targetIndex;
-                    });
-
-                    return filtered;
-                });
-            }
-
-            // For backward navigation, prepare state changes but don't switch step yet
-            // This prevents showing new content during fade-out animation
-            const workspaceIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-workspace');
-            const projectIndex = WIZARD_STEPS.findIndex(s => s.id === 'adobe-project');
+            // Get Adobe step indices for state clearing logic
+            const adobeIndices = getAdobeStepIndices(WIZARD_STEPS);
 
             // Clear any existing transition timer to prevent race conditions
             if (transitionTimerRef.current) {
@@ -428,25 +364,14 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
             // Wait for fade-out to complete, then update state and fade in
             transitionTimerRef.current = setTimeout(() => {
                 setState(prev => {
-                    const newState = { ...prev, currentStep: step };
-
-                    // Clear selections only when going BEFORE selection steps (not TO them)
-                    // Clear workspace and its cache when going before workspace step
-                    if (workspaceIndex !== -1 && targetIndex < workspaceIndex) {
-                        newState.adobeWorkspace = undefined;
-                        newState.workspacesCache = undefined;
-                    }
-
-                    // Clear project and its cache (plus dependent caches) when going before project step
-                    if (projectIndex !== -1 && targetIndex < projectIndex) {
-                        newState.adobeProject = undefined;
-                        newState.projectsCache = undefined;
-                        // Also clear workspace cache since workspaces are project-specific
-                        newState.adobeWorkspace = undefined;
-                        newState.workspacesCache = undefined;
-                    }
-
-                    return newState;
+                    // Use helper function for state updates
+                    const updates = computeStateUpdatesForBackwardNav(
+                        prev,
+                        step,
+                        targetIndex,
+                        adobeIndices
+                    );
+                    return { ...prev, ...updates };
                 });
                 setIsTransitioning(false);
                 transitionTimerRef.current = null;
@@ -484,8 +409,47 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
         return unsubscribe;
     }, [getCurrentStepIndex, navigateToStep, WIZARD_STEPS]);
 
+    // Note: Import mode navigation now handled in goNext (not auto-triggered)
+    // This allows user to see auth success before clicking Continue to proceed
+
     const goNext = useCallback(async () => {
         const currentIndex = getCurrentStepIndex();
+
+        // IMPORT MODE: Skip to review when clicking Continue on auth step
+        // User sees auth success, clicks Continue, then sees "Preparing review" before landing on review
+        if (importedSettings && state.currentStep === 'adobe-auth') {
+            const reviewIndex = WIZARD_STEPS.findIndex(step => step.id === 'review');
+            if (reviewIndex === -1) {
+                log.warn('Review step not found in wizard steps');
+                return;
+            }
+
+            log.info('Import mode: navigating from auth to review');
+
+            // Show preparing overlay (replaces current view content)
+            setIsPreparingReview(true);
+
+            // Brief delay to show the preparing message before navigating
+            importNavTimerRef.current = setTimeout(() => {
+                // Mark all steps before review as completed (so user can navigate back)
+                const stepsToComplete: WizardStep[] = [];
+                for (let i = 0; i < reviewIndex; i++) {
+                    stepsToComplete.push(WIZARD_STEPS[i].id);
+                }
+                setCompletedSteps(stepsToComplete);
+                setHighestCompletedStepIndex(reviewIndex - 1);
+
+                // Navigate to review
+                navigateToStep('review', reviewIndex, currentIndex);
+
+                // Clear loading state after navigation completes
+                importNavClearTimerRef.current = setTimeout(() => {
+                    setIsPreparingReview(false);
+                }, TIMEOUTS.STEP_TRANSITION);
+            }, TIMEOUTS.IMPORT_TRANSITION_FEEDBACK);
+
+            return; // Exit early - don't do normal navigation
+        }
 
         if (currentIndex < WIZARD_STEPS.length - 1) {
             const nextStep = WIZARD_STEPS[currentIndex + 1];
@@ -516,7 +480,7 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
                 setIsConfirmingSelection(false);
             }
         }
-    }, [state, completedSteps, highestCompletedStepIndex, getCurrentStepIndex, navigateToStep, WIZARD_STEPS]);
+    }, [state, completedSteps, highestCompletedStepIndex, getCurrentStepIndex, navigateToStep, WIZARD_STEPS, importedSettings]);
 
     const handleCancel = useCallback(() => {
         vscode.postMessage('cancel');
@@ -563,6 +527,25 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
     }, [meshDeployment.state, meshDeployment.retry, handleMeshDeploymentCancel, goNext]);
 
     const renderStep = () => {
+        // Import mode: Show loading view during transition to review
+        // Uses same UI pattern as project/workspace loading states
+        if (isPreparingReview) {
+            return (
+                <SingleColumnLayout>
+                    <Heading level={2} marginBottom="size-300">
+                        Preparing Review
+                    </Heading>
+                    <CenteredFeedbackContainer>
+                        <LoadingDisplay
+                            size="L"
+                            message="Preparing your project review..."
+                            subMessage="Loading your imported settings"
+                        />
+                    </CenteredFeedbackContainer>
+                </SingleColumnLayout>
+            );
+        }
+
         const props = {
             state,
             updateState,
@@ -660,8 +643,8 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
                         <LoadingOverlay isVisible={isConfirmingSelection} />
                     </div>
 
-                    {/* Footer - hidden on project-creation and mesh-deployment (they have their own buttons) */}
-                    {!isLastStep && state.currentStep !== 'mesh-deployment' && (
+                    {/* Footer - hidden on project-creation, mesh-deployment (own buttons), and during preparing review transition */}
+                    {!isLastStep && state.currentStep !== 'mesh-deployment' && !isPreparingReview && (
                         <PageFooter
                             leftContent={
                                 <Button

@@ -24,3 +24,6 @@ export type { PageLayoutProps } from './PageLayout';
 
 export { CenteredFeedbackContainer } from './CenteredFeedbackContainer';
 export type { CenteredFeedbackContainerProps } from './CenteredFeedbackContainer';
+
+export { SingleColumnLayout } from './SingleColumnLayout';
+export type { SingleColumnLayoutProps } from './SingleColumnLayout';

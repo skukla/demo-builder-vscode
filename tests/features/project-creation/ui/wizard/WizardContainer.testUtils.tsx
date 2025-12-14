@@ -23,17 +23,45 @@ export const createMockComponentDefaults = (): ComponentSelection => ({
 });
 
 // Note: Welcome step removed in Step 3 - wizard starts at adobe-auth
+// Note: api-mesh step disabled - mesh deployment now happens in project-creation
 export const createMockWizardSteps = () => [
     { id: 'adobe-auth', name: 'Adobe Authentication', enabled: true },
     { id: 'adobe-project', name: 'Adobe Project', enabled: true },
     { id: 'adobe-workspace', name: 'Adobe Workspace', enabled: true },
     { id: 'component-selection', name: 'Component Selection', enabled: true },
     { id: 'prerequisites', name: 'Prerequisites', enabled: true },
-    { id: 'api-mesh', name: 'API Mesh', enabled: true },
+    { id: 'api-mesh', name: 'API Mesh', enabled: false },  // Disabled: mesh deploys in project-creation
     { id: 'settings', name: 'Settings', enabled: true },
     { id: 'review', name: 'Review', enabled: true },
     { id: 'project-creation', name: 'Creating Project', enabled: true },
 ];
+
+// Helper to create mock imported settings for import flow tests
+export const createMockImportedSettings = () => ({
+    version: '1.0.0',
+    exportedFrom: 'Demo Builder',
+    adobe: {
+        orgId: 'org123',
+        orgName: 'Test Organization',
+        projectId: 'proj456',
+        projectName: 'Test Project',
+        workspaceId: 'ws789',
+        workspaceName: 'Test Workspace',
+    },
+    selections: {
+        frontend: 'citisignal-nextjs',
+        backend: 'commerce-paas',
+        dependencies: ['commerce-mesh'],
+        integrations: [],
+        appBuilder: [],
+    },
+    configs: {
+        'citisignal-nextjs': { port: 3000 },
+    },
+    source: {
+        project: 'my-existing-project',
+    },
+});
 
 export const createMockComponentsDataResponse = () => ({
     success: true,
