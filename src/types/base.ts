@@ -110,9 +110,14 @@ export type ProjectStatus =
 
 export interface AdobeConfig {
     projectId: string;
+    /** Internal project name/slug (e.g., "833BronzeShark") */
     projectName: string;
+    /** Human-readable project title (e.g., "Citisignal Headless") */
+    projectTitle?: string;
     organization: string;
     workspace: string;
+    /** Human-readable workspace title */
+    workspaceTitle?: string;
     authenticated: boolean;
 }
 

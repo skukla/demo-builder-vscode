@@ -23,9 +23,15 @@ export interface SettingsAdobeContext {
     orgId?: string;
     orgName?: string;
     projectId?: string;
+    /** Internal project name/slug (e.g., "833BronzeShark") */
     projectName?: string;
+    /** Human-readable project title (e.g., "Citisignal Headless") */
+    projectTitle?: string;
     workspaceId?: string;
+    /** Internal workspace name */
     workspaceName?: string;
+    /** Human-readable workspace title */
+    workspaceTitle?: string;
 }
 
 /**
