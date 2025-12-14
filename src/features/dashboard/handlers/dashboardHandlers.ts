@@ -682,7 +682,9 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
         await syncMeshStatus(project, verificationResult);
         await context.stateManager.saveProject(project);
 
-        await handleRequestStatus(context);
+        // Note: Do NOT call handleRequestStatus() here - it would create an infinite loop
+        // since handleRequestStatus() triggers verifyMeshDeployment() in the background.
+        // The UI is updated via meshStatusUpdate message below.
 
         if (context.panel) {
             await context.panel.webview.postMessage({

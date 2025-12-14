@@ -10,7 +10,7 @@ import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { validateProjectPath } from '@/core/validation/securityValidation';
-import { TIMEOUTS } from '@/core/utils';
+import { TIMEOUTS, showWebviewQuickPick } from '@/core/utils';
 import { toError } from '@/types/typeGuards';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
@@ -369,11 +369,10 @@ export const handleCopyFromExisting: MessageHandler = async (
             detail: project.path,
         }));
 
-        // Show QuickPick
-        const selected = await vscode.window.showQuickPick(items, {
-            placeHolder: 'Select a project to copy settings from',
+        // Show QuickPick (use webview-safe utility for proper keyboard handling)
+        const selected = await showWebviewQuickPick(items, {
             title: 'Copy Settings from Project',
-            ignoreFocusOut: true,
+            placeholder: 'Select a project to copy settings from',
         });
 
         if (!selected) {
