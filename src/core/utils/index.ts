@@ -26,3 +26,6 @@ export { formatDuration, formatMinutes } from './timeFormatting';
 export * from './promiseUtils';
 
 export { ExecutionLock } from './executionLock';
+
+export { showWebviewQuickPick, showWebviewQuickPickMany } from './quickPickUtils';
+export type { WebviewQuickPickOptions } from './quickPickUtils';
