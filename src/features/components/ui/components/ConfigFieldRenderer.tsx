@@ -45,28 +45,8 @@ export function ConfigFieldRenderer({ field, value, error, isTouched, onUpdate, 
         );
     };
 
-    // Special-case: defer MESH_ENDPOINT input
-    if (field.key === 'MESH_ENDPOINT') {
-        const hasValue = value && (value as string).length > 0;
-        const description = hasValue
-            ? 'Auto-filled from API Mesh setup'
-            : (field.description || 'This will be set automatically after Mesh deployment.');
-
-        return (
-            <div key={field.key} id={`field-${field.key}`} className="config-field">
-                <TextField
-                    label={field.label}
-                    value={value as string}
-                    onChange={(val) => onUpdate(field, val)}
-                    placeholder={field.placeholder || 'Will be auto-filled from API Mesh'}
-                    description={description}
-                    isReadOnly
-                    width="100%"
-                    marginBottom="size-200"
-                />
-            </div>
-        );
-    }
+    // Note: MESH_ENDPOINT special-case removed - field is now filtered out in useComponentConfig
+    // (auto-configured during project creation, not shown in Settings Collection)
 
     // Determine if field should be marked as required
     const isFieldRequired = field.required;

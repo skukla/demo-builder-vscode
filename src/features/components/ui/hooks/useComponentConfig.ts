@@ -58,13 +58,13 @@ interface UseComponentConfigReturn {
 }
 
 // Service group definitions with order
+// Note: 'mesh' group removed - MESH_ENDPOINT is auto-configured during project creation
 const SERVICE_GROUP_DEFS: ServiceGroupDef[] = [
     { id: 'adobe-commerce', label: 'Adobe Commerce', order: 1, fieldOrder: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT', 'ADOBE_COMMERCE_WEBSITE_CODE', 'ADOBE_COMMERCE_STORE_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', 'ADOBE_COMMERCE_CUSTOMER_GROUP', 'ADOBE_COMMERCE_ADMIN_USERNAME', 'ADOBE_COMMERCE_ADMIN_PASSWORD'] },
     { id: 'catalog-service', label: 'Catalog Service', order: 2, fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_API_KEY'] },
-    { id: 'mesh', label: 'API Mesh', order: 3 },
-    { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
-    { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
-    { id: 'experience-platform', label: 'Experience Platform', order: 6 },
+    { id: 'adobe-assets', label: 'Adobe Assets', order: 3 },
+    { id: 'integration-service', label: 'Kukla Integration Service', order: 4 },
+    { id: 'experience-platform', label: 'Experience Platform', order: 5 },
     { id: 'other', label: 'Additional Settings', order: 99 },
 ];
 
@@ -181,6 +181,9 @@ export function useComponentConfig({
 
         selectedComponents.forEach(({ id, data }) => {
             const addField = (envVarKey: string) => {
+                // Skip MESH_ENDPOINT - auto-configured during project creation
+                if (envVarKey === 'MESH_ENDPOINT') return;
+
                 const envVarDef = envVarDefs[envVarKey];
                 if (envVarDef) {
                     if (!fieldMap.has(envVarKey)) {
@@ -242,27 +245,8 @@ export function useComponentConfig({
         });
     }, [serviceGroups]);
 
-    // Auto-fill mesh endpoint
-    useEffect(() => {
-        const meshEndpoint = state.apiMesh?.endpoint;
-        if (meshEndpoint) {
-            const meshEndpointField = serviceGroups.flatMap(g => g.fields).find(f => f.key === 'MESH_ENDPOINT');
-            if (meshEndpointField) {
-                setComponentConfigs(prev => {
-                    const newConfigs = { ...prev };
-                    let needsUpdate = false;
-                    meshEndpointField.componentIds.forEach(componentId => {
-                        if (!newConfigs[componentId]) newConfigs[componentId] = {};
-                        if (newConfigs[componentId]['MESH_ENDPOINT'] !== meshEndpoint) {
-                            newConfigs[componentId]['MESH_ENDPOINT'] = meshEndpoint;
-                            needsUpdate = true;
-                        }
-                    });
-                    return needsUpdate ? newConfigs : prev;
-                });
-            }
-        }
-    }, [state.apiMesh?.endpoint, serviceGroups]);
+    // Note: Auto-fill mesh endpoint effect removed - MESH_ENDPOINT is now auto-configured
+    // during project creation (after mesh deployment), not collected in Settings Collection
 
     // Validation
     useEffect(() => {
@@ -273,9 +257,10 @@ export function useComponentConfig({
 
         serviceGroups.forEach(group => {
             group.fields.forEach(field => {
-                const isDeferredField = field.key === 'MESH_ENDPOINT';
+                // Note: MESH_ENDPOINT deferred field check removed - field is now filtered out entirely
+                // (auto-configured during project creation)
 
-                if (field.required && !isDeferredField) {
+                if (field.required) {
                     const hasValue = field.componentIds.some(compId => componentConfigs[compId]?.[field.key]);
                     if (!hasValue) {
                         allValid = false;
