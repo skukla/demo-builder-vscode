@@ -7,6 +7,14 @@ import { ComponentSelection } from '@/types/webview';
  * Shared test utilities for WizardContainer tests
  */
 
+/**
+ * Test-specific timing constants (SOP §3 compliance)
+ */
+const TEST_TIMEOUTS = {
+    /** Delay for test cleanup to allow pending timers/promises to complete */
+    CLEANUP_DELAY: 50,
+} as const;
+
 // Mock vscode API functions
 export const mockPostMessage = jest.fn();
 export const mockRequest = jest.fn();
@@ -95,6 +103,16 @@ export const setupDefaultMockRequest = () => {
         if (type === 'get-components-data') {
             return Promise.resolve(createMockComponentsDataResponse());
         }
+        if (type === 'get-projects') {
+            // Return projects with proper titles for hydration tests
+            // Format matches real handler response: { success, data }
+            return Promise.resolve({
+                success: true,
+                data: [
+                    { id: 'proj456', name: 'Test Project', title: 'Test Project Title' }
+                ]
+            });
+        }
         return Promise.resolve({ success: true });
     });
 };
@@ -111,7 +129,7 @@ export const setupTest = () => {
 export const cleanupTest = async () => {
     jest.resetAllMocks();
     // Wait for any pending timers/promises to complete
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, TEST_TIMEOUTS.CLEANUP_DELAY));
 };
 
 // Custom render with theme provider wrapper

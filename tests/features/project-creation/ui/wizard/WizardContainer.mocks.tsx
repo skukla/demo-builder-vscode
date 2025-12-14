@@ -20,6 +20,15 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
+// Mock WebviewClient for request calls (e.g., project title hydration)
+jest.mock('@/core/ui/utils/WebviewClient', () => ({
+    webviewClient: {
+        request: (...args: any[]) => mockRequest(...args),
+        postMessage: (...args: any[]) => mockPostMessage(...args),
+        onMessage: (...args: any[]) => mockOnMessage(...args),
+    },
+}));
+
 // Mock all step components
 jest.mock('@/features/project-creation/ui/steps/WelcomeStep', () => ({
     WelcomeStep: ({ setCanProceed }: any) => {

@@ -146,9 +146,15 @@ export interface ImportedSettings {
         orgId?: string;
         orgName?: string;
         projectId?: string;
+        /** Internal project name/slug (e.g., "833BronzeShark") */
         projectName?: string;
+        /** Human-readable project title (e.g., "Citisignal Headless") */
+        projectTitle?: string;
         workspaceId?: string;
+        /** Internal workspace name */
         workspaceName?: string;
+        /** Human-readable workspace title */
+        workspaceTitle?: string;
     };
 }
 
@@ -180,8 +186,8 @@ export function initializeComponentsFromImport(
  */
 export interface InitialAdobeContext {
     org?: { id: string; code: string; name: string };
-    project?: { id: string; name: string };
-    workspace?: { id: string; name: string };
+    project?: { id: string; name: string; title?: string };
+    workspace?: { id: string; name: string; title?: string };
 }
 
 /**
@@ -204,16 +210,22 @@ export function initializeAdobeContextFromImport(
     }
 
     if (importedSettings?.adobe?.projectId) {
+        const projectName = importedSettings.adobe.projectName || '';
         result.project = {
             id: importedSettings.adobe.projectId,
-            name: importedSettings.adobe.projectName || '',
+            name: projectName,
+            // Use projectTitle if available, otherwise fall back to name
+            title: importedSettings.adobe.projectTitle || projectName,
         };
     }
 
     if (importedSettings?.adobe?.workspaceId) {
+        const workspaceName = importedSettings.adobe.workspaceName || '';
         result.workspace = {
             id: importedSettings.adobe.workspaceId,
-            name: importedSettings.adobe.workspaceName || '',
+            name: workspaceName,
+            // Use workspaceTitle if available, otherwise fall back to name
+            title: importedSettings.adobe.workspaceTitle || workspaceName,
         };
     }
 
@@ -342,3 +354,4 @@ export function getEnabledWizardSteps(
         .filter(step => step.enabled)
         .map(step => ({ id: step.id as WizardStep, name: step.name }));
 }
+

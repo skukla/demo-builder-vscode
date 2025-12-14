@@ -3,6 +3,7 @@ import { useDebouncedLoading } from '@/core/ui/hooks/useDebouncedLoading';
 import { WizardState } from '@/types/webview';
 import { ErrorCode } from '@/types/errorCodes';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { needsTitleHydration } from '@/core/ui/utils/titleHelpers';
 
 /**
  * Configuration options for the selection step hook
@@ -55,6 +56,25 @@ export interface UseSelectionStepOptions<T extends { id: string }> {
  *
  * @template T - Item type that must have an `id` property
  */
+/**
+ * Get initial search query value from wizard state.
+ *
+ * Extracts complex inline expression (SOP §4 compliance):
+ * `searchFilterKey && typeof state[searchFilterKey] === 'string' ? state[searchFilterKey] as string : ''`
+ *
+ * @param state - Current wizard state
+ * @param searchFilterKey - Key where search filter is stored
+ * @returns Persisted search query or empty string
+ */
+function getInitialSearchQuery(
+  state: WizardState,
+  searchFilterKey: keyof WizardState | undefined,
+): string {
+  if (!searchFilterKey) return '';
+  const value = state[searchFilterKey];
+  return typeof value === 'string' ? value : '';
+}
+
 export interface UseSelectionStepResult<T extends { id: string }> {
   /** Cached items from wizard state */
   items: T[];
@@ -170,9 +190,7 @@ export function useSelectionStep<T extends { id: string }>(
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<ErrorCode | null>(null);
   const [searchQuery, setSearchQuery] = useState(
-    searchFilterKey && typeof state[searchFilterKey] === 'string'
-      ? (state[searchFilterKey] as string)
-      : '',
+    () => getInitialSearchQuery(state, searchFilterKey),
   );
 
   // Debounce loading state: only show loading UI if operation takes >300ms
@@ -252,13 +270,8 @@ export function useSelectionStep<T extends { id: string }>(
         // (e.g., when imported settings only have ID, populate title/name/description)
         if (selectedItem?.id && onSelect) {
           const matchingItem = (data as T[]).find(item => item.id === selectedItem.id);
-          if (matchingItem) {
-            // Only update if we have more complete data (e.g., title exists in list but not in selectedItem)
-            const selectedHasTitle = 'title' in selectedItem && selectedItem.title;
-            const matchingHasTitle = 'title' in matchingItem && matchingItem.title;
-            if (!selectedHasTitle && matchingHasTitle) {
-              onSelect(matchingItem);
-            }
+          if (matchingItem && needsTitleHydration(selectedItem, matchingItem)) {
+            onSelect(matchingItem);
           }
         }
       } else if (data && typeof data === 'object' && 'error' in data) {
@@ -293,6 +306,18 @@ export function useSelectionStep<T extends { id: string }>(
     autoSelectCustom,
     onSelect,
   ]);
+
+  // Hydrate selected item from cached data if needed
+  // This handles the case where items are already cached but selectedItem has incomplete data
+  // (e.g., when copying old projects that don't have projectTitle stored)
+  useEffect(() => {
+    if (!selectedItem?.id || !onSelect || items.length === 0) return;
+
+    const matchingItem = items.find(item => item.id === selectedItem.id);
+    if (matchingItem && needsTitleHydration(selectedItem, matchingItem)) {
+      onSelect(matchingItem);
+    }
+  }, [items, selectedItem, onSelect]);
 
   // Select an item
   const selectItem = useCallback((item: T) => {

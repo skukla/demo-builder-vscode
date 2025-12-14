@@ -37,7 +37,9 @@ import { ReviewStep, ComponentsData } from '@/features/project-creation/ui/steps
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
+import { hasValidTitle } from '@/core/ui/utils/titleHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { useFocusTrap, FOCUSABLE_SELECTOR } from '@/core/ui/hooks';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
@@ -66,8 +68,9 @@ const buildProjectConfig = (wizardState: WizardState) => {
             organization: wizardState.adobeOrg?.id,
             projectId: wizardState.adobeProject?.id,
             projectName: wizardState.adobeProject?.name,
+            projectTitle: wizardState.adobeProject?.title,
             workspace: wizardState.adobeWorkspace?.id,
-            workspaceName: wizardState.adobeWorkspace?.name,
+            workspaceTitle: wizardState.adobeWorkspace?.title,
         },
         components: {
             frontend: wizardState.components?.frontend,
@@ -192,6 +195,45 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
         type: string;
         data: ComponentsData;
     } | null>(null);
+
+    // Hydrate project title from API if needed (handles old projects without projectTitle stored)
+    // This runs once when wizard opens with copied/imported data that has title === name (fallback)
+    useEffect(() => {
+        const project = state.adobeProject;
+        if (!project?.id || !project.name) return;
+        if (hasValidTitle(project)) return;
+
+        log.debug('Project title needs hydration, fetching from API', {
+            id: project.id,
+            currentTitle: project.title
+        });
+
+        // Fetch projects from API to get correct title
+        webviewClient.request<{ success: boolean; data?: Array<{ id: string; name: string; title?: string }> }>('get-projects')
+            .then(response => {
+                const projects = response?.data;
+                if (!Array.isArray(projects)) return;
+
+                const matchingProject = projects.find(p => p.id === project.id);
+                if (hasValidTitle(matchingProject)) {
+                    log.info('Hydrating project title from API', {
+                        from: project.title,
+                        to: matchingProject?.title
+                    });
+                    setState(prev => ({
+                        ...prev,
+                        adobeProject: {
+                            ...prev.adobeProject!,
+                            title: matchingProject?.title,
+                        },
+                    }));
+                }
+            })
+            .catch(err => {
+                log.warn('Failed to hydrate project title', err);
+            });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once on mount - intentionally not reactive to state changes
 
     // Listen for feedback messages from extension
     // Register ONCE on mount - check conditions inside functional update to avoid stale closures
