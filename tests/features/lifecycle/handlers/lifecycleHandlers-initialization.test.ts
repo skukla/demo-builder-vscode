@@ -31,7 +31,7 @@ jest.mock('vscode', () => ({
         openExternal: jest.fn()
     }
 }), { virtual: true });
-jest.mock('@/core/validation/securityValidation');
+jest.mock('@/core/validation');
 
 // Mock component handlers module
 jest.mock('@/features/components/handlers/componentHandlers', () => ({

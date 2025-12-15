@@ -11,7 +11,7 @@
  * Total tests: 2
  */
 
-import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
+import { sanitizeErrorForLogging } from '@/core/validation';
 
 describe('CheckUpdatesCommand Security - Information Disclosure Prevention', () => {
     describe('Error Message Sanitization', () => {

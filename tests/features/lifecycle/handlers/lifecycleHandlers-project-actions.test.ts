@@ -11,7 +11,7 @@ import {
     handleBrowseFiles
 } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
-import * as securityValidation from '@/core/validation/securityValidation';
+import * as securityValidation from '@/core/validation';
 import { createMockContext } from './lifecycleHandlers.testUtils';
 
 // Mock vscode inline to avoid hoisting issues
@@ -35,7 +35,7 @@ jest.mock('vscode', () => ({
         openExternal: jest.fn()
     }
 }), { virtual: true });
-jest.mock('@/core/validation/securityValidation');
+jest.mock('@/core/validation');
 
 // Import the mocked vscode module
 import * as vscode from 'vscode';

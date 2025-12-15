@@ -11,10 +11,10 @@ import {
     handleSelectWorkspace
 } from '@/features/authentication/handlers/workspaceHandlers';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
-import * as securityValidation from '@/core/validation/securityValidation';
+import * as securityValidation from '@/core/validation';
 
 // Mock dependencies
-jest.mock('@/core/validation/securityValidation');
+jest.mock('@/core/validation');
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         WORKSPACE_LIST: 30000
