@@ -203,12 +203,13 @@ describe('Wizard Step Configuration', () => {
         const fs = require('fs').promises;
         const path = require('path');
 
-        const wizardContainerPath = path.resolve(
+        // After refactoring, getFirstEnabledStep is used in the extracted useWizardState hook
+        const wizardStateHookPath = path.resolve(
             __dirname,
-            '../../../../src/features/project-creation/ui/wizard/WizardContainer.tsx'
+            '../../../../src/features/project-creation/ui/wizard/hooks/useWizardState.ts'
         );
 
-        const content = await fs.readFile(wizardContainerPath, 'utf-8');
+        const content = await fs.readFile(wizardStateHookPath, 'utf-8');
 
         // Should compute first step from config using getFirstEnabledStep
         expect(content).toMatch(/getFirstEnabledStep/);

@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import type { WizardState, WizardStep } from '@/types/webview';
 import {
     getNavigationDirection,
-    filterCompletedStepsByDependency,
+    filterCompletedStepsForBackwardNav,
     getAdobeStepIndices,
     computeStateUpdatesForBackwardNav,
     buildProjectConfig,
@@ -130,9 +130,9 @@ export function useWizardNavigation({
         setAnimationDirection(getNavigationDirection(targetIndex, currentIndex));
         setIsTransitioning(true);
 
-        // If moving backward, use dependency-based invalidation (not index-based)
+        // If moving backward, filter completed steps (remove target step and all steps after it)
         if (targetIndex < currentIndex) {
-            setCompletedSteps(prev => filterCompletedStepsByDependency(prev, step));
+            setCompletedSteps(prev => filterCompletedStepsForBackwardNav(prev, step, targetIndex, WIZARD_STEPS));
 
             const adobeIndices = getAdobeStepIndices(WIZARD_STEPS);
 
