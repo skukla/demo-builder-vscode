@@ -11,7 +11,7 @@ import {
     PresetDefinition,
 } from '@/types';
 import { ProjectConfig } from '@/types/handlers';
-import { validateNodeVersion } from '@/core/validation/securityValidation';
+import { validateNodeVersion } from '@/core/validation';
 
 export class ComponentRegistryManager {
     private rawLoader: ConfigurationLoader<RawComponentRegistry>;

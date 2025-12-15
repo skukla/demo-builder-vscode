@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { BaseCommand } from '@/core/base';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
-import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
+import { sanitizeErrorForLogging } from '@/core/validation';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
 import { UpdateManager, UpdateCheckResult, MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
