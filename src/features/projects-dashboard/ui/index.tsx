@@ -71,13 +71,11 @@ const ProjectsDashboardApp: React.FC = () => {
         }
 
         // Subscribe to configuration changes (live updates from VS Code settings)
-        // Note: Session overrides are handled on the backend, so we can apply config changes here
-        // The backend will continue to return the session override until it's cleared
+        // Just update the view mode directly - no need to re-fetch projects
         const unsubscribeConfig = webviewClient.onMessage('configChanged', (data) => {
             const configData = data as { projectsViewMode?: 'cards' | 'rows' } | undefined;
             if (configData?.projectsViewMode) {
-                // Re-fetch to get the proper view mode (backend handles override logic)
-                fetchProjects(true);
+                setInitialViewMode(configData.projectsViewMode);
             }
         });
 
