@@ -1658,6 +1658,143 @@ button[class*="spectrum-Button"][disabled],
     border-left: 2px solid var(--spectrum-global-color-gray-300) !important;
 }
 
+/* ===========================================
+   CopyableText Component Styles
+   SOP §11: Extracted from inline style objects
+   =========================================== */
+.copyable-text {
+    font-family: var(--spectrum-alias-body-text-font-family, monospace) !important;
+    font-size: 0.9em !important;
+    background-color: var(--db-code-background) !important;
+    padding: 4px 10px !important;
+    border-radius: 4px !important;
+    color: var(--spectrum-global-color-blue-700) !important;
+    border: 1px solid var(--db-code-border) !important;
+    font-weight: 600 !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    transition: background-color 0.15s ease !important;
+}
+
+.copyable-text:hover {
+    background-color: var(--spectrum-global-color-gray-200) !important;
+}
+
+.copyable-icon {
+    margin-left: 6px !important;
+    font-size: 1em !important;
+    opacity: 0.7 !important;
+}
+
+.copyable-icon-copied {
+    margin-left: 6px !important;
+    font-size: 1em !important;
+    color: var(--spectrum-global-color-green-600) !important;
+    opacity: 1 !important;
+}
+
+/* ===========================================
+   LoadingOverlay Component Styles
+   SOP §11: Extracted from inline style objects
+   =========================================== */
+.loading-overlay-container {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background-color: var(--db-loading-overlay-bg) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 1000 !important;
+    border-radius: 4px !important;
+    gap: 16px !important;
+}
+
+.loading-overlay-container-opaque {
+    background-color: var(--spectrum-global-color-gray-50) !important;
+}
+
+.loading-overlay-spinner-container {
+    background-color: var(--spectrum-global-color-gray-50) !important;
+    padding: 24px !important;
+    border-radius: 50% !important;
+    box-shadow: 0 4px 12px var(--db-loading-overlay-shadow) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.loading-overlay-spinner {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    border: 3px solid var(--spectrum-global-color-blue-400) !important;
+    border-top-color: transparent !important;
+    animation: loading-overlay-spin 1s linear infinite !important;
+}
+
+@keyframes loading-overlay-spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-overlay-text {
+    color: var(--db-loading-text) !important;
+    font-weight: 500 !important;
+}
+
+/* ===========================================
+   NavigationPanel Component Styles
+   SOP §11: Extracted from inline style objects
+   =========================================== */
+.nav-section-button {
+    width: 100% !important;
+    padding: 12px !important;
+    background: transparent !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 4px !important;
+    transition: all 0.2s ease !important;
+}
+
+.nav-section-button:hover {
+    background: var(--spectrum-global-color-gray-100) !important;
+}
+
+.nav-section-button-active {
+    background: var(--spectrum-global-color-gray-200) !important;
+    border-left: 3px solid var(--spectrum-global-color-blue-500) !important;
+}
+
+.nav-field-button {
+    width: 100% !important;
+    padding: 8px 12px !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    text-align: left !important;
+    transition: all 0.2s !important;
+    border-radius: 4px !important;
+}
+
+.nav-field-button:hover {
+    background: var(--spectrum-global-color-gray-100) !important;
+}
+
+.nav-field-button-active {
+    background: var(--spectrum-global-color-blue-100) !important;
+    border-left: 2px solid var(--spectrum-global-color-blue-500) !important;
+}
+
 /* Status indicator icons (checkmarks, counts) */
 .status-icon-sm {
     font-size: 14px !important;
