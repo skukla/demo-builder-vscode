@@ -1,38 +1,54 @@
+/**
+ * StateManager
+ *
+ * Central orchestrator for project state management. Delegates to specialized services:
+ * - ProjectFileLoader: Loading projects from disk
+ * - ProjectConfigWriter: Writing project config files
+ * - RecentProjectsManager: Managing recent projects list
+ * - ProjectDirectoryScanner: Scanning projects directory
+ */
+
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { Project, StateData, ProcessInfo } from '@/types';
-import { parseJSON, getComponentIds } from '@/types/typeGuards';
+import { parseJSON } from '@/types/typeGuards';
 import { Logger } from '@/core/logging';
-
-interface RecentProject {
-    path: string;
-    name: string;
-    organization?: string;
-    lastOpened: string;
-}
+import { ProjectFileLoader } from './projectFileLoader';
+import { ProjectConfigWriter } from './projectConfigWriter';
+import { RecentProjectsManager, RecentProject } from './recentProjectsManager';
+import { ProjectDirectoryScanner, ProjectSummary } from './projectDirectoryScanner';
 
 export class StateManager {
     private context: vscode.ExtensionContext;
     private state: StateData;
     private stateFile: string;
-    private recentProjectsFile: string;
-    private recentProjects: RecentProject[] = [];
     private _onProjectChanged = new vscode.EventEmitter<Project | undefined>();
     readonly onProjectChanged = this._onProjectChanged.event;
     private logger = new Logger('StateManager');
 
+    // Delegated services
+    private projectFileLoader: ProjectFileLoader;
+    private projectConfigWriter: ProjectConfigWriter;
+    private recentProjectsManager: RecentProjectsManager;
+    private projectDirectoryScanner: ProjectDirectoryScanner;
+
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
         this.stateFile = path.join(os.homedir(), '.demo-builder', 'state.json');
-        this.recentProjectsFile = path.join(os.homedir(), '.demo-builder', 'recent-projects.json');
         this.state = {
             version: 1,
             currentProject: undefined,
             processes: new Map(),
             lastUpdated: new Date(),
         };
+
+        // Initialize delegated services
+        this.projectFileLoader = new ProjectFileLoader(this.logger);
+        this.projectConfigWriter = new ProjectConfigWriter(this.logger);
+        this.recentProjectsManager = new RecentProjectsManager(this.logger);
+        this.projectDirectoryScanner = new ProjectDirectoryScanner(this.logger);
     }
 
     public async initialize(): Promise<void> {
@@ -68,7 +84,7 @@ export class StateManager {
                     validProject = undefined;
                 }
             }
-            
+
             this.state = {
                 version: parsed.version || 1,
                 currentProject: validProject,
@@ -95,13 +111,12 @@ export class StateManager {
             await fs.writeFile(this.stateFile, JSON.stringify(data, null, 2));
         } catch (error) {
             this.logger.error('Failed to save state', error instanceof Error ? error : undefined);
-            throw error;  // Re-throw so caller knows save failed
+            throw error;
         }
     }
 
     /**
      * Check if a path exists on the filesystem
-     * Used as a guard to prevent recreating deleted projects
      */
     private async checkPathExists(pathToCheck: string): Promise<boolean> {
         try {
@@ -118,23 +133,18 @@ export class StateManager {
 
     public async getCurrentProject(): Promise<Project | undefined> {
         // If we have a cached project, reload it from disk to get latest data
-        // This ensures we always have the most up-to-date project state including componentVersions
         if (this.state.currentProject?.path) {
             try {
                 const freshProject = await this.loadProjectFromPath(this.state.currentProject.path);
 
-                // Check if reload failed (returns null on error)
-                // Debug level: expected during project deletion or if files moved
                 if (freshProject === null) {
                     this.logger.debug('Project files not found on disk, using cached version');
                     return this.state.currentProject;
                 }
 
-                // Update cache with fresh data
                 this.state.currentProject = freshProject;
                 return freshProject;
-            } catch (error) {
-                // Fallback for unexpected errors (loadProjectFromPath normally returns null, not throws)
+            } catch {
                 this.logger.debug('Failed to reload project from disk, using cached version');
                 return this.state.currentProject;
             }
@@ -144,24 +154,17 @@ export class StateManager {
 
     public async saveProject(project: Project): Promise<void> {
         // GUARD: Prevent stale background saves from recreating deleted projects
-        // When a project is deleted:
-        //   1. Files are deleted from disk
-        //   2. clearProject() sets this.state.currentProject = undefined
-        // If a background async operation (like mesh status check) tries to save
-        // after deletion, we should skip it rather than recreate the project.
         const projectPathExists = await this.checkPathExists(project.path);
         if (!projectPathExists && !this.state.currentProject) {
-            this.logger.debug(
-                `[StateManager] Blocking save for deleted project: ${project.name}`,
-            );
+            this.logger.debug(`[StateManager] Blocking save for deleted project: ${project.name}`);
             return;
         }
 
         this.state.currentProject = project;
         await this.saveState();
 
-        // Save project-specific config
-        await this.saveProjectConfig(project);
+        // Save project-specific config via delegated service
+        await this.projectConfigWriter.saveProjectConfig(project, this.state.currentProject?.path);
 
         // Update context variable for view switching
         await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', true);
@@ -170,107 +173,16 @@ export class StateManager {
         this._onProjectChanged.fire(project);
     }
 
-    private async saveProjectConfig(project: Project): Promise<void> {
-        // GUARD: Prevent recreating deleted project directories
-        // Background async operations (like mesh status checks) may call saveProject()
-        // after a project has been deleted. Without this guard, fs.mkdir() would
-        // recreate the deleted directory, causing "ghost" projects to reappear.
-        try {
-            await fs.access(project.path);
-        } catch {
-            // Directory doesn't exist - check if this is expected (project was deleted)
-            // If current project is undefined or different, this is a stale save - skip it
-            if (!this.state.currentProject || this.state.currentProject.path !== project.path) {
-                this.logger.debug(
-                    `[StateManager] Skipping save for deleted project: ${project.name} (path: ${project.path})`,
-                );
-                return;
-            }
-            // Directory doesn't exist but this IS the current project - create it
-            // This handles the case of a new project being created
-        }
-
-        // Ensure directory exists (only for active projects)
-        try {
-            await fs.mkdir(project.path, { recursive: true });
-        } catch (error) {
-            this.logger.error('Failed to create project directory', error instanceof Error ? error : undefined);
-            throw error;  // Re-throw so caller knows directory creation failed
-        }
-
-        // Update .demo-builder.json manifest with latest state
-        try {
-            const manifestPath = path.join(project.path, '.demo-builder.json');
-            const manifest = {
-                name: project.name,
-                version: '1.0.0',
-                // Type-safe Date handling: Handle both Date objects and ISO strings from persistence
-                created: (project.created instanceof Date
-                    ? project.created
-                    : new Date(project.created)
-                ).toISOString(),
-                lastModified: new Date().toISOString(),
-                adobe: project.adobe,
-                commerce: project.commerce,
-                componentSelections: project.componentSelections,
-                componentInstances: project.componentInstances,
-                componentConfigs: project.componentConfigs,
-                componentVersions: project.componentVersions,
-                meshState: project.meshState,
-                components: getComponentIds(project.componentInstances),
-            };
-
-            await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
-        } catch (error) {
-            this.logger.error('Failed to update project manifest', error instanceof Error ? error : undefined);
-            throw error;  // Re-throw so caller knows manifest creation failed
-        }
-
-        // Create .env file
-        await this.createEnvFile(project);
-    }
-
-    private async createEnvFile(project: Project): Promise<void> {
-        const envPath = path.join(project.path, '.env');
-
-        const envContent = [
-            '# Demo Builder Configuration',
-            `PROJECT_NAME=${project.name}`,
-            '',
-            '# Commerce Configuration',
-            `COMMERCE_URL=${project.commerce?.instance.url || ''}`,
-            `COMMERCE_ENV_ID=${project.commerce?.instance.environmentId || ''}`,
-            `COMMERCE_STORE_CODE=${project.commerce?.instance.storeCode || ''}`,
-            `COMMERCE_STORE_VIEW=${project.commerce?.instance.storeView || ''}`,
-            '',
-            '# API Keys',
-            `CATALOG_API_KEY=${project.commerce?.services.catalog?.apiKey || ''}`,
-            `SEARCH_API_KEY=${project.commerce?.services.liveSearch?.apiKey || ''}`,
-            '',
-            '# Note: Component-specific environment variables are now stored in each component\'s .env file',
-        ].join('\n');
-
-        try {
-            await fs.writeFile(envPath, envContent);
-        } catch (error) {
-            this.logger.error('Failed to create .env file', error instanceof Error ? error : undefined);
-            throw error;  // Re-throw so caller knows .env creation failed
-        }
-    }
-
     public async clearProject(): Promise<void> {
         this.state.currentProject = undefined;
         this.state.processes.clear();
         await this.saveState();
 
-        // Update context variable for view switching
         await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', false);
-
         this._onProjectChanged.fire(undefined);
     }
 
     public async clearAll(): Promise<void> {
-        // Clear all state
         this.state = {
             version: 1,
             currentProject: undefined,
@@ -278,19 +190,15 @@ export class StateManager {
             lastUpdated: new Date(),
         };
 
-        // Clear context state
         await this.context.workspaceState.update('demoBuilder.state', undefined);
 
-        // Delete state file
         try {
             await fs.unlink(this.stateFile);
         } catch {
             // Ignore if file doesn't exist
         }
 
-        // Update context variable for view switching
         await vscode.commands.executeCommand('setContext', 'demoBuilder.projectLoaded', false);
-
         this._onProjectChanged.fire(undefined);
     }
 
@@ -310,289 +218,53 @@ export class StateManager {
 
     public async reload(): Promise<void> {
         await this.loadState();
-        await this.loadRecentProjects();
+        await this.recentProjectsManager.load();
         this._onProjectChanged.fire(this.state.currentProject);
     }
 
-    // Recent Projects Management
-    private async loadRecentProjects(): Promise<void> {
-        try {
-            const data = await fs.readFile(this.recentProjectsFile, 'utf-8');
-            const parsed = parseJSON<RecentProject[]>(data);
-            if (!parsed) {
-                // Debug level: expected on first run or if file is empty/corrupted
-                this.logger.debug('Recent projects file empty or invalid, using empty list');
-                this.recentProjects = [];
-                return;
-            }
-            this.recentProjects = parsed;
-            
-            // Validate that paths still exist
-            this.recentProjects = await Promise.all(
-                this.recentProjects.map(async (project) => {
-                    try {
-                        await fs.access(project.path);
-                        return project;
-                    } catch {
-                        return null;
-                    }
-                }),
-            ).then(projects => projects.filter(p => p !== null));
-            
-            // Limit to 10 recent projects
-            this.recentProjects = this.recentProjects.slice(0, 10);
-            await this.saveRecentProjects();
-        } catch {
-            this.recentProjects = [];
-        }
-    }
-
-    private async saveRecentProjects(): Promise<void> {
-        try {
-            await fs.writeFile(
-                this.recentProjectsFile,
-                JSON.stringify(this.recentProjects, null, 2),
-                'utf-8',
-            );
-        } catch (error) {
-            this.logger.error('Failed to save recent projects', error instanceof Error ? error : undefined);
-        }
-    }
+    // Recent Projects Management (delegated)
 
     public async getRecentProjects(): Promise<RecentProject[]> {
-        await this.loadRecentProjects();
-        return this.recentProjects;
+        return this.recentProjectsManager.getAll();
     }
 
     public async addToRecentProjects(project: Project): Promise<void> {
-        await this.loadRecentProjects();
-        
-        // Remove if already exists
-        this.recentProjects = this.recentProjects.filter(p => p.path !== project.path);
-        
-        // Add to beginning
-        this.recentProjects.unshift({
-            path: project.path,
-            name: project.name,
-            organization: project.organization,
-            lastOpened: new Date().toISOString(),
-        });
-        
-        // Keep only 10 most recent
-        this.recentProjects = this.recentProjects.slice(0, 10);
-        
-        await this.saveRecentProjects();
+        return this.recentProjectsManager.add(project);
     }
 
     public async removeFromRecentProjects(projectPath: string): Promise<void> {
-        await this.loadRecentProjects();
-        this.recentProjects = this.recentProjects.filter(p => p.path !== projectPath);
-        await this.saveRecentProjects();
+        return this.recentProjectsManager.remove(projectPath);
     }
+
+    // Project Loading (delegated)
 
     /**
      * Load a project from a directory path
-     * @param projectPath - Path to the project directory
-     * @param terminalProvider - Optional function to get terminals (for testing)
      */
     public async loadProjectFromPath(
         projectPath: string,
         terminalProvider: () => readonly vscode.Terminal[] = () => vscode.window.terminals,
     ): Promise<Project | null> {
-        try {
-            // Check if path exists
-            await fs.access(projectPath);
+        const project = await this.projectFileLoader.loadProject(projectPath, terminalProvider);
 
-            // Check for .demo-builder.json manifest
-            const manifestPath = path.join(projectPath, '.demo-builder.json');
-            await fs.access(manifestPath);
-
-            // Load project manifest
-            const manifestData = await fs.readFile(manifestPath, 'utf-8');
-            const manifest = parseJSON<{
-                name?: string;
-                created?: string;
-                lastModified?: string;
-                adobe?: Project['adobe'];
-                commerce?: Project['commerce'];
-                componentInstances?: Project['componentInstances'];
-                componentSelections?: Project['componentSelections'];
-                componentConfigs?: Project['componentConfigs'];
-                componentVersions?: Project['componentVersions'];
-                meshState?: Project['meshState'];
-            }>(manifestData);
-            if (!manifest) {
-                throw new Error('Failed to parse project manifest');
-            }
-            
-            // Reconstruct componentInstances from components/ directory
-            // This ensures components on disk are tracked even if missing from manifest
-            const discoveredComponents: Record<string, import('@/types').ComponentInstance> = {};
-            const componentsDir = path.join(projectPath, 'components');
-
-            try {
-                const componentDirs = await fs.readdir(componentsDir);
-
-                for (const componentId of componentDirs) {
-                    // Skip snapshot directories (created during component updates)
-                    if (componentId.includes('.snapshot-')) {
-                        continue;
-                    }
-
-                    const componentPath = path.join(componentsDir, componentId);
-                    const stat = await fs.stat(componentPath);
-
-                    if (stat.isDirectory()) {
-                        // Create a basic component instance for any component on disk
-                        discoveredComponents[componentId] = {
-                            id: componentId,
-                            name: componentId,
-                            type: 'dependency', // Default, will be overridden by manifest if available
-                            status: 'ready',
-                            path: componentPath,
-                            lastUpdated: new Date(),
-                        };
-                    }
-                }
-            } catch {
-                // No components directory or error reading it
-                this.logger.debug('No components directory found or error reading it');
-            }
-
-            // MERGE: Combine manifest data with discovered components
-            // Manifest data takes priority, but discovered components fill in gaps
-            // This ensures components on disk (like commerce-mesh) are always tracked
-            const mergedComponentInstances: Record<string, import('@/types').ComponentInstance> = {
-                ...discoveredComponents, // Start with all discovered components
-                ...(manifest.componentInstances || {}), // Overlay manifest data (takes priority)
-            };
-
-            // For each discovered component not in manifest, ensure it has a path
-            for (const componentId of Object.keys(discoveredComponents)) {
-                if (mergedComponentInstances[componentId] && !mergedComponentInstances[componentId].path) {
-                    mergedComponentInstances[componentId].path = discoveredComponents[componentId].path;
-                }
-            }
-
-            // Merge componentVersions - ensure discovered components have version entries
-            const mergedComponentVersions = { ...(manifest.componentVersions || {}) };
-            for (const componentId of Object.keys(discoveredComponents)) {
-                if (!mergedComponentVersions[componentId]) {
-                    // Component exists on disk but has no version tracking - add placeholder
-                    mergedComponentVersions[componentId] = {
-                        version: 'unknown',
-                        lastUpdated: new Date().toISOString(),
-                    };
-                    this.logger.debug(`[StateManager] Discovered untracked component: ${componentId}`);
-                }
-            }
-
-            const project: Project = {
-                name: manifest.name || path.basename(projectPath),
-                path: projectPath,
-                status: 'stopped', // Will be updated below if demo is actually running
-                created: manifest.created ? new Date(manifest.created) : new Date(),
-                lastModified: manifest.lastModified ? new Date(manifest.lastModified) : new Date(),
-                adobe: manifest.adobe,
-                commerce: manifest.commerce,
-                componentInstances: mergedComponentInstances,
-                componentSelections: manifest.componentSelections,
-                componentConfigs: manifest.componentConfigs,
-                componentVersions: mergedComponentVersions,
-                meshState: manifest.meshState,
-            };
-            
-            // Detect if demo is actually running by checking for project-specific terminal
-            // This handles cases where extension state was lost but terminal is still alive
-            const frontendComponent = project.componentInstances?.['citisignal-nextjs'];
-            if (frontendComponent) {
-                try {
-                    const projectTerminalName = `${project.name} - Frontend`;
-                    const terminals = terminalProvider();
-                    const hasProjectTerminal = terminals.some(t => t.name === projectTerminalName);
-
-                    if (hasProjectTerminal) {
-                        // This project's demo is running, update status
-                        project.status = 'running';
-                        frontendComponent.status = 'running';
-                    } else {
-                        // No terminal for this project, ensure status is stopped
-                        project.status = 'stopped';
-                        frontendComponent.status = 'ready';
-                    }
-                } catch (error) {
-                    this.logger.error('Error detecting demo status', error instanceof Error ? error : undefined);
-                }
-            }
-            
+        if (project) {
             // Set as current project
             await this.saveProject(project);
-            
+
             // Add to recent projects
             await this.addToRecentProjects(project);
-            
-            return project;
-        } catch (error) {
-            // Check if this is an expected "not found" error (e.g., project was deleted)
-            const isNotFound = error instanceof Error &&
-                (error.message.includes('ENOENT') || (error as NodeJS.ErrnoException).code === 'ENOENT');
-
-            if (isNotFound) {
-                // Project directory doesn't exist - expected after deletion, log at debug
-                this.logger.debug(`[StateManager] Project not found at ${projectPath} (deleted or moved)`);
-            } else {
-                // Unexpected error - log at error level
-                this.logger.error(`Failed to load project from ${projectPath}`, error instanceof Error ? error : undefined);
-            }
-            return null;
         }
+
+        return project;
     }
+
+    // Project Directory Scanning (delegated)
 
     /**
      * Get all projects from the projects directory
      */
-    public async getAllProjects(): Promise<{ name: string; path: string; lastModified: Date }[]> {
-        const projectsDir = path.join(os.homedir(), '.demo-builder', 'projects');
-        const projects: { name: string; path: string; lastModified: Date }[] = [];
-
-        try {
-            const entries = await fs.readdir(projectsDir, { withFileTypes: true });
-
-            for (const entry of entries) {
-                if (entry.isDirectory()) {
-                    const projectPath = path.join(projectsDir, entry.name);
-                    const manifestPath = path.join(projectPath, '.demo-builder.json');
-
-                    // Check if it's a valid project (has manifest)
-                    try {
-                        await fs.access(manifestPath);
-                        const stats = await fs.stat(manifestPath);
-
-                        projects.push({
-                            name: entry.name,
-                            path: projectPath,
-                            lastModified: stats.mtime,
-                        });
-                    } catch {
-                        // Not a valid project (missing .demo-builder.json), skip silently
-                        this.logger.debug(`Skipping directory without manifest: ${entry.name}`);
-                    }
-                }
-            }
-
-            // Sort by last modified (newest first)
-            projects.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
-        } catch (error) {
-            // Distinguish between "doesn't exist yet" and "permission denied"
-            const nodeError = error as NodeJS.ErrnoException;
-            if (nodeError.code === 'ENOENT') {
-                this.logger.debug('Projects directory does not exist yet');
-            } else {
-                this.logger.error('Failed to read projects directory', error instanceof Error ? error : undefined);
-            }
-        }
-
-        return projects;
+    public async getAllProjects(): Promise<ProjectSummary[]> {
+        return this.projectDirectoryScanner.getAllProjects();
     }
 
     public dispose(): void {
