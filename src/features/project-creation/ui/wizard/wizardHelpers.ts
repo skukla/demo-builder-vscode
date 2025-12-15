@@ -308,10 +308,13 @@ export function getFirstEnabledStep(
 export function getNextButtonText(
     isConfirmingSelection: boolean,
     currentStepIndex: number,
-    totalSteps: number
+    totalSteps: number,
+    isEditMode?: boolean
 ): string {
     if (isConfirmingSelection) return 'Continue';
-    if (currentStepIndex === totalSteps - 2) return 'Create Project';
+    if (currentStepIndex === totalSteps - 2) {
+        return isEditMode ? 'Save Changes' : 'Create Project';
+    }
     return 'Continue';
 }
 
