@@ -2,13 +2,13 @@ import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState } from 'react';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { isProgressActive, isReadyToShowOpenButton } from './projectCreationPredicates';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { vscode } from '@/core/ui/utils/vscode-api';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { WizardState } from '@/types/webview';
-import { vscode } from '@/core/ui/utils/vscode-api';
-import { isProgressActive, isReadyToShowOpenButton } from './projectCreationPredicates';
 
 interface ProjectCreationStepProps {
     state: WizardState;

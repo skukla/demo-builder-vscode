@@ -7,10 +7,10 @@
 
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/core/base';
-import type { StateManager } from '@/core/state/stateManager';
-import type { Logger } from '@/core/logging/logger';
 import type { SidebarContext } from '../types';
+import { BaseWebviewCommand } from '@/core/base';
+import type { Logger } from '@/core/logging/logger';
+import type { StateManager } from '@/core/state/stateManager';
 
 /**
  * SidebarProvider - WebviewViewProvider for the Demo Builder sidebar
@@ -37,7 +37,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     constructor(
         private context: vscode.ExtensionContext,
         private stateManager: StateManager,
-        private logger: Logger
+        private logger: Logger,
     ) {
         this.extensionUri = context.extensionUri;
     }
@@ -48,7 +48,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
         _context: vscode.WebviewViewResolveContext,
-        _token: vscode.CancellationToken
+        _token: vscode.CancellationToken,
     ): void {
         this.view = webviewView;
 
@@ -66,7 +66,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         // Set up message handling
         const messageListener = webviewView.webview.onDidReceiveMessage(
-            (message) => this.handleMessage(message)
+            (message) => this.handleMessage(message),
         );
 
         // Clean up on dispose
@@ -110,7 +110,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Failed to open projects list',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -126,7 +126,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         try {
             await this.view.webview.postMessage({ type, data });
-        } catch (error) {
+        } catch {
             // Webview may be disposed during cleanup - this is expected
             this.logger.debug(`Cannot send message '${type}' - webview may be disposed`);
         }
@@ -304,7 +304,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Navigation failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -329,7 +329,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Back navigation failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -345,7 +345,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Create project failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -363,7 +363,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Open docs failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -381,7 +381,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Open help failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -398,7 +398,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Open settings failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -414,7 +414,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Start demo failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -430,7 +430,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Stop demo failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -446,7 +446,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Open dashboard failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -462,7 +462,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Open configure failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -478,7 +478,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Check updates failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }
@@ -499,7 +499,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         } catch (error) {
             this.logger.error(
                 'Wizard navigation failed',
-                error instanceof Error ? error : undefined
+                error instanceof Error ? error : undefined,
             );
         }
     }

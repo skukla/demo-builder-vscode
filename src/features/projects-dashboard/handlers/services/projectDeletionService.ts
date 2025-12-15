@@ -8,9 +8,9 @@
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { TIMEOUTS } from '@/core/utils';
-import { toError } from '@/types/typeGuards';
 import type { Project } from '@/types/base';
 import type { HandlerContext, HandlerResponse } from '@/types/handlers';
+import { toError } from '@/types/typeGuards';
 
 /**
  * Retryable error codes for filesystem operations:
@@ -88,7 +88,7 @@ export async function deleteProject(
             if (currentProject?.path === projectPath) {
                 await context.stateManager.clearProject();
             }
-        }
+        },
     );
 
     context.logger.info(`Deleted project: ${project.name}`);

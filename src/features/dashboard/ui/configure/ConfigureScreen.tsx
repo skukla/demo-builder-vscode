@@ -1,21 +1,21 @@
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import {
     Heading,
     Text,
     Form,
     Button,
-    View
+    View,
 } from '@adobe/react-spectrum';
-import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
-import type { Project } from '@/types/base';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { hasEntries } from '@/types/typeGuards';
-import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
-import { useFocusTrap } from '@/core/ui/hooks';
-import { TwoColumnLayout, PageHeader, PageFooter } from '@/core/ui/components/layout';
+import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import { FormField, ConfigSection } from '@/core/ui/components/forms';
-import { NavigationPanel, NavigationSection, NavigationField } from '@/core/ui/components/navigation';
+import { TwoColumnLayout, PageHeader, PageFooter } from '@/core/ui/components/layout';
+import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigation';
+import { useFocusTrap } from '@/core/ui/hooks';
+import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
+import type { Project } from '@/types/base';
+import { hasEntries } from '@/types/typeGuards';
+import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
 
 export interface ComponentsData {
     frontends?: ComponentData[];
@@ -232,7 +232,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
     const containerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
         autoFocus: false,
-        containFocus: true
+        containFocus: true,
     });
 
     // Update componentConfigs when existingEnvValues becomes available
@@ -343,7 +343,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         fieldMap.set(envVarKey, {
                             ...envVarDef,
                             key: envVarKey,
-                            componentIds: [id]
+                            componentIds: [id],
                         });
                     } else {
                         const existing = fieldMap.get(envVarKey)!;
@@ -361,7 +361,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                         fieldMap.set(envVarKey, {
                             ...envVarDef,
                             key: envVarKey,
-                            componentIds: [id]
+                            componentIds: [id],
                         });
                     } else {
                         const existing = fieldMap.get(envVarKey)!;
@@ -398,8 +398,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     'ADOBE_COMMERCE_STORE_VIEW_CODE',
                     'ADOBE_COMMERCE_CUSTOMER_GROUP',
                     'ADOBE_COMMERCE_ADMIN_USERNAME',
-                    'ADOBE_COMMERCE_ADMIN_PASSWORD'
-                ]
+                    'ADOBE_COMMERCE_ADMIN_PASSWORD',
+                ],
             },
             {
                 id: 'catalog-service',
@@ -408,14 +408,14 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 fieldOrder: [
                     'ADOBE_CATALOG_SERVICE_ENDPOINT',
                     'ADOBE_COMMERCE_ENVIRONMENT_ID',
-                    'ADOBE_CATALOG_API_KEY'
-                ]
+                    'ADOBE_CATALOG_API_KEY',
+                ],
             },
             { id: 'mesh', label: 'API Mesh', order: 3 },
             { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
             { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
             { id: 'experience-platform', label: 'Experience Platform', order: 6 },
-            { id: 'other', label: 'Additional Settings', order: 99 }
+            { id: 'other', label: 'Additional Settings', order: 99 },
         ];
 
         const orderedGroups = serviceGroupDefs
@@ -441,7 +441,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
             const fieldId = fieldWrapper.id.replace('field-', '');
             const section = serviceGroups.find(group =>
-                group.fields.some(f => f.key === fieldId)
+                group.fields.some(f => f.key === fieldId),
             );
 
             if (!section) return;
@@ -524,7 +524,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
                 if (field.required && !isDeferredField) {
                     const hasValue = field.componentIds.some(compId =>
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
 
                     if (!hasValue) {
@@ -534,7 +534,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
                 if (field.type === 'url') {
                     const firstComponentWithValue = field.componentIds.find(compId =>
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
 
                     if (firstComponentWithValue) {
@@ -549,7 +549,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
                 if (field.validation?.pattern) {
                     const firstComponentWithValue = field.componentIds.find(compId =>
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
 
                     if (firstComponentWithValue) {
@@ -666,7 +666,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             } else {
                 throw new Error(result.error || 'Failed to save configuration');
             }
-        } catch (err) {
+        } catch {
             // Error handled by extension - no action needed
             // Extension shows user-facing error message via webview communication
         } finally {
@@ -726,7 +726,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                                                     touchedFields,
                                                     updateField,
                                                     selectableDefaultProps,
-                                                })
+                                                }),
                                             )}
                                         </ConfigSection>
                                     ))}

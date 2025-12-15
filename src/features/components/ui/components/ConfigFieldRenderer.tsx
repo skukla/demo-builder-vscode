@@ -7,9 +7,9 @@ import {
     Text,
 } from '@adobe/react-spectrum';
 import React from 'react';
-import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
-import { FieldHelpButton } from '@/core/ui/components/forms';
 import { UniqueField } from '../hooks/useComponentConfig';
+import { FieldHelpButton } from '@/core/ui/components/forms';
+import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 
 interface ConfigFieldRendererProps {
     field: UniqueField;

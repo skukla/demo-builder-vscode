@@ -1,9 +1,9 @@
 import { Text } from '@adobe/react-spectrum';
 import React from 'react';
-import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
-import { SelectionStepContent } from '@/features/authentication/ui/components/SelectionStepContent';
-import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import { SelectionStepContent } from '@/features/authentication/ui/components/SelectionStepContent';
+import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
+import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
 import { Workspace } from '@/types/webview';
 import { TrackableStepProps } from '@/types/wizard';
 

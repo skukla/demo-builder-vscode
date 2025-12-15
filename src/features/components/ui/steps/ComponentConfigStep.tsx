@@ -6,12 +6,12 @@ import {
     Divider,
 } from '@adobe/react-spectrum';
 import React from 'react';
-import { useComponentConfig } from '../hooks/useComponentConfig';
-import { useConfigNavigation } from '../hooks/useConfigNavigation';
 import { ConfigFieldRenderer } from '../components/ConfigFieldRenderer';
 import { ConfigNavigationPanel } from '../components/ConfigNavigationPanel';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { useComponentConfig } from '../hooks/useComponentConfig';
+import { useConfigNavigation } from '../hooks/useConfigNavigation';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
 import { BaseStepProps } from '@/types/wizard';
 

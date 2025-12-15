@@ -271,7 +271,7 @@ export class StartDemoCommand extends BaseCommand {
                 // Prevents command injection (CWE-77) if project state is corrupted
                 try {
                     validateNodeVersion(nodeVersion);
-                } catch (error) {
+                } catch {
                     this.logger.error(`[Start Demo] Invalid Node version: ${nodeVersion}`);
                     await this.showError(`Invalid Node version "${nodeVersion}". Must be a number like 18, 20, or semver like 20.11.0`);
                     return;

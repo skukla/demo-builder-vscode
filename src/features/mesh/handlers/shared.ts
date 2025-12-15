@@ -5,14 +5,14 @@
  */
 
 import * as vscode from 'vscode';
-import { ServiceLocator } from '@/core/di';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
-import { Logger } from '@/types/logger';
+import { ServiceLocator } from '@/core/di';
 import {
     getSetupInstructions as getSetupInstructionsHelper,
     getEndpoint as getEndpointHelper,
 } from '@/features/project-creation/helpers';
 import { ErrorCode } from '@/types/errorCodes';
+import { Logger } from '@/types/logger';
 
 /**
  * Result of authentication guard check.

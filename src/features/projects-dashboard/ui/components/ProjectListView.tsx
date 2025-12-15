@@ -5,15 +5,15 @@
  * Part of the layout prototype comparison (Option D: Spectrum List).
  */
 
-import React from 'react';
 import { ListView, Item, Text, Flex } from '@adobe/react-spectrum';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
-import type { Project } from '@/types/base';
+import React from 'react';
 import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
-} from '../../utils/projectStatusUtils';
+} from '@/features/projects-dashboard/utils/projectStatusUtils';
+import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import type { Project } from '@/types/base';
 
 export interface ProjectListViewProps {
     /** Array of projects to display */

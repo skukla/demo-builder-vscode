@@ -5,12 +5,12 @@
  * Renders the Sidebar component with communication to the extension.
  */
 
+import { Provider, defaultTheme, Flex, ProgressCircle } from '@adobe/react-spectrum';
 import React, { useState, useEffect, useCallback } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Provider, defaultTheme, Flex, ProgressCircle } from '@adobe/react-spectrum';
 import '@/core/ui/styles/custom-spectrum.css';
-import { Sidebar } from './Sidebar';
 import type { SidebarContext } from '../types';
+import { Sidebar } from './Sidebar';
 
 // Acquire VS Code API
 declare const acquireVsCodeApi: () => {

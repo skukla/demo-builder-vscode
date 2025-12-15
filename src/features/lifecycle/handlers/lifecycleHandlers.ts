@@ -10,10 +10,10 @@
  */
 
 import * as vscode from 'vscode';
-import { validateProjectPath, validateURL } from '@/core/validation';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { sessionUIState } from '@/core/state/sessionUIState';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { sessionUIState } from '@/core/state/sessionUIState';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { validateProjectPath, validateURL } from '@/core/validation';
 import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult, DataResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';

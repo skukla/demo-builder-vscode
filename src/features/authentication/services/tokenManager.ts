@@ -3,7 +3,6 @@ import { AuthenticationErrorFormatter } from './authenticationErrorFormatter';
 import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, formatMinutes } from '@/core/utils';
-import type { AuthToken } from '@/features/authentication/services/types';
 import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';
 
@@ -35,10 +34,11 @@ export class TokenManager {
     private getSharedCacheManager(): AuthCacheManager | undefined {
         try {
             // Dynamic import to avoid circular dependency at module load time
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
             const { ServiceLocator } = require('@/core/di');
             const authService = ServiceLocator.getAuthenticationService();
             return authService.getCacheManager();
-        } catch (error) {
+        } catch {
             // ServiceLocator not initialized yet, or AuthenticationService not registered
             // This is OK - caching will be disabled for this instance
             this.logger.debug('[Token] Shared cache not available, caching disabled');
@@ -81,7 +81,7 @@ export class TokenManager {
 
         // Cache miss or expired, fetch fresh
         const maxRetries = 3;
-        let lastError: Error | null = null;
+        let _lastError: Error | null = null;
 
         // Retry loop with exponential backoff
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -155,7 +155,7 @@ export class TokenManager {
 
                 return result;
             } catch (error) {
-                lastError = toError(error);
+                _lastError = toError(error);
                 const appError = toAppError(error);
 
                 // Check if it's a timeout error that should be retried

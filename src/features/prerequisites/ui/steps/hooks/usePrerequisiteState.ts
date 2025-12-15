@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 export interface PrerequisitesLoadedData {
     prerequisites: Array<{
@@ -104,7 +104,7 @@ interface UsePrerequisiteStateReturn {
  * - Check stopped events
  */
 export function usePrerequisiteState(
-    scrollToTop: () => void
+    scrollToTop: () => void,
 ): UsePrerequisiteStateReturn {
     const [checks, setChecks] = useState<PrerequisiteCheck[]>(INITIAL_LOADING_STATE);
     const [isChecking, setIsChecking] = useState(false);

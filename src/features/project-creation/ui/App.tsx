@@ -1,9 +1,9 @@
 import { Provider, defaultTheme, View } from '@adobe/react-spectrum';
 import React, { useEffect, useState } from 'react';
 import { WizardContainer } from './wizard/WizardContainer';
-import { ThemeMode, ComponentSelection } from '@/types/webview';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+import { ThemeMode, ComponentSelection } from '@/types/webview';
 
 const log = webviewLogger('App');
 

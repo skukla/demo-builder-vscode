@@ -19,7 +19,7 @@ export interface WizardStepConfig {
  */
 export function getNavigationDirection(
     targetIndex: number,
-    currentIndex: number
+    currentIndex: number,
 ): 'forward' | 'backward' {
     return targetIndex > currentIndex ? 'forward' : 'backward';
 }
@@ -43,7 +43,7 @@ export function filterCompletedStepsForBackwardNav(
     completedSteps: WizardStep[],
     targetStep: WizardStep,
     targetIndex: number,
-    wizardSteps: WizardStepConfig[]
+    wizardSteps: WizardStepConfig[],
 ): WizardStep[] {
     // Special case: first step clears everything
     if (targetIndex === 0) {
@@ -99,7 +99,7 @@ export function computeStateUpdatesForBackwardNav(
     currentState: WizardState,
     targetStep: WizardStep,
     targetIndex: number,
-    indices: AdobeStepIndices
+    indices: AdobeStepIndices,
 ): Partial<WizardState> {
     const updates: Partial<WizardState> = {
         currentStep: targetStep,
@@ -172,7 +172,7 @@ export interface EditProjectConfig {
  */
 export function initializeComponentsFromImport(
     importedSettings: ImportedSettings | null | undefined,
-    componentDefaults: ComponentSelection | undefined
+    componentDefaults: ComponentSelection | undefined,
 ): ComponentSelection | undefined {
     if (importedSettings?.selections) {
         return {
@@ -202,7 +202,7 @@ export interface InitialAdobeContext {
  * @returns Adobe context with org, project, and workspace
  */
 export function initializeAdobeContextFromImport(
-    importedSettings: ImportedSettings | null | undefined
+    importedSettings: ImportedSettings | null | undefined,
 ): InitialAdobeContext {
     const result: InitialAdobeContext = {};
 
@@ -243,7 +243,7 @@ export function initializeAdobeContextFromImport(
  */
 export function generateUniqueProjectName(
     baseName: string,
-    existingNames: string[]
+    existingNames: string[],
 ): string {
     if (!existingNames.includes(baseName)) {
         return baseName;
@@ -272,12 +272,12 @@ export function generateUniqueProjectName(
  */
 export function initializeProjectName(
     importedSettings: ImportedSettings | null | undefined,
-    existingNames: string[]
+    existingNames: string[],
 ): string {
     if (importedSettings?.source?.project) {
         return generateUniqueProjectName(
             importedSettings.source.project,
-            existingNames
+            existingNames,
         );
     }
     return '';
@@ -290,7 +290,7 @@ export function initializeProjectName(
  * @returns First enabled step ID or 'adobe-auth' as fallback
  */
 export function getFirstEnabledStep(
-    wizardSteps: Array<{ id: string; enabled: boolean }> | undefined
+    wizardSteps: Array<{ id: string; enabled: boolean }> | undefined,
 ): WizardStep {
     const enabledSteps = wizardSteps?.filter(step => step.enabled) || [];
     return (enabledSteps.length > 0 ? enabledSteps[0].id : 'adobe-auth') as WizardStep;
@@ -310,7 +310,7 @@ export function getNextButtonText(
     isConfirmingSelection: boolean,
     currentStepIndex: number,
     totalSteps: number,
-    isEditMode?: boolean
+    isEditMode?: boolean,
 ): string {
     if (isConfirmingSelection) return 'Continue';
     if (currentStepIndex === totalSteps - 2) {
@@ -337,7 +337,7 @@ export function hasMeshComponentSelected(components: ComponentSelection | undefi
  */
 export function getCompletedStepIndices(
     completedSteps: WizardStep[],
-    wizardSteps: Array<{ id: WizardStep; name: string }>
+    wizardSteps: Array<{ id: WizardStep; name: string }>,
 ): number[] {
     return completedSteps.map(stepId => wizardSteps.findIndex(ws => ws.id === stepId));
 }
@@ -349,7 +349,7 @@ export function getCompletedStepIndices(
  * `wizardSteps.filter(step => step.enabled).map(step => ({ id: step.id as WizardStep, name: step.name }))`
  */
 export function getEnabledWizardSteps(
-    wizardSteps: Array<{ id: string; name: string; enabled: boolean }> | undefined
+    wizardSteps: Array<{ id: string; name: string; enabled: boolean }> | undefined,
 ): Array<{ id: WizardStep; name: string }> {
     if (!wizardSteps || wizardSteps.length === 0) {
         return [];

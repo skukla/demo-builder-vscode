@@ -6,11 +6,11 @@
  * Used by both ProjectCard and ProjectRow components.
  */
 
-import React, { useCallback, useMemo } from 'react';
 import { Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum';
-import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
-import Export from '@spectrum-icons/workflow/Export';
 import Delete from '@spectrum-icons/workflow/Delete';
+import Export from '@spectrum-icons/workflow/Export';
+import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
+import React, { useCallback, useMemo } from 'react';
 import type { Project } from '@/types/base';
 
 /** Menu item configuration */

@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
-import { WizardState } from '@/types/webview';
 import { ErrorCode } from '@/types/errorCodes';
 import { canProceedFromAuth } from '@/types/typeGuards';
+import { WizardState } from '@/types/webview';
 
 const log = webviewLogger('useAuthStatus');
 
@@ -166,8 +166,8 @@ export function useAuthStatus({
             canProceedFromAuth(
                 state.adobeAuth.isAuthenticated,
                 state.adobeOrg,
-                state.adobeAuth.tokenExpiringSoon
-            )
+                state.adobeAuth.tokenExpiringSoon,
+            ),
         );
     }, [state.adobeAuth.isAuthenticated, state.adobeAuth.tokenExpiringSoon, state.adobeOrg, setCanProceed]);
 

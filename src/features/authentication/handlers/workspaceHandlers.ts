@@ -23,7 +23,7 @@ import { toError } from '@/types/typeGuards';
  */
 export async function handleGetWorkspaces(
     context: HandlerContext,
-    payload?: { orgId?: string; projectId?: string },
+    _payload?: { orgId?: string; projectId?: string },
 ): Promise<DataResult<AdobeWorkspace[]>> {
     try {
         // Send loading status with sub-message

@@ -149,7 +149,7 @@ export class StopDemoCommand extends BaseCommand {
                     } catch (error: any) {
                         if (error.code === 'EPERM') {
                             await this.showError(
-                                `Permission denied killing process ${pid}. Try running VS Code as administrator or stop the process manually.`
+                                `Permission denied killing process ${pid}. Try running VS Code as administrator or stop the process manually.`,
                             );
                             // Don't update state - process still running
                             // Dispose terminal anyway (attempt cleanup)

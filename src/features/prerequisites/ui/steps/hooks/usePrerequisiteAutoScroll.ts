@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { PrerequisiteCheck } from '@/types/webview';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+import { PrerequisiteCheck } from '@/types/webview';
 
 interface UsePrerequisiteAutoScrollReturn {
     itemRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
@@ -19,7 +19,7 @@ interface UsePrerequisiteAutoScrollReturn {
  */
 export function usePrerequisiteAutoScroll(
     checks: PrerequisiteCheck[],
-    setCanProceed: (value: boolean) => void
+    setCanProceed: (value: boolean) => void,
 ): UsePrerequisiteAutoScrollReturn {
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);

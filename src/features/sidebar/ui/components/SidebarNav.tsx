@@ -4,8 +4,8 @@
  * Navigation list for the sidebar.
  */
 
-import React from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
+import React from 'react';
 import type { NavItem } from '../../types';
 
 export interface SidebarNavProps {

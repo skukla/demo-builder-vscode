@@ -87,6 +87,6 @@ export function getSetupInstructions(
 
     // SOP §6: Using extracted transformation function
     return rawInstructions.map((instruction: RawInstruction) =>
-        processInstruction(instruction, selectedComponents, componentsData)
+        processInstruction(instruction, selectedComponents, componentsData),
     );
 }

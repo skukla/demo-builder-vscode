@@ -7,8 +7,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { ProjectsDashboard } from './ProjectsDashboard';
+import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { Project } from '@/types/base';
 
@@ -209,5 +209,5 @@ root.render(
         <WebviewApp>
             <ProjectsDashboardApp />
         </WebviewApp>
-    </React.StrictMode>
+    </React.StrictMode>,
 );

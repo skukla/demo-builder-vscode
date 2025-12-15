@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { getInstallSteps } from './installation';
 import { PrerequisitesCacheManager } from './prerequisitesCacheManager';
 import type {
     PrerequisiteCheck,
@@ -11,15 +12,6 @@ import type {
     PrerequisitesConfig,
     PrerequisiteStatus,
 } from './types';
-import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
-import { ServiceLocator } from '@/core/di';
-import { TIMEOUTS, formatDuration } from '@/core/utils';
-import { Logger } from '@/types/logger';
-import { DEFAULT_SHELL } from '@/types/shell';
-import { toError } from '@/types/typeGuards';
-import { isTimeout, toAppError } from '@/types/errors';
-
-// Extracted modules
 import {
     checkVersionSatisfaction,
     checkMultipleNodeVersions,
@@ -27,7 +19,15 @@ import {
     getLatestInFamily,
     resolveDependencies,
 } from './versioning';
-import { getInstallSteps } from './installation';
+import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
+import { ServiceLocator } from '@/core/di';
+import { TIMEOUTS, formatDuration } from '@/core/utils';
+import { isTimeout, toAppError } from '@/types/errors';
+import { Logger } from '@/types/logger';
+import { DEFAULT_SHELL } from '@/types/shell';
+import { toError } from '@/types/typeGuards';
+
+// Extracted modules
 
 export type {
     PrerequisiteCheck,
@@ -155,7 +155,7 @@ export class PrerequisitesManager {
                     const perNodeStatus = await checkPerNodeVersionStatus(
                         prereq,
                         installedNodeVersions,
-                        this.createMinimalContext()
+                        this.createMinimalContext(),
                     );
 
                     // Cache per-version results

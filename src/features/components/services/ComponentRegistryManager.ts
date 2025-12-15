@@ -1,17 +1,16 @@
 import * as path from 'path';
 import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
+import { validateNodeVersion } from '@/core/validation';
 import {
     ComponentDefinition,
     ComponentRegistry,
     TransformedComponentDefinition,
     RawComponentRegistry,
-    RawComponentDefinition,
     EnvVarDefinition,
     ServiceDefinition,
     PresetDefinition,
 } from '@/types';
 import { ProjectConfig } from '@/types/handlers';
-import { validateNodeVersion } from '@/core/validation';
 
 export class ComponentRegistryManager {
     private rawLoader: ConfigurationLoader<RawComponentRegistry>;
@@ -36,11 +35,11 @@ export class ComponentRegistryManager {
     private formatNodeVersionError(
         componentName: string,
         componentType: string,
-        originalError: Error
+        originalError: Error,
     ): Error {
         return new Error(
             `Invalid Node version in ${componentType} "${componentName}": ${originalError.message}\n` +
-            `Please edit templates/components.json and ensure nodeVersion uses valid format (e.g., "20", "20.11.0").`
+            `Please edit templates/components.json and ensure nodeVersion uses valid format (e.g., "20", "20.11.0").`,
         );
     }
 
@@ -73,7 +72,7 @@ export class ComponentRegistryManager {
         version: string,
         versions: Set<string>,
         componentName: string,
-        componentType: string = 'component'
+        componentType: string = 'component',
     ): void {
         try {
             // SECURITY: Validate nodeVersion from components.json (defense-in-depth for CWE-77)
@@ -116,7 +115,7 @@ export class ComponentRegistryManager {
         version: string,
         componentName: string,
         mapping: Record<string, string>,
-        componentType: string = 'component'
+        componentType: string = 'component',
     ): void {
         try {
             // SECURITY: Validate nodeVersion from components.json (defense-in-depth for CWE-77)
@@ -325,7 +324,7 @@ export class ComponentRegistryManager {
                 this.validateAndAddNodeVersion(
                     frontend.configuration.nodeVersion,
                     nodeVersions,
-                    frontend.name
+                    frontend.name,
                 );
             }
         }
@@ -337,7 +336,7 @@ export class ComponentRegistryManager {
                 this.validateAndAddNodeVersion(
                     backend.configuration.nodeVersion,
                     nodeVersions,
-                    backend.name
+                    backend.name,
                 );
             }
         }
@@ -350,7 +349,7 @@ export class ComponentRegistryManager {
                     this.validateAndAddNodeVersion(
                         dep.configuration.nodeVersion,
                         nodeVersions,
-                        dep.name
+                        dep.name,
                     );
                 }
             }
@@ -364,7 +363,7 @@ export class ComponentRegistryManager {
                     this.validateAndAddNodeVersion(
                         app.configuration.nodeVersion,
                         nodeVersions,
-                        app.name
+                        app.name,
                     );
                 }
             }
@@ -406,7 +405,7 @@ export class ComponentRegistryManager {
                         infra.configuration.nodeVersion,
                         infra.name,
                         mapping,
-                        'infrastructure'
+                        'infrastructure',
                     );
                 }
             }
@@ -419,7 +418,7 @@ export class ComponentRegistryManager {
                 this.validateAndMapNodeVersion(
                     frontend.configuration.nodeVersion,
                     frontend.name,
-                    mapping
+                    mapping,
                 );
             }
         }
@@ -431,7 +430,7 @@ export class ComponentRegistryManager {
                 this.validateAndMapNodeVersion(
                     backend.configuration.nodeVersion,
                     backend.name,
-                    mapping
+                    mapping,
                 );
             }
         }
@@ -444,7 +443,7 @@ export class ComponentRegistryManager {
                     this.validateAndMapNodeVersion(
                         dep.configuration.nodeVersion,
                         dep.name,
-                        mapping
+                        mapping,
                     );
                 }
             }
@@ -458,7 +457,7 @@ export class ComponentRegistryManager {
                     this.validateAndMapNodeVersion(
                         app.configuration.nodeVersion,
                         app.name,
-                        mapping
+                        mapping,
                     );
                 }
             }

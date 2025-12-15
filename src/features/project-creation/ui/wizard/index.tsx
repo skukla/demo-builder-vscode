@@ -1,8 +1,8 @@
+import { View } from '@adobe/react-spectrum';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { View } from '@adobe/react-spectrum';
-import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
 import { WizardContainer, ImportedSettings } from './WizardContainer';
+import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
 import { ComponentSelection } from '@/types/webview';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
@@ -27,7 +27,7 @@ const root = createRoot(container);
 root.render(
     <React.StrictMode>
         <WebviewApp
-            onInit={(data) => {
+            onInit={(_data) => {
                 // Initialization complete
             }}
             loadingContent={
@@ -48,5 +48,5 @@ root.render(
                 );
             }}
         </WebviewApp>
-    </React.StrictMode>
+    </React.StrictMode>,
 );

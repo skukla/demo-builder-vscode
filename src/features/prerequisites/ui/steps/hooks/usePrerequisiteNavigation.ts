@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import { PrerequisiteCheck } from '@/types/webview';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+import { PrerequisiteCheck } from '@/types/webview';
 
 /**
  * Hook to manage prerequisite checking when navigating to/from the step
@@ -15,7 +15,7 @@ export function usePrerequisiteNavigation(
     checks: PrerequisiteCheck[],
     checkInProgressRef: React.MutableRefObject<boolean>,
     checkPrerequisites: () => void,
-    resetAutoScroll: () => void
+    resetAutoScroll: () => void,
 ): void {
     // Trigger prerequisites check when navigating back to this step
     useEffect(() => {

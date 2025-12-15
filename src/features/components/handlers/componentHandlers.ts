@@ -15,8 +15,8 @@
  * - validateSelection: Validate component selection
  */
 
-import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
 import { toComponentDataArray, toDependencyData } from './componentTransforms';
+import { ComponentRegistryManager, DependencyResolver } from '@/features/components/services/ComponentRegistryManager';
 import { ComponentSelection } from '@/types/components';
 import { toAppError } from '@/types/errors';
 import { HandlerContext, MessageHandler } from '@/types/handlers';

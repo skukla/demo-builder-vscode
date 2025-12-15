@@ -2,12 +2,12 @@
  * Mesh endpoint resolution utilities
  */
 
+import { getMeshNodeVersion } from './meshConfig';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateMeshId } from '@/core/validation';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
-import { getMeshNodeVersion } from './meshConfig';
 
 /**
  * Check if aio api-mesh plugin is installed
@@ -34,7 +34,7 @@ async function checkApiMeshPlugin(
             debugLogger.debug(`[API Mesh] Plugin check: ${hasPlugin ? 'installed' : 'not installed'}`);
             return hasPlugin;
         }
-    } catch (error) {
+    } catch {
         debugLogger.debug('[API Mesh] Plugin check failed, assuming not installed');
     }
     return false;

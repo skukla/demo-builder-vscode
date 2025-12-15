@@ -1,17 +1,17 @@
 import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
 import Info from '@spectrum-icons/workflow/Info';
 import React, { useCallback } from 'react';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
-import { WizardStep } from '@/types/webview';
-import { BaseStepProps } from '@/types/wizard';
 import { useMeshOperations } from '../hooks/useMeshOperations';
 import { MeshErrorDialog } from './components/MeshErrorDialog';
 import { MeshStatusDisplay } from './components/MeshStatusDisplay';
 import { isMeshDataReady, isReadyForMeshCreation } from './meshPredicates';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { ConfigurationSummary } from '@/features/project-creation/ui/components/ConfigurationSummary';
+import { WizardStep } from '@/types/webview';
+import { BaseStepProps } from '@/types/wizard';
 
 interface ApiMeshStepProps extends BaseStepProps {
     onBack: () => void;

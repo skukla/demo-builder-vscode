@@ -6,9 +6,9 @@
  * Phase 2: Install npm dependencies for all components
  */
 
-import type { Logger } from '@/types/logger';
-import type { Project, TransformedComponentDefinition } from '@/types';
 import { ProgressTracker } from '../shared';
+import type { Project, TransformedComponentDefinition } from '@/types';
+import type { Logger } from '@/types/logger';
 
 export interface ComponentDefinitionEntry {
     definition: TransformedComponentDefinition;
@@ -56,7 +56,7 @@ export async function cloneAllComponents(
             }
 
             return { compId, component: result.component };
-        }
+        },
     );
 
     const cloneResults = await Promise.all(clonePromises);
@@ -101,7 +101,7 @@ export async function installAllComponents(
             }
 
             return { compId, success: true };
-        }
+        },
     );
 
     await Promise.all(installPromises);

@@ -48,7 +48,7 @@ function getDisplayName(id: string, name: string): string {
  */
 export function getComponentSummary(
     project: Project,
-    maxComponents = 3
+    maxComponents = 3,
 ): string | undefined {
     if (!project.componentInstances) {
         return undefined;

@@ -7,7 +7,6 @@
  * Step 1 of Projects Navigation Architecture: Create Projects List as Home Screen
  */
 
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';

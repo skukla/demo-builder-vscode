@@ -7,10 +7,6 @@ import {
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
-import { NavigableStepProps } from '@/types/wizard';
-import { cn } from '@/core/ui/utils/classNames';
-
-// Extracted hooks and helpers
 import {
     usePrerequisiteState,
     usePrerequisiteAutoScroll,
@@ -21,6 +17,10 @@ import {
     getProgressValue,
     renderPrerequisiteMessage,
 } from './hooks';
+import { cn } from '@/core/ui/utils/classNames';
+import { NavigableStepProps } from '@/types/wizard';
+
+// Extracted hooks and helpers
 
 interface PrerequisitesStepProps extends NavigableStepProps {
     componentsData?: Record<string, unknown>;
@@ -56,7 +56,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         checks,
         checkInProgressRef,
         checkPrerequisites,
-        resetAutoScroll
+        resetAutoScroll,
     );
 
     const hasErrors = checks.some(check => check.status === 'error');

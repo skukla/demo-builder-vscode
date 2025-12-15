@@ -5,8 +5,8 @@
  * Transforms feature-specific data shape while preserving all behavior.
  */
 import React, { useMemo } from 'react';
-import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigation/NavigationPanel';
 import { ServiceGroup, UniqueField } from '../hooks/useComponentConfig';
+import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigation/NavigationPanel';
 
 interface SectionCompletion {
     total: number;

@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import { ProjectDashboardScreen } from './ProjectDashboardScreen';
+import { WebviewApp } from '@/core/ui/components/WebviewApp';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
 import '@/core/ui/styles/wizard.css';
@@ -20,5 +20,5 @@ root.render(
         <WebviewApp>
             {(data) => <ProjectDashboardScreen project={data?.project} hasMesh={data?.hasMesh} />}
         </WebviewApp>
-    </React.StrictMode>
+    </React.StrictMode>,
 );

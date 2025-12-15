@@ -1,27 +1,26 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
     View,
     Flex,
     Text,
     Button,
     ActionButton,
-    ProgressCircle
+    ProgressCircle,
 } from '@adobe/react-spectrum';
-import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
-import StopCircle from '@spectrum-icons/workflow/StopCircle';
-import Settings from '@spectrum-icons/workflow/Settings';
-import Refresh from '@spectrum-icons/workflow/Refresh';
-import Globe from '@spectrum-icons/workflow/Globe';
-import Delete from '@spectrum-icons/workflow/Delete';
-import ViewList from '@spectrum-icons/workflow/ViewList';
-import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Data from '@spectrum-icons/workflow/Data';
-import Login from '@spectrum-icons/workflow/Login';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { useFocusTrap } from '@/core/ui/hooks';
+import Delete from '@spectrum-icons/workflow/Delete';
+import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
+import Globe from '@spectrum-icons/workflow/Globe';
+import PlayCircle from '@spectrum-icons/workflow/PlayCircle';
+import Refresh from '@spectrum-icons/workflow/Refresh';
+import Settings from '@spectrum-icons/workflow/Settings';
+import StopCircle from '@spectrum-icons/workflow/StopCircle';
+import ViewList from '@spectrum-icons/workflow/ViewList';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { isStartActionDisabled } from './dashboardPredicates';
 import { StatusCard } from '@/core/ui/components/feedback';
 import { GridLayout, PageLayout, PageHeader } from '@/core/ui/components/layout';
-import { isStartActionDisabled } from './dashboardPredicates';
+import { useFocusTrap } from '@/core/ui/hooks';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 type MeshStatus = 'checking' | 'needs-auth' | 'authenticating' | 'not-deployed' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'error';
@@ -90,7 +89,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                     isMeshDeploying(prev?.mesh?.status) && projectData.mesh?.status === 'checking';
                 return {
                     ...projectData,
-                    mesh: shouldPreserveMeshStatus ? prev?.mesh : projectData.mesh
+                    mesh: shouldPreserveMeshStatus ? prev?.mesh : projectData.mesh,
                 };
             });
             setIsRunning(projectData.status === 'running');
@@ -107,8 +106,8 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                 mesh: {
                     status: meshData.status,
                     message: meshData.message,
-                    endpoint: meshData.endpoint
-                }
+                    endpoint: meshData.endpoint,
+                },
             } : prev);
             // Clear transitioning state when mesh operation completes
             if (!isMeshBusy(meshData.status)) {
@@ -172,7 +171,6 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     const port = projectStatus?.port || 3000;
     const frontendConfigChanged = projectStatus?.frontendConfigChanged || false;
     const meshStatus = projectStatus?.mesh?.status;
-    const meshEndpoint = projectStatus?.mesh?.endpoint;
     const meshMessage = projectStatus?.mesh?.message;
 
     // Button disabled states

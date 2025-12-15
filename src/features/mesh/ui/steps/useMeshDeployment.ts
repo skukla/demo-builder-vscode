@@ -13,9 +13,9 @@
  */
 
 import { useEffect, useReducer, useRef, useCallback } from 'react';
+import { MeshDeploymentState, INITIAL_MESH_DEPLOYMENT_STATE } from './meshDeploymentTypes';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { MeshDeploymentState, INITIAL_MESH_DEPLOYMENT_STATE } from './meshDeploymentTypes';
 
 /**
  * Type for mesh verification result from backend
@@ -69,7 +69,7 @@ type MeshDeploymentAction =
  */
 function meshDeploymentReducer(
     state: MeshDeploymentState,
-    action: MeshDeploymentAction
+    action: MeshDeploymentAction,
 ): MeshDeploymentState {
     switch (action.type) {
         case 'START_DEPLOYMENT':
@@ -235,7 +235,7 @@ export function useMeshDeployment({
                 try {
                     const verifyResult = await webviewClient.request<MeshVerificationResult>(
                         'verify-mesh-deployment',
-                        { workspaceId }
+                        { workspaceId },
                     );
 
                     if (!isMountedRef.current) return;
@@ -252,7 +252,7 @@ export function useMeshDeployment({
                         dispatch({ type: 'ERROR', errorMessage: verifyResult.error });
                     }
                     // If verified is false, continue polling
-                } catch (e) {
+                } catch {
                     // On network error during verification, continue polling
                     // (transient errors shouldn't fail deployment)
                 }

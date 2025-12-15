@@ -4,8 +4,8 @@
  * Type definitions for the Configure Screen component.
  */
 
-import { ComponentEnvVar } from '@/types/webview';
 import type { Project } from '@/types/base';
+import { ComponentEnvVar } from '@/types/webview';
 
 export interface ComponentsData {
     frontends?: ComponentData[];

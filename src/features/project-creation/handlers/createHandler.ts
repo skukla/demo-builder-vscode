@@ -10,14 +10,14 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { executeProjectCreation } from './executor';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { OVERALL_TIMEOUT_MS } from './shared';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ServiceLocator } from '@/core/di';
 import { withTimeout } from '@/core/utils/promiseUtils';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectNameSecurity as validateProjectName } from '@/core/validation';
-import { toAppError, isTimeout } from '@/types/errors';
 import { ErrorCode } from '@/types/errorCodes';
+import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';
 
 /**

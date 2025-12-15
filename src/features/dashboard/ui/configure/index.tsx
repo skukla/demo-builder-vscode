@@ -1,7 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
 import { ConfigureScreen, ComponentsData } from './ConfigureScreen';
+import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
 import { Project } from '@/types/base';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/vscode-theme.css';
@@ -36,5 +36,5 @@ root.render(
                 ) : null;
             }}
         </WebviewApp>
-    </React.StrictMode>
+    </React.StrictMode>,
 );

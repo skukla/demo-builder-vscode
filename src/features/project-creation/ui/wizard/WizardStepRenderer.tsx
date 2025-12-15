@@ -4,10 +4,10 @@
  * Extracted from WizardContainer to reduce component complexity (SOP god-file compliance).
  */
 
-import React from 'react';
 import { Heading } from '@adobe/react-spectrum';
-import { CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
+import React from 'react';
 import { LoadingDisplay } from '@/core/ui/components/feedback';
+import { CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
@@ -57,22 +57,6 @@ export interface WizardStepRendererProps {
     /** Mesh deployment cancel callback */
     onMeshCancel?: () => void;
 }
-
-/**
- * Step component map - maps step IDs to components
- */
-const STEP_COMPONENTS: Record<string, React.ComponentType<any>> = {
-    'welcome': WelcomeStep,
-    'component-selection': ComponentSelectionStep,
-    'prerequisites': PrerequisitesStep,
-    'adobe-auth': AdobeAuthStep,
-    'adobe-project': AdobeProjectStep,
-    'adobe-workspace': AdobeWorkspaceStep,
-    'api-mesh': ApiMeshStep,
-    'settings': ComponentConfigStep,
-    'review': ReviewStep,
-    'project-creation': ProjectCreationStep,
-};
 
 /**
  * Render the appropriate wizard step based on current step ID

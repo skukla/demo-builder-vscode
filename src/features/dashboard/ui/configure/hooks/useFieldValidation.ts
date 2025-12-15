@@ -6,8 +6,8 @@
  */
 
 import { useEffect, Dispatch, SetStateAction } from 'react';
-import { ComponentConfigs } from '@/types/webview';
 import type { ServiceGroup } from '../configureTypes';
+import { ComponentConfigs } from '@/types/webview';
 
 interface UseFieldValidationProps {
     serviceGroups: ServiceGroup[];
@@ -33,7 +33,7 @@ export function useFieldValidation({
                 // Required field validation
                 if (field.required && !isDeferredField) {
                     const hasValue = field.componentIds.some(compId =>
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
 
                     if (!hasValue) {
@@ -44,7 +44,7 @@ export function useFieldValidation({
                 // URL validation
                 if (field.type === 'url') {
                     const firstComponentWithValue = field.componentIds.find(compId =>
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
 
                     if (firstComponentWithValue) {
@@ -60,7 +60,7 @@ export function useFieldValidation({
                 // Pattern validation
                 if (field.validation?.pattern) {
                     const firstComponentWithValue = field.componentIds.find(compId =>
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
 
                     if (firstComponentWithValue) {

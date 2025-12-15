@@ -6,9 +6,9 @@
  */
 
 import { useCallback, Dispatch, SetStateAction } from 'react';
-import { ComponentConfigs } from '@/types/webview';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import type { SaveConfigurationResponse } from '../configureTypes';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { ComponentConfigs } from '@/types/webview';
 
 interface UseConfigureActionsProps {
     componentConfigs: ComponentConfigs;

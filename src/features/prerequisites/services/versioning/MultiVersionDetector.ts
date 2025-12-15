@@ -4,11 +4,11 @@
  * Detects and manages multiple Node.js versions installed via fnm.
  */
 
+import { buildMajorToFullVersionMap, parseMajorVersions, isValidVersionFamily } from './NodeVersionParser';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils';
-import { DEFAULT_SHELL } from '@/types/shell';
 import { Logger } from '@/types/logger';
-import { buildMajorToFullVersionMap, parseMajorVersions, isValidVersionFamily } from './NodeVersionParser';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 export interface NodeVersionStatus {
     version: string;

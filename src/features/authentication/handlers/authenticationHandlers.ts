@@ -6,13 +6,11 @@
  * - authenticate: Browser-based Adobe login flow
  */
 
-import { sanitizeErrorForLogging } from '@/core/validation';
+import type { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { formatDuration, formatMinutes } from '@/core/utils';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
-import type { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult } from '@/types/results';
-import { toError } from '@/types/typeGuards';
 
 /**
  * Generate user-friendly sub-message for authentication status

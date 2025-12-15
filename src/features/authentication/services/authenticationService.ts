@@ -1,4 +1,5 @@
 import * as path from 'path';
+import { isValidTokenResponse } from './authPredicates';
 import { getLogger, Logger, StepLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, CACHE_TTL } from '@/core/utils/timeoutConfig';
@@ -10,7 +11,6 @@ import { OrganizationValidator } from '@/features/authentication/services/organi
 import { PerformanceTracker } from '@/features/authentication/services/performanceTracker';
 import { TokenManager } from '@/features/authentication/services/tokenManager';
 import type { AdobeOrg, AdobeProject, AdobeWorkspace, AdobeContext, AuthTokenValidation } from '@/features/authentication/services/types';
-import { isValidTokenResponse } from './authPredicates';
 
 /**
  * Main authentication service - orchestrates all authentication operations

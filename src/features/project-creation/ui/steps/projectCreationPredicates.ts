@@ -25,7 +25,7 @@ export function isProgressActive(
     progress: ProgressState | undefined,
     isCancelled: boolean,
     isFailed: boolean,
-    isCompleted: boolean
+    isCompleted: boolean,
 ): boolean {
     if (!progress) return false;
     if (progress.error) return false;
@@ -46,7 +46,7 @@ export function isProgressActive(
 export function isReadyToShowOpenButton(
     isCompleted: boolean,
     progress: ProgressState | undefined,
-    isOpeningProject: boolean
+    isOpeningProject: boolean,
 ): boolean {
     if (!isCompleted) return false;
     if (progress?.error) return false;

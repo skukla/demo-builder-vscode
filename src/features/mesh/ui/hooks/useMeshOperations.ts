@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { WizardState } from '@/types/webview';
-import { ErrorCode } from '@/types/errorCodes';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { ErrorCode } from '@/types/errorCodes';
+import { WizardState } from '@/types/webview';
 
 interface CheckApiMeshResponse {
     success: boolean;

@@ -6,9 +6,9 @@
  */
 
 import { useCallback, Dispatch, SetStateAction } from 'react';
-import { ComponentConfigs } from '@/types/webview';
-import type { Project } from '@/types/base';
 import type { UniqueField } from '../configureTypes';
+import type { Project } from '@/types/base';
+import { ComponentConfigs } from '@/types/webview';
 
 interface UseConfigureFieldsProps {
     componentConfigs: ComponentConfigs;

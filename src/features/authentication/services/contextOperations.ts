@@ -5,7 +5,7 @@
  * (org, project, workspace). Extracted from AdobeEntityService for SOP compliance.
  */
 
-import { getLogger, Logger } from '@/core/logging';
+import { getLogger } from '@/core/logging';
 import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS } from '@/core/utils';
 import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';

@@ -4,10 +4,10 @@
  * Displays an empty state for the Projects Dashboard with CTAs to create or import a project.
  */
 
-import React, { useEffect, useRef } from 'react';
 import { Flex, Text, Button } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
 import Import from '@spectrum-icons/workflow/Import';
+import React, { useEffect, useRef } from 'react';
 
 export interface DashboardEmptyStateProps {
     /** Callback when the create button is clicked */

@@ -48,7 +48,7 @@ export async function handleEnsureOrgSelected(context: HandlerContext): Promise<
  */
 export async function handleGetProjects(
     context: HandlerContext,
-    payload?: { orgId?: string },
+    _payload?: { orgId?: string },
 ): Promise<DataResult<AdobeProject[]>> {
     try {
         // Send loading status with sub-message

@@ -7,7 +7,6 @@
  * - Rows: Full-width horizontal list
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
 import {
     View,
     Flex,
@@ -19,15 +18,16 @@ import {
     Item,
 } from '@adobe/react-spectrum';
 import Add from '@spectrum-icons/workflow/Add';
+import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
 import Copy from '@spectrum-icons/workflow/Copy';
 import Import from '@spectrum-icons/workflow/Import';
-import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
-import { ProjectsGrid } from './components/ProjectsGrid';
-import { ProjectRowList } from './components/ProjectRowList';
+import React, { useState, useMemo, useEffect } from 'react';
 import { DashboardEmptyState } from './components/DashboardEmptyState';
-import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
+import { ProjectRowList } from './components/ProjectRowList';
+import { ProjectsGrid } from './components/ProjectsGrid';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
+import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
 import { useFocusTrap } from '@/core/ui/hooks';
 import type { Project } from '@/types/base';
 
@@ -114,7 +114,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
         }
         const query = searchQuery.toLowerCase();
         return projects.filter((project) =>
-            project.name.toLowerCase().includes(query)
+            project.name.toLowerCase().includes(query),
         );
     }, [projects, searchQuery]);
 

@@ -12,15 +12,14 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import React from 'react';
-import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
-import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
-import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import {
     isDeploymentActive,
-    canShowRecoveryOptions,
     isDeploymentSuccess,
 } from './meshDeploymentPredicates';
 import { MeshDeploymentState, MeshDeploymentCallbacks } from './meshDeploymentTypes';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 
 interface MeshDeploymentStepProps extends MeshDeploymentCallbacks {
     state: MeshDeploymentState;
@@ -58,7 +57,6 @@ export function MeshDeploymentStep({
     onContinue,
 }: MeshDeploymentStepProps) {
     const isActive = isDeploymentActive(state);
-    const showRecovery = canShowRecoveryOptions(state);
     const isSuccess = isDeploymentSuccess(state);
 
     return (

@@ -5,17 +5,27 @@ import {
     Button,
     Text,
 } from '@adobe/react-spectrum';
-import { PageHeader, PageFooter, CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
-import { LoadingOverlay, LoadingDisplay } from '@/core/ui/components/feedback';
 import React, { useCallback, useMemo, useRef } from 'react';
+import {
+    useWizardState,
+    useWizardNavigation,
+    useMessageListeners,
+    useWizardEffects,
+} from './hooks';
 import {
     getNextButtonText,
     hasMeshComponentSelected,
-    getCompletedStepIndices,
     getNavigationDirection,
     ImportedSettings,
     EditProjectConfig,
 } from './wizardHelpers';
+import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
+import { LoadingOverlay, LoadingDisplay } from '@/core/ui/components/feedback';
+import { PageHeader, PageFooter, CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
+import { useFocusTrap } from '@/core/ui/hooks';
+import { cn } from '@/core/ui/utils/classNames';
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
 import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
@@ -26,22 +36,11 @@ import { MeshDeploymentStep } from '@/features/mesh/ui/steps/MeshDeploymentStep'
 import { useMeshDeployment } from '@/features/mesh/ui/steps/useMeshDeployment';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
-import { ReviewStep, ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
+import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
 import { ComponentSelection } from '@/types/webview';
-import { cn } from '@/core/ui/utils/classNames';
-import { webviewLogger } from '@/core/ui/utils/webviewLogger';
-import { useFocusTrap } from '@/core/ui/hooks';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 
 // Extracted hooks
-import {
-    useWizardState,
-    useWizardNavigation,
-    useMessageListeners,
-    useWizardEffects,
-} from './hooks';
 
 const log = webviewLogger('WizardContainer');
 
@@ -120,7 +119,7 @@ export function WizardContainer({
     // Mesh deployment hook - called unconditionally per Rules of Hooks
     const hasMeshComponent = useMemo(
         () => hasMeshComponentSelected(state.components),
-        [state.components]
+        [state.components],
     );
 
     const meshDeployment = useMeshDeployment({

@@ -5,18 +5,18 @@
  * Phase 3: Generate mesh .env + Deploy to Adobe I/O (or link existing mesh)
  */
 
-import type { Logger } from '@/types/logger';
-import type { Project, TransformedComponentDefinition, EnvVarDefinition } from '@/types';
+import { ProgressTracker } from '../shared';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { hasEntries } from '@/types/typeGuards';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
+import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import {
     generateComponentEnvFile,
     deployMeshComponent,
 } from '@/features/project-creation/helpers';
-import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
-import { extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
-import { ProgressTracker } from '../shared';
+import type { Project, TransformedComponentDefinition, EnvVarDefinition } from '@/types';
+import type { Logger } from '@/types/logger';
+import { hasEntries } from '@/types/typeGuards';
 
 export interface MeshSetupContext {
     project: Project;

@@ -4,8 +4,8 @@
  * Displays wizard step progress with completed/current/future indicators.
  */
 
-import React from 'react';
 import { Text } from '@adobe/react-spectrum';
+import React from 'react';
 import type { WizardStep } from '../../types';
 
 export interface WizardProgressProps {

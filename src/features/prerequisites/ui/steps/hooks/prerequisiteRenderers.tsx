@@ -1,12 +1,12 @@
-import React from 'react';
 import { View, Flex, Text } from '@adobe/react-spectrum';
+import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import CloseCircle from '@spectrum-icons/workflow/CloseCircle';
-import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import Pending from '@spectrum-icons/workflow/Pending';
+import React from 'react';
 import { Spinner } from '@/core/ui/components/ui/Spinner';
-import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
+import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
 
 /**
  * Check if plugin details should be shown for a prerequisite
@@ -161,7 +161,7 @@ export function renderPrerequisiteMessage(check: PrerequisiteCheck): React.React
                 check.status === 'error'
                     ? 'prerequisite-message prerequisite-message-error'
                     : 'prerequisite-message prerequisite-message-default',
-                'animate-fade-in'
+                'animate-fade-in',
             )}>
                 {check.message || 'Waiting...'}
             </Text>

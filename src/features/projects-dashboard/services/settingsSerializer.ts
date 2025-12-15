@@ -5,9 +5,8 @@
  * Used for import/export functionality to share settings between projects.
  */
 
+import { SETTINGS_FILE_VERSION, type SettingsFile } from '@/features/projects-dashboard/types/settingsFile';
 import type { Project } from '@/types/base';
-import type { SettingsFile } from '../types/settingsFile';
-import { SETTINGS_FILE_VERSION } from '../types/settingsFile';
 
 /**
  * Result of parsing a settings file

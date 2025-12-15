@@ -1,7 +1,7 @@
-import React from 'react';
 import { Flex, Text, Button } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import React from 'react';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
 

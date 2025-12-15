@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { toServiceGroupWithSortedFields, ServiceGroupDef } from '@/features/components/services/serviceGroupTransforms';
+import { ComponentEnvVar, ComponentConfigs, WizardState } from '@/types/webview';
 
 const log = webviewLogger('useComponentConfig');
 

@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { HandlerContext, SharedState } from '@/commands/handlers/HandlerContext';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { ServiceLocator } from '@/core/di';
@@ -12,10 +13,7 @@ import { AuthenticationService } from '@/features/authentication';
 // Prerequisites checking is handled by PrerequisitesManager
 import { ComponentHandler } from '@/features/components/handlers/componentHandler';
 import { PrerequisitesManager } from '@/features/prerequisites/services/PrerequisitesManager';
-import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
-import type { SettingsFile } from '@/features/projects-dashboard';
 // Extracted helper functions
-import { HandlerContext, SharedState } from '@/commands/handlers/HandlerContext';
 import { HandlerRegistry } from '@/features/project-creation/handlers/HandlerRegistry';
 import {
     formatGroupName as formatGroupNameHelper,
@@ -23,6 +21,8 @@ import {
     getEndpoint as getEndpointHelper,
     deployMeshComponent as deployMeshHelper,
 } from '@/features/project-creation/helpers';
+import type { SettingsFile } from '@/features/projects-dashboard';
+import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { parseJSON } from '@/types/typeGuards';
 
 // Type definitions for createProjectWebview
@@ -368,7 +368,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             if (!this.wizardNavigateCommand) {
                 this.wizardNavigateCommand = vscode.commands.registerCommand(
                     'demoBuilder.internal.wizardNavigate',
-                    (stepIndex: number) => this.navigateToStep(stepIndex)
+                    (stepIndex: number) => this.navigateToStep(stepIndex),
                 );
             }
 

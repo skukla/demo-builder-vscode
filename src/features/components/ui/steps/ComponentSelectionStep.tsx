@@ -9,12 +9,12 @@ import {
 } from '@adobe/react-spectrum';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
 import React, { useRef } from 'react';
-import { cn } from '@/core/ui/utils/classNames';
-import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+import { useComponentSelection } from '../hooks/useComponentSelection';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { useFocusOnMount } from '@/core/ui/hooks';
+import { cn } from '@/core/ui/utils/classNames';
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { BaseStepProps } from '@/types/wizard';
-import { useComponentSelection } from '../hooks/useComponentSelection';
 
 const log = webviewLogger('ComponentSelectionStep');
 

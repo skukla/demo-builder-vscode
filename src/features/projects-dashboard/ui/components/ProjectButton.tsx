@@ -6,15 +6,15 @@
  * Part of the layout prototype comparison.
  */
 
-import React, { useCallback } from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
-import type { Project } from '@/types/base';
+import React, { useCallback } from 'react';
 import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
-} from '../../utils/projectStatusUtils';
+} from '@/features/projects-dashboard/utils/projectStatusUtils';
+import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import type { Project } from '@/types/base';
 
 /**
  * Adobe "A" icon - sized to match Spectrum size="L" icons (36px)
@@ -65,7 +65,7 @@ export const ProjectButton: React.FC<ProjectButtonProps> = ({
                 onSelect(project);
             }
         },
-        [project, onSelect]
+        [project, onSelect],
     );
 
     const isRunning = project.status === 'running';

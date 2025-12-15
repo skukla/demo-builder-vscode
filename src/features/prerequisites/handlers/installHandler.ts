@@ -15,14 +15,14 @@
  */
 
 import * as vscode from 'vscode';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { ErrorCode } from '@/types/errorCodes';
+import { isTimeout, toAppError } from '@/types/errors';
 import { SimpleResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
-import { isTimeout, toAppError } from '@/types/errors';
 
 /**
  * Get target Node versions for installation (SOP §3 compliance)
@@ -273,7 +273,7 @@ export async function handleInstallPrerequisite(
         // CRITICAL: Also invalidate cache for prerequisites that DEPEND on this one
         // This fixes the bug where Adobe I/O CLI cache remains stale after Node.js installs
         const dependents = context.sharedState.currentPrerequisites?.filter(p =>
-            p.depends?.includes(prereq.id)
+            p.depends?.includes(prereq.id),
         );
         if (dependents && dependents.length > 0) {
             dependents.forEach(dep => {

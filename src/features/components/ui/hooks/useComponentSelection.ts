@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { useDebouncedValue, useSetToggle } from '@/core/ui/hooks';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { WizardState } from '@/types/webview';
 
 interface DependencyOption {
@@ -45,16 +45,16 @@ export function useComponentSelection({
 
     // Use useSetToggle for multi-select state - provides Set + toggle handler in one
     const [selectedDependencies, handleDependencyToggle, setSelectedDependencies] = useSetToggle<string>(
-        state.components?.dependencies || []
+        state.components?.dependencies || [],
     );
     const [selectedServices, handleServiceToggle, setSelectedServices] = useSetToggle<string>(
-        state.components?.services || []
+        state.components?.services || [],
     );
     const [selectedIntegrations, handleIntegrationToggle] = useSetToggle<string>(
-        state.components?.integrations || []
+        state.components?.integrations || [],
     );
     const [selectedAppBuilder, handleAppBuilderToggle] = useSetToggle<string>(
-        state.components?.appBuilderApps || []
+        state.components?.appBuilderApps || [],
     );
 
     // Track last sent selection to prevent duplicate messages

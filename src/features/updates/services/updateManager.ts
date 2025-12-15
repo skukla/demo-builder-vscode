@@ -6,8 +6,8 @@ import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { Project, SubmoduleConfig } from '@/types';
-import { getComponentIds, getComponentVersion } from '@/types/typeGuards';
 import { DEFAULT_SHELL } from '@/types/shell';
+import { getComponentIds, getComponentVersion } from '@/types/typeGuards';
 
 export type { UpdateCheckResult };
 
@@ -199,7 +199,7 @@ export class UpdateManager {
      */
     async checkSubmoduleUpdates(
         parentComponentPath: string,
-        submodules: Record<string, SubmoduleConfig>
+        submodules: Record<string, SubmoduleConfig>,
     ): Promise<Map<string, UpdateCheckResult>> {
         const results = new Map<string, UpdateCheckResult>();
         const channel = this.getUpdateChannel();

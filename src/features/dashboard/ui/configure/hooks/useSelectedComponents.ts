@@ -6,9 +6,9 @@
  */
 
 import { useMemo } from 'react';
-import type { Project } from '@/types/base';
-import type { ComponentsData, ComponentData } from '../configureTypes';
 import { getAllComponentDefinitions, discoverComponentsFromInstances } from '../configureHelpers';
+import type { ComponentsData, ComponentData } from '../configureTypes';
+import type { Project } from '@/types/base';
 
 export interface SelectedComponent {
     id: string;

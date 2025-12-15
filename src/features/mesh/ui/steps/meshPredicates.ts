@@ -17,7 +17,7 @@ import type { MeshData } from '../hooks/useMeshOperations';
 export function isMeshDataReady(
     isChecking: boolean,
     error: string | null | undefined,
-    meshData: MeshData | null
+    meshData: MeshData | null,
 ): boolean {
     if (isChecking) return false;
     if (error) return false;
@@ -36,7 +36,7 @@ export function isMeshDataReady(
 export function isReadyForMeshCreation(
     isChecking: boolean,
     error: string | null | undefined,
-    meshData: MeshData | null
+    meshData: MeshData | null,
 ): boolean {
     if (isChecking) return false;
     if (error) return false;

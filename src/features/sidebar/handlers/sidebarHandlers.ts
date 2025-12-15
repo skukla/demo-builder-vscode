@@ -6,8 +6,8 @@
  */
 
 import * as vscode from 'vscode';
-import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import type { SidebarContext } from '../types';
+import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /**
  * Handle navigation requests
@@ -16,7 +16,7 @@ import type { SidebarContext } from '../types';
  */
 export const handleNavigate: MessageHandler = async (
     context: HandlerContext,
-    payload?: unknown
+    payload?: unknown,
 ): Promise<HandlerResponse> => {
     try {
         const typedPayload = payload as { target?: string } | undefined;
@@ -49,7 +49,7 @@ export const handleNavigate: MessageHandler = async (
  * Note: Wizard context is managed separately by the wizard command.
  */
 export const handleGetContext: MessageHandler = async (
-    context: HandlerContext
+    context: HandlerContext,
 ): Promise<HandlerResponse> => {
     try {
         // Check if project is selected
@@ -74,7 +74,7 @@ export const handleGetContext: MessageHandler = async (
     } catch (error) {
         context.logger.error(
             'Failed to get sidebar context',
-            error instanceof Error ? error : undefined
+            error instanceof Error ? error : undefined,
         );
         return {
             success: false,
@@ -91,7 +91,7 @@ export const handleGetContext: MessageHandler = async (
  */
 export const handleSetContext: MessageHandler = async (
     context: HandlerContext,
-    payload?: unknown
+    payload?: unknown,
 ): Promise<HandlerResponse> => {
     try {
         const typedPayload = payload as { context?: SidebarContext } | undefined;
@@ -109,7 +109,7 @@ export const handleSetContext: MessageHandler = async (
     } catch (error) {
         context.logger.error(
             'Failed to set sidebar context',
-            error instanceof Error ? error : undefined
+            error instanceof Error ? error : undefined,
         );
         return {
             success: false,

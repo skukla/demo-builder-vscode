@@ -5,11 +5,11 @@
  * Displayed in all contexts except wizard mode.
  */
 
-import React from 'react';
 import { Flex, Text, ActionButton } from '@adobe/react-spectrum';
 import Book from '@spectrum-icons/workflow/Book';
 import Help from '@spectrum-icons/workflow/Help';
 import Settings from '@spectrum-icons/workflow/Settings';
+import React from 'react';
 
 export interface UtilityBarProps {
     /** Callback when user clicks Documentation link */

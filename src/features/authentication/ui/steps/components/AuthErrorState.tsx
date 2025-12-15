@@ -10,7 +10,7 @@ interface AuthErrorStateProps {
     onBack: () => void;
 }
 
-export function AuthErrorState({ error, code, onRetry, onBack }: AuthErrorStateProps) {
+export function AuthErrorState({ error, code: _code, onRetry, onBack }: AuthErrorStateProps) {
     return (
         <StatusDisplay
             variant="error"

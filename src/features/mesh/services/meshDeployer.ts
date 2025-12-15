@@ -6,7 +6,7 @@ import { validateMeshId } from '@/core/validation';
 import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { toAppError } from '@/types/errors';
-import { DataResult, SimpleResult } from '@/types/results';
+import { DataResult } from '@/types/results';
 
 export class MeshDeployer {
     private logger: Logger;

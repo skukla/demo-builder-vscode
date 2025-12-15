@@ -6,9 +6,9 @@
  */
 
 import { useMemo } from 'react';
-import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
 import type { ComponentsData, UniqueField, ServiceGroup } from '../configureTypes';
 import type { SelectedComponent } from './useSelectedComponents';
+import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
 
 interface ServiceGroupDefinition {
     id: string;
@@ -33,8 +33,8 @@ const SERVICE_GROUP_DEFINITIONS: ServiceGroupDefinition[] = [
             'ADOBE_COMMERCE_STORE_VIEW_CODE',
             'ADOBE_COMMERCE_CUSTOMER_GROUP',
             'ADOBE_COMMERCE_ADMIN_USERNAME',
-            'ADOBE_COMMERCE_ADMIN_PASSWORD'
-        ]
+            'ADOBE_COMMERCE_ADMIN_PASSWORD',
+        ],
     },
     {
         id: 'catalog-service',
@@ -43,14 +43,14 @@ const SERVICE_GROUP_DEFINITIONS: ServiceGroupDefinition[] = [
         fieldOrder: [
             'ADOBE_CATALOG_SERVICE_ENDPOINT',
             'ADOBE_COMMERCE_ENVIRONMENT_ID',
-            'ADOBE_CATALOG_API_KEY'
-        ]
+            'ADOBE_CATALOG_API_KEY',
+        ],
     },
     { id: 'mesh', label: 'API Mesh', order: 3 },
     { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
     { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
     { id: 'experience-platform', label: 'Experience Platform', order: 6 },
-    { id: 'other', label: 'Additional Settings', order: 99 }
+    { id: 'other', label: 'Additional Settings', order: 99 },
 ];
 
 interface UseServiceGroupsProps {
@@ -77,7 +77,7 @@ export function useServiceGroups({
                         fieldMap.set(envVarKey, {
                             ...envVarDef,
                             key: envVarKey,
-                            componentIds: [id]
+                            componentIds: [id],
                         });
                     } else {
                         const existing = fieldMap.get(envVarKey)!;
@@ -95,7 +95,7 @@ export function useServiceGroups({
                         fieldMap.set(envVarKey, {
                             ...envVarDef,
                             key: envVarKey,
-                            componentIds: [id]
+                            componentIds: [id],
                         });
                     } else {
                         const existing = fieldMap.get(envVarKey)!;

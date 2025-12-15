@@ -1,6 +1,4 @@
 import { useState, useMemo } from 'react';
-import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
-import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import {
     getEnabledWizardSteps,
     initializeComponentsFromImport,
@@ -11,6 +9,8 @@ import {
     EditProjectConfig,
 } from '../wizardHelpers';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
+import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
 
 const log = webviewLogger('useWizardState');
 
@@ -73,7 +73,7 @@ function computeInitialState(
     editProject: EditProjectConfig | undefined,
     importedSettings: ImportedSettings | null | undefined,
     componentDefaults: ComponentSelection | undefined,
-    existingProjectNames: string[]
+    existingProjectNames: string[],
 ): WizardState {
     const firstStep = getFirstEnabledStep(wizardSteps);
 
@@ -176,7 +176,7 @@ export function useWizardState({
 
     // Main wizard state
     const [state, setState] = useState<WizardState>(() =>
-        computeInitialState(wizardSteps, editProject, importedSettings, componentDefaults, existingProjectNames || [])
+        computeInitialState(wizardSteps, editProject, importedSettings, componentDefaults, existingProjectNames || []),
     );
 
     // Step completion tracking

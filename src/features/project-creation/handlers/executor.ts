@@ -9,12 +9,6 @@
  */
 
 import * as vscode from 'vscode';
-import { HandlerContext } from '@/commands/handlers/HandlerContext';
-import { ProgressTracker } from './shared';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { AdobeConfig } from '@/types/base';
-import { getProjectFrontendPort, getComponentConfigPort } from '@/types/typeGuards';
-import { TransformedComponentDefinition } from '@/types';
 import {
     cloneAllComponents,
     installAllComponents,
@@ -26,34 +20,16 @@ import {
     sendCompletionAndCleanup,
     type ComponentDefinitionEntry,
 } from './services';
+import { ProgressTracker } from './shared';
+import { HandlerContext } from '@/commands/handlers/HandlerContext';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { TransformedComponentDefinition } from '@/types';
+import { AdobeConfig } from '@/types/base';
+import { getProjectFrontendPort, getComponentConfigPort } from '@/types/typeGuards';
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
-
-/**
- * Convert kebab-case submodule ID to Title Case display name
- */
-function formatSubmoduleDisplayName(id: string): string {
-    return id
-        .split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
-}
-
-/**
- * Build user-friendly submessage for component installation progress
- */
-function buildInstallationSubmessage(selectedSubmodules?: string[]): string {
-    const DEFAULT_MESSAGE = 'Cloning repository and installing dependencies...';
-
-    if (!selectedSubmodules || selectedSubmodules.length === 0) {
-        return DEFAULT_MESSAGE;
-    }
-
-    const displayNames = selectedSubmodules.map(formatSubmoduleDisplayName);
-    return `Adding ${displayNames.join(', ')}...`;
-}
 
 /**
  * ProjectCreationConfig - Configuration passed to project creation
@@ -226,7 +202,7 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
 async function handlePortConflicts(
     context: HandlerContext,
     typedConfig: ProjectCreationConfig,
-    progressTracker: ProgressTracker,
+    _progressTracker: ProgressTracker,
 ): Promise<void> {
     const existingProject = await context.stateManager.getCurrentProject();
     if (existingProject && existingProject.status === 'running') {
@@ -319,7 +295,7 @@ async function loadComponentDefinitions(
         if (comp.type === 'frontend' && componentDef.submodules) {
             const allSelectedDeps = typedConfig.components?.dependencies || [];
             const selectedSubmodules = allSelectedDeps.filter(
-                (depId: string) => componentDef?.submodules?.[depId] !== undefined
+                (depId: string) => componentDef?.submodules?.[depId] !== undefined,
             );
             if (selectedSubmodules.length > 0) {
                 installOptions.selectedSubmodules = selectedSubmodules;

@@ -1,6 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { formatAdobeCliError, extractMeshErrorSummary } from '@/features/mesh/utils/errorFormatter';
 import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
@@ -9,7 +10,6 @@ import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { Project } from '@/types/base';
 import { parseJSON, getComponentInstanceEntries } from '@/types/typeGuards';
-import { formatAdobeCliError, extractMeshErrorSummary } from '../utils/errorFormatter';
 
 /**
  * Deploy (or redeploy) API Mesh using the mesh.json from the mesh component
@@ -273,7 +273,7 @@ export class DeployMeshCommand extends BaseCommand {
                     },
                 );
             
-            } catch (error) {
+            } catch {
                 // Error details already shown above
                 this.logger.info(''); // Blank line (no ❌ prefix)
                 this.logger.error('Deployment failed. See error above.');
@@ -292,7 +292,7 @@ export class DeployMeshCommand extends BaseCommand {
                 // Show simple error with View Logs button (details are in Demo Builder: User Logs channel)
                 const selection = await vscode.window.showErrorMessage(
                     'Mesh deployment failed. Check logs for details.',
-                    'View Logs'
+                    'View Logs',
                 );
                 if (selection === 'View Logs') {
                     vscode.commands.executeCommand('demoBuilder.showLogs');
@@ -303,7 +303,7 @@ export class DeployMeshCommand extends BaseCommand {
                 this.logger.error('[Mesh Deployment] Unexpected error', error as Error);
                 const selection = await vscode.window.showErrorMessage(
                     'Failed to deploy API Mesh. Check logs for details.',
-                    'View Logs'
+                    'View Logs',
                 );
                 if (selection === 'View Logs') {
                     vscode.commands.executeCommand('demoBuilder.showLogs');

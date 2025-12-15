@@ -9,7 +9,7 @@ interface ValidationResult {
 
 export function useConfigValidation(
     serviceGroups: ServiceGroup[],
-    componentConfigs: ComponentConfigs
+    componentConfigs: ComponentConfigs,
 ): ValidationResult {
     return useMemo(() => {
         let allValid = true;
@@ -25,7 +25,7 @@ export function useConfigValidation(
                 // Required field validation
                 if (field.required) {
                     const hasValue = field.componentIds.some(compId =>
-                        componentConfigs[compId]?.[field.key]
+                        componentConfigs[compId]?.[field.key],
                     );
 
                     if (!hasValue) {
@@ -37,7 +37,7 @@ export function useConfigValidation(
 
                 // Get first component with a value for type validation
                 const firstComponentWithValue = field.componentIds.find(compId =>
-                    componentConfigs[compId]?.[field.key]
+                    componentConfigs[compId]?.[field.key],
                 );
 
                 if (!firstComponentWithValue) {

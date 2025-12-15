@@ -1,5 +1,4 @@
 import { useCallback, useRef, useEffect } from 'react';
-import type { WizardState, WizardStep } from '@/types/webview';
 import {
     getNavigationDirection,
     filterCompletedStepsForBackwardNav,
@@ -11,6 +10,7 @@ import {
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import type { WizardState, WizardStep } from '@/types/webview';
 
 const log = webviewLogger('useWizardNavigation');
 
@@ -50,7 +50,7 @@ interface UseWizardNavigationReturn {
 async function handleStepBackendCalls(
     currentStep: string,
     nextStepId: string,
-    wizardState: WizardState
+    wizardState: WizardState,
 ): Promise<void> {
     // Project selection: Commit the UI selection to backend
     if (currentStep === 'adobe-project' && wizardState.adobeProject?.id) {
@@ -146,7 +146,7 @@ export function useWizardNavigation({
                         prev,
                         step,
                         targetIndex,
-                        adobeIndices
+                        adobeIndices,
                     );
                     return { ...prev, ...updates };
                 });

@@ -3,12 +3,12 @@
  * Used by both project creation wizard and manual deploy command
  */
 
+import { getMeshNodeVersion } from './meshConfig';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateMeshId } from '@/core/validation';
 import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
-import { getMeshNodeVersion } from './meshConfig';
 
 /**
  * MeshDeploymentVerificationResult - Result from deployment verification polling

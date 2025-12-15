@@ -1,8 +1,8 @@
 import { View, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React from 'react';
-import { WizardStep } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
+import { WizardStep } from '@/types/webview';
 
 /**
  * Timeline step status type

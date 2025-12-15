@@ -6,9 +6,9 @@
  */
 
 import { useMemo, useCallback, Dispatch, SetStateAction } from 'react';
-import { NavigationSection } from '@/core/ui/components/navigation';
-import type { ServiceGroup, UniqueField } from '../configureTypes';
 import { toNavigationSection } from '../configureHelpers';
+import type { ServiceGroup, UniqueField } from '../configureTypes';
+import { NavigationSection } from '@/core/ui/components/navigation';
 
 interface UseConfigureNavigationProps {
     serviceGroups: ServiceGroup[];

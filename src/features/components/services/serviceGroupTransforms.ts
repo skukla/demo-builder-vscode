@@ -65,7 +65,7 @@ export interface ServiceGroupResult<T> {
  */
 export function toServiceGroupWithSortedFields<T extends FieldWithKey>(
     def: ServiceGroupDef,
-    groups: Record<string, T[]>
+    groups: Record<string, T[]>,
 ): ServiceGroupResult<T> {
     const fields = groups[def.id] || [];
 

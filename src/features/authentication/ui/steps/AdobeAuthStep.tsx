@@ -4,17 +4,12 @@ import {
 } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Key from '@spectrum-icons/workflow/Key';
 import Login from '@spectrum-icons/workflow/Login';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import React from 'react';
-import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
-import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
-import { AuthLoadingState } from './components/AuthLoadingState';
-import { ErrorCode } from '@/types/errorCodes';
-import { BaseStepProps } from '@/types/wizard';
 import { useAuthStatus } from '../hooks/useAuthStatus';
+import { getOrgSelectionMessage } from './authHelpers';
 import {
     isTokenExpiringSoon,
     isAuthenticatedWithOrg,
@@ -23,7 +18,11 @@ import {
     hasAuthError,
     hasAuthTimeout,
 } from './authPredicates';
-import { getOrgSelectionMessage } from './authHelpers';
+import { AuthLoadingState } from './components/AuthLoadingState';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { ErrorCode } from '@/types/errorCodes';
+import { BaseStepProps } from '@/types/wizard';
 
 export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepProps) {
     const {

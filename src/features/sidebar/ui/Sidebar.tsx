@@ -5,13 +5,13 @@
  * Shows different views depending on whether user has a project, is in wizard, etc.
  */
 
-import React from 'react';
 import { Flex, Text, ActionButton, Divider } from '@adobe/react-spectrum';
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
-import { SidebarNav } from './components/SidebarNav';
-import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
-import { UtilityBar } from './views';
+import React from 'react';
 import type { SidebarContext, NavItem } from '../types';
+import { SidebarNav } from './components/SidebarNav';
+import { UtilityBar } from './views';
+import { TimelineNav, TimelineStep } from '@/core/ui/components/TimelineNav';
 
 export interface SidebarProps {
     /** Current sidebar context */
@@ -49,15 +49,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
     context,
     onNavigate,
     onBack,
-    onCreateProject,
+    onCreateProject: _onCreateProject,
     onOpenDocs,
     onOpenHelp,
     onOpenSettings,
-    onStartDemo,
-    onStopDemo,
-    onOpenDashboard,
-    onOpenConfigure,
-    onCheckUpdates,
+    onStartDemo: _onStartDemo,
+    onStopDemo: _onStopDemo,
+    onOpenDashboard: _onOpenDashboard,
+    onOpenConfigure: _onOpenConfigure,
+    onCheckUpdates: _onCheckUpdates,
     onWizardStepClick,
 }) => {
     // For projects, projectsList, or project context, show UtilityBar
@@ -143,7 +143,7 @@ function renderHeader(context: SidebarContext): React.ReactNode {
 
 function renderContent(
     context: SidebarContext,
-    onNavigate: (target: string) => void
+    onNavigate: (target: string) => void,
 ): React.ReactNode {
     switch (context.type) {
         case 'project':

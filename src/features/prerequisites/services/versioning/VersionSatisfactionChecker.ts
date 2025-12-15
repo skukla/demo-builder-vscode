@@ -5,11 +5,11 @@
  */
 
 import * as semver from 'semver';
+import { parseInstalledVersions, isValidVersionFamily } from './NodeVersionParser';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
-import { DEFAULT_SHELL } from '@/types/shell';
 import { Logger } from '@/types/logger';
-import { parseInstalledVersions, isValidVersionFamily } from './NodeVersionParser';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 interface VersionSatisfactionResult {
     satisfied: boolean;

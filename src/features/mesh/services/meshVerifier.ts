@@ -3,12 +3,12 @@
  * Checks if mesh actually exists, not just if we think it's deployed
  */
 
+import { getMeshNodeVersion } from './meshConfig';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { MeshVerificationResult } from '@/features/mesh/services/types';
 import { Project } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
-import { getMeshNodeVersion } from './meshConfig';
 
 export type { MeshVerificationResult };
 

@@ -6,18 +6,18 @@
  * Includes a kebab menu for additional actions like Export.
  */
 
-import React, { useCallback, useMemo } from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
-import { StatusDot } from '@/core/ui/components/ui/StatusDot';
-import { ProjectActionsMenu } from './ProjectActionsMenu';
-import type { Project } from '@/types/base';
+import React, { useCallback, useMemo } from 'react';
+import { getComponentSummary } from '@/features/projects-dashboard/utils/componentSummaryUtils';
 import {
     getStatusText,
     getStatusVariant,
     getFrontendPort,
-} from '../../utils/projectStatusUtils';
-import { getComponentSummary } from '../../utils/componentSummaryUtils';
+} from '@/features/projects-dashboard/utils/projectStatusUtils';
+import { ProjectActionsMenu } from './ProjectActionsMenu';
+import { StatusDot } from '@/core/ui/components/ui/StatusDot';
+import type { Project } from '@/types/base';
 
 export interface ProjectRowProps {
     /** The project to display */
@@ -50,7 +50,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                 onSelect(project);
             }
         },
-        [project, onSelect]
+        [project, onSelect],
     );
 
     const port = getFrontendPort(project);

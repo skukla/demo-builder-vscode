@@ -11,7 +11,7 @@
  */
 export function getStepStatus(
     hasValue: boolean,
-    isCompleted: boolean
+    isCompleted: boolean,
 ): 'completed' | 'pending' | 'empty' {
     if (!hasValue) return 'empty';
     if (isCompleted) return 'completed';

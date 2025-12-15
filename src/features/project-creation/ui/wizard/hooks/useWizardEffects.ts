@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
-import type { WizardState, WizardStep } from '@/types/webview';
-import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import { getCompletedStepIndices } from '../wizardHelpers';
+import { FOCUSABLE_SELECTOR } from '@/core/ui/hooks';
+import { hasValidTitle } from '@/core/ui/utils/titleHelpers';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
-import { FOCUSABLE_SELECTOR } from '@/core/ui/hooks';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { hasValidTitle } from '@/core/ui/utils/titleHelpers';
+import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
+import type { WizardState, WizardStep } from '@/types/webview';
 
 const log = webviewLogger('useWizardEffects');
 
@@ -83,7 +83,7 @@ export function useWizardEffects({
 
         log.debug('Project title needs hydration, fetching from API', {
             id: project.id,
-            currentTitle: project.title
+            currentTitle: project.title,
         });
 
         webviewClient.request<{ success: boolean; data?: Array<{ id: string; name: string; title?: string }> }>('get-projects')
@@ -95,7 +95,7 @@ export function useWizardEffects({
                 if (hasValidTitle(matchingProject)) {
                     log.info('Hydrating project title from API', {
                         from: project.title,
-                        to: matchingProject?.title
+                        to: matchingProject?.title,
                     });
                     setState(prev => ({
                         ...prev,

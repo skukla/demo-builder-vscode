@@ -4,7 +4,7 @@ import { ExecutionLock, TIMEOUTS } from '@/core/utils';
 import { sanitizeErrorForLogging } from '@/core/validation';
 import { ComponentUpdater } from '@/features/updates/services/componentUpdater';
 import { ExtensionUpdater } from '@/features/updates/services/extensionUpdater';
-import { UpdateManager, UpdateCheckResult, MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
+import { UpdateManager, MultiProjectUpdateResult } from '@/features/updates/services/updateManager';
 import { Project } from '@/types';
 
 /**
@@ -274,7 +274,6 @@ export class CheckUpdatesCommand extends BaseCommand {
                 const componentUpdater = new ComponentUpdater(this.logger, this.context.extensionPath);
                 let successCount = 0;
                 let failCount = 0;
-                let completedCount = 0;
 
                 for (const [, updates] of projectUpdates.entries()) {
                     const project = updates[0].project;
@@ -304,8 +303,6 @@ export class CheckUpdatesCommand extends BaseCommand {
                                 `Failed to update ${update.componentId} in ${project.name}: ${sanitizedError}`,
                             );
                         }
-
-                        completedCount++;
                     }
 
                     // Save project state after updates

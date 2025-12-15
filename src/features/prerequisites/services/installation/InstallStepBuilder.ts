@@ -4,8 +4,8 @@
  * Builds installation steps for prerequisites.
  */
 
-import { TIMEOUTS } from '@/core/utils';
 import type { PrerequisiteDefinition, InstallStep } from '../types';
+import { TIMEOUTS } from '@/core/utils';
 
 export interface InstallStepsResult {
     steps: InstallStep[];
@@ -20,7 +20,7 @@ export interface InstallStepsResult {
  */
 function toVersionedInstallStep(
     templateStep: Partial<InstallStep>,
-    version: string
+    version: string,
 ): InstallStep {
     const replaceVersion = (str: string | undefined): string | undefined =>
         str?.replace(/{version}/g, version);
@@ -72,7 +72,7 @@ export function getInstallSteps(
         const templateSteps = prereq.install.steps;
         // Create a step for each version and each template step
         const steps: InstallStep[] = versions.flatMap(version =>
-            templateSteps.map(templateStep => toVersionedInstallStep(templateStep, version))
+            templateSteps.map(templateStep => toVersionedInstallStep(templateStep, version)),
         );
         return { steps };
     }

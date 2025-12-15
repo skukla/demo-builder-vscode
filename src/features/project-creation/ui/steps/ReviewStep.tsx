@@ -1,9 +1,9 @@
 import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useEffect, useMemo } from 'react';
-import { BaseStepProps } from '@/types/wizard';
 import { hasRequiredReviewData } from './reviewPredicates';
 import { cn } from '@/core/ui/utils/classNames';
+import { BaseStepProps } from '@/types/wizard';
 
 export interface ComponentData {
     id: string;
@@ -128,7 +128,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                                 </>
                             )}
                         </Flex>
-                    )
+                    ),
                 });
             }
         }
@@ -155,7 +155,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
             if (otherDeps.length > 0) {
                 info.push({
                     label: 'Dependencies',
-                    value: otherDeps.map(d => d!.name).join(', ')
+                    value: otherDeps.map(d => d!.name).join(', '),
                 });
             }
         }
@@ -169,7 +169,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
             if (integrations.length > 0) {
                 info.push({
                     label: 'Integrations',
-                    value: integrations.map(i => i!.name).join(', ')
+                    value: integrations.map(i => i!.name).join(', '),
                 });
             }
         }
@@ -183,7 +183,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
             if (apps.length > 0) {
                 info.push({
                     label: 'App Builder',
-                    value: apps.map(a => a!.name).join(', ')
+                    value: apps.map(a => a!.name).join(', '),
                 });
             }
         }

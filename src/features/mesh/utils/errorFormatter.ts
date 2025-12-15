@@ -170,7 +170,7 @@ export function extractMeshErrorSummary(error: string): string {
     }
 
     // Try to extract the 💥 error line (the actual failure)
-    const fatalMatch = /💥[^💥\n]*?(?:Failed|Error)[^💥\n]*/i.exec(error);
+    const fatalMatch = /💥[^💥\n]*?(?:Failed|Error)[^💥\n]*/iu.exec(error);
     if (fatalMatch) {
         // Clean up the match - remove emojis and internal paths
         let summary = fatalMatch[0]

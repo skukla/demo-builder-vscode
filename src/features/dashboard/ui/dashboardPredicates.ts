@@ -17,7 +17,7 @@
 export function isStartActionDisabled(
     isTransitioning: boolean,
     meshStatus: string | undefined,
-    status: string
+    status: string,
 ): boolean {
     if (isTransitioning) return true;
     if (meshStatus === 'checking') return true;

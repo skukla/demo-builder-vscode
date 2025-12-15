@@ -138,7 +138,7 @@ export async function checkMeshExistence(
 
         // Fallback - shouldn't reach here
         return { meshExists: false };
-    } catch (_error) {
+    } catch {
         // Command execution failed - treat as no mesh
         return { meshExists: false };
     }

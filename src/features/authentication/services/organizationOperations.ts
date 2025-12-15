@@ -5,22 +5,18 @@
  * Extracted from AdobeEntityService for SOP compliance.
  */
 
+import { getConsoleWhereContext, clearConsoleContext, type ContextOperationsDeps } from './contextOperations';
+import { mapOrganizations } from './entityMappers';
 import { getLogger, Logger, StepLogger } from '@/core/logging';
-import type { CommandExecutor } from '@/core/shell';
 import { TIMEOUTS, formatDuration } from '@/core/utils';
 import { validateOrgId } from '@/core/validation';
 import type { AdobeSDKClient } from '@/features/authentication/services/adobeSDKClient';
-import type { AuthCacheManager } from '@/features/authentication/services/authCacheManager';
 import type { OrganizationValidator } from '@/features/authentication/services/organizationValidator';
 import type {
     AdobeOrg,
-    AdobeContext,
     RawAdobeOrg,
-    AdobeConsoleWhereResponse,
     SDKResponse,
 } from '@/features/authentication/services/types';
-import { mapOrganizations } from './entityMappers';
-import { getConsoleWhereContext, clearConsoleContext, type ContextOperationsDeps } from './contextOperations';
 import { parseJSON } from '@/types/typeGuards';
 
 /**

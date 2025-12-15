@@ -5,8 +5,6 @@
  */
 
 import React from 'react';
-import { FormField } from '@/core/ui/components/forms';
-import { NavigationSection } from '@/core/ui/components/navigation';
 import type {
     ComponentsData,
     ComponentData,
@@ -15,6 +13,8 @@ import type {
     ComponentInstance,
     FormFieldRenderContext,
 } from './configureTypes';
+import { FormField } from '@/core/ui/components/forms';
+import { NavigationSection } from '@/core/ui/components/navigation';
 
 /**
  * Get all component definitions from componentsData

@@ -9,9 +9,9 @@ import {
 import React, { useEffect, useCallback } from 'react';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { BaseStepProps } from '@/types/wizard';
 import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
 import { normalizeProjectName } from '@/features/project-creation/helpers/formatters';
+import { BaseStepProps } from '@/types/wizard';
 
 interface WelcomeStepProps extends BaseStepProps {
     existingProjectNames?: string[];
@@ -30,7 +30,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 error: isDuplicate ? message : undefined,
             };
         },
-        [existingProjectNames]
+        [existingProjectNames],
     );
 
     const validateProjectName = useCallback((value: string): string | undefined => {
@@ -39,7 +39,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
             pattern(/^[a-z0-9-]+$/, 'Use lowercase letters, numbers, and hyphens only'),
             minLength(3, 'Name must be at least 3 characters'),
             maxLength(30, 'Name must be less than 30 characters'),
-            notDuplicate('A project with this name already exists')
+            notDuplicate('A project with this name already exists'),
         );
         return validator(value).error;
     }, [notDuplicate]);

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useDebouncedLoading } from '@/core/ui/hooks/useDebouncedLoading';
-import { WizardState } from '@/types/webview';
-import { ErrorCode } from '@/types/errorCodes';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { ErrorCode } from '@/types/errorCodes';
+import { WizardState } from '@/types/webview';
 
 /**
  * Configuration options for the selection step hook

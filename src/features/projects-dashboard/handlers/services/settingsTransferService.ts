@@ -6,18 +6,18 @@
  */
 
 import * as vscode from 'vscode';
-import { showWebviewQuickPick } from '@/core/utils';
-import type { Project } from '@/types/base';
-import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 import {
     parseSettingsFile,
     isNewerVersion,
     extractSettingsFromProject,
     createExportSettings,
     getSuggestedFilename,
-} from '../../services/settingsSerializer';
-import { SETTINGS_FILE_VERSION } from '../../types/settingsFile';
-import { getProjectDescription } from '../../utils/componentSummaryUtils';
+} from '@/features/projects-dashboard/services/settingsSerializer';
+import { SETTINGS_FILE_VERSION } from '@/features/projects-dashboard/types/settingsFile';
+import { getProjectDescription } from '@/features/projects-dashboard/utils/componentSummaryUtils';
+import { showWebviewQuickPick } from '@/core/utils';
+import type { Project } from '@/types/base';
+import type { HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /**
  * Import settings from a JSON file

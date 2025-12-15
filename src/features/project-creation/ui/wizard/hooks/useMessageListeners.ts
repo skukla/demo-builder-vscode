@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
-import type { WizardState, WizardStep, FeedbackMessage } from '@/types/webview';
 import { vscode } from '@/core/ui/utils/vscode-api';
+import type { WizardState, WizardStep, FeedbackMessage } from '@/types/webview';
 
 interface UseMessageListenersProps {
     setState: React.Dispatch<React.SetStateAction<WizardState>>;

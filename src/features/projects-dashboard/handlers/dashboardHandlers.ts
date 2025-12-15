@@ -10,11 +10,6 @@
  */
 
 import * as vscode from 'vscode';
-import { BaseWebviewCommand } from '@/core/base';
-import { sessionUIState } from '@/core/state/sessionUIState';
-import { validateProjectPath } from '@/core/validation';
-import type { Project } from '@/types/base';
-import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import { extractSettingsFromProject } from '../services/settingsSerializer';
 import {
     importSettingsFromFile,
@@ -22,6 +17,11 @@ import {
     exportProjectSettings,
     deleteProject,
 } from './services';
+import { BaseWebviewCommand } from '@/core/base';
+import { sessionUIState } from '@/core/state/sessionUIState';
+import { validateProjectPath } from '@/core/validation';
+import type { Project } from '@/types/base';
+import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 
 /**
  * Get all projects from StateManager

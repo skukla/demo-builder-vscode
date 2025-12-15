@@ -7,13 +7,13 @@
  */
 
 import * as vscode from 'vscode';
-import type { Logger } from '@/types/logger';
-import type { Project, EnvVarDefinition } from '@/types';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { getComponentIds, getEntryCount } from '@/types/typeGuards';
-import { generateComponentEnvFile, EnvGenerationConfig } from '@/features/project-creation/helpers';
 import { ProgressTracker } from '../shared';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { generateComponentEnvFile, EnvGenerationConfig } from '@/features/project-creation/helpers';
+import type { Project, EnvVarDefinition } from '@/types';
+import type { Logger } from '@/types/logger';
+import { getComponentIds, getEntryCount } from '@/types/typeGuards';
 
 export interface FinalizationContext {
     project: Project;

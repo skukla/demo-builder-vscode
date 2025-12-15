@@ -5,7 +5,7 @@
  * Handles scrolling to section headers when fields are focused.
  */
 
-import { useEffect, useRef, useCallback, Dispatch, SetStateAction } from 'react';
+import { useEffect, useRef, Dispatch, SetStateAction } from 'react';
 import type { ServiceGroup } from '../configureTypes';
 
 interface UseFieldFocusTrackingProps {
@@ -42,7 +42,7 @@ export function useFieldFocusTracking({
 
             const fieldId = fieldWrapper.id.replace('field-', '');
             const section = serviceGroups.find(group =>
-                group.fields.some(f => f.key === fieldId)
+                group.fields.some(f => f.key === fieldId),
             );
 
             if (!section) return;

@@ -8,17 +8,16 @@
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
-import { Logger } from '@/core/logging';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateURL } from '@/core/validation';
+import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
 import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
-import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 
 /**
  * Handle 'ready' message - Send initialization data

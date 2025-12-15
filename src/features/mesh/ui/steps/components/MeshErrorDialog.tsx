@@ -1,6 +1,6 @@
-import React from 'react';
 import { Flex, Text, DialogTrigger, ActionButton } from '@adobe/react-spectrum';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
+import React from 'react';
 import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { NumberedInstructions } from '@/core/ui/components/ui/NumberedInstructions';
@@ -22,7 +22,7 @@ interface MeshErrorDialogProps {
     onOpenConsole: () => void;
 }
 
-export function MeshErrorDialog({ error, code, setupInstructions = [], onRetry, onBack, onOpenConsole }: MeshErrorDialogProps) {
+export function MeshErrorDialog({ error, code: _code, setupInstructions = [], onRetry, onBack, onOpenConsole }: MeshErrorDialogProps) {
     return (
         <StatusDisplay
             variant="error"

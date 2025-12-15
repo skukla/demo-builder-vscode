@@ -3,9 +3,9 @@ import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import React from 'react';
-import { WizardState, WizardStep } from '@/types/webview';
-import { cn } from '@/core/ui/utils/classNames';
 import { getStepStatus } from './configurationSummaryHelpers';
+import { cn } from '@/core/ui/utils/classNames';
+import { WizardState, WizardStep } from '@/types/webview';
 
 interface ConfigurationSummaryProps {
     state: WizardState;

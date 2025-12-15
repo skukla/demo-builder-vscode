@@ -180,7 +180,7 @@ export class DeleteProjectCommand extends BaseCommand {
                     // Last retry failed
                     this.logger.error('[Delete Project] Failed to delete project files after all retries', err);
                     throw new Error(
-                        `Failed to delete project directory after ${this.MAX_RETRIES} attempts: ${err.message}`
+                        `Failed to delete project directory after ${this.MAX_RETRIES} attempts: ${err.message}`,
                     );
                 } else {
                     // Non-retryable error (e.g., EACCES - actual permission denied)
