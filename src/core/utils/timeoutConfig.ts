@@ -92,6 +92,7 @@ export const TIMEOUTS = {
 
     // Default fallbacks
     COMMAND_DEFAULT: 30000,         // Default command timeout
+    MIN_COMMAND_TIMEOUT: 1000,      // Minimum allowed timeout (1 second - prevents zero/negative)
 
     // SOP §1 Compliance - Round 3: Centralized timeout constants
     // Webview communication
