@@ -138,7 +138,7 @@ export function mockFetchNetworkError(message: string = 'Network timeout'): void
  * Sets up security validation mock to allow all URLs
  */
 export function mockSecurityValidationPass(): void {
-    const { validateGitHubDownloadURL } = require('@/core/validation');
+    const { validateGitHubDownloadURL } = require('@/core/validation/securityValidation');
     validateGitHubDownloadURL.mockImplementation(() => {});
 }
 
@@ -146,7 +146,7 @@ export function mockSecurityValidationPass(): void {
  * Sets up security validation mock to reject URLs
  */
 export function mockSecurityValidationFail(): void {
-    const { validateGitHubDownloadURL } = require('@/core/validation');
+    const { validateGitHubDownloadURL } = require('@/core/validation/securityValidation');
     validateGitHubDownloadURL.mockImplementation(() => {
         throw new Error('Invalid URL');
     });

@@ -9,11 +9,11 @@
 
 import { handleSelectProject } from '@/features/authentication/handlers/projectHandlers';
 import { createMockContext } from './projectHandlers.testUtils';
-import * as securityValidation from '@/core/validation';
+import * as securityValidation from '@/core/validation/securityValidation';
 
 // Mock dependencies
 jest.mock('@/core/di/serviceLocator');
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/securityValidation');
 jest.mock('@/types/typeGuards', () => ({
     toError: jest.fn((error: any) => error instanceof Error ? error : new Error(String(error))),
     parseJSON: jest.fn((str: string) => JSON.parse(str))

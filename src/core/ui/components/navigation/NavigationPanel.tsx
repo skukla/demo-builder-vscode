@@ -2,7 +2,6 @@ import React, { useCallback } from 'react';
 import { Heading, Flex, Text } from '@adobe/react-spectrum';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
-import { cn } from '@/core/ui/utils/classNames';
 
 export interface NavigationField {
     key: string;
@@ -35,12 +34,52 @@ export interface NavigationPanelProps {
 }
 
 /**
+ * Get styles for section button (SOP §6 compliance - extracted style object)
+ */
+function getSectionButtonStyles(isActive: boolean): React.CSSProperties {
+    return {
+        width: '100%',
+        padding: '12px',
+        background: isActive ? 'var(--spectrum-global-color-gray-200)' : 'transparent',
+        border: '1px solid var(--spectrum-global-color-gray-300)',
+        borderLeft: isActive
+            ? '3px solid var(--spectrum-global-color-blue-500)'
+            : '1px solid var(--spectrum-global-color-gray-300)',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: '4px',
+        transition: 'all 0.2s ease',
+    };
+}
+
+/**
+ * Get styles for field button (SOP §6 compliance - extracted style object)
+ */
+function getFieldButtonStyles(isActiveField: boolean): React.CSSProperties {
+    return {
+        width: '100%',
+        padding: '8px 12px',
+        background: isActiveField ? 'var(--spectrum-global-color-blue-100)' : 'transparent',
+        border: 'none',
+        borderLeft: isActiveField ? '2px solid var(--spectrum-global-color-blue-500)' : 'none',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        textAlign: 'left',
+        transition: 'all 0.2s',
+        borderRadius: '4px',
+    };
+}
+
+/**
  * Organism Component: NavigationPanel
  *
  * Configuration navigation sidebar with expandable sections and field navigation.
  * Shows completion status and allows jumping to specific fields.
- *
- * SOP §11: Uses CSS classes from custom-spectrum.css instead of inline styles
  *
  * @example
  * ```tsx
@@ -87,10 +126,18 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                 id={`nav-${section.id}`}
                                 onClick={() => handleToggleSection(section.id)}
                                 tabIndex={-1}
-                                className={cn(
-                                    'nav-section-button',
-                                    isActive && 'nav-section-button-active'
-                                )}
+                                style={getSectionButtonStyles(isActive)}
+                                onMouseEnter={(e) => {
+                                    if (!isActive) {
+                                        e.currentTarget.style.background =
+                                            'var(--spectrum-global-color-gray-100)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!isActive) {
+                                        e.currentTarget.style.background = 'transparent';
+                                    }
+                                }}
                             >
                                 <Flex width="100%" justifyContent="space-between" alignItems="center">
                                     <Flex gap="size-100" alignItems="center">
@@ -128,10 +175,18 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                                 id={`nav-field-${field.key}`}
                                                 onClick={() => handleNavigateToField(field.key)}
                                                 tabIndex={-1}
-                                                className={cn(
-                                                    'nav-field-button',
-                                                    isActiveField && 'nav-field-button-active'
-                                                )}
+                                                style={getFieldButtonStyles(isActiveField)}
+                                                onMouseEnter={(e) => {
+                                                    if (!isActiveField) {
+                                                        e.currentTarget.style.background =
+                                                            'var(--spectrum-global-color-gray-100)';
+                                                    }
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!isActiveField) {
+                                                        e.currentTarget.style.background = 'transparent';
+                                                    }
+                                                }}
                                             >
                                                 <Text
                                                     UNSAFE_className={`text-xs ${

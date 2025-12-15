@@ -18,7 +18,7 @@ jest.mock('vscode', () => ({
         Notification: 15,
     },
 }));
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/securityValidation');
 jest.mock('@/core/utils/timeoutConfig', () => ({
     TIMEOUTS: {
         UPDATE_DOWNLOAD: 300000,
@@ -66,7 +66,7 @@ describe('ExtensionUpdater', () => {
 
         beforeEach(() => {
             // Mock security validation
-            const { validateGitHubDownloadURL } = require('@/core/validation');
+            const { validateGitHubDownloadURL } = require('@/core/validation/securityValidation');
             validateGitHubDownloadURL.mockImplementation(() => {});
 
             // Mock fetch
@@ -114,7 +114,7 @@ describe('ExtensionUpdater', () => {
         });
 
         it('should validate GitHub URL before downloading', async () => {
-            const { validateGitHubDownloadURL } = require('@/core/validation');
+            const { validateGitHubDownloadURL } = require('@/core/validation/securityValidation');
 
             await updater.updateExtension(downloadUrl, newVersion);
 
@@ -122,7 +122,7 @@ describe('ExtensionUpdater', () => {
         });
 
         it('should throw error if URL validation fails', async () => {
-            const { validateGitHubDownloadURL } = require('@/core/validation');
+            const { validateGitHubDownloadURL } = require('@/core/validation/securityValidation');
             validateGitHubDownloadURL.mockImplementation(() => {
                 throw new Error('Invalid URL');
             });

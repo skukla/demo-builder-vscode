@@ -12,7 +12,7 @@
  * Target Coverage: 100% (security-critical code)
  */
 
-import { validateNodeVersion } from '@/core/validation';
+import { validateNodeVersion } from '@/core/validation/securityValidation';
 
 describe('securityValidation - validateNodeVersion', () => {
 

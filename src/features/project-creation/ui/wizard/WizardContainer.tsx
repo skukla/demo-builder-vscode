@@ -5,134 +5,160 @@ import {
     Button,
     Text,
 } from '@adobe/react-spectrum';
-import { PageHeader, PageFooter } from '@/core/ui/components/layout';
-import { LoadingOverlay } from '@/core/ui/components/feedback';
-import React, { useMemo, useRef } from 'react';
+import { PageHeader, PageFooter, CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
+import { LoadingOverlay, LoadingDisplay } from '@/core/ui/components/feedback';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
     getNextButtonText,
     hasMeshComponentSelected,
+    getCompletedStepIndices,
+    getEnabledWizardSteps,
+    getNavigationDirection,
+    filterCompletedStepsForBackwardNav,
+    getAdobeStepIndices,
+    computeStateUpdatesForBackwardNav,
+    initializeComponentsFromImport,
+    initializeAdobeContextFromImport,
+    initializeProjectName,
+    getFirstEnabledStep,
     ImportedSettings,
 } from './wizardHelpers';
-import { WizardStepRenderer } from './WizardStepRenderer';
+import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
+import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
+import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
+import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
+import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
+import { ApiMeshStep } from '@/features/mesh/ui/steps/ApiMeshStep';
+import { MeshDeploymentStep } from '@/features/mesh/ui/steps/MeshDeploymentStep';
 import { useMeshDeployment } from '@/features/mesh/ui/steps/useMeshDeployment';
-import { ComponentSelection } from '@/types/webview';
+import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
+import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
+import { ReviewStep, ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
+import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
+import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
+import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
-import { useFocusTrap } from '@/core/ui/hooks';
+import { useFocusTrap, FOCUSABLE_SELECTOR } from '@/core/ui/hooks';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
-
-// Extracted hooks
-import {
-    useWizardState,
-    useWizardNavigation,
-    useMessageListeners,
-    useWizardEffects,
-} from './hooks';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 const log = webviewLogger('WizardContainer');
 
+// Note: ImportedSettings interface and generateUniqueProjectName moved to wizardHelpers.ts
 // Re-export ImportedSettings for consumers that import from WizardContainer
 export type { ImportedSettings };
-
-/**
- * Edit project configuration passed from handleEditProject handler
- */
-export interface EditProjectConfig {
-    projectPath: string;
-    projectName: string;
-    settings: {
-        version: number;
-        selections?: {
-            frontend?: string;
-            backend?: string;
-            dependencies?: string[];
-            integrations?: string[];
-            appBuilder?: string[];
-        };
-        configs?: Record<string, Record<string, string | boolean | number | undefined>>;
-        adobe?: {
-            orgId?: string;
-            orgName?: string;
-            projectId?: string;
-            projectName?: string;
-            projectTitle?: string;
-            workspaceId?: string;
-            workspaceName?: string;
-            workspaceTitle?: string;
-        };
-    };
-}
 
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;
     wizardSteps?: { id: string; name: string; enabled: boolean }[];
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
-    /** Edit project configuration for edit mode */
-    editProject?: EditProjectConfig;
 }
 
-export function WizardContainer({
-    componentDefaults,
-    wizardSteps,
-    existingProjectNames,
-    importedSettings,
-    editProject,
-}: WizardContainerProps) {
-    // State management hook
-    const {
-        state,
-        updateState,
-        setState,
-        WIZARD_STEPS,
-        completedSteps,
-        setCompletedSteps,
-        highestCompletedStepIndex,
-        setHighestCompletedStepIndex,
-        canProceed,
-        setCanProceed,
-        animationDirection,
-        setAnimationDirection,
-        isTransitioning,
-        setIsTransitioning,
-        isConfirmingSelection,
-        setIsConfirmingSelection,
-        isPreparingReview,
-        setIsPreparingReview,
-        componentsData,
-        setComponentsData,
-    } = useWizardState({
-        componentDefaults,
-        wizardSteps,
-        existingProjectNames,
-        importedSettings,
-        editProject,
+
+// Helper: Build project configuration from wizard state
+const buildProjectConfig = (wizardState: WizardState) => {
+    const config = {
+        projectName: wizardState.projectName,
+        projectTemplate: wizardState.projectTemplate,
+        adobe: {
+            organization: wizardState.adobeOrg?.id,
+            projectId: wizardState.adobeProject?.id,
+            projectName: wizardState.adobeProject?.name,
+            workspace: wizardState.adobeWorkspace?.id,
+            workspaceName: wizardState.adobeWorkspace?.name,
+        },
+        components: {
+            frontend: wizardState.components?.frontend,
+            backend: wizardState.components?.backend,
+            dependencies: wizardState.components?.dependencies || [],
+            integrations: wizardState.components?.integrations || [],
+            appBuilderApps: wizardState.components?.appBuilderApps || [],
+        },
+        apiMesh: wizardState.apiMesh,
+        componentConfigs: wizardState.componentConfigs,
+    };
+
+    return config;
+};
+
+// Helper: Handle backend calls for step transitions
+const handleStepBackendCalls = async (currentStep: string, nextStepId: string, wizardState: WizardState) => {
+    // Project selection: Commit the UI selection to backend
+    if (currentStep === 'adobe-project' && wizardState.adobeProject?.id) {
+        const result = await vscode.request('select-project', { projectId: wizardState.adobeProject.id }) as { success: boolean; error?: string };
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to select project');
+        }
+    }
+
+    // Workspace selection: Commit the UI selection to backend
+    if (currentStep === 'adobe-workspace' && wizardState.adobeWorkspace?.id) {
+        const result = await vscode.request('select-workspace', { workspaceId: wizardState.adobeWorkspace.id }) as { success: boolean; error?: string };
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to select workspace');
+        }
+    }
+
+    // Project creation: Trigger project creation when moving from review to project-creation step
+    if (currentStep === 'review' && nextStepId === 'project-creation') {
+        const projectConfig = buildProjectConfig(wizardState);
+        vscode.createProject(projectConfig);
+    }
+};
+
+export function WizardContainer({ componentDefaults, wizardSteps, existingProjectNames, importedSettings }: WizardContainerProps) {
+    // Use the provided configuration, filtering out disabled steps
+    // NOTE: Must filter before using in hooks to avoid conditional hook calls
+    // Wrapped in useMemo to prevent changing on every render
+    const WIZARD_STEPS = useMemo(() => getEnabledWizardSteps(wizardSteps), [wizardSteps]);
+
+    // Note: Welcome step removed in Step 3 - wizard now starts at first enabled step
+    // Compute initial step inside lazy initializer to use prop value on mount
+    const [state, setState] = useState<WizardState>(() => {
+        // Use helper functions for cleaner initialization
+        const firstStep = getFirstEnabledStep(wizardSteps);
+        const initialComponents = initializeComponentsFromImport(importedSettings, componentDefaults);
+        const adobeContext = initializeAdobeContextFromImport(importedSettings);
+        const initialProjectName = initializeProjectName(importedSettings, existingProjectNames || []);
+
+        if (importedSettings) {
+            log.info('Initializing wizard with imported settings', {
+                hasSelections: !!importedSettings.selections,
+                hasAdobe: !!importedSettings.adobe,
+                hasConfigs: !!importedSettings.configs,
+                sourceProject: importedSettings.source?.project,
+                generatedName: initialProjectName,
+            });
+        }
+
+        return {
+            currentStep: firstStep,
+            projectName: initialProjectName,
+            projectTemplate: 'citisignal',
+            componentConfigs: importedSettings?.configs || {},
+            adobeAuth: {
+                isAuthenticated: false,  // Start as false, will be checked on auth step
+                isChecking: false,  // Allow the check to proceed
+            },
+            components: initialComponents,
+            adobeOrg: adobeContext.org,
+            adobeProject: adobeContext.project,
+            adobeWorkspace: adobeContext.workspace,
+        };
     });
 
-    // Navigation hook
-    const {
-        goNext,
-        goBack,
-        handleCancel,
-        handleShowLogs,
-        handleMeshDeploymentCancel,
-        getCurrentStepIndex,
-    } = useWizardNavigation({
-        state,
-        setState,
-        WIZARD_STEPS,
-        completedSteps,
-        setCompletedSteps,
-        highestCompletedStepIndex,
-        setHighestCompletedStepIndex,
-        setAnimationDirection,
-        setIsTransitioning,
-        setIsConfirmingSelection,
-        setIsPreparingReview,
-        importedSettings,
-    });
+    const [canProceed, setCanProceed] = useState(false);
+    const [completedSteps, setCompletedSteps] = useState<WizardStep[]>([]);
+    const [highestCompletedStepIndex, setHighestCompletedStepIndex] = useState(-1);
+    const [animationDirection, setAnimationDirection] = useState<'forward' | 'backward'>('forward');
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    const [isConfirmingSelection, setIsConfirmingSelection] = useState(false);
+    const [isPreparingReview, setIsPreparingReview] = useState(false);
 
     // Mesh deployment hook - called unconditionally per Rules of Hooks
+    // Only activates when mesh-deployment step is enabled AND mesh component selected
     const hasMeshComponent = useMemo(
         () => hasMeshComponentSelected(state.components),
         [state.components]
@@ -153,34 +179,412 @@ export function WizardContainer({
     // Ref for step content area (to focus first element when step changes)
     const stepContentRef = useRef<HTMLDivElement>(null);
 
-    // Message listeners
-    useMessageListeners({
-        setState,
-        getCurrentStepIndex,
-        navigateToStep: (step, targetIndex, currentIndex) => {
-            // Re-implement navigateToStep locally for message listener
-            // This avoids circular dependency issues
-            import('./wizardHelpers').then(({ getNavigationDirection }) => {
-                setAnimationDirection(getNavigationDirection(targetIndex, currentIndex));
-                setIsTransitioning(true);
-                setTimeout(() => {
-                    setState(prev => ({ ...prev, currentStep: step }));
-                    setIsTransitioning(false);
-                }, 150);
-            });
-        },
-        WIZARD_STEPS,
-    });
+    // Ref for tracking navigation transition timeout (to prevent race conditions)
+    const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Side effects (auto-focus, sidebar notifications, data loading)
-    useWizardEffects({
-        state,
-        setState,
-        WIZARD_STEPS,
-        completedSteps,
-        stepContentRef,
-        setComponentsData,
-    });
+    // Ref for import mode auto-navigation timers (cleanup on unmount)
+    const importNavTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const importNavClearTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Store response from get-components-data handler (includes full component data with envVars)
+    const [componentsData, setComponentsData] = useState<{
+        success: boolean;
+        type: string;
+        data: ComponentsData;
+    } | null>(null);
+
+    // Listen for feedback messages from extension
+    // Register ONCE on mount - check conditions inside functional update to avoid stale closures
+    useEffect(() => {
+        const unsubscribe = vscode.onMessage('feedback', (message: FeedbackMessage) => {
+            // Use functional update to check conditions with current state (no stale closures)
+            setState(prev => {
+                // Only update if in project-creation step with active progress
+                if (prev.currentStep !== 'project-creation' || !prev.creationProgress) {
+                    return prev; // No change
+                }
+
+                return {
+                    ...prev,
+                    creationProgress: {
+                        ...prev.creationProgress,
+                        currentOperation: message.primary,
+                        progress: message.progress || prev.creationProgress.progress,
+                        message: message.secondary || prev.creationProgress.message,
+                        logs: message.log
+                            ? [...prev.creationProgress.logs, message.log]
+                            : prev.creationProgress.logs,
+                        error: message.error,
+                    },
+                };
+            });
+        });
+
+        return unsubscribe;
+    }, []); // Empty deps - register listener ONCE to prevent re-registration
+
+    // Listen for creationProgress messages from extension
+    useEffect(() => {
+        const unsubscribe = vscode.onMessage('creationProgress', (progressData: unknown) => {
+            // Type guard: ensure progressData has expected shape
+            const data = progressData as {
+                currentOperation?: string;
+                progress?: number;
+                message?: string;
+                logs?: string[];
+                error?: string;
+            };
+            setState(prev => ({
+                ...prev,
+                creationProgress: {
+                    currentOperation: data.currentOperation || 'Processing',
+                    progress: data.progress || 0,
+                    message: data.message || '',
+                    logs: data.logs || [],
+                    error: data.error,
+                },
+            }));
+        });
+
+        return unsubscribe;
+    }, []);
+
+    // Auto-focus first element in step content when step changes
+    useEffect(() => {
+        // Don't auto-focus on steps that manage their own focus or use natural tab order
+        // - component-selection, component-config: Complex Spectrum components with delayed rendering
+        // - prerequisites: Natural tab order works better (Recheck button is first)
+        const selfManagedFocusSteps = new Set(['component-selection', 'component-config', 'prerequisites']);
+
+        if (selfManagedFocusSteps.has(state.currentStep)) {
+            // Step handles its own focus management or uses natural tab order
+            return;
+        }
+
+        // Longer delay to let step render, transition complete, and Spectrum components mount
+        const timer = setTimeout(() => {
+            if (!stepContentRef.current) return;
+
+            // Find first focusable element in step content (includes native elements and Spectrum ARIA roles)
+            const focusableElements = stepContentRef.current.querySelectorAll(FOCUSABLE_SELECTOR);
+
+            if (focusableElements.length > 0) {
+                (focusableElements[0] as HTMLElement).focus();
+            }
+        }, TIMEOUTS.STEP_CONTENT_FOCUS);
+
+        return () => clearTimeout(timer);
+    }, [state.currentStep]);
+
+    // Cleanup all timers on unmount (prevents memory leaks and state updates on unmounted component)
+    useEffect(() => {
+        return () => {
+            if (transitionTimerRef.current) {
+                clearTimeout(transitionTimerRef.current);
+                transitionTimerRef.current = null;
+            }
+            if (importNavTimerRef.current) {
+                clearTimeout(importNavTimerRef.current);
+                importNavTimerRef.current = null;
+            }
+            if (importNavClearTimerRef.current) {
+                clearTimeout(importNavClearTimerRef.current);
+                importNavClearTimerRef.current = null;
+            }
+        };
+    }, []);
+
+    // Notify sidebar of step changes (for wizard progress display)
+    useEffect(() => {
+        const stepIndex = WIZARD_STEPS.findIndex(step => step.id === state.currentStep);
+        if (stepIndex >= 0) {
+            // Step numbers are 1-indexed for display, also send completed steps for clickability
+            vscode.postMessage('wizardStepChanged', {
+                step: stepIndex + 1,
+                completedSteps: getCompletedStepIndices(completedSteps, WIZARD_STEPS),
+            });
+        }
+    }, [state.currentStep, completedSteps, WIZARD_STEPS]);
+
+    // Note: We no longer auto-close the wizard on success
+    // The ProjectCreationStep has Browse Files and Close buttons instead
+
+    // Track whether we've already requested components (prevent double-load in StrictMode)
+    const componentsRequestedRef = useRef(false);
+
+    // Load full component data with envVars using request-response pattern
+    useEffect(() => {
+        const loadData = async () => {
+            if (componentsRequestedRef.current) {
+                return; // Prevent double-load in StrictMode
+            }
+            componentsRequestedRef.current = true;
+
+            try {
+                const response = await vscode.request<{
+                    success: boolean;
+                    type: string;
+                    data: ComponentsData;
+                }>('get-components-data');
+
+                setComponentsData(response);
+            } catch (error) {
+                log.error('Failed to load components data', error instanceof Error ? error : undefined);
+            }
+        };
+
+        loadData();
+    }, []);
+
+    const getCurrentStepIndex = useCallback(() => {
+        return WIZARD_STEPS.findIndex(step => step.id === state.currentStep);
+    }, [state.currentStep, WIZARD_STEPS]);
+
+    // Internal navigation function used by both timeline and Continue button
+    const navigateToStep = useCallback((step: WizardStep, targetIndex: number, currentIndex: number) => {
+        // Use helper function for direction
+        setAnimationDirection(getNavigationDirection(targetIndex, currentIndex));
+        setIsTransitioning(true);
+
+        // If moving backward, remove completions for the target step and all steps after it
+        if (targetIndex < currentIndex) {
+            // Use helper function for filtering completed steps
+            setCompletedSteps(prev =>
+                filterCompletedStepsForBackwardNav(prev, step, targetIndex, WIZARD_STEPS)
+            );
+
+            // Get Adobe step indices for state clearing logic
+            const adobeIndices = getAdobeStepIndices(WIZARD_STEPS);
+
+            // Clear any existing transition timer to prevent race conditions
+            if (transitionTimerRef.current) {
+                clearTimeout(transitionTimerRef.current);
+            }
+
+            // Wait for fade-out to complete, then update state and fade in
+            transitionTimerRef.current = setTimeout(() => {
+                setState(prev => {
+                    // Use helper function for state updates
+                    const updates = computeStateUpdatesForBackwardNav(
+                        prev,
+                        step,
+                        targetIndex,
+                        adobeIndices
+                    );
+                    return { ...prev, ...updates };
+                });
+                setIsTransitioning(false);
+                transitionTimerRef.current = null;
+            }, TIMEOUTS.STEP_TRANSITION);
+        } else {
+            // Clear any existing transition timer to prevent race conditions
+            if (transitionTimerRef.current) {
+                clearTimeout(transitionTimerRef.current);
+            }
+
+            // For forward navigation, keep original behavior with delayed state update
+            transitionTimerRef.current = setTimeout(() => {
+                setState(prev => ({ ...prev, currentStep: step }));
+                setIsTransitioning(false);
+                transitionTimerRef.current = null;
+            }, TIMEOUTS.STEP_TRANSITION);
+        }
+    }, [WIZARD_STEPS]);
+
+    // Listen for navigation requests from sidebar (must be after getCurrentStepIndex and navigateToStep)
+    useEffect(() => {
+        const unsubscribe = vscode.onMessage('navigateToStep', (data: { stepIndex: number }) => {
+            const targetIndex = data.stepIndex;
+            const currentIndex = getCurrentStepIndex();
+
+            // Only allow backward navigation (to completed steps)
+            if (targetIndex < currentIndex && targetIndex >= 0) {
+                const targetStep = WIZARD_STEPS[targetIndex];
+                if (targetStep) {
+                    navigateToStep(targetStep.id, targetIndex, currentIndex);
+                }
+            }
+        });
+
+        return unsubscribe;
+    }, [getCurrentStepIndex, navigateToStep, WIZARD_STEPS]);
+
+    // Note: Import mode navigation now handled in goNext (not auto-triggered)
+    // This allows user to see auth success before clicking Continue to proceed
+
+    const goNext = useCallback(async () => {
+        const currentIndex = getCurrentStepIndex();
+
+        // IMPORT MODE: Skip to review when clicking Continue on auth step
+        // User sees auth success, clicks Continue, then sees "Preparing review" before landing on review
+        if (importedSettings && state.currentStep === 'adobe-auth') {
+            const reviewIndex = WIZARD_STEPS.findIndex(step => step.id === 'review');
+            if (reviewIndex === -1) {
+                log.warn('Review step not found in wizard steps');
+                return;
+            }
+
+            log.info('Import mode: navigating from auth to review');
+
+            // Show preparing overlay (replaces current view content)
+            setIsPreparingReview(true);
+
+            // Brief delay to show the preparing message before navigating
+            importNavTimerRef.current = setTimeout(() => {
+                // Mark all steps before review as completed (so user can navigate back)
+                const stepsToComplete: WizardStep[] = [];
+                for (let i = 0; i < reviewIndex; i++) {
+                    stepsToComplete.push(WIZARD_STEPS[i].id);
+                }
+                setCompletedSteps(stepsToComplete);
+                setHighestCompletedStepIndex(reviewIndex - 1);
+
+                // Navigate to review
+                navigateToStep('review', reviewIndex, currentIndex);
+
+                // Clear loading state after navigation completes
+                importNavClearTimerRef.current = setTimeout(() => {
+                    setIsPreparingReview(false);
+                }, TIMEOUTS.STEP_TRANSITION);
+            }, TIMEOUTS.IMPORT_TRANSITION_FEEDBACK);
+
+            return; // Exit early - don't do normal navigation
+        }
+
+        if (currentIndex < WIZARD_STEPS.length - 1) {
+            const nextStep = WIZARD_STEPS[currentIndex + 1];
+
+            // BACKEND CALL ON CONTINUE PATTERN:
+            // User selections update UI state immediately (in step components)
+            // Actual backend operations happen here when user commits via Continue
+            try {
+                // Show loading overlay while backend operations execute
+                setIsConfirmingSelection(true);
+
+                // Execute backend calls for step transition
+                await handleStepBackendCalls(state.currentStep, nextStep.id, state);
+
+                // Mark current step as completed only after successful backend operation
+                if (!completedSteps.includes(state.currentStep)) {
+                    setCompletedSteps(prev => [...prev, state.currentStep]);
+                    setHighestCompletedStepIndex(Math.max(highestCompletedStepIndex, currentIndex));
+                }
+
+                // Clear loading overlay and proceed to next step
+                setIsConfirmingSelection(false);
+                navigateToStep(nextStep.id, currentIndex + 1, currentIndex);
+
+            } catch (error) {
+                log.error('Failed to proceed to next step', error instanceof Error ? error : undefined);
+                // Error display handled by backend via creationProgress feedback messages
+                setIsConfirmingSelection(false);
+            }
+        }
+    }, [state, completedSteps, highestCompletedStepIndex, getCurrentStepIndex, navigateToStep, WIZARD_STEPS, importedSettings]);
+
+    const handleCancel = useCallback(() => {
+        vscode.postMessage('cancel');
+    }, []);
+
+    const handleShowLogs = useCallback(() => {
+        vscode.postMessage('show-logs');
+    }, []);
+
+    const goBack = useCallback(() => {
+        const currentIndex = getCurrentStepIndex();
+        if (currentIndex === 0) {
+            // On first step, go back means cancel and return to welcome
+            handleCancel();
+        } else if (currentIndex > 0) {
+            const targetIndex = currentIndex - 1;
+            navigateToStep(WIZARD_STEPS[targetIndex].id, targetIndex, currentIndex);
+        }
+    }, [getCurrentStepIndex, navigateToStep, handleCancel, WIZARD_STEPS]);
+
+    const updateState = useCallback((updates: Partial<WizardState>) => {
+        setState(prev => ({ ...prev, ...updates }));
+    }, []);
+
+    // Handle cancel from mesh deployment step
+    // This triggers project cleanup and returns to wizard start
+    const handleMeshDeploymentCancel = useCallback(() => {
+        // Send cancel message to extension for cleanup
+        vscode.postMessage('cancel-project-creation');
+        // Also trigger standard cancel to close wizard
+        handleCancel();
+    }, [handleCancel]);
+
+    // Render mesh deployment step with hook state
+    const renderMeshDeploymentStep = useCallback(() => {
+        return (
+            <MeshDeploymentStep
+                state={meshDeployment.state}
+                onRetry={meshDeployment.retry}
+                onCancel={handleMeshDeploymentCancel}
+                onContinue={goNext}
+            />
+        );
+    }, [meshDeployment.state, meshDeployment.retry, handleMeshDeploymentCancel, goNext]);
+
+    const renderStep = () => {
+        // Import mode: Show loading view during transition to review
+        // Uses same UI pattern as project/workspace loading states
+        if (isPreparingReview) {
+            return (
+                <SingleColumnLayout>
+                    <Heading level={2} marginBottom="size-300">
+                        Preparing Review
+                    </Heading>
+                    <CenteredFeedbackContainer>
+                        <LoadingDisplay
+                            size="L"
+                            message="Preparing your project review..."
+                            subMessage="Loading your imported settings"
+                        />
+                    </CenteredFeedbackContainer>
+                </SingleColumnLayout>
+            );
+        }
+
+        const props = {
+            state,
+            updateState,
+            onNext: goNext,
+            onBack: goBack,
+            setCanProceed,
+            componentsData,
+        };
+
+        switch (state.currentStep) {
+            case 'welcome':
+                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} />;
+            case 'component-selection':
+                return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
+            case 'prerequisites':
+                return <PrerequisitesStep {...props} componentsData={componentsData?.data as Record<string, unknown>} currentStep={state.currentStep} />;
+            case 'adobe-auth':
+                return <AdobeAuthStep {...props} />;
+            case 'adobe-project':
+                return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
+            case 'adobe-workspace':
+                return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
+            case 'api-mesh':
+                return <ApiMeshStep {...props} completedSteps={completedSteps} />;
+            case 'mesh-deployment':
+                // Mesh deployment step with timeout recovery (PM Decision 2025-12-06)
+                // Note: This step is disabled by default in wizard-steps.json
+                // When enabled, uses useMeshDeployment hook for state management
+                return renderMeshDeploymentStep();
+            case 'settings':
+                return <ComponentConfigStep {...props} />;
+            case 'review':
+                return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} />;
+            case 'project-creation':
+                return <ProjectCreationStep state={state} onBack={goBack} />;
+            default:
+                return null;
+        }
+    };
 
     // Configuration error check - AFTER all hooks to comply with Rules of Hooks
     if (WIZARD_STEPS.length === 0) {
@@ -208,7 +612,7 @@ export function WizardContainer({
                 <div className="flex-column flex-1 h-full w-full">
                     {/* Header */}
                     <PageHeader
-                        title={state.editMode ? "Edit Project" : "Create Demo Project"}
+                        title="Create Demo Project"
                         subtitle={currentStepName}
                     />
 
@@ -231,21 +635,7 @@ export function WizardContainer({
                                 key={state.currentStep}
                                 onError={(error) => log.error('Step error:', error)}
                             >
-                                <WizardStepRenderer
-                                    currentStep={state.currentStep}
-                                    state={state}
-                                    updateState={updateState}
-                                    onNext={goNext}
-                                    onBack={goBack}
-                                    setCanProceed={setCanProceed}
-                                    componentsData={componentsData}
-                                    completedSteps={completedSteps}
-                                    existingProjectNames={existingProjectNames}
-                                    isPreparingReview={isPreparingReview}
-                                    meshDeploymentState={meshDeployment.state}
-                                    onMeshRetry={meshDeployment.retry}
-                                    onMeshCancel={handleMeshDeploymentCancel}
-                                />
+                                {renderStep()}
                             </ErrorBoundary>
                         </div>
 
@@ -292,7 +682,7 @@ export function WizardContainer({
                                         onPress={goNext}
                                         isDisabled={!canProceed || isConfirmingSelection}
                                     >
-                                        {getNextButtonText(isConfirmingSelection, currentStepIndex, WIZARD_STEPS.length, state.editMode)}
+                                        {getNextButtonText(isConfirmingSelection, currentStepIndex, WIZARD_STEPS.length)}
                                     </Button>
                                 </Flex>
                             }
@@ -301,6 +691,47 @@ export function WizardContainer({
                     )}
                 </div>
             </div>
+
+            <style>{`
+                .step-content {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+                
+                .step-content.transitioning {
+                    opacity: 0;
+                }
+                
+                .step-content.transitioning.forward {
+                    transform: translateX(-20px);
+                }
+                
+                .step-content.transitioning.backward {
+                    transform: translateX(20px);
+                }
+
+                @keyframes slideInFromRight {
+                    from {
+                        opacity: 0;
+                        transform: translateX(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                }
+
+                @keyframes slideInFromLeft {
+                    from {
+                        opacity: 0;
+                        transform: translateX(-20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateX(0);
+                    }
+                }
+            `}</style>
         </View>
     );
 }

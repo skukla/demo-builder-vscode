@@ -11,7 +11,7 @@ import {
     handleOpenAdobeConsole
 } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
-import * as securityValidation from '@/core/validation';
+import * as securityValidation from '@/core/validation/securityValidation';
 import { createMockContext } from './lifecycleHandlers.testUtils';
 
 // Mock vscode inline to avoid hoisting issues
@@ -35,7 +35,7 @@ jest.mock('vscode', () => ({
         openExternal: jest.fn()
     }
 }), { virtual: true });
-jest.mock('@/core/validation');
+jest.mock('@/core/validation/securityValidation');
 
 // Import the mocked vscode module
 import * as vscode from 'vscode';

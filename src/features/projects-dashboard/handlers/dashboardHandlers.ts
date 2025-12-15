@@ -3,25 +3,24 @@
  *
  * Handles messages from the Projects Dashboard webview.
  * Follows Pattern B: Returns response data (doesn't use sendMessage).
- *
- * Complex operations are delegated to services:
- * - settingsTransferService: Import/export/copy settings
- * - projectDeletionService: Project deletion with retry logic
  */
 
+import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { sessionUIState } from '@/core/state/sessionUIState';
-import { validateProjectPath } from '@/core/validation';
+import { validateProjectPath } from '@/core/validation/securityValidation';
+import { TIMEOUTS, showWebviewQuickPick } from '@/core/utils';
+import { toError } from '@/types/typeGuards';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
-import { extractSettingsFromProject } from '../services/settingsSerializer';
 import {
-    importSettingsFromFile,
-    copySettingsFromProject,
-    exportProjectSettings,
-    deleteProject,
-} from './services';
+    parseSettingsFile,
+    isNewerVersion,
+    extractSettingsFromProject,
+} from '../services/settingsSerializer';
+import { SETTINGS_FILE_VERSION } from '../types/settingsFile';
+import { getProjectDescription } from '../utils/componentSummaryUtils';
 
 /**
  * Get all projects from StateManager
@@ -82,6 +81,7 @@ export const handleSelectProject: MessageHandler<{ projectPath: string }> = asyn
         }
 
         // SECURITY: Validate path is within demo-builder projects directory
+        // Prevents path traversal attacks (CWE-22)
         try {
             validateProjectPath(payload.projectPath);
         } catch (validationError) {
@@ -109,10 +109,14 @@ export const handleSelectProject: MessageHandler<{ projectPath: string }> = asyn
         context.logger.info(`Selected project: ${project.name}`);
 
         // Navigate to project dashboard
+        // Note: The dashboard command handles disposing the Projects List panel
+        // Start transition to prevent auto-open handler from firing during panel disposal
         await BaseWebviewCommand.startWebviewTransition();
         try {
             await vscode.commands.executeCommand('demoBuilder.showProjectDashboard');
         } catch (navError) {
+            // Log navigation failure but don't fail the selection
+            // Project was successfully selected, navigation is non-critical
             context.logger.error(
                 'Failed to navigate to dashboard',
                 navError instanceof Error ? navError : undefined,
@@ -142,6 +146,7 @@ export const handleCreateProject: MessageHandler = async (
 ): Promise<HandlerResponse> => {
     try {
         context.logger.info('Creating new project from dashboard');
+        // Note: The wizard command handles disposing the Projects List panel
         await vscode.commands.executeCommand('demoBuilder.createProject');
         return {
             success: true,
@@ -162,6 +167,7 @@ export const handleOpenDocs: MessageHandler = async (
     context: HandlerContext,
 ): Promise<HandlerResponse> => {
     try {
+        // TODO: Replace with actual documentation URL when available
         const docsUrl = 'https://github.com/anthropics/demo-builder-vscode#readme';
         await vscode.env.openExternal(vscode.Uri.parse(docsUrl));
         return { success: true };
@@ -181,6 +187,7 @@ export const handleOpenHelp: MessageHandler = async (
     context: HandlerContext,
 ): Promise<HandlerResponse> => {
     try {
+        // TODO: Replace with actual help URL when available
         const helpUrl = 'https://github.com/anthropics/demo-builder-vscode/issues';
         await vscode.env.openExternal(vscode.Uri.parse(helpUrl));
         return { success: true };
@@ -200,6 +207,7 @@ export const handleOpenSettings: MessageHandler = async (
     context: HandlerContext,
 ): Promise<HandlerResponse> => {
     try {
+        // Open VS Code settings filtered to this extension
         await vscode.commands.executeCommand('workbench.action.openSettings', '@ext:adobe.demo-builder');
         return { success: true };
     } catch (error) {
@@ -213,6 +221,9 @@ export const handleOpenSettings: MessageHandler = async (
 
 /**
  * Set view mode override for the session
+ *
+ * Persists the user's view mode preference for this session,
+ * overriding the VS Code setting until extension is reloaded.
  */
 export const handleSetViewModeOverride: MessageHandler<{ viewMode: 'cards' | 'rows' }> = async (
     _context: HandlerContext,
@@ -234,29 +245,186 @@ export function resetViewModeOverride(): void {
 }
 
 // ============================================================================
-// Settings Import/Export Handlers (delegated to settingsTransferService)
+// Settings Import/Export Handlers
 // ============================================================================
 
 /**
  * Import settings from a JSON file
+ *
+ * Opens a file picker dialog and parses the selected settings file.
+ * Returns the parsed settings to be passed to the wizard.
  */
 export const handleImportFromFile: MessageHandler = async (
     context: HandlerContext,
 ): Promise<HandlerResponse> => {
-    return importSettingsFromFile(context);
+    try {
+        context.logger.info('Opening file picker for settings import');
+
+        // Open file picker dialog
+        const fileUris = await vscode.window.showOpenDialog({
+            canSelectFiles: true,
+            canSelectFolders: false,
+            canSelectMany: false,
+            filters: {
+                'Demo Builder Settings': ['json'],
+                'All Files': ['*'],
+            },
+            title: 'Import Settings File',
+        });
+
+        if (!fileUris || fileUris.length === 0) {
+            // User cancelled
+            return {
+                success: true,
+                data: { success: false, error: 'cancelled' },
+            };
+        }
+
+        const fileUri = fileUris[0];
+        const fileContent = await vscode.workspace.fs.readFile(fileUri);
+        const jsonString = Buffer.from(fileContent).toString('utf8');
+
+        // Parse and validate using settings serializer
+        const parseResult = parseSettingsFile(jsonString);
+        if (!parseResult.success) {
+            return {
+                success: true,
+                data: {
+                    success: false,
+                    error: parseResult.error,
+                },
+            };
+        }
+
+        const settings = parseResult.settings;
+
+        // Version check (allow older versions, just log warning)
+        if (isNewerVersion(settings)) {
+            context.logger.warn(
+                `Settings file version ${settings.version} is newer than supported version ${SETTINGS_FILE_VERSION}`,
+            );
+        }
+
+        context.logger.info(`Imported settings from file: ${fileUri.fsPath}`);
+
+        // Launch wizard with imported settings
+        await vscode.commands.executeCommand('demoBuilder.createProject', {
+            importedSettings: settings,
+            sourceDescription: `Imported from ${vscode.workspace.asRelativePath(fileUri)}`,
+        });
+
+        return {
+            success: true,
+            data: {
+                success: true,
+                settings,
+                sourceDescription: vscode.workspace.asRelativePath(fileUri),
+            },
+        };
+    } catch (error) {
+        context.logger.error('Failed to import settings from file', error instanceof Error ? error : undefined);
+        return {
+            success: false,
+            error: 'Failed to import settings file',
+        };
+    }
 };
 
 /**
  * Copy settings from an existing project
+ *
+ * Shows a QuickPick of available projects and extracts settings from the selected one.
  */
 export const handleCopyFromExisting: MessageHandler = async (
     context: HandlerContext,
 ): Promise<HandlerResponse> => {
-    return copySettingsFromProject(context);
+    try {
+        context.logger.info('Opening project picker for settings copy');
+
+        // Get all projects
+        const projectList = await context.stateManager.getAllProjects();
+        const projects: Project[] = [];
+
+        for (const item of projectList) {
+            const project = await context.stateManager.loadProjectFromPath(item.path);
+            if (project) {
+                projects.push(project);
+            }
+        }
+
+        if (projects.length === 0) {
+            return {
+                success: true,
+                data: {
+                    success: false,
+                    error: 'No existing projects to copy from.',
+                },
+            };
+        }
+
+        // Build QuickPick items
+        const items: vscode.QuickPickItem[] = projects.map((project) => ({
+            label: project.name,
+            description: getProjectDescription(project),
+            detail: project.path,
+        }));
+
+        // Show QuickPick (use webview-safe utility for proper keyboard handling)
+        const selected = await showWebviewQuickPick(items, {
+            title: 'Copy Settings from Project',
+            placeholder: 'Select a project to copy settings from',
+        });
+
+        if (!selected) {
+            // User cancelled
+            return {
+                success: true,
+                data: { success: false, error: 'cancelled' },
+            };
+        }
+
+        // Find the selected project
+        const sourceProject = projects.find((p) => p.path === selected.detail);
+        if (!sourceProject) {
+            return {
+                success: false,
+                error: 'Selected project not found',
+            };
+        }
+
+        // Extract settings from project using serializer
+        const settings = extractSettingsFromProject(sourceProject, true);
+
+        context.logger.info(`Copying settings from project: ${sourceProject.name}`);
+
+        // Launch wizard with copied settings
+        await vscode.commands.executeCommand('demoBuilder.createProject', {
+            importedSettings: settings,
+            sourceDescription: `Copied from ${sourceProject.name}`,
+        });
+
+        return {
+            success: true,
+            data: {
+                success: true,
+                settings,
+                sourceDescription: sourceProject.name,
+            },
+        };
+    } catch (error) {
+        context.logger.error('Failed to copy settings from project', error instanceof Error ? error : undefined);
+        return {
+            success: false,
+            error: 'Failed to copy settings from project',
+        };
+    }
 };
 
 /**
- * Export project settings to a file
+ * Handle exporting project settings to a file
+ *
+ * Shows a save dialog for user to choose location, then writes settings file.
+ * User can choose whether to include secrets via a QuickPick.
  */
 export const handleExportProject: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
@@ -270,31 +438,83 @@ export const handleExportProject: MessageHandler<{ projectPath: string }> = asyn
     }
 
     try {
-        validateProjectPath(payload.projectPath);
-    } catch {
+        // Validate path
+        try {
+            validateProjectPath(payload.projectPath);
+        } catch {
+            return {
+                success: false,
+                error: 'Invalid project path',
+            };
+        }
+
+        // Load the project
+        const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
+
+        if (!project) {
+            return {
+                success: false,
+                error: 'Project not found',
+            };
+        }
+
+        // Get extension version for metadata
+        const extension = vscode.extensions.getExtension('AdobeDemoSystem.adobe-demo-builder');
+        const extensionVersion = extension?.packageJSON?.version || 'unknown';
+
+        // Create settings using serializer (always include secrets for local export)
+        const { createExportSettings, getSuggestedFilename } = await import('../services/settingsSerializer');
+        const settings = createExportSettings(project, extensionVersion, true);
+        const suggestedFilename = getSuggestedFilename(project.name);
+
+        // Show save dialog
+        const saveUri = await vscode.window.showSaveDialog({
+            defaultUri: vscode.Uri.file(suggestedFilename),
+            filters: {
+                'Demo Builder Settings': ['json'],
+                'All Files': ['*'],
+            },
+            title: 'Export Project Settings',
+        });
+
+        if (!saveUri) {
+            // User cancelled
+            return {
+                success: true,
+                data: { success: false, error: 'cancelled' },
+            };
+        }
+
+        // Write the file
+        const content = JSON.stringify(settings, null, 2);
+        await vscode.workspace.fs.writeFile(saveUri, Buffer.from(content, 'utf8'));
+
+        context.logger.info(`Exported settings to: ${saveUri.fsPath}`);
+
+        // Show success message
+        vscode.window.showInformationMessage(`${project.name} exported.`);
+
+        return {
+            success: true,
+            data: {
+                success: true,
+                filePath: saveUri.fsPath,
+            },
+        };
+    } catch (error) {
+        context.logger.error('Failed to export project settings', error instanceof Error ? error : undefined);
         return {
             success: false,
-            error: 'Invalid project path',
+            error: 'Failed to export project settings',
         };
     }
-
-    const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
-    if (!project) {
-        return {
-            success: false,
-            error: 'Project not found',
-        };
-    }
-
-    return exportProjectSettings(context, project);
 };
-
-// ============================================================================
-// Delete Project Handler (delegated to projectDeletionService)
-// ============================================================================
 
 /**
  * Delete a project by path
+ *
+ * Shows confirmation dialog, stops demo if running, deletes files,
+ * and removes from recent projects. Returns success/cancelled/error.
  */
 export const handleDeleteProject: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
@@ -308,6 +528,7 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
             };
         }
 
+        // SECURITY: Validate path
         try {
             validateProjectPath(payload.projectPath);
         } catch {
@@ -317,6 +538,7 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
             };
         }
 
+        // Load the project to get its name and status
         const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
         if (!project) {
             return {
@@ -325,7 +547,73 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
             };
         }
 
-        return deleteProject(context, project);
+        // Show confirmation dialog
+        const confirm = await vscode.window.showWarningMessage(
+            `Are you sure you want to delete "${project.name}"?`,
+            {
+                modal: true,
+                detail: 'This will remove all project files and configuration. This action cannot be undone.',
+            },
+            'Delete',
+        );
+
+        if (confirm !== 'Delete') {
+            // User cancelled - return success with cancelled flag (no error toast)
+            return {
+                success: true,
+                data: { success: false, error: 'cancelled' },
+            };
+        }
+
+        // Show progress notification during deletion
+        await vscode.window.withProgress(
+            {
+                location: vscode.ProgressLocation.Notification,
+                title: `Deleting "${project.name}"...`,
+                cancellable: false,
+            },
+            async () => {
+                // Stop demo if running
+                if (project.status === 'running') {
+                    // Set as current project so stopDemo knows which to stop
+                    await context.stateManager.saveProject(project);
+                    await vscode.commands.executeCommand('demoBuilder.stopDemo');
+                }
+
+                // Delete project files with retry logic
+                const projectPath = project.path;
+                if (projectPath) {
+                    context.logger.debug(`[Delete Project] Deleting directory: ${projectPath}`);
+
+                    // Wait for OS to release file handles
+                    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.FILE_HANDLE_RELEASE));
+
+                    // Delete with retry
+                    await deleteWithRetry(projectPath, context);
+                }
+
+                // Remove from recent projects list
+                if (projectPath) {
+                    await context.stateManager.removeFromRecentProjects(projectPath);
+                }
+
+                // Clear current project if it was the deleted one
+                const currentProject = await context.stateManager.getCurrentProject();
+                if (currentProject?.path === projectPath) {
+                    await context.stateManager.clearProject();
+                }
+            }
+        );
+
+        context.logger.info(`Deleted project: ${project.name}`);
+
+        // Show success message
+        vscode.window.showInformationMessage(`"${project.name}" deleted.`);
+
+        return {
+            success: true,
+            data: { success: true, projectName: project.name },
+        };
     } catch (error) {
         context.logger.error('Failed to delete project', error instanceof Error ? error : undefined);
         return {
@@ -335,78 +623,42 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
     }
 };
 
-// ============================================================================
-// Edit Project Handler
-// ============================================================================
-
 /**
- * Edit an existing project
+ * Delete directory with exponential backoff retry on transient filesystem errors
  *
- * Checks if demo is running and opens wizard in edit mode.
+ * Retryable error codes:
+ * - EBUSY: Resource busy (file in use)
+ * - ENOTEMPTY: Directory not empty
+ * - EPERM: Permission error (temporary lock)
+ * - EMFILE/ENFILE: Too many open files
  */
-export const handleEditProject: MessageHandler<{ projectPath: string }> = async (
-    context: HandlerContext,
-    payload?: { projectPath: string },
-): Promise<HandlerResponse> => {
-    try {
-        if (!payload?.projectPath) {
-            return {
-                success: false,
-                error: 'Project path is required',
-            };
-        }
+async function deleteWithRetry(path: string, context: HandlerContext): Promise<void> {
+    const MAX_RETRIES = 5;
+    const BASE_DELAY = TIMEOUTS.FILE_DELETE_RETRY_BASE;
+    const RETRYABLE_CODES = ['EBUSY', 'ENOTEMPTY', 'EPERM', 'EMFILE', 'ENFILE'];
 
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
         try {
-            validateProjectPath(payload.projectPath);
-        } catch {
-            return {
-                success: false,
-                error: 'Invalid project path',
-            };
+            context.logger.debug(`[Delete Project] Attempt ${attempt + 1}/${MAX_RETRIES}`);
+            await fs.rm(path, { recursive: true, force: true });
+            context.logger.debug(`[Delete Project] Deletion successful`);
+            return;
+        } catch (error) {
+            const err = toError(error);
+            const code = (error as NodeJS.ErrnoException).code;
+            const isRetryable = code !== undefined && RETRYABLE_CODES.includes(code);
+
+            context.logger.debug(`[Delete Project] Error: ${code} - ${err.message} (retryable: ${isRetryable})`);
+
+            if (isRetryable && attempt < MAX_RETRIES - 1) {
+                const delay = BASE_DELAY * Math.pow(2, attempt);
+                context.logger.debug(`[Delete Project] Waiting ${delay}ms before retry...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            } else if (isRetryable) {
+                throw new Error(`Failed to delete project after ${MAX_RETRIES} attempts: ${err.message}`);
+            } else {
+                throw new Error(`Failed to delete project: ${err.message}`);
+            }
         }
-
-        const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
-        if (!project) {
-            return {
-                success: false,
-                error: 'Project not found',
-            };
-        }
-
-        // Check if demo is running or starting (can't edit while running)
-        if (project.status === 'running' || project.status === 'starting') {
-            return {
-                success: true,
-                data: {
-                    requiresStop: true,
-                    projectName: project.name,
-                },
-            };
-        }
-
-        // Extract settings for edit mode (include secrets for local edit)
-        const settings = extractSettingsFromProject(project, true);
-
-        context.logger.info(`Opening edit wizard for project: ${project.name}`);
-
-        // Open wizard in edit mode
-        await vscode.commands.executeCommand('demoBuilder.createProject', {
-            editProject: {
-                projectPath: project.path,
-                projectName: project.name,
-                settings,
-            },
-        });
-
-        return {
-            success: true,
-            data: { success: true },
-        };
-    } catch (error) {
-        context.logger.error('Failed to edit project', error instanceof Error ? error : undefined);
-        return {
-            success: false,
-            error: 'Failed to edit project',
-        };
     }
-};
+}

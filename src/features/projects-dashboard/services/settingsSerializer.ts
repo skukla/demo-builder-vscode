@@ -116,10 +116,7 @@ export function extractSettingsFromProject(
                   // Include names for display and fallback matching
                   orgName: project.adobe.organization,
                   projectName: project.adobe.projectName,
-                  // Include human-readable titles for display
-                  projectTitle: project.adobe.projectTitle,
                   workspaceName: project.adobe.workspace,
-                  workspaceTitle: project.adobe.workspaceTitle,
               }
             : undefined,
     };

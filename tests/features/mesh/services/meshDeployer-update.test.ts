@@ -28,7 +28,7 @@ jest.mock('@/core/di/serviceLocator');
 jest.mock('fs/promises');
 
 // Mock securityValidation
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/securityValidation', () => ({
     validateMeshId: jest.fn()
 }));
 

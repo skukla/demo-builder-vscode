@@ -301,10 +301,15 @@ describe('ProjectsDashboard', () => {
                 />
             );
 
-            // Then: PageLayout provides 100vh flex column container via CSS class
-            // PageLayout uses .page-layout-container class (provides 100vh flex column via CSS)
-            const layoutContainer = container.querySelector('.page-layout-container');
+            // Then: PageLayout provides 100vh flex column container via inline styles
+            // PageLayout uses a plain div with inline styles (not Spectrum View)
+            const layoutContainer = container.querySelector('[style*="height: 100vh"]');
             expect(layoutContainer).toBeInTheDocument();
+            // PageLayout sets display: flex and flex-direction: column via inline style
+            expect(layoutContainer).toHaveStyle({
+                display: 'flex',
+                flexDirection: 'column',
+            });
         });
 
         it('should have scrollable content area provided by PageLayout', () => {
@@ -320,8 +325,8 @@ describe('ProjectsDashboard', () => {
                 />
             );
 
-            // Then: PageLayout provides scrollable content area (.page-layout-content provides overflow-y via CSS)
-            const scrollableArea = container.querySelector('.page-layout-content');
+            // Then: PageLayout provides scrollable content area with overflow-y: auto
+            const scrollableArea = container.querySelector('[style*="overflow-y: auto"]');
             expect(scrollableArea).toBeInTheDocument();
         });
 
@@ -337,9 +342,9 @@ describe('ProjectsDashboard', () => {
                 />
             );
 
-            // Then: Loading state does NOT have scrollable area (no .page-layout-content)
+            // Then: Loading state does NOT have scrollable area (no overflow-y: auto)
             // because it doesn't use PageLayout - it uses original View/Flex structure
-            const scrollableArea = container.querySelector('.page-layout-content');
+            const scrollableArea = container.querySelector('[style*="overflow-y: auto"]');
             expect(scrollableArea).not.toBeInTheDocument();
         });
 

@@ -36,7 +36,7 @@ jest.mock('@/core/utils/timeoutConfig', () => ({
 }));
 
 // Mock security validation
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/securityValidation', () => ({
     validateGitHubDownloadURL: jest.fn(),
 }));
 

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { ServiceGroup, UniqueField } from './useComponentConfig';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 interface UseConfigNavigationProps {
     serviceGroups: ServiceGroup[];
@@ -118,13 +117,14 @@ export function useConfigNavigation({
                     fieldWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
 
-                // Scroll the navigation field node into view after scroll animation completes
+                // Scroll the navigation field node into view
+                // SOP §1: 150ms matches TIMEOUTS.SCROLL_ANIMATION (frontend can't import backend constants)
                 const navScrollTimeout = setTimeout(() => {
                     const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
                     if (navFieldElement) {
                         navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
-                }, FRONTEND_TIMEOUTS.SCROLL_ANIMATION);
+                }, 150);
                 timeoutsRef.current.push(navScrollTimeout);
             } else {
                 // Within same section, only update navigation highlighting (no scroll)
@@ -160,13 +160,14 @@ export function useConfigNavigation({
         let focusTimeout: NodeJS.Timeout | undefined;
         if (firstEditableField) {
             // Wait for DOM to be ready, then focus the first field
+            // SOP §1: 100ms matches TIMEOUTS.UI_UPDATE_DELAY (frontend can't import backend constants)
             focusTimeout = setTimeout(() => {
                 const firstFieldElement = document.querySelector(`#field-${firstEditableField.key} input, #field-${firstEditableField.key} select`);
                 if (firstFieldElement instanceof HTMLElement) {
                     // Prevent scroll on initial focus to keep page at top
                     firstFieldElement.focus({ preventScroll: true });
                 }
-            }, FRONTEND_TIMEOUTS.UI_UPDATE_DELAY);
+            }, 100);
             timeoutsRef.current.push(focusTimeout);
         }
 
@@ -208,8 +209,7 @@ export function useConfigNavigation({
 
             // Only scroll to section when EXPANDING, not when collapsing
             if (!wasExpanded) {
-                // Defer navigation to next event loop to ensure UI state updates complete
-                const scrollTimeout = setTimeout(() => navigateToSection(sectionId), FRONTEND_TIMEOUTS.MICROTASK_DEFER);
+                const scrollTimeout = setTimeout(() => navigateToSection(sectionId), 0);
                 timeoutsRef.current.push(scrollTimeout);
             }
 

@@ -64,7 +64,7 @@ export class ExtensionUpdater {
    */
     private async downloadVsix(url: string, version: string): Promise<string> {
         // SECURITY: Validate GitHub URL before downloading
-        const { validateGitHubDownloadURL } = await import('@/core/validation');
+        const { validateGitHubDownloadURL } = await import('@/core/validation/securityValidation');
         try {
             validateGitHubDownloadURL(url);
         } catch (error) {

@@ -67,41 +67,22 @@ describe('LoadingOverlay', () => {
     });
 
     describe('styling', () => {
-        it('applies container CSS class for positioning and layout', () => {
+        it('covers full container with semi-transparent backdrop', () => {
             const { container } = renderWithProviders(<LoadingOverlay isVisible={true} />);
 
             const overlay = container.querySelector('[data-testid="loading-overlay"]');
-            // SOP §11: Styles moved to CSS classes - verify class is applied
-            expect(overlay).toHaveClass('loading-overlay-container');
+            expect(overlay).toHaveStyle({ position: 'absolute' });
         });
 
-        it('applies opaque class when opaque prop is true', () => {
-            const { container } = renderWithProviders(<LoadingOverlay isVisible={true} opaque />);
-
-            const overlay = container.querySelector('[data-testid="loading-overlay"]');
-            expect(overlay).toHaveClass('loading-overlay-container');
-            expect(overlay).toHaveClass('loading-overlay-container-opaque');
-        });
-
-        it('does not apply opaque class by default', () => {
+        it('uses flexbox for centering', () => {
             const { container } = renderWithProviders(<LoadingOverlay isVisible={true} />);
 
             const overlay = container.querySelector('[data-testid="loading-overlay"]');
-            expect(overlay).not.toHaveClass('loading-overlay-container-opaque');
-        });
-
-        it('applies spinner container CSS class', () => {
-            const { container } = renderWithProviders(<LoadingOverlay isVisible={true} />);
-
-            const spinnerContainer = container.querySelector('[role="status"]');
-            expect(spinnerContainer).toHaveClass('loading-overlay-spinner-container');
-        });
-
-        it('applies spinner CSS class', () => {
-            const { container } = renderWithProviders(<LoadingOverlay isVisible={true} />);
-
-            const spinner = container.querySelector('[data-testid="loading-spinner"]');
-            expect(spinner).toHaveClass('loading-overlay-spinner');
+            expect(overlay).toHaveStyle({
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            });
         });
     });
 

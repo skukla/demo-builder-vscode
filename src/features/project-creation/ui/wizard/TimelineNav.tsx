@@ -133,7 +133,6 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
                         <View key={step.id} position="relative">
                             {/* Step item */}
                             <div
-                                data-testid={`timeline-step-${step.id}`}
                                 style={{
                                     marginBottom: index < steps.length - 1 ? 'var(--spectrum-global-dimension-size-400)' : undefined,
                                 }}

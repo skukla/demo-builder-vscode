@@ -15,14 +15,7 @@ export { extractEnvVars, extractEnvVarsSync } from './envVarExtraction';
 export { ProgressUnifier } from './progressUnifier';
 export type {
     UnifiedProgress,
-    IDateProvider,
-    ITimerProvider,
-    IProcessSpawner,
-    ProgressHandler,
-    ExecutionContext,
 } from './progressUnifier';
-export { ElapsedTimeTracker, formatElapsedTime, CommandResolver } from './progressUnifier';
-export type { CommandResolveOptions } from './progressUnifier';
 
 export { setLoadingState } from './loadingHTML';
 

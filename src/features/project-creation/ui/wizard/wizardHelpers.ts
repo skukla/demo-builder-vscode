@@ -146,15 +146,9 @@ export interface ImportedSettings {
         orgId?: string;
         orgName?: string;
         projectId?: string;
-        /** Internal project name/slug (e.g., "833BronzeShark") */
         projectName?: string;
-        /** Human-readable project title (e.g., "Citisignal Headless") */
-        projectTitle?: string;
         workspaceId?: string;
-        /** Internal workspace name */
         workspaceName?: string;
-        /** Human-readable workspace title */
-        workspaceTitle?: string;
     };
 }
 
@@ -186,8 +180,8 @@ export function initializeComponentsFromImport(
  */
 export interface InitialAdobeContext {
     org?: { id: string; code: string; name: string };
-    project?: { id: string; name: string; title?: string };
-    workspace?: { id: string; name: string; title?: string };
+    project?: { id: string; name: string };
+    workspace?: { id: string; name: string };
 }
 
 /**
@@ -210,22 +204,16 @@ export function initializeAdobeContextFromImport(
     }
 
     if (importedSettings?.adobe?.projectId) {
-        const projectName = importedSettings.adobe.projectName || '';
         result.project = {
             id: importedSettings.adobe.projectId,
-            name: projectName,
-            // Use projectTitle if available, otherwise fall back to name
-            title: importedSettings.adobe.projectTitle || projectName,
+            name: importedSettings.adobe.projectName || '',
         };
     }
 
     if (importedSettings?.adobe?.workspaceId) {
-        const workspaceName = importedSettings.adobe.workspaceName || '';
         result.workspace = {
             id: importedSettings.adobe.workspaceId,
-            name: workspaceName,
-            // Use workspaceTitle if available, otherwise fall back to name
-            title: importedSettings.adobe.workspaceTitle || workspaceName,
+            name: importedSettings.adobe.workspaceName || '',
         };
     }
 
@@ -308,13 +296,10 @@ export function getFirstEnabledStep(
 export function getNextButtonText(
     isConfirmingSelection: boolean,
     currentStepIndex: number,
-    totalSteps: number,
-    isEditMode?: boolean
+    totalSteps: number
 ): string {
     if (isConfirmingSelection) return 'Continue';
-    if (currentStepIndex === totalSteps - 2) {
-        return isEditMode ? 'Save Changes' : 'Create Project';
-    }
+    if (currentStepIndex === totalSteps - 2) return 'Create Project';
     return 'Continue';
 }
 
@@ -357,39 +342,3 @@ export function getEnabledWizardSteps(
         .filter(step => step.enabled)
         .map(step => ({ id: step.id as WizardStep, name: step.name }));
 }
-
-// ============================================================================
-// Project Configuration Helpers
-// ============================================================================
-
-/**
- * Build project configuration object from wizard state.
- * Used when creating a project or exporting settings.
- *
- * @param wizardState - Current wizard state
- * @returns Project configuration object
- */
-export function buildProjectConfig(wizardState: WizardState) {
-    return {
-        projectName: wizardState.projectName,
-        projectTemplate: wizardState.projectTemplate,
-        adobe: {
-            organization: wizardState.adobeOrg?.id,
-            projectId: wizardState.adobeProject?.id,
-            projectName: wizardState.adobeProject?.name,
-            projectTitle: wizardState.adobeProject?.title,
-            workspace: wizardState.adobeWorkspace?.id,
-            workspaceTitle: wizardState.adobeWorkspace?.title,
-        },
-        components: {
-            frontend: wizardState.components?.frontend,
-            backend: wizardState.components?.backend,
-            dependencies: wizardState.components?.dependencies || [],
-            integrations: wizardState.components?.integrations || [],
-            appBuilderApps: wizardState.components?.appBuilderApps || [],
-        },
-        apiMesh: wizardState.apiMesh,
-        componentConfigs: wizardState.componentConfigs,
-    };
-}
-

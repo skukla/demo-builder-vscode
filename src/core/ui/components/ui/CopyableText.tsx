@@ -1,5 +1,39 @@
 import React, { useState, useCallback } from 'react';
-import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+
+/**
+ * Copied feedback display duration (matches TIMEOUTS.LOADING_MIN_DISPLAY)
+ * SOP §1: Named constant for UI timing delays
+ */
+const COPIED_FEEDBACK_DURATION = 1500;
+
+/**
+ * Styles for copyable text (matches CODE_SNIPPET_STYLES from NumberedInstructions)
+ */
+const COPYABLE_STYLES: React.CSSProperties = {
+    fontFamily: 'var(--spectrum-alias-body-text-font-family, monospace)',
+    fontSize: '0.9em',
+    backgroundColor: 'var(--db-code-background)',
+    padding: '4px 10px',
+    borderRadius: '4px',
+    color: 'var(--spectrum-global-color-blue-700)',
+    border: '1px solid var(--db-code-border)',
+    fontWeight: 600,
+    whiteSpace: 'nowrap',
+    cursor: 'pointer',
+    transition: 'background-color 0.15s ease',
+};
+
+const ICON_STYLES: React.CSSProperties = {
+    marginLeft: '6px',
+    fontSize: '1em',
+    opacity: 0.7,
+};
+
+const CHECKMARK_STYLES: React.CSSProperties = {
+    ...ICON_STYLES,
+    color: 'var(--spectrum-global-color-green-600)',
+    opacity: 1,
+};
 
 interface CopyableTextProps {
     /** Text to display and copy */
@@ -11,8 +45,6 @@ interface CopyableTextProps {
  *
  * Styled like code snippets with a visual feedback on copy.
  * Shows a copy icon that changes to a checkmark when clicked.
- *
- * SOP §11: Uses CSS classes from custom-spectrum.css instead of inline styles
  */
 export function CopyableText({ children }: CopyableTextProps) {
     const [copied, setCopied] = useState(false);
@@ -24,7 +56,7 @@ export function CopyableText({ children }: CopyableTextProps) {
         try {
             await navigator.clipboard.writeText(children);
             setCopied(true);
-            setTimeout(() => setCopied(false), FRONTEND_TIMEOUTS.LOADING_MIN_DISPLAY);
+            setTimeout(() => setCopied(false), COPIED_FEEDBACK_DURATION);
         } catch (err) {
             // Fallback for older browsers or restricted contexts
             console.warn('Failed to copy to clipboard:', err);
@@ -34,7 +66,7 @@ export function CopyableText({ children }: CopyableTextProps) {
     return (
         <code
             onClick={handleClick}
-            className="copyable-text"
+            style={COPYABLE_STYLES}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
@@ -44,7 +76,7 @@ export function CopyableText({ children }: CopyableTextProps) {
             }}
         >
             {children}
-            <span className={copied ? 'copyable-icon-copied' : 'copyable-icon'}>
+            <span style={copied ? CHECKMARK_STYLES : ICON_STYLES}>
                 {copied ? '✓' : '⧉'}
             </span>
         </code>

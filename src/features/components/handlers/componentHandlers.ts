@@ -133,7 +133,6 @@ export const handleGetComponentsData: MessageHandler = async (context: HandlerCo
             appBuilder: toComponentDataArray(appBuilder, { includeDependencies: true }),
             dependencies: toComponentDataArray(dependencies, { includeDependencies: true }),
             envVars: registry.envVars || {},
-            services: registry.services || {},
         };
 
         // Log summary at debug level (concise)

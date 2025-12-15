@@ -7,6 +7,7 @@ import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProjec
 import { ViewStatusCommand } from '@/features/lifecycle/commands/viewStatus';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';

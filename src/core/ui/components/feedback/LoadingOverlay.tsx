@@ -1,6 +1,5 @@
 import React from 'react';
 import { Text } from '@adobe/react-spectrum';
-import { cn } from '@/core/ui/utils/classNames';
 
 export interface LoadingOverlayProps {
     /** Whether the overlay is visible */
@@ -11,6 +10,48 @@ export interface LoadingOverlayProps {
     opaque?: boolean;
 }
 
+const styles = {
+    container: {
+        position: 'absolute' as const,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'var(--db-loading-overlay-bg)',
+        display: 'flex',
+        flexDirection: 'column' as const,
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        borderRadius: '4px',
+        gap: '16px',
+    },
+    spinnerContainer: {
+        backgroundColor: 'var(--spectrum-global-color-gray-50)',
+        padding: '24px',
+        borderRadius: '50%',
+        boxShadow: '0 4px 12px var(--db-loading-overlay-shadow)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    spinner: {
+        width: '32px',
+        height: '32px',
+        borderRadius: '50%',
+        border: '3px solid var(--spectrum-global-color-blue-400)',
+        borderTopColor: 'transparent',
+        animation: 'loading-overlay-spin 1s linear infinite',
+    },
+};
+
+// CSS keyframes for spinner (injected once)
+const spinKeyframes = `
+  @keyframes loading-overlay-spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+
 /**
  * Modal loading overlay with spinner.
  *
@@ -18,8 +59,6 @@ export interface LoadingOverlayProps {
  * (e.g., "Backend Call on Continue" pattern).
  *
  * For inline loading states, use LoadingDisplay instead.
- *
- * SOP §11: Uses CSS classes from custom-spectrum.css instead of inline styles
  *
  * @example
  * <div style={{ position: 'relative' }}>
@@ -35,30 +74,35 @@ export function LoadingOverlay({ isVisible, message, opaque = false }: LoadingOv
         return null;
     }
 
+    const containerStyle = {
+        ...styles.container,
+        // Use opaque background for full-screen transitions (hides content behind)
+        backgroundColor: opaque
+            ? 'var(--spectrum-global-color-gray-50)'
+            : 'var(--db-loading-overlay-bg)',
+    };
+
     return (
-        <div
-            className={cn(
-                'loading-overlay-container',
-                opaque && 'loading-overlay-container-opaque'
-            )}
-            data-testid="loading-overlay"
-        >
-            <div
-                className="loading-overlay-spinner-container"
-                role="status"
-                aria-busy="true"
-                aria-label={message || 'Loading'}
-            >
-                <div className="loading-overlay-spinner" data-testid="loading-spinner" />
-            </div>
-            {message && (
-                <Text
-                    UNSAFE_className="loading-overlay-text"
-                    data-testid="loading-message"
+        <>
+            <style>{spinKeyframes}</style>
+            <div style={containerStyle} data-testid="loading-overlay">
+                <div
+                    style={styles.spinnerContainer}
+                    role="status"
+                    aria-busy="true"
+                    aria-label={message || 'Loading'}
                 >
-                    {message}
-                </Text>
-            )}
-        </div>
+                    <div style={styles.spinner} data-testid="loading-spinner" />
+                </div>
+                {message && (
+                    <Text
+                        UNSAFE_style={{ color: 'var(--db-loading-text)', fontWeight: 500 }}
+                        data-testid="loading-message"
+                    >
+                        {message}
+                    </Text>
+                )}
+            </div>
+        </>
     );
 }

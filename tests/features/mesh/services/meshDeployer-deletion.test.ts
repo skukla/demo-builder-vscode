@@ -27,14 +27,14 @@ jest.mock('@/core/di/serviceLocator');
 jest.mock('fs/promises');
 
 // Mock securityValidation
-jest.mock('@/core/validation', () => ({
+jest.mock('@/core/validation/securityValidation', () => ({
     validateMeshId: jest.fn()
 }));
 
 describe('MeshDeployer - Deletion', () => {
     let meshDeployer: MeshDeployer;
     let mockCommandExecutor: jest.Mocked<ReturnType<typeof createMockCommandExecutor>>;
-    const { validateMeshId } = require('@/core/validation');
+    const { validateMeshId } = require('@/core/validation/securityValidation');
 
     beforeEach(() => {
         jest.clearAllMocks();

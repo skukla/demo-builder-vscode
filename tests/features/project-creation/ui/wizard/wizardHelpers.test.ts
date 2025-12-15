@@ -396,11 +396,10 @@ describe('wizardHelpers', () => {
 
             const result = initializeAdobeContextFromImport(imported);
 
-            // Note: title falls back to name when not explicitly provided
             expect(result).toEqual({
                 org: { id: 'org-123', code: '', name: 'My Org' },
-                project: { id: 'proj-456', name: 'My Project', title: 'My Project' },
-                workspace: { id: 'ws-789', name: 'Production', title: 'Production' },
+                project: { id: 'proj-456', name: 'My Project' },
+                workspace: { id: 'ws-789', name: 'Production' },
             });
         });
 
@@ -438,89 +437,6 @@ describe('wizardHelpers', () => {
 
             expect(result.org?.name).toBe('');
             expect(result.project?.name).toBe('');
-        });
-
-        it('should use projectTitle when provided', () => {
-            const imported: ImportedSettings = {
-                adobe: {
-                    projectId: 'proj-456',
-                    projectName: '833BronzeShark',
-                    projectTitle: 'Citisignal Headless',
-                },
-            };
-
-            const result = initializeAdobeContextFromImport(imported);
-
-            expect(result.project?.name).toBe('833BronzeShark');
-            expect(result.project?.title).toBe('Citisignal Headless');
-        });
-
-        it('should fall back to projectName when projectTitle is missing', () => {
-            const imported: ImportedSettings = {
-                adobe: {
-                    projectId: 'proj-456',
-                    projectName: '833BronzeShark',
-                    // projectTitle missing
-                },
-            };
-
-            const result = initializeAdobeContextFromImport(imported);
-
-            expect(result.project?.name).toBe('833BronzeShark');
-            expect(result.project?.title).toBe('833BronzeShark');
-        });
-
-        it('should use workspaceTitle when provided', () => {
-            const imported: ImportedSettings = {
-                adobe: {
-                    workspaceId: 'ws-789',
-                    workspaceName: 'Stage',
-                    workspaceTitle: 'Staging Environment',
-                },
-            };
-
-            const result = initializeAdobeContextFromImport(imported);
-
-            expect(result.workspace?.name).toBe('Stage');
-            expect(result.workspace?.title).toBe('Staging Environment');
-        });
-
-        it('should fall back to workspaceName when workspaceTitle is missing', () => {
-            const imported: ImportedSettings = {
-                adobe: {
-                    workspaceId: 'ws-789',
-                    workspaceName: 'Production',
-                    // workspaceTitle missing
-                },
-            };
-
-            const result = initializeAdobeContextFromImport(imported);
-
-            expect(result.workspace?.name).toBe('Production');
-            expect(result.workspace?.title).toBe('Production');
-        });
-
-        it('should include all title fields when fully specified', () => {
-            const imported: ImportedSettings = {
-                adobe: {
-                    orgId: 'org-123',
-                    orgName: 'My Organization',
-                    projectId: 'proj-456',
-                    projectName: '833BronzeShark',
-                    projectTitle: 'Citisignal Headless',
-                    workspaceId: 'ws-789',
-                    workspaceName: 'Stage',
-                    workspaceTitle: 'Staging Environment',
-                },
-            };
-
-            const result = initializeAdobeContextFromImport(imported);
-
-            expect(result).toEqual({
-                org: { id: 'org-123', code: '', name: 'My Organization' },
-                project: { id: 'proj-456', name: '833BronzeShark', title: 'Citisignal Headless' },
-                workspace: { id: 'ws-789', name: 'Stage', title: 'Staging Environment' },
-            });
         });
     });
 

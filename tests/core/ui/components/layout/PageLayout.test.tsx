@@ -24,8 +24,8 @@ const renderWithProvider = (ui: React.ReactElement) => {
 
 // Helper to find the PageLayout container (skips Provider wrapper)
 const findLayoutContainer = (container: HTMLElement): HTMLElement | null => {
-    // PageLayout uses .page-layout-container class
-    return container.querySelector('.page-layout-container');
+    // PageLayout has height: 100vh style which is unique
+    return container.querySelector('[style*="height: 100vh"]');
 };
 
 describe('PageLayout', () => {
@@ -70,8 +70,8 @@ describe('PageLayout', () => {
                 </PageLayout>
             );
 
-            // Then: Content is inside a scrollable div (.page-layout-content provides overflow-y: auto via CSS)
-            const scrollableDiv = container.querySelector('.page-layout-content');
+            // Then: Content is inside a scrollable div (overflow-y: auto)
+            const scrollableDiv = container.querySelector('[style*="overflow"]');
             expect(scrollableDiv).toBeInTheDocument();
             expect(scrollableDiv).toContainElement(screen.getByTestId('scroll-content'));
         });
@@ -125,11 +125,11 @@ describe('PageLayout', () => {
             const header = screen.getByTestId('header-elem');
             const content = screen.getByTestId('content-elem');
 
-            // Compare DOM positions - header is direct child of container, content is inside .page-layout-content
-            const layoutContainer = container.querySelector('.page-layout-container');
-            const contentParent = content.closest('.page-layout-content');
+            // Compare DOM positions
+            const headerParent = header.closest('[style*="flex"]');
+            const contentParent = content.closest('[style*="overflow"]');
 
-            expect(layoutContainer).toBeInTheDocument();
+            expect(headerParent).toBeInTheDocument();
             expect(contentParent).toBeInTheDocument();
         });
 
@@ -293,10 +293,10 @@ describe('PageLayout', () => {
                 </PageLayout>
             );
 
-            // Then: Container has page-layout-container class (provides 100vh via CSS)
+            // Then: Container has 100vh height (use findLayoutContainer to skip Provider wrapper)
             const layoutContainer = findLayoutContainer(container);
             expect(layoutContainer).toBeInTheDocument();
-            expect(layoutContainer).toHaveClass('page-layout-container');
+            expect(layoutContainer?.style.height).toBe('100vh');
         });
 
         it('should use flex column layout', () => {
@@ -307,13 +307,14 @@ describe('PageLayout', () => {
                 </PageLayout>
             );
 
-            // Then: Container uses page-layout-container class (provides flex column via CSS)
+            // Then: Container uses flex column (verify via style property)
             const layoutContainer = findLayoutContainer(container);
             expect(layoutContainer).toBeInTheDocument();
-            expect(layoutContainer).toHaveClass('page-layout-container');
+            expect(layoutContainer?.style.display).toBe('flex');
+            expect(layoutContainer?.style.flexDirection).toBe('column');
         });
 
-        it('should make content area flexible with page-layout-content class', () => {
+        it('should make content area flexible with flex: 1', () => {
             // Given: PageLayout with content
             const { container } = renderWithProvider(
                 <PageLayout>
@@ -321,8 +322,8 @@ describe('PageLayout', () => {
                 </PageLayout>
             );
 
-            // Then: Content area has page-layout-content class (provides flex: 1 via CSS)
-            const scrollableArea = container.querySelector('.page-layout-content');
+            // Then: Content area has flex: 1
+            const scrollableArea = container.querySelector('[style*="flex: 1"]');
             expect(scrollableArea).toBeInTheDocument();
         });
     });

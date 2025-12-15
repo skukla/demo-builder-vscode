@@ -154,9 +154,9 @@ describe('NavigationPanel - Display', () => {
     });
 
     describe('Active States', () => {
-        it('highlights active section with CSS class', () => {
+        it('highlights active section', () => {
             const mockSections = createMockSections();
-            renderWithProviders(
+            const { container } = renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
                     activeSection="section1"
@@ -168,32 +168,14 @@ describe('NavigationPanel - Display', () => {
             );
 
             const activeButton = screen.getByText('Adobe Commerce').closest('button');
-            // SOP §11: Styles moved to CSS classes - verify class is applied
-            expect(activeButton).toHaveClass('nav-section-button');
-            expect(activeButton).toHaveClass('nav-section-button-active');
+            expect(activeButton).toHaveStyle({
+                borderLeft: '3px solid var(--spectrum-global-color-blue-500)'
+            });
         });
 
-        it('does not apply active class to inactive sections', () => {
+        it('highlights active field', () => {
             const mockSections = createMockSections();
-            renderWithProviders(
-                <NavigationPanel
-                    sections={mockSections}
-                    activeSection="section1"
-                    activeField={null}
-                    expandedSections={new Set()}
-                    onToggleSection={jest.fn()}
-                    onNavigateToField={jest.fn()}
-                />
-            );
-
-            const inactiveButton = screen.getByText('API Mesh').closest('button');
-            expect(inactiveButton).toHaveClass('nav-section-button');
-            expect(inactiveButton).not.toHaveClass('nav-section-button-active');
-        });
-
-        it('highlights active field with CSS class', () => {
-            const mockSections = createMockSections();
-            renderWithProviders(
+            const { container } = renderWithProviders(
                 <NavigationPanel
                     sections={mockSections}
                     activeSection="section1"
@@ -205,27 +187,9 @@ describe('NavigationPanel - Display', () => {
             );
 
             const activeField = screen.getByText('Field 1').closest('button');
-            // SOP §11: Styles moved to CSS classes - verify class is applied
-            expect(activeField).toHaveClass('nav-field-button');
-            expect(activeField).toHaveClass('nav-field-button-active');
-        });
-
-        it('does not apply active class to inactive fields', () => {
-            const mockSections = createMockSections();
-            renderWithProviders(
-                <NavigationPanel
-                    sections={mockSections}
-                    activeSection="section1"
-                    activeField="field1"
-                    expandedSections={new Set(['section1'])}
-                    onToggleSection={jest.fn()}
-                    onNavigateToField={jest.fn()}
-                />
-            );
-
-            const inactiveField = screen.getByText('Field 2').closest('button');
-            expect(inactiveField).toHaveClass('nav-field-button');
-            expect(inactiveField).not.toHaveClass('nav-field-button-active');
+            expect(activeField).toHaveStyle({
+                borderLeft: '2px solid var(--spectrum-global-color-blue-500)'
+            });
         });
 
         it('applies bold font to active section', () => {

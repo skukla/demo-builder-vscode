@@ -14,7 +14,7 @@ import {
     validateAccessToken,
     validateURL,
     sanitizeErrorForLogging
-} from '@/core/validation';
+} from '@/core/validation/securityValidation';
 
 describe('securityValidation - Network Security', () => {
 

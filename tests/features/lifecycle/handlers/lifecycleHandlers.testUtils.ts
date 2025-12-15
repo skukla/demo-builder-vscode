@@ -86,7 +86,7 @@ export function createMockContext() {
  */
 export function setupMocks() {
     jest.mock('vscode', () => mockVSCode, { virtual: true });
-    jest.mock('@/core/validation');
+    jest.mock('@/core/validation/securityValidation');
     jest.mock('@/features/components/handlers/componentHandlers', () => ({
         handleLoadComponents: jest.fn().mockResolvedValue({
             success: true,
