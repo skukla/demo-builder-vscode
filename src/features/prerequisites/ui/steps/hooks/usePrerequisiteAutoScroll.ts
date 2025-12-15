@@ -4,6 +4,8 @@ import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 interface UsePrerequisiteAutoScrollReturn {
     itemRefs: React.MutableRefObject<(HTMLDivElement | null)[]>;
+    scrollContainerRef: React.MutableRefObject<HTMLDivElement | null>;
+    scrollToTop: () => void;
     resetAutoScroll: () => void;
 }
 
@@ -14,18 +16,24 @@ interface UsePrerequisiteAutoScrollReturn {
  * - Auto-scroll to currently checking item
  * - Auto-scroll to bottom when all complete
  * - Reset scroll state when rechecking
- *
- * @param checks - Current prerequisite checks
- * @param setCanProceed - Callback to update navigation state
- * @param scrollContainerRef - Ref to the scroll container (passed from component)
  */
 export function usePrerequisiteAutoScroll(
     checks: PrerequisiteCheck[],
-    setCanProceed: (value: boolean) => void,
-    scrollContainerRef: React.MutableRefObject<HTMLDivElement | null>
+    setCanProceed: (value: boolean) => void
 ): UsePrerequisiteAutoScrollReturn {
     const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
     const hasAutoScrolled = useRef<boolean>(false);
+
+    // Scroll to top (used when starting a check)
+    const scrollToTop = useCallback(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({
+                top: 0,
+                behavior: 'smooth',
+            });
+        }
+    }, []);
 
     // Reset auto-scroll flag (used when navigating back to step)
     const resetAutoScroll = useCallback(() => {
@@ -88,6 +96,8 @@ export function usePrerequisiteAutoScroll(
 
     return {
         itemRefs,
+        scrollContainerRef,
+        scrollToTop,
         resetAutoScroll,
     };
 }
