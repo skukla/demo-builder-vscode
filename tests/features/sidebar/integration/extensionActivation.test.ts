@@ -188,16 +188,16 @@ describe('Wizard Step Configuration', () => {
     });
 
     it('should start wizard at first enabled step from config', async () => {
-        // This test verifies the initial step logic
+        // This test verifies the initial step logic (now in wizardHelpers.ts after hook extraction)
         const fs = require('fs').promises;
         const path = require('path');
 
-        const wizardContainerPath = path.resolve(
+        const wizardHelpersPath = path.resolve(
             __dirname,
-            '../../../../src/features/project-creation/ui/wizard/WizardContainer.tsx'
+            '../../../../src/features/project-creation/ui/wizard/wizardHelpers.ts'
         );
 
-        const content = await fs.readFile(wizardContainerPath, 'utf-8');
+        const content = await fs.readFile(wizardHelpersPath, 'utf-8');
 
         // Should compute first step from config
         expect(content).toMatch(/enabledSteps\[0\]\.id/);
