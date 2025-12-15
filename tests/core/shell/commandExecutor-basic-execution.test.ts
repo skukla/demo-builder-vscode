@@ -247,8 +247,9 @@ describe('CommandExecutor - Basic Execution', () => {
         });
 
         it('should reject queued commands on dispose', async () => {
-            // Set isProcessingQueue to prevent immediate processing
-            (commandExecutor as any).isProcessingQueue = true;
+            // Set isProcessing on the internal CommandQueue to prevent immediate processing
+            const commandQueue = (commandExecutor as any).commandQueue;
+            (commandQueue as any).isProcessing = true;
 
             // Now queue a command - it won't start because queue is locked
             const promise = commandExecutor.queueCommand('echo test');
