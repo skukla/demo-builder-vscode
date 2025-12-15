@@ -3,20 +3,19 @@ import { ConfigureCommand } from './configure';
 import { DiagnosticsCommand } from './diagnostics';
 import { ResetAllCommand } from '@/core/commands/ResetAllCommand';
 import { ServiceLocator } from '@/core/di/serviceLocator';
-import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
-import { ViewStatusCommand } from '@/features/lifecycle/commands/viewStatus';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
 import { ConfigureProjectWebviewCommand } from '@/features/dashboard/commands/configure';
 import { ProjectDashboardWebviewCommand } from '@/features/dashboard/commands/showDashboard';
+import { DeleteProjectCommand } from '@/features/lifecycle/commands/deleteProject';
 import { StartDemoCommand } from '@/features/lifecycle/commands/startDemo';
 import { StopDemoCommand } from '@/features/lifecycle/commands/stopDemo';
+import { ViewStatusCommand } from '@/features/lifecycle/commands/viewStatus';
 import { DeployMeshCommand } from '@/features/mesh/commands/deployMesh';
 import { CreateProjectWebviewCommand } from '@/features/project-creation/commands/createProject';
-import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
+import { CheckUpdatesCommand } from '@/features/updates/commands/checkUpdates';
 import { Project } from '@/types';
 
 export class CommandManager {

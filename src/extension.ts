@@ -1,3 +1,6 @@
+import * as fs from 'fs/promises';
+import * as os from 'os';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { CommandManager } from '@/commands/commandManager';
 import { BaseWebviewCommand } from '@/core/base';
@@ -7,9 +10,9 @@ import { CommandExecutor } from '@/core/shell';
 import { StateManager } from '@/core/state';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StatusBarManager, WorkspaceWatcherManager, EnvFileWatcherService } from '@/core/vscode';
-import { SidebarProvider } from '@/features/sidebar';
 import { AuthenticationService } from '@/features/authentication';
 import { ComponentTreeProvider } from '@/features/components/providers/componentTreeProvider';
+import { SidebarProvider } from '@/features/sidebar';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
 
@@ -53,25 +56,21 @@ export async function activate(context: vscode.ExtensionContext) {
     
     // Check for pending log replay (after Extension Host restart)
     try {
-        const os = require('os');
-        const path = require('path');
-        const fs = require('fs').promises;
-        
         const flagFile = path.join(os.homedir(), '.demo-builder', '.pending-log-replay');
-        
+
         // Check if flag file exists
         const flagExists = await fs.access(flagFile).then(() => true).catch(() => false);
         if (flagExists) {
             // Read log file path from flag
             const logFilePath = await fs.readFile(flagFile, 'utf8');
-            
+
             // Replay logs from the saved file (don't auto-show output panel)
             await debugLogger.replayLogsFromFile(logFilePath.trim());
-            
+
             // Remove flag file
             await fs.unlink(flagFile);
         }
-    } catch (replayError) {
+    } catch {
         // Silently ignore errors (flag file might not exist, which is fine)
     }
     
@@ -100,8 +99,8 @@ export async function activate(context: vscode.ExtensionContext) {
                     webviewOptions: {
                         retainContextWhenHidden: true, // Keep state when sidebar hidden
                     },
-                }
-            )
+                },
+            ),
         );
 
         // Register SidebarProvider with ServiceLocator (for wizard/command access)
@@ -169,7 +168,7 @@ export async function activate(context: vscode.ExtensionContext) {
         authenticationService = new AuthenticationService(
             context.extensionPath,
             logger,
-            externalCommandManager
+            externalCommandManager,
         );
 
         // Register AuthenticationService with ServiceLocator
@@ -261,9 +260,6 @@ export async function activate(context: vscode.ExtensionContext) {
         // Clean up any stale flag files from previous versions
         // (The workspace folder addition that used this flag was removed in beta.64)
         try {
-            const os = require('os');
-            const path = require('path');
-            const fs = require('fs').promises;
             const flagFile = path.join(os.homedir(), '.demo-builder', '.open-dashboard-after-restart');
             await fs.unlink(flagFile).catch(() => {}); // Silently remove if exists
         } catch {
