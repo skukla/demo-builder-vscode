@@ -168,23 +168,34 @@ describe('SidebarProvider Registration', () => {
 });
 
 describe('Wizard Step Configuration', () => {
-    it('should have WelcomeStep support in WizardContainer', async () => {
-        // This test verifies WelcomeStep is properly supported
+    it('should have WelcomeStep support via WizardStepRenderer', async () => {
+        // This test verifies WelcomeStep is properly supported via extracted renderer
         const fs = require('fs').promises;
         const path = require('path');
 
+        // WizardContainer uses WizardStepRenderer for step rendering
         const wizardContainerPath = path.resolve(
             __dirname,
             '../../../../src/features/project-creation/ui/wizard/WizardContainer.tsx'
         );
+        const containerContent = await fs.readFile(wizardContainerPath, 'utf-8');
 
-        const content = await fs.readFile(wizardContainerPath, 'utf-8');
+        // Should import and use WizardStepRenderer
+        expect(containerContent).toMatch(/import.*WizardStepRenderer.*from/);
+        expect(containerContent).toMatch(/<WizardStepRenderer/);
+
+        // WizardStepRenderer should have WelcomeStep import and case
+        const stepRendererPath = path.resolve(
+            __dirname,
+            '../../../../src/features/project-creation/ui/wizard/WizardStepRenderer.tsx'
+        );
+        const rendererContent = await fs.readFile(stepRendererPath, 'utf-8');
 
         // Should have WelcomeStep import
-        expect(content).toMatch(/import.*WelcomeStep.*from/);
+        expect(rendererContent).toMatch(/import.*WelcomeStep.*from/);
 
         // Should have welcome case in switch
-        expect(content).toMatch(/case\s+['"]welcome['"]/);
+        expect(rendererContent).toMatch(/case\s+['"]welcome['"]/);
     });
 
     it('should start wizard at first enabled step from config', async () => {
@@ -199,10 +210,15 @@ describe('Wizard Step Configuration', () => {
 
         const content = await fs.readFile(wizardContainerPath, 'utf-8');
 
-        // Should compute first step from config
-        expect(content).toMatch(/enabledSteps\[0\]\.id/);
+        // Should compute first step from config using getFirstEnabledStep
+        expect(content).toMatch(/getFirstEnabledStep/);
 
-        // Should have fallback to adobe-auth
-        expect(content).toMatch(/adobe-auth.*as WizardStep/);
+        // WizardStepRenderer should have adobe-auth step in switch case
+        const stepRendererPath = path.resolve(
+            __dirname,
+            '../../../../src/features/project-creation/ui/wizard/WizardStepRenderer.tsx'
+        );
+        const rendererContent = await fs.readFile(stepRendererPath, 'utf-8');
+        expect(rendererContent).toMatch(/case\s+['"]adobe-auth['"]/);
     });
 });

@@ -5,8 +5,8 @@ import {
     Button,
     Text,
 } from '@adobe/react-spectrum';
-import { PageHeader, PageFooter, CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
-import { LoadingOverlay, LoadingDisplay } from '@/core/ui/components/feedback';
+import { PageHeader, PageFooter } from '@/core/ui/components/layout';
+import { LoadingOverlay } from '@/core/ui/components/feedback';
 import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
     getNextButtonText,
@@ -21,20 +21,12 @@ import {
     initializeAdobeContextFromImport,
     initializeProjectName,
     getFirstEnabledStep,
+    buildProjectConfig,
     ImportedSettings,
 } from './wizardHelpers';
-import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
-import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjectStep';
-import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
-import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
-import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
-import { ApiMeshStep } from '@/features/mesh/ui/steps/ApiMeshStep';
-import { MeshDeploymentStep } from '@/features/mesh/ui/steps/MeshDeploymentStep';
+import { WizardStepRenderer } from './WizardStepRenderer';
 import { useMeshDeployment } from '@/features/mesh/ui/steps/useMeshDeployment';
-import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
-import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
-import { ReviewStep, ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
-import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
+import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WizardState, WizardStep, FeedbackMessage, ComponentSelection } from '@/types/webview';
 import { cn } from '@/core/ui/utils/classNames';
 import { hasValidTitle } from '@/core/ui/utils/titleHelpers';
@@ -58,33 +50,6 @@ interface WizardContainerProps {
     importedSettings?: ImportedSettings | null;
 }
 
-
-// Helper: Build project configuration from wizard state
-const buildProjectConfig = (wizardState: WizardState) => {
-    const config = {
-        projectName: wizardState.projectName,
-        projectTemplate: wizardState.projectTemplate,
-        adobe: {
-            organization: wizardState.adobeOrg?.id,
-            projectId: wizardState.adobeProject?.id,
-            projectName: wizardState.adobeProject?.name,
-            projectTitle: wizardState.adobeProject?.title,
-            workspace: wizardState.adobeWorkspace?.id,
-            workspaceTitle: wizardState.adobeWorkspace?.title,
-        },
-        components: {
-            frontend: wizardState.components?.frontend,
-            backend: wizardState.components?.backend,
-            dependencies: wizardState.components?.dependencies || [],
-            integrations: wizardState.components?.integrations || [],
-            appBuilderApps: wizardState.components?.appBuilderApps || [],
-        },
-        apiMesh: wizardState.apiMesh,
-        componentConfigs: wizardState.componentConfigs,
-    };
-
-    return config;
-};
 
 // Helper: Handle backend calls for step transitions
 const handleStepBackendCalls = async (currentStep: string, nextStepId: string, wizardState: WizardState) => {
@@ -556,78 +521,6 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
         handleCancel();
     }, [handleCancel]);
 
-    // Render mesh deployment step with hook state
-    const renderMeshDeploymentStep = useCallback(() => {
-        return (
-            <MeshDeploymentStep
-                state={meshDeployment.state}
-                onRetry={meshDeployment.retry}
-                onCancel={handleMeshDeploymentCancel}
-                onContinue={goNext}
-            />
-        );
-    }, [meshDeployment.state, meshDeployment.retry, handleMeshDeploymentCancel, goNext]);
-
-    const renderStep = () => {
-        // Import mode: Show loading view during transition to review
-        // Uses same UI pattern as project/workspace loading states
-        if (isPreparingReview) {
-            return (
-                <SingleColumnLayout>
-                    <Heading level={2} marginBottom="size-300">
-                        Preparing Review
-                    </Heading>
-                    <CenteredFeedbackContainer>
-                        <LoadingDisplay
-                            size="L"
-                            message="Preparing your project review..."
-                            subMessage="Loading your imported settings"
-                        />
-                    </CenteredFeedbackContainer>
-                </SingleColumnLayout>
-            );
-        }
-
-        const props = {
-            state,
-            updateState,
-            onNext: goNext,
-            onBack: goBack,
-            setCanProceed,
-            componentsData,
-        };
-
-        switch (state.currentStep) {
-            case 'welcome':
-                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} />;
-            case 'component-selection':
-                return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
-            case 'prerequisites':
-                return <PrerequisitesStep {...props} componentsData={componentsData?.data as Record<string, unknown>} currentStep={state.currentStep} />;
-            case 'adobe-auth':
-                return <AdobeAuthStep {...props} />;
-            case 'adobe-project':
-                return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
-            case 'adobe-workspace':
-                return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
-            case 'api-mesh':
-                return <ApiMeshStep {...props} completedSteps={completedSteps} />;
-            case 'mesh-deployment':
-                // Mesh deployment step with timeout recovery (PM Decision 2025-12-06)
-                // Note: This step is disabled by default in wizard-steps.json
-                // When enabled, uses useMeshDeployment hook for state management
-                return renderMeshDeploymentStep();
-            case 'settings':
-                return <ComponentConfigStep {...props} />;
-            case 'review':
-                return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} />;
-            case 'project-creation':
-                return <ProjectCreationStep state={state} onBack={goBack} />;
-            default:
-                return null;
-        }
-    };
-
     // Configuration error check - AFTER all hooks to comply with Rules of Hooks
     if (WIZARD_STEPS.length === 0) {
         return (
@@ -677,7 +570,21 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
                                 key={state.currentStep}
                                 onError={(error) => log.error('Step error:', error)}
                             >
-                                {renderStep()}
+                                <WizardStepRenderer
+                                    currentStep={state.currentStep}
+                                    state={state}
+                                    updateState={updateState}
+                                    onNext={goNext}
+                                    onBack={goBack}
+                                    setCanProceed={setCanProceed}
+                                    componentsData={componentsData}
+                                    completedSteps={completedSteps}
+                                    existingProjectNames={existingProjectNames}
+                                    isPreparingReview={isPreparingReview}
+                                    meshDeploymentState={meshDeployment.state}
+                                    onMeshRetry={meshDeployment.retry}
+                                    onMeshCancel={handleMeshDeploymentCancel}
+                                />
                             </ErrorBoundary>
                         </div>
 
@@ -733,47 +640,6 @@ export function WizardContainer({ componentDefaults, wizardSteps, existingProjec
                     )}
                 </div>
             </div>
-
-            <style>{`
-                .step-content {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-                
-                .step-content.transitioning {
-                    opacity: 0;
-                }
-                
-                .step-content.transitioning.forward {
-                    transform: translateX(-20px);
-                }
-                
-                .step-content.transitioning.backward {
-                    transform: translateX(20px);
-                }
-
-                @keyframes slideInFromRight {
-                    from {
-                        opacity: 0;
-                        transform: translateX(20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
-                }
-
-                @keyframes slideInFromLeft {
-                    from {
-                        opacity: 0;
-                        transform: translateX(-20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(0);
-                    }
-                }
-            `}</style>
         </View>
     );
 }

@@ -355,3 +355,38 @@ export function getEnabledWizardSteps(
         .map(step => ({ id: step.id as WizardStep, name: step.name }));
 }
 
+// ============================================================================
+// Project Configuration Helpers
+// ============================================================================
+
+/**
+ * Build project configuration object from wizard state.
+ * Used when creating a project or exporting settings.
+ *
+ * @param wizardState - Current wizard state
+ * @returns Project configuration object
+ */
+export function buildProjectConfig(wizardState: WizardState) {
+    return {
+        projectName: wizardState.projectName,
+        projectTemplate: wizardState.projectTemplate,
+        adobe: {
+            organization: wizardState.adobeOrg?.id,
+            projectId: wizardState.adobeProject?.id,
+            projectName: wizardState.adobeProject?.name,
+            projectTitle: wizardState.adobeProject?.title,
+            workspace: wizardState.adobeWorkspace?.id,
+            workspaceTitle: wizardState.adobeWorkspace?.title,
+        },
+        components: {
+            frontend: wizardState.components?.frontend,
+            backend: wizardState.components?.backend,
+            dependencies: wizardState.components?.dependencies || [],
+            integrations: wizardState.components?.integrations || [],
+            appBuilderApps: wizardState.components?.appBuilderApps || [],
+        },
+        apiMesh: wizardState.apiMesh,
+        componentConfigs: wizardState.componentConfigs,
+    };
+}
+
