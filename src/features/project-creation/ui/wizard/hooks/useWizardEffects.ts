@@ -16,7 +16,7 @@ interface UseWizardEffectsProps {
     setState: React.Dispatch<React.SetStateAction<WizardState>>;
     WIZARD_STEPS: Array<{ id: WizardStep; name: string }>;
     completedSteps: WizardStep[];
-    stepContentRef: React.RefObject<HTMLDivElement>;
+    stepContentRef: React.RefObject<HTMLDivElement | null>;
     setComponentsData: React.Dispatch<React.SetStateAction<{
         success: boolean;
         type: string;

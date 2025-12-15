@@ -36,6 +36,69 @@ export const createMockWizardSteps = () => [
     { id: 'project-creation', name: 'Creating Project', enabled: true },
 ];
 
+/**
+ * Edit project configuration for edit mode tests
+ */
+export interface EditProjectConfig {
+    projectPath: string;
+    projectName: string;
+    settings: {
+        version: number;
+        selections?: {
+            frontend?: string;
+            backend?: string;
+            dependencies?: string[];
+            integrations?: string[];
+            appBuilder?: string[];
+        };
+        configs?: Record<string, Record<string, string | boolean | number | undefined>>;
+        adobe?: {
+            orgId?: string;
+            orgName?: string;
+            projectId?: string;
+            projectName?: string;
+            projectTitle?: string;
+            workspaceId?: string;
+            workspaceName?: string;
+            workspaceTitle?: string;
+        };
+    };
+}
+
+/**
+ * Create mock editProject prop for edit mode tests
+ */
+export const createMockEditProject = (
+    overrides: Partial<EditProjectConfig> = {}
+): EditProjectConfig => ({
+    projectPath: '/Users/test/.demo-builder/projects/test-project',
+    projectName: 'test-project',
+    settings: {
+        version: 1,
+        selections: {
+            frontend: 'citisignal-nextjs',
+            backend: 'commerce-paas',
+            dependencies: ['commerce-mesh'],
+            integrations: [],
+            appBuilder: [],
+        },
+        configs: {
+            'citisignal-nextjs': { port: 3000 },
+        },
+        adobe: {
+            orgId: 'org123',
+            orgName: 'Test Organization',
+            projectId: 'proj456',
+            projectName: 'TestProject',
+            projectTitle: 'Test Project Title',
+            workspaceId: 'ws789',
+            workspaceName: 'Development',
+            workspaceTitle: 'Development',
+        },
+    },
+    ...overrides,
+});
+
 // Helper to create mock imported settings for import flow tests
 export const createMockImportedSettings = () => ({
     version: '1.0.0',
