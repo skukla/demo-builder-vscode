@@ -67,22 +67,41 @@ describe('LoadingOverlay', () => {
     });
 
     describe('styling', () => {
-        it('covers full container with semi-transparent backdrop', () => {
+        it('applies container CSS class for positioning and layout', () => {
             const { container } = renderWithProviders(<LoadingOverlay isVisible={true} />);
 
             const overlay = container.querySelector('[data-testid="loading-overlay"]');
-            expect(overlay).toHaveStyle({ position: 'absolute' });
+            // SOP §11: Styles moved to CSS classes - verify class is applied
+            expect(overlay).toHaveClass('loading-overlay-container');
         });
 
-        it('uses flexbox for centering', () => {
+        it('applies opaque class when opaque prop is true', () => {
+            const { container } = renderWithProviders(<LoadingOverlay isVisible={true} opaque />);
+
+            const overlay = container.querySelector('[data-testid="loading-overlay"]');
+            expect(overlay).toHaveClass('loading-overlay-container');
+            expect(overlay).toHaveClass('loading-overlay-container-opaque');
+        });
+
+        it('does not apply opaque class by default', () => {
             const { container } = renderWithProviders(<LoadingOverlay isVisible={true} />);
 
             const overlay = container.querySelector('[data-testid="loading-overlay"]');
-            expect(overlay).toHaveStyle({
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-            });
+            expect(overlay).not.toHaveClass('loading-overlay-container-opaque');
+        });
+
+        it('applies spinner container CSS class', () => {
+            const { container } = renderWithProviders(<LoadingOverlay isVisible={true} />);
+
+            const spinnerContainer = container.querySelector('[role="status"]');
+            expect(spinnerContainer).toHaveClass('loading-overlay-spinner-container');
+        });
+
+        it('applies spinner CSS class', () => {
+            const { container } = renderWithProviders(<LoadingOverlay isVisible={true} />);
+
+            const spinner = container.querySelector('[data-testid="loading-spinner"]');
+            expect(spinner).toHaveClass('loading-overlay-spinner');
         });
     });
 

@@ -45,4 +45,11 @@ export const FRONTEND_TIMEOUTS = {
      * Prefer this over raw `setTimeout(fn, 0)` for clarity.
      */
     MICROTASK_DEFER: 0,
+
+    /**
+     * Minimum display duration for loading indicators and feedback states.
+     * Matches TIMEOUTS.LOADING_MIN_DISPLAY from backend.
+     * Used for copy-to-clipboard feedback, loading spinners, etc.
+     */
+    LOADING_MIN_DISPLAY: 1500,
 } as const;
