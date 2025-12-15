@@ -10,7 +10,7 @@ import type { CommandResult, ExecuteOptions, CommandRequest, CommandConfig, Poll
 import { DEFAULT_SHELL } from '@/types/shell';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { validateNodeVersion } from '@/core/validation/securityValidation';
+import { validateNodeVersion } from '@/core/validation';
 
 /**
  * Main command executor - orchestrates all command execution operations

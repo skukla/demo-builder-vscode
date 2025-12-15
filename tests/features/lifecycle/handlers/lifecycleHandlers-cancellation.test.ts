@@ -38,7 +38,7 @@ jest.mock('vscode', () => ({
         openExternal: jest.fn()
     }
 }), { virtual: true });
-jest.mock('@/core/validation/securityValidation');
+jest.mock('@/core/validation');
 
 describe('lifecycleHandlers - Cancellation', () => {
     let mockContext: any;

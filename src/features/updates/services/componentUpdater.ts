@@ -294,7 +294,7 @@ export class ComponentUpdater {
         componentId: string,
     ): Promise<void> {
         // SECURITY: Validate GitHub URL before downloading
-        const { validateGitHubDownloadURL } = await import('@/core/validation/securityValidation');
+        const { validateGitHubDownloadURL } = await import('@/core/validation');
         try {
             validateGitHubDownloadURL(downloadUrl);
         } catch (error) {

@@ -6,7 +6,7 @@
  * - authenticate: Browser-based Adobe login flow
  */
 
-import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
+import { sanitizeErrorForLogging } from '@/core/validation';
 import { formatDuration, formatMinutes } from '@/core/utils';
 import type { AdobeOrg, AdobeProject } from '@/features/authentication/services/types';
 import type { HandlerContext } from '@/commands/handlers/HandlerContext';

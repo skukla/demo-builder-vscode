@@ -18,7 +18,7 @@ import type { Project } from '@/types';
 // Mock dependencies
 jest.mock('@/core/logging');
 jest.mock('@/core/di');
-jest.mock('@/core/validation/securityValidation');
+jest.mock('@/core/validation');
 jest.mock('fs/promises');
 jest.mock('vscode', () => ({
     commands: {
@@ -72,7 +72,7 @@ describe('ComponentUpdater (Step 1)', () => {
         (ServiceLocator.getCommandExecutor as jest.Mock) = jest.fn().mockReturnValue(mockExecutor);
 
         // Mock security validation
-        const securityValidation = require('@/core/validation/securityValidation');
+        const securityValidation = require('@/core/validation');
         securityValidation.validateGitHubDownloadURL = jest.fn();
 
         // Mock fs operations using jest.spyOn

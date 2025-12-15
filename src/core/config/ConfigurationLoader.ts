@@ -6,7 +6,7 @@
  */
 
 import * as fs from 'fs';
-import { sanitizeErrorForLogging } from '@/core/validation/securityValidation';
+import { sanitizeErrorForLogging } from '@/core/validation';
 
 export interface LoadOptions {
     validationErrorMessage?: string;

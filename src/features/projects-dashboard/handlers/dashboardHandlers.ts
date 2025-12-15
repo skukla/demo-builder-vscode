@@ -12,7 +12,7 @@
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { sessionUIState } from '@/core/state/sessionUIState';
-import { validateProjectPath } from '@/core/validation/securityValidation';
+import { validateProjectPath } from '@/core/validation';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import { extractSettingsFromProject } from '../services/settingsSerializer';

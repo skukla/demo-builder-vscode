@@ -6,7 +6,7 @@ import { ServiceLocator } from '@/core/di';
 import { ProcessCleanup } from '@/core/shell/processCleanup';
 import { updateFrontendState } from '@/core/state';
 import { ExecutionLock, TIMEOUTS } from '@/core/utils';
-import { validateNodeVersion } from '@/core/validation/securityValidation';
+import { validateNodeVersion } from '@/core/validation';
 import { DEFAULT_SHELL } from '@/types/shell';
 import { getComponentIds, getComponentInstanceValues } from '@/types/typeGuards';
 
@@ -127,8 +127,8 @@ export class StartDemoCommand extends BaseCommand {
         }
 
         // Verify port is actually free now (wait up to 2 seconds)
-        const maxWait = 2000;
-        const checkInterval = 100;
+        const maxWait = TIMEOUTS.DEMO_STOP_WAIT;
+        const checkInterval = TIMEOUTS.PROCESS_CHECK_INTERVAL;
         const startTime = Date.now();
 
         while (Date.now() - startTime < maxWait) {

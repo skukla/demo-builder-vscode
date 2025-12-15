@@ -20,7 +20,7 @@ import {
     validateProjectId,
     validateWorkspaceId,
     validateMeshId
-} from '@/core/validation/securityValidation';
+} from '@/core/validation';
 
 describe('securityValidation - Input Validation', () => {
 

@@ -10,8 +10,8 @@ jest.mock('fs/promises');
 
 // Mock validatePathSafety since it uses dynamic import
 const mockValidatePathSafety = jest.fn();
-jest.mock('@/core/validation/securityValidation', () => ({
-    ...jest.requireActual('@/core/validation/securityValidation'),
+jest.mock('@/core/validation', () => ({
+    ...jest.requireActual('@/core/validation'),
     validatePathSafety: (...args: any[]) => mockValidatePathSafety(...args),
 }));
 

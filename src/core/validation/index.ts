@@ -4,22 +4,35 @@
  * Provides input sanitization, field validation, and security validation.
  */
 
-// Security validation for backend handlers
+// Sensitive data redaction
 export {
+    sanitizeErrorForLogging,
+    sanitizeError,
+} from './SensitiveDataRedactor';
+
+// Path safety validation
+export {
+    validatePathSafety,
+    validateProjectPath,
+} from './PathSafetyValidator';
+
+// URL validation
+export {
+    validateURL,
+    validateGitHubDownloadURL,
+} from './URLValidator';
+
+// Domain-specific validators
+export {
+    validateAdobeResourceId,
     validateOrgId,
     validateProjectId,
     validateWorkspaceId,
     validateMeshId,
-    validateAccessToken,
-    validateAdobeResourceId,
     validateProjectNameSecurity,
-    validateProjectPath,
-    validateURL,
-    sanitizeErrorForLogging,
-    sanitizeError,
-    validatePathSafety,
-    validateGitHubDownloadURL,
-} from './securityValidation';
+    validateAccessToken,
+    validateNodeVersion,
+} from './validators';
 
 // UI field validation
 export {

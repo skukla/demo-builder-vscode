@@ -341,7 +341,7 @@ export class UpdateManager {
                     : release.zipball_url;
 
                 // SECURITY: Validate GitHub download URL before returning
-                const { validateGitHubDownloadURL } = await import('@/core/validation/securityValidation');
+                const { validateGitHubDownloadURL } = await import('@/core/validation');
                 try {
                     validateGitHubDownloadURL(downloadUrl);
                 } catch (error) {
