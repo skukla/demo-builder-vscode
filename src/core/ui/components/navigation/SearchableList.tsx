@@ -5,6 +5,7 @@ import {
     Item
 } from '@adobe/react-spectrum';
 import { SearchHeader } from './SearchHeader';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 export interface SearchableListItem {
     id: string;
@@ -142,7 +143,7 @@ export function SearchableList<T extends SearchableListItem>({
                 selectedElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
                 hasScrolledRef.current = true;
             }
-        }, 100);
+        }, FRONTEND_TIMEOUTS.UI_UPDATE_DELAY);
 
         return () => clearTimeout(timer);
     }, [selectedKeys]);

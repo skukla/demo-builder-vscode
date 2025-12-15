@@ -154,7 +154,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                                 Logs
                             </Button>
                             {/* Spacer for right side to balance layout */}
-                            <div style={{ width: '80px' }} />
+                            <div className="w-80" />
                         </Flex>
                     </div>
                 </div>
@@ -166,7 +166,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                     <div className="max-w-800 w-full">
                         <Flex justifyContent="space-between" alignItems="center" width="100%">
                             {/* Spacer for left side to balance layout */}
-                            <div style={{ width: '80px' }} />
+                            <div className="w-80" />
                             <Button
                                 variant="secondary"
                                 onPress={handleShowLogs}

@@ -15,12 +15,7 @@ import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
 import { NavigableStepProps } from '@/types/wizard';
 import { cn } from '@/core/ui/utils/classNames';
-
-/**
- * Delay before continuing prerequisite checks (matches TIMEOUTS.DASHBOARD_OPEN_DELAY)
- * SOP §1: Named constant for UI timing delays
- */
-const CONTINUE_CHECK_DELAY = 500;
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 
 interface PrerequisitesStepProps extends NavigableStepProps {
     componentsData?: Record<string, unknown>;
@@ -187,7 +182,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                 // Continue checking from the next prerequisite, not from the beginning
                 setTimeout(() => {
                     webviewClient.postMessage('continue-prerequisites', { fromIndex: index + 1 });
-                }, CONTINUE_CHECK_DELAY);
+                }, FRONTEND_TIMEOUTS.CONTINUE_CHECK_DELAY);
             }
         });
 
@@ -311,7 +306,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                         behavior: 'auto',  // Instant scroll to prevent shudder during content changes
                     });
                 }
-            }, 200);
+            }, FRONTEND_TIMEOUTS.SCROLL_SETTLE);
         }
     }, [checks, setCanProceed]);
 
@@ -329,7 +324,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
             // Small delay to ensure UI has settled
             const timer = setTimeout(() => {
                 checkPrerequisites();
-            }, 100);
+            }, FRONTEND_TIMEOUTS.UI_UPDATE_DELAY);
 
             return () => {
                 clearTimeout(timer);

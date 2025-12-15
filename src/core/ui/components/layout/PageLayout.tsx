@@ -65,24 +65,14 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
 }) => {
     return (
         <div
-            className={cn(className)}
-            style={{
-                height: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                backgroundColor,
-            }}
+            className={cn('page-layout-container', className)}
+            style={backgroundColor ? { backgroundColor } : undefined}
         >
             {/* Header slot - fixed, no shrink */}
             {header}
 
             {/* Content area - scrollable, flex-grow */}
-            <div
-                style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                }}
-            >
+            <div className="page-layout-content">
                 {children}
             </div>
 

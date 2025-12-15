@@ -124,11 +124,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                     onPress={() => onViewModeChange('cards')}
                     aria-label="Card view"
                     aria-pressed={viewMode === 'cards'}
-                    UNSAFE_className={`cursor-pointer ${viewMode === 'cards' ? 'is-selected' : ''}`}
-                    UNSAFE_style={{
-                        backgroundColor: viewMode === 'cards' ? 'var(--spectrum-global-color-gray-200)' : undefined,
-                        borderRadius: '4px',
-                    }}
+                    UNSAFE_className={`cursor-pointer ${viewMode === 'cards' ? 'is-selected toggle-selected' : ''}`}
                 >
                     <ViewGrid />
                 </ActionButton>
@@ -140,11 +136,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                     onPress={() => onViewModeChange('rows')}
                     aria-label="List view"
                     aria-pressed={viewMode === 'rows'}
-                    UNSAFE_className={`cursor-pointer ${viewMode === 'rows' ? 'is-selected' : ''}`}
-                    UNSAFE_style={{
-                        backgroundColor: viewMode === 'rows' ? 'var(--spectrum-global-color-gray-200)' : undefined,
-                        borderRadius: '4px',
-                    }}
+                    UNSAFE_className={`cursor-pointer ${viewMode === 'rows' ? 'is-selected toggle-selected' : ''}`}
                 >
                     <ViewList />
                 </ActionButton>

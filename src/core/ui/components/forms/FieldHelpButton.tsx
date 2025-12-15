@@ -98,42 +98,14 @@ function ImageZoom({
     return (
         <div
             ref={overlayRef}
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 10000,
-                cursor: 'zoom-out',
-                padding: '20px',
-            }}
+            className="image-zoom-overlay"
         >
             <img
                 src={src}
                 alt={alt}
-                style={{
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    objectFit: 'contain',
-                    borderRadius: '4px',
-                    cursor: 'zoom-out',
-                }}
+                className="image-zoom-content"
             />
-            <div
-                style={{
-                    position: 'absolute',
-                    top: '20px',
-                    right: '20px',
-                    color: 'white',
-                    fontSize: '14px',
-                    opacity: 0.7,
-                }}
-            >
+            <div className="image-zoom-close-hint">
                 Press Escape or click to close
             </div>
         </div>
@@ -202,7 +174,7 @@ function StepContent({
             {/* Content */}
             <Flex direction="column" gap="size-150" flex={1}>
                 {/* Fixed height for text prevents layout shift between steps */}
-                <div style={{ minHeight: '48px' }}>
+                <div className="min-h-48">
                     <Text UNSAFE_className="instruction-title">
                         {renderTextWithCopyable(step.text)}
                     </Text>
@@ -346,7 +318,7 @@ export function FieldHelpButton({
                             <Flex justifyContent="space-between" alignItems="center" width="100%">
                                 <Text>{help.title || `Help: ${fieldLabel}`}</Text>
                                 {hasMultipleSteps && (
-                                    <Text UNSAFE_style={{ fontSize: '13px', fontWeight: 'normal', color: 'var(--spectrum-global-color-gray-500)' }}>
+                                    <Text UNSAFE_className="step-counter">
                                         Step {currentStep + 1} of {totalSteps}
                                     </Text>
                                 )}
@@ -372,7 +344,7 @@ export function FieldHelpButton({
                         <Footer>
                             <Flex width="100%" justifyContent="space-between" alignItems="center">
                                 {/* Left spacer for centering */}
-                                <div style={{ flex: 1 }} />
+                                <div className="flex-1" />
                                 {/* Navigation buttons - centered */}
                                 {hasMultipleSteps ? (
                                     <Flex gap="size-100">
@@ -397,7 +369,7 @@ export function FieldHelpButton({
                                     <div />
                                 )}
                                 {/* Accent button - right aligned */}
-                                <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                                <div className="flex-end-container">
                                     <Button variant="accent" onPress={close}>
                                         {hasMultipleSteps && currentStep === totalSteps - 1 ? 'Done' : 'Got it'}
                                     </Button>
