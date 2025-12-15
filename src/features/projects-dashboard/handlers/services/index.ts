@@ -9,5 +9,3 @@ export {
     copySettingsFromProject,
     exportProjectSettings,
 } from './settingsTransferService';
-
-export { deleteProject } from './projectDeletionService';

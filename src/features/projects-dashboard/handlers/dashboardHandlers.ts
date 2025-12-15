@@ -5,13 +5,11 @@
  * Follows Pattern B: Returns response data (doesn't use sendMessage).
  */
 
-import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { validateProjectPath } from '@/core/validation/securityValidation';
-import { TIMEOUTS, showWebviewQuickPick } from '@/core/utils';
-import { toError } from '@/types/typeGuards';
+import { showWebviewQuickPick } from '@/core/utils';
 import type { Project } from '@/types/base';
 import type { MessageHandler, HandlerContext, HandlerResponse } from '@/types/handlers';
 import {
@@ -513,8 +511,14 @@ export const handleExportProject: MessageHandler<{ projectPath: string }> = asyn
 /**
  * Delete a project by path
  *
- * Shows confirmation dialog, stops demo if running, deletes files,
- * and removes from recent projects. Returns success/cancelled/error.
+ * Delegates to the demoBuilder.deleteProject command which handles:
+ * - Confirmation dialog
+ * - Stopping demo if running
+ * - File deletion with retry logic
+ * - State cleanup
+ * - Success notification
+ *
+ * This handler just sets the project as current so the command knows what to delete.
  */
 export const handleDeleteProject: MessageHandler<{ projectPath: string }> = async (
     context: HandlerContext,
@@ -538,7 +542,7 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
             };
         }
 
-        // Load the project to get its name and status
+        // Load the project
         const project = await context.stateManager.loadProjectFromPath(payload.projectPath);
         if (!project) {
             return {
@@ -547,72 +551,22 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
             };
         }
 
-        // Show confirmation dialog
-        const confirm = await vscode.window.showWarningMessage(
-            `Are you sure you want to delete "${project.name}"?`,
-            {
-                modal: true,
-                detail: 'This will remove all project files and configuration. This action cannot be undone.',
-            },
-            'Delete',
-        );
+        // Set as current project so the delete command knows what to delete
+        await context.stateManager.saveProject(project);
 
-        if (confirm !== 'Delete') {
-            // User cancelled - return success with cancelled flag (no error toast)
-            return {
-                success: true,
-                data: { success: false, error: 'cancelled' },
-            };
-        }
+        // Delegate to the delete command (handles confirmation, deletion, navigation)
+        await vscode.commands.executeCommand('demoBuilder.deleteProject');
 
-        // Show progress notification during deletion
-        await vscode.window.withProgress(
-            {
-                location: vscode.ProgressLocation.Notification,
-                title: `Deleting "${project.name}"...`,
-                cancellable: false,
-            },
-            async () => {
-                // Stop demo if running
-                if (project.status === 'running') {
-                    // Set as current project so stopDemo knows which to stop
-                    await context.stateManager.saveProject(project);
-                    await vscode.commands.executeCommand('demoBuilder.stopDemo');
-                }
-
-                // Delete project files with retry logic
-                const projectPath = project.path;
-                if (projectPath) {
-                    context.logger.debug(`[Delete Project] Deleting directory: ${projectPath}`);
-
-                    // Wait for OS to release file handles
-                    await new Promise(resolve => setTimeout(resolve, TIMEOUTS.FILE_HANDLE_RELEASE));
-
-                    // Delete with retry
-                    await deleteWithRetry(projectPath, context);
-                }
-
-                // Remove from recent projects list
-                if (projectPath) {
-                    await context.stateManager.removeFromRecentProjects(projectPath);
-                }
-
-                // Clear current project if it was the deleted one
-                const currentProject = await context.stateManager.getCurrentProject();
-                if (currentProject?.path === projectPath) {
-                    await context.stateManager.clearProject();
-                }
-            }
-        );
-
-        context.logger.info(`Deleted project: ${project.name}`);
-
-        // Show success message
-        vscode.window.showInformationMessage(`"${project.name}" deleted.`);
+        // Check if project was actually deleted (user might have cancelled)
+        const stillExists = await context.stateManager.loadProjectFromPath(payload.projectPath);
 
         return {
             success: true,
-            data: { success: true, projectName: project.name },
+            data: {
+                success: !stillExists,
+                projectName: project.name,
+                error: stillExists ? 'cancelled' : undefined,
+            },
         };
     } catch (error) {
         context.logger.error('Failed to delete project', error instanceof Error ? error : undefined);
@@ -623,42 +577,3 @@ export const handleDeleteProject: MessageHandler<{ projectPath: string }> = asyn
     }
 };
 
-/**
- * Delete directory with exponential backoff retry on transient filesystem errors
- *
- * Retryable error codes:
- * - EBUSY: Resource busy (file in use)
- * - ENOTEMPTY: Directory not empty
- * - EPERM: Permission error (temporary lock)
- * - EMFILE/ENFILE: Too many open files
- */
-async function deleteWithRetry(path: string, context: HandlerContext): Promise<void> {
-    const MAX_RETRIES = 5;
-    const BASE_DELAY = TIMEOUTS.FILE_DELETE_RETRY_BASE;
-    const RETRYABLE_CODES = ['EBUSY', 'ENOTEMPTY', 'EPERM', 'EMFILE', 'ENFILE'];
-
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-        try {
-            context.logger.debug(`[Delete Project] Attempt ${attempt + 1}/${MAX_RETRIES}`);
-            await fs.rm(path, { recursive: true, force: true });
-            context.logger.debug(`[Delete Project] Deletion successful`);
-            return;
-        } catch (error) {
-            const err = toError(error);
-            const code = (error as NodeJS.ErrnoException).code;
-            const isRetryable = code !== undefined && RETRYABLE_CODES.includes(code);
-
-            context.logger.debug(`[Delete Project] Error: ${code} - ${err.message} (retryable: ${isRetryable})`);
-
-            if (isRetryable && attempt < MAX_RETRIES - 1) {
-                const delay = BASE_DELAY * Math.pow(2, attempt);
-                context.logger.debug(`[Delete Project] Waiting ${delay}ms before retry...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-            } else if (isRetryable) {
-                throw new Error(`Failed to delete project after ${MAX_RETRIES} attempts: ${err.message}`);
-            } else {
-                throw new Error(`Failed to delete project: ${err.message}`);
-            }
-        }
-    }
-}

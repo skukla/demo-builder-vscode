@@ -185,6 +185,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                             default: 'http://localhost:3000',
                         },
                     },
+                    services: {},
                 },
             });
 
@@ -249,6 +250,7 @@ describe('componentHandlers - Pattern B (request-response)', () => {
                     appBuilder: [],
                     dependencies: [],
                     envVars: {},
+                    services: {},
                 },
             });
 

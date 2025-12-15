@@ -21,6 +21,7 @@ import {
     initializeAdobeContextFromImport,
     initializeProjectName,
     getFirstEnabledStep,
+    buildProjectConfig,
     ImportedSettings,
 } from './wizardHelpers';
 import { AdobeAuthStep } from '@/features/authentication/ui/steps/AdobeAuthStep';
@@ -55,33 +56,6 @@ interface WizardContainerProps {
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
 }
-
-
-// Helper: Build project configuration from wizard state
-const buildProjectConfig = (wizardState: WizardState) => {
-    const config = {
-        projectName: wizardState.projectName,
-        projectTemplate: wizardState.projectTemplate,
-        adobe: {
-            organization: wizardState.adobeOrg?.id,
-            projectId: wizardState.adobeProject?.id,
-            projectName: wizardState.adobeProject?.name,
-            workspace: wizardState.adobeWorkspace?.id,
-            workspaceName: wizardState.adobeWorkspace?.name,
-        },
-        components: {
-            frontend: wizardState.components?.frontend,
-            backend: wizardState.components?.backend,
-            dependencies: wizardState.components?.dependencies || [],
-            integrations: wizardState.components?.integrations || [],
-            appBuilderApps: wizardState.components?.appBuilderApps || [],
-        },
-        apiMesh: wizardState.apiMesh,
-        componentConfigs: wizardState.componentConfigs,
-    };
-
-    return config;
-};
 
 // Helper: Handle backend calls for step transitions
 const handleStepBackendCalls = async (currentStep: string, nextStepId: string, wizardState: WizardState) => {

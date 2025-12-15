@@ -112,11 +112,14 @@ export function extractSettingsFromProject(
         adobe: project.adobe
             ? {
                   // Include IDs for pre-selection in wizard
+                  // Note: project.adobe stores IDs in organization/workspace fields
+                  orgId: project.adobe.organization,
                   projectId: project.adobe.projectId,
+                  workspaceId: project.adobe.workspace,
                   // Include names for display and fallback matching
-                  orgName: project.adobe.organization,
                   projectName: project.adobe.projectName,
-                  workspaceName: project.adobe.workspace,
+                  projectTitle: project.adobe.projectTitle,
+                  workspaceTitle: project.adobe.workspaceTitle,
               }
             : undefined,
     };

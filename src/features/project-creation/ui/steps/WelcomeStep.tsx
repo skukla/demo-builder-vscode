@@ -23,10 +23,13 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
 
     // Custom validator for duplicate project name check
     const notDuplicate = useCallback(
-        (message: string) => (value: string) => ({
-            value,
-            error: existingProjectNames.includes(value) ? message : undefined,
-        }),
+        (message: string) => (value: string) => {
+            const isDuplicate = existingProjectNames.includes(value);
+            return {
+                valid: !isDuplicate,
+                error: isDuplicate ? message : undefined,
+            };
+        },
         [existingProjectNames]
     );
 

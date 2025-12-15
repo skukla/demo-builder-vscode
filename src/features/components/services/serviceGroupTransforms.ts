@@ -17,10 +17,10 @@ export interface ServiceGroupDef {
 
 /**
  * Field interface (minimal for transformation)
+ * Only requires 'key' property for sorting operations
  */
 export interface FieldWithKey {
     key: string;
-    [key: string]: unknown;
 }
 
 /**
@@ -46,18 +46,27 @@ function sortByFieldOrder<T extends FieldWithKey>(fields: T[], fieldOrder: strin
 }
 
 /**
+ * Generic service group result that preserves field type
+ */
+export interface ServiceGroupResult<T> {
+    id: string;
+    label: string;
+    fields: T[];
+}
+
+/**
  * Transform service group definition to service group with sorted fields (SOP §6 compliance)
  *
  * Extracts complex callback with nested sorting logic to named function.
  *
  * @param def - Service group definition
  * @param groups - Record mapping group IDs to arrays of fields
- * @returns ServiceGroup with sorted fields
+ * @returns ServiceGroup with sorted fields, preserving the field type
  */
 export function toServiceGroupWithSortedFields<T extends FieldWithKey>(
     def: ServiceGroupDef,
     groups: Record<string, T[]>
-): ServiceGroup {
+): ServiceGroupResult<T> {
     const fields = groups[def.id] || [];
 
     const sortedFields = def.fieldOrder

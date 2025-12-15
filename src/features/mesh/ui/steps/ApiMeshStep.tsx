@@ -76,7 +76,7 @@ export function ApiMeshStep({ state, updateState, onBack, setCanProceed, complet
                     )}
 
                     {/* Mesh exists */}
-                    {showMeshData && (
+                    {showMeshData && meshData && (
                         <MeshStatusDisplay
                             meshData={meshData}
                             onRecreateMesh={recreateMesh}

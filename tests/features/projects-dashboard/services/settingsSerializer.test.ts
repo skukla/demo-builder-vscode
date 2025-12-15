@@ -133,8 +133,8 @@ describe('settingsSerializer', () => {
                 adobe: {
                     projectId: 'proj-123',
                     projectName: '833BronzeShark',
-                    organization: 'My Org',
-                    workspace: 'ws-456',
+                    organization: 'org-789', // This is actually the org ID
+                    workspace: 'ws-456', // This is the workspace ID
                     authenticated: true,
                 },
             });
@@ -142,10 +142,10 @@ describe('settingsSerializer', () => {
             const result = extractSettingsFromProject(project);
 
             expect(result.adobe).toBeDefined();
+            expect(result.adobe?.orgId).toBe('org-789');
             expect(result.adobe?.projectId).toBe('proj-123');
+            expect(result.adobe?.workspaceId).toBe('ws-456');
             expect(result.adobe?.projectName).toBe('833BronzeShark');
-            expect(result.adobe?.orgName).toBe('My Org');
-            expect(result.adobe?.workspaceName).toBe('ws-456');
         });
 
         it('should include projectTitle when present', () => {
@@ -171,7 +171,7 @@ describe('settingsSerializer', () => {
                 adobe: {
                     projectId: 'proj-123',
                     projectName: '833BronzeShark',
-                    organization: 'My Org',
+                    organization: 'org-789',
                     workspace: 'ws-456',
                     workspaceTitle: 'Staging Environment',
                     authenticated: true,
@@ -180,7 +180,7 @@ describe('settingsSerializer', () => {
 
             const result = extractSettingsFromProject(project);
 
-            expect(result.adobe?.workspaceName).toBe('ws-456');
+            expect(result.adobe?.workspaceId).toBe('ws-456');
             expect(result.adobe?.workspaceTitle).toBe('Staging Environment');
         });
 
@@ -190,7 +190,7 @@ describe('settingsSerializer', () => {
                     projectId: 'proj-123',
                     projectName: '833BronzeShark',
                     projectTitle: 'Citisignal Headless',
-                    organization: 'My Org',
+                    organization: 'org-789',
                     workspace: 'ws-456',
                     workspaceTitle: 'Staging Environment',
                     authenticated: true,
@@ -200,11 +200,11 @@ describe('settingsSerializer', () => {
             const result = extractSettingsFromProject(project);
 
             expect(result.adobe).toEqual({
+                orgId: 'org-789',
                 projectId: 'proj-123',
+                workspaceId: 'ws-456',
                 projectName: '833BronzeShark',
                 projectTitle: 'Citisignal Headless',
-                orgName: 'My Org',
-                workspaceName: 'ws-456',
                 workspaceTitle: 'Staging Environment',
             });
         });

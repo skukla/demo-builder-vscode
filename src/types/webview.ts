@@ -65,6 +65,10 @@ export interface WizardState {
         code?: ErrorCode;  // Typed error code for programmatic handling
         setupInstructions?: Array<{ step: string; details: string; important?: boolean }>;
     };
+
+    // Edit mode properties
+    editMode?: boolean;  // True when editing existing project
+    editProjectPath?: string;  // Path to existing project being edited
 }
 
 export interface AdobeAuthState {

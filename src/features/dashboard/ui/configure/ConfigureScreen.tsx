@@ -418,8 +418,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
             { id: 'other', label: 'Additional Settings', order: 99 }
         ];
 
-        const orderedGroups: ServiceGroup[] = serviceGroupDefs
-            .map(def => toServiceGroupWithSortedFields(def, groups) as ServiceGroup)
+        const orderedGroups = serviceGroupDefs
+            .map(def => toServiceGroupWithSortedFields(def, groups))
             .filter(group => group.fields.length > 0)
             .sort((a, b) => {
                 const aOrder = serviceGroupDefs.find(d => d.id === a.id)?.order || 99;

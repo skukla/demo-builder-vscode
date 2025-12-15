@@ -119,8 +119,8 @@ export function useServiceGroups({
             groups[groupKey].push(field);
         });
 
-        const orderedGroups: ServiceGroup[] = SERVICE_GROUP_DEFINITIONS
-            .map(def => toServiceGroupWithSortedFields(def, groups) as ServiceGroup)
+        const orderedGroups = SERVICE_GROUP_DEFINITIONS
+            .map(def => toServiceGroupWithSortedFields(def, groups))
             .filter(group => group.fields.length > 0)
             .sort((a, b) => {
                 const aOrder = SERVICE_GROUP_DEFINITIONS.find(d => d.id === a.id)?.order || 99;

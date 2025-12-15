@@ -18,14 +18,22 @@ export interface SettingsSelections {
 
 /**
  * Adobe context - org/project/workspace binding
+ *
+ * Note: Both `name` and `title` fields exist because:
+ * - `name` is often an auto-generated ID (e.g., "833BronzeShark")
+ * - `title` is the human-readable display name (e.g., "Citisignal Headless")
  */
 export interface SettingsAdobeContext {
     orgId?: string;
     orgName?: string;
     projectId?: string;
     projectName?: string;
+    /** Human-readable project title (preferred for display) */
+    projectTitle?: string;
     workspaceId?: string;
     workspaceName?: string;
+    /** Human-readable workspace title (preferred for display) */
+    workspaceTitle?: string;
 }
 
 /**

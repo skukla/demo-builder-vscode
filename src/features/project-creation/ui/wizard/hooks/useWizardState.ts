@@ -8,8 +8,8 @@ import {
     initializeProjectName,
     getFirstEnabledStep,
     ImportedSettings,
+    EditProjectConfig,
 } from '../wizardHelpers';
-import type { EditProjectConfig } from '../WizardContainer';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 
 const log = webviewLogger('useWizardState');

@@ -58,7 +58,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                     </Text>
 
             {/* Active creation state - matches ApiMeshStep loading pattern (no buttons) */}
-            {isActive && (
+            {isActive && progress && (
                 <CenteredFeedbackContainer>
                     <LoadingDisplay
                         size="L"

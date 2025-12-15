@@ -72,7 +72,7 @@ export function AdobeAuthStep({ state, updateState, setCanProceed }: BaseStepPro
             )}
 
             {/* Authenticated with valid organization */}
-            {isAuthenticatedWithOrg(adobeAuth, adobeOrg) && (
+            {isAuthenticatedWithOrg(adobeAuth, adobeOrg) && adobeOrg && (
                 <StatusDisplay
                     variant="success"
                     title="Connected"

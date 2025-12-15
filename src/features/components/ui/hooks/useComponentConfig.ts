@@ -210,7 +210,7 @@ export function useComponentConfig({
         });
 
         return SERVICE_GROUP_DEFS
-            .map(def => toServiceGroupWithSortedFields(def, groups) as ServiceGroup)
+            .map(def => toServiceGroupWithSortedFields(def, groups))
             .filter(group => group.fields.length > 0)
             .sort((a, b) => {
                 const aOrder = SERVICE_GROUP_DEFS.find(d => d.id === a.id)?.order || 99;

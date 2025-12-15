@@ -147,9 +147,20 @@ export interface ImportedSettings {
         orgName?: string;
         projectId?: string;
         projectName?: string;
+        projectTitle?: string;
         workspaceId?: string;
         workspaceName?: string;
+        workspaceTitle?: string;
     };
+}
+
+/**
+ * Configuration for editing an existing project
+ */
+export interface EditProjectConfig {
+    projectName: string;
+    projectPath: string;
+    settings: ImportedSettings;
 }
 
 /**
@@ -180,8 +191,8 @@ export function initializeComponentsFromImport(
  */
 export interface InitialAdobeContext {
     org?: { id: string; code: string; name: string };
-    project?: { id: string; name: string };
-    workspace?: { id: string; name: string };
+    project?: { id: string; name: string; title?: string };
+    workspace?: { id: string; name: string; title?: string };
 }
 
 /**
@@ -207,6 +218,7 @@ export function initializeAdobeContextFromImport(
         result.project = {
             id: importedSettings.adobe.projectId,
             name: importedSettings.adobe.projectName || '',
+            title: importedSettings.adobe.projectTitle,
         };
     }
 
@@ -214,6 +226,7 @@ export function initializeAdobeContextFromImport(
         result.workspace = {
             id: importedSettings.adobe.workspaceId,
             name: importedSettings.adobe.workspaceName || '',
+            title: importedSettings.adobe.workspaceTitle,
         };
     }
 
@@ -341,4 +354,36 @@ export function getEnabledWizardSteps(
     return wizardSteps
         .filter(step => step.enabled)
         .map(step => ({ id: step.id as WizardStep, name: step.name }));
+}
+
+// ============================================================================
+// Project Configuration Builder
+// ============================================================================
+
+/**
+ * Build project configuration from wizard state for project creation
+ */
+export function buildProjectConfig(wizardState: WizardState) {
+    return {
+        projectName: wizardState.projectName,
+        projectTemplate: wizardState.projectTemplate,
+        adobe: {
+            organization: wizardState.adobeOrg?.id,
+            projectId: wizardState.adobeProject?.id,
+            projectName: wizardState.adobeProject?.name,
+            projectTitle: wizardState.adobeProject?.title,
+            workspace: wizardState.adobeWorkspace?.id,
+            workspaceName: wizardState.adobeWorkspace?.name,
+            workspaceTitle: wizardState.adobeWorkspace?.title,
+        },
+        components: {
+            frontend: wizardState.components?.frontend,
+            backend: wizardState.components?.backend,
+            dependencies: wizardState.components?.dependencies || [],
+            integrations: wizardState.components?.integrations || [],
+            appBuilderApps: wizardState.components?.appBuilderApps || [],
+        },
+        apiMesh: wizardState.apiMesh,
+        componentConfigs: wizardState.componentConfigs,
+    };
 }

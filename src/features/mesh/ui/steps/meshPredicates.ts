@@ -4,7 +4,7 @@
  * Extracts long validation chains to named functions for improved readability.
  */
 
-import { MeshData } from '@/types/webview';
+import type { MeshData } from '../hooks/useMeshOperations';
 
 /**
  * Check if mesh data is ready to display (SOP §10 compliance)
@@ -16,7 +16,7 @@ import { MeshData } from '@/types/webview';
  */
 export function isMeshDataReady(
     isChecking: boolean,
-    error: string | null,
+    error: string | null | undefined,
     meshData: MeshData | null
 ): boolean {
     if (isChecking) return false;
@@ -35,7 +35,7 @@ export function isMeshDataReady(
  */
 export function isReadyForMeshCreation(
     isChecking: boolean,
-    error: string | null,
+    error: string | null | undefined,
     meshData: MeshData | null
 ): boolean {
     if (isChecking) return false;

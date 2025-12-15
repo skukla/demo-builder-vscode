@@ -27,7 +27,7 @@ interface CreateApiMeshResponse {
     code?: ErrorCode;
 }
 
-interface MeshData {
+export interface MeshData {
     meshId?: string;
     status?: string;
     endpoint?: string;

@@ -9,7 +9,6 @@
  */
 interface ProgressState {
     error?: string;
-    [key: string]: unknown;
 }
 
 /**
