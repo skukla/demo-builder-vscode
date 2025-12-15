@@ -1,0 +1,123 @@
+/**
+ * ProjectConfigWriter
+ *
+ * Writes project configuration files to disk including the .demo-builder.json manifest
+ * and .env file.
+ */
+
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import type { Project } from '@/types';
+import { getComponentIds } from '@/types/typeGuards';
+import { Logger } from '@/core/logging';
+
+export class ProjectConfigWriter {
+    private logger: Logger;
+
+    constructor(logger: Logger) {
+        this.logger = logger;
+    }
+
+    /**
+     * Save project configuration to disk
+     * @param project - The project to save
+     * @param currentProjectPath - Path of the current active project (for stale save detection)
+     */
+    async saveProjectConfig(project: Project, currentProjectPath?: string): Promise<void> {
+        // GUARD: Prevent recreating deleted project directories
+        // Background async operations (like mesh status checks) may call saveProject()
+        // after a project has been deleted. Without this guard, fs.mkdir() would
+        // recreate the deleted directory, causing "ghost" projects to reappear.
+        try {
+            await fs.access(project.path);
+        } catch {
+            // Directory doesn't exist - check if this is expected (project was deleted)
+            // If current project is undefined or different, this is a stale save - skip it
+            if (!currentProjectPath || currentProjectPath !== project.path) {
+                this.logger.debug(
+                    `[ProjectConfigWriter] Skipping save for deleted project: ${project.name} (path: ${project.path})`,
+                );
+                return;
+            }
+            // Directory doesn't exist but this IS the current project - create it
+            // This handles the case of a new project being created
+        }
+
+        // Ensure directory exists (only for active projects)
+        try {
+            await fs.mkdir(project.path, { recursive: true });
+        } catch (error) {
+            this.logger.error('Failed to create project directory', error instanceof Error ? error : undefined);
+            throw error;
+        }
+
+        // Update .demo-builder.json manifest with latest state
+        await this.writeManifest(project);
+
+        // Create .env file
+        await this.writeEnvFile(project);
+    }
+
+    /**
+     * Write the .demo-builder.json manifest file
+     */
+    private async writeManifest(project: Project): Promise<void> {
+        try {
+            const manifestPath = path.join(project.path, '.demo-builder.json');
+            const manifest = {
+                name: project.name,
+                version: '1.0.0',
+                // Type-safe Date handling: Handle both Date objects and ISO strings from persistence
+                created: (project.created instanceof Date
+                    ? project.created
+                    : new Date(project.created)
+                ).toISOString(),
+                lastModified: new Date().toISOString(),
+                adobe: project.adobe,
+                commerce: project.commerce,
+                componentSelections: project.componentSelections,
+                componentInstances: project.componentInstances,
+                componentConfigs: project.componentConfigs,
+                componentVersions: project.componentVersions,
+                meshState: project.meshState,
+                components: getComponentIds(project.componentInstances),
+            };
+
+            await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+        } catch (error) {
+            this.logger.error('Failed to update project manifest', error instanceof Error ? error : undefined);
+            throw error;
+        }
+    }
+
+    /**
+     * Write the .env file with project configuration
+     */
+    private async writeEnvFile(project: Project): Promise<void> {
+        const envPath = path.join(project.path, '.env');
+
+        const envContent = [
+            '# Demo Builder Configuration',
+            `PROJECT_NAME=${project.name}`,
+            '',
+            '# Commerce Configuration',
+            `COMMERCE_URL=${project.commerce?.instance.url || ''}`,
+            `COMMERCE_ENV_ID=${project.commerce?.instance.environmentId || ''}`,
+            `COMMERCE_STORE_CODE=${project.commerce?.instance.storeCode || ''}`,
+            `COMMERCE_STORE_VIEW=${project.commerce?.instance.storeView || ''}`,
+            '',
+            '# API Keys',
+            `CATALOG_API_KEY=${project.commerce?.services.catalog?.apiKey || ''}`,
+            `SEARCH_API_KEY=${project.commerce?.services.liveSearch?.apiKey || ''}`,
+            '',
+            '# Note: Component-specific environment variables are now stored in each component\'s .env file',
+        ].join('\n');
+
+        try {
+            await fs.writeFile(envPath, envContent);
+        } catch (error) {
+            this.logger.error('Failed to create .env file', error instanceof Error ? error : undefined);
+            throw error;
+        }
+    }
+}
