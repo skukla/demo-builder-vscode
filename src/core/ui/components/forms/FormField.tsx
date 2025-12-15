@@ -1,4 +1,3 @@
-import React, { useCallback } from 'react';
 import {
     TextField,
     Picker,
@@ -6,6 +5,7 @@ import {
     Flex,
     Text,
 } from '@adobe/react-spectrum';
+import React, { useCallback } from 'react';
 import { FieldHelpButton, FieldHelpContent } from './FieldHelpButton';
 
 export interface FormFieldOption {
@@ -89,7 +89,7 @@ export const FormField = React.memo<FormFieldProps>(({
 
     // Common wrapper for scroll margin
     const wrapperStyle = {
-        scrollMarginTop: '24px'
+        scrollMarginTop: '24px',
     };
 
     // Render label with optional help button

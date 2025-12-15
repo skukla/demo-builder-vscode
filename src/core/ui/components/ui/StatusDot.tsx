@@ -26,7 +26,7 @@ export interface StatusDotProps {
 export const StatusDot: React.FC<StatusDotProps> = ({
     variant,
     size = 8,
-    className
+    className,
 }) => {
     const getColor = (): string => {
         switch (variant) {

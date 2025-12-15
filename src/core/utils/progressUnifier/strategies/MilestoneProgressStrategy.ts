@@ -5,9 +5,9 @@
  * Used for tools like brew, npm where progress can be estimated from output patterns.
  */
 
-import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ProgressHandler, ExecutionContext } from '../types';
 import { IProgressStrategy, StrategyDependencies } from './IProgressStrategy';
+import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 
 /**
  * Milestone progress strategy implementation
@@ -23,7 +23,7 @@ export class MilestoneProgressStrategy implements IProgressStrategy {
         step: InstallStep,
         context: ExecutionContext,
         onProgress: ProgressHandler,
-        deps: StrategyDependencies
+        deps: StrategyDependencies,
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = deps.spawnCommand(context.command);

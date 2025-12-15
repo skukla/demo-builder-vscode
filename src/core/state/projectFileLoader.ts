@@ -8,9 +8,9 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { Logger } from '@/core/logging';
 import type { Project, ComponentInstance } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
-import { Logger } from '@/core/logging';
 
 export interface ProjectManifest {
     name?: string;

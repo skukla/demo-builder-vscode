@@ -1,5 +1,5 @@
 import { useEffect, useRef, DependencyList } from 'react';
-import { webviewClient } from '../utils/WebviewClient';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 /**
  * Subscribe to messages from the VS Code extension
@@ -21,7 +21,7 @@ import { webviewClient } from '../utils/WebviewClient';
 export function useVSCodeMessage<T = unknown>(
   type: string,
   callback: (data: T) => void,
-  deps: DependencyList = []
+  deps: DependencyList = [],
 ): void {
   // Store callback in ref to avoid re-subscribing on every callback change
   const callbackRef = useRef(callback);

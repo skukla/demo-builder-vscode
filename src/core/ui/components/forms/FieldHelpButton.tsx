@@ -1,5 +1,3 @@
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import {
     ActionButton,
     DialogTrigger,
@@ -12,12 +10,14 @@ import {
     Button,
     Footer,
 } from '@adobe/react-spectrum';
-import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
 import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
-import { FieldHelp, FieldHelpStep } from '@/types/webview';
-import { getBaseUri } from '@/core/ui/utils/baseUri';
+import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { CopyableText } from '@/core/ui/components/ui/CopyableText';
+import { getBaseUri } from '@/core/ui/utils/baseUri';
+import { FieldHelp, FieldHelpStep } from '@/types/webview';
 
 // Re-export types for convenience
 export type { FieldHelp as FieldHelpContent, FieldHelpStep };
@@ -43,7 +43,7 @@ export interface FieldHelpButtonProps {
 function ImageZoom({
     src,
     alt,
-    onClose
+    onClose,
 }: {
     src: string;
     alt: string;
@@ -330,7 +330,7 @@ export function FieldHelpButton({
                     alt={zoomedImage.alt}
                     onClose={() => setZoomedImage(null)}
                 />,
-                document.body
+                document.body,
             )}
             <DialogTrigger type="modal" onOpenChange={(isOpen) => isOpen && handleDialogOpen()}>
                 <ActionButton

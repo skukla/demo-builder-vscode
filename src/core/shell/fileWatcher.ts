@@ -28,19 +28,13 @@ export class FileWatcher {
         this.logger.debug(`[File Watcher] Waiting for file system change: ${path}`);
 
         return new Promise((resolve, reject) => {
-            // Declare watcher at top to avoid temporal dead zone in timeout callback
-            let watcher: vscode.FileSystemWatcher | undefined;
-
-            const timeoutHandle = setTimeout(() => {
-                if (watcher) {
-                    watcher.dispose();
-                }
-                reject(new Error(`File system wait timeout: ${path}`));
-            }, timeout);
-
             // If we have a condition, poll for it
             // SOP §1: Using TIMEOUTS constants instead of magic numbers
             if (expectedCondition) {
+                const timeoutHandle = setTimeout(() => {
+                    reject(new Error(`File system wait timeout: ${path}`));
+                }, timeout);
+
                 this.pollingService.pollUntilCondition(expectedCondition, {
                     timeout,
                     name: `file system: ${path}`,
@@ -53,12 +47,17 @@ export class FileWatcher {
                 return;
             }
 
-            // Otherwise, wait for any change
-            watcher = vscode.workspace.createFileSystemWatcher(path);
+            // Otherwise, wait for any change using file watcher
+            const watcher = vscode.workspace.createFileSystemWatcher(path);
+
+            const timeoutHandle = setTimeout(() => {
+                watcher.dispose();
+                reject(new Error(`File system wait timeout: ${path}`));
+            }, timeout);
 
             const handleChange = () => {
                 clearTimeout(timeoutHandle);
-                watcher!.dispose();
+                watcher.dispose();
                 this.logger.debug(`[File Watcher] File system change detected: ${path}`);
                 resolve();
             };

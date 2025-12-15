@@ -1,5 +1,5 @@
-import React from 'react';
 import { ProgressCircle } from '@adobe/react-spectrum';
+import React from 'react';
 
 export interface SpinnerProps {
     /** Size of the spinner */
@@ -27,7 +27,7 @@ export const Spinner: React.FC<SpinnerProps> = ({
     size = 'M',
     isIndeterminate = true,
     'aria-label': ariaLabel = 'Loading',
-    className
+    className,
 }) => {
     return (
         <ProgressCircle

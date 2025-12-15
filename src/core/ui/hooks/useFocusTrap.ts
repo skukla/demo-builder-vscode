@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, RefObject } from 'react';
-import { webviewLogger } from '../utils/webviewLogger';
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 
 const log = webviewLogger('useFocusTrap');
 
@@ -70,13 +70,13 @@ export const FOCUSABLE_SELECTOR =
  * ```
  */
 export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
-  options: UseFocusTrapOptions = {}
+  options: UseFocusTrapOptions = {},
 ): RefObject<T> {
   const {
     enabled = true,
     autoFocus = false,
     focusableSelector = FOCUSABLE_SELECTOR,
-    containFocus = true
+    containFocus = true,
   } = options;
 
   const containerRef = useRef<T>(null);
@@ -141,7 +141,7 @@ export function useFocusTrap<T extends HTMLElement = HTMLDivElement>(
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ['disabled', 'tabindex']
+      attributeFilter: ['disabled', 'tabindex'],
     });
 
     // Handle Tab key to trap focus

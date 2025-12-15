@@ -25,8 +25,8 @@
  * ```
  */
 
-import React from 'react';
 import { View, Flex, Heading, Button } from '@adobe/react-spectrum';
+import React from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface BackButtonConfig {

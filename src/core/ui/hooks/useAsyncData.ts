@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useLoadingState } from './useLoadingState';
 import { useVSCodeMessage } from './useVSCodeMessage';
 
@@ -77,7 +77,7 @@ interface UseAsyncDataReturn<T> {
  * ```
  */
 export function useAsyncData<T>(
-  options: UseAsyncDataOptions<T> = {}
+  options: UseAsyncDataOptions<T> = {},
 ): UseAsyncDataReturn<T> {
   const {
     initialData = null,
@@ -86,7 +86,7 @@ export function useAsyncData<T>(
     errorMessageType,
     transform,
     autoSelectSingle = false,
-    onAutoSelect
+    onAutoSelect,
   } = options;
 
   const {
@@ -99,16 +99,17 @@ export function useAsyncData<T>(
     setLoading,
     setError: setErrorState,
     setRefreshing,
-    reset
+    reset,
   } = useLoadingState<T>(initialData);
 
-  const [loadRequested, setLoadRequested] = useState(autoLoad);
+  const [_loadRequested, setLoadRequested] = useState(autoLoad);
 
-  // Listen for data messages
-  useEffect(() => {
-    if (!messageType) return;
+  // Listen for data messages - hook must be called at top level
+  useVSCodeMessage(
+    messageType || '__disabled__',
+    (receivedData) => {
+      if (!messageType) return;
 
-    const unsubscribe = useVSCodeMessage(messageType, (receivedData) => {
       // Handle error responses (data with error field)
       if (receivedData && typeof receivedData === 'object' && 'error' in receivedData) {
         setErrorState(receivedData.error as string);
@@ -128,25 +129,24 @@ export function useAsyncData<T>(
       ) {
         onAutoSelect(processedData[0]);
       }
-    });
+    },
+    [messageType, transform, autoSelectSingle, onAutoSelect, setDataState, setErrorState],
+  );
 
-    return unsubscribe;
-  }, [messageType, transform, autoSelectSingle, onAutoSelect, setDataState, setErrorState]);
+  // Listen for error messages - hook must be called at top level
+  useVSCodeMessage<string | { error?: string }>(
+    errorMessageType || '__disabled__',
+    (errorData) => {
+      if (!errorMessageType) return;
 
-  // Listen for error messages
-  useEffect(() => {
-    if (!errorMessageType) return;
-
-    const unsubscribe = useVSCodeMessage<string | { error?: string }>(errorMessageType, (errorData) => {
       const errorMessage =
         typeof errorData === 'string'
           ? errorData
           : (errorData as { error?: string })?.error || 'An error occurred';
       setErrorState(errorMessage);
-    });
-
-    return unsubscribe;
-  }, [errorMessageType, setErrorState]);
+    },
+    [errorMessageType, setErrorState],
+  );
 
   const load = useCallback((isRefresh = false) => {
     if (isRefresh) {
@@ -161,14 +161,14 @@ export function useAsyncData<T>(
     (newData: T) => {
       setDataState(newData);
     },
-    [setDataState]
+    [setDataState],
   );
 
   const setError = useCallback(
     (errorMessage: string) => {
       setErrorState(errorMessage);
     },
-    [setErrorState]
+    [setErrorState],
   );
 
   return {
@@ -181,6 +181,6 @@ export function useAsyncData<T>(
     setData,
     setLoading,
     setError,
-    reset
+    reset,
   };
 }

@@ -30,7 +30,7 @@ import { useEffect } from 'react';
 export function useCanProceed<T>(
     value: T,
     setCanProceed: (canProceed: boolean) => void,
-    validator?: (value: T) => boolean
+    validator?: (value: T) => boolean,
 ): void {
     useEffect(() => {
         const canProceed = validator ? validator(value) : Boolean(value);
@@ -56,7 +56,7 @@ export function useCanProceed<T>(
  */
 export function useCanProceedAll(
     conditions: unknown[],
-    setCanProceed: (canProceed: boolean) => void
+    setCanProceed: (canProceed: boolean) => void,
 ): void {
     useEffect(() => {
         const canProceed = conditions.every(Boolean);

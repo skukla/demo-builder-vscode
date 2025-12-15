@@ -1,9 +1,10 @@
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { Logger } from '@/core/logging';
 import { StateManager } from '@/core/state';
+import { DisposableStore } from '@/core/utils/disposableStore';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { StatusBarManager } from '@/core/vscode/StatusBarManager';
-import { DisposableStore } from '@/core/utils/disposableStore';
 
 /**
  * Base class for all VS Code commands
@@ -253,7 +254,6 @@ export abstract class BaseCommand implements vscode.Disposable {
         try {
             const projectDir = await this.getProjectDirectory();
             // Return parent directory for operations outside project
-            const path = require('path');
             return path.dirname(projectDir);
         } catch {
             // No project loaded, fall back to workspace or cwd

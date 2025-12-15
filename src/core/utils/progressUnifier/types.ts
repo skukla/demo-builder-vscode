@@ -28,6 +28,7 @@ export interface ITimerProvider {
  * Allows tests to mock child process creation
  */
 import { spawn } from 'child_process';
+
 export type IProcessSpawner = typeof spawn;
 
 /**

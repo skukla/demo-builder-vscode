@@ -7,9 +7,9 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { Logger } from '@/core/logging';
 import type { Project } from '@/types';
 import { getComponentIds } from '@/types/typeGuards';
-import { Logger } from '@/core/logging';
 
 export class ProjectConfigWriter {
     private logger: Logger;

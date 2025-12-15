@@ -5,8 +5,8 @@
  * Shows elapsed time in progress messages after a configurable threshold.
  */
 
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { IDateProvider, ITimerProvider } from './types';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 
 /**
  * Threshold in milliseconds for showing elapsed time in progress messages.
@@ -43,7 +43,7 @@ export class ElapsedTimeTracker {
 
     constructor(
         private readonly dateProvider: IDateProvider,
-        private readonly timerProvider: ITimerProvider
+        private readonly timerProvider: ITimerProvider,
     ) {}
 
     /**

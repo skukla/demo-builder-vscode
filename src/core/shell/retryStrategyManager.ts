@@ -156,7 +156,7 @@ export class RetryStrategyManager {
                 return result;
             } catch (error) {
                 lastError = error as Error;
-                const duration = Date.now() - startTime;
+                const _duration = Date.now() - startTime;
                 const appError = toAppError(error);
 
                 // Log errors only on final attempt

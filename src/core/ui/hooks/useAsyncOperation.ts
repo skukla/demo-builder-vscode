@@ -73,7 +73,7 @@ export interface UseAsyncOperationReturn<T> {
  * ```
  */
 export function useAsyncOperation<T = void>(
-    options: UseAsyncOperationOptions<T> = {}
+    options: UseAsyncOperationOptions<T> = {},
 ): UseAsyncOperationReturn<T> {
     const {
         onSuccess,
@@ -115,7 +115,7 @@ export function useAsyncOperation<T = void>(
                 return undefined;
             }
         },
-        [onSuccess, onError]
+        [onSuccess, onError],
     );
 
     const reset = useCallback(() => {

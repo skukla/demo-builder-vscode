@@ -7,9 +7,9 @@
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
-import { parseJSON } from '@/types/typeGuards';
 import { Logger } from '@/core/logging';
 import type { Project } from '@/types';
+import { parseJSON } from '@/types/typeGuards';
 
 export interface RecentProject {
     path: string;

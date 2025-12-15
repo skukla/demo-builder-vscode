@@ -1,19 +1,19 @@
 import type { ExecOptions } from 'child_process';
 import execa, { type ExecaError, type ExecaChildProcess } from 'execa';
+import { CommandQueue } from './commandQueue';
+import { CommandResultCache } from './commandResultCache';
 import { CommandSequencer } from './commandSequencer';
 import { EnvironmentSetup } from './environmentSetup';
 import { FileWatcher } from './fileWatcher';
 import { PollingService } from './pollingService';
+import { isPortAvailable } from './portChecker';
 import { ResourceLocker } from './resourceLocker';
 import { RetryStrategyManager } from './retryStrategyManager';
-import { CommandResultCache } from './commandResultCache';
-import { CommandQueue } from './commandQueue';
-import { isPortAvailable } from './portChecker';
 import type { CommandResult, ExecuteOptions, CommandConfig, PollOptions } from './types';
-import { DEFAULT_SHELL } from '@/types/shell';
 import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateNodeVersion } from '@/core/validation';
+import { DEFAULT_SHELL } from '@/types/shell';
 
 /**
  * Main command executor - orchestrates all command execution operations
@@ -271,7 +271,7 @@ export class CommandExecutor {
             };
         } catch (error) {
             const execaError = error as ExecaError;
-            const duration = Date.now() - startTime;
+            const _duration = Date.now() - startTime;
 
             if (execaError.timedOut) {
                 this.logger.warn(`[Command Executor] Command timed out after ${options.timeout}ms`);
@@ -377,7 +377,7 @@ export class CommandExecutor {
      */
     async commandExists(command: string): Promise<boolean> {
         // SECURITY: Validate command name to prevent command injection
-        if (!/^[a-zA-Z0-9_./\-]+$/.test(command)) {
+        if (!/^[a-zA-Z0-9_./-]+$/.test(command)) {
             this.logger.warn(`[Command Executor] Invalid command name rejected: ${command}`);
             return false;
         }

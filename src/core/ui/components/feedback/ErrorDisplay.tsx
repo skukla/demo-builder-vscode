@@ -1,5 +1,5 @@
-import React from 'react';
 import Refresh from '@spectrum-icons/workflow/Refresh';
+import React from 'react';
 import { StatusDisplay } from './StatusDisplay';
 
 export interface ErrorDisplayProps {
@@ -43,12 +43,12 @@ export const ErrorDisplay = React.memo<ErrorDisplayProps>(({
     onRetry,
     retryLabel = 'Try Again',
     maxWidth = '450px',
-    severity = 'error'
+    severity = 'error',
 }) => {
     // Log deprecation warning in development
     if (process.env.NODE_ENV === 'development') {
         console.warn(
-            'ErrorDisplay is deprecated. Use StatusDisplay with variant="error" instead.'
+            'ErrorDisplay is deprecated. Use StatusDisplay with variant="error" instead.',
         );
     }
 

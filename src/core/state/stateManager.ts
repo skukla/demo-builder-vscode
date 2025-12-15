@@ -12,13 +12,13 @@ import * as fs from 'fs/promises';
 import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { ProjectConfigWriter } from './projectConfigWriter';
+import { ProjectDirectoryScanner, ProjectSummary } from './projectDirectoryScanner';
+import { ProjectFileLoader } from './projectFileLoader';
+import { RecentProjectsManager, RecentProject } from './recentProjectsManager';
+import { Logger } from '@/core/logging';
 import { Project, StateData, ProcessInfo } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
-import { Logger } from '@/core/logging';
-import { ProjectFileLoader } from './projectFileLoader';
-import { ProjectConfigWriter } from './projectConfigWriter';
-import { RecentProjectsManager, RecentProject } from './recentProjectsManager';
-import { ProjectDirectoryScanner, ProjectSummary } from './projectDirectoryScanner';
 
 export class StateManager {
     private context: vscode.ExtensionContext;

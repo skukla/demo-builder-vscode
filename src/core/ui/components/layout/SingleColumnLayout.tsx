@@ -46,7 +46,7 @@ export const SingleColumnLayout: React.FC<SingleColumnLayoutProps> = ({
     maxWidth = '800px' as DimensionValue,
     padding = '24px' as DimensionValue,
     margin = '0' as DimensionValue,
-    className
+    className,
 }) => {
     return (
         <div
@@ -54,7 +54,7 @@ export const SingleColumnLayout: React.FC<SingleColumnLayoutProps> = ({
                 maxWidth: translateSpectrumToken(maxWidth),
                 width: '100%',
                 margin: translateSpectrumToken(margin),
-                padding: translateSpectrumToken(padding)
+                padding: translateSpectrumToken(padding),
             }}
             className={className}
         >

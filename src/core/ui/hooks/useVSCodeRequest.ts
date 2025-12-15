@@ -1,6 +1,6 @@
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import { flushSync } from 'react-dom';
-import { webviewClient } from '../utils/WebviewClient';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
 
 interface UseVSCodeRequestReturn<T> {
   /** Execute the request */
@@ -47,7 +47,7 @@ export function useVSCodeRequest<T = unknown>(
     timeout?: number;
     onSuccess?: (data: T) => void;
     onError?: (error: Error) => void;
-  } = {}
+  } = {},
 ): UseVSCodeRequestReturn<T> {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -68,7 +68,7 @@ export function useVSCodeRequest<T = unknown>(
         const result = await webviewClient.request<T>(
           type,
           payload,
-          optionsRef.current.timeout
+          optionsRef.current.timeout,
         );
 
         setData(result);
@@ -98,7 +98,7 @@ export function useVSCodeRequest<T = unknown>(
         throw error;
       }
     },
-    [type]
+    [type],
   );
 
   const reset = useCallback(() => {
@@ -112,6 +112,6 @@ export function useVSCodeRequest<T = unknown>(
     loading,
     error,
     data,
-    reset
+    reset,
   };
 }

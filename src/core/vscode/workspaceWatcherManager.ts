@@ -31,8 +31,8 @@
  */
 
 import * as vscode from 'vscode';
-import { DisposableStore } from '@/core/utils/disposableStore';
 import { getLogger, DebugLogger } from '@/core/logging';
+import { DisposableStore } from '@/core/utils/disposableStore';
 
 // Lazy-initialized logger to avoid calling getLogger() before initializeLogger()
 let _logger: DebugLogger | null = null;
@@ -106,7 +106,7 @@ export class WorkspaceWatcherManager implements vscode.Disposable {
      */
     public createWatcher(
         workspaceFolder: vscode.WorkspaceFolder,
-        pattern: string
+        pattern: string,
     ): vscode.FileSystemWatcher {
         if (this.disposed) {
             throw new Error('WorkspaceWatcherManager is disposed, cannot create watchers');
@@ -118,14 +118,14 @@ export class WorkspaceWatcherManager implements vscode.Disposable {
         // Return existing watcher if already created
         if (this.watchers.has(key)) {
             getLoggerLazy().warn(
-                `[WorkspaceWatcherManager] Watcher already exists for ${workspaceFolder.name} with pattern ${pattern}`
+                `[WorkspaceWatcherManager] Watcher already exists for ${workspaceFolder.name} with pattern ${pattern}`,
             );
             return this.watchers.get(key)!;
         }
 
         // Create new watcher
         getLoggerLazy().debug(
-            `[WorkspaceWatcherManager] Creating watcher for ${workspaceFolder.name} with pattern ${pattern}`
+            `[WorkspaceWatcherManager] Creating watcher for ${workspaceFolder.name} with pattern ${pattern}`,
         );
 
         const watcher = vscode.workspace.createFileSystemWatcher(pattern);
@@ -159,7 +159,7 @@ export class WorkspaceWatcherManager implements vscode.Disposable {
     public registerWatcher(
         workspaceFolder: vscode.WorkspaceFolder,
         watcher: vscode.FileSystemWatcher,
-        identifier?: string
+        identifier?: string,
     ): void {
         if (this.disposed) {
             throw new Error('WorkspaceWatcherManager is disposed, cannot register watchers');
@@ -173,14 +173,14 @@ export class WorkspaceWatcherManager implements vscode.Disposable {
         // Warn if duplicate key
         if (this.watchers.has(key)) {
             getLoggerLazy().warn(
-                `[WorkspaceWatcherManager] Watcher already exists with key ${key}, replacing`
+                `[WorkspaceWatcherManager] Watcher already exists with key ${key}, replacing`,
             );
             const existingWatcher = this.watchers.get(key);
             existingWatcher?.dispose();
         }
 
         getLoggerLazy().debug(
-            `[WorkspaceWatcherManager] Registering watcher for ${workspaceFolder.name} with key ${key}`
+            `[WorkspaceWatcherManager] Registering watcher for ${workspaceFolder.name} with key ${key}`,
         );
 
         // Track watcher for disposal
@@ -211,7 +211,7 @@ export class WorkspaceWatcherManager implements vscode.Disposable {
         keysToRemove.forEach(key => this.watchers.delete(key));
 
         getLoggerLazy().info(
-            `[WorkspaceWatcherManager] Removed ${keysToRemove.length} watchers for ${workspaceFolder.name}`
+            `[WorkspaceWatcherManager] Removed ${keysToRemove.length} watchers for ${workspaceFolder.name}`,
         );
     }
 

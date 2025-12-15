@@ -6,16 +6,8 @@
  */
 
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process';
-import { Logger } from '@/core/logging';
-import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
-import {
-    IDateProvider,
-    ITimerProvider,
-    IProcessSpawner,
-    UnifiedProgress,
-    ProgressHandler,
-    ExecutionContext,
-} from './types';
+import { CommandResolver } from './CommandResolver';
+import { ElapsedTimeTracker } from './ElapsedTimeTracker';
 import {
     IProgressStrategy,
     StrategyDependencies,
@@ -24,8 +16,15 @@ import {
     SyntheticProgressStrategy,
     ImmediateProgressStrategy,
 } from './strategies';
-import { ElapsedTimeTracker } from './ElapsedTimeTracker';
-import { CommandResolver } from './CommandResolver';
+import type {
+    IDateProvider,
+    ITimerProvider,
+    IProcessSpawner,
+    ProgressHandler,
+    ExecutionContext,
+} from './types';
+import { Logger } from '@/core/logging';
+import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 
 /**
  * ProgressUnifier - Main orchestrator for progress tracking

@@ -59,7 +59,7 @@ const SPECTRUM_TOKEN_MAP: Record<SpectrumSizeToken, string> = {
   'size-500': '40px',
   'size-600': '48px',
   'size-1000': '80px',
-  'size-6000': '480px'
+  'size-6000': '480px',
 };
 
 /**
@@ -93,7 +93,7 @@ const SPECTRUM_TOKEN_MAP: Record<SpectrumSizeToken, string> = {
  * translateSpectrumToken('invalid')   // 'invalid' (graceful degradation)
  */
 export function translateSpectrumToken(
-  value: DimensionValue | undefined
+  value: DimensionValue | undefined,
 ): string | undefined {
   // Handle undefined (preserves optional prop behavior)
   if (value === undefined) {

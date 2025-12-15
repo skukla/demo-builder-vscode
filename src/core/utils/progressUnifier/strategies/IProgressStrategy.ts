@@ -6,8 +6,8 @@
  */
 
 import { ChildProcessWithoutNullStreams } from 'child_process';
-import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ProgressHandler, ExecutionContext, ITimerProvider, IDateProvider } from '../types';
+import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 
 /**
  * Dependencies required by progress strategies

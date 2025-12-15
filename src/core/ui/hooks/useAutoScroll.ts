@@ -1,4 +1,4 @@
-import { useRef, useEffect, RefObject } from 'react';
+import { useRef, RefObject } from 'react';
 
 interface UseAutoScrollOptions {
   /** Enable/disable auto-scroll */
@@ -55,13 +55,13 @@ export function useAutoScroll<
   C extends HTMLElement = HTMLDivElement,
   I extends HTMLElement = HTMLDivElement
 >(
-  options: UseAutoScrollOptions = {}
+  options: UseAutoScrollOptions = {},
 ): UseAutoScrollReturn<C, I> {
   const {
     enabled = true,
     behavior = 'smooth',
     delay = 100,
-    padding = 10
+    padding = 10,
   } = options;
 
   const containerRef = useRef<C>(null);
@@ -103,14 +103,14 @@ export function useAutoScroll<
           const scrollTo = itemTop + itemHeight - containerHeight + padding;
           container.scrollTo({
             top: Math.max(0, scrollTo),
-            behavior
+            behavior,
           });
         }
         // If item is above visible area, scroll to show it at top
         else if (itemTop < containerScrollTop) {
           container.scrollTo({
             top: Math.max(0, itemTop - padding),
-            behavior
+            behavior,
           });
         }
       }
@@ -121,7 +121,7 @@ export function useAutoScroll<
     if (containerRef.current) {
       containerRef.current.scrollTo({
         top: 0,
-        behavior
+        behavior,
       });
     }
   };
@@ -130,7 +130,7 @@ export function useAutoScroll<
     if (containerRef.current) {
       containerRef.current.scrollTo({
         top: containerRef.current.scrollHeight,
-        behavior
+        behavior,
       });
     }
   };
@@ -140,6 +140,6 @@ export function useAutoScroll<
     createItemRef,
     scrollToItem,
     scrollToTop,
-    scrollToBottom
+    scrollToBottom,
   };
 }

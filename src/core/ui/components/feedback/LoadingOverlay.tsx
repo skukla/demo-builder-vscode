@@ -1,5 +1,5 @@
-import React from 'react';
 import { Text } from '@adobe/react-spectrum';
+import React from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface LoadingOverlayProps {
@@ -39,7 +39,7 @@ export function LoadingOverlay({ isVisible, message, opaque = false }: LoadingOv
         <div
             className={cn(
                 'loading-overlay-container',
-                opaque && 'loading-overlay-container-opaque'
+                opaque && 'loading-overlay-container-opaque',
             )}
             data-testid="loading-overlay"
         >

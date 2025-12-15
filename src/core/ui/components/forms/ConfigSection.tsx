@@ -1,5 +1,5 @@
-import React from 'react';
 import { Heading, Flex, Divider } from '@adobe/react-spectrum';
+import React from 'react';
 
 export interface ConfigSectionProps {
     /** Section ID */
@@ -30,7 +30,7 @@ export const ConfigSection = React.memo<ConfigSectionProps>(({
     id,
     label,
     children,
-    showDivider = false
+    showDivider = false,
 }) => {
     return (
         <>

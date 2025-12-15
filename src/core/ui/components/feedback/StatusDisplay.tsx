@@ -28,12 +28,12 @@
  * />
  * ```
  */
-import React from 'react';
 import { Flex, Text, Button } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Clock from '@spectrum-icons/workflow/Clock';
 import InfoOutline from '@spectrum-icons/workflow/InfoOutline';
+import React from 'react';
 import { FadeTransition } from '@/core/ui/components/ui/FadeTransition';
 
 export type StatusVariant = 'error' | 'success' | 'warning' | 'info' | 'pending';

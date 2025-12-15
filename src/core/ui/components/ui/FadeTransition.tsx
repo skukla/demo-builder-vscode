@@ -19,7 +19,7 @@ export const FadeTransition: React.FC<FadeTransitionProps> = ({
     show,
     duration = 200,
     children,
-    className
+    className,
 }) => {
     const [shouldRender, setShouldRender] = useState(show);
 
@@ -43,7 +43,7 @@ export const FadeTransition: React.FC<FadeTransitionProps> = ({
             className={className}
             style={{
                 opacity: show ? 1 : 0,
-                transition: `opacity ${duration}ms ease-in-out`
+                transition: `opacity ${duration}ms ease-in-out`,
             }}
         >
             {children}

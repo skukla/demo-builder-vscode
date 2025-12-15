@@ -50,13 +50,13 @@ interface UseSearchFilterReturn<T> {
  */
 export function useSearchFilter<T extends Record<string, unknown>>(
   items: T[],
-  options: UseSearchFilterOptions<T>
+  options: UseSearchFilterOptions<T>,
 ): UseSearchFilterReturn<T> {
   const {
     initialQuery = '',
     searchFields,
     caseSensitive = false,
-    customFilter
+    customFilter,
   } = options;
 
   const [query, setQuery] = useState(initialQuery);
@@ -101,6 +101,6 @@ export function useSearchFilter<T extends Record<string, unknown>>(
     setQuery,
     clearQuery,
     filteredItems,
-    isFiltering
+    isFiltering,
   };
 }

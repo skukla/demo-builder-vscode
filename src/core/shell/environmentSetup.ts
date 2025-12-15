@@ -1,3 +1,4 @@
+import { execSync } from 'child_process';
 import * as fsSync from 'fs';
 import * as os from 'os';
 import * as path from 'path';
@@ -114,7 +115,6 @@ export class EnvironmentSetup {
         // Fallback: check PATH using 'which' command
         try {
             const which = process.platform === 'win32' ? 'where' : 'which';
-            const { execSync } = require('child_process');
             const result = execSync(`${which} fnm`, {
                 encoding: 'utf8',
                 stdio: ['pipe', 'pipe', 'ignore'],
@@ -368,7 +368,7 @@ export class EnvironmentSetup {
         try {
             await executeCommand('fnm --version', {
                 timeout: TIMEOUTS.QUICK_SHELL,
-                shell: DEFAULT_SHELL  // Fixes ENOENT in Dock-launched VS Code
+                shell: DEFAULT_SHELL,  // Fixes ENOENT in Dock-launched VS Code
             });
             return true;
         } catch {
@@ -383,7 +383,7 @@ export class EnvironmentSetup {
         try {
             const result = await executeCommand('fnm current', {
                 timeout: TIMEOUTS.QUICK_SHELL,
-                shell: DEFAULT_SHELL  // Fixes ENOENT in Dock-launched VS Code
+                shell: DEFAULT_SHELL,  // Fixes ENOENT in Dock-launched VS Code
             });
             return result.stdout?.trim() || null;
         } catch {

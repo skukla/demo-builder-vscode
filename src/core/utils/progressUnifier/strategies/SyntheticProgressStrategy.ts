@@ -5,10 +5,10 @@
  * Used when command output doesn't provide progress information.
  */
 
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ProgressHandler, ExecutionContext } from '../types';
 import { IProgressStrategy, StrategyDependencies } from './IProgressStrategy';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 
 /**
  * Synthetic progress strategy implementation
@@ -24,7 +24,7 @@ export class SyntheticProgressStrategy implements IProgressStrategy {
         step: InstallStep,
         context: ExecutionContext,
         onProgress: ProgressHandler,
-        deps: StrategyDependencies
+        deps: StrategyDependencies,
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = deps.spawnCommand(context.command);

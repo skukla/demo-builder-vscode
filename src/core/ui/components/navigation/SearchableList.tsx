@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
 import {
     Text,
     ListView,
-    Item
+    Item,
 } from '@adobe/react-spectrum';
+import React, { useEffect, useRef } from 'react';
 import { SearchHeader } from './SearchHeader';
 
 export interface SearchableListItem {
@@ -136,7 +136,7 @@ export function SearchableList<T extends SearchableListItem>({
         const timer = setTimeout(() => {
             const selectedId = selectedKeys[0];
             const selectedElement = listContainerRef.current?.querySelector(
-                `[data-key="${selectedId}"]`
+                `[data-key="${selectedId}"]`,
             );
             if (selectedElement) {
                 selectedElement.scrollIntoView({ block: 'center', behavior: 'smooth' });

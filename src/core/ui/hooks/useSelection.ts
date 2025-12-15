@@ -55,13 +55,13 @@ interface UseSelectionReturn<T> {
  * ```
  */
 export function useSelection<T>(
-  options: UseSelectionOptions<T> = {}
+  options: UseSelectionOptions<T> = {},
 ): UseSelectionReturn<T> {
   const {
     initialSelection = null,
     onChange,
     getKey,
-    allowDeselect = false
+    allowDeselect = false,
   } = options;
 
   const [selectedItem, setSelectedItem] = useState<T | null>(initialSelection);
@@ -73,7 +73,7 @@ export function useSelection<T>(
         onChange(item);
       }
     },
-    [onChange]
+    [onChange],
   );
 
   const clearSelection = useCallback(() => {
@@ -94,7 +94,7 @@ export function useSelection<T>(
       // Fallback to reference equality
       return selectedItem === item;
     },
-    [selectedItem, getKey]
+    [selectedItem, getKey],
   );
 
   const toggle = useCallback(
@@ -107,7 +107,7 @@ export function useSelection<T>(
         select(item);
       }
     },
-    [isSelected, select, clearSelection, allowDeselect]
+    [isSelected, select, clearSelection, allowDeselect],
   );
 
   const selectedKey = selectedItem && getKey ? getKey(selectedItem) : null;
@@ -118,6 +118,6 @@ export function useSelection<T>(
     select,
     clearSelection,
     isSelected,
-    toggle
+    toggle,
   };
 }

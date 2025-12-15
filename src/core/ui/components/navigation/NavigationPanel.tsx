@@ -1,7 +1,7 @@
-import React, { useCallback } from 'react';
 import { Heading, Flex, Text } from '@adobe/react-spectrum';
-import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
 import ChevronDown from '@spectrum-icons/workflow/ChevronDown';
+import ChevronRight from '@spectrum-icons/workflow/ChevronRight';
+import React, { useCallback } from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface NavigationField {
@@ -60,7 +60,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
     activeField,
     expandedSections,
     onToggleSection,
-    onNavigateToField
+    onNavigateToField,
 }) => {
     const handleToggleSection = useCallback((sectionId: string) => {
         onToggleSection(sectionId);
@@ -89,7 +89,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                 tabIndex={-1}
                                 className={cn(
                                     'nav-section-button',
-                                    isActive && 'nav-section-button-active'
+                                    isActive && 'nav-section-button-active',
                                 )}
                             >
                                 <Flex width="100%" justifyContent="space-between" alignItems="center">
@@ -130,7 +130,7 @@ export const NavigationPanel = React.memo<NavigationPanelProps>(({
                                                 tabIndex={-1}
                                                 className={cn(
                                                     'nav-field-button',
-                                                    isActiveField && 'nav-field-button-active'
+                                                    isActiveField && 'nav-field-button-active',
                                                 )}
                                             >
                                                 <Text

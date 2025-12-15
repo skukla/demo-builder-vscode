@@ -1,5 +1,5 @@
-import * as path from 'path';
 import * as crypto from 'crypto';
+import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
 import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication';

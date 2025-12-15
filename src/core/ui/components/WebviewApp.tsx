@@ -8,10 +8,10 @@
  * - Spectrum Provider setup
  */
 
-import React, { useEffect, useState, useRef, ReactNode } from 'react';
 import { Provider, defaultTheme } from '@adobe/react-spectrum';
-import { webviewClient } from '../utils/WebviewClient';
-import { webviewLogger } from '../utils/webviewLogger';
+import React, { useEffect, useState, useRef, ReactNode } from 'react';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 
 const log = webviewLogger('WebviewApp');
 
@@ -73,7 +73,7 @@ export function WebviewApp({
     children,
     onInit,
     loadingContent = null,
-    className = 'app-container'
+    className = 'app-container',
 }: WebviewAppProps) {
     const [isReady, setIsReady] = useState(false);
     const [initData, setInitData] = useState<WebviewInitData | null>(null);

@@ -32,8 +32,8 @@
  * ```
  */
 
-import React from 'react';
 import { View, Flex } from '@adobe/react-spectrum';
+import React from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
 export interface PageFooterProps {

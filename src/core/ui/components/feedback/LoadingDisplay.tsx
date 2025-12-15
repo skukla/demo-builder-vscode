@@ -1,5 +1,5 @@
-import React from 'react';
 import { Flex, ProgressCircle, Text } from '@adobe/react-spectrum';
+import React from 'react';
 
 export interface LoadingDisplayProps {
     /** Size of the progress circle */
@@ -23,7 +23,7 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     message,
     subMessage,
     helperText,
-    className
+    className,
 }) => {
     // Center display for large size, left-align for smaller sizes
     const shouldCenter = size === 'L';
@@ -38,9 +38,9 @@ export const LoadingDisplay: React.FC<LoadingDisplayProps> = ({
     const containerProps = shouldCenter ? {
         alignItems: 'center' as const,
         justifyContent: 'center' as const,
-        height: '100%'
+        height: '100%',
     } : {
-        alignItems: 'center' as const
+        alignItems: 'center' as const,
     };
     
     // For small size with no sub-message, use horizontal layout

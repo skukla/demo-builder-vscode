@@ -9,6 +9,9 @@
  */
 
 export const TIMEOUTS = {
+    // Minimum thresholds
+    MIN_COMMAND_TIMEOUT: 1000,      // Minimum timeout for any command (1 second)
+
     // Adobe CLI operations
     CONFIG_READ: 5000,              // Reading config values (expiry, other config)
     TOKEN_READ: 10000,              // Reading JWT tokens (longer due to size)

@@ -5,9 +5,9 @@
  * Used for tools like fnm that report download/install progress directly.
  */
 
-import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ProgressHandler, ExecutionContext } from '../types';
 import { IProgressStrategy, StrategyDependencies } from './IProgressStrategy';
+import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 
 /**
  * Exact progress strategy implementation
@@ -23,7 +23,7 @@ export class ExactProgressStrategy implements IProgressStrategy {
         step: InstallStep,
         context: ExecutionContext,
         onProgress: ProgressHandler,
-        deps: StrategyDependencies
+        deps: StrategyDependencies,
     ): Promise<void> {
         return new Promise((resolve, reject) => {
             const child = deps.spawnCommand(context.command);
@@ -40,7 +40,7 @@ export class ExactProgressStrategy implements IProgressStrategy {
                         context,
                         onProgress,
                         lastDetail,
-                        (detail) => { lastDetail = detail; }
+                        (detail) => { lastDetail = detail; },
                     );
                 } else {
                     await this.parseGenericOutput(
@@ -49,7 +49,7 @@ export class ExactProgressStrategy implements IProgressStrategy {
                         context,
                         onProgress,
                         lastDetail,
-                        (detail) => { lastDetail = detail; }
+                        (detail) => { lastDetail = detail; },
                     );
                 }
 
@@ -80,7 +80,7 @@ export class ExactProgressStrategy implements IProgressStrategy {
         context: ExecutionContext,
         onProgress: ProgressHandler,
         lastDetail: string,
-        setLastDetail: (detail: string) => void
+        setLastDetail: (detail: string) => void,
     ): Promise<void> {
         const trimmedOutput = output.trim();
 
@@ -142,7 +142,7 @@ export class ExactProgressStrategy implements IProgressStrategy {
         context: ExecutionContext,
         onProgress: ProgressHandler,
         lastDetail: string,
-        setLastDetail: (detail: string) => void
+        setLastDetail: (detail: string) => void,
     ): Promise<void> {
         const percentMatch = output.match(/(\d+)%/);
         if (percentMatch) {

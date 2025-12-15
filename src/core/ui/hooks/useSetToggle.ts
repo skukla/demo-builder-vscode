@@ -21,10 +21,10 @@ import { useState, useCallback, Dispatch, SetStateAction } from 'react';
  * setSelectedDependencies(new Set());
  */
 export function useSetToggle<T>(
-    initial: Set<T> | T[] = []
+    initial: Set<T> | T[] = [],
 ): [Set<T>, (id: T, selected: boolean) => void, Dispatch<SetStateAction<Set<T>>>] {
     const [set, setSet] = useState<Set<T>>(
-        initial instanceof Set ? initial : new Set(initial)
+        initial instanceof Set ? initial : new Set(initial),
     );
 
     const toggle = useCallback((id: T, selected: boolean) => {

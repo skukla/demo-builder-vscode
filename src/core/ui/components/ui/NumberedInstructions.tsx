@@ -1,5 +1,5 @@
-import React from 'react';
 import { Flex, Text } from '@adobe/react-spectrum';
+import React from 'react';
 import { CopyableText } from './CopyableText';
 
 export interface Instruction {

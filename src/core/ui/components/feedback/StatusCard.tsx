@@ -34,7 +34,7 @@ export const StatusCard = React.memo<StatusCardProps>(({
     color,
     label,
     size = 'M',
-    className
+    className,
 }) => {
     // Map color to StatusDot variant
     const getVariant = (): 'success' | 'error' | 'warning' | 'info' | 'neutral' => {

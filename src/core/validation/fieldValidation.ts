@@ -55,7 +55,7 @@ export function validateProjectNameUI(value: string): FieldValidation {
     const validator = compose(
         required('Project name is required'),
         alphanumeric('Project name can only contain letters, numbers, hyphens, and underscores'),
-        maxLength(50, 'Project name must be 50 characters or less')
+        maxLength(50, 'Project name must be 50 characters or less'),
     );
 
     return toFieldValidation(validator(value));

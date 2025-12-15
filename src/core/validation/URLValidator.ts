@@ -44,8 +44,8 @@ export function validateGitHubDownloadURL(url: string): boolean {
 
         // Must be a releases download URL pattern
         const validPatterns = [
-            /^\/[^\/]+\/[^\/]+\/releases\/download\//,  // Standard releases
-            /^\/repos\/[^\/]+\/[^\/]+\/releases\/assets\//, // API endpoint
+            /^\/[^/]+\/[^/]+\/releases\/download\//,  // Standard releases
+            /^\/repos\/[^/]+\/[^/]+\/releases\/assets\//, // API endpoint
         ];
 
         return validPatterns.some(pattern => pattern.test(parsedUrl.pathname));

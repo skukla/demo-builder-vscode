@@ -27,7 +27,7 @@ export function useSelectableDefault() {
     }, []);
 
     return {
-        onFocus: handleFocus
+        onFocus: handleFocus,
     };
 }
 
@@ -58,6 +58,6 @@ export function useSelectableDefaultWhen(currentValue: string, defaultValue: str
     }, [currentValue, defaultValue]);
 
     return {
-        onFocus: handleFocus
+        onFocus: handleFocus,
     };
 }

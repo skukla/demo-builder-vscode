@@ -11,9 +11,9 @@
  * ```
  */
 
-import React from 'react';
 import { ActionButton, Text } from '@adobe/react-spectrum';
 import ChevronLeft from '@spectrum-icons/workflow/ChevronLeft';
+import React from 'react';
 
 export interface BackButtonProps {
     /** Button label text. Defaults to "Back" */

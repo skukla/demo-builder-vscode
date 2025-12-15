@@ -36,7 +36,7 @@ export function hasValidTitle(item: TitleableItem | null | undefined): boolean {
  */
 export function needsTitleHydration(
     selectedItem: TitleableItem | null | undefined,
-    apiItem: TitleableItem | null | undefined
+    apiItem: TitleableItem | null | undefined,
 ): boolean {
     return !hasValidTitle(selectedItem) && hasValidTitle(apiItem);
 }

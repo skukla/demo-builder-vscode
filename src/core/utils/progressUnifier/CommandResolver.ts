@@ -54,7 +54,7 @@ export class CommandResolver {
         // Wrap commands with fnm if Node version specified
         if (options?.nodeVersion && commands.length > 0) {
             commands = commands.map(cmd =>
-                cmd.startsWith('fnm ') ? cmd : `fnm exec --using ${options.nodeVersion} ${cmd}`
+                cmd.startsWith('fnm ') ? cmd : `fnm exec --using ${options.nodeVersion} ${cmd}`,
             );
         }
 

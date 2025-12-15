@@ -67,12 +67,12 @@ interface UseFocusOnMountOptions {
  */
 export function useFocusOnMount(
     ref: RefObject<HTMLElement | null>,
-    options: UseFocusOnMountOptions = {}
+    options: UseFocusOnMountOptions = {},
 ): void {
     const {
         selector,
         delay = TIMEOUTS.FOCUS_FALLBACK,
-        disabled = false
+        disabled = false,
     } = options;
 
     useEffect(() => {

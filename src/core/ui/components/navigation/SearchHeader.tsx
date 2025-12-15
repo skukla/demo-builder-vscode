@@ -12,11 +12,11 @@
  * - Configurable visibility and behavior
  */
 
-import React from 'react';
 import { Flex, Text, SearchField, ActionButton, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import Refresh from '@spectrum-icons/workflow/Refresh';
 import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
 import ViewList from '@spectrum-icons/workflow/ViewList';
+import React from 'react';
 import { Spinner } from '../ui/Spinner';
 
 /** Available view modes */

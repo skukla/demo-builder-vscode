@@ -12,10 +12,10 @@
  * ```
  */
 
-import React, { Component, ReactNode, ErrorInfo } from 'react';
 import { View, Text, Heading } from '@adobe/react-spectrum';
 import Alert from '@spectrum-icons/workflow/Alert';
-import { webviewLogger } from '../utils/webviewLogger';
+import React, { Component, ReactNode, ErrorInfo } from 'react';
+import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 
 const log = webviewLogger('ErrorBoundary');
 

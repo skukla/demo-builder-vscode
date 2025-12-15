@@ -62,7 +62,7 @@ export const TwoColumnLayout: React.FC<TwoColumnLayoutProps> = ({
     rightBackgroundColor = 'var(--spectrum-global-color-gray-75)',
     showBorder = true,
     gap = '0' as DimensionValue,
-    className
+    className,
 }) => {
     // SOP §11: Static styles use utility classes, dynamic styles stay inline
     const containerClasses = ['flex', 'h-full', 'w-full', 'flex-1', 'min-h-0', 'items-stretch', className].filter(Boolean).join(' ');

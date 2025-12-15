@@ -65,7 +65,7 @@ interface UseLoadingStateReturn<T> extends LoadingState<T> {
  * ```
  */
 export function useLoadingState<T>(
-  initialData: T | null = null
+  initialData: T | null = null,
 ): UseLoadingStateReturn<T> {
   const [data, setDataState] = useState<T | null>(initialData);
   const [loading, setLoadingState] = useState(false);
@@ -119,6 +119,6 @@ export function useLoadingState<T>(
     setLoading,
     setError,
     setRefreshing,
-    reset
+    reset,
   };
 }

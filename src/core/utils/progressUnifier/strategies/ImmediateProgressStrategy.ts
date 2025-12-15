@@ -5,10 +5,10 @@
  * Provides smooth visual progress with minimum duration to avoid UI flickering.
  */
 
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
-import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 import { ProgressHandler, ExecutionContext } from '../types';
 import { IProgressStrategy, StrategyDependencies } from './IProgressStrategy';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
 
 /**
  * Immediate progress strategy implementation
@@ -26,7 +26,7 @@ export class ImmediateProgressStrategy implements IProgressStrategy {
         step: InstallStep,
         context: ExecutionContext,
         onProgress: ProgressHandler,
-        deps: StrategyDependencies
+        deps: StrategyDependencies,
     ): Promise<void> {
         // Special handling for internal commands
         if (context.command === 'configureFnmShell') {

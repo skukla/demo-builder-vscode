@@ -1,6 +1,6 @@
-import React from 'react';
 import { Flex, Text, Well } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
+import React from 'react';
 
 export interface EmptyStateProps {
     /** Icon to display (defaults to AlertCircle) */
@@ -34,7 +34,7 @@ export const EmptyState = React.memo<EmptyStateProps>(({
     title,
     description,
     iconColor = 'text-yellow-600',
-    centered = true
+    centered = true,
 }) => {
     const content = (
         <Well>

@@ -1,5 +1,5 @@
-import React, { ReactNode } from 'react';
 import { Dialog, Heading, Content, Divider, ButtonGroup, Button } from '@adobe/react-spectrum';
+import React, { ReactNode } from 'react';
 
 export interface ActionButton {
     label: string;
@@ -20,7 +20,7 @@ export function Modal({
     size = 'M',
     actionButtons = [],
     onClose,
-    children
+    children,
 }: ModalProps) {
     // Map custom sizes to Dialog-compatible sizes
     const dialogSize: 'S' | 'M' | 'L' =

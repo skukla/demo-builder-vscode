@@ -98,7 +98,7 @@ export async function setLoadingState(
     panel: vscode.WebviewPanel,
     getContent: () => Promise<string>,
     message = 'Loading...',
-    logger?: { info: (msg: string) => void; debug?: (msg: string) => void },
+    _logger?: { info: (msg: string) => void; debug?: (msg: string) => void },
 ): Promise<void> {
     // Give VSCode a moment to fully initialize the panel
     // This helps prevent the "Initializing web view..." message

@@ -2,8 +2,8 @@
  * Promise utilities for timeout and cancellation handling
  */
 
-import { TimeoutError, toAppError, isTimeout } from '@/types/errors';
 import { ErrorCode } from '@/types/errorCodes';
+import { TimeoutError, toAppError, isTimeout } from '@/types/errors';
 
 export interface TimeoutOptions {
     timeoutMs: number;

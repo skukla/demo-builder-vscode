@@ -52,7 +52,7 @@ export const GridLayout: React.FC<GridLayoutProps> = ({
     gap = 'size-300',
     maxWidth,
     padding,
-    className
+    className,
 }) => {
     // SOP §11: Static styles use utility classes, dynamic styles stay inline
     const containerClasses = ['grid', 'w-full', className].filter(Boolean).join(' ');
