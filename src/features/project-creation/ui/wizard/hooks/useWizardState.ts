@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react';
 import {
     getEnabledWizardSteps,
+    filterStepsByComponents,
     initializeComponentsFromImport,
     initializeAdobeContextFromImport,
     initializeProjectName,
     getFirstEnabledStep,
     ImportedSettings,
     EditProjectConfig,
+    WizardStepConfigWithRequirements,
 } from '../wizardHelpers';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
@@ -16,7 +18,8 @@ const log = webviewLogger('useWizardState');
 
 interface UseWizardStateProps {
     componentDefaults?: ComponentSelection;
-    wizardSteps?: { id: string; name: string; enabled: boolean }[];
+    /** Wizard step configuration, optionally with requiredComponents for component-specific filtering */
+    wizardSteps?: WizardStepConfigWithRequirements[];
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
     editProject?: EditProjectConfig;
@@ -69,7 +72,7 @@ interface UseWizardStateReturn {
  * Compute initial state based on mode (edit vs create) and any imported settings
  */
 function computeInitialState(
-    wizardSteps: { id: string; name: string; enabled: boolean }[] | undefined,
+    wizardSteps: WizardStepConfigWithRequirements[] | undefined,
     editProject: EditProjectConfig | undefined,
     importedSettings: ImportedSettings | null | undefined,
     componentDefaults: ComponentSelection | undefined,
@@ -171,12 +174,16 @@ export function useWizardState({
     importedSettings,
     editProject,
 }: UseWizardStateProps): UseWizardStateReturn {
-    // Filter enabled steps before using in state to avoid conditional hook calls
-    const WIZARD_STEPS = useMemo(() => getEnabledWizardSteps(wizardSteps), [wizardSteps]);
-
-    // Main wizard state
+    // Main wizard state - declared first so WIZARD_STEPS can depend on state.components
     const [state, setState] = useState<WizardState>(() =>
         computeInitialState(wizardSteps, editProject, importedSettings, componentDefaults, existingProjectNames || []),
+    );
+
+    // Filter wizard steps based on enabled flag AND component requirements
+    // Recalculates when wizardSteps config changes OR when component selection changes
+    const WIZARD_STEPS = useMemo(
+        () => filterStepsByComponents(wizardSteps || [], state.components),
+        [wizardSteps, state.components],
     );
 
     // Step completion tracking
