@@ -2218,4 +2218,108 @@ div[class*="spectrum"] input[type="search"] {
     line-height: 1.4 !important;
 }
 
+/* Template Row Styles (List View) */
+.template-row-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.template-row {
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 6px !important;
+    padding: 12px 16px !important;
+    border: 2px solid var(--spectrum-global-color-gray-300) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.template-row:hover {
+    background: var(--spectrum-global-color-gray-75) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+}
+
+.template-row:focus {
+    outline: none !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+    box-shadow: 0 0 0 2px var(--spectrum-global-color-blue-400) !important;
+}
+
+.template-row-selected,
+.template-row[data-selected="true"] {
+    background: var(--spectrum-global-color-blue-100) !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+}
+
+.template-row-name {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    min-width: 180px !important;
+}
+
+.template-row-description {
+    font-size: 13px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* Template Tag Styles (inside cards/rows) */
+.template-tag {
+    display: inline-block !important;
+    font-size: 11px !important;
+    padding: 2px 8px !important;
+    background: var(--spectrum-global-color-gray-200) !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    border-radius: 12px !important;
+}
+
+/* Template Tag Filter Styles (gallery filter chips) */
+.template-tag-filter {
+    display: inline-block !important;
+    font-size: 12px !important;
+    padding: 4px 12px !important;
+    background: var(--spectrum-global-color-gray-100) !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 16px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.template-tag-filter:hover {
+    background: var(--spectrum-global-color-gray-200) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+}
+
+.template-tag-filter:focus {
+    outline: none !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+    box-shadow: 0 0 0 2px var(--spectrum-global-color-blue-400) !important;
+}
+
+.template-tag-filter-selected,
+.template-tag-filter[aria-pressed="true"] {
+    background: var(--spectrum-global-color-blue-500) !important;
+    color: white !important;
+    border-color: var(--spectrum-global-color-blue-600) !important;
+}
+
+.template-tag-filter-selected:hover,
+.template-tag-filter[aria-pressed="true"]:hover {
+    background: var(--spectrum-global-color-blue-600) !important;
+}
+
+/* Template Featured Badge */
+.template-featured-badge {
+    font-size: 10px !important;
+}
+
+/* Template Gallery Container */
+.template-gallery {
+    width: 100% !important;
+}
+
 } /* End of second @layer theme block */

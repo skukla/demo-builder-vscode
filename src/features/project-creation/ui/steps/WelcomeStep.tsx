@@ -7,7 +7,7 @@ import {
     Text,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useCallback } from 'react';
-import { TemplateCardGrid } from '../components/TemplateCardGrid';
+import { TemplateGallery } from '../components/TemplateGallery';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
@@ -83,10 +83,13 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
 
     // Handler for template selection
     const handleTemplateSelect = useCallback(
-        (templateId: string | undefined) => {
-            updateState({ selectedTemplate: templateId });
+        (templateId: string) => {
+            // Toggle selection: if already selected, deselect; otherwise select
+            updateState({
+                selectedTemplate: state.selectedTemplate === templateId ? undefined : templateId,
+            });
         },
-        [updateState],
+        [updateState, state.selectedTemplate],
     );
 
     useEffect(() => {
@@ -159,7 +162,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                             Select a pre-configured template to get started quickly.
                         </Text>
 
-                        <TemplateCardGrid
+                        <TemplateGallery
                             templates={templates}
                             selectedTemplateId={state.selectedTemplate}
                             onSelect={handleTemplateSelect}
