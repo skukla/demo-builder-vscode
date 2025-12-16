@@ -114,7 +114,9 @@ describe('ComponentSelectionStep - Dependencies', () => {
             expect(demoInspectorCheckbox).not.toBeDisabled();
         });
 
-        it('should allow selecting external integrations', () => {
+        it('should NOT render external integrations (simplified UI)', () => {
+            // External Systems section was removed to reduce visual clutter
+            // as part of Demo Templates Phase 3
             render(
                 <Provider theme={defaultTheme}>
                     <ComponentSelectionStep
@@ -126,12 +128,13 @@ describe('ComponentSelectionStep - Dependencies', () => {
                 </Provider>
             );
 
-            const platformCheckbox = screen.getByLabelText('Experience Platform');
-            expect(platformCheckbox).toBeInTheDocument();
-            expect(platformCheckbox).not.toBeChecked();
+            const platformCheckbox = screen.queryByLabelText('Experience Platform');
+            expect(platformCheckbox).not.toBeInTheDocument();
         });
 
-        it('should allow selecting app builder apps', () => {
+        it('should NOT render app builder apps (simplified UI)', () => {
+            // App Builder Apps section was removed to reduce visual clutter
+            // as part of Demo Templates Phase 3
             render(
                 <Provider theme={defaultTheme}>
                     <ComponentSelectionStep
@@ -143,9 +146,8 @@ describe('ComponentSelectionStep - Dependencies', () => {
                 </Provider>
             );
 
-            const appCheckbox = screen.getByLabelText('Integration Service');
-            expect(appCheckbox).toBeInTheDocument();
-            expect(appCheckbox).not.toBeChecked();
+            const appCheckbox = screen.queryByLabelText('Integration Service');
+            expect(appCheckbox).not.toBeInTheDocument();
         });
     });
 });

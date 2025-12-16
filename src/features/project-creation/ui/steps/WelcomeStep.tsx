@@ -7,19 +7,26 @@ import {
     Text,
 } from '@adobe/react-spectrum';
 import React, { useEffect, useCallback } from 'react';
+import { TemplateCardGrid } from '../components/TemplateCardGrid';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
 import { normalizeProjectName } from '@/features/project-creation/helpers/formatters';
+import { DemoTemplate } from '@/types/templates';
 import { BaseStepProps } from '@/types/wizard';
 
 interface WelcomeStepProps extends BaseStepProps {
     existingProjectNames?: string[];
+    /** Available demo templates for selection */
+    templates?: DemoTemplate[];
 }
 
-export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [] }: WelcomeStepProps) {
+export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], templates }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
+
+    // Check if templates are provided - if so, require template selection
+    const hasTemplates = templates && templates.length > 0;
 
     // Custom validator for duplicate project name check
     const notDuplicate = useCallback(
@@ -74,12 +81,25 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount
 
+    // Handler for template selection
+    const handleTemplateSelect = useCallback(
+        (templateId: string | undefined) => {
+            updateState({ selectedTemplate: templateId });
+        },
+        [updateState],
+    );
+
     useEffect(() => {
-        const isValid =
+        const isProjectNameValid =
             state.projectName.length >= 3 &&
             validateProjectName(state.projectName) === undefined;
-        setCanProceed(isValid);
-    }, [state.projectName, setCanProceed, validateProjectName]);
+
+        // If templates are provided, require template selection
+        // If no templates, just validate project name (backward compatibility)
+        const isTemplateValid = !hasTemplates || Boolean(state.selectedTemplate);
+
+        setCanProceed(isProjectNameValid && isTemplateValid);
+    }, [state.projectName, state.selectedTemplate, setCanProceed, validateProjectName, hasTemplates]);
 
     return (
         <div className="container-wizard">
@@ -103,7 +123,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                         Choose a unique name to identify your demo project.
                     </Text>
 
-                    <Form 
+                    <Form
                         necessityIndicator="icon"
                         onSubmit={(e) => {
                             e.preventDefault();
@@ -127,6 +147,25 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                         />
                     </Form>
                 </View>
+
+                {/* Template Selection Section - Only shown when templates are provided */}
+                {templates !== undefined && (
+                    <View>
+                        <Heading level={3} marginBottom="size-200">
+                            Choose a Template
+                        </Heading>
+
+                        <Text marginBottom="size-300" UNSAFE_className="welcome-step-description">
+                            Select a pre-configured template to get started quickly.
+                        </Text>
+
+                        <TemplateCardGrid
+                            templates={templates}
+                            selectedTemplateId={state.selectedTemplate}
+                            onSelect={handleTemplateSelect}
+                        />
+                    </View>
+                )}
             </Flex>
         </div>
     );

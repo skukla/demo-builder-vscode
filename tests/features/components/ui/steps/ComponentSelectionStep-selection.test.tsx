@@ -19,7 +19,9 @@ describe('ComponentSelectionStep - Selection', () => {
     });
 
     describe('Happy Path - Component Selection', () => {
-        it('should render with available components', () => {
+        it('should render with available components (simplified UI)', () => {
+            // External Systems and App Builder Apps sections were removed
+            // to reduce visual clutter as part of Demo Templates Phase 3
             render(
                 <Provider theme={defaultTheme}>
                     <ComponentSelectionStep
@@ -33,8 +35,9 @@ describe('ComponentSelectionStep - Selection', () => {
 
             expect(screen.getByText('Frontend')).toBeInTheDocument();
             expect(screen.getByText('Backend')).toBeInTheDocument();
-            expect(screen.getByText('External Systems')).toBeInTheDocument();
-            expect(screen.getByText('App Builder Apps')).toBeInTheDocument();
+            // External Systems and App Builder Apps are no longer rendered
+            expect(screen.queryByText('External Systems')).not.toBeInTheDocument();
+            expect(screen.queryByText('App Builder Apps')).not.toBeInTheDocument();
         });
 
         it('should allow frontend selection', () => {

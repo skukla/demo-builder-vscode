@@ -178,15 +178,19 @@ features/my-feature/
 
 ### project-creation
 
-**Purpose**: Project creation workflow and environment setup
+**Purpose**: Project creation workflow, demo template selection, and environment setup
 
 **Key Services:**
+- Demo template loading and validation (`templateLoader.ts`)
+- Template defaults application (`templateDefaults.ts`)
 - Project template application
 - Environment file generation
 - Directory structure creation
 - Component installation
 
 **Responsibilities:**
+- Demo template selection on WelcomeStep
+- Applying template defaults to component selections
 - Creating project directory structure
 - Applying component templates
 - Generating .env files

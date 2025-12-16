@@ -9,7 +9,7 @@
   },
   "selectionGroups": {
     "frontends": ["citisignal-nextjs"],
-    "backends": ["adobe-commerce-paas"],
+    "backends": ["adobe-commerce-paas", "adobe-commerce-accs"],
     "dependencies": ["commerce-mesh", "demo-inspector"],
     "appBuilderApps": ["integration-service"],
     "integrations": ["experience-platform"]
@@ -63,6 +63,18 @@
         "nodeVersion": "20",
         "requiredServices": ["catalog-service", "live-search"]
       }
+    },
+    "adobe-commerce-accs": {
+      "name": "Adobe Commerce Cloud Service",
+      "description": "App Builder-based commerce backend (placeholder for Phase 3)",
+      "configuration": {
+        "nodeVersion": "20"
+      }
+    },
+    "adobe-commerce-aco": {
+      "name": "Adobe Commerce Optimizer",
+      "description": "Commerce optimization addon (placeholder for Phase 3)",
+      "addonFor": ["adobe-commerce-paas"]
     },
     "demo-inspector": {
       "name": "Demo Inspector",

@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Demo Builder Demo Templates Schema",
+  "description": "Schema for defining demo templates that pre-populate component selections",
+  "type": "object",
+  "required": ["version", "templates"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Schema version (e.g., '1.0.0')"
+    },
+    "templates": {
+      "type": "array",
+      "description": "Array of available demo templates",
+      "items": {
+        "$ref": "#/definitions/template"
+      },
+      "minItems": 1
+    }
+  },
+  "definitions": {
+    "template": {
+      "type": "object",
+      "required": ["id", "name", "description", "defaults"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Unique identifier for the template (lowercase, hyphen-separated)"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name for the template"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of what this template includes"
+        },
+        "defaults": {
+          "$ref": "#/definitions/templateDefaults"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon identifier for the template"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Tags for filtering and categorization"
+        },
+        "featured": {
+          "type": "boolean",
+          "description": "Whether this template should be featured in the UI"
+        }
+      }
+    },
+    "templateDefaults": {
+      "type": "object",
+      "description": "Default component selections for this template",
+      "properties": {
+        "frontend": {
+          "type": "string",
+          "description": "Frontend component ID (must match a component in components.json)"
+        },
+        "backend": {
+          "type": "string",
+          "description": "Backend component ID (must match a component in components.json)"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of dependency component IDs"
+        },
+        "integrations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of integration component IDs"
+        },
+        "appBuilder": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of App Builder app component IDs"
+        }
+      }
+    }
+  }
+}

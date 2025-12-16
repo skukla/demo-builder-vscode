@@ -235,6 +235,98 @@ describe('filterStepsByComponents', () => {
     });
 });
 
+describe('requiredAny OR logic', () => {
+    const mockSteps: WizardStepConfigWithRequirements[] = [
+        { id: 'welcome', name: 'Welcome', enabled: true },
+        {
+            id: 'backend-config',
+            name: 'Backend Config',
+            enabled: true,
+            requiredAny: ['commerce-backend', 'custom-backend'],
+        },
+    ];
+
+    it('should show step when first component in requiredAny is selected', () => {
+        const selectedComponents: ComponentSelection = {
+            backend: 'commerce-backend',
+        };
+
+        const result = filterStepsByComponents(mockSteps, selectedComponents);
+
+        expect(result).toHaveLength(2);
+        expect(result.find(s => s.id === 'backend-config')).toBeDefined();
+    });
+
+    it('should show step when second component in requiredAny is selected', () => {
+        const selectedComponents: ComponentSelection = {
+            backend: 'custom-backend',
+        };
+
+        const result = filterStepsByComponents(mockSteps, selectedComponents);
+
+        expect(result).toHaveLength(2);
+        expect(result.find(s => s.id === 'backend-config')).toBeDefined();
+    });
+
+    it('should hide step when NONE of requiredAny components are selected', () => {
+        const selectedComponents: ComponentSelection = {
+            backend: 'other-backend',
+        };
+
+        const result = filterStepsByComponents(mockSteps, selectedComponents);
+
+        expect(result).toHaveLength(1);
+        expect(result.find(s => s.id === 'backend-config')).toBeUndefined();
+    });
+
+    it('should handle empty requiredAny array as always-visible', () => {
+        const stepsWithEmpty: WizardStepConfigWithRequirements[] = [
+            { id: 'test', name: 'Test', enabled: true, requiredAny: [] },
+        ];
+
+        const result = filterStepsByComponents(stepsWithEmpty, undefined);
+
+        expect(result).toHaveLength(1);
+    });
+
+    it('should show step when requiredAny component is in dependencies', () => {
+        const stepsWithDependency: WizardStepConfigWithRequirements[] = [
+            {
+                id: 'mesh-step',
+                name: 'Mesh Step',
+                enabled: true,
+                requiredAny: ['commerce-mesh', 'other-mesh'],
+            },
+        ];
+        const selectedComponents: ComponentSelection = {
+            dependencies: ['commerce-mesh'],
+        };
+
+        const result = filterStepsByComponents(stepsWithDependency, selectedComponents);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].id).toBe('mesh-step');
+    });
+
+    it('should show step when requiredAny component is in frontend', () => {
+        const stepsWithFrontend: WizardStepConfigWithRequirements[] = [
+            {
+                id: 'storefront-config',
+                name: 'Storefront Config',
+                enabled: true,
+                requiredAny: ['citisignal-nextjs', 'eds-storefront'],
+            },
+        ];
+        const selectedComponents: ComponentSelection = {
+            frontend: 'citisignal-nextjs',
+        };
+
+        const result = filterStepsByComponents(stepsWithFrontend, selectedComponents);
+
+        expect(result).toHaveLength(1);
+    });
+});
+
 describe('isComponentSelected', () => {
     it('should find component in frontend', () => {
         const selection: ComponentSelection = {

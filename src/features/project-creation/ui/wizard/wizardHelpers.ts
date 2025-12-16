@@ -20,8 +20,10 @@ export interface WizardStepConfigWithRequirements {
     id: string;
     name: string;
     enabled: boolean;
-    /** Optional: Component IDs that must ALL be selected for this step to appear */
+    /** Optional: Component IDs that must ALL be selected for this step to appear (AND logic) */
     requiredComponents?: string[];
+    /** Optional: Component IDs where ANY selection makes this step appear (OR logic) */
+    requiredAny?: string[];
 }
 
 // ============================================================================
@@ -75,15 +77,22 @@ export function filterStepsByComponents(
             // Disabled steps never shown
             if (!step.enabled) return false;
 
-            // No requirements = always shown (backward compatible)
-            if (!step.requiredComponents || step.requiredComponents.length === 0) {
-                return true;
+            // requiredComponents: ALL must be selected (AND logic)
+            if (step.requiredComponents && step.requiredComponents.length > 0) {
+                return step.requiredComponents.every(componentId =>
+                    isComponentSelected(componentId, selectedComponents),
+                );
             }
 
-            // All required components must be selected
-            return step.requiredComponents.every(componentId =>
-                isComponentSelected(componentId, selectedComponents),
-            );
+            // requiredAny: ANY must be selected (OR logic)
+            if (step.requiredAny && step.requiredAny.length > 0) {
+                return step.requiredAny.some(componentId =>
+                    isComponentSelected(componentId, selectedComponents),
+                );
+            }
+
+            // No requirements = always shown (backward compatible)
+            return true;
         })
         .map(step => ({
             id: step.id as WizardStep,

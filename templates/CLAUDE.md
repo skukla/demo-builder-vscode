@@ -13,7 +13,9 @@ templates/
 ├── components.json         # Available project components
 ├── defaults.json          # Default component selections
 ├── wizard-steps.json      # Wizard timeline configuration
-├── logging.json           # Logging message templates (NEW)
+├── logging.json           # Logging message templates
+├── demo-templates.json    # Demo template definitions (pre-configured selections)
+├── demo-templates.schema.json # JSON schema for demo templates
 ├── project-templates/      # Project scaffolding templates
 └── scripts/               # Installation and setup scripts
 ```
@@ -169,6 +171,124 @@ templates/
   ]
 }
 ```
+
+## Demo Templates System
+
+### Overview
+
+The demo templates system enables a "demo-first" workflow where users select a pre-configured template on the Welcome step, which automatically pre-populates component selections. This streamlines the wizard for common demo scenarios.
+
+### demo-templates.json Structure
+
+**Top-level Structure**:
+```json
+{
+  "$schema": "./demo-templates.schema.json",
+  "version": "1.0.0",
+  "templates": [...]
+}
+```
+
+**Template Definition**:
+```json
+{
+  "id": "citisignal",
+  "name": "CitiSignal Storefront",
+  "description": "Next.js headless storefront with Adobe Commerce API Mesh integration",
+  "icon": "nextjs",
+  "featured": true,
+  "tags": ["headless", "nextjs", "storefront"],
+  "defaults": {
+    "frontend": "citisignal-nextjs",
+    "backend": "adobe-commerce-paas",
+    "dependencies": ["commerce-mesh", "demo-inspector"]
+  }
+}
+```
+
+### Template Properties
+
+| Property | Type | Required | Description |
+|----------|------|----------|-------------|
+| `id` | string | Yes | Unique identifier (lowercase, hyphen-separated) |
+| `name` | string | Yes | Display name for the template |
+| `description` | string | Yes | Description of what this template includes |
+| `defaults` | object | Yes | Default component selections |
+| `icon` | string | No | Icon identifier for the template card |
+| `tags` | string[] | No | Tags for filtering and categorization |
+| `featured` | boolean | No | Whether to highlight this template |
+
+### Template Defaults Object
+
+The `defaults` object maps to component IDs from `components.json`:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `frontend` | string | Frontend component ID (e.g., 'citisignal-nextjs') |
+| `backend` | string | Backend component ID (e.g., 'adobe-commerce-paas') |
+| `dependencies` | string[] | Array of dependency component IDs |
+| `integrations` | string[] | Array of integration component IDs |
+| `appBuilder` | string[] | Array of App Builder app component IDs |
+
+### Adding a New Demo Template
+
+1. **Define the template in demo-templates.json**:
+```json
+{
+  "id": "my-demo",
+  "name": "My Custom Demo",
+  "description": "Description of what this demo includes",
+  "defaults": {
+    "frontend": "my-frontend-component",
+    "backend": "adobe-commerce-paas",
+    "dependencies": ["commerce-mesh"]
+  }
+}
+```
+
+2. **Ensure component IDs exist**: All component IDs in `defaults` must match IDs defined in `components.json`.
+
+3. **Validate the template**: The schema (`demo-templates.schema.json`) validates:
+   - Required fields are present
+   - ID follows lowercase hyphen pattern
+   - All properties have correct types
+
+### Template Loader
+
+Templates are loaded via `src/features/project-creation/ui/helpers/templateLoader.ts`:
+
+```typescript
+import { loadDemoTemplates, validateTemplate } from './templateLoader';
+
+// Load all templates
+const templates = await loadDemoTemplates();
+
+// Validate a template against known components
+const result = validateTemplate(template, knownComponentIds);
+if (!result.valid) {
+  console.error('Validation errors:', result.errors);
+}
+```
+
+### Template Defaults Application
+
+When a user selects a template, its defaults are applied via `templateDefaults.ts`:
+
+```typescript
+import { applyTemplateDefaults } from './templateDefaults';
+
+// Apply template defaults to wizard state
+const newState = applyTemplateDefaults(currentState, templates);
+```
+
+### Type Definitions
+
+Template types are defined in `src/types/templates.ts`:
+
+- `DemoTemplate` - Single template definition
+- `TemplateDefaults` - Component selection defaults
+- `DemoTemplatesConfig` - Root configuration structure
+- `TemplateValidationResult` - Validation result with errors
 
 ## Wizard Steps Configuration
 

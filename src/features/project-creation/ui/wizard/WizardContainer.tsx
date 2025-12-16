@@ -5,7 +5,7 @@ import {
     Button,
     Text,
 } from '@adobe/react-spectrum';
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     useWizardState,
     useWizardNavigation,
@@ -19,6 +19,8 @@ import {
     ImportedSettings,
     EditProjectConfig,
 } from './wizardHelpers';
+import { loadDemoTemplates } from '../helpers/templateLoader';
+import type { DemoTemplate } from '@/types/templates';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay, LoadingDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageFooter, CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
@@ -127,6 +129,12 @@ export function WizardContainer({
         workspaceId: state.adobeWorkspace?.id,
     });
 
+    // Demo templates - loaded once on mount
+    const [templates, setTemplates] = useState<DemoTemplate[]>([]);
+    useEffect(() => {
+        loadDemoTemplates().then(setTemplates);
+    }, []);
+
     // Focus trap for keyboard navigation (replaces manual implementation)
     const wizardContainerRef = useFocusTrap<HTMLDivElement>({
         enabled: true,
@@ -207,7 +215,7 @@ export function WizardContainer({
 
         switch (state.currentStep) {
             case 'welcome':
-                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} />;
+                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} templates={templates} />;
             case 'component-selection':
                 return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':

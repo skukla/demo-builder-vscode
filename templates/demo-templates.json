@@ -1,0 +1,19 @@
+{
+  "$schema": "./demo-templates.schema.json",
+  "version": "1.0.0",
+  "templates": [
+    {
+      "id": "citisignal",
+      "name": "CitiSignal Storefront",
+      "description": "Next.js headless storefront with Adobe Commerce API Mesh integration",
+      "icon": "nextjs",
+      "featured": true,
+      "tags": ["headless", "nextjs", "storefront"],
+      "defaults": {
+        "frontend": "citisignal-nextjs",
+        "backend": "adobe-commerce-paas",
+        "dependencies": ["commerce-mesh", "demo-inspector"]
+      }
+    }
+  ]
+}

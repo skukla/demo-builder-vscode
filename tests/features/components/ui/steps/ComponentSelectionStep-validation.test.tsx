@@ -79,7 +79,10 @@ describe('ComponentSelectionStep - Validation', () => {
     });
 
     describe('Edge Cases', () => {
-        it('should initialize from state defaults', () => {
+        it('should initialize from state defaults (simplified UI)', () => {
+            // External Systems and App Builder Apps sections were removed
+            // to reduce visual clutter as part of Demo Templates Phase 3.
+            // This test now verifies that core component selections work.
             const stateWithDefaults = createStateWithDefaults();
 
             render(
@@ -93,11 +96,13 @@ describe('ComponentSelectionStep - Validation', () => {
                 </Provider>
             );
 
-            const platformCheckbox = screen.getByLabelText('Experience Platform');
-            const appCheckbox = screen.getByLabelText('Integration Service');
+            // Experience Platform and Integration Service checkboxes are no longer rendered
+            expect(screen.queryByLabelText('Experience Platform')).not.toBeInTheDocument();
+            expect(screen.queryByLabelText('Integration Service')).not.toBeInTheDocument();
 
-            expect(platformCheckbox).toBeChecked();
-            expect(appCheckbox).toBeChecked();
+            // Verify core selections still work (frontend/backend pickers present)
+            expect(screen.getByLabelText('Select frontend system')).toBeInTheDocument();
+            expect(screen.getByLabelText('Select backend system')).toBeInTheDocument();
         });
 
         it('should prevent duplicate backend messages', () => {
