@@ -6,7 +6,7 @@ import {
     ProgressBar,
 } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
     usePrerequisiteState,
     usePrerequisiteAutoScroll,
@@ -28,13 +28,15 @@ interface PrerequisitesStepProps extends NavigableStepProps {
 }
 
 export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesStepProps) {
-    // Auto-scroll hook (must be first to provide scrollToTop to state hook)
-    const {
-        itemRefs,
-        scrollContainerRef,
-        scrollToTop,
-        resetAutoScroll,
-    } = usePrerequisiteAutoScroll([], setCanProceed); // Initial empty checks, will be connected below
+    // Create scroll container ref at component level to break circular dependency
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+    // scrollToTop callback using the component-level ref
+    const scrollToTop = useCallback(() => {
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, []);
 
     // State management hook
     const {
@@ -46,8 +48,11 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         installPrerequisite,
     } = usePrerequisiteState(scrollToTop);
 
-    // Re-run auto-scroll effects with actual checks
-    usePrerequisiteAutoScroll(checks, setCanProceed);
+    // Auto-scroll hook with actual checks (pass the shared ref)
+    const {
+        itemRefs,
+        resetAutoScroll,
+    } = usePrerequisiteAutoScroll(checks, setCanProceed, scrollContainerRef);
 
     // Navigation effects (recheck on step change)
     usePrerequisiteNavigation(
