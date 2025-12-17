@@ -32,6 +32,19 @@
 import React from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
+// Style constants extracted per SOP §7
+const PAGE_LAYOUT_STYLES = {
+    container: {
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column' as const,
+    },
+    content: {
+        flex: 1,
+        overflowY: 'auto' as const,
+    },
+} as const;
+
 export interface PageLayoutProps {
     /** Optional header slot - fixed at viewport top (no shrink) */
     header?: React.ReactNode;
@@ -66,23 +79,13 @@ export const PageLayout: React.FC<PageLayoutProps> = ({
     return (
         <div
             className={cn(className)}
-            style={{
-                height: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                backgroundColor,
-            }}
+            style={{ ...PAGE_LAYOUT_STYLES.container, backgroundColor }}
         >
             {/* Header slot - fixed, no shrink */}
             {header}
 
             {/* Content area - scrollable, flex-grow */}
-            <div
-                style={{
-                    flex: 1,
-                    overflowY: 'auto',
-                }}
-            >
+            <div style={PAGE_LAYOUT_STYLES.content}>
                 {children}
             </div>
 

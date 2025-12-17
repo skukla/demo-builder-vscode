@@ -120,13 +120,13 @@ export function StatusDisplay({
                 direction="column"
                 justifyContent="center"
                 alignItems="center"
-                UNSAFE_style={{ height }}
+                height={height}
             >
                 <Flex
                     direction="column"
                     gap="size-200"
                     alignItems="center"
-                    UNSAFE_style={{ maxWidth }}
+                    maxWidth={maxWidth}
                 >
                     {displayIcon}
 
