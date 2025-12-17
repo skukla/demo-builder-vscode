@@ -126,18 +126,18 @@ export async function handleInstallPrerequisite(
 
             // Determine missing majors from mapping
             const mapping = await getNodeVersionMapping(context);
-            context.debugLogger.debug(`[Prerequisites] Node version mapping: ${JSON.stringify(mapping)}`);
+            context.debugLogger.trace(`[Prerequisites] Node version mapping: ${JSON.stringify(mapping)}`);
             const nodeStatus = hasNodeVersions(mapping)
                 ? await context.prereqManager?.checkMultipleNodeVersions(mapping)
                 : undefined;
-            context.debugLogger.debug(`[Prerequisites] Node status check results: ${JSON.stringify(nodeStatus)}`);
+            context.debugLogger.trace(`[Prerequisites] Node status check results: ${JSON.stringify(nodeStatus)}`);
             const missingMajors = nodeStatus
                 ? getNodeVersionKeys(mapping).filter(m => !nodeStatus.some(s => s.version.startsWith(`Node ${m}`) && s.installed))
                 : [];
-            context.debugLogger.debug(`[Prerequisites] Missing major versions: ${JSON.stringify(missingMajors)}`);
+            context.debugLogger.trace(`[Prerequisites] Missing major versions: ${JSON.stringify(missingMajors)}`);
             // Sort versions in ascending order (18, 20, 24) for predictable installation order
             const sortedMissingMajors = missingMajors.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-            context.debugLogger.debug(`[Prerequisites] Sorted missing majors for installation: ${JSON.stringify(sortedMissingMajors)}`);
+            context.debugLogger.trace(`[Prerequisites] Sorted missing majors for installation: ${JSON.stringify(sortedMissingMajors)}`);
             targetVersions = getTargetNodeVersions(sortedMissingMajors, version);
 
             // If no versions need installation, we're done

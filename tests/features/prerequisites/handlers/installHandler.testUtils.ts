@@ -17,6 +17,7 @@
  * jest.mock('@/core/logging/debugLogger', () => ({
  *     getLogger: () => ({
  *         debug: jest.fn(),
+ *         trace: jest.fn(),
  *         info: jest.fn(),
  *         warn: jest.fn(),
  *         error: jest.fn(),
@@ -221,6 +222,7 @@ export function createMockContext(overrides?: Partial<HandlerContext>): jest.Moc
         } as any,
         debugLogger: {
             debug: jest.fn(),
+            trace: jest.fn(),
         } as any,
         stepLogger: {
             log: jest.fn(),

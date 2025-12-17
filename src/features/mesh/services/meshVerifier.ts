@@ -46,7 +46,7 @@ async function fetchMeshInfoFromAdobeIO(): Promise<{ meshId?: string; endpoint?:
             return null;
         }
 
-        logger.debug(`[Mesh Verifier] Raw output (first 500 chars): ${output.substring(0, 500)}`);
+        logger.trace(`[Mesh Verifier] Raw output (first 500 chars): ${output.substring(0, 500)}`);
 
 
         // Try JSON parsing first

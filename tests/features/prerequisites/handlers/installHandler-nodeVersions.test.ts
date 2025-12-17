@@ -35,6 +35,7 @@ jest.mock('vscode', () => ({
 jest.mock('@/core/logging/debugLogger', () => ({
     getLogger: () => ({
         debug: jest.fn(),
+        trace: jest.fn(),
         info: jest.fn(),
         warn: jest.fn(),
         error: jest.fn(),
