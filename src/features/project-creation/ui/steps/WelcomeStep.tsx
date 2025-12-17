@@ -1,13 +1,7 @@
-import {
-    View,
-    Flex,
-    Form,
-    TextField,
-    Heading,
-    Text,
-} from '@adobe/react-spectrum';
+import { TextField } from '@adobe/react-spectrum';
 import React, { useEffect, useCallback } from 'react';
 import { TemplateGallery } from '../components/TemplateGallery';
+import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
@@ -19,9 +13,11 @@ interface WelcomeStepProps extends BaseStepProps {
     existingProjectNames?: string[];
     /** Available demo templates for selection */
     templates?: DemoTemplate[];
+    /** Initial view mode from extension settings */
+    initialViewMode?: 'cards' | 'rows';
 }
 
-export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], templates }: WelcomeStepProps) {
+export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], templates, initialViewMode }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
 
@@ -105,71 +101,35 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     }, [state.projectName, state.selectedTemplate, setCanProceed, validateProjectName, hasTemplates]);
 
     return (
-        <div className="container-wizard">
-            <Flex direction="column" gap="size-400">
-                <View>
-                    <Heading level={2} marginBottom="size-200">
-                        Welcome to Adobe Demo Builder
-                    </Heading>
-                    
-                    <Text marginBottom="size-400" UNSAFE_className="welcome-step-subtitle">
-                        Let's create a new demo project. We'll guide you through the setup process.
-                    </Text>
-                </View>
+        <SingleColumnLayout>
+            {/* Project Name Input - min-height ensures consistent spacing with/without error */}
+            <div className="mb-8" style={{ minHeight: '96px' }}>
+                <TextField
+                    label="Project Name"
+                    placeholder="Enter project name..."
+                    value={state.projectName}
+                    onChange={(value) => updateState({ projectName: normalizeProjectName(value) })}
+                    validationState={getProjectNameValidationState(state.projectName)}
+                    errorMessage={
+                        state.projectName
+                            ? validateProjectName(state.projectName)
+                            : undefined
+                    }
+                    width="size-6000"
+                    isRequired
+                    {...selectableDefaultProps}
+                />
+            </div>
 
-                <View>
-                    <Heading level={3} marginBottom="size-200">
-                        Name Your Demo
-                    </Heading>
-                    
-                    <Text marginBottom="size-300" UNSAFE_className="welcome-step-description">
-                        Choose a unique name to identify your demo project.
-                    </Text>
-
-                    <Form
-                        necessityIndicator="icon"
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            // Prevent form submission - navigation handled by Continue button
-                        }}
-                    >
-                        <TextField
-                            label="Name"
-                            value={state.projectName}
-                            onChange={(value) => updateState({ projectName: normalizeProjectName(value) })}
-                            description="Lowercase letters, numbers, and hyphens only"
-                            validationState={getProjectNameValidationState(state.projectName)}
-                            errorMessage={
-                                state.projectName
-                                    ? validateProjectName(state.projectName)
-                                    : undefined
-                            }
-                            isRequired
-                            width="size-3600"
-                            {...selectableDefaultProps}
-                        />
-                    </Form>
-                </View>
-
-                {/* Template Selection Section - Only shown when templates are provided */}
-                {templates !== undefined && (
-                    <View>
-                        <Heading level={3} marginBottom="size-200">
-                            Choose a Template
-                        </Heading>
-
-                        <Text marginBottom="size-300" UNSAFE_className="welcome-step-description">
-                            Select a pre-configured template to get started quickly.
-                        </Text>
-
-                        <TemplateGallery
-                            templates={templates}
-                            selectedTemplateId={state.selectedTemplate}
-                            onSelect={handleTemplateSelect}
-                        />
-                    </View>
-                )}
-            </Flex>
-        </div>
+            {/* Template Gallery */}
+            {templates !== undefined && (
+                <TemplateGallery
+                    templates={templates}
+                    selectedTemplateId={state.selectedTemplate}
+                    onSelect={handleTemplateSelect}
+                    initialViewMode={initialViewMode}
+                />
+            )}
+        </SingleColumnLayout>
     );
 }

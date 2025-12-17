@@ -2193,16 +2193,19 @@ div[class*="spectrum"] input[type="search"] {
     box-shadow: 0 0 0 2px var(--spectrum-global-color-blue-400) !important;
 }
 
-.template-card-selected,
-.template-card[data-selected="true"] {
+/* Template card selected state - matches component-card-selected pattern */
+.project-card-spectrum.template-card-selected,
+.project-card-spectrum[data-selected="true"] {
     background: var(--spectrum-global-color-blue-100) !important;
-    border-color: var(--spectrum-global-color-blue-500) !important;
+    border-color: var(--spectrum-global-color-blue-400) !important;
+    transform: none !important; /* No lift on selected */
 }
 
-.template-card-selected:hover,
-.template-card[data-selected="true"]:hover {
+.project-card-spectrum.template-card-selected:hover,
+.project-card-spectrum[data-selected="true"]:hover {
     background: var(--spectrum-global-color-blue-200) !important;
-    border-color: var(--spectrum-global-color-blue-600) !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+    transform: none !important;
 }
 
 .template-card-name {
@@ -2320,6 +2323,17 @@ div[class*="spectrum"] input[type="search"] {
 /* Template Gallery Container */
 .template-gallery {
     width: 100% !important;
+    max-width: 500px !important;
+}
+
+/* Welcome Step Centered Layout */
+.welcome-step-centered {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 100% !important;
+    padding: 40px 20px !important;
 }
 
 } /* End of second @layer theme block */

@@ -56,6 +56,8 @@ interface WizardContainerProps {
     importedSettings?: ImportedSettings | null;
     /** Edit project configuration for edit mode */
     editProject?: EditProjectConfig;
+    /** Initial view mode for template gallery (from settings) */
+    projectsViewMode?: 'cards' | 'rows';
 }
 
 export function WizardContainer({
@@ -64,6 +66,7 @@ export function WizardContainer({
     existingProjectNames,
     importedSettings,
     editProject,
+    projectsViewMode,
 }: WizardContainerProps) {
     // State management hook
     const {
@@ -95,6 +98,12 @@ export function WizardContainer({
         editProject,
     });
 
+    // Demo templates - loaded once on mount
+    const [templates, setTemplates] = useState<DemoTemplate[]>([]);
+    useEffect(() => {
+        loadDemoTemplates().then(setTemplates);
+    }, []);
+
     // Navigation hook
     const {
         goNext,
@@ -116,6 +125,7 @@ export function WizardContainer({
         setIsConfirmingSelection,
         setIsPreparingReview,
         importedSettings,
+        templates,
     });
 
     // Mesh deployment hook - called unconditionally per Rules of Hooks
@@ -128,12 +138,6 @@ export function WizardContainer({
         hasMeshComponent: hasMeshComponent && state.currentStep === 'mesh-deployment',
         workspaceId: state.adobeWorkspace?.id,
     });
-
-    // Demo templates - loaded once on mount
-    const [templates, setTemplates] = useState<DemoTemplate[]>([]);
-    useEffect(() => {
-        loadDemoTemplates().then(setTemplates);
-    }, []);
 
     // Focus trap for keyboard navigation (replaces manual implementation)
     const wizardContainerRef = useFocusTrap<HTMLDivElement>({
@@ -215,7 +219,7 @@ export function WizardContainer({
 
         switch (state.currentStep) {
             case 'welcome':
-                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} templates={templates} />;
+                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} templates={templates} initialViewMode={projectsViewMode} />;
             case 'component-selection':
                 return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':

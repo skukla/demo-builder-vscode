@@ -1,81 +1,42 @@
 /**
  * TemplateGallery Component
  *
- * Full-featured template gallery with search, tag filtering, and view mode toggle.
- * Provides the main template browsing experience in WelcomeStep.
+ * Template gallery with search and view toggles, matching ProjectsDashboard.
  */
 
-import { Flex, Text, SearchField, ActionButton, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
-import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
-import ViewList from '@spectrum-icons/workflow/ViewList';
-import React, { useState, useMemo, useCallback } from 'react';
+import { Text } from '@adobe/react-spectrum';
+import React, { useState, useMemo } from 'react';
 import { DemoTemplate } from '@/types/templates';
 import { TemplateCard } from './TemplateCard';
 import { TemplateRow } from './TemplateRow';
-
-type ViewMode = 'cards' | 'rows';
+import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
 
 export interface TemplateGalleryProps {
-    /** Available templates to display */
     templates: DemoTemplate[];
-    /** Currently selected template ID */
     selectedTemplateId?: string;
-    /** Callback when a template is selected */
     onSelect: (templateId: string) => void;
+    /** Initial view mode from extension settings */
+    initialViewMode?: ViewMode;
 }
 
-/**
- * TemplateGallery - Full template browsing experience
- *
- * Features:
- * - Search by name and description
- * - Tag-based filtering (multiple tags with OR logic)
- * - Grid/list view toggle
- * - Empty state for no matches
- */
 export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
     templates,
     selectedTemplateId,
     onSelect,
+    initialViewMode = 'cards',
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedTags, setSelectedTags] = useState<string[]>([]);
-    const [viewMode, setViewMode] = useState<ViewMode>('cards');
+    const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
 
-    // Extract all unique tags from templates
-    const allTags = useMemo(() => {
-        const tagSet = new Set<string>();
-        templates.forEach(t => t.tags?.forEach(tag => tagSet.add(tag)));
-        return Array.from(tagSet).sort();
-    }, [templates]);
-
-    // Filter templates by search query and selected tags
     const filteredTemplates = useMemo(() => {
-        return templates.filter(template => {
-            // Search filter (name and description)
-            const query = searchQuery.toLowerCase();
-            const matchesSearch = !searchQuery ||
-                template.name.toLowerCase().includes(query) ||
-                template.description.toLowerCase().includes(query);
-
-            // Tag filter (OR logic - matches if template has ANY selected tag)
-            const matchesTags = selectedTags.length === 0 ||
-                selectedTags.some(tag => template.tags?.includes(tag));
-
-            return matchesSearch && matchesTags;
-        });
-    }, [templates, searchQuery, selectedTags]);
-
-    // Toggle tag selection
-    const toggleTag = useCallback((tag: string) => {
-        setSelectedTags(prev =>
-            prev.includes(tag)
-                ? prev.filter(t => t !== tag)
-                : [...prev, tag]
+        if (!searchQuery.trim()) return templates;
+        const query = searchQuery.toLowerCase();
+        return templates.filter(t =>
+            t.name.toLowerCase().includes(query) ||
+            t.description.toLowerCase().includes(query)
         );
-    }, []);
+    }, [templates, searchQuery]);
 
-    // Empty state
     if (templates.length === 0) {
         return (
             <Text UNSAFE_className="text-gray-600">
@@ -84,103 +45,52 @@ export const TemplateGallery: React.FC<TemplateGalleryProps> = ({
         );
     }
 
-    const hasNoResults = filteredTemplates.length === 0 && (searchQuery || selectedTags.length > 0);
-
     return (
-        <div className="template-gallery">
-            {/* Search and View Toggle Bar */}
-            <Flex gap="size-100" marginBottom="size-200" alignItems="end">
-                <SearchField
-                    placeholder="Search templates..."
-                    value={searchQuery}
-                    onChange={setSearchQuery}
-                    width="100%"
-                    isQuiet
-                    aria-label="Search templates"
-                    UNSAFE_className="flex-1"
-                />
-                <Flex gap="size-50">
-                    <TooltipTrigger delay={300}>
-                        <ActionButton
-                            isQuiet
-                            onPress={() => setViewMode('cards')}
-                            aria-label="Card view"
-                            aria-pressed={viewMode === 'cards'}
-                            UNSAFE_className="cursor-pointer"
-                            UNSAFE_style={{
-                                backgroundColor: viewMode === 'cards' ? 'var(--spectrum-global-color-gray-200)' : undefined,
-                                borderRadius: '4px',
-                            }}
-                        >
-                            <ViewGrid />
-                        </ActionButton>
-                        <Tooltip>Card view</Tooltip>
-                    </TooltipTrigger>
-                    <TooltipTrigger delay={300}>
-                        <ActionButton
-                            isQuiet
-                            onPress={() => setViewMode('rows')}
-                            aria-label="List view"
-                            aria-pressed={viewMode === 'rows'}
-                            UNSAFE_className="cursor-pointer"
-                            UNSAFE_style={{
-                                backgroundColor: viewMode === 'rows' ? 'var(--spectrum-global-color-gray-200)' : undefined,
-                                borderRadius: '4px',
-                            }}
-                        >
-                            <ViewList />
-                        </ActionButton>
-                        <Tooltip>List view</Tooltip>
-                    </TooltipTrigger>
-                </Flex>
-            </Flex>
+        <div>
+            <SearchHeader
+                searchQuery={searchQuery}
+                onSearchQueryChange={setSearchQuery}
+                searchPlaceholder="Filter templates..."
+                searchThreshold={0}
+                totalCount={templates.length}
+                filteredCount={filteredTemplates.length}
+                itemNoun="template"
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                hasLoadedOnce={true}
+                alwaysShowCount={true}
+            />
 
-            {/* Tag Filter Chips */}
-            {allTags.length > 0 && (
-                <Flex gap="size-100" wrap marginBottom="size-200">
-                    {allTags.map(tag => (
-                        <button
-                            key={tag}
-                            type="button"
-                            onClick={() => toggleTag(tag)}
-                            className={`template-tag-filter ${selectedTags.includes(tag) ? 'template-tag-filter-selected' : ''}`}
-                            aria-pressed={selectedTags.includes(tag)}
-                        >
-                            {tag}
-                        </button>
-                    ))}
-                </Flex>
-            )}
-
-            {/* Templates Grid/List */}
-            {hasNoResults ? (
-                <Text UNSAFE_className="text-gray-600">
-                    No templates match your search
-                </Text>
-            ) : (
-                <div
-                    data-testid="template-grid"
-                    data-view-mode={viewMode}
-                    className={viewMode === 'cards' ? 'template-card-grid' : 'template-row-list'}
-                >
+            {viewMode === 'cards' && (
+                <div className="projects-grid">
                     {filteredTemplates.map(template => (
-                        viewMode === 'cards' ? (
-                            <TemplateCard
-                                key={template.id}
-                                template={template}
-                                isSelected={selectedTemplateId === template.id}
-                                onSelect={onSelect}
-                            />
-                        ) : (
-                            <TemplateRow
-                                key={template.id}
-                                template={template}
-                                isSelected={selectedTemplateId === template.id}
-                                onSelect={onSelect}
-                            />
-                        )
+                        <TemplateCard
+                            key={template.id}
+                            template={template}
+                            isSelected={selectedTemplateId === template.id}
+                            onSelect={onSelect}
+                        />
                     ))}
                 </div>
+            )}
+
+            {viewMode === 'rows' && (
+                <div className="projects-row-list">
+                    {filteredTemplates.map(template => (
+                        <TemplateRow
+                            key={template.id}
+                            template={template}
+                            isSelected={selectedTemplateId === template.id}
+                            onSelect={onSelect}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {searchQuery && filteredTemplates.length === 0 && (
+                <Text UNSAFE_className="text-gray-500 py-4">
+                    No templates match "{searchQuery}"
+                </Text>
             )}
         </div>
     );

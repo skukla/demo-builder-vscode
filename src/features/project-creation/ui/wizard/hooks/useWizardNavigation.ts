@@ -7,10 +7,12 @@ import {
     buildProjectConfig,
     ImportedSettings,
 } from '../wizardHelpers';
+import { applyTemplateDefaults } from '../../helpers/templateDefaults';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { WizardState, WizardStep } from '@/types/webview';
+import type { DemoTemplate } from '@/types/templates';
 
 const log = webviewLogger('useWizardNavigation');
 
@@ -27,6 +29,8 @@ interface UseWizardNavigationProps {
     setIsConfirmingSelection: React.Dispatch<React.SetStateAction<boolean>>;
     setIsPreparingReview: React.Dispatch<React.SetStateAction<boolean>>;
     importedSettings?: ImportedSettings | null;
+    /** Demo templates for applying defaults when leaving welcome step */
+    templates?: DemoTemplate[];
 }
 
 interface UseWizardNavigationReturn {
@@ -97,6 +101,7 @@ export function useWizardNavigation({
     setIsConfirmingSelection,
     setIsPreparingReview,
     importedSettings,
+    templates,
 }: UseWizardNavigationProps): UseWizardNavigationReturn {
     // Refs for tracking navigation transition timeout (prevents race conditions)
     const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -214,6 +219,11 @@ export function useWizardNavigation({
         if (currentIndex < WIZARD_STEPS.length - 1) {
             const nextStep = WIZARD_STEPS[currentIndex + 1];
 
+            // Apply template defaults when leaving welcome step with template selected
+            if (state.currentStep === 'welcome' && state.selectedTemplate && templates) {
+                setState(prev => applyTemplateDefaults(prev, templates));
+            }
+
             try {
                 setIsConfirmingSelection(true);
                 await handleStepBackendCalls(state.currentStep, nextStep.id, state);
@@ -239,6 +249,7 @@ export function useWizardNavigation({
         navigateToStep,
         WIZARD_STEPS,
         importedSettings,
+        templates,
         setCompletedSteps,
         setHighestCompletedStepIndex,
         setIsConfirmingSelection,

@@ -319,8 +319,8 @@ describe('WelcomeStep - Template Selection', () => {
                 />
             );
 
-            // Then: The step should render without crashing
-            expect(screen.getByText('Welcome to Adobe Demo Builder')).toBeInTheDocument();
+            // Then: The step should render without crashing (showing project name input)
+            expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
 
             // And: Should allow proceeding if project name is valid (no template requirement)
             expect(mockSetCanProceed).toHaveBeenCalledWith(true);

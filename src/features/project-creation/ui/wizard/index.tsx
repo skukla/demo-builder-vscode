@@ -14,6 +14,7 @@ interface WizardInitData extends WebviewInitData {
     wizardSteps?: { id: string; name: string; enabled: boolean }[];
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
+    projectsViewMode?: 'cards' | 'rows';
 }
 
 // Get root element
@@ -44,6 +45,7 @@ root.render(
                         wizardSteps={data?.wizardSteps}
                         existingProjectNames={data?.existingProjectNames}
                         importedSettings={data?.importedSettings}
+                        projectsViewMode={data?.projectsViewMode}
                     />
                 );
             }}

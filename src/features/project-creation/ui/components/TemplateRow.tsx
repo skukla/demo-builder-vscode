@@ -5,8 +5,7 @@
  * Part of the Template Gallery system.
  */
 
-import { Flex, Text, Badge } from '@adobe/react-spectrum';
-import Star from '@spectrum-icons/workflow/Star';
+import { Flex, Text } from '@adobe/react-spectrum';
 import React, { useCallback } from 'react';
 import { DemoTemplate } from '@/types/templates';
 
@@ -23,7 +22,7 @@ export interface TemplateRowProps {
  * TemplateRow - Displays a single template as a selectable row
  *
  * Features:
- * - Horizontal layout: Icon → Name → Description → Tags
+ * - Horizontal layout: Name → Description
  * - Full-width clickable area
  * - Selection state styling
  * - Keyboard accessible
@@ -47,15 +46,11 @@ export const TemplateRow: React.FC<TemplateRowProps> = ({
         [template.id, onSelect],
     );
 
-    const hasIcon = Boolean(template.icon);
-    const hasTags = template.tags && template.tags.length > 0;
-
     return (
         <div
             role="button"
             tabIndex={0}
             data-selected={isSelected ? 'true' : 'false'}
-            data-has-icon={hasIcon ? 'true' : 'false'}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
             className={`template-row ${isSelected ? 'template-row-selected' : ''}`}
@@ -63,11 +58,6 @@ export const TemplateRow: React.FC<TemplateRowProps> = ({
             aria-label={`${template.name}: ${template.description}`}
         >
             <Flex alignItems="center" gap="size-200" width="100%">
-                {/* Icon */}
-                {hasIcon && (
-                    <Star size="S" UNSAFE_className="text-gray-600 flex-shrink-0" />
-                )}
-
                 {/* Name */}
                 <Text UNSAFE_className="template-row-name flex-shrink-0">
                     {template.name}
@@ -77,24 +67,6 @@ export const TemplateRow: React.FC<TemplateRowProps> = ({
                 <Text UNSAFE_className="template-row-description flex-grow truncate">
                     {template.description}
                 </Text>
-
-                {/* Tags - inline */}
-                {hasTags && (
-                    <Flex gap="size-75" UNSAFE_className="flex-shrink-0">
-                        {template.tags!.map((tag) => (
-                            <span key={tag} className="template-tag">
-                                {tag}
-                            </span>
-                        ))}
-                    </Flex>
-                )}
-
-                {/* Featured badge */}
-                {template.featured && (
-                    <Badge variant="positive" UNSAFE_className="template-featured-badge flex-shrink-0">
-                        Featured
-                    </Badge>
-                )}
             </Flex>
         </div>
     );

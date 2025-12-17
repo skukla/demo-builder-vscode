@@ -2,6 +2,7 @@
  * TemplateRow Component Tests
  *
  * Tests for the template row component used in list view.
+ * Simplified design: Name + Description only (no icons, tags, or badges).
  */
 
 import React from 'react';
@@ -18,18 +19,6 @@ const mockTemplate: DemoTemplate = {
         frontend: 'test-frontend',
         backend: 'test-backend',
     },
-};
-
-const mockTemplateWithExtras: DemoTemplate = {
-    id: 'featured-template',
-    name: 'Featured Template',
-    description: 'A featured template with all options',
-    defaults: {
-        frontend: 'test-frontend',
-    },
-    icon: 'Star',
-    tags: ['commerce', 'ai', 'personalization'],
-    featured: true,
 };
 
 describe('TemplateRow', () => {
@@ -50,33 +39,6 @@ describe('TemplateRow', () => {
 
         expect(screen.getByText('Test Template')).toBeInTheDocument();
         expect(screen.getByText('A test template for unit testing')).toBeInTheDocument();
-    });
-
-    it('should display icon on the left when provided', () => {
-        render(
-            <TemplateRow
-                template={mockTemplateWithExtras}
-                isSelected={false}
-                onSelect={mockOnSelect}
-            />
-        );
-
-        const row = screen.getByRole('button');
-        expect(row).toHaveAttribute('data-has-icon', 'true');
-    });
-
-    it('should show tags inline', () => {
-        render(
-            <TemplateRow
-                template={mockTemplateWithExtras}
-                isSelected={false}
-                onSelect={mockOnSelect}
-            />
-        );
-
-        expect(screen.getByText('commerce')).toBeInTheDocument();
-        expect(screen.getByText('ai')).toBeInTheDocument();
-        expect(screen.getByText('personalization')).toBeInTheDocument();
     });
 
     it('should apply selected styling when isSelected is true', () => {
@@ -163,17 +125,5 @@ describe('TemplateRow', () => {
         const row = screen.getByRole('button');
         expect(row).toHaveAttribute('tabIndex', '0');
         expect(row).toHaveAttribute('aria-label', 'Test Template: A test template for unit testing');
-    });
-
-    it('should show featured badge when template.featured is true', () => {
-        render(
-            <TemplateRow
-                template={mockTemplateWithExtras}
-                isSelected={false}
-                onSelect={mockOnSelect}
-            />
-        );
-
-        expect(screen.getByText('Featured')).toBeInTheDocument();
     });
 });

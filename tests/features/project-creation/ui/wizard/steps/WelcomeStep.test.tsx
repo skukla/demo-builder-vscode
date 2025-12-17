@@ -33,23 +33,6 @@ describe('WelcomeStep', () => {
     });
 
     describe('Happy Path - Initial Render', () => {
-        it('should render welcome heading and description', () => {
-            render(
-                <Provider theme={defaultTheme}>
-                    <WelcomeStep
-                        state={baseState as WizardState}
-                        updateState={mockUpdateState}
-                        onNext={mockOnNext}
-                        onBack={mockOnBack}
-                        setCanProceed={mockSetCanProceed}
-                    />
-                </Provider>
-            );
-
-            expect(screen.getByText('Welcome to Adobe Demo Builder')).toBeInTheDocument();
-            expect(screen.getByText(/Let's create a new demo project/)).toBeInTheDocument();
-        });
-
         it('should render project name input field', () => {
             render(
                 <Provider theme={defaultTheme}>
@@ -64,7 +47,6 @@ describe('WelcomeStep', () => {
             );
 
             expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
-            expect(screen.getByText(/Lowercase letters, numbers, and hyphens only/)).toBeInTheDocument();
         });
 
         it('should set default project name on mount', () => {
@@ -346,7 +328,7 @@ describe('WelcomeStep', () => {
             );
 
             // Should render without crashing
-            expect(screen.getByText('Welcome to Adobe Demo Builder')).toBeInTheDocument();
+            expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
         });
 
         it('should handle rapid input changes', async () => {
