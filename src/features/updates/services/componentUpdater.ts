@@ -102,7 +102,7 @@ export class ComponentUpdater {
                     // Restore snapshot
                     await fs.rename(snapshotPath, component.path);
           
-                    this.logger.info('[Updates] Rollback successful - component restored to previous state');
+                    this.logger.debug('[Updates] Rollback successful - component restored to previous state');
           
                     // RESILIENCE: Format user-friendly error message
                     throw new Error(this.formatUpdateError(error as Error));
@@ -197,7 +197,7 @@ export class ComponentUpdater {
             throw new Error('Component verification failed: package.json is invalid');
         }
     
-        this.logger.info('[Updates] ✓ Component structure verified successfully');
+        this.logger.debug('[Updates] ✓ Component structure verified successfully');
     }
 
     /**
@@ -256,7 +256,7 @@ export class ComponentUpdater {
                 throw new Error(`Build failed: ${buildResult.stderr || buildResult.stdout}`);
             }
 
-            this.logger.info('[Updates] ✓ Post-update build completed successfully');
+            this.logger.debug('[Updates] ✓ Post-update build completed successfully');
         } catch (error) {
             this.logger.error('[Updates] Post-update build failed', error as Error);
             throw new Error(`Post-update build failed for ${componentId}: ${(error as Error).message}`);

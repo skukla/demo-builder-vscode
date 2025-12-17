@@ -186,7 +186,7 @@ describe('ComponentUpdater (Step 1)', () => {
 
             // Verify rollback happened
             expect(fs.rename).toHaveBeenCalled();
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            expect(mockLogger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('Rollback successful')
             );
         });
