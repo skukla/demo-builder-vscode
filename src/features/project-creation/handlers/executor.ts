@@ -171,6 +171,16 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         await deployNewMesh(meshContext, typedConfig.apiMesh);
     } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent, typedConfig.meshStepEnabled)) {
         await linkExistingMesh(meshContext, typedConfig.apiMesh!);
+    } else if (meshComponent?.path && typedConfig.meshStepEnabled && typedConfig.apiMesh?.endpoint) {
+        // Mesh was deployed via wizard step - update component instance with wizard data
+        context.logger.debug('[Project Creation] Mesh deployed via wizard step, updating component instance');
+        meshComponent.endpoint = typedConfig.apiMesh.endpoint;
+        meshComponent.status = 'deployed';
+        meshComponent.metadata = {
+            meshId: typedConfig.apiMesh.meshId || '',
+            meshStatus: 'deployed',
+        };
+        project.componentInstances!['commerce-mesh'] = meshComponent;
     }
 
     // ========================================================================
