@@ -31,12 +31,6 @@
       "enabled": true
     },
     {
-      "id": "api-mesh",
-      "name": "API Mesh Setup",
-      "enabled": true,
-      "requiredComponents": ["commerce-mesh"]
-    },
-    {
       "id": "settings",
       "name": "Settings Collection",
       "enabled": true
@@ -45,12 +39,6 @@
       "id": "review",
       "name": "Final Review",
       "enabled": true
-    },
-    {
-      "id": "mesh-deployment",
-      "name": "Deploying Mesh",
-      "enabled": true,
-      "requiredComponents": ["commerce-mesh"]
     },
     {
       "id": "project-creation",

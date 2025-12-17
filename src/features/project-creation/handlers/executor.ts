@@ -26,6 +26,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { TransformedComponentDefinition } from '@/types';
 import { AdobeConfig } from '@/types/base';
 import { getProjectFrontendPort, getComponentConfigPort } from '@/types/typeGuards';
+import type { MeshPhaseState } from '@/types/webview';
 
 // ============================================================================
 // Helper Functions
@@ -60,13 +61,17 @@ interface ProjectCreationConfig {
 export async function executeProjectCreation(context: HandlerContext, config: Record<string, unknown>): Promise<void> {
     const typedConfig = config as unknown as ProjectCreationConfig;
 
-    // Create progress tracker
+    // Track current mesh phase for progress messages
+    let currentMeshPhase: MeshPhaseState | undefined;
+
+    // Create progress tracker (includes mesh phase state when present)
     const progressTracker: ProgressTracker = (currentOperation: string, progress: number, message?: string) => {
         context.sendMessage('creationProgress', {
             currentOperation,
             progress,
             message: message || '',
             logs: [],
+            meshPhase: currentMeshPhase,
         });
     };
 

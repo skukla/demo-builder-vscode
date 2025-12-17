@@ -13,9 +13,6 @@ import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjec
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
-import { ApiMeshStep } from '@/features/mesh/ui/steps/ApiMeshStep';
-import { MeshDeploymentStep } from '@/features/mesh/ui/steps/MeshDeploymentStep';
-import type { MeshDeploymentState } from '@/features/mesh/ui/steps/meshDeploymentTypes';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep, ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
@@ -50,12 +47,6 @@ export interface WizardStepRendererProps {
     existingProjectNames?: string[];
     /** Whether preparing review (import mode transition) */
     isPreparingReview: boolean;
-    /** Mesh deployment state (from useMeshDeployment hook) */
-    meshDeploymentState?: MeshDeploymentState;
-    /** Mesh deployment retry callback */
-    onMeshRetry?: () => void;
-    /** Mesh deployment cancel callback */
-    onMeshCancel?: () => void;
 }
 
 /**
@@ -72,9 +63,6 @@ export function WizardStepRenderer({
     completedSteps,
     existingProjectNames,
     isPreparingReview,
-    meshDeploymentState,
-    onMeshRetry,
-    onMeshCancel,
 }: WizardStepRendererProps): React.ReactElement | null {
     // Import mode: Show loading view during transition to review
     if (isPreparingReview) {
@@ -124,22 +112,8 @@ export function WizardStepRenderer({
         case 'adobe-workspace':
             return <AdobeWorkspaceStep {...baseProps} completedSteps={completedSteps} />;
 
-        case 'api-mesh':
-            return <ApiMeshStep {...baseProps} completedSteps={completedSteps} />;
-
-        case 'mesh-deployment':
-            // Mesh deployment step with timeout recovery
-            if (!meshDeploymentState || !onMeshRetry || !onMeshCancel) {
-                return null;
-            }
-            return (
-                <MeshDeploymentStep
-                    state={meshDeploymentState}
-                    onRetry={onMeshRetry}
-                    onCancel={onMeshCancel}
-                    onContinue={onNext}
-                />
-            );
+        // Note: 'api-mesh' and 'mesh-deployment' steps removed from wizard
+        // Mesh deployment now happens during ProjectCreationStep Phase 3
 
         case 'settings':
             return <ComponentConfigStep {...baseProps} />;

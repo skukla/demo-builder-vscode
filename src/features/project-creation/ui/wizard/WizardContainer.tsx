@@ -5,7 +5,7 @@ import {
     Button,
     Text,
 } from '@adobe/react-spectrum';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     useWizardState,
     useWizardNavigation,
@@ -14,7 +14,6 @@ import {
 } from './hooks';
 import {
     getNextButtonText,
-    hasMeshComponentSelected,
     getNavigationDirection,
     shouldShowWizardFooter,
     ImportedSettings,
@@ -34,9 +33,6 @@ import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjec
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
-import { ApiMeshStep } from '@/features/mesh/ui/steps/ApiMeshStep';
-import { MeshDeploymentStep } from '@/features/mesh/ui/steps/MeshDeploymentStep';
-import { useMeshDeployment } from '@/features/mesh/ui/steps/useMeshDeployment';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
@@ -111,7 +107,6 @@ export function WizardContainer({
         goBack,
         handleCancel,
         handleShowLogs,
-        handleMeshDeploymentCancel,
         getCurrentStepIndex,
     } = useWizardNavigation({
         state,
@@ -127,17 +122,6 @@ export function WizardContainer({
         setIsPreparingReview,
         importedSettings,
         templates,
-    });
-
-    // Mesh deployment hook - called unconditionally per Rules of Hooks
-    const hasMeshComponent = useMemo(
-        () => hasMeshComponentSelected(state.components),
-        [state.components],
-    );
-
-    const meshDeployment = useMeshDeployment({
-        hasMeshComponent: hasMeshComponent && state.currentStep === 'mesh-deployment',
-        workspaceId: state.adobeWorkspace?.id,
     });
 
     // Focus trap for keyboard navigation (replaces manual implementation)
@@ -176,18 +160,6 @@ export function WizardContainer({
         stepContentRef,
         setComponentsData,
     });
-
-    // Render mesh deployment step with hook state
-    const renderMeshDeploymentStep = useCallback(() => {
-        return (
-            <MeshDeploymentStep
-                state={meshDeployment.state}
-                onRetry={meshDeployment.retry}
-                onCancel={handleMeshDeploymentCancel}
-                onContinue={goNext}
-            />
-        );
-    }, [meshDeployment.state, meshDeployment.retry, handleMeshDeploymentCancel, goNext]);
 
     const renderStep = () => {
         // Import mode: Show loading view during transition to review
@@ -231,13 +203,6 @@ export function WizardContainer({
                 return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
             case 'adobe-workspace':
                 return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
-            case 'api-mesh':
-                return <ApiMeshStep {...props} completedSteps={completedSteps} />;
-            case 'mesh-deployment':
-                // Mesh deployment step with timeout recovery (PM Decision 2025-12-06)
-                // Note: This step is disabled by default in wizard-steps.json
-                // When enabled, uses useMeshDeployment hook for state management
-                return renderMeshDeploymentStep();
             case 'settings':
                 return <ComponentConfigStep {...props} />;
             case 'review':

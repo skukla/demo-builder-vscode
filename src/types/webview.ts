@@ -15,8 +15,6 @@ export type WizardStep =
     | 'adobe-auth'  // Adobe authentication step
     | 'adobe-project'  // Adobe project selection step
     | 'adobe-workspace'  // Adobe workspace selection step
-    | 'api-mesh'  // API Mesh verification and setup step
-    | 'mesh-deployment'  // Mesh deployment with timeout recovery (PM Decision 2025-12-06)
     | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
@@ -24,6 +22,7 @@ export type WizardStep =
     | 'commerce-config'  // Kept for compatibility
     | 'review'
     | 'project-creation';
+    // Note: 'api-mesh' and 'mesh-deployment' removed - mesh deployment now in Project Creation Phase 3
 
 export interface WizardState {
     currentStep: WizardStep;
@@ -116,12 +115,28 @@ export interface WizardCommerceConfig {
     searchApiKey?: string;
 }
 
+/** Status of mesh deployment during project creation Phase 3 */
+export type MeshPhaseStatus = 'deploying' | 'verifying' | 'timeout' | 'error' | 'success';
+
+/** Mesh deployment state for Phase 3 UI */
+export interface MeshPhaseState {
+    status: MeshPhaseStatus;
+    attempt: number;
+    maxAttempts: number;
+    elapsedSeconds: number;
+    message?: string;
+    endpoint?: string;
+    errorMessage?: string;
+}
+
 export interface CreationProgress {
     currentOperation: string;
     progress: number;
     message: string;
     logs: string[];
     error?: string;
+    /** Mesh deployment state - present during Phase 3 when mesh is being deployed */
+    meshPhase?: MeshPhaseState;
 }
 
 export interface FeedbackMessage {

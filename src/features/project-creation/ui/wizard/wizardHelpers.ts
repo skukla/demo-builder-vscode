@@ -495,5 +495,7 @@ export function buildProjectConfig(wizardState: WizardState) {
         },
         apiMesh: wizardState.apiMesh,
         componentConfigs: wizardState.componentConfigs,
+        // Mesh deployment happens during Project Creation (Phase 3), not as separate wizard step
+        meshStepEnabled: false,
     };
 }

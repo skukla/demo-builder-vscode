@@ -37,7 +37,7 @@ export async function generateEnvironmentFiles(
     const { project, componentDefinitions, sharedEnvVars, config, progressTracker, logger } = context;
 
     progressTracker('Configuring Environment', 85, 'Generating environment files...');
-    logger.info('[Project Creation] 📝 Phase 4: Generating environment configuration...');
+    logger.debug('[Project Creation] 📝 Phase 4: Generating environment configuration...');
 
     // Get deployed mesh endpoint (if available)
     const deployedMeshEndpoint = project.componentInstances?.['commerce-mesh']?.endpoint;
@@ -70,7 +70,7 @@ export async function generateEnvironmentFiles(
         );
     }
 
-    logger.info('[Project Creation] ✅ Phase 4 complete: Environment configured');
+    logger.debug('[Project Creation] ✅ Phase 4 complete: Environment configured');
 }
 
 /**
@@ -133,14 +133,14 @@ export async function finalizeProject(
         }
 
         await saveProject();
-        logger.info('[Project Creation] ✅ Project state saved successfully');
+        logger.debug('[Project Creation] ✅ Project state saved successfully');
     } catch (saveError) {
         logger.error('[Project Creation] ❌ Failed to save project', saveError instanceof Error ? saveError : undefined);
         throw saveError;
     }
 
     progressTracker('Project Created', 100, 'Project creation complete');
-    logger.info('[Project Creation] ✅ Phase 5 complete: Project finalized');
+    logger.debug('[Project Creation] ✅ Phase 5 complete: Project finalized');
 }
 
 /**
