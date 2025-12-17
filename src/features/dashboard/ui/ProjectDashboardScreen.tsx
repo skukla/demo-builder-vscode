@@ -6,7 +6,7 @@ import {
     ActionButton,
     ProgressCircle,
 } from '@adobe/react-spectrum';
-import Data from '@spectrum-icons/workflow/Data';
+import Code from '@spectrum-icons/workflow/Code';
 import Delete from '@spectrum-icons/workflow/Delete';
 import FolderOpen from '@spectrum-icons/workflow/FolderOpen';
 import Globe from '@spectrum-icons/workflow/Globe';
@@ -169,6 +169,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
         setTimeout(() => setIsOpeningBrowser(false), 1000);
     }, [isOpeningBrowser]);
     const handleConfigure = useCallback(() => webviewClient.postMessage('configure'), []);
+    const handleOpenDevConsole = useCallback(() => webviewClient.postMessage('openDevConsole'), []);
     const handleDeleteProject = useCallback(() => webviewClient.postMessage('deleteProject'), []);
     const handleNavigateBack = useCallback(() => webviewClient.postMessage('navigateBack'), []);
     const handleViewComponents = useCallback(() => webviewClient.postMessage('viewComponents'), []);
@@ -388,14 +389,14 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                             <Text UNSAFE_className="icon-label">Components</Text>
                         </ActionButton>
 
-                        {/* Data Manager (Coming Soon) */}
+                        {/* Developer Console */}
                         <ActionButton
+                            onPress={handleOpenDevConsole}
                             isQuiet
-                            isDisabled
                             UNSAFE_className="dashboard-action-button"
                         >
-                            <Data size="L" />
-                            <Text UNSAFE_className="icon-label">Data Manager</Text>
+                            <Code size="L" />
+                            <Text UNSAFE_className="icon-label">Dev Console</Text>
                         </ActionButton>
 
                         {/* Delete Project */}
