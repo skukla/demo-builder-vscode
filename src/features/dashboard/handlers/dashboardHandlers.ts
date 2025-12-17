@@ -66,8 +66,9 @@ export const handleRequestStatus: MessageHandler = async (context) => {
 
     context.logger.debug(`[Dashboard] Status request: mesh=${meshComponent?.status || 'none'}, asyncCheck=${shouldAsync}`);
 
-    if (shouldAsync) {
-        // Send initial status with 'checking' for mesh
+    // Always send initial 'checking' status when mesh exists (unless deploying)
+    // This ensures UI shows "Checking" state during any async operations
+    if (meshComponent && meshComponent.status !== 'deploying') {
         const initialStatusData = buildStatusPayload(project, frontendConfigChanged, {
             status: 'checking',
             message: MESH_STATUS_MESSAGES.CHECKING,
@@ -77,13 +78,15 @@ export const handleRequestStatus: MessageHandler = async (context) => {
             type: 'statusUpdate',
             payload: initialStatusData,
         });
+    }
 
+    if (shouldAsync) {
         // Check mesh status asynchronously
         checkMeshStatusAsync(context, project, meshComponent, frontendConfigChanged).catch(err => {
             context.logger.error('[Dashboard] Failed to check mesh status', err as Error);
         });
 
-        return { success: true, data: initialStatusData };
+        return { success: true };
     }
 
     // For other cases (deploying, error, no mesh), continue with synchronous check
@@ -689,7 +692,8 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
             await context.panel.webview.postMessage({
                 type: 'meshStatusUpdate',
                 payload: {
-                    status: 'not-deployed',
+                    // Show 'error' for verification failures, 'not-deployed' for actual missing mesh
+                    status: isVerificationError ? 'error' : 'not-deployed',
                     message: isVerificationError
                         ? 'Cannot verify mesh status'
                         : 'Mesh not found in Adobe I/O - may have been deleted externally',
@@ -697,6 +701,11 @@ async function verifyMeshDeployment(context: HandlerContext, project: Project): 
             });
         }
     } else {
+        // Log if mesh ID was recovered (self-healing for older projects)
+        if (verificationResult.data?.meshIdRecovered) {
+            context.logger.info('[Dashboard] Recovered missing mesh ID from Adobe I/O - project updated');
+        }
+
         await syncMeshStatus(project, verificationResult);
         await context.stateManager.saveProject(project);
     }

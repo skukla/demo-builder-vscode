@@ -4,7 +4,7 @@
   "templates": [
     {
       "id": "citisignal",
-      "name": "CitiSignal Storefront",
+      "name": "CitiSignal Headless Storefront",
       "description": "Next.js headless storefront with Adobe Commerce API Mesh integration",
       "icon": "nextjs",
       "featured": true,

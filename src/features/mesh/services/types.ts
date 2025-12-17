@@ -29,7 +29,7 @@ export type MeshDeploymentResult = DataResult<{
  * Result of mesh verification check
  *
  * BREAKING CHANGE: Now uses canonical DataResult<T> type.
- * - On success: data contains { exists, meshId?, endpoint? }
+ * - On success: data contains { exists, meshId?, endpoint?, meshIdRecovered? }
  * - On failure: error field contains error message
  *
  * @example Mesh exists
@@ -37,11 +37,16 @@ export type MeshDeploymentResult = DataResult<{
  *
  * @example Mesh doesn't exist
  * { success: true, data: { exists: false } }
+ *
+ * @example Mesh ID was recovered from Adobe I/O (caller should save project)
+ * { success: true, data: { exists: true, meshId: 'abc', meshIdRecovered: true } }
  */
 export type MeshVerificationResult = DataResult<{
     exists: boolean;
     meshId?: string;
     endpoint?: string;
+    /** True if mesh ID was missing and recovered from Adobe I/O. Caller should save project. */
+    meshIdRecovered?: boolean;
 }>;
 
 

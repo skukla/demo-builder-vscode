@@ -245,16 +245,21 @@ export class DeployMeshCommand extends BaseCommand {
                             this.logger.info(`  Endpoint: ${deployedEndpoint}`);
                         }
                         
-                        // Update component instance
+                        // Update component instance with deployment info
                         meshComponent.endpoint = deployedEndpoint;
                         meshComponent.status = 'deployed';
-                        
+                        meshComponent.metadata = {
+                            ...meshComponent.metadata,
+                            meshId: deployedMeshId || '',
+                            meshStatus: 'deployed',
+                        };
+
                         // Update mesh state (env vars + source hash) to match deployed configuration
                         // This ensures the dashboard knows the config is in sync
                         const { updateMeshState } = await import('../services/stalenessDetector');
                         await updateMeshState(project);
                         this.logger.debug('[Mesh Deployment] Updated mesh state after successful deployment');
-                        
+
                         await this.stateManager.saveProject(project);
                         
                         // Send final "deployed" status to Project Dashboard

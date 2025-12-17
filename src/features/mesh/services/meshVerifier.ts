@@ -5,34 +5,146 @@
 
 import { getMeshNodeVersion } from './meshConfig';
 import { ServiceLocator } from '@/core/di';
+import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { MeshVerificationResult } from '@/features/mesh/services/types';
-import { Project } from '@/types';
+import { Project, ComponentInstance } from '@/types';
 import { parseJSON } from '@/types/typeGuards';
 
 export type { MeshVerificationResult };
 
 /**
+ * Fetch mesh info from Adobe I/O via aio api-mesh:describe
+ * Returns mesh ID and endpoint if found
+ */
+async function fetchMeshInfoFromAdobeIO(): Promise<{ meshId?: string; endpoint?: string } | null> {
+    const commandManager = ServiceLocator.getCommandExecutor();
+    const logger = getLogger();
+
+    try {
+        const result = await commandManager.execute(
+            'aio api-mesh:describe',
+            {
+                timeout: TIMEOUTS.MESH_DESCRIBE,
+                configureTelemetry: false,
+                useNodeVersion: getMeshNodeVersion(),
+                enhancePath: true,
+            },
+        );
+
+        logger.debug(`[Mesh Verifier] describe command: code=${result.code}, stdout=${result.stdout?.length || 0} chars, stderr=${result.stderr?.length || 0} chars`);
+
+        if (result.code !== 0) {
+            logger.debug(`[Mesh Verifier] describe command failed: ${result.stderr?.substring(0, 200)}`);
+            return null;
+        }
+
+        const output = result.stdout;
+
+        if (!output || output.trim().length === 0) {
+            logger.debug('[Mesh Verifier] describe command returned empty output');
+            return null;
+        }
+
+        logger.debug(`[Mesh Verifier] Raw output (first 500 chars): ${output.substring(0, 500)}`);
+
+
+        // Try JSON parsing first
+        try {
+            const meshData = parseJSON<{ meshId?: string; mesh_id?: string; meshEndpoint?: string; endpoint?: string }>(output);
+            if (meshData) {
+                return {
+                    meshId: meshData.meshId || meshData.mesh_id,
+                    endpoint: meshData.meshEndpoint || meshData.endpoint,
+                };
+            }
+        } catch {
+            // Not JSON, try regex
+        }
+
+        // Try regex patterns - handle formats like "Mesh ID:", "mesh_id:", "meshId:"
+        const meshIdMatch = /mesh[\s_-]?id[:\s]+([a-f0-9-]+)/i.exec(output);
+        const endpointMatch = /(?:mesh\s+)?endpoint[:\s]+([^\s\n]+)/i.exec(output);
+
+        if (meshIdMatch || endpointMatch) {
+            return {
+                meshId: meshIdMatch ? meshIdMatch[1] : undefined,
+                endpoint: endpointMatch ? endpointMatch[1] : undefined,
+            };
+        }
+
+        // Log parsing failure (output already logged above)
+        logger.debug('[Mesh Verifier] Could not parse mesh info from describe output');
+        return null;
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
+ * Attempt to recover missing mesh ID by fetching from Adobe I/O
+ * This is a self-healing mechanism for projects created before mesh ID was saved
+ */
+async function tryRecoverMeshId(meshComponent: ComponentInstance): Promise<string | null> {
+    const logger = getLogger();
+    logger.debug('[Mesh Verifier] Attempting to recover missing mesh ID from Adobe I/O...');
+
+    const meshInfo = await fetchMeshInfoFromAdobeIO();
+
+    if (meshInfo?.meshId) {
+        logger.info('[Mesh Verifier] Successfully recovered mesh ID from Adobe I/O');
+
+        // Update the component metadata with recovered mesh ID
+        meshComponent.metadata = {
+            ...meshComponent.metadata,
+            meshId: meshInfo.meshId,
+            meshStatus: 'deployed',
+        };
+
+        // Update endpoint if we got one
+        if (meshInfo.endpoint) {
+            meshComponent.endpoint = meshInfo.endpoint;
+        }
+
+        return meshInfo.meshId;
+    }
+
+    logger.debug('[Mesh Verifier] Could not recover mesh ID from Adobe I/O');
+    return null;
+}
+
+/**
  * Verify that a mesh actually exists in Adobe I/O
  * Calls `aio api-mesh:describe` to check real deployment status
+ *
+ * Note: If mesh ID is missing from metadata, attempts to recover it from Adobe I/O.
+ * The caller should save the project if meshIdRecovered is true in the result.
  */
 export async function verifyMeshDeployment(project: Project): Promise<MeshVerificationResult> {
     const meshComponent = project.componentInstances?.['commerce-mesh'];
-    
+
     // No mesh component = no mesh
     if (!meshComponent) {
         return { success: true, data: { exists: false } };
     }
-    
-    // Get mesh ID from metadata
-    const meshId = meshComponent.metadata?.meshId;
+
+    // Get mesh ID from metadata, or try to recover it
+    let meshId = meshComponent.metadata?.meshId;
+    let meshIdRecovered = false;
+
     if (!meshId) {
-        return {
-            success: false,
-            error: 'No mesh ID found in project metadata',
-        };
+        // Attempt to recover mesh ID from Adobe I/O (self-healing for older projects)
+        meshId = await tryRecoverMeshId(meshComponent);
+        if (meshId) {
+            meshIdRecovered = true;
+        } else {
+            return {
+                success: false,
+                error: 'No mesh ID found in project metadata',
+            };
+        }
     }
-    
+
     try {
         const commandManager = ServiceLocator.getCommandExecutor();
         
@@ -59,8 +171,8 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
         // Parse output to extract mesh info
         const output = result.stdout;
         
-        // Try to find mesh ID in output
-        const meshIdMatch = /mesh[_-]?id[:\s]+([a-f0-9-]+)/i.exec(output);
+        // Try to find mesh ID in output - handle formats like "Mesh ID:", "mesh_id:", "meshId:"
+        const meshIdMatch = /mesh[\s_-]?id[:\s]+([a-f0-9-]+)/i.exec(output);
         const foundMeshId = meshIdMatch ? meshIdMatch[1] : null;
         
         // Try to find endpoint
@@ -78,6 +190,7 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
                             exists: true,
                             meshId: (meshData.meshId || foundMeshId || meshId) as string,
                             endpoint: meshData.endpoint || endpoint,
+                            meshIdRecovered,
                         },
                     };
                 }
@@ -100,6 +213,7 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
                 exists: true,
                 meshId: foundMeshId ?? (meshId as string),
                 endpoint,
+                meshIdRecovered,
             },
         };
         
