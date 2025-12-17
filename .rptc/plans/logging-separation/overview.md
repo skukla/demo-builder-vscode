@@ -10,13 +10,21 @@ The logging architecture in `debugLogger.ts` is correct - this is a caller disci
 
 ## Problem Statement
 
-Currently both channels show nearly identical content because developers use `logger.info()` for technical implementation details that should use `logger.debug()`.
+Currently both channels show nearly identical content because:
+1. Developers use `logger.info()` for technical implementation details that should use `logger.debug()`
+2. Verbose diagnostic data uses `debug()` when it should use `trace()`
 
-**Rule of Thumb**: If a message has a `[ComponentName]` prefix, it's a technical detail that should use `debug()` not `info()`.
+**Log Level Guidelines**:
+| Level | Use For | Example |
+|-------|---------|---------|
+| `info()` | User milestones (✅, success, complete) | `Authentication successful` |
+| `debug()` | Technical operations with `[Component]` prefix | `[Auth] Token check completed in 2519ms` |
+| `trace()` | Verbose diagnostics (full payloads, stdout) | `[Auth] Full token response: {...}` |
 
 ## Scope
 
-- **174 `logger.info('[...')` calls** across 34 files (candidates for audit)
+- **174 `logger.info('[...')` calls** across 34 files (candidates for `info` → `debug`)
+- **Verbose `logger.debug()` calls** with full payloads/stdout (candidates for `debug` → `trace`)
 - **34 files** to review and potentially modify
 - **5 priority feature areas** based on user-visible impact
 
@@ -66,9 +74,11 @@ grep -rn "logger\.info.*\[" src/features/ src/core/ src/commands/ --include="*.t
 
 - [ ] All existing tests pass (no regressions)
 - [ ] `logger.info('[Component]...')` calls changed to `logger.debug('[Component]...')`
+- [ ] `logger.debug()` calls with verbose data (full payloads, stdout) changed to `logger.trace()`
 - [ ] User milestone messages remain as `info()`
 - [ ] User Logs channel shows only user-relevant information
-- [ ] Debug channel shows full technical details
+- [ ] Debug channel shows technical operation flow
+- [ ] Trace level reserved for verbose diagnostics
 - [ ] Logging README updated with guidelines
 
 ## Files Reference
