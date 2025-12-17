@@ -140,16 +140,22 @@ export class ShowProjectsListCommand extends BaseWebviewCommand {
             await sidebarProvider.setShowingProjectsList(true);
         }
 
+        // Track if this is an existing panel being revealed vs new panel creation
+        const isExistingPanel = this.communicationManager !== undefined;
+
         // Create or reveal panel and initialize communication
         await this.createOrRevealPanel();
         if (!this.communicationManager) {
             await this.initializeCommunication();
         }
 
-        // Always send fresh data after revealing panel
-        // This ensures the UI is up-to-date after operations like delete or config changes
-        await this.refreshProjectsList();
-        await this.refreshConfig();
+        // Only send fresh data when REVEALING an existing panel
+        // New panels get data via the UI's getProjects request after mount
+        // Sending projectsUpdated on new panels causes double-render flicker
+        if (isExistingPanel) {
+            await this.refreshProjectsList();
+            await this.refreshConfig();
+        }
     }
 
     /**
