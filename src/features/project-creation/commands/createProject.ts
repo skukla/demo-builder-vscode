@@ -368,7 +368,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             // Store imported settings for use in getInitialData
             this.importedSettings = options?.importedSettings ?? null;
             if (this.importedSettings) {
-                this.logger.info(`[Project Creation] Loading wizard with imported settings from: ${options?.sourceDescription ?? 'unknown source'}`);
+                this.logger.debug(`[Project Creation] Loading wizard with imported settings from: ${options?.sourceDescription ?? 'unknown source'}`);
             }
 
             // Dispose Projects List if open (replace it with the wizard)
@@ -410,7 +410,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     // Override dispose to clean up polling intervals and sidebar context
     public dispose(): void {
-        this.logger.info('[Wizard] dispose() called - cleaning up sidebar context');
+        this.logger.debug('[Wizard] dispose() called - cleaning up sidebar context');
 
         // Update context variable for view switching (fire-and-forget since dispose is synchronous)
         vscode.commands.executeCommand('setContext', 'demoBuilder.wizardActive', false);

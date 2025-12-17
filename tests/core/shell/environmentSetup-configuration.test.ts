@@ -212,8 +212,8 @@ describe('EnvironmentSetup - Configuration', () => {
 
             await environmentSetup.ensureAdobeCLIConfigured(executeCommand);
 
-            // Verify info() was called (success message)
-            expect(mockLogger.info).toHaveBeenCalledWith(
+            // Verify debug() was called (technical message, not user-facing)
+            expect(mockLogger.debug).toHaveBeenCalledWith(
                 expect.stringContaining('Configured aio-cli to opt out of telemetry')
             );
         });

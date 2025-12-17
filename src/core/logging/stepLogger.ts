@@ -259,7 +259,7 @@ export class StepLogger {
      */
     public logStepStart(stepId: string) {
         const stepName = this.getStepName(stepId);
-        this.logger.info(`[${stepName}] Starting ${stepName.toLowerCase()}...`);
+        this.logger.debug(`[${stepName}] Starting ${stepName.toLowerCase()}...`);
     }
     
     /**

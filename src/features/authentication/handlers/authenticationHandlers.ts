@@ -339,7 +339,7 @@ export async function handleAuthenticate(
                     if (selected) {
                         currentOrg = orgs?.[0];
                         context.authManager?.setCachedOrganization(currentOrg);
-                        context.logger.info(`[Auth] Successfully auto-selected and cached organization: ${orgs?.[0].name}`);
+                        context.logger.debug(`[Auth] Successfully auto-selected and cached organization: ${orgs?.[0].name}`);
                     } else {
                         context.logger.warn(`[Auth] Failed to auto-select organization: ${orgs?.[0].name}`);
                         requiresOrgSelection = true;

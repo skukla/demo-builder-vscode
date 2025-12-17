@@ -134,7 +134,7 @@ export class StartDemoCommand extends BaseCommand {
         while (Date.now() - startTime < maxWait) {
             const portFree = await commandManager.isPortAvailable(port);
             if (portFree) {
-                this.logger.info(`[Start Demo] Port ${port} is now free`);
+                this.logger.debug(`[Start Demo] Port ${port} is now free`);
                 return true;
             }
             await new Promise(resolve => setTimeout(resolve, checkInterval));

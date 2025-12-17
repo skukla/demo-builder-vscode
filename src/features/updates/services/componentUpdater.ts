@@ -220,7 +220,7 @@ export class ComponentUpdater {
             return;
         }
 
-        this.logger.info(`[Updates] Running post-update setup for ${componentId}...`);
+        this.logger.debug(`[Updates] Running post-update setup for ${componentId}...`);
 
         const { ServiceLocator } = await import('@/core/di');
         const commandManager = ServiceLocator.getCommandExecutor();

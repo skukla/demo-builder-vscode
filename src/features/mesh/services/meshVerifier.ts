@@ -92,7 +92,7 @@ async function tryRecoverMeshId(meshComponent: ComponentInstance): Promise<strin
     const meshInfo = await fetchMeshInfoFromAdobeIO();
 
     if (meshInfo?.meshId) {
-        logger.info('[Mesh Verifier] Successfully recovered mesh ID from Adobe I/O');
+        logger.debug('[Mesh Verifier] Successfully recovered mesh ID from Adobe I/O');
 
         // Update the component metadata with recovered mesh ID
         meshComponent.metadata = {

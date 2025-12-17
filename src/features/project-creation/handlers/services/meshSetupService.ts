@@ -244,16 +244,16 @@ export async function deployNewMesh(
                     message: 'Mesh deployment failed',
                 });
 
-                logger.info('[Project Creation] Waiting for user decision (retry or cancel)...');
+                logger.debug('[Project Creation] Waiting for user decision (retry or cancel)...');
                 const decision = await waitForMeshDecision();
 
                 if (decision === 'cancel') {
-                    logger.info('[Project Creation] User cancelled mesh deployment');
+                    logger.debug('[Project Creation] User cancelled mesh deployment');
                     throw new Error('Mesh deployment cancelled by user');
                 }
 
                 // User chose retry, continue to next iteration
-                logger.info(`[Project Creation] User chose to retry mesh deployment (attempt ${attempt + 1}/${MAX_MESH_ATTEMPTS})`);
+                logger.debug(`[Project Creation] User chose to retry mesh deployment (attempt ${attempt + 1}/${MAX_MESH_ATTEMPTS})`);
                 continue;
             }
 

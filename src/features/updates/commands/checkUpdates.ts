@@ -210,7 +210,7 @@ export class CheckUpdatesCommand extends BaseCommand {
             return;
         }
 
-        this.logger.info(`[Updates] User selected ${selected.length} component update(s) to apply`);
+        this.logger.debug(`[Updates] User selected ${selected.length} component update(s) to apply`);
 
         // Perform updates for selected items
         await this.performMultiProjectUpdates(selected);

@@ -175,7 +175,7 @@ export class EnvFileWatcherService implements vscode.Disposable {
 
             // Content changed
             this.fileContentHashes.set(filePath, currentHash);
-            this.logger.info(`[Env Watcher] Content actually changed: ${filePath}`);
+            this.logger.debug(`[Env Watcher] Content actually changed: ${filePath}`);
             this.logger.debug(`[Env Watcher] Hash changed from ${previousHash.substring(0, 8)}... to ${currentHash.substring(0, 8)}...`);
 
             // Show notification if demo running
@@ -186,7 +186,7 @@ export class EnvFileWatcherService implements vscode.Disposable {
                     return;
                 }
 
-                this.logger.info('[Env Watcher] Demo is running, suggesting restart');
+                this.logger.debug('[Env Watcher] Demo is running, suggesting restart');
                 this.restartNotificationShown = true;
 
                 vscode.window.showInformationMessage(

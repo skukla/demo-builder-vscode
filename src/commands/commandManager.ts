@@ -119,7 +119,7 @@ export class CommandManager {
                 }
 
                 // Stop the current demo
-                this.logger.info('[LoadProject] Stopping current demo before switching...');
+                this.logger.debug('[LoadProject] Stopping current demo before switching...');
                 await vscode.commands.executeCommand('demoBuilder.stopDemo');
             }
 

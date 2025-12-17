@@ -343,7 +343,7 @@ export class EnvironmentSetup {
             if (isFnmAvailable) {
                 const currentVersion = await this.getCurrentFnmVersion(executeCommand);
                 if (!currentVersion?.includes(requiredVersion)) {
-                    this.logger.info(`[Env Setup] Switching to Node v${requiredVersion}`);
+                    this.logger.debug(`[Env Setup] Switching to Node v${requiredVersion}`);
                     await executeCommand(`fnm use ${requiredVersion} --silent-if-unchanged`, {
                         timeout: TIMEOUTS.COMMAND_DEFAULT,
                     });
@@ -418,7 +418,7 @@ export class EnvironmentSetup {
             // Only log success if command actually succeeded
             if (result.code === 0) {
                 EnvironmentSetup.telemetryConfigured = true;
-                this.logger.info('[Telemetry] Configured aio-cli to opt out of telemetry');
+                this.logger.debug('[Telemetry] Configured aio-cli to opt out of telemetry');
             } else {
                 this.logger.debug(`[Telemetry] Failed to configure (exit code ${result.code})`);
                 // Still mark as configured to avoid repeated attempts
