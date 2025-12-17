@@ -13,10 +13,10 @@ import {
     hasAdobeProjectContext,
     determineMeshStatus,
     shouldAsyncCheckMesh,
-    MeshStatusInfo,
-    ProjectWithAdobeWorkspace,
-    ProjectWithAdobeProject,
-} from './dashboardHelpers';
+    checkMeshStatusAsync,
+    sendDemoStatusUpdate,
+    verifyMeshDeployment,
+} from './meshStatusHelpers';
 import { BaseWebviewCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { sessionUIState } from '@/core/state/sessionUIState';
@@ -25,10 +25,10 @@ import { validateURL } from '@/core/validation';
 import { toggleLogsPanel } from '@/features/lifecycle/handlers/lifecycleHandlers';
 import { detectMeshChanges, detectFrontendChanges } from '@/features/mesh/services/stalenessDetector';
 import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
-import { Project, ComponentInstance } from '@/types';
+import { Project } from '@/types';
 import { ErrorCode } from '@/types/errorCodes';
 import { MessageHandler, HandlerContext } from '@/types/handlers';
-import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
+import { getProjectFrontendPort } from '@/types/typeGuards';
 
 /**
  * Handle 'ready' message - Send initialization data
@@ -97,7 +97,13 @@ export const handleRequestStatus: MessageHandler = async (context) => {
             context.logger.error('[Dashboard] Failed to check mesh status', err as Error);
         });
 
-        return { success: true };
+        // Return initial 'checking' status data for Pattern B (request-response)
+        // UI receives data via return value AND postMessage updates
+        const initialStatusData = buildStatusPayload(project, frontendConfigChanged, {
+            status: 'checking',
+            message: MESH_STATUS_MESSAGES.CHECKING,
+        });
+        return { success: true, data: initialStatusData };
     }
 
     // For other cases (deploying, error, no mesh), continue with synchronous check
@@ -209,7 +215,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
         // Trigger browser auth
         await authManager.login();
 
-        context.logger.info('[Dashboard] Browser authentication completed');
+        context.logger.debug('[Dashboard] Browser authentication completed');
         sendAuthProgress('Restoring Adobe context...');
 
         // Auto-select project's Adobe context (org → project → workspace)
@@ -220,7 +226,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
 
             try {
                 await authManager.selectOrganization(project.adobe.organization);
-                context.logger.info('[Dashboard] Organization selected successfully');
+                context.logger.debug('[Dashboard] Organization selected successfully');
             } catch (orgError) {
                 context.logger.warn('[Dashboard] Could not select project organization', orgError as Error);
             }
@@ -233,7 +239,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
 
             try {
                 await authManager.selectProject(project.adobe.projectId, project.adobe.organization);
-                context.logger.info('[Dashboard] Project selected successfully');
+                context.logger.debug('[Dashboard] Project selected successfully');
             } catch (projectError) {
                 context.logger.warn('[Dashboard] Could not select project', projectError as Error);
             }
@@ -246,7 +252,7 @@ export const handleReAuthenticate: MessageHandler = async (context) => {
 
             try {
                 await authManager.selectWorkspace(project.adobe.workspace, project.adobe.projectId);
-                context.logger.info('[Dashboard] Workspace selected successfully');
+                context.logger.debug('[Dashboard] Workspace selected successfully');
             } catch (workspaceError) {
                 context.logger.warn('[Dashboard] Could not select workspace', workspaceError as Error);
             }
@@ -405,212 +411,6 @@ export const handleDeleteProject: MessageHandler = async () => {
     await vscode.commands.executeCommand('demoBuilder.deleteProject');
     return { success: true };
 };
-
-// ============================================================================
-// Async Handler Helpers (require HandlerContext)
-// ============================================================================
-
-/**
- * Check mesh status asynchronously and update UI when complete
- */
-async function checkMeshStatusAsync(
-    context: HandlerContext,
-    project: Project,
-    meshComponent: ComponentInstance,
-    frontendConfigChanged: boolean,
-): Promise<void> {
-    context.logger.debug('[Dashboard] Starting async mesh status check');
-
-    try {
-        let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
-        let meshEndpoint: string | undefined;
-        let meshMessage: string | undefined;
-
-        if (project.componentConfigs) {
-            const authManager = ServiceLocator.getAuthenticationService();
-
-            const tokenStatus = await authManager.getTokenStatus();
-
-            if (!tokenStatus.isAuthenticated) {
-                // Calculate how long ago the session expired
-                const expiredMinutesAgo = Math.abs(tokenStatus.expiresInMinutes);
-                const expiredMessage = expiredMinutesAgo > 0
-                    ? `Session expired ${expiredMinutesAgo} minute${expiredMinutesAgo !== 1 ? 's' : ''} ago`
-                    : 'Session expired';
-
-                context.logger.debug(`[Dashboard] Auth check failed: ${expiredMessage}`);
-                context.panel?.webview.postMessage({
-                    type: 'statusUpdate',
-                    payload: buildStatusPayload(project, frontendConfigChanged, {
-                        status: 'needs-auth',
-                        message: expiredMessage,
-                    }),
-                });
-                return;
-            }
-
-            // Check org access
-            await authManager.ensureSDKInitialized();
-
-            if (project.adobe?.organization) {
-                const currentOrg = await authManager.getCurrentOrganization();
-                if (!currentOrg || currentOrg.id !== project.adobe.organization) {
-                    context.logger.warn('[Dashboard] User lost access to project organization');
-                    context.panel?.webview.postMessage({
-                        type: 'statusUpdate',
-                        payload: buildStatusPayload(project, frontendConfigChanged, {
-                            status: 'error',
-                            message: 'Organization access lost',
-                        }),
-                    });
-                    return;
-                }
-            }
-
-            // Initialize meshState if needed
-            if (!project.meshState) {
-                project.meshState = {
-                    envVars: {},
-                    sourceHash: null,
-                    lastDeployed: '',
-                };
-            }
-
-            const meshChanges = await detectMeshChanges(project, project.componentConfigs);
-
-            if (meshChanges.shouldSaveProject) {
-                await context.stateManager.saveProject(project);
-            }
-
-            if (hasMeshDeploymentRecord(project)) {
-                meshStatus = determineMeshStatus(meshChanges, meshComponent, project);
-                meshEndpoint = meshComponent.endpoint;
-
-                verifyMeshDeployment(context, project).catch(() => {
-                    // Background verification - errors logged internally
-                });
-            } else if (meshChanges.unknownDeployedState) {
-                meshStatus = meshComponent.status === 'error' ? 'error' : 'not-deployed';
-                meshMessage = MESH_STATUS_MESSAGES.UNKNOWN;
-            }
-        }
-
-        context.logger.debug(`[Dashboard] Mesh check complete: ${meshStatus}`);
-        if (context.panel) {
-            context.panel.webview.postMessage({
-                type: 'statusUpdate',
-                payload: buildStatusPayload(project, frontendConfigChanged, {
-                    status: meshStatus,
-                    endpoint: meshEndpoint,
-                    message: meshMessage,
-                }),
-            });
-        }
-    } catch (error) {
-        context.logger.error('[Dashboard] Error in async mesh status check', error as Error);
-
-        if (context.panel) {
-            context.panel.webview.postMessage({
-                type: 'statusUpdate',
-                payload: buildStatusPayload(project, frontendConfigChanged, {
-                    status: 'error',
-                    message: 'Failed to check deployment status',
-                }),
-            });
-        }
-    }
-}
-
-/**
- * Send quick demo status update without re-checking mesh
- */
-async function sendDemoStatusUpdate(context: HandlerContext): Promise<void> {
-    if (!context.panel) return;
-
-    const project = await context.stateManager.getCurrentProject();
-    if (!project) return;
-
-    const frontendConfigChanged = project.status === 'running' ? detectFrontendChanges(project) : false;
-
-    const meshComponent = project.componentInstances?.['commerce-mesh'];
-    let meshStatus: { status: string; message?: string; endpoint?: string } | undefined = undefined;
-
-    if (meshComponent) {
-        if (meshComponent.status === 'deploying') {
-            meshStatus = { status: 'deploying', message: 'Deploying...' };
-        } else if (meshComponent.status === 'error') {
-            meshStatus = { status: 'error', message: 'Deployment error' };
-        } else if (hasMeshDeploymentRecord(project)) {
-            if (project.componentConfigs) {
-                const meshChanges = await detectMeshChanges(project, project.componentConfigs);
-                meshStatus = {
-                    status: meshChanges.hasChanges ? 'config-changed' : 'deployed',
-                    endpoint: meshComponent.endpoint,
-                };
-            } else {
-                meshStatus = { status: 'deployed', endpoint: meshComponent.endpoint };
-            }
-        } else {
-            meshStatus = { status: 'not-deployed' };
-        }
-    }
-
-    context.panel.webview.postMessage({
-        type: 'statusUpdate',
-        payload: buildStatusPayload(project, frontendConfigChanged, meshStatus),
-    });
-}
-
-/**
- * Verify mesh deployment with Adobe I/O
- */
-async function verifyMeshDeployment(context: HandlerContext, project: Project): Promise<void> {
-    const { verifyMeshDeployment: verify, syncMeshStatus } = await import('@/features/mesh/services/meshVerifier');
-
-    const verificationResult = await verify(project);
-
-    if (!verificationResult.success || !verificationResult.data?.exists) {
-        // Distinguish between verification errors and actual "mesh not found"
-        const isVerificationError = !verificationResult.success;
-        const errorMessage = verificationResult.error || '';
-
-        if (isVerificationError) {
-            context.logger.warn('[Dashboard] Cannot verify mesh - verification failed', {
-                error: errorMessage,
-            });
-        } else {
-            context.logger.warn('[Dashboard] Mesh not found in Adobe I/O - may have been deleted externally');
-        }
-
-        await syncMeshStatus(project, verificationResult);
-        await context.stateManager.saveProject(project);
-
-        // Note: Do NOT call handleRequestStatus() here - it would create an infinite loop
-        // since handleRequestStatus() triggers verifyMeshDeployment() in the background.
-        // The UI is updated via meshStatusUpdate message below.
-
-        if (context.panel) {
-            await context.panel.webview.postMessage({
-                type: 'meshStatusUpdate',
-                payload: {
-                    // Show 'error' for verification failures, 'not-deployed' for actual missing mesh
-                    status: isVerificationError ? 'error' : 'not-deployed',
-                    message: isVerificationError
-                        ? 'Cannot verify mesh status'
-                        : 'Mesh not found in Adobe I/O - may have been deleted externally',
-                },
-            });
-        }
-    } else {
-        // Log if mesh ID was recovered (self-healing for older projects)
-        if (verificationResult.data?.meshIdRecovered) {
-            context.logger.info('[Dashboard] Recovered missing mesh ID from Adobe I/O - project updated');
-        }
-
-        await syncMeshStatus(project, verificationResult);
-        await context.stateManager.saveProject(project);
-    }
-}
 
 /**
  * Handle 'viewComponents' message - Toggle the components tree view in the sidebar

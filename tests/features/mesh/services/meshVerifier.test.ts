@@ -15,10 +15,23 @@ import type { Project } from '@/types';
  */
 
 // Mock dependencies
+jest.mock('@/core/logging', () => ({
+    getLogger: () => ({
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+    }),
+}));
+
 jest.mock('@/core/di', () => ({
     ServiceLocator: {
         getCommandExecutor: jest.fn(),
     },
+}));
+
+jest.mock('@/features/mesh/services/meshConfig', () => ({
+    getMeshNodeVersion: () => '20',
 }));
 
 describe('MeshVerifier', () => {
@@ -222,9 +235,11 @@ describe('MeshVerifier', () => {
                 },
             });
 
+            // Use stdout that doesn't contain mesh ID pattern at all
+            // Avoid "mesh ID" text followed by hex chars which could false-positive match
             mockCommandManager.execute.mockResolvedValue({
                 code: 0,
-                stdout: 'Some output without mesh ID\nEndpoint: https://example.com/graphql',
+                stdout: 'API configuration loaded successfully\nGraphQL URL: https://example.com/graphql',
             });
 
             const result = await verifyMeshDeployment(project);

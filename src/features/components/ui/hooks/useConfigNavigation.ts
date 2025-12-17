@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { ServiceGroup, UniqueField } from './useComponentConfig';
 
 interface UseConfigNavigationProps {
@@ -118,13 +119,12 @@ export function useConfigNavigation({
                 }
 
                 // Scroll the navigation field node into view
-                // SOP §1: 150ms matches TIMEOUTS.SCROLL_ANIMATION (frontend can't import backend constants)
                 const navScrollTimeout = setTimeout(() => {
                     const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
                     if (navFieldElement) {
                         navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     }
-                }, 150);
+                }, FRONTEND_TIMEOUTS.SCROLL_ANIMATION);
                 timeoutsRef.current.push(navScrollTimeout);
             } else {
                 // Within same section, only update navigation highlighting (no scroll)
@@ -160,14 +160,13 @@ export function useConfigNavigation({
         let focusTimeout: NodeJS.Timeout | undefined;
         if (firstEditableField) {
             // Wait for DOM to be ready, then focus the first field
-            // SOP §1: 100ms matches TIMEOUTS.UI_UPDATE_DELAY (frontend can't import backend constants)
             focusTimeout = setTimeout(() => {
                 const firstFieldElement = document.querySelector(`#field-${firstEditableField.key} input, #field-${firstEditableField.key} select`);
                 if (firstFieldElement instanceof HTMLElement) {
                     // Prevent scroll on initial focus to keep page at top
                     firstFieldElement.focus({ preventScroll: true });
                 }
-            }, 100);
+            }, FRONTEND_TIMEOUTS.UI_UPDATE_DELAY);
             timeoutsRef.current.push(focusTimeout);
         }
 

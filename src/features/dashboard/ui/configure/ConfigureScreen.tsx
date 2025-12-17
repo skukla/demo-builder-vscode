@@ -12,6 +12,7 @@ import { NavigationPanel, NavigationSection } from '@/core/ui/components/navigat
 import { useFocusTrap } from '@/core/ui/hooks';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { toServiceGroupWithSortedFields } from '@/features/components/services/serviceGroupTransforms';
 import type { Project } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
@@ -481,7 +482,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                     if (navFieldElement) {
                         navFieldElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
-                }, 150);
+                }, FRONTEND_TIMEOUTS.SCROLL_ANIMATION);
             } else {
                 const navFieldElement = document.getElementById(`nav-field-${fieldId}`);
                 if (navFieldElement) {

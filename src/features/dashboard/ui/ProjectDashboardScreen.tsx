@@ -129,7 +129,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                 if (firstButton) {
                     firstButton.focus();
                 }
-            }, 100);
+            }, TIMEOUTS.UI_UPDATE_DELAY);
             return () => clearTimeout(timer);
         }
         return undefined;
