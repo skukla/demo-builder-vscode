@@ -2,8 +2,9 @@ import * as crypto from 'crypto';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseCommand } from './baseCommand';
+import { WebviewPanelManager } from './webviewPanelManager';
 import { WebviewCommunicationManager, createWebviewCommunication } from '@/core/communication';
-import { ExecutionLock, setLoadingState, TIMEOUTS } from '@/core/utils';
+import { setLoadingState, TIMEOUTS } from '@/core/utils';
 
 /**
  * Base class for commands that use webviews with robust communication
@@ -51,75 +52,42 @@ import { ExecutionLock, setLoadingState, TIMEOUTS } from '@/core/utils';
  * ```
  */
 export abstract class BaseWebviewCommand extends BaseCommand {
-    // Singleton: Track active webview panels and their communication managers by ID to prevent duplicates
-    private static activePanels = new Map<string, vscode.WebviewPanel>();
-    private static activeCommunicationManagers = new Map<string, WebviewCommunicationManager>();
-
-    // Static callback for disposal notifications
-    private static disposalCallback?: (webviewId: string) => Promise<void>;
-
-    // Track when we're transitioning between webviews to prevent auto-welcome
-    private static transitionLock = new ExecutionLock('WebviewTransition');
-    private static transitionRelease: (() => void) | undefined;
-    private static transitionTimeout?: NodeJS.Timeout;
-
+    // Instance references to webview panel and communication manager
     protected panel: vscode.WebviewPanel | undefined;
     protected communicationManager: WebviewCommunicationManager | undefined;
+
+    // ========================================================================
+    // Static Delegations to WebviewPanelManager
+    // These maintain backward compatibility while centralizing panel management
+    // ========================================================================
 
     /**
      * Set callback to be invoked when any webview disposes
      * Used by extension.ts to handle auto-reopen logic centrally
      */
     public static setDisposalCallback(callback: (webviewId: string) => Promise<void>): void {
-        BaseWebviewCommand.disposalCallback = callback;
+        WebviewPanelManager.setDisposalCallback(callback);
     }
 
     /**
      * Start a webview transition (prevents auto-welcome during transition)
      */
     public static async startWebviewTransition(): Promise<void> {
-        // Clear existing timeout if present (safety for double-start)
-        if (BaseWebviewCommand.transitionTimeout) {
-            clearTimeout(BaseWebviewCommand.transitionTimeout);
-        }
-
-        // Release existing lock if held
-        if (BaseWebviewCommand.transitionRelease) {
-            BaseWebviewCommand.transitionRelease();
-            BaseWebviewCommand.transitionRelease = undefined;
-        }
-
-        // Acquire lock
-        BaseWebviewCommand.transitionRelease = await BaseWebviewCommand.transitionLock.acquire();
-
-        // Auto-clear after 3 seconds (safety timeout)
-        BaseWebviewCommand.transitionTimeout = setTimeout(() => {
-            BaseWebviewCommand.endWebviewTransition();
-        }, TIMEOUTS.WEBVIEW_TRANSITION);
+        await WebviewPanelManager.startWebviewTransition();
     }
 
     /**
      * End a webview transition
      */
     public static endWebviewTransition(): void {
-        // Clear timeout if present
-        if (BaseWebviewCommand.transitionTimeout) {
-            clearTimeout(BaseWebviewCommand.transitionTimeout);
-            BaseWebviewCommand.transitionTimeout = undefined;
-        }
-
-        // Release lock if held
-        if (BaseWebviewCommand.transitionRelease) {
-            BaseWebviewCommand.transitionRelease();
-            BaseWebviewCommand.transitionRelease = undefined;
-        }
+        WebviewPanelManager.endWebviewTransition();
     }
 
     /**
      * Check if a webview transition is in progress
      */
     public static isWebviewTransitionInProgress(): boolean {
-        return BaseWebviewCommand.transitionLock.isLocked();
+        return WebviewPanelManager.isWebviewTransitionInProgress();
     }
 
     /**
@@ -127,7 +95,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
      * Used to check if any webviews are still open
      */
     public static getActivePanelCount(): number {
-        return BaseWebviewCommand.activePanels.size;
+        return WebviewPanelManager.getActivePanelCount();
     }
 
     /**
@@ -136,7 +104,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
      * @returns The active panel or undefined if not found
      */
     public static getActivePanel(webviewId: string): vscode.WebviewPanel | undefined {
-        return BaseWebviewCommand.activePanels.get(webviewId);
+        return WebviewPanelManager.getActivePanel(webviewId);
     }
 
     /**
@@ -152,7 +120,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
      */
     public isVisible(): boolean {
         const webviewId = this.getWebviewId();
-        const activePanel = BaseWebviewCommand.activePanels.get(webviewId);
+        const activePanel = WebviewPanelManager.getActivePanel(webviewId);
         try {
             return (activePanel !== undefined && activePanel.visible) ||
                    (this.panel !== undefined && this.panel.visible);
@@ -167,15 +135,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
      * Useful for cleanup during extension reset
      */
     public static disposeAllActivePanels(): void {
-        BaseWebviewCommand.activePanels.forEach((panel, _id) => {
-            try {
-                panel.dispose();
-            } catch {
-                // Ignore errors during disposal
-            }
-        });
-        BaseWebviewCommand.activePanels.clear();
-        BaseWebviewCommand.activeCommunicationManagers.clear();
+        WebviewPanelManager.disposeAllActivePanels();
     }
 
     /**
@@ -223,22 +183,22 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         // Check if this webview type already has an active panel
         // Important: Check panel first regardless of comm manager state
         // to prevent orphaning panels when only one reference exists
-        const existingPanel = BaseWebviewCommand.activePanels.get(webviewId);
+        const existingPanel = WebviewPanelManager.getActivePanel(webviewId);
 
         if (existingPanel) {
             try {
                 existingPanel.reveal();
                 this.panel = existingPanel;
                 // Reuse existing comm manager if available
-                const existingCommManager = BaseWebviewCommand.activeCommunicationManagers.get(webviewId);
+                const existingCommManager = WebviewPanelManager.getActiveCommunicationManager(webviewId);
                 if (existingCommManager) {
                     this.communicationManager = existingCommManager;
                 }
                 return existingPanel;
             } catch {
                 // Panel was disposed - clean up stale references and create new one
-                BaseWebviewCommand.activePanels.delete(webviewId);
-                BaseWebviewCommand.activeCommunicationManagers.delete(webviewId);
+                WebviewPanelManager.unregisterPanel(webviewId);
+                WebviewPanelManager.unregisterCommunicationManager(webviewId);
             }
         }
 
@@ -259,7 +219,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         );
 
         // Register in singleton map
-        BaseWebviewCommand.activePanels.set(webviewId, this.panel);
+        WebviewPanelManager.registerPanel(webviewId, this.panel);
 
         // Set up disposal handling - call dispose() to ensure full cleanup
         const panelDisposalListener = this.panel.onDidDispose(() => {
@@ -305,7 +265,7 @@ export abstract class BaseWebviewCommand extends BaseCommand {
 
         // Register in singleton map
         const webviewId = this.getWebviewId();
-        BaseWebviewCommand.activeCommunicationManagers.set(webviewId, this.communicationManager);
+        WebviewPanelManager.registerCommunicationManager(webviewId, this.communicationManager);
 
         // Set up message handlers
         this.initializeMessageHandlers(this.communicationManager);
@@ -424,18 +384,19 @@ export abstract class BaseWebviewCommand extends BaseCommand {
         }
 
         // Remove from singleton maps
-        BaseWebviewCommand.activePanels.delete(webviewId);
-        BaseWebviewCommand.activeCommunicationManagers.delete(webviewId);
+        WebviewPanelManager.unregisterPanel(webviewId);
+        WebviewPanelManager.unregisterCommunicationManager(webviewId);
 
         // Clear panel reference
         this.panel = undefined;
 
         // Notify about disposal if webview requested Welcome reopen
-        if (this.shouldReopenWelcomeOnDispose() && BaseWebviewCommand.disposalCallback) {
+        const disposalCallback = WebviewPanelManager.getDisposalCallback();
+        if (this.shouldReopenWelcomeOnDispose() && disposalCallback) {
             // Use setTimeout to ensure disposal is fully complete before callback
             // SOP §1: Using TIMEOUTS.UI_UPDATE_DELAY
             setTimeout(() => {
-                BaseWebviewCommand.disposalCallback?.(webviewId);
+                disposalCallback(webviewId);
             }, TIMEOUTS.UI_UPDATE_DELAY);
         }
     }
