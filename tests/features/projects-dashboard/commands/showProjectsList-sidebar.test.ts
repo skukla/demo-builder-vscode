@@ -309,30 +309,32 @@ describe('ShowProjectsListCommand - Sidebar Integration', () => {
             expect((command as any).createOrRevealPanel).toHaveBeenCalled();
         });
 
-        it('should refresh projects list after panel creation', async () => {
-            // Given: A Projects List command instance with mocked internal methods
+        it('should refresh projects list when revealing existing panel', async () => {
+            // Given: A Projects List command instance with EXISTING communicationManager
+            // (simulates revealing an existing panel, not creating a new one)
             const command = createCommand();
+
+            // Set communicationManager to simulate existing panel
+            const mockCommunicationManager = {
+                on: jest.fn(),
+                sendMessage: jest.fn().mockResolvedValue(undefined),
+            };
+            (command as any).communicationManager = mockCommunicationManager;
 
             const callOrder: string[] = [];
             (command as any).createOrRevealPanel = jest.fn().mockImplementation(async () => {
                 callOrder.push('createOrRevealPanel');
                 return mockPanel;
             });
-            (command as any).initializeCommunication = jest.fn().mockImplementation(async () => {
-                callOrder.push('initializeCommunication');
-                return {
-                    on: jest.fn(),
-                    sendMessage: jest.fn().mockResolvedValue(undefined),
-                };
-            });
             (command as any).refreshProjectsList = jest.fn().mockImplementation(async () => {
                 callOrder.push('refreshProjectsList');
             });
+            (command as any).refreshConfig = jest.fn().mockResolvedValue(undefined);
 
             // When: execute() is called
             await command.execute();
 
-            // Then: refreshProjectsList should be called after panel creation
+            // Then: refreshProjectsList should be called after panel reveal
             const panelIndex = callOrder.indexOf('createOrRevealPanel');
             const refreshIndex = callOrder.indexOf('refreshProjectsList');
 

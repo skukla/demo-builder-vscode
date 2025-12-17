@@ -176,23 +176,10 @@ export async function checkMeshStatusAsync(
                 return;
             }
 
-            // Check org access
-            await authManager.ensureSDKInitialized();
-
-            if (project.adobe?.organization) {
-                const currentOrg = await authManager.getCurrentOrganization();
-                if (!currentOrg || currentOrg.id !== project.adobe.organization) {
-                    context.logger.warn('[Dashboard] User lost access to project organization');
-                    context.panel?.webview.postMessage({
-                        type: 'statusUpdate',
-                        payload: buildStatusPayload(project, frontendConfigChanged, {
-                            status: 'error',
-                            message: 'Organization access lost',
-                        }),
-                    });
-                    return;
-                }
-            }
+            // Skip org access check during dashboard open - CLI commands can trigger
+            // unexpected browser auth even when token appears valid.
+            // Org access is verified when user attempts mesh operations instead.
+            // See: dashboard regression where opening dashboard triggered browser login
 
             // Initialize meshState if needed
             if (!project.meshState) {
