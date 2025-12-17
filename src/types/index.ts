@@ -96,3 +96,6 @@ export {
     hasErrorCode,
     toAppError,
 } from './errors';
+
+// Demo template types
+export * from './templates';

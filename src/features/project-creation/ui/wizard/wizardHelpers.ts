@@ -13,6 +13,94 @@ export interface WizardStepConfig {
 }
 
 /**
+ * Extended step configuration with optional component requirements.
+ * Used for loading wizard-steps.json which may include requiredComponents.
+ */
+export interface WizardStepConfigWithRequirements {
+    id: string;
+    name: string;
+    enabled: boolean;
+    /** Optional: Component IDs that must ALL be selected for this step to appear (AND logic) */
+    requiredComponents?: string[];
+    /** Optional: Component IDs where ANY selection makes this step appear (OR logic) */
+    requiredAny?: string[];
+}
+
+// ============================================================================
+// Component-Specific Step Filtering
+// ============================================================================
+
+/**
+ * Check if a specific component is selected in the component selection state.
+ *
+ * Searches across all component categories: frontend, backend, dependencies,
+ * integrations, and appBuilderApps.
+ *
+ * @param componentId - The component ID to check
+ * @param selectedComponents - Current component selection state
+ * @returns true if component is selected, false otherwise
+ */
+export function isComponentSelected(
+    componentId: string,
+    selectedComponents: ComponentSelection | undefined,
+): boolean {
+    if (!selectedComponents) return false;
+
+    // Check string fields (frontend, backend)
+    if (selectedComponents.frontend === componentId) return true;
+    if (selectedComponents.backend === componentId) return true;
+
+    // Check array fields (dependencies, integrations, appBuilderApps)
+    if (selectedComponents.dependencies?.includes(componentId)) return true;
+    if (selectedComponents.integrations?.includes(componentId)) return true;
+    if (selectedComponents.appBuilderApps?.includes(componentId)) return true;
+
+    return false;
+}
+
+/**
+ * Filter wizard steps based on component selection.
+ *
+ * Steps without requiredComponents always pass (backward compatible).
+ * Steps with requiredComponents pass only if ALL required components are selected.
+ *
+ * @param allSteps - All configured wizard steps with requirements
+ * @param selectedComponents - Currently selected components
+ * @returns Filtered steps that should be displayed
+ */
+export function filterStepsByComponents(
+    allSteps: WizardStepConfigWithRequirements[],
+    selectedComponents: ComponentSelection | undefined,
+): Array<{ id: WizardStep; name: string }> {
+    return allSteps
+        .filter(step => {
+            // Disabled steps never shown
+            if (!step.enabled) return false;
+
+            // requiredComponents: ALL must be selected (AND logic)
+            if (step.requiredComponents && step.requiredComponents.length > 0) {
+                return step.requiredComponents.every(componentId =>
+                    isComponentSelected(componentId, selectedComponents),
+                );
+            }
+
+            // requiredAny: ANY must be selected (OR logic)
+            if (step.requiredAny && step.requiredAny.length > 0) {
+                return step.requiredAny.some(componentId =>
+                    isComponentSelected(componentId, selectedComponents),
+                );
+            }
+
+            // No requirements = always shown (backward compatible)
+            return true;
+        })
+        .map(step => ({
+            id: step.id as WizardStep,
+            name: step.name,
+        }));
+}
+
+/**
  * Determine navigation direction based on target and current indices.
  *
  * @returns 'forward' when navigating to a later step, 'backward' otherwise

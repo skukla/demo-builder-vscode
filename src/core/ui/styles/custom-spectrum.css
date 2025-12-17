@@ -2158,4 +2158,182 @@ div[class*="spectrum"] input[type="search"] {
     .search-field-custom [class*="Icon"] + input {
         padding-left: 32px !important;
     }
+
+/* ===========================================
+   Template Card Grid Styles
+   Used in WelcomeStep for demo template selection
+   =========================================== */
+.template-card-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 16px !important;
+    padding: 8px 0 !important;
+}
+
+.template-card {
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 8px !important;
+    padding: 20px !important;
+    border: 2px solid var(--spectrum-global-color-gray-300) !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    min-height: 100px !important;
+}
+
+.template-card:hover {
+    background: var(--spectrum-global-color-gray-75) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.template-card:focus {
+    outline: none !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+    box-shadow: 0 0 0 2px var(--spectrum-global-color-blue-400) !important;
+}
+
+/* Template card selected state - matches component-card-selected pattern */
+.project-card-spectrum.template-card-selected,
+.project-card-spectrum[data-selected="true"] {
+    background: var(--spectrum-global-color-blue-100) !important;
+    border-color: var(--spectrum-global-color-blue-400) !important;
+    transform: none !important; /* No lift on selected */
+}
+
+.project-card-spectrum.template-card-selected:hover,
+.project-card-spectrum[data-selected="true"]:hover {
+    background: var(--spectrum-global-color-blue-200) !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+    transform: none !important;
+}
+
+.template-card-name {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    line-height: 1.3 !important;
+}
+
+.template-card-description {
+    font-size: 13px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.4 !important;
+}
+
+/* Template Row Styles (List View) */
+.template-row-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.template-row {
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 6px !important;
+    padding: 12px 16px !important;
+    border: 2px solid var(--spectrum-global-color-gray-300) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.template-row:hover {
+    background: var(--spectrum-global-color-gray-75) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+}
+
+.template-row:focus {
+    outline: none !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+    box-shadow: 0 0 0 2px var(--spectrum-global-color-blue-400) !important;
+}
+
+.template-row-selected,
+.template-row[data-selected="true"] {
+    background: var(--spectrum-global-color-blue-100) !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+}
+
+.template-row-name {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    min-width: 180px !important;
+}
+
+.template-row-description {
+    font-size: 13px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* Template Tag Styles (inside cards/rows) */
+.template-tag {
+    display: inline-block !important;
+    font-size: 11px !important;
+    padding: 2px 8px !important;
+    background: var(--spectrum-global-color-gray-200) !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    border-radius: 12px !important;
+}
+
+/* Template Tag Filter Styles (gallery filter chips) */
+.template-tag-filter {
+    display: inline-block !important;
+    font-size: 12px !important;
+    padding: 4px 12px !important;
+    background: var(--spectrum-global-color-gray-100) !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    border-radius: 16px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.template-tag-filter:hover {
+    background: var(--spectrum-global-color-gray-200) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+}
+
+.template-tag-filter:focus {
+    outline: none !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+    box-shadow: 0 0 0 2px var(--spectrum-global-color-blue-400) !important;
+}
+
+.template-tag-filter-selected,
+.template-tag-filter[aria-pressed="true"] {
+    background: var(--spectrum-global-color-blue-500) !important;
+    color: white !important;
+    border-color: var(--spectrum-global-color-blue-600) !important;
+}
+
+.template-tag-filter-selected:hover,
+.template-tag-filter[aria-pressed="true"]:hover {
+    background: var(--spectrum-global-color-blue-600) !important;
+}
+
+/* Template Featured Badge */
+.template-featured-badge {
+    font-size: 10px !important;
+}
+
+/* Template Gallery Container */
+.template-gallery {
+    width: 100% !important;
+    max-width: 500px !important;
+}
+
+/* Welcome Step Centered Layout */
+.welcome-step-centered {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 100% !important;
+    padding: 40px 20px !important;
+}
+
 } /* End of second @layer theme block */

@@ -5,7 +5,6 @@ import {
     Picker,
     Item,
     Checkbox,
-    Divider,
 } from '@adobe/react-spectrum';
 import LockClosed from '@spectrum-icons/workflow/LockClosed';
 import React, { useRef } from 'react';
@@ -62,14 +61,6 @@ const DEFAULT_BACKENDS: ComponentOption[] = [
     { id: 'adobe-commerce-paas', name: 'Adobe Commerce PaaS', description: 'Adobe Commerce DSN instance' },
 ];
 
-const DEFAULT_INTEGRATIONS: ComponentOption[] = [
-    { id: 'experience-platform', name: 'Experience Platform', description: 'Adobe Experience Platform integration' },
-];
-
-const DEFAULT_APP_BUILDER: ComponentOption[] = [
-    { id: 'integration-service', name: 'Integration Service', description: 'Custom integration service app' },
-];
-
 export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     state,
     updateState,
@@ -88,12 +79,10 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
         setSelectedBackend,
         selectedDependencies,
         selectedServices,
-        selectedIntegrations,
-        selectedAppBuilder,
+        // Note: selectedIntegrations, selectedAppBuilder, handleIntegrationToggle, handleAppBuilderToggle
+        // are still available from the hook but not destructured since sections were removed
         handleDependencyToggle,
         handleServiceToggle,
-        handleIntegrationToggle,
-        handleAppBuilderToggle,
     } = useComponentSelection({
         state,
         updateState,
@@ -106,13 +95,11 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
     const dataTyped = (componentsData || {}) as ComponentsData;
     const frontendOptions = dataTyped.frontends || DEFAULT_FRONTENDS;
     const backendOptions = dataTyped.backends || DEFAULT_BACKENDS;
-    const integrationsOptions = dataTyped.integrations || DEFAULT_INTEGRATIONS;
-    const appBuilderOptions = dataTyped.appBuilder || DEFAULT_APP_BUILDER;
 
     return (
         <div className="max-w-800 w-full m-0 p-5">
-            {/* Frontend and Backend */}
-            <Flex gap="size-300" wrap marginBottom="size-300">
+            {/* Frontend and Backend Selection */}
+            <Flex gap="size-300" wrap>
                 {/* Frontend */}
                 <View flex="1" minWidth="300px">
                     <div ref={frontendPickerRef}>
@@ -207,57 +194,6 @@ export const ComponentSelectionStep: React.FC<ComponentSelectionStepProps> = ({
                             ))}
                         </View>
                     )}
-                </View>
-            </Flex>
-
-            <Divider size="S" />
-
-            {/* External Systems and App Builder */}
-            <Flex gap="size-300" wrap marginTop="size-300">
-                {/* External Systems */}
-                <View flex="1" minWidth="300px">
-                    <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
-                        External Systems
-                    </Text>
-                    <View UNSAFE_className="bordered-container">
-                        {integrationsOptions.map((system) => (
-                            <Checkbox
-                                key={system.id}
-                                isSelected={selectedIntegrations.has(system.id)}
-                                onChange={(sel) => handleIntegrationToggle(system.id, sel)}
-                                aria-label={system.name}
-                                UNSAFE_className="mb-2"
-                            >
-                                <Flex direction="column" gap="size-50">
-                                    <Text UNSAFE_className={cn('text-md', 'font-medium', 'block')}>{system.name}</Text>
-                                    <Text UNSAFE_className={cn('text-sm', 'text-gray-600', 'block')}>{system.description}</Text>
-                                </Flex>
-                            </Checkbox>
-                        ))}
-                    </View>
-                </View>
-
-                {/* App Builder Apps */}
-                <View flex="1" minWidth="300px">
-                    <Text UNSAFE_className={cn('text-xs', 'font-semibold', 'text-gray-700', 'mb-2', 'text-uppercase', 'letter-spacing-05')}>
-                        App Builder Apps
-                    </Text>
-                    <View UNSAFE_className="bordered-container">
-                        {appBuilderOptions.map((app) => (
-                            <Checkbox
-                                key={app.id}
-                                isSelected={selectedAppBuilder.has(app.id)}
-                                onChange={(sel) => handleAppBuilderToggle(app.id, sel)}
-                                aria-label={app.name}
-                                UNSAFE_className="mb-2"
-                            >
-                                <Flex direction="column" gap="size-50">
-                                    <Text UNSAFE_className={cn('text-md', 'font-medium', 'block')}>{app.name}</Text>
-                                    <Text UNSAFE_className={cn('text-sm', 'text-gray-600', 'block')}>{app.description}</Text>
-                                </Flex>
-                            </Checkbox>
-                        ))}
-                    </View>
                 </View>
             </Flex>
         </div>

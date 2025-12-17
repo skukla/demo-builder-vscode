@@ -5,7 +5,7 @@ import {
     Button,
     Text,
 } from '@adobe/react-spectrum';
-import React, { useCallback, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     useWizardState,
     useWizardNavigation,
@@ -19,6 +19,8 @@ import {
     ImportedSettings,
     EditProjectConfig,
 } from './wizardHelpers';
+import { loadDemoTemplates } from '../helpers/templateLoader';
+import type { DemoTemplate } from '@/types/templates';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay, LoadingDisplay } from '@/core/ui/components/feedback';
 import { PageHeader, PageFooter, CenteredFeedbackContainer, SingleColumnLayout } from '@/core/ui/components/layout';
@@ -54,6 +56,8 @@ interface WizardContainerProps {
     importedSettings?: ImportedSettings | null;
     /** Edit project configuration for edit mode */
     editProject?: EditProjectConfig;
+    /** Initial view mode for template gallery (from settings) */
+    projectsViewMode?: 'cards' | 'rows';
 }
 
 export function WizardContainer({
@@ -62,6 +66,7 @@ export function WizardContainer({
     existingProjectNames,
     importedSettings,
     editProject,
+    projectsViewMode,
 }: WizardContainerProps) {
     // State management hook
     const {
@@ -93,6 +98,12 @@ export function WizardContainer({
         editProject,
     });
 
+    // Demo templates - loaded once on mount
+    const [templates, setTemplates] = useState<DemoTemplate[]>([]);
+    useEffect(() => {
+        loadDemoTemplates().then(setTemplates);
+    }, []);
+
     // Navigation hook
     const {
         goNext,
@@ -114,6 +125,7 @@ export function WizardContainer({
         setIsConfirmingSelection,
         setIsPreparingReview,
         importedSettings,
+        templates,
     });
 
     // Mesh deployment hook - called unconditionally per Rules of Hooks
@@ -207,7 +219,7 @@ export function WizardContainer({
 
         switch (state.currentStep) {
             case 'welcome':
-                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} />;
+                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} templates={templates} initialViewMode={projectsViewMode} />;
             case 'component-selection':
                 return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':

@@ -29,6 +29,7 @@ export interface WizardState {
     currentStep: WizardStep;
     projectName: string;
     projectTemplate: ProjectTemplate;
+    selectedTemplate?: string;  // Selected demo template ID (e.g., 'citisignal')
     components?: ComponentSelection;
     componentConfigs?: ComponentConfigs;  // Component-specific environment configurations
     adobeAuth: AdobeAuthState;

@@ -173,6 +173,7 @@ demo-builder-vscode/
 7. **src/utils/stateManager.ts** - Project state persistence and management
 8. **templates/prerequisites.json** - Prerequisite definitions
 9. **templates/components.json** - Component registry
+10. **templates/demo-templates.json** - Demo template definitions (pre-configured component selections)
 
 ## Common Tasks
 
@@ -180,14 +181,14 @@ demo-builder-vscode/
 → See `templates/CLAUDE.md` and `docs/systems/prerequisites-system.md`
 
 ### Modifying Wizard Steps
-→ See wizard steps in respective feature directories:
+-> See wizard steps in respective feature directories:
   - `src/features/authentication/ui/steps/` - Adobe auth steps
   - `src/features/components/ui/steps/` - Component selection steps
   - `src/features/prerequisites/ui/steps/` - Prerequisites step
   - `src/features/mesh/ui/steps/` - API Mesh step
-  - `src/features/project-creation/ui/steps/` - Wizard-specific steps (Review, ProjectCreation)
-→ Note: Welcome step removed - wizard now starts at adobe-auth step
-→ See feature documentation for wizard orchestration details
+  - `src/features/project-creation/ui/steps/` - WelcomeStep (with template selection), ReviewStep, ProjectCreationStep
+-> Note: WelcomeStep includes demo template selection (see `templates/CLAUDE.md` for demo templates documentation)
+-> See feature documentation for wizard orchestration details
 
 ### Debugging Width Issues
 → See `docs/troubleshooting.md` and use WidthDebugger component

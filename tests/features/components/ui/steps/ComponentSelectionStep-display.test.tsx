@@ -83,7 +83,9 @@ describe('ComponentSelectionStep - Display', () => {
             expect(screen.getByLabelText('Select backend system')).toBeInTheDocument();
         });
 
-        it('should render external systems section', () => {
+        it('should NOT render external systems section (simplified UI)', () => {
+            // External Systems and App Builder Apps sections were removed
+            // to reduce visual clutter as part of Demo Templates Phase 3
             render(
                 <Provider theme={defaultTheme}>
                     <ComponentSelectionStep
@@ -95,8 +97,8 @@ describe('ComponentSelectionStep - Display', () => {
                 </Provider>
             );
 
-            expect(screen.getByText('External Systems')).toBeInTheDocument();
-            expect(screen.getByText('App Builder Apps')).toBeInTheDocument();
+            expect(screen.queryByText('External Systems')).not.toBeInTheDocument();
+            expect(screen.queryByText('App Builder Apps')).not.toBeInTheDocument();
         });
     });
 });

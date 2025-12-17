@@ -58,6 +58,7 @@ interface InitialWizardData {
     wizardSteps: WizardStep[] | null;
     existingProjectNames: string[];
     importedSettings: SettingsFile | null;
+    projectsViewMode: 'cards' | 'rows';
 }
 
 export class CreateProjectWebviewCommand extends BaseWebviewCommand {
@@ -251,6 +252,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         const allProjects = await this.stateManager.getAllProjects();
         const existingProjectNames = allProjects.map(p => p.name);
 
+        // Get view mode setting
+        const config = vscode.workspace.getConfiguration('demoBuilder');
+        const projectsViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
+
         return {
             theme: vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Dark ? 'dark' : 'light',
             workspacePath: vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
@@ -258,6 +263,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             wizardSteps,
             existingProjectNames,
             importedSettings: this.importedSettings,
+            projectsViewMode,
         };
     }
 
