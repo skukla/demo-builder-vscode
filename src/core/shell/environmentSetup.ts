@@ -54,6 +54,37 @@ export class EnvironmentSetup {
     private static checkingTelemetry = false;
 
     /**
+     * Helper: Scan node version manager directory for Adobe CLI installation
+     * Reduces duplication between fnm and nvm scanning logic (SOP §10 compliance)
+     *
+     * @param basePath - Base directory of the node manager (e.g., fnm node-versions or nvm versions)
+     * @param binSubpath - Path to aio binary relative to version directory (e.g., 'installation/bin/aio' for fnm)
+     * @returns Major version number if found, null otherwise
+     */
+    private scanNodeManagerForAio(basePath: string, binSubpath: string): string | null {
+        if (!fsSync.existsSync(basePath)) return null;
+
+        try {
+            const versions = fsSync.readdirSync(basePath);
+            for (const version of versions) {
+                const aioPath = path.join(basePath, version, binSubpath);
+                if (fsSync.existsSync(aioPath)) {
+                    // Extract major version number
+                    const match = /v?(\d+)/.exec(version);
+                    if (match) {
+                        this.logger.debug(`[Env Setup] Found Adobe CLI in Node ${version}, using version family: ${match[1]}`);
+                        return match[1];
+                    }
+                    return version;
+                }
+            }
+        } catch {
+            // Ignore errors
+        }
+        return null;
+    }
+
+    /**
      * Helper: Find paths for a node version manager (fnm or nvm)
      * Reduces duplication between fnm and nvm path finding logic
      */
@@ -245,54 +276,23 @@ export class EnvironmentSetup {
 
         // PRIORITY 3: Scan for installed aio-cli (fallback)
         const homeDir = os.homedir();
-        // Fix #7 (01b94d6): Support FNM_DIR environment variable
+
+        // Try fnm (Fix #7: Support FNM_DIR environment variable)
         const fnmBase = process.env.FNM_DIR
             ? path.join(process.env.FNM_DIR, 'node-versions')
             : path.join(homeDir, '.local/share/fnm/node-versions');
-
-        if (fsSync.existsSync(fnmBase)) {
-            try {
-                const versions = fsSync.readdirSync(fnmBase);
-                for (const version of versions) {
-                    const aioPath = path.join(fnmBase, version, 'installation/bin/aio');
-                    if (fsSync.existsSync(aioPath)) {
-                        // Extract major version number
-                        const match = /v?(\d+)/.exec(version);
-                        if (match) {
-                            this.logger.debug(`[Env Setup] Found Adobe CLI in Node ${version}, using version family: ${match[1]}`);
-                            this.cachedAdobeCLINodeVersion = match[1];
-                            return match[1];
-                        }
-                        this.cachedAdobeCLINodeVersion = version;
-                        return version;
-                    }
-                }
-            } catch {
-                // Ignore errors
-            }
+        const fnmVersion = this.scanNodeManagerForAio(fnmBase, 'installation/bin/aio');
+        if (fnmVersion) {
+            this.cachedAdobeCLINodeVersion = fnmVersion;
+            return fnmVersion;
         }
 
-        // Check nvm
+        // Try nvm
         const nvmBase = path.join(homeDir, '.nvm/versions/node');
-        if (fsSync.existsSync(nvmBase)) {
-            try {
-                const versions = fsSync.readdirSync(nvmBase);
-                for (const version of versions) {
-                    const aioPath = path.join(nvmBase, version, 'bin/aio');
-                    if (fsSync.existsSync(aioPath)) {
-                        const match = /v?(\d+)/.exec(version);
-                        if (match) {
-                            this.logger.debug(`[Env Setup] Found Adobe CLI in Node ${version}, using version family: ${match[1]}`);
-                            this.cachedAdobeCLINodeVersion = match[1];
-                            return match[1];
-                        }
-                        this.cachedAdobeCLINodeVersion = version;
-                        return version;
-                    }
-                }
-            } catch {
-                // Ignore errors
-            }
+        const nvmVersion = this.scanNodeManagerForAio(nvmBase, 'bin/aio');
+        if (nvmVersion) {
+            this.cachedAdobeCLINodeVersion = nvmVersion;
+            return nvmVersion;
         }
 
         // Cache null result
