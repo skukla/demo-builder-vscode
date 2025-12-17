@@ -60,6 +60,7 @@ export function useAutoScroll<
   const {
     enabled = true,
     behavior = 'smooth',
+    // SOP §1: 100ms matches TIMEOUTS.UI_UPDATE_DELAY (frontend can't import backend constants)
     delay = 100,
     padding = 10,
   } = options;

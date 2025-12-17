@@ -16,6 +16,7 @@ import {
     getNextButtonText,
     hasMeshComponentSelected,
     getNavigationDirection,
+    shouldShowWizardFooter,
     ImportedSettings,
     EditProjectConfig,
 } from './wizardHelpers';
@@ -306,7 +307,7 @@ export function WizardContainer({
                     </div>
 
                     {/* Footer - hidden on project-creation, mesh-deployment (own buttons), and during preparing review transition */}
-                    {!isLastStep && state.currentStep !== 'mesh-deployment' && !isPreparingReview && (
+                    {shouldShowWizardFooter(isLastStep, state.currentStep, isPreparingReview) && (
                         <PageFooter
                             leftContent={
                                 <Button

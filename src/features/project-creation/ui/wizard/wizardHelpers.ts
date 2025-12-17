@@ -389,6 +389,25 @@ export function getFirstEnabledStep(
 // ============================================================================
 
 /**
+ * Determine whether to show wizard footer (SOP §10 compliance)
+ *
+ * Extracts long validation chain to named helper for readability.
+ * Footer is hidden on final step, mesh-deployment (has own buttons), and during review preparation.
+ *
+ * @param isLastStep - Whether current step is the final step
+ * @param currentStep - Current step ID
+ * @param isPreparingReview - Whether review preparation is in progress
+ * @returns true if footer should be shown
+ */
+export function shouldShowWizardFooter(
+    isLastStep: boolean,
+    currentStep: string,
+    isPreparingReview: boolean,
+): boolean {
+    return !isLastStep && currentStep !== 'mesh-deployment' && !isPreparingReview;
+}
+
+/**
  * Determine next button text based on wizard state
  *
  * Extracts nested ternary (SOP §3):

@@ -21,6 +21,19 @@ import { toAppError, isTimeout } from '@/types/errors';
 import { toError } from '@/types/typeGuards';
 
 /**
+ * Count selected components (SOP §10 compliance)
+ *
+ * Extracts deep optional chaining into readable helper function.
+ */
+function countSelectedComponents(components?: { frontend?: string; backend?: string; dependencies?: string[] }): number {
+    let count = 0;
+    if (components?.frontend) count++;
+    if (components?.backend) count++;
+    count += components?.dependencies?.length || 0;
+    return count;
+}
+
+/**
  * Handler: create-project
  *
  * Main project creation handler with timeout and cancellation support
@@ -119,8 +132,7 @@ export async function handleCreateProject(
     try {
         // Log summary at debug, full config at trace
         const typedConfig = config as { projectName?: string; components?: { frontend?: string; backend?: string; dependencies?: string[] } };
-        const componentCount = (typedConfig.components?.dependencies?.length || 0) + (typedConfig.components?.frontend ? 1 : 0) + (typedConfig.components?.backend ? 1 : 0);
-        context.logger.debug(`[Project Creation] Starting: ${typedConfig.projectName} (${componentCount} components)`);
+        context.logger.debug(`[Project Creation] Starting: ${typedConfig.projectName} (${countSelectedComponents(typedConfig.components)} components)`);
         context.logger.trace('[Project Creation] Full config:', config);
 
         // Send initial status with progress

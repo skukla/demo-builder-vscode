@@ -209,6 +209,7 @@ export function useConfigNavigation({
 
             // Only scroll to section when EXPANDING, not when collapsing
             if (!wasExpanded) {
+                // SOP §1: Zero delay defers to next microtask to allow React state updates before scroll
                 const scrollTimeout = setTimeout(() => navigateToSection(sectionId), 0);
                 timeoutsRef.current.push(scrollTimeout);
             }

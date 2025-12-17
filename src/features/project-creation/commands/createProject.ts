@@ -51,6 +51,19 @@ interface ComponentDefaults {
     dependencies?: string[];
 }
 
+/**
+ * Format component defaults for logging (SOP §10 compliance)
+ *
+ * Extracts deep optional chaining into readable helper function.
+ */
+function formatComponentDefaults(defaults: ComponentDefaults | null): string {
+    if (!defaults) return 'no defaults loaded';
+    const frontend = defaults.frontend || 'none';
+    const backend = defaults.backend || 'none';
+    const depCount = defaults.dependencies?.length || 0;
+    return `frontend=${frontend}, backend=${backend}, ${depCount} dependencies`;
+}
+
 interface InitialWizardData {
     theme: 'dark' | 'light';
     workspacePath: string | undefined;
@@ -219,7 +232,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 const defaults = parseJSON<{ componentSelection: ComponentDefaults }>(defaultsContent);
                 if (defaults) {
                     componentDefaults = defaults.componentSelection;
-                    this.logger.debug(`Loaded component defaults: frontend=${componentDefaults?.frontend || 'none'}, backend=${componentDefaults?.backend || 'none'}, ${componentDefaults?.dependencies?.length || 0} dependencies`);
+                    this.logger.debug(`Loaded component defaults: ${formatComponentDefaults(componentDefaults)}`);
                 }
             }
         } catch (error) {

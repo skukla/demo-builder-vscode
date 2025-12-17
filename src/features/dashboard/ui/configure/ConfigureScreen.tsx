@@ -261,12 +261,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
             comp.dependencies?.required?.forEach(depId => {
                 const dep = findComponent(depId);
-                if (dep && !components.some(c => c.id === depId)) {
-                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                    if (hasEnvVars) {
-                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                    }
+                if (dep && !components.some(c => c.id === depId) && componentHasEnvVars(dep)) {
+                    components.push({ id: dep.id, data: dep, type: 'Dependency' });
                 }
             });
 
@@ -274,12 +270,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 const dep = findComponent(depId);
                 if (dep && !components.some(c => c.id === depId)) {
                     const isSelected = project.componentSelections?.dependencies?.includes(depId);
-                    if (isSelected) {
-                        const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                           (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                        if (hasEnvVars) {
-                            components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                        }
+                    if (isSelected && componentHasEnvVars(dep)) {
+                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
                     }
                 }
             });
@@ -298,12 +290,8 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         project.componentSelections?.dependencies?.forEach((depId: string) => {
             if (!components.some(c => c.id === depId)) {
                 const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId);
-                if (dep) {
-                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                    if (hasEnvVars) {
-                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                    }
+                if (dep && componentHasEnvVars(dep)) {
+                    components.push({ id: dep.id, data: dep, type: 'Dependency' });
                 }
             }
         });
