@@ -173,10 +173,6 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
         this.logger.debug(`[Dashboard] Showing dashboard for project: ${project.name}`);
 
-        // Dispose Projects List if open (replace it with this dashboard)
-        // This must happen BEFORE creating our panel, not from within the Projects List message handler
-        ShowProjectsListCommand.disposeActivePanel();
-
         // If demo is already running, initialize file hashes for change detection
         if (project.status === 'running') {
             await this.initializeFileHashesForRunningDemo(project);
@@ -187,6 +183,10 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
 
         // Create or reveal panel and initialize communication
         await this.createOrRevealPanel();
+
+        // Dispose Projects List AFTER our panel is created (prevents flash)
+        ShowProjectsListCommand.disposeActivePanel();
+
         if (!this.communicationManager) {
             await this.initializeCommunication();
         }

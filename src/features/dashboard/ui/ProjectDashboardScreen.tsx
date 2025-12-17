@@ -60,6 +60,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
     const [isRunning, setIsRunning] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false); // Local state for immediate button disable
+    const [isOpeningBrowser, setIsOpeningBrowser] = useState(false); // Prevent double-click on Open button
     // Temporarily suppress hover after click to prevent stuck state during layout shift
     const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
     // Track whether status was requested (prevent StrictMode double-request)
@@ -160,7 +161,13 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
         webviewClient.postMessage('deployMesh');
     }, []);
 
-    const handleOpenBrowser = useCallback(() => webviewClient.postMessage('openBrowser'), []);
+    const handleOpenBrowser = useCallback(() => {
+        if (isOpeningBrowser) return; // Prevent double-click
+        setIsOpeningBrowser(true);
+        webviewClient.postMessage('openBrowser');
+        // Re-enable after 1 second (browser open is fast, this just prevents double-click)
+        setTimeout(() => setIsOpeningBrowser(false), 1000);
+    }, [isOpeningBrowser]);
     const handleConfigure = useCallback(() => webviewClient.postMessage('configure'), []);
     const handleDeleteProject = useCallback(() => webviewClient.postMessage('deleteProject'), []);
     const handleNavigateBack = useCallback(() => webviewClient.postMessage('navigateBack'), []);
@@ -331,7 +338,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                         <ActionButton
                             onPress={handleOpenBrowser}
                             isQuiet
-                            isDisabled={!isRunning}
+                            isDisabled={!isRunning || isOpeningBrowser}
                             UNSAFE_className="dashboard-action-button"
                         >
                             <Globe size="L" />

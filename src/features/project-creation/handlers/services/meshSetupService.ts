@@ -49,17 +49,22 @@ export interface MeshApiConfig {
 }
 
 /**
- * Determine if we should configure an existing mesh (vs clone new one)
+ * Determine if we should configure an existing mesh (vs deploy new one)
+ *
+ * @param meshConfig - Mesh config from wizard (meshId, endpoint from workspace check)
+ * @param existingEndpoint - Endpoint already set on component instance (if any)
+ * @param meshStepEnabled - Whether mesh wizard step is enabled
+ * @returns True if workspace has existing mesh that should be linked
  */
 export function shouldConfigureExistingMesh(
     meshConfig: MeshApiConfig | undefined,
-    meshComponent: unknown,
+    existingEndpoint: string | undefined,
     meshStepEnabled: boolean | undefined,
 ): boolean {
     const hasExistingMesh = Boolean(meshConfig?.meshId && meshConfig?.endpoint);
-    const notAlreadyInstalled = !meshComponent;
+    const notAlreadyConfigured = !existingEndpoint; // Skip if endpoint already set
     const notHandledByWizardStep = !meshStepEnabled;
-    return hasExistingMesh && notAlreadyInstalled && notHandledByWizardStep;
+    return hasExistingMesh && notAlreadyConfigured && notHandledByWizardStep;
 }
 
 /**
@@ -284,7 +289,11 @@ export async function linkExistingMesh(
     progressTracker('Configuring API Mesh', 75, 'Adding existing mesh to project...');
     logger.info('[Project Creation] 🔗 Phase 3: Linking existing API Mesh...');
 
+    // Preserve existing component properties (like path from Phase 1 cloning)
+    const existingMeshComponent = project.componentInstances?.['commerce-mesh'];
+
     project.componentInstances!['commerce-mesh'] = {
+        ...existingMeshComponent, // Preserve path if component was cloned
         id: 'commerce-mesh',
         name: 'Commerce API Mesh',
         type: 'dependency',

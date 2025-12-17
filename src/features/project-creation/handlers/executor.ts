@@ -172,10 +172,12 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         },
     };
 
-    if (meshComponent?.path && meshDefinition && !typedConfig.meshStepEnabled) {
-        await deployNewMesh(meshContext, typedConfig.apiMesh);
-    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent, typedConfig.meshStepEnabled)) {
+    // Check for existing mesh FIRST (takes precedence - don't deploy if workspace already has mesh)
+    if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint, typedConfig.meshStepEnabled)) {
         await linkExistingMesh(meshContext, typedConfig.apiMesh!);
+    } else if (meshComponent?.path && meshDefinition && !typedConfig.meshStepEnabled) {
+        // No existing mesh in workspace - deploy new one
+        await deployNewMesh(meshContext, typedConfig.apiMesh);
     } else if (meshComponent?.path && typedConfig.meshStepEnabled && typedConfig.apiMesh?.endpoint) {
         // Mesh was deployed via wizard step - update component instance with wizard data
         context.logger.debug('[Project Creation] Mesh deployed via wizard step, updating component instance');
@@ -186,6 +188,20 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             meshStatus: 'deployed',
         };
         project.componentInstances!['commerce-mesh'] = meshComponent;
+    }
+
+    // Persist MESH_ENDPOINT to componentConfigs so exports include it
+    const meshEndpoint = project.componentInstances?.['commerce-mesh']?.endpoint;
+    if (meshEndpoint && typedConfig.components?.frontend) {
+        const frontendId = typedConfig.components.frontend;
+        if (!project.componentConfigs) {
+            project.componentConfigs = {};
+        }
+        if (!project.componentConfigs[frontendId]) {
+            project.componentConfigs[frontendId] = {};
+        }
+        project.componentConfigs[frontendId]['MESH_ENDPOINT'] = meshEndpoint;
+        context.logger.debug(`[Project Creation] Persisted MESH_ENDPOINT to componentConfigs.${frontendId}`);
     }
 
     // ========================================================================

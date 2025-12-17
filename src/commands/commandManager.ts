@@ -84,8 +84,6 @@ export class CommandManager {
             this.logger,
         );
         this.registerCommand('demoBuilder.showProjectDashboard', async () => {
-            // Close other webviews when opening Dashboard (tab replacement)
-            ShowProjectsListCommand.disposeActivePanel();
             // Clear projects list context to show components tree in sidebar
             await vscode.commands.executeCommand('setContext', 'demoBuilder.showingProjectsList', false);
             // Update sidebar context
@@ -93,6 +91,7 @@ export class CommandManager {
                 const sidebarProvider = ServiceLocator.getSidebarProvider();
                 await sidebarProvider.setShowingProjectsList(false);
             }
+            // Note: Projects List disposal is handled by showDashboard.execute() AFTER panel creation
             await projectDashboard.execute();
         });
 
