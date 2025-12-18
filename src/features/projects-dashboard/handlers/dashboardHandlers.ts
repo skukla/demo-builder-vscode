@@ -18,6 +18,7 @@ import {
     deleteProject,
 } from './services';
 import { BaseWebviewCommand } from '@/core/base';
+import { executeCommandForProject } from '@/core/handlers';
 import { sessionUIState } from '@/core/state/sessionUIState';
 import { validateProjectPath } from '@/core/validation';
 import type { Project } from '@/types/base';
@@ -51,9 +52,13 @@ export const handleGetProjects: MessageHandler = async (
         const configViewMode = config.get<'cards' | 'rows'>('projectsViewMode', 'cards');
         const projectsViewMode = sessionUIState.viewModeOverride ?? configViewMode;
 
+        // Find running project path (if any)
+        const runningProject = projects.find(p => p.status === 'running');
+        const runningProjectPath = runningProject?.path;
+
         return {
             success: true,
-            data: { projects, projectsViewMode },
+            data: { projects, projectsViewMode, runningProjectPath },
         };
     } catch (error) {
         context.logger.error('Failed to load projects', error instanceof Error ? error : undefined);
@@ -411,4 +416,38 @@ export const handleEditProject: MessageHandler<{ projectPath: string }> = async 
             error: 'Failed to edit project',
         };
     }
+};
+
+// ============================================================================
+// Demo Control Handlers (Start/Stop/Open)
+// ============================================================================
+
+/**
+ * Start a demo for a project
+ */
+export const handleStartDemo: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    return executeCommandForProject(context, payload?.projectPath, 'demoBuilder.startDemo');
+};
+
+/**
+ * Stop a demo for a project
+ */
+export const handleStopDemo: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    return executeCommandForProject(context, payload?.projectPath, 'demoBuilder.stopDemo');
+};
+
+/**
+ * Open a running demo in browser
+ */
+export const handleOpenBrowser: MessageHandler<{ projectPath: string }> = async (
+    context: HandlerContext,
+    payload?: { projectPath: string },
+): Promise<HandlerResponse> => {
+    return executeCommandForProject(context, payload?.projectPath, 'demoBuilder.openBrowser');
 };

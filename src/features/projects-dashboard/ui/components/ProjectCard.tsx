@@ -23,8 +23,16 @@ import type { Project } from '@/types/base';
 export interface ProjectCardProps {
     /** The project to display */
     project: Project;
+    /** Whether the project demo is currently running */
+    isRunning?: boolean;
     /** Callback when the card is selected */
     onSelect: (project: Project) => void;
+    /** Callback to start the demo */
+    onStartDemo?: (project: Project) => void;
+    /** Callback to stop the demo */
+    onStopDemo?: (project: Project) => void;
+    /** Callback to open the demo in browser */
+    onOpenBrowser?: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
     /** Callback to delete project */
@@ -38,7 +46,11 @@ export interface ProjectCardProps {
  */
 export const ProjectCard: React.FC<ProjectCardProps> = ({
     project,
+    isRunning = false,
     onSelect,
+    onStartDemo,
+    onStopDemo,
+    onOpenBrowser,
     onExport,
     onDelete,
 }) => {
@@ -79,6 +91,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                 </Text>
                 <ProjectActionsMenu
                     project={project}
+                    isRunning={isRunning}
+                    onStartDemo={onStartDemo}
+                    onStopDemo={onStopDemo}
+                    onOpenBrowser={onOpenBrowser}
                     onExport={onExport}
                     onDelete={onDelete}
                     className="project-card-menu-button"

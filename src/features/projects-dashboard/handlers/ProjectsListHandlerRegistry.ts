@@ -38,6 +38,11 @@ export class ProjectsListHandlerRegistry extends BaseHandlerRegistry {
         // Project deletion handler
         this.handlers.set('deleteProject', handlers.handleDeleteProject as MessageHandler);
 
+        // Demo control handlers
+        this.handlers.set('startDemo', handlers.handleStartDemo as MessageHandler);
+        this.handlers.set('stopDemo', handlers.handleStopDemo as MessageHandler);
+        this.handlers.set('openBrowser', handlers.handleOpenBrowser as MessageHandler);
+
         // Utility handlers (docs, help, settings)
         this.handlers.set('openDocs', handlers.handleOpenDocs);
         this.handlers.set('openHelp', handlers.handleOpenHelp);

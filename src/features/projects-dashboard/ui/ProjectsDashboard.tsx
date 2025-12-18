@@ -34,6 +34,8 @@ import type { Project } from '@/types/base';
 export interface ProjectsDashboardProps {
     /** Array of all projects */
     projects: Project[];
+    /** Path of the currently running project (if any) */
+    runningProjectPath?: string;
     /** Callback when a project is selected */
     onSelectProject: (project: Project) => void;
     /** Callback to create a new project */
@@ -42,6 +44,12 @@ export interface ProjectsDashboardProps {
     onCopyFromExisting?: () => void;
     /** Callback to import settings from file */
     onImportFromFile?: () => void;
+    /** Callback to start a demo */
+    onStartDemo?: (project: Project) => void;
+    /** Callback to stop a demo */
+    onStopDemo?: (project: Project) => void;
+    /** Callback to open demo in browser */
+    onOpenBrowser?: (project: Project) => void;
     /** Callback to export project settings */
     onExportProject?: (project: Project) => void;
     /** Callback to delete project */
@@ -72,10 +80,14 @@ export interface ProjectsDashboardProps {
  */
 export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
     projects,
+    runningProjectPath,
     onSelectProject,
     onCreateProject,
     onCopyFromExisting,
     onImportFromFile,
+    onStartDemo,
+    onStopDemo,
+    onOpenBrowser,
     onExportProject,
     onDeleteProject,
     isLoading = false,
@@ -241,7 +253,11 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                 {viewMode === 'cards' && (
                     <ProjectsGrid
                         projects={filteredProjects}
+                        runningProjectPath={runningProjectPath}
                         onSelectProject={onSelectProject}
+                        onStartDemo={onStartDemo}
+                        onStopDemo={onStopDemo}
+                        onOpenBrowser={onOpenBrowser}
                         onExportProject={onExportProject}
                         onDeleteProject={onDeleteProject}
                     />
@@ -249,7 +265,11 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                 {viewMode === 'rows' && (
                     <ProjectRowList
                         projects={filteredProjects}
+                        runningProjectPath={runningProjectPath}
                         onSelectProject={onSelectProject}
+                        onStartDemo={onStartDemo}
+                        onStopDemo={onStopDemo}
+                        onOpenBrowser={onOpenBrowser}
                         onExportProject={onExportProject}
                         onDeleteProject={onDeleteProject}
                     />

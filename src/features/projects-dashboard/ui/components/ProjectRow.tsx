@@ -22,8 +22,16 @@ import type { Project } from '@/types/base';
 export interface ProjectRowProps {
     /** The project to display */
     project: Project;
+    /** Whether the project demo is currently running */
+    isRunning?: boolean;
     /** Callback when the row is selected */
     onSelect: (project: Project) => void;
+    /** Callback to start the demo */
+    onStartDemo?: (project: Project) => void;
+    /** Callback to stop the demo */
+    onStopDemo?: (project: Project) => void;
+    /** Callback to open the demo in browser */
+    onOpenBrowser?: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
     /** Callback to delete project */
@@ -35,7 +43,11 @@ export interface ProjectRowProps {
  */
 export const ProjectRow: React.FC<ProjectRowProps> = ({
     project,
+    isRunning = false,
     onSelect,
+    onStartDemo,
+    onStopDemo,
+    onOpenBrowser,
     onExport,
     onDelete,
 }) => {
@@ -87,6 +99,10 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                 <Flex alignItems="center" gap="size-150">
                     <ProjectActionsMenu
                         project={project}
+                        isRunning={isRunning}
+                        onStartDemo={onStartDemo}
+                        onStopDemo={onStopDemo}
+                        onOpenBrowser={onOpenBrowser}
                         onExport={onExport}
                         onDelete={onDelete}
                         className="project-row-menu-button"

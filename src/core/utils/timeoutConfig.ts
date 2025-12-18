@@ -132,6 +132,9 @@ export const TIMEOUTS = {
     FILE_WATCH_INITIAL: 100,        // Initial delay for file watcher polling (100ms)
     FILE_WATCH_MAX: 1000,           // Max delay for file watcher polling (1 second)
 
+    // State persistence
+    PROJECT_STATE_PERSIST_DELAY: 500, // Wait for project manifest to be written to disk after state change (500ms)
+
     // Retry strategy delays (SOP §1 Round 4)
     RETRY_INITIAL_DELAY: 1000,      // Initial delay for network/adobe-cli retry strategies (1 second)
     RETRY_MAX_DELAY: 5000,          // Max delay for retry backoff (5 seconds)

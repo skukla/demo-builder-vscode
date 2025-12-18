@@ -1,7 +1,7 @@
 /**
  * ProjectActionsMenu Component
  *
- * Kebab menu (⋮) for project actions like Export and Delete.
+ * Kebab menu (⋮) for project actions like Start/Stop, Open, Export, and Delete.
  * Handles click propagation to prevent triggering parent selection.
  * Used by both ProjectCard and ProjectRow components.
  */
@@ -9,7 +9,10 @@
 import { Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum';
 import Delete from '@spectrum-icons/workflow/Delete';
 import Export from '@spectrum-icons/workflow/Export';
+import Globe from '@spectrum-icons/workflow/Globe';
 import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
+import Play from '@spectrum-icons/workflow/Play';
+import Stop from '@spectrum-icons/workflow/Stop';
 import React, { useCallback, useMemo } from 'react';
 import type { Project } from '@/types/base';
 
@@ -17,12 +20,20 @@ import type { Project } from '@/types/base';
 interface MenuItem {
     key: string;
     label: string;
-    icon: 'export' | 'delete';
+    icon: 'play' | 'stop' | 'globe' | 'export' | 'delete';
 }
 
 export interface ProjectActionsMenuProps {
     /** The project to perform actions on */
     project: Project;
+    /** Whether the project demo is currently running */
+    isRunning?: boolean;
+    /** Callback to start the demo */
+    onStartDemo?: (project: Project) => void;
+    /** Callback to stop the demo */
+    onStopDemo?: (project: Project) => void;
+    /** Callback to open the demo in browser */
+    onOpenBrowser?: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
     /** Callback to delete project */
@@ -39,26 +50,56 @@ export interface ProjectActionsMenuProps {
  */
 export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     project,
+    isRunning = false,
+    onStartDemo,
+    onStopDemo,
+    onOpenBrowser,
     onExport,
     onDelete,
     className,
 }) => {
     const handleMenuAction = useCallback((key: React.Key) => {
-        if (key === 'export' && onExport) {
-            onExport(project);
-        } else if (key === 'delete' && onDelete) {
-            onDelete(project);
+        switch (key) {
+            case 'start':
+                onStartDemo?.(project);
+                break;
+            case 'stop':
+                onStopDemo?.(project);
+                break;
+            case 'open':
+                onOpenBrowser?.(project);
+                break;
+            case 'export':
+                onExport?.(project);
+                break;
+            case 'delete':
+                onDelete?.(project);
+                break;
         }
-    }, [project, onExport, onDelete]);
+    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onExport, onDelete]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
     }, []);
 
-    // Build menu items dynamically (Spectrum requires no undefined children)
+    // Build menu items dynamically based on project state
     const menuItems = useMemo<MenuItem[]>(() => {
         const items: MenuItem[] = [];
+
+        // Start/Stop based on running state
+        if (isRunning && onStopDemo) {
+            items.push({ key: 'stop', label: 'Stop Demo', icon: 'stop' });
+        } else if (!isRunning && onStartDemo) {
+            items.push({ key: 'start', label: 'Start Demo', icon: 'play' });
+        }
+
+        // Open in Browser (only when running)
+        if (isRunning && onOpenBrowser) {
+            items.push({ key: 'open', label: 'Open in Browser', icon: 'globe' });
+        }
+
+        // Export and Delete always available
         if (onExport) {
             items.push({ key: 'export', label: 'Export Project', icon: 'export' });
         }
@@ -66,7 +107,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             items.push({ key: 'delete', label: 'Delete Project', icon: 'delete' });
         }
         return items;
-    }, [onExport, onDelete]);
+    }, [isRunning, onStartDemo, onStopDemo, onOpenBrowser, onExport, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {
@@ -86,6 +127,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 <Menu onAction={handleMenuAction} items={menuItems}>
                     {(item) => (
                         <Item key={item.key} textValue={item.label}>
+                            {item.icon === 'play' && <Play size="S" />}
+                            {item.icon === 'stop' && <Stop size="S" />}
+                            {item.icon === 'globe' && <Globe size="S" />}
                             {item.icon === 'export' && <Export size="S" />}
                             {item.icon === 'delete' && <Delete size="S" />}
                             <Text>{item.label}</Text>

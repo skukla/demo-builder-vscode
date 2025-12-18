@@ -343,7 +343,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                             UNSAFE_className="dashboard-action-button"
                         >
                             <Globe size="L" />
-                            <Text UNSAFE_className="icon-label">Open</Text>
+                            <Text UNSAFE_className="icon-label">Open in Browser</Text>
                         </ActionButton>
 
                         {/* Logs */}

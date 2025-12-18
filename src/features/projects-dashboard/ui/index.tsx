@@ -16,6 +16,10 @@ import type { Project } from '@/types/base';
 import '@/core/ui/styles/index.css';
 import '@/core/ui/styles/custom-spectrum.css';
 
+// Local constant - webview cannot import TIMEOUTS from extension host
+// Equivalent to TIMEOUTS.PROJECT_STATE_PERSIST_DELAY in src/core/utils/timeoutConfig.ts
+const PROJECT_STATE_PERSIST_DELAY = 500;
+
 /**
  * ProjectsDashboardApp - Wrapper component that handles data fetching
  */
@@ -25,6 +29,7 @@ const ProjectsDashboardApp: React.FC = () => {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
     const [initialViewMode, setInitialViewMode] = useState<'cards' | 'rows'>('cards');
+    const [runningProjectPath, setRunningProjectPath] = useState<string | undefined>(undefined);
     // Track whether initial fetch was triggered (prevent StrictMode double-fetch)
     const initialFetchTriggeredRef = useRef(false);
 
@@ -39,7 +44,11 @@ const ProjectsDashboardApp: React.FC = () => {
         try {
             const response = await webviewClient.request<{
                 success: boolean;
-                data?: { projects: Project[]; projectsViewMode?: 'cards' | 'rows' };
+                data?: {
+                    projects: Project[];
+                    projectsViewMode?: 'cards' | 'rows';
+                    runningProjectPath?: string;
+                };
             }>('getProjects');
 
             let projectList: Project[] = [];
@@ -50,6 +59,8 @@ const ProjectsDashboardApp: React.FC = () => {
                 if (response.data.projectsViewMode) {
                     setInitialViewMode(response.data.projectsViewMode);
                 }
+                // Update running project path from response
+                setRunningProjectPath(response.data.runningProjectPath);
             }
 
             setProjects(projectList);
@@ -87,9 +98,16 @@ const ProjectsDashboardApp: React.FC = () => {
             }
         });
 
+        // Subscribe to demo state changes (start/stop)
+        const unsubscribeDemoState = webviewClient.onMessage('demoStateChanged', (data) => {
+            const typedData = data as { runningProjectPath?: string } | undefined;
+            setRunningProjectPath(typedData?.runningProjectPath);
+        });
+
         return () => {
             unsubscribeConfig();
             unsubscribeProjects();
+            unsubscribeDemoState();
         };
     }, [fetchProjects]);
 
@@ -171,6 +189,41 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, [fetchProjects]);
 
+    // Handle start demo
+    const handleStartDemo = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.request('startDemo', { projectPath: project.path });
+            // Allow project manifest to be written to disk before refreshing
+            await new Promise(resolve => setTimeout(resolve, PROJECT_STATE_PERSIST_DELAY));
+            fetchProjects(true);
+        } catch (error) {
+            console.error('Failed to start demo:', error);
+        }
+    }, [fetchProjects]);
+
+    // Handle stop demo
+    const handleStopDemo = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.request('stopDemo', { projectPath: project.path });
+            // Allow project manifest to be written to disk before refreshing
+            await new Promise(resolve => setTimeout(resolve, PROJECT_STATE_PERSIST_DELAY));
+            fetchProjects(true);
+        } catch (error) {
+            console.error('Failed to stop demo:', error);
+        }
+    }, [fetchProjects]);
+
+    // Handle open browser
+    const handleOpenBrowser = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('openBrowser', {
+                projectPath: project.path,
+            });
+        } catch (error) {
+            console.error('Failed to open browser:', error);
+        }
+    }, []);
+
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
         setInitialViewMode(mode);
@@ -181,10 +234,14 @@ const ProjectsDashboardApp: React.FC = () => {
     return (
         <ProjectsDashboard
             projects={projects}
+            runningProjectPath={runningProjectPath}
             onSelectProject={handleSelectProject}
             onCreateProject={handleCreateProject}
             onCopyFromExisting={handleCopyFromExisting}
             onImportFromFile={handleImportFromFile}
+            onStartDemo={handleStartDemo}
+            onStopDemo={handleStopDemo}
+            onOpenBrowser={handleOpenBrowser}
             onExportProject={handleExportProject}
             onDeleteProject={handleDeleteProject}
             isLoading={isLoading}
