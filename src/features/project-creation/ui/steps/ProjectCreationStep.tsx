@@ -2,9 +2,10 @@ import { Heading, Text, Flex, Button } from '@adobe/react-spectrum';
 import AlertCircle from '@spectrum-icons/workflow/AlertCircle';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState } from 'react';
-import { isProgressActive, isReadyToShowOpenButton } from './projectCreationPredicates';
+import { isProgressActive } from './projectCreationPredicates';
 import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
 import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
+import { PageFooter } from '@/core/ui/components/layout/PageFooter';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { vscode } from '@/core/ui/utils/vscode-api';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
@@ -42,8 +43,6 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
     const isFailed = progress?.currentOperation === 'Failed';
     const isCompleted = progress?.currentOperation === 'Project Created';
     const isActive = isProgressActive(progress, isCancelled, isFailed, isCompleted);
-    // SOP §10: Using named predicate for complex condition
-    const showOpenButton = isReadyToShowOpenButton(isCompleted, progress, isOpeningProject);
 
     return (
         <div className="flex-column h-full w-full">
@@ -132,41 +131,40 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                 </SingleColumnLayout>
             </div>
 
-            {/* Footer - matches WizardContainer footer pattern */}
+            {/* Footer - uses PageFooter for consistency with WizardContainer */}
+            {/* CSS Grid layout maintains column positions without placeholders */}
+
             {/* Show Cancel during active creation */}
             {isActive && (
-                <div className="footer-bar">
-                    <div className="max-w-800 w-full">
-                        <Flex justifyContent="space-between" alignItems="center" width="100%">
-                            <Button
-                                variant="secondary"
-                                onPress={handleCancel}
-                                isQuiet
-                                isDisabled={isCancelling}
-                            >
-                                {isCancelling ? 'Cancelling...' : 'Cancel'}
-                            </Button>
-                            <Button
-                                variant="secondary"
-                                onPress={handleShowLogs}
-                                isQuiet
-                            >
-                                Logs
-                            </Button>
-                            {/* Spacer for right side to balance layout */}
-                            <div style={{ width: '80px' }} />
-                        </Flex>
-                    </div>
-                </div>
+                <PageFooter
+                    leftContent={
+                        <Button
+                            variant="secondary"
+                            onPress={handleCancel}
+                            isQuiet
+                            isDisabled={isCancelling}
+                        >
+                            {isCancelling ? 'Cancelling...' : 'Cancel'}
+                        </Button>
+                    }
+                    centerContent={
+                        <Button
+                            variant="secondary"
+                            onPress={handleShowLogs}
+                            isQuiet
+                        >
+                            Logs
+                        </Button>
+                    }
+                    constrainWidth={true}
+                />
             )}
-            
-            {/* Show View Projects button on success */}
-            {showOpenButton && (
-                <div className="footer-bar">
-                    <div className="max-w-800 w-full">
-                        <Flex justifyContent="space-between" alignItems="center" width="100%">
-                            {/* Spacer for left side to balance layout */}
-                            <div style={{ width: '80px' }} />
+
+            {/* Show View Projects button on success, empty footer during loading transition */}
+            {isCompleted && !progress?.error && (
+                <PageFooter
+                    centerContent={
+                        !isOpeningProject && (
                             <Button
                                 variant="secondary"
                                 onPress={handleShowLogs}
@@ -174,15 +172,20 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                             >
                                 Logs
                             </Button>
+                        )
+                    }
+                    rightContent={
+                        !isOpeningProject && (
                             <Button
                                 variant="cta"
                                 onPress={handleOpenProject}
                             >
                                 View Projects
                             </Button>
-                        </Flex>
-                    </div>
-                </div>
+                        )
+                    }
+                    constrainWidth={true}
+                />
             )}
         </div>
     );

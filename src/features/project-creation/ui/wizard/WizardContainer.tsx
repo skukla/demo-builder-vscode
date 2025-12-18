@@ -271,7 +271,7 @@ export function WizardContainer({
                         <LoadingOverlay isVisible={isConfirmingSelection} />
                     </div>
 
-                    {/* Footer - hidden on project-creation, mesh-deployment (own buttons), and during preparing review transition */}
+                    {/* Footer - hidden on project-creation, mesh-deployment (own buttons) */}
                     {shouldShowWizardFooter(isLastStep, state.currentStep, isPreparingReview) && (
                         <PageFooter
                             leftContent={
@@ -316,6 +316,11 @@ export function WizardContainer({
                             }
                             constrainWidth={true}
                         />
+                    )}
+
+                    {/* Empty footer during preparing review transition for visual consistency */}
+                    {isPreparingReview && (
+                        <PageFooter constrainWidth={true} />
                     )}
                 </div>
             </div>

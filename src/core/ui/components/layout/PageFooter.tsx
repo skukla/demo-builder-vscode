@@ -32,7 +32,7 @@
  * ```
  */
 
-import { View, Flex } from '@adobe/react-spectrum';
+import { View } from '@adobe/react-spectrum';
 import React from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
@@ -55,8 +55,11 @@ export interface PageFooterProps {
  * Follows the design pattern established in WizardContainer and ConfigureScreen:
  * - Fixed footer with bg-gray-75 and border-t
  * - Padding via Spectrum size-400
- * - Flex layout with space-between for left/right content
+ * - CSS Grid with 3 equal columns for stable positioning
  * - Optional width constraint for centered content
+ *
+ * Uses CSS Grid instead of Flexbox space-between to ensure columns maintain
+ * their position regardless of content presence (no placeholder divs needed).
  */
 export const PageFooter: React.FC<PageFooterProps> = ({
     leftContent,
@@ -66,11 +69,19 @@ export const PageFooter: React.FC<PageFooterProps> = ({
     className,
 }) => {
     const footerContent = (
-        <Flex justifyContent="space-between" alignItems="center" width="100%">
-            <View>{leftContent}</View>
-            {centerContent && <View>{centerContent}</View>}
-            <View>{rightContent}</View>
-        </Flex>
+        <div
+            style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr auto 1fr',
+                alignItems: 'center',
+                width: '100%',
+                minHeight: 32, // Match Spectrum button height for consistent footer height
+            }}
+        >
+            <div style={{ justifySelf: 'start' }}>{leftContent}</div>
+            <div style={{ justifySelf: 'center' }}>{centerContent}</div>
+            <div style={{ justifySelf: 'end' }}>{rightContent}</div>
+        </div>
     );
 
     return (
