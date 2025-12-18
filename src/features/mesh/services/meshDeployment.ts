@@ -50,27 +50,29 @@ export async function deployMeshComponent(
         // This ensures relative paths in mesh.json (like build/resolvers/*.js) resolve correctly
         logger.debug(`[Mesh Deployment] Using config from: ${meshConfigPath}`);
 
-        onProgress?.('Deploying API Mesh...', 'Updating mesh configuration');
+        // Try create first (faster than checking existence)
+        // If mesh already exists, create will fail fast and we'll fall back to update
+        let meshCommand: 'create' | 'update' = 'create';
+        logger.debug('[Mesh Deployment] Attempting mesh creation...');
+        onProgress?.('Deploying API Mesh...', 'Creating mesh');
 
-        // Always use 'update' during project creation since mesh was already created in wizard
-        logger.debug('[Mesh Deployment] Updating mesh with configuration from commerce-mesh component');
-        const deployResult = await commandManager.execute(
-            `aio api-mesh:update "${meshConfigPath}" --autoConfirmAction`,
+        let deployResult = await commandManager.execute(
+            `aio api-mesh:${meshCommand} "${meshConfigPath}" --autoConfirmAction`,
             {
                 cwd: componentPath, // Run from mesh component directory (where .env file is)
                 streaming: true,
                 shell: true, // Required for command string with arguments and quoted paths
-                timeout: TIMEOUTS.API_MESH_UPDATE,
+                timeout: TIMEOUTS.API_MESH_CREATE,
                 onOutput: (data: string) => {
                     const output = data.toLowerCase();
                     if (output.includes('validating')) {
                         onProgress?.('Deploying...', 'Validating configuration');
-                    } else if (output.includes('updating')) {
-                        onProgress?.('Deploying...', 'Updating mesh infrastructure');
+                    } else if (output.includes('updating') || output.includes('creating')) {
+                        onProgress?.('Deploying...', 'Creating mesh infrastructure');
                     } else if (output.includes('deploying')) {
                         onProgress?.('Deploying...', 'Deploying mesh');
                     } else if (output.includes('success')) {
-                        onProgress?.('Deploying...', 'Mesh updated successfully');
+                        onProgress?.('Deploying...', 'Mesh created successfully');
                     }
                 },
                 configureTelemetry: false,
@@ -79,13 +81,51 @@ export async function deployMeshComponent(
             },
         );
 
+        // If create fails with "mesh already exists", fall back to update
+        if (deployResult.code !== 0) {
+            const combined = `${deployResult.stdout}\n${deployResult.stderr}`;
+            // Adobe CLI returns "already has a mesh" when workspace has existing mesh
+            const meshAlreadyExists = /already has a mesh|mesh already exists/i.test(combined);
+
+            if (meshAlreadyExists) {
+                logger.debug('[Mesh Deployment] Mesh already exists, falling back to update...');
+                meshCommand = 'update';
+                onProgress?.('Deploying API Mesh...', 'Updating existing mesh');
+
+                deployResult = await commandManager.execute(
+                    `aio api-mesh:update "${meshConfigPath}" --autoConfirmAction`,
+                    {
+                        cwd: componentPath,
+                        streaming: true,
+                        shell: true,
+                        timeout: TIMEOUTS.API_MESH_UPDATE,
+                        onOutput: (data: string) => {
+                            const output = data.toLowerCase();
+                            if (output.includes('validating')) {
+                                onProgress?.('Deploying...', 'Validating configuration');
+                            } else if (output.includes('updating')) {
+                                onProgress?.('Deploying...', 'Updating mesh infrastructure');
+                            } else if (output.includes('deploying')) {
+                                onProgress?.('Deploying...', 'Deploying mesh');
+                            } else if (output.includes('success')) {
+                                onProgress?.('Deploying...', 'Mesh updated successfully');
+                            }
+                        },
+                        configureTelemetry: false,
+                        useNodeVersion: null,
+                        enhancePath: true,
+                    },
+                );
+            }
+        }
+
         if (deployResult.code !== 0) {
             const errorMsg = deployResult.stderr || deployResult.stdout || 'Mesh deployment failed';
             const { formatAdobeCliError } = await import('@/features/mesh/utils/errorFormatter');
             throw new Error(formatAdobeCliError(errorMsg));
         }
 
-        logger.debug('[Mesh Deployment] Update command completed, verifying deployment...');
+        logger.debug(`[Mesh Deployment] ${meshCommand} command completed, verifying deployment...`);
 
         // Use shared verification utility (same as manual deploy command)
         const { waitForMeshDeployment } = await import('./meshDeploymentVerifier');

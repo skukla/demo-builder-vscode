@@ -1,0 +1,244 @@
+/**
+ * useDashboardStatus Hook
+ *
+ * Extracts status state, subscriptions, and computed status displays
+ * from ProjectDashboardScreen.
+ *
+ * @module features/dashboard/ui/hooks/useDashboardStatus
+ */
+
+import { useState, useEffect, useMemo, useRef, Dispatch, SetStateAction } from 'react';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+
+/**
+ * Mesh deployment status values
+ */
+export type MeshStatus =
+    | 'checking'
+    | 'needs-auth'
+    | 'authenticating'
+    | 'not-deployed'
+    | 'deploying'
+    | 'deployed'
+    | 'config-changed'
+    | 'update-declined'
+    | 'error';
+
+/**
+ * Project status data from extension
+ */
+export interface ProjectStatus {
+    name: string;
+    path: string;
+    status: 'created' | 'configuring' | 'ready' | 'starting' | 'running' | 'stopping' | 'stopped' | 'error';
+    port?: number;
+    adobeOrg?: string;
+    adobeProject?: string;
+    frontendConfigChanged?: boolean;
+    mesh?: {
+        status: MeshStatus;
+        endpoint?: string;
+        message?: string;
+    };
+}
+
+/**
+ * Status display color values
+ */
+export type StatusColor = 'blue' | 'green' | 'yellow' | 'orange' | 'red' | 'gray';
+
+/**
+ * Status display object
+ */
+export interface StatusDisplay {
+    color: StatusColor;
+    text: string;
+}
+
+/**
+ * Props for the useDashboardStatus hook
+ */
+export interface UseDashboardStatusProps {
+    /** Whether project has mesh configuration */
+    hasMesh?: boolean;
+}
+
+/**
+ * Return type for the useDashboardStatus hook
+ */
+export interface UseDashboardStatusReturn {
+    /** Current project status data */
+    projectStatus: ProjectStatus | null;
+    /** Whether demo is currently running */
+    isRunning: boolean;
+    /** Whether UI is transitioning (button pressed, waiting for response) */
+    isTransitioning: boolean;
+    /** Setter for transitioning state */
+    setIsTransitioning: Dispatch<SetStateAction<boolean>>;
+    /** Computed demo status display */
+    demoStatusDisplay: StatusDisplay;
+    /** Computed mesh status display (null if no mesh) */
+    meshStatusDisplay: StatusDisplay | null;
+    /** Display name for project */
+    displayName: string;
+    /** Current project status value */
+    status: ProjectStatus['status'] | undefined;
+    /** Current mesh status value */
+    meshStatus: MeshStatus | undefined;
+}
+
+/** Mesh statuses that indicate a user-initiated operation is in progress (preserve during updates) */
+const isMeshDeploying = (status: MeshStatus | undefined): boolean =>
+    status === 'deploying' || status === 'authenticating';
+
+/** Mesh statuses that indicate any operation is in progress (disable UI actions) */
+export const isMeshBusy = (status: MeshStatus | undefined): boolean =>
+    status === 'deploying' || status === 'checking' || status === 'authenticating';
+
+/**
+ * Hook to manage dashboard status state and computed displays
+ *
+ * Extracts status management from ProjectDashboardScreen for better
+ * separation of concerns and testability.
+ *
+ * @param props - Hook configuration
+ * @returns Object containing status state and computed displays
+ */
+export function useDashboardStatus(props: UseDashboardStatusProps = {}): UseDashboardStatusReturn {
+    const { hasMesh } = props;
+
+    const [projectStatus, setProjectStatus] = useState<ProjectStatus | null>(null);
+    const [isRunning, setIsRunning] = useState(false);
+    const [isTransitioning, setIsTransitioning] = useState(false);
+    // Track whether status was requested (prevent StrictMode double-request)
+    const statusRequestedRef = useRef(false);
+
+    useEffect(() => {
+        // Guard against StrictMode double-request (only send message once)
+        if (!statusRequestedRef.current) {
+            statusRequestedRef.current = true;
+            webviewClient.postMessage('requestStatus');
+        }
+
+        const unsubscribeStatus = webviewClient.onMessage('statusUpdate', (data: unknown) => {
+            const projectData = data as ProjectStatus;
+            // Merge status update, preserving mesh status only during active deployment
+            // AND only if the new status is a transient 'checking' state.
+            // This prevents update checks from resetting mesh button state mid-deployment
+            // but allows completion statuses (deployed, error, etc.) to come through.
+            setProjectStatus(prev => {
+                const shouldPreserveMeshStatus =
+                    isMeshDeploying(prev?.mesh?.status) && projectData.mesh?.status === 'checking';
+                return {
+                    ...projectData,
+                    mesh: shouldPreserveMeshStatus ? prev?.mesh : projectData.mesh,
+                };
+            });
+            setIsRunning(projectData.status === 'running');
+            // Clear transitioning state when we receive a definitive status
+            if (projectData.status === 'running' || projectData.status === 'ready' || projectData.status === 'stopped') {
+                setIsTransitioning(false);
+            }
+        });
+
+        const unsubscribeMesh = webviewClient.onMessage('meshStatusUpdate', (data: unknown) => {
+            const meshData = data as { status: MeshStatus; message?: string; endpoint?: string };
+            setProjectStatus(prev => prev ? {
+                ...prev,
+                mesh: {
+                    status: meshData.status,
+                    message: meshData.message,
+                    endpoint: meshData.endpoint,
+                },
+            } : prev);
+            // Clear transitioning state when mesh operation completes
+            if (!isMeshBusy(meshData.status)) {
+                setIsTransitioning(false);
+            }
+        });
+
+        return () => {
+            unsubscribeStatus();
+            unsubscribeMesh();
+        };
+    }, []);
+
+    // Derived values
+    const status = projectStatus?.status;
+    const port = projectStatus?.port || 3000;
+    const frontendConfigChanged = projectStatus?.frontendConfigChanged || false;
+    const meshStatus = projectStatus?.mesh?.status;
+    const meshMessage = projectStatus?.mesh?.message;
+    const displayName = projectStatus?.name || '';
+
+    // Memoize status displays for performance
+    const demoStatusDisplay = useMemo((): StatusDisplay => {
+        switch (status) {
+            case 'starting':
+                return { color: 'blue', text: 'Starting...' };
+            case 'running':
+                if (frontendConfigChanged) {
+                    return { color: 'yellow', text: 'Restart needed' };
+                }
+                return { color: 'green', text: `Running on port ${port}` };
+            case 'stopping':
+                return { color: 'yellow', text: 'Stopping...' };
+            case 'stopped':
+            case 'ready':
+                return { color: 'gray', text: 'Stopped' };
+            case 'configuring':
+                return { color: 'blue', text: 'Configuring...' };
+            case 'error':
+                return { color: 'red', text: 'Error' };
+            default:
+                return { color: 'gray', text: 'Ready' };
+        }
+    }, [status, frontendConfigChanged, port]);
+
+    const meshStatusDisplay = useMemo((): StatusDisplay | null => {
+        // If no mesh status yet, show checking state until we have definitive info
+        if (!meshStatus) {
+            // If we know hasMesh, use it
+            if (hasMesh) return { color: 'blue', text: 'Checking status...' };
+            // If projectStatus hasn't loaded yet, show checking (avoids flash)
+            if (!projectStatus) return { color: 'blue', text: 'Checking status...' };
+            // projectStatus loaded and no mesh - hide the section
+            return null;
+        }
+
+        switch (meshStatus) {
+            case 'checking':
+                return { color: 'blue', text: 'Checking status...' };
+            case 'needs-auth':
+                return { color: 'yellow', text: 'Session expired' };
+            case 'authenticating':
+                return { color: 'blue', text: meshMessage || 'Signing in...' };
+            case 'deploying':
+                return { color: 'blue', text: meshMessage || 'Deploying...' };
+            case 'deployed':
+                return { color: 'green', text: 'Deployed' };
+            case 'config-changed':
+                return { color: 'yellow', text: 'Redeploy needed' };
+            case 'update-declined':
+                return { color: 'orange', text: 'Needs deployment' };
+            case 'not-deployed':
+                return { color: 'gray', text: 'Not deployed' };
+            case 'error':
+                return { color: 'red', text: 'Deployment error' };
+            default:
+                return { color: 'gray', text: 'Unknown' };
+        }
+    }, [meshStatus, meshMessage, hasMesh, projectStatus]);
+
+    return {
+        projectStatus,
+        isRunning,
+        isTransitioning,
+        setIsTransitioning,
+        demoStatusDisplay,
+        meshStatusDisplay,
+        displayName,
+        status,
+        meshStatus,
+    };
+}

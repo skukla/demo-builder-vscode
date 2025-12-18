@@ -83,7 +83,8 @@ describe('MeshDeployment - Progress Reporting', () => {
                 onProgress
             );
 
-            expect(onProgress).toHaveBeenCalledWith('Deploying API Mesh...', 'Updating mesh configuration');
+            // Now uses create-first approach (create, then fallback to update if mesh exists)
+            expect(onProgress).toHaveBeenCalledWith('Deploying API Mesh...', 'Creating mesh');
         });
 
         it('should report verification status', async () => {

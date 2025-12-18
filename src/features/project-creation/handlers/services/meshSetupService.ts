@@ -19,7 +19,6 @@ import {
 import type { Project, TransformedComponentDefinition, EnvVarDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
 import type { MeshPhaseState } from '@/types/webview';
-import { hasEntries } from '@/types/typeGuards';
 
 /** Maximum number of mesh deployment retry attempts */
 const MAX_MESH_ATTEMPTS = 3;
@@ -314,16 +313,13 @@ export async function linkExistingMesh(
 
 /**
  * Update project mesh state after deployment/linking
+ *
+ * Sets meshState with envVars from componentConfigs, source hash, and timestamp.
+ * Staleness detection (comparing local vs deployed) happens later via detectMeshChanges().
  */
 async function updateProjectMeshState(project: Project, logger: Logger): Promise<void> {
-    const { updateMeshState, fetchDeployedMeshConfig } = await import('@/features/mesh/services/stalenessDetector');
+    const { updateMeshState } = await import('@/features/mesh/services/stalenessDetector');
 
     await updateMeshState(project);
     logger.debug('[Project Creation] Updated mesh state after deployment');
-
-    const deployedConfig = await fetchDeployedMeshConfig();
-    if (hasEntries(deployedConfig)) {
-        project.meshState!.envVars = deployedConfig;
-        logger.debug('[Project Creation] Populated meshState.envVars with deployed config');
-    }
 }

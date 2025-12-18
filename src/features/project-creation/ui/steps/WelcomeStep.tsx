@@ -3,6 +3,7 @@ import React, { useEffect, useCallback } from 'react';
 import { TemplateGallery } from '../components/TemplateGallery';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
+import { cn } from '@/core/ui/utils/classNames';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
 import { normalizeProjectName } from '@/features/project-creation/helpers/formatters';
@@ -103,7 +104,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     return (
         <SingleColumnLayout>
             {/* Project Name Input - min-height ensures consistent spacing with/without error */}
-            <div className="mb-8" style={{ minHeight: '96px' }}>
+            <div className={cn('mb-8', 'min-h-96')}>
                 <TextField
                     label="Project Name"
                     placeholder="Enter project name..."

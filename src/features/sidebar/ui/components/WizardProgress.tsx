@@ -89,14 +89,17 @@ const WizardStepItem: React.FC<WizardStepItemProps> = ({
             onClick={onClick}
             onKeyDown={onClick ? handleKeyDown : undefined}
             className="wizard-step-item"
+            // SOP: Dynamic style - cursor depends on onClick prop
             style={{ cursor: onClick ? 'pointer' : 'default' }}
         >
             <span
                 className="wizard-step-indicator"
+                // SOP: Dynamic style - color computed from isCompleted/isCurrent state
                 style={{ color: indicatorColor }}
             >
                 {indicator}
             </span>
+            {/* SOP: Dynamic style - color depends on isCurrent prop */}
             <Text
                 UNSAFE_className={`text-sm ${isCurrent ? 'font-medium' : ''}`}
                 UNSAFE_style={{

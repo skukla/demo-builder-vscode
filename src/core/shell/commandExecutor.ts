@@ -259,6 +259,12 @@ export class CommandExecutor {
             const result = await subprocess;
             const duration = Date.now() - startTime;
 
+            // With reject: false, timeout doesn't throw - check explicitly
+            if (result.timedOut) {
+                this.logger.warn(`[Command Executor] Command timed out after ${options.timeout}ms`);
+                throw new Error(`Command timed out after ${options.timeout}ms`);
+            }
+
             if (result.exitCode && result.exitCode !== 0) {
                 this.logger.debug(`[Command Executor] Process exited with code ${result.exitCode} after ${duration}ms`);
             }

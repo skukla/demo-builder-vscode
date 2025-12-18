@@ -26,9 +26,6 @@ interface ReviewStepProps extends BaseStepProps {
     componentsData?: ComponentsData;
 }
 
-// Style constant extracted per SOP §7
-const LABEL_MIN_WIDTH = '100px';
-
 /**
  * LabelValue - Single row with label and value
  * Uses 14px fonts for readability with fixed-width labels
@@ -42,7 +39,7 @@ function LabelValue({ label, value, icon, subItems }: {
 }) {
     return (
         <Flex gap="size-200" alignItems="start">
-            <Text UNSAFE_className={cn('text-md', 'text-gray-500')} UNSAFE_style={{ minWidth: LABEL_MIN_WIDTH }}>{label}</Text>
+            <Text UNSAFE_className={cn('text-md', 'text-gray-500', 'min-w-100')}>{label}</Text>
             <Flex direction="column" gap="size-50" flex={1}>
                 <Flex gap="size-100" alignItems="center">
                     {icon}

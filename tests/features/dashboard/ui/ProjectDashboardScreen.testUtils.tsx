@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { ProjectDashboardScreen } from '@/features/dashboard/ui/ProjectDashboardScreen';
 import '@testing-library/jest-dom';
 
@@ -133,7 +133,9 @@ export function setupTestContext(): TestContext {
     const triggerMessage = (type: string, data: any) => {
         const handler = messageHandlers.get(type);
         if (handler) {
-            handler(data);
+            act(() => {
+                handler(data);
+            });
         }
     };
 

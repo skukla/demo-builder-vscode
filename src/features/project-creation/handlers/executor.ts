@@ -53,6 +53,9 @@ interface ProjectCreationConfig {
         workspace?: string;
     };
     meshStepEnabled?: boolean;
+    // For detecting same-workspace imports to skip mesh deployment
+    importedWorkspaceId?: string;
+    importedMeshEndpoint?: string;
 }
 
 /**
@@ -172,11 +175,34 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
         },
     };
 
-    // Check for existing mesh FIRST (takes precedence - don't deploy if workspace already has mesh)
-    if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint, typedConfig.meshStepEnabled)) {
+    // Check for same-workspace import FIRST - if user imported settings from same workspace,
+    // the mesh already exists there, so we can skip deployment entirely
+    const isSameWorkspaceImport = typedConfig.importedWorkspaceId &&
+                                   typedConfig.importedMeshEndpoint &&
+                                   typedConfig.importedWorkspaceId === typedConfig.adobe?.workspace;
+
+    if (isSameWorkspaceImport) {
+        // Same workspace import - mesh already exists, just link to it
+        // This happens when importing from a file - the workspace is auto-selected from the import
+        context.logger.info(`[Mesh Setup] Skipping deployment - reusing mesh from imported settings`);
+        context.logger.debug(`[Mesh Setup] Imported workspace matches selected: ${typedConfig.importedWorkspaceId}`);
+        const importedApiMesh = {
+            endpoint: typedConfig.importedMeshEndpoint,
+            meshId: '', // We don't have the mesh ID, but endpoint is sufficient
+            meshStatus: 'deployed' as const,
+            workspace: typedConfig.adobe?.workspace,
+        };
+        await linkExistingMesh(meshContext, importedApiMesh);
+    } else if (shouldConfigureExistingMesh(typedConfig.apiMesh, meshComponent?.endpoint, typedConfig.meshStepEnabled)) {
+        // Check for existing mesh (takes precedence - don't deploy if workspace already has mesh)
         await linkExistingMesh(meshContext, typedConfig.apiMesh!);
     } else if (meshComponent?.path && meshDefinition && !typedConfig.meshStepEnabled) {
         // No existing mesh in workspace - deploy new one
+        // If imported from different workspace, mesh endpoint won't work - must deploy fresh
+        if (typedConfig.importedWorkspaceId && typedConfig.importedWorkspaceId !== typedConfig.adobe?.workspace) {
+            context.logger.debug(`[Mesh Setup] Imported workspace differs from selected - deploying new mesh`);
+            context.logger.debug(`[Mesh Setup] Imported: ${typedConfig.importedWorkspaceId}, Selected: ${typedConfig.adobe?.workspace}`);
+        }
         await deployNewMesh(meshContext, typedConfig.apiMesh);
     } else if (meshComponent?.path && typedConfig.meshStepEnabled && typedConfig.apiMesh?.endpoint) {
         // Mesh was deployed via wizard step - update component instance with wizard data

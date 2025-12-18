@@ -90,15 +90,16 @@ describe('MeshDeployment - Operations', () => {
 
             const onProgress = jest.fn();
 
+            // Simulate create command streaming output (create-first approach)
             mockCommandManager.execute.mockImplementation((cmd: string, options: any) => {
                 if (options.onOutput) {
                     options.onOutput('Validating mesh configuration...');
-                    options.onOutput('Updating mesh infrastructure...');
+                    options.onOutput('Creating mesh infrastructure...');
                     options.onOutput('Success! Mesh deployed.');
                 }
                 return Promise.resolve({
                     code: 0,
-                    stdout: 'Mesh updated successfully',
+                    stdout: 'Mesh created successfully',
                 });
             });
 
@@ -112,11 +113,11 @@ describe('MeshDeployment - Operations', () => {
             );
 
             expect(onProgress).toHaveBeenCalledWith('Deploying...', 'Validating configuration');
-            expect(onProgress).toHaveBeenCalledWith('Deploying...', 'Updating mesh infrastructure');
-            expect(onProgress).toHaveBeenCalledWith('Deploying...', 'Mesh updated successfully');
+            expect(onProgress).toHaveBeenCalledWith('Deploying...', 'Creating mesh infrastructure');
+            expect(onProgress).toHaveBeenCalledWith('Deploying...', 'Mesh created successfully');
         });
 
-        it('should use update command', async () => {
+        it('should use create command first (create-first approach)', async () => {
             mockSuccessfulFileRead();
             mockSuccessfulDeployment(mockCommandManager);
             mockSuccessfulVerification();
@@ -127,8 +128,9 @@ describe('MeshDeployment - Operations', () => {
                 mockLogger
             );
 
+            // Create-first approach: try create, fallback to update if mesh already exists
             expect(mockCommandManager.execute).toHaveBeenCalledWith(
-                expect.stringContaining('aio api-mesh:update'),
+                expect.stringContaining('aio api-mesh:create'),
                 expect.any(Object)
             );
         });

@@ -132,6 +132,7 @@ export function TimelineNav({ steps, currentStep, completedSteps, highestComplet
                     return (
                         <View key={step.id} position="relative">
                             {/* Step item */}
+                            {/* SOP: Dynamic style - marginBottom conditional for last-item handling */}
                             <div
                                 data-testid={`timeline-step-${step.id}`}
                                 style={{

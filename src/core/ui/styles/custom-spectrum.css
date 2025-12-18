@@ -613,6 +613,7 @@ button[class*="spectrum-Button"][disabled],
 
 .min-h-0 { min-height: 0 !important; }
 .min-h-48 { min-height: 48px !important; }
+.min-h-96 { min-height: 96px !important; }
 .min-h-120 { min-height: 120px !important; }
 .min-h-200 { min-height: 200px !important; }
 .max-h-300 { max-height: 300px !important; }

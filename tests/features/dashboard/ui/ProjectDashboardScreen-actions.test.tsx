@@ -52,7 +52,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
                 status: 'stopped',
             });
 
-            const openButton = screen.getByText('Open').closest('button');
+            const openButton = screen.getByText('Open in Browser').closest('button');
             expect(openButton).toBeDisabled();
         });
     });
@@ -100,7 +100,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             });
 
             await waitFor(() => {
-                const openButton = screen.getByText('Open').closest('button');
+                const openButton = screen.getByText('Open in Browser').closest('button');
                 expect(openButton).not.toBeDisabled();
             });
         });
@@ -148,7 +148,7 @@ describe('ProjectDashboardScreen - Action Buttons', () => {
             });
 
             await waitFor(async () => {
-                const openButton = screen.getByText('Open');
+                const openButton = screen.getByText('Open in Browser');
                 await user.click(openButton);
             });
 

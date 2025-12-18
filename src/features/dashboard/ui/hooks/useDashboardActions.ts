@@ -1,0 +1,141 @@
+/**
+ * useDashboardActions Hook
+ *
+ * Extracts all action handlers from ProjectDashboardScreen.
+ * Handles user interactions with the dashboard control panel.
+ *
+ * @module features/dashboard/ui/hooks/useDashboardActions
+ */
+
+import { useCallback, Dispatch, SetStateAction } from 'react';
+import { webviewClient } from '@/core/ui/utils/WebviewClient';
+import { TIMEOUTS } from '@/core/utils/timeoutConfig';
+import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
+
+/**
+ * Props for the useDashboardActions hook
+ */
+export interface UseDashboardActionsProps {
+    /** Whether browser is currently opening (prevents double-click) */
+    isOpeningBrowser: boolean;
+    /** Setter for transitioning state */
+    setIsTransitioning: Dispatch<SetStateAction<boolean>>;
+    /** Setter for opening browser state */
+    setIsOpeningBrowser: Dispatch<SetStateAction<boolean>>;
+    /** Setter for logs hover suppression state */
+    setIsLogsHoverSuppressed: Dispatch<SetStateAction<boolean>>;
+}
+
+/**
+ * Return type for the useDashboardActions hook
+ */
+export interface UseDashboardActionsReturn {
+    /** Start the demo server */
+    handleStartDemo: () => void;
+    /** Stop the demo server */
+    handleStopDemo: () => void;
+    /** Re-authenticate with Adobe */
+    handleReAuthenticate: () => void;
+    /** View logs in output channel */
+    handleViewLogs: () => void;
+    /** Deploy API Mesh */
+    handleDeployMesh: () => void;
+    /** Open demo in browser */
+    handleOpenBrowser: () => void;
+    /** Open configure screen */
+    handleConfigure: () => void;
+    /** Open Adobe Developer Console */
+    handleOpenDevConsole: () => void;
+    /** Delete the project */
+    handleDeleteProject: () => void;
+    /** Navigate back to projects list */
+    handleNavigateBack: () => void;
+    /** View components in file browser */
+    handleViewComponents: () => void;
+}
+
+/**
+ * Hook to manage dashboard action handlers
+ *
+ * Extracts all action handlers from ProjectDashboardScreen for better
+ * separation of concerns and testability.
+ *
+ * @param props - Hook configuration
+ * @returns Object containing all action handlers
+ */
+export function useDashboardActions({
+    isOpeningBrowser,
+    setIsTransitioning,
+    setIsOpeningBrowser,
+    setIsLogsHoverSuppressed,
+}: UseDashboardActionsProps): UseDashboardActionsReturn {
+    const handleStartDemo = useCallback(() => {
+        setIsTransitioning(true);
+        webviewClient.postMessage('startDemo');
+    }, [setIsTransitioning]);
+
+    const handleStopDemo = useCallback(() => {
+        setIsTransitioning(true);
+        webviewClient.postMessage('stopDemo');
+    }, [setIsTransitioning]);
+
+    const handleReAuthenticate = useCallback(() => {
+        webviewClient.postMessage('re-authenticate');
+    }, []);
+
+    const handleViewLogs = useCallback(() => {
+        // Suppress hover styles during layout shift
+        setIsLogsHoverSuppressed(true);
+        (document.activeElement as HTMLElement)?.blur();
+        webviewClient.postMessage('viewLogs');
+        // Re-enable hover after layout stabilizes (SOP section 1: using TIMEOUTS constant)
+        setTimeout(() => setIsLogsHoverSuppressed(false), TIMEOUTS.HOVER_SUPPRESSION_DELAY);
+    }, [setIsLogsHoverSuppressed]);
+
+    const handleDeployMesh = useCallback(() => {
+        setIsTransitioning(true);
+        webviewClient.postMessage('deployMesh');
+    }, [setIsTransitioning]);
+
+    const handleOpenBrowser = useCallback(() => {
+        if (isOpeningBrowser) return; // Prevent double-click
+        setIsOpeningBrowser(true);
+        webviewClient.postMessage('openBrowser');
+        // Re-enable after delay (browser open is fast, this just prevents double-click)
+        setTimeout(() => setIsOpeningBrowser(false), FRONTEND_TIMEOUTS.DOUBLE_CLICK_PREVENTION);
+    }, [isOpeningBrowser, setIsOpeningBrowser]);
+
+    const handleConfigure = useCallback(() => {
+        webviewClient.postMessage('configure');
+    }, []);
+
+    const handleOpenDevConsole = useCallback(() => {
+        webviewClient.postMessage('openDevConsole');
+    }, []);
+
+    const handleDeleteProject = useCallback(() => {
+        webviewClient.postMessage('deleteProject');
+    }, []);
+
+    const handleNavigateBack = useCallback(() => {
+        webviewClient.postMessage('navigateBack');
+    }, []);
+
+    const handleViewComponents = useCallback(() => {
+        webviewClient.postMessage('viewComponents');
+    }, []);
+
+    return {
+        handleStartDemo,
+        handleStopDemo,
+        handleReAuthenticate,
+        handleViewLogs,
+        handleDeployMesh,
+        handleOpenBrowser,
+        handleConfigure,
+        handleOpenDevConsole,
+        handleDeleteProject,
+        handleNavigateBack,
+        handleViewComponents,
+    };
+}

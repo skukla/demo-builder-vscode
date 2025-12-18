@@ -473,7 +473,18 @@ export function getEnabledWizardSteps(
 /**
  * Build project configuration from wizard state for project creation
  */
-export function buildProjectConfig(wizardState: WizardState) {
+export function buildProjectConfig(wizardState: WizardState, importedSettings?: ImportedSettings | null) {
+    // Extract MESH_ENDPOINT from componentConfigs if it exists (from imported settings)
+    let importedMeshEndpoint: string | undefined;
+    if (wizardState.componentConfigs) {
+        for (const componentConfig of Object.values(wizardState.componentConfigs)) {
+            if (componentConfig?.MESH_ENDPOINT && typeof componentConfig.MESH_ENDPOINT === 'string') {
+                importedMeshEndpoint = componentConfig.MESH_ENDPOINT;
+                break;
+            }
+        }
+    }
+
     return {
         projectName: wizardState.projectName,
         projectTemplate: wizardState.projectTemplate,
@@ -495,6 +506,10 @@ export function buildProjectConfig(wizardState: WizardState) {
         },
         apiMesh: wizardState.apiMesh,
         componentConfigs: wizardState.componentConfigs,
+        // Track imported workspace for mesh reuse detection
+        // If user selects same workspace as imported settings, we can skip mesh deployment
+        importedWorkspaceId: importedSettings?.adobe?.workspaceId,
+        importedMeshEndpoint,
         // Mesh deployment happens during Project Creation (Phase 3), not as separate wizard step
         meshStepEnabled: false,
     };

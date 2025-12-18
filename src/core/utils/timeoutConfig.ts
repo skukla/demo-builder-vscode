@@ -19,7 +19,7 @@ export const TIMEOUTS = {
     // Adobe CLI project/workspace selection often takes 8-10 seconds, but can exceed 10s
     API_CALL: 10000,                // API-based commands (console where, org list)
     BROWSER_AUTH: 60000,            // Browser-based authentication flow (1 minute)
-    API_MESH_CREATE: 120000,        // API Mesh creation (2 minutes)
+    API_MESH_CREATE: 180000,        // API Mesh creation (3 minutes - initial creation can be slow)
     API_MESH_UPDATE: 120000,        // API Mesh update/deployment (2 minutes)
     MESH_DESCRIBE: 30000,           // Fetching mesh info via describe command (30 seconds)
     MESH_VERIFY_INITIAL_WAIT: 20000, // Initial wait before first verification poll (20 seconds)

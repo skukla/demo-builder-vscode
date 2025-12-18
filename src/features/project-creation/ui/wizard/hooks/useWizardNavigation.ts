@@ -55,6 +55,7 @@ async function handleStepBackendCalls(
     currentStep: string,
     nextStepId: string,
     wizardState: WizardState,
+    importedSettings?: ImportedSettings | null,
 ): Promise<void> {
     // Project selection: Commit the UI selection to backend
     if (currentStep === 'adobe-project' && wizardState.adobeProject?.id) {
@@ -74,7 +75,8 @@ async function handleStepBackendCalls(
 
     // Project creation: Trigger project creation when moving from review to project-creation step
     if (currentStep === 'review' && nextStepId === 'project-creation') {
-        const projectConfig = buildProjectConfig(wizardState);
+        // Pass importedSettings so we can detect same-workspace imports and skip mesh deployment
+        const projectConfig = buildProjectConfig(wizardState, importedSettings);
         vscode.createProject(projectConfig);
     }
 }
@@ -226,7 +228,7 @@ export function useWizardNavigation({
 
             try {
                 setIsConfirmingSelection(true);
-                await handleStepBackendCalls(state.currentStep, nextStep.id, state);
+                await handleStepBackendCalls(state.currentStep, nextStep.id, state, importedSettings);
 
                 if (!completedSteps.includes(state.currentStep)) {
                     setCompletedSteps(prev => [...prev, state.currentStep]);

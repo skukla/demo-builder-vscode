@@ -53,6 +53,7 @@ const NavItemButton: React.FC<NavItemButtonProps> = ({ item, onClick }) => {
             onClick={onClick}
             onKeyDown={handleKeyDown}
             className="sidebar-nav-item"
+            // SOP: Dynamic style - background depends on item.active prop
             style={{
                 background: item.active
                     ? 'var(--spectrum-global-color-gray-200)'

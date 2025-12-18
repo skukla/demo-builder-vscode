@@ -52,4 +52,10 @@ export const FRONTEND_TIMEOUTS = {
      * Used for copy-to-clipboard feedback, loading spinners, etc.
      */
     LOADING_MIN_DISPLAY: 1500,
+
+    /**
+     * Double-click prevention delay for buttons that open external resources.
+     * Prevents multiple browser tabs from opening on rapid clicks.
+     */
+    DOUBLE_CLICK_PREVENTION: 1000,
 } as const;
