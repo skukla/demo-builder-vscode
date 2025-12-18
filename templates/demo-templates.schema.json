@@ -90,6 +90,13 @@
             "type": "string"
           },
           "description": "Array of App Builder app component IDs"
+        },
+        "configDefaults": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Default configuration values (env var name → value)"
         }
       }
     }

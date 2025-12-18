@@ -26,12 +26,12 @@ export function getTemplateById(
  * Apply template defaults to wizard state
  *
  * Takes the current wizard state and applies the selected template's
- * default component selections. Returns unchanged state if no template
- * is selected or template is not found.
+ * default component selections and configuration values. Returns unchanged
+ * state if no template is selected or template is not found.
  *
  * @param state - Current wizard state
  * @param templates - Array of available templates
- * @returns New state with template defaults applied to components
+ * @returns New state with template defaults applied to components and configs
  */
 export function applyTemplateDefaults(
     state: WizardState,
@@ -60,9 +60,25 @@ export function applyTemplateDefaults(
         appBuilderApps: defaults.appBuilder ?? [],
     };
 
-    // Return new state with components applied
+    // Build component configs from template config defaults
+    // Store under frontend component ID (envFileGenerator searches all components)
+    let componentConfigs = state.componentConfigs;
+    if (defaults.configDefaults && defaults.frontend) {
+        const configCount = Object.keys(defaults.configDefaults).length;
+        console.debug(`[Template] Applied ${configCount} config defaults from "${template.id}" template`);
+        componentConfigs = {
+            ...state.componentConfigs,
+            [defaults.frontend]: {
+                ...state.componentConfigs?.[defaults.frontend],
+                ...defaults.configDefaults,
+            },
+        };
+    }
+
+    // Return new state with components and configs applied
     return {
         ...state,
         components,
+        componentConfigs,
     };
 }

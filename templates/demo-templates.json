@@ -12,7 +12,12 @@
       "defaults": {
         "frontend": "citisignal-nextjs",
         "backend": "adobe-commerce-paas",
-        "dependencies": ["commerce-mesh", "demo-inspector"]
+        "dependencies": ["commerce-mesh", "demo-inspector"],
+        "configDefaults": {
+          "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
+          "ADOBE_COMMERCE_STORE_CODE": "citisignal_store",
+          "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us"
+        }
       }
     }
   ]

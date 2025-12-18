@@ -22,6 +22,11 @@ const mockTemplates: DemoTemplate[] = [
             frontend: 'citisignal-nextjs',
             backend: 'adobe-commerce-paas',
             dependencies: ['commerce-mesh', 'demo-inspector'],
+            configDefaults: {
+                ADOBE_COMMERCE_WEBSITE_CODE: 'citisignal',
+                ADOBE_COMMERCE_STORE_CODE: 'citisignal_store',
+                ADOBE_COMMERCE_STORE_VIEW_CODE: 'citisignal_us',
+            },
         },
     },
     {
@@ -238,6 +243,62 @@ describe('templateDefaults', () => {
             expect(result.adobeAuth.isAuthenticated).toBe(true);
             expect(result.adobeAuth.email).toBe('user@example.com');
             expect(result.selectedTemplate).toBe('citisignal');
+        });
+
+        it('should apply configDefaults to componentConfigs', () => {
+            // Given: A state with a selected template that has configDefaults
+            const state: WizardState = {
+                ...createBaseState(),
+                selectedTemplate: 'citisignal',
+            };
+
+            // When: Applying template defaults
+            const result = applyTemplateDefaults(state, mockTemplates);
+
+            // Then: Should have componentConfigs populated under frontend component ID
+            expect(result.componentConfigs).toBeDefined();
+            expect(result.componentConfigs?.['citisignal-nextjs']).toBeDefined();
+            expect(result.componentConfigs?.['citisignal-nextjs']?.ADOBE_COMMERCE_WEBSITE_CODE).toBe('citisignal');
+            expect(result.componentConfigs?.['citisignal-nextjs']?.ADOBE_COMMERCE_STORE_CODE).toBe('citisignal_store');
+            expect(result.componentConfigs?.['citisignal-nextjs']?.ADOBE_COMMERCE_STORE_VIEW_CODE).toBe('citisignal_us');
+        });
+
+        it('should not set componentConfigs when template has no configDefaults', () => {
+            // Given: A state with a template without configDefaults
+            const state: WizardState = {
+                ...createBaseState(),
+                selectedTemplate: 'full-stack',
+            };
+
+            // When: Applying template defaults
+            const result = applyTemplateDefaults(state, mockTemplates);
+
+            // Then: componentConfigs should remain undefined
+            expect(result.componentConfigs).toBeUndefined();
+        });
+
+        it('should merge configDefaults with existing componentConfigs', () => {
+            // Given: A state with existing componentConfigs
+            const state: WizardState = {
+                ...createBaseState(),
+                selectedTemplate: 'citisignal',
+                componentConfigs: {
+                    'citisignal-nextjs': {
+                        EXISTING_VAR: 'existing-value',
+                    },
+                    'other-component': {
+                        OTHER_VAR: 'other-value',
+                    },
+                },
+            };
+
+            // When: Applying template defaults
+            const result = applyTemplateDefaults(state, mockTemplates);
+
+            // Then: Should merge with existing configs
+            expect(result.componentConfigs?.['citisignal-nextjs']?.EXISTING_VAR).toBe('existing-value');
+            expect(result.componentConfigs?.['citisignal-nextjs']?.ADOBE_COMMERCE_WEBSITE_CODE).toBe('citisignal');
+            expect(result.componentConfigs?.['other-component']?.OTHER_VAR).toBe('other-value');
         });
     });
 });

@@ -19,6 +19,8 @@ export interface TemplateDefaults {
     integrations?: string[];
     /** Array of App Builder app component IDs */
     appBuilder?: string[];
+    /** Default configuration values (env var name → value) */
+    configDefaults?: Record<string, string>;
 }
 
 /**
