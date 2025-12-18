@@ -213,8 +213,9 @@ describe('WelcomeStep - Template Selection', () => {
     });
 
     describe('Proceed Validation with Templates', () => {
-        it('should NOT allow proceeding with valid project name but NO template selected', () => {
+        it('should allow proceeding with valid project name even without template selected (templates are optional)', () => {
             // Given: A valid project name but no template selected
+            // Templates are optional - users can skip and configure components manually
             const stateWithValidNameNoTemplate = {
                 ...baseState,
                 projectName: 'valid-project',
@@ -232,8 +233,8 @@ describe('WelcomeStep - Template Selection', () => {
                 />
             );
 
-            // Then: setCanProceed should be called with false
-            expect(mockSetCanProceed).toHaveBeenCalledWith(false);
+            // Then: setCanProceed should be called with true (templates are optional)
+            expect(mockSetCanProceed).toHaveBeenCalledWith(true);
         });
 
         it('should allow proceeding with valid project name AND template selected', () => {

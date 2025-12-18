@@ -1,4 +1,4 @@
-import { TextField } from '@adobe/react-spectrum';
+import { TextField, Text } from '@adobe/react-spectrum';
 import React, { useEffect, useCallback } from 'react';
 import { TemplateGallery } from '../components/TemplateGallery';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
@@ -93,9 +93,9 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
             state.projectName.length >= 3 &&
             validateProjectName(state.projectName) === undefined;
 
-        // If templates are provided, require template selection
-        // If no templates, just validate project name (backward compatibility)
-        const isTemplateValid = !hasTemplates || Boolean(state.selectedTemplate);
+        // Templates are optional - they pre-populate component selections as a shortcut
+        // Users can skip template selection and configure components manually
+        const isTemplateValid = true;
 
         setCanProceed(isProjectNameValid && isTemplateValid);
     }, [state.projectName, state.selectedTemplate, setCanProceed, validateProjectName, hasTemplates]);
@@ -123,12 +123,17 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
 
             {/* Template Gallery */}
             {templates !== undefined && (
-                <TemplateGallery
-                    templates={templates}
-                    selectedTemplateId={state.selectedTemplate}
-                    onSelect={handleTemplateSelect}
-                    initialViewMode={initialViewMode}
-                />
+                <>
+                    <TemplateGallery
+                        templates={templates}
+                        selectedTemplateId={state.selectedTemplate}
+                        onSelect={handleTemplateSelect}
+                        initialViewMode={initialViewMode}
+                    />
+                    <Text UNSAFE_className="text-gray-500 text-sm mt-4">
+                        Select a template to pre-configure components, or continue to choose manually.
+                    </Text>
+                </>
             )}
         </SingleColumnLayout>
     );
