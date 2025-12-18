@@ -12,7 +12,6 @@
 import * as vscode from 'vscode';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { sessionUIState } from '@/core/state/sessionUIState';
-import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateProjectPath, validateURL } from '@/core/validation';
 import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult, DataResult } from '@/types/results';
@@ -149,20 +148,9 @@ export async function handleOpenProject(context: HandlerContext): Promise<Simple
         ShowProjectsListCommand.disposeActivePanel();
         context.logger.debug('[Project Creation] Closed Projects List webview if it was open');
 
-        // Dispose this panel
+        // Dispose this panel - wizard's dispose() will open projects list automatically
         context.panel?.dispose();
         context.logger.debug('[Project Creation] Wizard closed');
-
-        // REMOVED (Package 4 - beta.64): No longer add workspace folder
-        // Previously added workspace folder, which caused terminal directory issues.
-        // Now users access projects via Dashboard or status bar.
-        // context.logger.info('[Project Creation] Adding project to workspace...');
-        // const added = vscode.workspace.updateWorkspaceFolders(0, 0, workspaceFolder);
-
-        // Navigate to projects list (home screen) so user can see and select their new project
-        context.logger.debug('[Project Creation] Opening projects list...');
-        await new Promise(resolve => setTimeout(resolve, TIMEOUTS.DASHBOARD_OPEN_DELAY));
-        await vscode.commands.executeCommand('demoBuilder.showProjectsList');
 
     } catch (error) {
         context.logger.error('[Project Creation] Error opening project', error as Error);
