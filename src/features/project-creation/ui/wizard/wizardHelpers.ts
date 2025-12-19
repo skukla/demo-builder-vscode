@@ -24,6 +24,13 @@ export interface WizardStepConfigWithRequirements {
     requiredComponents?: string[];
     /** Optional: Component IDs where ANY selection makes this step appear (OR logic) */
     requiredAny?: string[];
+    /** Optional: Condition for stack-based filtering */
+    condition?: {
+        /** Stack property that must be truthy for this step to be shown */
+        stackRequires?: 'requiresGitHub' | 'requiresDaLive';
+        /** If true, this step is only shown when NO predefined stack is selected */
+        showWhenNoStack?: boolean;
+    };
 }
 
 // ============================================================================

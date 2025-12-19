@@ -18,6 +18,8 @@ export type WizardStep =
     | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
+    | 'eds-github-dalive'  // EDS: GitHub OAuth + DA.live setup (conditional: edge-delivery stack)
+    | 'eds-data-source'  // EDS: ACCS data source configuration (conditional: edge-delivery stack)
     | 'settings'  // Component-specific settings collection
     | 'commerce-config'  // Kept for compatibility
     | 'review'
@@ -29,6 +31,8 @@ export interface WizardState {
     projectName: string;
     projectTemplate: ProjectTemplate;
     selectedTemplate?: string;  // Selected demo template ID (e.g., 'citisignal')
+    selectedBrand?: string;  // Selected brand ID (e.g., 'citisignal', 'default', 'buildright')
+    selectedStack?: string;  // Selected stack ID (e.g., 'headless', 'edge-delivery')
     components?: ComponentSelection;
     componentConfigs?: ComponentConfigs;  // Component-specific environment configurations
     adobeAuth: AdobeAuthState;
@@ -38,6 +42,7 @@ export interface WizardState {
     commerceConfig?: WizardCommerceConfig;  // Wizard-specific commerce config (simplified)
     creationProgress?: CreationProgress;
     projectSearchFilter?: string;  // Filter persistence for project selection
+    edsConfig?: EDSConfig;  // EDS (Edge Delivery Services) configuration
 
     // Persistent caches to prevent re-fetching on backward navigation
     projectsCache?: AdobeProject[];
@@ -274,4 +279,40 @@ export interface ComponentEnvVar {
         pattern?: string;
         message?: string;
     };
+}
+
+/**
+ * EDS (Edge Delivery Services) configuration for wizard
+ * Contains ACCS credentials, GitHub auth state, and DA.live settings
+ */
+export interface EDSConfig {
+    /** ACCS host URL (must start with https://) */
+    accsHost: string;
+    /** Store view code for ACCS */
+    storeViewCode: string;
+    /** Customer group for ACCS */
+    customerGroup: string;
+    /** Data source selection */
+    dataSource?: 'citisignal-electronics' | 'citisignal-fashion' | 'custom';
+    /** Whether ACCS credentials have been validated */
+    accsValidated?: boolean;
+    /** ACCS validation error message */
+    accsValidationError?: string;
+    /** GitHub authentication state */
+    githubAuth?: {
+        isAuthenticated: boolean;
+        isAuthenticating?: boolean;
+        user?: { login: string; avatarUrl?: string; email?: string };
+        error?: string;
+    };
+    /** GitHub repository name */
+    repoName: string;
+    /** DA.live organization name */
+    daLiveOrg: string;
+    /** Whether DA.live org access has been verified */
+    daLiveOrgVerified?: boolean;
+    /** DA.live org verification error */
+    daLiveOrgError?: string;
+    /** DA.live site name */
+    daLiveSite: string;
 }

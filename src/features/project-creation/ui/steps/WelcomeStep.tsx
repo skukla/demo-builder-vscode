@@ -1,5 +1,6 @@
 import { TextField, Text } from '@adobe/react-spectrum';
 import React, { useEffect, useCallback } from 'react';
+import { BrandGallery } from '../components/BrandGallery';
 import { TemplateGallery } from '../components/TemplateGallery';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
@@ -7,6 +8,8 @@ import { cn } from '@/core/ui/utils/classNames';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { compose, required, pattern, minLength, maxLength } from '@/core/validation/Validator';
 import { normalizeProjectName } from '@/features/project-creation/helpers/formatters';
+import { Brand } from '@/types/brands';
+import { Stack } from '@/types/stacks';
 import { DemoTemplate } from '@/types/templates';
 import { BaseStepProps } from '@/types/wizard';
 
@@ -16,14 +19,19 @@ interface WelcomeStepProps extends BaseStepProps {
     templates?: DemoTemplate[];
     /** Initial view mode from extension settings */
     initialViewMode?: 'cards' | 'rows';
+    /** Available brands for selection (vertical + stack architecture) */
+    brands?: Brand[];
+    /** Available stacks/architectures for selection */
+    stacks?: Stack[];
 }
 
-export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], templates, initialViewMode }: WelcomeStepProps) {
+export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], templates, initialViewMode, brands, stacks }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
 
-    // Check if templates are provided - if so, require template selection
-    const hasTemplates = templates && templates.length > 0;
+    // Check if brands are provided (new vertical + stack architecture)
+    const hasBrands = brands && brands.length > 0;
+    const hasStacks = stacks && stacks.length > 0;
 
     // Custom validator for duplicate project name check
     const notDuplicate = useCallback(
@@ -65,7 +73,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         if (!state.projectName) {
             updateState({ projectName: defaultProjectName });
         }
-        
+
         // Manually focus and select text (more reliable than autoFocus + onFocus)
         // Delay slightly longer than WizardContainer's auto-focus (300ms + 100ms)
         setTimeout(() => {
@@ -89,40 +97,82 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
         [updateState, state.selectedTemplate],
     );
 
+    // Handler for brand selection
+    const handleBrandSelect = useCallback(
+        (brandId: string) => {
+            // When brand changes, clear any previously selected stack
+            // (user may have selected a stack that's not compatible with new brand)
+            if (brandId !== state.selectedBrand) {
+                updateState({ selectedBrand: brandId, selectedStack: undefined });
+            }
+        },
+        [updateState, state.selectedBrand],
+    );
+
+    // Handler for stack/architecture selection
+    const handleStackSelect = useCallback(
+        (stackId: string) => {
+            updateState({ selectedStack: stackId });
+        },
+        [updateState],
+    );
+
     useEffect(() => {
         const isProjectNameValid =
             state.projectName.length >= 3 &&
             validateProjectName(state.projectName) === undefined;
 
-        // Templates are optional - they pre-populate component selections as a shortcut
-        // Users can skip template selection and configure components manually
-        const isTemplateValid = true;
+        // If brands are provided, both brand AND stack must be selected
+        // (expandable cards pattern - both selections happen on this step)
+        // Otherwise, fall back to legacy behavior (templates optional)
+        const isBrandStackValid = hasBrands && hasStacks
+            ? Boolean(state.selectedBrand) && Boolean(state.selectedStack)
+            : true;
 
-        setCanProceed(isProjectNameValid && isTemplateValid);
-    }, [state.projectName, state.selectedTemplate, setCanProceed, validateProjectName, hasTemplates]);
+        setCanProceed(isProjectNameValid && isBrandStackValid);
+    }, [state.projectName, state.selectedBrand, state.selectedStack, setCanProceed, validateProjectName, hasBrands, hasStacks]);
 
+    // Project Name Input - shared between both layouts
+    const projectNameField = (
+        <div className={cn('mb-8', 'min-h-96')}>
+            <TextField
+                label="Project Name"
+                placeholder="Enter project name..."
+                value={state.projectName}
+                onChange={(value) => updateState({ projectName: normalizeProjectName(value) })}
+                validationState={getProjectNameValidationState(state.projectName)}
+                errorMessage={
+                    state.projectName
+                        ? validateProjectName(state.projectName)
+                        : undefined
+                }
+                width="size-6000"
+                isRequired
+                {...selectableDefaultProps}
+            />
+        </div>
+    );
+
+    // Brand mode: Expandable cards with architecture selection built-in
+    if (hasBrands && hasStacks) {
+        return (
+            <BrandGallery
+                brands={brands!}
+                stacks={stacks!}
+                selectedBrand={state.selectedBrand}
+                selectedStack={state.selectedStack}
+                onBrandSelect={handleBrandSelect}
+                onStackSelect={handleStackSelect}
+                headerContent={projectNameField}
+            />
+        );
+    }
+
+    // Legacy template mode: Use SingleColumnLayout
     return (
         <SingleColumnLayout>
-            {/* Project Name Input - min-height ensures consistent spacing with/without error */}
-            <div className={cn('mb-8', 'min-h-96')}>
-                <TextField
-                    label="Project Name"
-                    placeholder="Enter project name..."
-                    value={state.projectName}
-                    onChange={(value) => updateState({ projectName: normalizeProjectName(value) })}
-                    validationState={getProjectNameValidationState(state.projectName)}
-                    errorMessage={
-                        state.projectName
-                            ? validateProjectName(state.projectName)
-                            : undefined
-                    }
-                    width="size-6000"
-                    isRequired
-                    {...selectableDefaultProps}
-                />
-            </div>
+            {projectNameField}
 
-            {/* Template Gallery */}
             {templates !== undefined && (
                 <>
                     <TemplateGallery

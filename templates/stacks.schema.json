@@ -1,0 +1,82 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Demo Builder Stacks Schema",
+  "description": "Schema for defining stacks (frontend + backend architecture combinations)",
+  "type": "object",
+  "required": ["version", "stacks"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Schema version (e.g., '1.0.0')"
+    },
+    "stacks": {
+      "type": "array",
+      "description": "Array of available stacks",
+      "items": {
+        "$ref": "#/definitions/stack"
+      },
+      "minItems": 1
+    }
+  },
+  "definitions": {
+    "stack": {
+      "type": "object",
+      "required": ["id", "name", "description", "frontend", "backend", "dependencies"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Unique identifier for the stack (lowercase, hyphen-separated)"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Display name for the stack"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the stack architecture"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Icon identifier for the stack"
+        },
+        "frontend": {
+          "type": "string",
+          "description": "Frontend component ID from components.json"
+        },
+        "backend": {
+          "type": "string",
+          "description": "Backend component ID from components.json"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Array of dependency component IDs from components.json"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Feature highlights for UI display"
+        },
+        "requiresGitHub": {
+          "type": "boolean",
+          "description": "Whether this stack requires GitHub OAuth authentication"
+        },
+        "requiresDaLive": {
+          "type": "boolean",
+          "description": "Whether this stack requires DA.live access"
+        }
+      }
+    }
+  }
+}

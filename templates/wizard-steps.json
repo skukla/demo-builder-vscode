@@ -8,7 +8,11 @@
     {
       "id": "component-selection",
       "name": "Component Selection",
-      "enabled": true
+      "enabled": true,
+      "condition": {
+        "showWhenNoStack": true
+      },
+      "_comment": "Hidden when a predefined stack is selected (stack determines components). Kept for future 'Custom' brand option where users manually select components."
     },
     {
       "id": "prerequisites",
@@ -29,6 +33,22 @@
       "id": "adobe-workspace",
       "name": "Workspace Selection",
       "enabled": true
+    },
+    {
+      "id": "eds-github-dalive",
+      "name": "GitHub & DA.live Setup",
+      "enabled": true,
+      "condition": {
+        "stackRequires": "requiresGitHub"
+      }
+    },
+    {
+      "id": "eds-data-source",
+      "name": "Data Source Configuration",
+      "enabled": true,
+      "condition": {
+        "stackRequires": "requiresDaLive"
+      }
     },
     {
       "id": "settings",

@@ -99,3 +99,9 @@ export {
 
 // Demo template types
 export * from './templates';
+
+// Brand types (content/vertical configurations)
+export * from './brands';
+
+// Stack types (frontend + backend architecture combinations)
+export * from './stacks';

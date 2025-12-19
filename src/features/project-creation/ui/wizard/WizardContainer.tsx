@@ -18,8 +18,12 @@ import {
     shouldShowWizardFooter,
     ImportedSettings,
     EditProjectConfig,
+    WizardStepConfigWithRequirements,
 } from './wizardHelpers';
+import { loadBrands, loadStacks } from '../helpers/brandStackLoader';
 import { loadDemoTemplates } from '../helpers/templateLoader';
+import type { Brand } from '@/types/brands';
+import type { Stack } from '@/types/stacks';
 import type { DemoTemplate } from '@/types/templates';
 import { ErrorBoundary } from '@/core/ui/components/ErrorBoundary';
 import { LoadingOverlay, LoadingDisplay } from '@/core/ui/components/feedback';
@@ -48,7 +52,7 @@ export type { ImportedSettings, EditProjectConfig };
 
 interface WizardContainerProps {
     componentDefaults?: ComponentSelection;
-    wizardSteps?: { id: string; name: string; enabled: boolean }[];
+    wizardSteps?: WizardStepConfigWithRequirements[];
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
     /** Edit project configuration for edit mode */
@@ -65,7 +69,23 @@ export function WizardContainer({
     editProject,
     projectsViewMode,
 }: WizardContainerProps) {
+    // Demo templates - loaded once on mount
+    const [templates, setTemplates] = useState<DemoTemplate[]>([]);
+    useEffect(() => {
+        loadDemoTemplates().then(setTemplates);
+    }, []);
+
+    // Brands and stacks - loaded once on mount
+    // NOTE: Must be declared BEFORE useWizardState so stacks can be passed for step filtering
+    const [brands, setBrands] = useState<Brand[]>([]);
+    const [stacks, setStacks] = useState<Stack[]>([]);
+    useEffect(() => {
+        loadBrands().then(setBrands);
+        loadStacks().then(setStacks);
+    }, []);
+
     // State management hook
+    // Receives stacks for dynamic step filtering based on selectedStack
     const {
         state,
         updateState,
@@ -93,13 +113,8 @@ export function WizardContainer({
         existingProjectNames,
         importedSettings,
         editProject,
+        stacks,
     });
-
-    // Demo templates - loaded once on mount
-    const [templates, setTemplates] = useState<DemoTemplate[]>([]);
-    useEffect(() => {
-        loadDemoTemplates().then(setTemplates);
-    }, []);
 
     // Navigation hook
     const {
@@ -192,7 +207,7 @@ export function WizardContainer({
 
         switch (state.currentStep) {
             case 'welcome':
-                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} templates={templates} initialViewMode={projectsViewMode} />;
+                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} templates={templates} initialViewMode={projectsViewMode} brands={brands} stacks={stacks} />;
             case 'component-selection':
                 return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':

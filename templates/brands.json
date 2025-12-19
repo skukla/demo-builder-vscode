@@ -1,0 +1,45 @@
+{
+  "$schema": "./brands.schema.json",
+  "version": "1.0.0",
+  "brands": [
+    {
+      "id": "default",
+      "name": "Default",
+      "description": "Generic storefront with default content",
+      "icon": "default",
+      "configDefaults": {},
+      "contentSources": {
+        "eds": "main--boilerplate--adobe-commerce.aem.live"
+      }
+    },
+    {
+      "id": "citisignal",
+      "name": "CitiSignal",
+      "description": "Telecommunications demo with CitiSignal branding",
+      "icon": "citisignal",
+      "featured": true,
+      "configDefaults": {
+        "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
+        "ADOBE_COMMERCE_STORE_CODE": "citisignal_store",
+        "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us"
+      },
+      "contentSources": {
+        "eds": "main--accs-citisignal--demo-system-stores.aem.live"
+      }
+    },
+    {
+      "id": "buildright",
+      "name": "BuildRight",
+      "description": "Construction/hardware demo with BuildRight branding",
+      "icon": "buildright",
+      "configDefaults": {
+        "ADOBE_COMMERCE_WEBSITE_CODE": "buildright",
+        "ADOBE_COMMERCE_STORE_CODE": "buildright_store",
+        "ADOBE_COMMERCE_STORE_VIEW_CODE": "buildright_us"
+      },
+      "contentSources": {
+        "eds": "main--accs-buildright--demo-system-stores.aem.live"
+      }
+    }
+  ]
+}

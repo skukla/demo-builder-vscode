@@ -571,6 +571,423 @@ button[class*="spectrum-Button"][disabled],
     padding: 8px !important;
 }
 
+/* Compact selector grid for brand/stack selection */
+.selector-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)) !important;
+    gap: 12px !important;
+    margin-bottom: 20px !important;
+}
+
+/* Compact card variant for selectors - matches project-card-spectrum style but smaller */
+.selector-card {
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 8px !important;
+    padding: 12px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+}
+
+.selector-card:hover {
+    background: var(--spectrum-global-color-gray-75) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.selector-card:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+.selector-card[data-selected="true"] {
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-color: var(--spectrum-global-color-blue-400) !important;
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+    transform: none !important;
+}
+
+.selector-card[data-selected="true"]:hover {
+    background: var(--spectrum-global-color-gray-75) !important;
+    transform: none !important;
+}
+
+.selector-card-name {
+    display: block !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    margin-bottom: 4px !important;
+}
+
+.selector-card-description {
+    display: block !important;
+    font-size: 11px !important;
+    color: var(--spectrum-global-color-gray-500) !important;
+    line-height: 1.4 !important;
+}
+
+/* ========================================
+ * Expandable Brand Cards
+ * ======================================== */
+
+/* Grid for expandable brand cards - slightly wider cards with more gap */
+.expandable-brand-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+    gap: 20px !important;
+    margin-bottom: 24px !important;
+    align-items: start !important;  /* Cards take natural height, don't stretch to match row */
+}
+
+/* Base brand card - expandable variant */
+.expandable-brand-card {
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 12px !important;
+    padding: 16px !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease-out !important;
+}
+
+.expandable-brand-card:hover {
+    background: var(--spectrum-global-color-gray-75) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
+}
+
+.expandable-brand-card:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+/* Selected state - brand chosen, shows blue border */
+.expandable-brand-card.selected {
+    border-color: var(--spectrum-global-color-blue-400) !important;
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+/* Expanded state - shows architecture selection */
+.expandable-brand-card.expanded {
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-color: var(--spectrum-global-color-blue-400) !important;
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+    transform: none !important;
+    cursor: default !important;
+}
+
+.expandable-brand-card.expanded:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Dimmed state - other cards when one is expanded */
+.expandable-brand-card.dimmed {
+    opacity: 0.5 !important;
+    transform: none !important;
+}
+
+.expandable-brand-card.dimmed:hover {
+    opacity: 0.7 !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Brand card header area */
+.brand-card-header {
+    margin-bottom: 0 !important;
+}
+
+.expandable-brand-card.expanded .brand-card-header {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    /* No border here - selection section has its own border-top */
+}
+
+.brand-card-title-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    margin-bottom: 4px !important;
+}
+
+.brand-card-name {
+    display: block !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+
+.brand-card-check {
+    color: var(--spectrum-global-color-blue-400) !important;
+    flex-shrink: 0 !important;
+}
+
+.brand-card-description {
+    display: block !important;
+    font-size: 12px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.4 !important;
+}
+
+/* Architecture options section (inside expanded card) */
+.brand-card-architectures {
+    animation: fadeIn 0.2s ease-out !important;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.brand-card-section-label {
+    display: block !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-700) !important;
+    margin-bottom: 12px !important;
+}
+
+.architecture-options {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+/* Individual architecture option (radio-like) - compact */
+.architecture-option {
+    display: flex !important;
+    align-items: center !important;  /* Center align for single-line feel */
+    gap: 10px !important;
+    padding: 8px 10px !important;
+    border-radius: 6px !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.architecture-option:hover {
+    background: var(--spectrum-global-color-gray-100) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+}
+
+.architecture-option:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+.architecture-option.selected {
+    background: var(--spectrum-global-color-blue-400) !important;
+    background: rgba(38, 128, 235, 0.15) !important;
+    border-color: var(--spectrum-global-color-blue-400) !important;
+}
+
+/* Radio circle indicator */
+.architecture-radio {
+    width: 18px !important;
+    height: 18px !important;
+    border-radius: 50% !important;
+    border: 2px solid var(--spectrum-global-color-gray-500) !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-top: 2px !important;
+    transition: all 0.15s ease !important;
+}
+
+.architecture-option.selected .architecture-radio {
+    border-color: var(--spectrum-global-color-blue-400) !important;
+}
+
+.architecture-radio-dot {
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50% !important;
+    background: var(--spectrum-global-color-blue-400) !important;
+}
+
+/* Architecture option text content */
+.architecture-content {
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+
+.architecture-name {
+    display: block !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+    margin-bottom: 2px !important;
+}
+
+.architecture-description {
+    display: block !important;
+    font-size: 11px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.4 !important;
+}
+
+/* Architecture options in modal - more spacious */
+.architecture-modal-options {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    margin-bottom: 20px !important;  /* Space before Close button */
+}
+
+.architecture-modal-option {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 14px !important;
+    border-radius: 8px !important;
+    background: var(--spectrum-global-color-gray-75) !important;
+    border: 1px solid var(--spectrum-global-color-gray-300) !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
+}
+
+.architecture-modal-option:hover {
+    background: var(--spectrum-global-color-gray-100) !important;
+    border-color: var(--spectrum-global-color-gray-400) !important;
+}
+
+.architecture-modal-option:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
+.architecture-modal-option.selected {
+    background: rgba(38, 128, 235, 0.15) !important;
+    border-color: var(--spectrum-global-color-blue-400) !important;
+}
+
+/* Selection summary in expanded brand card */
+.brand-card-selection {
+    margin-top: 12px !important;
+    padding-top: 12px !important;
+    border-top: 1px solid var(--spectrum-global-color-gray-300) !important;
+    animation: expandIn 0.25s ease-out !important;
+}
+
+@keyframes expandIn {
+    from {
+        opacity: 0;
+        max-height: 0;
+        margin-top: 0;
+        padding-top: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 100px;
+        margin-top: 12px;
+        padding-top: 12px;
+    }
+}
+
+.brand-card-selection-label {
+    display: block !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    margin-bottom: 4px !important;
+}
+
+.brand-card-selection-value {
+    display: block !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+
+/* Edit hint for expanded card */
+.brand-card-edit-hint {
+    display: block !important;
+    font-size: 11px !important;
+    color: var(--spectrum-global-color-blue-400) !important;
+    margin-top: 8px !important;
+    opacity: 0.7 !important;
+    transition: opacity 0.15s ease !important;
+}
+
+.expandable-brand-card.expanded:hover .brand-card-edit-hint {
+    opacity: 1 !important;
+}
+
+/* Make expanded card look clickable on hover */
+.expandable-brand-card.expanded {
+    cursor: pointer !important;
+}
+
+.expandable-brand-card.expanded:hover {
+    background: var(--spectrum-global-color-gray-75) !important;
+}
+
+/* Modal button - focusable button matching Spectrum design language */
+.modal-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 32px !important;
+    padding: 0 14px !important;
+    border-radius: 16px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: background-color 0.13s ease, border-color 0.13s ease !important;
+    border: 2px solid transparent !important;
+    box-sizing: border-box !important;
+}
+
+.modal-button-secondary {
+    background: transparent !important;
+    color: var(--spectrum-global-color-gray-800) !important;
+    border-color: var(--spectrum-global-color-gray-300) !important;
+}
+
+.modal-button-secondary:hover {
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: var(--spectrum-global-color-gray-200) !important;
+}
+
+.modal-button-secondary:active {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.modal-button-primary {
+    background: var(--spectrum-global-color-blue-500) !important;
+    color: white !important;
+    border-color: var(--spectrum-global-color-blue-500) !important;
+}
+
+.modal-button-primary:hover {
+    background: var(--spectrum-global-color-blue-600) !important;
+    border-color: var(--spectrum-global-color-blue-600) !important;
+}
+
+.modal-button-primary:active {
+    background: var(--spectrum-global-color-blue-700) !important;
+    border-color: var(--spectrum-global-color-blue-700) !important;
+}
+
+.modal-button:focus-visible {
+    outline: 2px solid var(--spectrum-global-color-blue-400) !important;
+    outline-offset: 2px !important;
+}
+
 /* Sidebar loading state */
 .sidebar-loading {
     padding: 16px !important;

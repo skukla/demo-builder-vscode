@@ -7,19 +7,24 @@ import {
     getFirstEnabledStep,
     ImportedSettings,
     EditProjectConfig,
+    WizardStepConfigWithRequirements,
 } from '../wizardHelpers';
+import { filterStepsForStack, WizardStepWithCondition } from '../stepFiltering';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import type { WizardState, WizardStep, ComponentSelection } from '@/types/webview';
+import type { Stack } from '@/types/stacks';
 
 const log = webviewLogger('useWizardState');
 
 interface UseWizardStateProps {
     componentDefaults?: ComponentSelection;
-    wizardSteps?: { id: string; name: string; enabled: boolean }[];
+    wizardSteps?: WizardStepConfigWithRequirements[];
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
     editProject?: EditProjectConfig;
+    /** Available stacks for filtering steps based on selectedStack */
+    stacks?: Stack[];
 }
 
 interface UseWizardStateReturn {
@@ -170,14 +175,44 @@ export function useWizardState({
     existingProjectNames,
     importedSettings,
     editProject,
+    stacks,
 }: UseWizardStateProps): UseWizardStateReturn {
-    // Filter enabled steps before using in state to avoid conditional hook calls
-    const WIZARD_STEPS = useMemo(() => getEnabledWizardSteps(wizardSteps), [wizardSteps]);
-
-    // Main wizard state
+    // Main wizard state (declared before WIZARD_STEPS so we can use selectedStack)
     const [state, setState] = useState<WizardState>(() =>
         computeInitialState(wizardSteps, editProject, importedSettings, componentDefaults, existingProjectNames || []),
     );
+
+    // Filter steps based on enabled flag AND stack conditions
+    // When a predefined stack is selected, hide steps with showWhenNoStack: true
+    // (e.g., Component Selection is hidden because the stack determines components)
+    const WIZARD_STEPS = useMemo(() => {
+        // Step 1: Get all enabled steps
+        const enabledSteps = getEnabledWizardSteps(wizardSteps);
+
+        // Step 2: Look up the selected Stack object from the stacks array
+        const selectedStack = state.selectedStack
+            ? stacks?.find(s => s.id === state.selectedStack)
+            : undefined;
+
+        // Step 3: Convert to format expected by filterStepsForStack
+        const stepsWithConditions: WizardStepWithCondition[] = enabledSteps.map(step => {
+            // Find the original step config to get the condition
+            const originalStep = wizardSteps?.find(ws => ws.id === step.id);
+            return {
+                id: step.id,
+                name: step.name,
+                condition: originalStep?.condition,
+            };
+        });
+
+        // Step 4: Apply stack-based filtering
+        const filteredSteps = filterStepsForStack(stepsWithConditions, selectedStack);
+
+        return filteredSteps.map(step => ({
+            id: step.id as WizardStep,
+            name: step.name,
+        }));
+    }, [wizardSteps, stacks, state.selectedStack]);
 
     // Step completion tracking
     const [completedSteps, setCompletedSteps] = useState<WizardStep[]>(() => {

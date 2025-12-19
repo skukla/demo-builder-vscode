@@ -1,0 +1,50 @@
+{
+  "$schema": "./stacks.schema.json",
+  "version": "1.0.0",
+  "stacks": [
+    {
+      "id": "headless-paas",
+      "name": "Headless + PaaS",
+      "description": "NextJS storefront with API Mesh and Commerce PaaS",
+      "icon": "nextjs",
+      "frontend": "citisignal-nextjs",
+      "backend": "adobe-commerce-paas",
+      "dependencies": ["commerce-mesh", "demo-inspector"],
+      "features": ["Server-side rendering", "API Mesh integration", "Full customization"]
+    },
+    {
+      "id": "headless-accs",
+      "name": "Headless + ACCS",
+      "description": "NextJS storefront with API Mesh and Commerce ACCS",
+      "icon": "nextjs",
+      "frontend": "citisignal-nextjs",
+      "backend": "adobe-commerce-accs",
+      "dependencies": ["commerce-mesh", "demo-inspector"],
+      "features": ["Server-side rendering", "API Mesh integration", "Managed backend"]
+    },
+    {
+      "id": "eds-paas",
+      "name": "Edge Delivery + PaaS",
+      "description": "EDS storefront with Commerce Drop-ins and PaaS",
+      "icon": "eds",
+      "frontend": "eds-citisignal-storefront",
+      "backend": "adobe-commerce-paas",
+      "dependencies": ["demo-inspector"],
+      "features": ["Ultra-fast delivery", "DA.live content", "Self-managed backend"],
+      "requiresGitHub": true,
+      "requiresDaLive": true
+    },
+    {
+      "id": "eds-accs",
+      "name": "Edge Delivery + ACCS",
+      "description": "EDS storefront with Commerce Drop-ins and ACCS",
+      "icon": "eds",
+      "frontend": "eds-citisignal-storefront",
+      "backend": "adobe-commerce-accs",
+      "dependencies": ["demo-inspector"],
+      "features": ["Ultra-fast delivery", "DA.live content", "Managed backend"],
+      "requiresGitHub": true,
+      "requiresDaLive": true
+    }
+  ]
+}
