@@ -134,7 +134,7 @@ describe('GitHubService', () => {
             // Mock token exchange response
             mockOctokitRequest.mockResolvedValueOnce({
                 data: {
-                    access_token: 'gho_test_access_token',
+                    access_token: 'mock_gh_token_test_access_token',
                     token_type: 'bearer',
                     scope: 'repo,user:email',
                 },
@@ -145,7 +145,7 @@ describe('GitHubService', () => {
 
             // Then: Token should be returned
             expect(token).toEqual({
-                token: 'gho_test_access_token',
+                token: 'mock_gh_token_test_access_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email'],
             });
@@ -194,7 +194,7 @@ describe('GitHubService', () => {
         it('should store token in VS Code SecretStorage', async () => {
             // Given: Valid GitHub token
             const token = {
-                token: 'gho_test_token',
+                token: 'mock_gh_token_test_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email'],
             };
@@ -212,7 +212,7 @@ describe('GitHubService', () => {
         it('should retrieve token from SecretStorage', async () => {
             // Given: Token stored in SecretStorage
             const storedToken = {
-                token: 'gho_stored_token',
+                token: 'mock_gh_token_stored_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email'],
             };
@@ -265,7 +265,7 @@ describe('GitHubService', () => {
         it('should validate token with GitHub API', async () => {
             // Given: Valid token in storage
             const storedToken = {
-                token: 'gho_valid_token',
+                token: 'mock_gh_token_valid_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email'],
             };
@@ -295,7 +295,7 @@ describe('GitHubService', () => {
         it('should detect expired or revoked token', async () => {
             // Given: Expired/revoked token in storage
             const storedToken = {
-                token: 'gho_expired_token',
+                token: 'mock_gh_token_expired_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email'],
             };
@@ -318,7 +318,7 @@ describe('GitHubService', () => {
         it('should check required scopes (repo, user:email)', async () => {
             // Given: Token with missing scopes
             const storedToken = {
-                token: 'gho_limited_token',
+                token: 'mock_gh_token_limited_token',
                 tokenType: 'bearer',
                 scopes: ['repo'], // Missing user:email
             };
@@ -343,7 +343,7 @@ describe('GitHubService', () => {
         it('should return cached validation result within TTL', async () => {
             // Given: Token already validated
             const storedToken = {
-                token: 'gho_cached_token',
+                token: 'mock_gh_token_cached_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email'],
             };
@@ -367,7 +367,7 @@ describe('GitHubService', () => {
         it('should handle missing scope header from GitHub API', async () => {
             // Given: Token in storage
             const storedToken = {
-                token: 'gho_no_scope_header_token',
+                token: 'mock_gh_token_no_scope_header_token',
                 tokenType: 'bearer',
                 scopes: [],
             };
@@ -397,7 +397,7 @@ describe('GitHubService', () => {
         beforeEach(() => {
             // Setup authenticated token
             const storedToken = {
-                token: 'gho_valid_token',
+                token: 'mock_gh_token_valid_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email'],
             };
@@ -517,7 +517,7 @@ describe('GitHubService', () => {
         beforeEach(() => {
             // Setup authenticated token
             const storedToken = {
-                token: 'gho_valid_token',
+                token: 'mock_gh_token_valid_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email'],
             };
@@ -626,7 +626,7 @@ describe('GitHubService', () => {
 
             // Setup authenticated token
             const storedToken = {
-                token: 'gho_valid_token',
+                token: 'mock_gh_token_valid_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email'],
             };
@@ -723,7 +723,7 @@ describe('GitHubService', () => {
         beforeEach(() => {
             // Setup authenticated token
             const storedToken = {
-                token: 'gho_valid_token',
+                token: 'mock_gh_token_valid_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email', 'delete_repo'],
             };
@@ -782,7 +782,7 @@ describe('GitHubService', () => {
         it('should throw error when delete_repo scope missing for delete', async () => {
             // Given: Token without delete_repo scope
             const storedToken = {
-                token: 'gho_limited_token',
+                token: 'mock_gh_token_limited_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email'], // Missing delete_repo
             };
@@ -804,7 +804,7 @@ describe('GitHubService', () => {
         it('should work with repo scope for archive (no delete_repo needed)', async () => {
             // Given: Token with only repo scope (no delete_repo)
             const storedToken = {
-                token: 'gho_repo_only_token',
+                token: 'mock_gh_token_repo_only_token',
                 tokenType: 'bearer',
                 scopes: ['repo', 'user:email'],
             };
