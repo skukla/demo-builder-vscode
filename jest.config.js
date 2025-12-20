@@ -50,7 +50,13 @@ module.exports = {
         '^@/utils/(.*)$': '<rootDir>/src/utils/$1',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
+        '^@octokit/core$': '<rootDir>/tests/__mocks__/@octokit/core.ts',
+        '^@octokit/plugin-retry$': '<rootDir>/tests/__mocks__/@octokit/plugin-retry.ts',
       },
+      // Transform ESM-only packages (Octokit, etc.)
+      transformIgnorePatterns: [
+        'node_modules/(?!(@octokit|universal-user-agent|before-after-hook)/)',
+      ],
       setupFilesAfterEnv: ['<rootDir>/tests/setup/node.ts'],
     },
     {
@@ -98,6 +104,8 @@ module.exports = {
         '\\.(css|less|scss|sass)$': '<rootDir>/tests/__mocks__/styleMock.js',
         '^vscode$': '<rootDir>/tests/__mocks__/vscode.ts',
         '^uuid$': '<rootDir>/tests/__mocks__/uuid.ts',
+        '^@octokit/core$': '<rootDir>/tests/__mocks__/@octokit/core.ts',
+        '^@octokit/plugin-retry$': '<rootDir>/tests/__mocks__/@octokit/plugin-retry.ts',
       },
     }
   ],
