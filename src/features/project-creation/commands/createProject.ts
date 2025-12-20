@@ -64,6 +64,13 @@ function formatComponentDefaults(defaults: ComponentDefaults | null): string {
     return `frontend=${frontend}, backend=${backend}, ${depCount} dependencies`;
 }
 
+/** Configuration for editing an existing project */
+interface EditProjectConfig {
+    projectName: string;
+    projectPath: string;
+    settings: SettingsFile;
+}
+
 interface InitialWizardData {
     theme: 'dark' | 'light';
     workspacePath: string | undefined;
@@ -71,6 +78,7 @@ interface InitialWizardData {
     wizardSteps: WizardStep[] | null;
     existingProjectNames: string[];
     importedSettings: SettingsFile | null;
+    editProject: EditProjectConfig | null;
     projectsViewMode: 'cards' | 'rows';
 }
 
@@ -89,6 +97,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
     private wizardNavigateCommand: vscode.Disposable | null = null;  // Command for sidebar navigation
     private wizardSteps: WizardStep[] | null = null;  // Loaded wizard steps for sidebar
     private importedSettings: SettingsFile | null = null;  // Settings imported from file or copied from project
+    private editProject: EditProjectConfig | null = null;  // Configuration for editing existing project
 
     // Shared state object (passed by reference to handlers for automatic synchronization)
     private sharedState: SharedState;
@@ -276,6 +285,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             wizardSteps,
             existingProjectNames,
             importedSettings: this.importedSettings,
+            editProject: this.editProject,
             projectsViewMode,
         };
     }
@@ -326,9 +336,10 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 step: number;
                 completedSteps?: number[];
                 steps?: Array<{ id: string; label: string }>;
+                isEditMode?: boolean;
             };
             if (payload?.step) {
-                this.updateSidebarWizardContext(payload.step, payload.completedSteps, payload.steps);
+                this.updateSidebarWizardContext(payload.step, payload.completedSteps, payload.steps, payload.isEditMode);
             }
             return { success: true };
         });
@@ -366,7 +377,11 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
         }
     }
 
-    public async execute(options?: { importedSettings?: SettingsFile; sourceDescription?: string }): Promise<void> {
+    public async execute(options?: {
+        importedSettings?: SettingsFile;
+        sourceDescription?: string;
+        editProject?: EditProjectConfig;
+    }): Promise<void> {
         try {
             this.logger.debug('[Project Creation] Initializing wizard interface...');
 
@@ -374,6 +389,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.importedSettings = options?.importedSettings ?? null;
             if (this.importedSettings) {
                 this.logger.debug(`[Project Creation] Loading wizard with imported settings from: ${options?.sourceDescription ?? 'unknown source'}`);
+            }
+
+            // Store edit project config for use in getInitialData
+            this.editProject = options?.editProject ?? null;
+            if (this.editProject) {
+                this.logger.debug(`[Project Creation] Loading wizard in edit mode for project: ${this.editProject.projectName}`);
             }
 
             // Dispose Projects List if open (replace it with the wizard)
@@ -442,11 +463,13 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
      * @param step - Current step index (1-based)
      * @param completedSteps - Array of completed step indices
      * @param filteredSteps - Optional filtered steps from webview (based on stack selection)
+     * @param isEditMode - Whether we're in edit mode (reviewing existing project)
      */
     private updateSidebarWizardContext(
         step: number,
         completedSteps?: number[],
         filteredSteps?: Array<{ id: string; label: string }>,
+        isEditMode?: boolean,
     ): void {
         if (ServiceLocator.isSidebarInitialized()) {
             const sidebarProvider = ServiceLocator.getSidebarProvider();
@@ -471,6 +494,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 total: sidebarSteps.length,
                 completedSteps,
                 steps: sidebarSteps,
+                isEditMode,
             });
         }
     }

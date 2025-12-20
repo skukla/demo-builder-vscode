@@ -79,6 +79,7 @@ export function useWizardEffects({
                 step: stepIndex + 1,
                 completedSteps: getCompletedStepIndices(completedSteps, WIZARD_STEPS),
                 steps: sidebarSteps,
+                isEditMode: state.editMode,
             });
         }
     }, [state.currentStep, completedSteps, WIZARD_STEPS]);

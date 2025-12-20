@@ -13,7 +13,7 @@ export type SidebarContext =
     | { type: 'projects' }                                                          // Projects Dashboard (no project loaded)
     | { type: 'projectsList' }                                                      // Projects List (utility icons only)
     | { type: 'project'; project: Project }                                         // Project Detail
-    | { type: 'wizard'; step: number; total: number; completedSteps?: number[]; steps?: WizardStep[] }    // Wizard
+    | { type: 'wizard'; step: number; total: number; completedSteps?: number[]; steps?: WizardStep[]; isEditMode?: boolean }    // Wizard
     | { type: 'configure'; project: Project };                                      // Configure
 
 /**

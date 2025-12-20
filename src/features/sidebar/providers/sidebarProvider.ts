@@ -29,7 +29,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     // Local context state (for wizard tracking)
     // Stores the full wizard context including steps array
-    private wizardContext?: { step: number; total: number; completedSteps?: number[]; steps?: { id: string; label: string }[] };
+    private wizardContext?: { step: number; total: number; completedSteps?: number[]; steps?: { id: string; label: string }[]; isEditMode?: boolean };
 
     // Track when we're showing the Projects List (vs Project Dashboard)
     private showingProjectsList = false;
@@ -263,6 +263,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 total: this.wizardContext.total,
                 completedSteps: this.wizardContext.completedSteps,
                 steps: this.wizardContext.steps,
+                isEditMode: this.wizardContext.isEditMode,
             };
         }
 

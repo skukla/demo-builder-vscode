@@ -95,6 +95,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     compact={true}
                     showHeader={true}
                     headerText="Setup Progress"
+                    isEditMode={context.isEditMode}
                 />
             </Flex>
         );

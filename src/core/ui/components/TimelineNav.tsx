@@ -13,7 +13,7 @@ import { cn } from '@/core/ui/utils/classNames';
 /**
  * Timeline step status type
  */
-type TimelineStatus = 'completed' | 'completed-current' | 'current' | 'upcoming';
+type TimelineStatus = 'completed' | 'completed-current' | 'current' | 'upcoming' | 'review';
 
 /**
  * Lookup map for timeline step dot status classes
@@ -23,6 +23,7 @@ const TIMELINE_DOT_STATUS_CLASS: Record<TimelineStatus, string> = {
     'completed-current': 'timeline-step-dot-completed',
     'current': 'timeline-step-dot-current',
     'upcoming': 'timeline-step-dot-upcoming',
+    'review': 'timeline-step-dot-review',
 };
 
 /**
@@ -42,6 +43,7 @@ const TIMELINE_LABEL_COLOR_CLASS: Record<TimelineStatus, string> = {
     'completed-current': 'text-blue-700',
     'current': 'text-blue-700',
     'upcoming': 'text-gray-600',
+    'review': 'text-gray-800',
 };
 
 /**
@@ -60,6 +62,17 @@ function getTimelineLabelClasses(status: TimelineStatus): string {
 function renderStepIndicator(status: TimelineStatus): React.ReactNode {
     if (status === 'completed' || status === 'completed-current') {
         return <CheckmarkCircle size="XS" UNSAFE_className={cn('text-white', 'icon-xs')} />;
+    }
+    if (status === 'review') {
+        // Solid white inner dot for edit mode (no checkmark - indicates "can review/edit")
+        return (
+            <View
+                width="size-100"
+                height="size-100"
+                UNSAFE_className="rounded-full"
+                UNSAFE_style={{ backgroundColor: '#ffffff' }}
+            />
+        );
     }
     if (status === 'current') {
         // White inner dot creates contrast against the blue outer ring
@@ -105,6 +118,8 @@ export interface TimelineNavProps {
     headerText?: string;
     /** Whether to use compact mode (smaller padding, for sidebar) */
     compact?: boolean;
+    /** Whether we're in edit mode (reviewing existing project) */
+    isEditMode?: boolean;
 }
 
 /** Animation duration in milliseconds */
@@ -123,6 +138,7 @@ export function TimelineNav({
     showHeader = true,
     headerText = 'Setup Progress',
     compact = false,
+    isEditMode = false,
 }: TimelineNavProps) {
     // Track previous steps for detecting changes
     const prevStepsRef = useRef<TimelineStep[]>([]);
@@ -221,6 +237,10 @@ export function TimelineNav({
     const getStepStatus = (index: number): TimelineStatus => {
         const isCompleted = completedStepIndices.includes(index);
         const isCurrent = index === currentStepIndex;
+
+        // In edit mode, show completed steps as 'review' (blue filled, no checkmark)
+        // This signals "these are done but you can still review/edit them"
+        if (isEditMode && isCompleted && !isCurrent) return 'review';
 
         if (isCurrent && isCompleted) return 'completed-current';
         if (isCurrent && !isCompleted) return 'current';

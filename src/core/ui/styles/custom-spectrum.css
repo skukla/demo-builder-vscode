@@ -1162,6 +1162,10 @@ button[class*="spectrum-Button"][disabled],
     background: var(--spectrum-global-color-green-600) !important; /* Green - Completed steps */
 }
 
+.timeline-step-dot-review {
+    background: var(--spectrum-global-color-blue-600) !important; /* Blue - Edit mode (reviewing completed steps) */
+}
+
 .timeline-step-dot-current {
     background: var(--spectrum-global-color-blue-600) !important; /* Blue - Active step */
     border: 2px solid var(--spectrum-global-color-blue-400) !important; /* Blue - Active step border */
