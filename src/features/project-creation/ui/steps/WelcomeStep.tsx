@@ -37,15 +37,25 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     const hasStacks = stacks && stacks.length > 0;
 
     // Custom validator for duplicate project name check
+    // In edit mode, allow the original project name (user is keeping it)
     const notDuplicate = useCallback(
         (message: string) => (value: string) => {
+            // Never allow empty names (required validator should catch this first,
+            // but be explicit to prevent any bypass)
+            if (!value || value.trim() === '') {
+                return { valid: false, error: 'Project name is required' };
+            }
+            // In edit mode, the original name is always allowed
+            if (state.editMode && value === state.editOriginalName) {
+                return { valid: true, error: undefined };
+            }
             const isDuplicate = existingProjectNames.includes(value);
             return {
                 valid: !isDuplicate,
                 error: isDuplicate ? message : undefined,
             };
         },
-        [existingProjectNames],
+        [existingProjectNames, state.editMode, state.editOriginalName],
     );
 
     const validateProjectName = useCallback((value: string): string | undefined => {
@@ -66,7 +76,9 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     const getProjectNameValidationState = (
         projectName: string | undefined,
     ): 'valid' | 'invalid' | undefined => {
-        if (!projectName) return undefined;
+        // Only return undefined for truly untouched fields (undefined)
+        // Empty string should show as invalid (user cleared the field)
+        if (projectName === undefined) return undefined;
         const error = validateProjectName(projectName);
         return error ? 'invalid' : 'valid';
     };
@@ -183,7 +195,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 onChange={(value) => updateState({ projectName: normalizeProjectName(value) })}
                 validationState={getProjectNameValidationState(state.projectName)}
                 errorMessage={
-                    state.projectName
+                    state.projectName !== undefined
                         ? validateProjectName(state.projectName)
                         : undefined
                 }

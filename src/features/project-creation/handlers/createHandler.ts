@@ -77,8 +77,15 @@ export async function handleCreateProject(
     // VALIDATION: Check for duplicate project name (prevents accidental overwrite)
     // This checks for valid projects (with .demo-builder.json manifest)
     // Orphaned/invalid directories will still be cleaned up by executor
+    // In edit mode, allow the original project name (same project being edited)
     const existingProjects = await context.stateManager.getAllProjects();
-    const duplicateProject = existingProjects.find(p => p.name === config.projectName);
+    const isEditMode = Boolean(config.editMode && config.editProjectPath);
+    const duplicateProject = existingProjects.find(p => {
+        if (p.name !== config.projectName) return false;
+        // In edit mode, allow if it's the same project being edited
+        if (isEditMode && p.path === config.editProjectPath) return false;
+        return true;
+    });
 
     if (duplicateProject) {
         context.logger.warn(`[Project Creation] Project "${config.projectName}" already exists at: ${duplicateProject.path}`);

@@ -75,6 +75,7 @@ export interface WizardState {
     // Edit mode properties
     editMode?: boolean;  // True when editing existing project
     editProjectPath?: string;  // Path to existing project being edited
+    editOriginalName?: string;  // Original project name (for duplicate validation)
 }
 
 export interface AdobeAuthState {

@@ -98,6 +98,7 @@ function computeInitialState(
             projectName: editProject.projectName,
             editMode: true,
             editProjectPath: editProject.projectPath,
+            editOriginalName: editProject.projectName,  // For duplicate validation
             componentConfigs: editSettings.configs || {},
             adobeAuth: {
                 isAuthenticated: true, // Assumed authenticated for edit mode
