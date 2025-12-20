@@ -16,6 +16,7 @@ const mockFs = fs as jest.Mocked<typeof fs>;
 
 describe('meshStatusHelpers', () => {
     const mockMeshPath = '/projects/demo/components/commerce-mesh';
+    const mockMeshEndpoint = 'https://mesh.example.com/api/mesh-id/graphql';
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -32,7 +33,7 @@ describe('meshStatusHelpers', () => {
         it('returns incomplete when .env file does not exist', async () => {
             mockFs.readFile.mockRejectedValue(new Error('ENOENT: no such file'));
 
-            const result = await checkMeshConfigCompleteness(mockMeshPath);
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
 
             expect(result.isComplete).toBe(false);
             expect(result.missingFields).toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
@@ -41,7 +42,7 @@ describe('meshStatusHelpers', () => {
         it('returns incomplete when .env file is empty', async () => {
             mockFs.readFile.mockResolvedValue('');
 
-            const result = await checkMeshConfigCompleteness(mockMeshPath);
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
 
             expect(result.isComplete).toBe(false);
             expect(result.missingFields).toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
@@ -54,16 +55,16 @@ ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
 SOME_OTHER_VAR=value
 `);
 
-            const result = await checkMeshConfigCompleteness(mockMeshPath);
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
 
             expect(result.isComplete).toBe(false);
             expect(result.missingFields).not.toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
             expect(result.missingFields).toContain('ADOBE_CATALOG_SERVICE_ENDPOINT');
         });
 
-        it('returns complete when all required fields are present', async () => {
+        it('returns incomplete when mesh endpoint from componentConfigs is not provided', async () => {
             mockFs.readFile.mockResolvedValue(`
-# Complete mesh config
+# Complete .env INPUT config (but no endpoint in componentConfigs)
 ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
 ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
 ADOBE_COMMERCE_URL=https://commerce.example.com
@@ -74,7 +75,28 @@ ADOBE_COMMERCE_STORE_CODE=main_store
 ADOBE_CATALOG_API_KEY=api-key-123
 `);
 
+            // No mesh endpoint passed - simulates componentConfigs missing MESH_ENDPOINT
             const result = await checkMeshConfigCompleteness(mockMeshPath);
+
+            expect(result.isComplete).toBe(false);
+            expect(result.missingFields).toContain('MESH_ENDPOINT');
+        });
+
+        it('returns complete when all required fields and mesh endpoint from componentConfigs are present', async () => {
+            mockFs.readFile.mockResolvedValue(`
+# Complete mesh INPUT config
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            // Pass mesh endpoint (from componentConfigs['frontend']['MESH_ENDPOINT'])
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
 
             expect(result.isComplete).toBe(true);
             expect(result.missingFields).toHaveLength(0);
@@ -92,7 +114,7 @@ ADOBE_COMMERCE_STORE_CODE=main_store
 ADOBE_CATALOG_API_KEY=api-key-123
 `);
 
-            const result = await checkMeshConfigCompleteness(mockMeshPath);
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
 
             expect(result.isComplete).toBe(true);
         });
@@ -109,7 +131,7 @@ ADOBE_COMMERCE_STORE_CODE=main_store
 ADOBE_CATALOG_API_KEY=api-key-123
 `);
 
-            const result = await checkMeshConfigCompleteness(mockMeshPath);
+            const result = await checkMeshConfigCompleteness(mockMeshPath, mockMeshEndpoint);
 
             expect(result.isComplete).toBe(false);
             expect(result.missingFields).toContain('ADOBE_COMMERCE_GRAPHQL_ENDPOINT');
@@ -123,14 +145,34 @@ ADOBE_CATALOG_API_KEY=api-key-123
             type: 'dependency',
             path: mockMeshPath,
             status: 'deployed',
+            endpoint: mockMeshEndpoint,
             lastUpdated: new Date(),
         };
 
-        const mockProject: Project = {
+        // Project with MESH_ENDPOINT in componentConfigs (complete config)
+        const mockProjectWithMeshEndpoint: Project = {
             name: 'Test Project',
             path: '/projects/demo',
             createdAt: new Date(),
             status: 'ready',
+            componentConfigs: {
+                'citisignal-nextjs': {
+                    MESH_ENDPOINT: mockMeshEndpoint,
+                },
+            },
+        };
+
+        // Project WITHOUT MESH_ENDPOINT in componentConfigs (incomplete config)
+        const mockProjectWithoutMeshEndpoint: Project = {
+            name: 'Test Project',
+            path: '/projects/demo',
+            createdAt: new Date(),
+            status: 'ready',
+            componentConfigs: {
+                'citisignal-nextjs': {
+                    // No MESH_ENDPOINT here
+                },
+            },
         };
 
         it('returns config-incomplete when .env file is missing', async () => {
@@ -139,7 +181,54 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 mockMeshComponent,
-                mockProject,
+                mockProjectWithMeshEndpoint,
+            );
+
+            expect(result).toBe('config-incomplete');
+        });
+
+        it('returns config-incomplete when MESH_ENDPOINT is missing from componentConfigs', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            // Project has componentConfigs but no MESH_ENDPOINT
+            const result = await determineMeshStatus(
+                { hasChanges: false },
+                mockMeshComponent,
+                mockProjectWithoutMeshEndpoint,
+            );
+
+            expect(result).toBe('config-incomplete');
+        });
+
+        it('returns config-incomplete even when meshComponent.endpoint is set but not in componentConfigs', async () => {
+            mockFs.readFile.mockResolvedValue(`
+ADOBE_COMMERCE_GRAPHQL_ENDPOINT=https://example.com/graphql
+ADOBE_CATALOG_SERVICE_ENDPOINT=https://catalog.example.com
+ADOBE_COMMERCE_URL=https://commerce.example.com
+ADOBE_COMMERCE_ENVIRONMENT_ID=env-123
+ADOBE_COMMERCE_STORE_VIEW_CODE=default
+ADOBE_COMMERCE_WEBSITE_CODE=base
+ADOBE_COMMERCE_STORE_CODE=main_store
+ADOBE_CATALOG_API_KEY=api-key-123
+`);
+
+            // Component has endpoint in state, but componentConfigs doesn't have MESH_ENDPOINT
+            // This simulates the user's issue: mesh deployed but MESH_ENDPOINT not in frontend .env
+            const componentWithEndpoint = { ...mockMeshComponent, endpoint: mockMeshEndpoint };
+
+            const result = await determineMeshStatus(
+                { hasChanges: false },
+                componentWithEndpoint,
+                mockProjectWithoutMeshEndpoint, // Missing MESH_ENDPOINT in componentConfigs
             );
 
             expect(result).toBe('config-incomplete');
@@ -160,7 +249,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 mockMeshComponent,
-                mockProject,
+                mockProjectWithMeshEndpoint, // Has MESH_ENDPOINT in componentConfigs
             );
 
             expect(result).toBe('deployed');
@@ -181,7 +270,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: true },
                 mockMeshComponent,
-                mockProject,
+                mockProjectWithMeshEndpoint,
             );
 
             expect(result).toBe('config-changed');
@@ -204,7 +293,7 @@ ADOBE_CATALOG_API_KEY=api-key-123
             const result = await determineMeshStatus(
                 { hasChanges: false },
                 errorComponent,
-                mockProject,
+                mockProjectWithMeshEndpoint,
             );
 
             expect(result).toBe('error');

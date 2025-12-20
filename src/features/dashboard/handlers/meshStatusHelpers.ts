@@ -118,8 +118,12 @@ export function getExpirationMessage(expiredMinutesAgo: number): string {
 }
 
 /**
- * Required environment variables for mesh deployment
- * These must all be present for the mesh to function correctly
+ * Required environment variables for mesh deployment (INPUT variables)
+ * These must all be present in the mesh's .env file for deployment to work.
+ *
+ * Note: MESH_ENDPOINT is NOT in this list because it's an OUTPUT of deployment,
+ * not an input. The mesh endpoint is stored in componentInstances['commerce-mesh'].endpoint
+ * and is checked separately.
  */
 const REQUIRED_MESH_ENV_VARS = [
     'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
@@ -133,23 +137,31 @@ const REQUIRED_MESH_ENV_VARS = [
 ];
 
 /**
- * Check if all required mesh configuration fields are populated in the .env file
+ * Check if all required mesh configuration fields are populated
  *
- * Reads the actual .env file from the mesh component path to verify configuration
- * is complete. This catches cases where componentConfigs has data but the .env
- * file was never generated (e.g., older projects using linkExistingMesh).
+ * Checks both:
+ * 1. The .env file for INPUT variables (commerce URLs, credentials)
+ * 2. The mesh endpoint (OUTPUT of deployment) - must be persisted to componentConfigs
+ *
+ * Note: We check componentConfigs for MESH_ENDPOINT rather than just meshComponent.endpoint
+ * because componentConfigs is what gets written to the frontend's .env file. If MESH_ENDPOINT
+ * is in component state but not in componentConfigs, the frontend can't use it.
  *
  * @param meshPath - Path to the mesh component directory
+ * @param meshEndpointFromConfigs - MESH_ENDPOINT value from componentConfigs (what frontend uses)
  * @returns Object with isComplete flag and list of missing fields
  */
-export async function checkMeshConfigCompleteness(meshPath: string | undefined): Promise<{
+export async function checkMeshConfigCompleteness(
+    meshPath: string | undefined,
+    meshEndpointFromConfigs?: string,
+): Promise<{
     isComplete: boolean;
     missingFields: string[];
 }> {
     const missingFields: string[] = [];
 
     if (!meshPath) {
-        return { isComplete: false, missingFields: [...REQUIRED_MESH_ENV_VARS] };
+        return { isComplete: false, missingFields: [...REQUIRED_MESH_ENV_VARS, 'MESH_ENDPOINT'] };
     }
 
     // Read the .env file from the mesh component directory
@@ -161,9 +173,10 @@ export async function checkMeshConfigCompleteness(meshPath: string | undefined):
         envConfig = parseEnvFile(content);
     } catch {
         // .env file doesn't exist or can't be read - all fields are missing
-        return { isComplete: false, missingFields: [...REQUIRED_MESH_ENV_VARS] };
+        return { isComplete: false, missingFields: [...REQUIRED_MESH_ENV_VARS, 'MESH_ENDPOINT'] };
     }
 
+    // Check INPUT variables from .env file
     for (const field of REQUIRED_MESH_ENV_VARS) {
         const value = envConfig[field];
         if (value === undefined || value === null || value === '') {
@@ -171,10 +184,32 @@ export async function checkMeshConfigCompleteness(meshPath: string | undefined):
         }
     }
 
+    // Check OUTPUT variable (mesh endpoint)
+    // Must be in componentConfigs so frontend .env has it - component state alone isn't enough
+    if (!meshEndpointFromConfigs) {
+        missingFields.push('MESH_ENDPOINT');
+    }
+
     return {
         isComplete: missingFields.length === 0,
         missingFields,
     };
+}
+
+/**
+ * Get MESH_ENDPOINT from componentConfigs (checks all component configs)
+ */
+function getMeshEndpointFromConfigs(project: Project): string | undefined {
+    if (!project.componentConfigs) return undefined;
+
+    // Check all component configs for MESH_ENDPOINT (usually in frontend config)
+    for (const configValues of Object.values(project.componentConfigs)) {
+        const endpoint = configValues?.MESH_ENDPOINT;
+        if (endpoint && typeof endpoint === 'string' && endpoint.trim() !== '') {
+            return endpoint;
+        }
+    }
+    return undefined;
 }
 
 /**
@@ -185,8 +220,12 @@ export async function determineMeshStatus(
     meshComponent: ComponentInstance,
     project: Project,
 ): Promise<'deployed' | 'config-changed' | 'config-incomplete' | 'update-declined' | 'error' | 'checking'> {
-    // First check if configuration is complete (reads actual .env file)
-    const configCheck = await checkMeshConfigCompleteness(meshComponent.path);
+    // Get MESH_ENDPOINT from componentConfigs (what frontend .env will have)
+    // Not meshComponent.endpoint - that's component state which may not be in .env
+    const meshEndpointFromConfigs = getMeshEndpointFromConfigs(project);
+
+    // Check if configuration is complete (both .env INPUT vars and mesh endpoint in componentConfigs)
+    const configCheck = await checkMeshConfigCompleteness(meshComponent.path, meshEndpointFromConfigs);
     if (!configCheck.isComplete) {
         return 'config-incomplete';
     }
@@ -327,12 +366,18 @@ export async function sendDemoStatusUpdate(context: HandlerContext): Promise<voi
         } else if (hasMeshDeploymentRecord(project)) {
             if (project.componentConfigs) {
                 const meshChanges = await detectMeshChanges(project, project.componentConfigs);
+                // Use determineMeshStatus for consistent config completeness checking
+                const status = await determineMeshStatus(meshChanges, meshComponent, project);
                 meshStatus = {
-                    status: meshChanges.hasChanges ? 'config-changed' : 'deployed',
+                    status,
                     endpoint: meshComponent.endpoint,
                 };
             } else {
-                meshStatus = { status: 'deployed', endpoint: meshComponent.endpoint };
+                // No componentConfigs - MESH_ENDPOINT definitely missing from frontend .env
+                meshStatus = {
+                    status: 'config-incomplete',
+                    endpoint: meshComponent.endpoint,
+                };
             }
         } else {
             meshStatus = { status: 'not-deployed' };
