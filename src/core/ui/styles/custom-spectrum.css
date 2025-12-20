@@ -722,7 +722,7 @@ button[class*="spectrum-Button"][disabled],
 }
 
 .brand-card-check {
-    color: var(--spectrum-global-color-blue-400) !important;
+    color: var(--spectrum-global-color-green-600) !important;
     flex-shrink: 0 !important;
 }
 
@@ -927,6 +927,53 @@ button[class*="spectrum-Button"][disabled],
     opacity: 1 !important;
 }
 
+/* Optional addons section in architecture modal */
+.architecture-addons {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+}
+
+.architecture-addons .addon-label {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+}
+
+.architecture-addons .addon-name {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--spectrum-global-color-gray-900) !important;
+}
+
+.architecture-addons .addon-description {
+    font-size: 11px !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    line-height: 1.4 !important;
+}
+
+.architecture-addons .addon-required-badge {
+    display: inline-block !important;
+    margin-left: 8px !important;
+    padding: 1px 6px !important;
+    font-size: 10px !important;
+    font-weight: 500 !important;
+    color: var(--spectrum-global-color-gray-600) !important;
+    background: var(--spectrum-global-color-gray-200) !important;
+    border-radius: 4px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+}
+
+/* Architecture modal footer with Done button */
+.architecture-modal-footer {
+    display: flex !important;
+    justify-content: flex-end !important;
+    margin-top: 20px !important;
+    padding-top: 16px !important;
+    border-top: 1px solid var(--spectrum-global-color-gray-200) !important;
+}
+
 /* Make expanded card look clickable on hover */
 .expandable-brand-card.expanded {
     cursor: pointer !important;
@@ -968,19 +1015,19 @@ button[class*="spectrum-Button"][disabled],
 }
 
 .modal-button-primary {
-    background: var(--spectrum-global-color-blue-500) !important;
+    background: var(--spectrum-accent-background-color-default, var(--spectrum-global-color-blue-400)) !important;
     color: white !important;
-    border-color: var(--spectrum-global-color-blue-500) !important;
+    border-color: var(--spectrum-accent-background-color-default, var(--spectrum-global-color-blue-400)) !important;
 }
 
 .modal-button-primary:hover {
-    background: var(--spectrum-global-color-blue-600) !important;
-    border-color: var(--spectrum-global-color-blue-600) !important;
+    background: var(--spectrum-accent-background-color-hover, var(--spectrum-global-color-blue-500)) !important;
+    border-color: var(--spectrum-accent-background-color-hover, var(--spectrum-global-color-blue-500)) !important;
 }
 
 .modal-button-primary:active {
-    background: var(--spectrum-global-color-blue-700) !important;
-    border-color: var(--spectrum-global-color-blue-700) !important;
+    background: var(--spectrum-accent-background-color-down, var(--spectrum-global-color-blue-600)) !important;
+    border-color: var(--spectrum-accent-background-color-down, var(--spectrum-global-color-blue-600)) !important;
 }
 
 .modal-button:focus-visible {
@@ -1140,6 +1187,45 @@ button[class*="spectrum-Button"][disabled],
 
 .timeline-connector-pending {
     background: repeating-linear-gradient(to bottom, var(--spectrum-global-color-gray-400) 0px, var(--spectrum-global-color-gray-400) 4px, transparent 4px, transparent 8px) !important;
+}
+
+/* Timeline step entrance animation - fade in with expand */
+.timeline-step-enter {
+    animation: timeline-enter 0.3s ease-out forwards !important;
+    overflow: hidden !important;
+}
+
+@keyframes timeline-enter {
+    0% {
+        opacity: 0;
+        max-height: 0;
+        margin-bottom: 0;
+    }
+    100% {
+        opacity: 1;
+        max-height: 50px;
+        margin-bottom: var(--spectrum-global-dimension-size-300);
+    }
+}
+
+/* Timeline step exit animation - fade out with collapse */
+.timeline-step-exit {
+    animation: timeline-exit 0.3s ease-out forwards !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+}
+
+@keyframes timeline-exit {
+    0% {
+        opacity: 1;
+        max-height: 50px;
+        margin-bottom: var(--spectrum-global-dimension-size-300);
+    }
+    100% {
+        opacity: 0;
+        max-height: 0;
+        margin-bottom: 0;
+    }
 }
 
 /* ===========================================
@@ -2810,6 +2896,36 @@ div[class*="spectrum"] input[type="search"] {
     flex: 1 !important;
     display: flex !important;
     justify-content: flex-end !important;
+}
+
+/* ===========================================
+   GitHub Avatar with Badge
+   Used in GitHubSetupStep connected state
+   Sized to match the L checkmark icon (~36px)
+   =========================================== */
+.github-avatar-container {
+    position: relative !important;
+    display: inline-block !important;
+}
+
+.github-avatar-container img {
+    width: 64px !important;
+    height: 64px !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+}
+
+.github-avatar-badge {
+    position: absolute !important;
+    bottom: 0 !important;
+    right: 0 !important;
+    background: var(--spectrum-global-color-gray-50) !important;
+    border-radius: 50% !important;
+    padding: 3px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
 }
 
 } /* End of second @layer theme block */

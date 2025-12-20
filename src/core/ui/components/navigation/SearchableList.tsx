@@ -45,6 +45,8 @@ export interface SearchableListProps<T extends SearchableListItem> {
     renderItem?: (item: T) => React.ReactNode;
     /** Singular noun for item type (default: "item") */
     itemNoun?: string;
+    /** Plural noun for item type (default: itemNoun + 's') */
+    itemNounPlural?: string;
     /** Placeholder text for search field (default: "Type to filter...") */
     searchPlaceholder?: string;
     /** Aria label for refresh button (default: "Refresh list") */
@@ -96,9 +98,12 @@ export function SearchableList<T extends SearchableListItem>({
     autoFocus = false,
     renderItem,
     itemNoun = 'item',
+    itemNounPlural,
     searchPlaceholder = 'Type to filter...',
     refreshAriaLabel = 'Refresh list',
 }: SearchableListProps<T>) {
+    // Use provided plural or default to simple +s
+    const nounPlural = itemNounPlural || `${itemNoun}s`;
     // Default item renderer
     const defaultRenderItem = (item: T) => (
         <Item key={item.id} textValue={item.title || item.name}>
@@ -158,6 +163,7 @@ export function SearchableList<T extends SearchableListItem>({
                 totalCount={items.length}
                 filteredCount={filteredItems.length}
                 itemNoun={itemNoun}
+                itemNounPlural={itemNounPlural}
                 onRefresh={onRefresh}
                 isRefreshing={isLoading}
                 refreshAriaLabel={refreshAriaLabel}
@@ -186,7 +192,7 @@ export function SearchableList<T extends SearchableListItem>({
                 {/* No results message */}
                 {filteredItems.length === 0 && searchQuery && (
                     <Text UNSAFE_className="text-sm text-gray-600" marginTop="size-200">
-                        No {itemNoun}s match "{searchQuery}"
+                        No {nounPlural} match "{searchQuery}"
                     </Text>
                 )}
             </div>

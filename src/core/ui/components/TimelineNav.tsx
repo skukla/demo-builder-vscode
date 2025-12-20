@@ -7,7 +7,7 @@
 
 import { View, Text } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { cn } from '@/core/ui/utils/classNames';
 
 /**
@@ -107,6 +107,14 @@ export interface TimelineNavProps {
     compact?: boolean;
 }
 
+/** Animation duration in milliseconds */
+const ANIMATION_DURATION = 300;
+
+/** Exiting step with its original position */
+interface ExitingStep extends TimelineStep {
+    originalIndex: number;
+}
+
 export function TimelineNav({
     steps,
     currentStepIndex,
@@ -116,6 +124,100 @@ export function TimelineNav({
     headerText = 'Setup Progress',
     compact = false,
 }: TimelineNavProps) {
+    // Track previous steps for detecting changes
+    const prevStepsRef = useRef<TimelineStep[]>([]);
+    // Delay before enabling animations (lets initial load settle)
+    const INIT_DELAY_MS = 500;
+    const [animationsEnabled, setAnimationsEnabled] = useState(false);
+
+    // Animation states
+    const [enteringSteps, setEnteringSteps] = useState<Set<string>>(new Set());
+    const [exitingSteps, setExitingSteps] = useState<ExitingStep[]>([]);
+
+    // Enable animations after initial load settles
+    useEffect(() => {
+        if (steps.length > 0 && !animationsEnabled) {
+            const timer = setTimeout(() => {
+                setAnimationsEnabled(true);
+            }, INIT_DELAY_MS);
+            return () => clearTimeout(timer);
+        }
+        return undefined;
+    }, [steps.length, animationsEnabled]);
+
+    // Track step changes and animate
+    useEffect(() => {
+        // Always keep ref updated
+        if (steps.length === 0) {
+            return undefined;
+        }
+
+        // Don't animate until initialization period is over
+        if (!animationsEnabled) {
+            prevStepsRef.current = steps;
+            return undefined;
+        }
+
+        const currentIds = new Set(steps.map(s => s.id));
+        const prevSteps = prevStepsRef.current;
+        const prevIds = new Set(prevSteps.map(s => s.id));
+
+        // Find entering steps (in current but not in previous)
+        const entering = steps.filter(s => !prevIds.has(s.id)).map(s => s.id);
+
+        // Find exiting steps with their original index (in previous but not in current)
+        const exiting: ExitingStep[] = prevSteps
+            .map((s, i) => ({ ...s, originalIndex: i }))
+            .filter(s => !currentIds.has(s.id));
+
+        // Only animate if there are changes
+        if (entering.length > 0 || exiting.length > 0) {
+            // Mark entering steps
+            if (entering.length > 0) {
+                setEnteringSteps(new Set(entering));
+            }
+
+            // Keep exiting steps visible for exit animation (with their positions)
+            if (exiting.length > 0) {
+                setExitingSteps(exiting);
+            }
+
+            // Clear animation states after animation completes
+            const timer = setTimeout(() => {
+                setEnteringSteps(new Set());
+                setExitingSteps([]);
+                // Update ref AFTER animation completes
+                prevStepsRef.current = steps;
+            }, ANIMATION_DURATION);
+
+            return () => clearTimeout(timer);
+        }
+
+        prevStepsRef.current = steps;
+        return undefined;
+    }, [steps, animationsEnabled]);
+
+    // Combine current steps with exiting steps for rendering
+    const displaySteps = React.useMemo(() => {
+        if (exitingSteps.length === 0) {
+            return steps.map(s => ({ ...s, isExiting: false }));
+        }
+
+        // Insert exiting steps at their original positions
+        const result: Array<TimelineStep & { isExiting: boolean }> =
+            steps.map(s => ({ ...s, isExiting: false }));
+
+        // Insert exiting steps at their original indices (adjust for already inserted)
+        let offset = 0;
+        for (const exitingStep of exitingSteps) {
+            const insertIndex = Math.min(exitingStep.originalIndex + offset, result.length);
+            result.splice(insertIndex, 0, { ...exitingStep, isExiting: true });
+            offset++;
+        }
+
+        return result;
+    }, [steps, exitingSteps]);
+
     const getStepStatus = (index: number): TimelineStatus => {
         const isCompleted = completedStepIndices.includes(index);
         const isCurrent = index === currentStepIndex;
@@ -160,25 +262,34 @@ export function TimelineNav({
 
             <View position="relative">
                 {/* Steps */}
-                {steps.map((step, index) => {
-                    const status = getStepStatus(index);
-                    const isClickable = isStepClickable(index);
+                {displaySteps.map((step, displayIndex) => {
+                    // For exiting steps, use 'upcoming' status (grayed out)
+                    // For normal steps, calculate status based on position in actual steps array
+                    const actualIndex = step.isExiting ? -1 : steps.findIndex(s => s.id === step.id);
+                    const status = step.isExiting ? 'upcoming' : getStepStatus(actualIndex);
+                    const isClickable = !step.isExiting && isStepClickable(actualIndex);
+                    const isEntering = enteringSteps.has(step.id);
+                    const isExiting = step.isExiting;
 
                     return (
                         <View key={step.id} position="relative">
                             {/* Step item */}
                             <div
                                 data-testid={`timeline-step-${step.id}`}
-                                aria-current={index === currentStepIndex ? 'step' : undefined}
+                                aria-current={!step.isExiting && actualIndex === currentStepIndex ? 'step' : undefined}
                                 style={{
-                                    marginBottom: index < steps.length - 1 ? stepSpacing : undefined,
+                                    marginBottom: displayIndex < displaySteps.length - 1 ? stepSpacing : undefined,
+                                    // Staggered animation delay for cascade effect
+                                    animationDelay: isEntering ? `${displayIndex * 40}ms` : undefined,
                                 }}
                                 className={cn(
                                     isClickable ? 'cursor-pointer' : 'cursor-default',
                                     status === 'upcoming' ? 'opacity-50' : 'opacity-100',
                                     'transition-opacity',
+                                    isEntering && 'timeline-step-enter',
+                                    isExiting && 'timeline-step-exit',
                                 )}
-                                onClick={() => handleStepClick(index)}
+                                onClick={() => !step.isExiting && handleStepClick(actualIndex)}
                             >
                                 <View
                                     UNSAFE_className={cn('flex', 'items-center', 'gap-3')}
@@ -202,7 +313,7 @@ export function TimelineNav({
                             </div>
 
                             {/* Dotted line connector after each step except last */}
-                            {index < steps.length - 1 && (
+                            {displayIndex < displaySteps.length - 1 && (
                                 <View
                                     position="absolute"
                                     left="11px"

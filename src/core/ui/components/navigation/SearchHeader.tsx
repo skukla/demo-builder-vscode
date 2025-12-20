@@ -38,6 +38,8 @@ export interface SearchHeaderProps {
     filteredCount: number;
     /** Singular noun for item type (default: "item") */
     itemNoun?: string;
+    /** Plural noun for item type (default: itemNoun + 's') */
+    itemNounPlural?: string;
 
     /** Refresh handler (if not provided, no refresh button shown) */
     onRefresh?: () => void;
@@ -87,6 +89,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
     totalCount,
     filteredCount,
     itemNoun = 'item',
+    itemNounPlural,
     onRefresh,
     isRefreshing = false,
     refreshAriaLabel = 'Refresh list',
@@ -99,7 +102,9 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
     const showSearch = totalCount > searchThreshold;
     const showCount = hasLoadedOnce && (alwaysShowCount || totalCount > 0);
     const showViewToggle = viewMode !== undefined && onViewModeChange !== undefined;
-    const plural = totalCount !== 1 ? 's' : '';
+    // Use provided plural or default to simple +s
+    const nounPlural = itemNounPlural || `${itemNoun}s`;
+    const displayNoun = totalCount === 1 ? itemNoun : nounPlural;
     const isFiltering = searchQuery.trim().length > 0;
 
     // Refresh button component (reused in both layouts)
@@ -173,7 +178,7 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                         width="100%"
                         isQuiet
                         autoFocus={autoFocus}
-                        aria-label={`Filter ${itemNoun}s`}
+                        aria-label={`Filter ${nounPlural}`}
                         UNSAFE_className="flex-1"
                     />
                     {ActionButtons}
@@ -185,8 +190,8 @@ export const SearchHeader: React.FC<SearchHeaderProps> = ({
                 <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
                     <Text UNSAFE_className="text-sm text-gray-600">
                         {isFiltering
-                            ? `Showing ${filteredCount} of ${totalCount} ${itemNoun}${plural}`
-                            : `${totalCount} ${itemNoun}${plural}`}
+                            ? `Showing ${filteredCount} of ${totalCount} ${displayNoun}`
+                            : `${totalCount} ${displayNoun}`}
                     </Text>
                     {/* Show actions here only if search bar not shown */}
                     {!showSearch && ActionButtons}

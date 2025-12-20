@@ -19,6 +19,8 @@ export const TIMEOUTS = {
     // Adobe CLI project/workspace selection often takes 8-10 seconds, but can exceed 10s
     API_CALL: 10000,                // API-based commands (console where, org list)
     BROWSER_AUTH: 60000,            // Browser-based authentication flow (1 minute)
+    OAUTH_FLOW: 120000,             // OAuth flow timeout (2 minutes - browser auth + callback)
+    TOKEN_VALIDATION_TTL: 300000,   // Token validation cache TTL (5 minutes)
     API_MESH_CREATE: 180000,        // API Mesh creation (3 minutes - initial creation can be slow)
     API_MESH_UPDATE: 120000,        // API Mesh update/deployment (2 minutes)
     MESH_DESCRIBE: 30000,           // Fetching mesh info via describe command (30 seconds)
@@ -146,6 +148,20 @@ export const TIMEOUTS = {
 
     // Authentication retry
     TOKEN_RETRY_BASE: 500,          // Base delay for token retry backoff (500ms)
+
+    // DA.live API operations
+    DA_LIVE_API: 30000,             // DA.live admin API calls (30 seconds)
+    DA_LIVE_COPY: 120000,           // DA.live content copy operations (2 minutes - recursive directory copy)
+
+    // EDS (Edge Delivery Services) operations
+    EDS_HELIX_CONFIG: 30000,        // Helix 5 configuration API call (30 seconds)
+    EDS_CODE_SYNC_POLL: 5000,       // Interval between code bus sync polls (5 seconds)
+    EDS_CODE_SYNC_TOTAL: 125000,    // Total timeout for code bus sync (25 polls * 5 seconds = 125 seconds)
+
+    // Tool Manager operations (commerce-demo-ingestion, vertical-data)
+    TOOL_CLONE: 120000,             // Git clone for tool repository (2 minutes)
+    TOOL_INSTALL: 180000,           // npm install for tool dependencies (3 minutes)
+    DATA_INGESTION: 600000,         // Data ingestion operations (10 minutes - large data imports)
 
     // SOP §1 Compliance - Round 5
     RATE_LIMIT_WINDOW: 1000,        // Rate limiting window (1 second - operations per second)

@@ -54,15 +54,15 @@ export interface StatusDisplayProps {
     variant: StatusVariant;
     /** Custom icon to override the default variant icon */
     icon?: React.ReactNode;
-    /** Main title text */
-    title: string;
+    /** Main title text (optional if using children for custom content) */
+    title?: string;
     /** Description or error message */
     message?: string;
     /** Additional detail lines */
     details?: string[];
     /** Action buttons */
     actions?: StatusAction[];
-    /** Optional additional content between message and actions */
+    /** Optional additional content - can replace title/message for custom layouts */
     children?: React.ReactNode;
     /** Height of the container (default: 350px) */
     height?: string;
@@ -130,17 +130,20 @@ export function StatusDisplay({
                 >
                     {displayIcon}
 
-                    <Flex direction="column" gap="size-100" alignItems="center">
-                        <Text UNSAFE_className="text-xl font-medium">{title}</Text>
-                        {message && (
-                            <Text UNSAFE_className={messageClassName}>{message}</Text>
-                        )}
-                        {details?.map((detail, index) => (
-                            <Text key={index} UNSAFE_className={messageClassName}>
-                                {detail}
-                            </Text>
-                        ))}
-                    </Flex>
+                    {/* Title/message section - only render if title provided */}
+                    {title && (
+                        <Flex direction="column" gap="size-100" alignItems="center">
+                            <Text UNSAFE_className="text-xl font-medium">{title}</Text>
+                            {message && (
+                                <Text UNSAFE_className={messageClassName}>{message}</Text>
+                            )}
+                            {details?.map((detail, index) => (
+                                <Text key={index} UNSAFE_className={messageClassName}>
+                                    {detail}
+                                </Text>
+                            ))}
+                        </Flex>
+                    )}
 
                     {children}
 
