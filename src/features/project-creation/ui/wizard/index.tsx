@@ -1,7 +1,7 @@
 import { View } from '@adobe/react-spectrum';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { WizardContainer, ImportedSettings } from './WizardContainer';
+import { WizardContainer, ImportedSettings, EditProjectConfig } from './WizardContainer';
 import { WebviewApp, WebviewInitData } from '@/core/ui/components/WebviewApp';
 import { ComponentSelection } from '@/types/webview';
 import '@/core/ui/styles/index.css';
@@ -14,6 +14,7 @@ interface WizardInitData extends WebviewInitData {
     wizardSteps?: { id: string; name: string; enabled: boolean }[];
     existingProjectNames?: string[];
     importedSettings?: ImportedSettings | null;
+    editProject?: EditProjectConfig | null;
     projectsViewMode?: 'cards' | 'rows';
 }
 
@@ -45,6 +46,7 @@ root.render(
                         wizardSteps={data?.wizardSteps}
                         existingProjectNames={data?.existingProjectNames}
                         importedSettings={data?.importedSettings}
+                        editProject={data?.editProject ?? undefined}
                         projectsViewMode={data?.projectsViewMode}
                     />
                 );

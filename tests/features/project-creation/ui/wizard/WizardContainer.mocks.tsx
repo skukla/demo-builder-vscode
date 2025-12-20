@@ -87,20 +87,3 @@ jest.mock('@/features/mesh/ui/steps/ApiMeshStep', () => ({
         return <div data-testid="api-mesh-step">API Mesh Step</div>;
     },
 }));
-
-jest.mock('@/features/project-creation/ui/wizard/TimelineNav', () => ({
-    TimelineNav: ({ steps, currentStep, onStepClick }: any) => (
-        <div data-testid="timeline-nav">
-            {steps.map((step: any) => (
-                <button
-                    key={step.id}
-                    data-testid={`timeline-step-${step.id}`}
-                    onClick={() => onStepClick?.(step.id)}
-                    aria-current={step.id === currentStep ? 'step' : undefined}
-                >
-                    {step.name}
-                </button>
-            ))}
-        </div>
-    ),
-}));

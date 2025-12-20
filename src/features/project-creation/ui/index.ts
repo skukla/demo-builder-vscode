@@ -9,7 +9,6 @@ export { ProjectCreationStep } from './steps/ProjectCreationStep';
 
 // Wizard
 export { WizardContainer } from './wizard/WizardContainer';
-export { TimelineNav } from './wizard/TimelineNav';
 
 // Components
 export { ConfigurationSummary } from './components';
