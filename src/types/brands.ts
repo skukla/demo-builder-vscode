@@ -35,6 +35,17 @@ export interface Brand {
     /** Whether this brand should be featured in the UI */
     featured?: boolean;
 
+    /** Stack IDs this brand is compatible with (if omitted, all stacks are allowed) */
+    compatibleStacks?: string[];
+
+    /**
+     * Addons configuration for this brand.
+     * - Key: addon ID
+     * - Value: "required" (pre-checked, disabled) or "optional" (toggleable)
+     * - Absence of key means addon is unsupported/hidden
+     */
+    addons?: Record<string, 'required' | 'optional'>;
+
     /** Default configuration values for this brand (env var name to value) */
     configDefaults: Record<string, string>;
 

@@ -60,11 +60,12 @@ interface UseComponentConfigReturn {
 // Service group definitions with order
 // Note: 'mesh' group removed - MESH_ENDPOINT is auto-configured during project creation
 const SERVICE_GROUP_DEFS: ServiceGroupDef[] = [
-    { id: 'adobe-commerce', label: 'Adobe Commerce', order: 1, fieldOrder: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT', 'ADOBE_COMMERCE_WEBSITE_CODE', 'ADOBE_COMMERCE_STORE_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', 'ADOBE_COMMERCE_CUSTOMER_GROUP', 'ADOBE_COMMERCE_ADMIN_USERNAME', 'ADOBE_COMMERCE_ADMIN_PASSWORD'] },
-    { id: 'catalog-service', label: 'Catalog Service', order: 2, fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_API_KEY'] },
-    { id: 'adobe-assets', label: 'Adobe Assets', order: 3 },
-    { id: 'integration-service', label: 'Kukla Integration Service', order: 4 },
-    { id: 'experience-platform', label: 'Experience Platform', order: 5 },
+    { id: 'accs', label: 'Adobe Commerce Cloud Service', order: 1, fieldOrder: ['ACCS_HOST', 'ACCS_STORE_VIEW_CODE', 'ACCS_CUSTOMER_GROUP'] },
+    { id: 'adobe-commerce', label: 'Adobe Commerce', order: 2, fieldOrder: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT', 'ADOBE_COMMERCE_WEBSITE_CODE', 'ADOBE_COMMERCE_STORE_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', 'ADOBE_COMMERCE_CUSTOMER_GROUP', 'ADOBE_COMMERCE_ADMIN_USERNAME', 'ADOBE_COMMERCE_ADMIN_PASSWORD'] },
+    { id: 'catalog-service', label: 'Catalog Service', order: 3, fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_API_KEY'] },
+    { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
+    { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
+    { id: 'experience-platform', label: 'Experience Platform', order: 6 },
     { id: 'other', label: 'Additional Settings', order: 99 },
 ];
 
@@ -73,12 +74,41 @@ export function useComponentConfig({
     updateState,
     setCanProceed,
 }: UseComponentConfigProps): UseComponentConfigReturn {
+    // Debug: Log what we receive from wizard state
+    log.info('useComponentConfig init', {
+        hasStateComponentConfigs: !!state.componentConfigs,
+        stateConfigKeys: state.componentConfigs ? Object.keys(state.componentConfigs) : [],
+        sampleConfig: state.componentConfigs ? JSON.stringify(state.componentConfigs).slice(0, 500) : 'none',
+    });
+
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>(state.componentConfigs || {});
+    const [hasInitializedFromState, setHasInitializedFromState] = useState(false);
     const [componentsData, setComponentsData] = useState<ComponentsData>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
     const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
+
+    // Sync imported configs from state (handles case where state arrives after first render)
+    useEffect(() => {
+        if (!hasInitializedFromState && state.componentConfigs && Object.keys(state.componentConfigs).length > 0) {
+            log.info('Syncing componentConfigs from state', {
+                configKeys: Object.keys(state.componentConfigs),
+            });
+            setComponentConfigs(prev => {
+                // Merge: state configs take priority, but preserve any user edits
+                const merged = { ...state.componentConfigs };
+                // Keep any keys that exist in prev but not in state (user edits)
+                for (const key of Object.keys(prev)) {
+                    if (!merged[key]) {
+                        merged[key] = prev[key];
+                    }
+                }
+                return merged;
+            });
+            setHasInitializedFromState(true);
+        }
+    }, [state.componentConfigs, hasInitializedFromState]);
 
     // Load components data
     useEffect(() => {
@@ -219,7 +249,7 @@ export function useComponentConfig({
             });
     }, [selectedComponents, componentsData.envVars]);
 
-    // Initialize defaults
+    // Initialize defaults (field defaults + brand-specific defaults)
     useEffect(() => {
         if (serviceGroups.length === 0) return;
 
@@ -227,13 +257,21 @@ export function useComponentConfig({
             const newConfigs = { ...prevConfigs };
             let hasChanges = false;
 
+            // Get brand-specific defaults from state (e.g., CitiSignal store codes)
+            const brandDefaults = state.brandConfigDefaults || {};
+
             serviceGroups.forEach(group => {
                 group.fields.forEach(field => {
-                    if (field.default !== undefined && field.default !== '') {
+                    // Priority: 1) Brand defaults, 2) Field defaults
+                    const brandValue = brandDefaults[field.key];
+                    const defaultValue = brandValue ?? field.default;
+
+                    if (defaultValue !== undefined && defaultValue !== '') {
                         field.componentIds.forEach(componentId => {
                             if (!newConfigs[componentId]) newConfigs[componentId] = {};
-                            if (!newConfigs[componentId][field.key]) {
-                                newConfigs[componentId][field.key] = field.default;
+                            // Apply if field is empty OR if brand default should override
+                            if (!newConfigs[componentId][field.key] || brandValue) {
+                                newConfigs[componentId][field.key] = defaultValue;
                                 hasChanges = true;
                             }
                         });
@@ -243,7 +281,7 @@ export function useComponentConfig({
 
             return hasChanges ? newConfigs : prevConfigs;
         });
-    }, [serviceGroups]);
+    }, [serviceGroups, state.brandConfigDefaults]);
 
     // Note: Auto-fill mesh endpoint effect removed - MESH_ENDPOINT is now auto-configured
     // during project creation (after mesh deployment), not collected in Settings Collection

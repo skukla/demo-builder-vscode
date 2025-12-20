@@ -34,6 +34,9 @@ export interface Stack {
     /** Dependency component IDs from components.json */
     dependencies: string[];
 
+    /** Optional addon component IDs that can be enabled for this stack */
+    optionalAddons?: string[];
+
     /** Feature highlights for UI display */
     features?: string[];
 

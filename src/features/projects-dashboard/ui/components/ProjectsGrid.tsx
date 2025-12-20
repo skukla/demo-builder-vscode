@@ -21,6 +21,8 @@ export interface ProjectsGridProps {
     onStopDemo?: (project: Project) => void;
     /** Callback to open demo in browser */
     onOpenBrowser?: (project: Project) => void;
+    /** Callback to edit project settings */
+    onEditProject?: (project: Project) => void;
     /** Callback to export project settings */
     onExportProject?: (project: Project) => void;
     /** Callback to delete project */
@@ -37,6 +39,7 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
     onStartDemo,
     onStopDemo,
     onOpenBrowser,
+    onEditProject,
     onExportProject,
     onDeleteProject,
 }) => {
@@ -54,6 +57,7 @@ export const ProjectsGrid: React.FC<ProjectsGridProps> = ({
                     onStartDemo={onStartDemo}
                     onStopDemo={onStopDemo}
                     onOpenBrowser={onOpenBrowser}
+                    onEdit={onEditProject}
                     onExport={onExportProject}
                     onDelete={onDeleteProject}
                 />

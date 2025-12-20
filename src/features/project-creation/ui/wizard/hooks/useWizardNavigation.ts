@@ -190,7 +190,16 @@ export function useWizardNavigation({
         const currentIndex = getCurrentStepIndex();
 
         // IMPORT MODE: Skip to review when clicking Continue on auth step
-        if (importedSettings && state.currentStep === 'adobe-auth') {
+        // Only valid if:
+        // 1. We have imported settings
+        // 2. User hasn't changed the architecture (brand AND stack match)
+        // 3. We're on the adobe-auth step
+        const hasImportedSettings = Boolean(importedSettings);
+        const brandMatches = state.selectedBrand === importedSettings?.selectedBrand;
+        const stackMatches = state.selectedStack === importedSettings?.selectedStack;
+        const architectureUnchanged = brandMatches && stackMatches;
+
+        if (hasImportedSettings && architectureUnchanged && state.currentStep === 'adobe-auth') {
             const reviewIndex = WIZARD_STEPS.findIndex(step => step.id === 'review');
             if (reviewIndex === -1) {
                 log.warn('Review step not found in wizard steps');

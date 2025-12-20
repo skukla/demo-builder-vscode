@@ -5,6 +5,7 @@ import { ProjectDashboardWebviewCommand } from './showDashboard';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
 import { createBundleUris } from '@/core/utils/bundleUri';
+import { parseEnvFile } from '@/core/utils/envParser';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
@@ -308,7 +309,7 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
             for (const envPath of possibleEnvFiles) {
                 try {
                     const envContent = await fs.readFile(envPath, 'utf-8');
-                    envValues[componentId] = this.parseEnvFile(envContent);
+                    envValues[componentId] = parseEnvFile(envContent);
                     loaded = true;
                     break;  // Found it, stop looking
                 } catch {
@@ -324,38 +325,6 @@ export class ConfigureProjectWebviewCommand extends BaseWebviewCommand {
         return envValues;
     }
 
-    /**
-     * Parse .env file content into key-value pairs
-     */
-    private parseEnvFile(content: string): Record<string, string> {
-        const values: Record<string, string> = {};
-        const lines = content.split('\n');
-
-        for (const line of lines) {
-            // Skip comments and empty lines
-            const trimmed = line.trim();
-            if (!trimmed || trimmed.startsWith('#')) {
-                continue;
-            }
-
-            // Parse KEY=VALUE
-            const match = /^([^=]+)=(.*)$/.exec(trimmed);
-            if (match) {
-                const key = match[1].trim();
-                let value = match[2].trim();
-                
-                // Remove quotes if present
-                if ((value.startsWith('"') && value.endsWith('"')) || 
-                    (value.startsWith('\'') && value.endsWith('\''))) {
-                    value = value.slice(1, -1);
-                }
-                
-                values[key] = value;
-            }
-        }
-
-        return values;
-    }
 
     /**
      * Register programmatic writes to suppress file watcher notifications

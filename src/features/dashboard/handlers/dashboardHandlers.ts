@@ -107,7 +107,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
     }
 
     // For other cases (deploying, error, no mesh), continue with synchronous check
-    let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
+    let meshStatus: 'deploying' | 'deployed' | 'config-changed' | 'config-incomplete' | 'update-declined' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
 
     if (meshComponent) {
         if (meshComponent.status === 'deploying') {
@@ -145,7 +145,7 @@ export const handleRequestStatus: MessageHandler = async (context) => {
                     }
 
                     if (hasMeshDeploymentRecord(project)) {
-                        meshStatus = determineMeshStatus(meshChanges, meshComponent, project);
+                        meshStatus = await determineMeshStatus(meshChanges, meshComponent, project);
 
                         if (meshChanges.hasChanges && meshChanges.unknownDeployedState) {
                             context.logger.debug('[Dashboard] Mesh flagged as changed due to unknown deployed state');

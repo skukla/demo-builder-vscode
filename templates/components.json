@@ -8,11 +8,13 @@
     }
   },
   "selectionGroups": {
-    "frontends": ["citisignal-nextjs"],
+    "frontends": ["citisignal-nextjs", "eds-citisignal-storefront"],
     "backends": ["adobe-commerce-paas", "adobe-commerce-accs"],
     "dependencies": ["commerce-mesh", "demo-inspector"],
     "appBuilderApps": ["integration-service"],
-    "integrations": ["experience-platform"]
+    "integrations": ["experience-platform"],
+    "addons": ["adobe-commerce-aco"],
+    "tools": ["commerce-demo-ingestion"]
   },
   "components": {
     "citisignal-nextjs": {
@@ -41,7 +43,7 @@
           "repository": "skukla/demo-inspector"
         }
       },
-      "compatibleBackends": ["adobe-commerce-paas"],
+      "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
       "configuration": {
         "nodeVersion": "24",
         "requiredEnvVars": [
@@ -56,6 +58,38 @@
         "optionalEnvVars": ["ADOBE_ASSETS_URL", "ADOBE_COMMERCE_CUSTOMER_GROUP"]
       }
     },
+    "eds-citisignal-storefront": {
+      "name": "CitiSignal EDS Storefront",
+      "description": "Edge Delivery Services storefront with Commerce Drop-in components",
+      "icon": {
+        "light": "eds-file-icon-light.svg",
+        "dark": "eds-file-icon-dark.svg"
+      },
+      "version": "latest",
+      "source": {
+        "type": "git",
+        "url": "https://github.com/skukla/citisignal-one",
+        "branch": "main",
+        "gitOptions": {
+          "shallow": true,
+          "recursive": false
+        }
+      },
+      "dependencies": {
+        "required": [],
+        "optional": ["demo-inspector"]
+      },
+      "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
+      "configuration": {
+        "nodeVersion": "20",
+        "requiredEnvVars": [
+          "COMMERCE_STORE_URL",
+          "COMMERCE_STORE_CODE",
+          "COMMERCE_STORE_VIEW_CODE",
+          "COMMERCE_WEBSITE_CODE"
+        ]
+      }
+    },
     "adobe-commerce-paas": {
       "name": "Adobe Commerce PaaS",
       "description": "Adobe Commerce DSN instance",
@@ -66,15 +100,30 @@
     },
     "adobe-commerce-accs": {
       "name": "Adobe Commerce Cloud Service",
-      "description": "App Builder-based commerce backend (placeholder for Phase 3)",
+      "description": "Adobe's managed SaaS commerce backend",
       "configuration": {
-        "nodeVersion": "20"
+        "nodeVersion": "20",
+        "requiredEnvVars": [
+          "ACCS_HOST",
+          "ACCS_STORE_VIEW_CODE"
+        ],
+        "optionalEnvVars": [
+          "ACCS_CUSTOMER_GROUP"
+        ]
       }
     },
     "adobe-commerce-aco": {
       "name": "Adobe Commerce Optimizer",
-      "description": "Commerce optimization addon (placeholder for Phase 3)",
-      "addonFor": ["adobe-commerce-paas"]
+      "description": "Catalog optimization service for enhanced product discovery and merchandising",
+      "addonFor": ["adobe-commerce-paas", "adobe-commerce-accs"],
+      "configuration": {
+        "requiredEnvVars": [
+          "ACO_API_URL",
+          "ACO_API_KEY",
+          "ACO_TENANT_ID",
+          "ACO_ENVIRONMENT_ID"
+        ]
+      }
     },
     "demo-inspector": {
       "name": "Demo Inspector",
@@ -162,6 +211,38 @@
         ],
         "optionalEnvVars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
       }
+    },
+    "commerce-demo-ingestion": {
+      "name": "Commerce Demo Ingestion",
+      "description": "Tool for populating ACCS instances with demo data",
+      "category": "tools",
+      "hidden": true,
+      "source": {
+        "type": "git",
+        "url": "https://github.com/PMET-public/commerce-demo-ingestion",
+        "branch": "main",
+        "gitOptions": {
+          "shallow": true
+        }
+      },
+      "dataRepository": {
+        "url": "https://github.com/PMET-public/vertical-data-citisignal",
+        "branch": "accs"
+      },
+      "installPath": "~/.demo-builder/tools/commerce-demo-ingestion",
+      "configuration": {
+        "nodeVersion": "18",
+        "requiredEnvVars": [
+          "ACO_API_URL",
+          "ACO_API_KEY",
+          "ACO_TENANT_ID",
+          "ACO_ENVIRONMENT_ID"
+        ],
+        "scripts": {
+          "import": "npm run import:aco",
+          "cleanup": "npm run delete:aco"
+        }
+      }
     }
   },
   "services": {
@@ -185,6 +266,30 @@
     }
   },
   "envVars": {
+    "ACCS_HOST": {
+      "label": "ACCS Host URL",
+      "type": "url",
+      "required": true,
+      "placeholder": "https://your-instance.adobecommerce.com",
+      "description": "The base URL of your Adobe Commerce Cloud Service instance",
+      "group": "accs"
+    },
+    "ACCS_STORE_VIEW_CODE": {
+      "label": "Store View Code",
+      "type": "text",
+      "required": true,
+      "placeholder": "default",
+      "description": "The store view code for your ACCS instance",
+      "group": "accs"
+    },
+    "ACCS_CUSTOMER_GROUP": {
+      "label": "Customer Group",
+      "type": "text",
+      "required": false,
+      "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
+      "description": "Customer group hash for pricing. Default is 'Not Logged In' group",
+      "group": "accs"
+    },
     "MESH_ENDPOINT": {
       "label": "Mesh Query URL",
       "type": "url",

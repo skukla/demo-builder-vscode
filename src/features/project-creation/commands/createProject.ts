@@ -320,10 +320,15 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     protected initializeMessageHandlers(comm: WebviewCommunicationManager): void {
         // Handle wizard step changes (update sidebar progress)
+        // Receives filtered steps from webview based on stack selection
         comm.on('wizardStepChanged', (data: unknown) => {
-            const payload = data as { step: number; completedSteps?: number[] };
+            const payload = data as {
+                step: number;
+                completedSteps?: number[];
+                steps?: Array<{ id: string; label: string }>;
+            };
             if (payload?.step) {
-                this.updateSidebarWizardContext(payload.step, payload.completedSteps);
+                this.updateSidebarWizardContext(payload.step, payload.completedSteps, payload.steps);
             }
             return { success: true };
         });
@@ -433,16 +438,33 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
 
     /**
      * Update sidebar to show wizard progress
+     *
+     * @param step - Current step index (1-based)
+     * @param completedSteps - Array of completed step indices
+     * @param filteredSteps - Optional filtered steps from webview (based on stack selection)
      */
-    private updateSidebarWizardContext(step: number, completedSteps?: number[]): void {
+    private updateSidebarWizardContext(
+        step: number,
+        completedSteps?: number[],
+        filteredSteps?: Array<{ id: string; label: string }>,
+    ): void {
         if (ServiceLocator.isSidebarInitialized()) {
             const sidebarProvider = ServiceLocator.getSidebarProvider();
-            // Filter to enabled steps and convert to sidebar format (id, label)
-            const enabledSteps = this.wizardSteps?.filter(s => s.enabled !== false) || [];
-            const sidebarSteps = enabledSteps.map(s => ({
-                id: s.id,
-                label: s.name,  // Convert 'name' to 'label' for sidebar
-            }));
+
+            // Use filtered steps from webview if provided (includes stack-based filtering),
+            // otherwise fall back to enabled steps from config (initial load before webview sends steps)
+            let sidebarSteps: Array<{ id: string; label: string }>;
+            if (filteredSteps && filteredSteps.length > 0) {
+                sidebarSteps = filteredSteps;
+            } else {
+                // Fallback: filter to enabled steps only (doesn't include stack-based filtering)
+                const enabledSteps = this.wizardSteps?.filter(s => s.enabled !== false) || [];
+                sidebarSteps = enabledSteps.map(s => ({
+                    id: s.id,
+                    label: s.name,  // Convert 'name' to 'label' for sidebar
+                }));
+            }
+
             sidebarProvider.updateContext({
                 type: 'wizard',
                 step,

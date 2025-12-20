@@ -43,6 +43,9 @@ export class ProjectsListHandlerRegistry extends BaseHandlerRegistry {
         this.handlers.set('stopDemo', handlers.handleStopDemo as MessageHandler);
         this.handlers.set('openBrowser', handlers.handleOpenBrowser as MessageHandler);
 
+        // Project edit handler
+        this.handlers.set('editProject', handlers.handleEditProject as MessageHandler);
+
         // Utility handlers (docs, help, settings)
         this.handlers.set('openDocs', handlers.handleOpenDocs);
         this.handlers.set('openHelp', handlers.handleOpenHelp);

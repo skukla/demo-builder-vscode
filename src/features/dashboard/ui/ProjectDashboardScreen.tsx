@@ -32,6 +32,10 @@ interface ProjectDashboardScreenProps {
         path: string;
     };
     hasMesh?: boolean;
+    /** Resolved brand name (e.g., "CitiSignal") */
+    brandName?: string;
+    /** Resolved stack/architecture name (e.g., "Headless + PaaS") */
+    stackName?: string;
 }
 
 /**
@@ -45,7 +49,7 @@ interface ProjectDashboardScreenProps {
  *
  * @param props - Component props
  */
-export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScreenProps) {
+export function ProjectDashboardScreen({ project, hasMesh, brandName, stackName }: ProjectDashboardScreenProps) {
     // State for browser opening and logs hover suppression (passed to actions hook)
     const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
     const [isLogsHoverSuppressed, setIsLogsHoverSuppressed] = useState(false);
@@ -107,6 +111,9 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
     // Derived values
     const displayName = statusDisplayName || project?.name || 'Demo Project';
 
+    // Build subtitle from brand/stack (e.g., "CitiSignal · Headless + PaaS")
+    const brandStackSubtitle = [brandName, stackName].filter(Boolean).join(' · ') || undefined;
+
     // Button disabled states
     const isStartDisabled = isStartActionDisabled(isTransitioning, meshStatus, status || 'ready');
     const isStopDisabled = isTransitioning || status === 'stopping';
@@ -118,6 +125,7 @@ export function ProjectDashboardScreen({ project, hasMesh }: ProjectDashboardScr
                 header={
                     <PageHeader
                         title={displayName}
+                        subtitle={brandStackSubtitle}
                         constrainWidth
                     />
                 }

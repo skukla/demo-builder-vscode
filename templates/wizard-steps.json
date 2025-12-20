@@ -35,8 +35,16 @@
       "enabled": true
     },
     {
-      "id": "eds-github-dalive",
-      "name": "GitHub & DA.live Setup",
+      "id": "eds-github",
+      "name": "GitHub Setup",
+      "enabled": true,
+      "condition": {
+        "stackRequires": "requiresGitHub"
+      }
+    },
+    {
+      "id": "eds-repository-config",
+      "name": "Repository Configuration",
       "enabled": true,
       "condition": {
         "stackRequires": "requiresGitHub"

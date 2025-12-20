@@ -8,6 +8,7 @@
 
 import { Text, ActionButton, MenuTrigger, Menu, Item } from '@adobe/react-spectrum';
 import Delete from '@spectrum-icons/workflow/Delete';
+import Edit from '@spectrum-icons/workflow/Edit';
 import Export from '@spectrum-icons/workflow/Export';
 import Globe from '@spectrum-icons/workflow/Globe';
 import MoreSmallListVert from '@spectrum-icons/workflow/MoreSmallListVert';
@@ -20,7 +21,7 @@ import type { Project } from '@/types/base';
 interface MenuItem {
     key: string;
     label: string;
-    icon: 'play' | 'stop' | 'globe' | 'export' | 'delete';
+    icon: 'play' | 'stop' | 'globe' | 'edit' | 'export' | 'delete';
 }
 
 export interface ProjectActionsMenuProps {
@@ -34,6 +35,8 @@ export interface ProjectActionsMenuProps {
     onStopDemo?: (project: Project) => void;
     /** Callback to open the demo in browser */
     onOpenBrowser?: (project: Project) => void;
+    /** Callback to edit project settings */
+    onEdit?: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
     /** Callback to delete project */
@@ -54,6 +57,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
     onStartDemo,
     onStopDemo,
     onOpenBrowser,
+    onEdit,
     onExport,
     onDelete,
     className,
@@ -69,6 +73,9 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             case 'open':
                 onOpenBrowser?.(project);
                 break;
+            case 'edit':
+                onEdit?.(project);
+                break;
             case 'export':
                 onExport?.(project);
                 break;
@@ -76,7 +83,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                 onDelete?.(project);
                 break;
         }
-    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onExport, onDelete]);
+    }, [project, onStartDemo, onStopDemo, onOpenBrowser, onEdit, onExport, onDelete]);
 
     // Stop click propagation to prevent triggering parent selection
     const handleMenuClick = useCallback((e: React.MouseEvent) => {
@@ -99,6 +106,11 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             items.push({ key: 'open', label: 'Open in Browser', icon: 'globe' });
         }
 
+        // Edit (only when NOT running - must stop demo first)
+        if (!isRunning && onEdit) {
+            items.push({ key: 'edit', label: 'Edit Project', icon: 'edit' });
+        }
+
         // Export and Delete always available
         if (onExport) {
             items.push({ key: 'export', label: 'Export Project', icon: 'export' });
@@ -107,7 +119,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
             items.push({ key: 'delete', label: 'Delete Project', icon: 'delete' });
         }
         return items;
-    }, [isRunning, onStartDemo, onStopDemo, onOpenBrowser, onExport, onDelete]);
+    }, [isRunning, onStartDemo, onStopDemo, onOpenBrowser, onEdit, onExport, onDelete]);
 
     // Don't render if no actions available
     if (menuItems.length === 0) {
@@ -130,6 +142,7 @@ export const ProjectActionsMenu: React.FC<ProjectActionsMenuProps> = ({
                             {item.icon === 'play' && <Play size="S" />}
                             {item.icon === 'stop' && <Stop size="S" />}
                             {item.icon === 'globe' && <Globe size="S" />}
+                            {item.icon === 'edit' && <Edit size="S" />}
                             {item.icon === 'export' && <Export size="S" />}
                             {item.icon === 'delete' && <Delete size="S" />}
                             <Text>{item.label}</Text>

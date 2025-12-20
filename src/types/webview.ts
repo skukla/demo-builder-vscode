@@ -4,9 +4,6 @@ import { ErrorCode } from './errorCodes';
 
 export type ThemeMode = 'light' | 'dark';
 
-// Re-export types needed from extension (avoiding circular dependency)
-export type ProjectTemplate = 'citisignal' | 'blank' | 'custom';
-
 export type WizardStep =
     | 'welcome'
     | 'component-selection'
@@ -18,8 +15,9 @@ export type WizardStep =
     | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
-    | 'eds-github-dalive'  // EDS: GitHub OAuth + DA.live setup (conditional: edge-delivery stack)
-    | 'eds-data-source'  // EDS: ACCS data source configuration (conditional: edge-delivery stack)
+    | 'eds-github'  // EDS: GitHub authentication (conditional: requiresGitHub stack)
+    | 'eds-repository-config'  // EDS: Repository and DA.live configuration (conditional: requiresGitHub stack)
+    | 'eds-data-source'  // EDS: ACCS data source configuration (conditional: requiresDaLive stack)
     | 'settings'  // Component-specific settings collection
     | 'commerce-config'  // Kept for compatibility
     | 'review'
@@ -29,10 +27,11 @@ export type WizardStep =
 export interface WizardState {
     currentStep: WizardStep;
     projectName: string;
-    projectTemplate: ProjectTemplate;
     selectedTemplate?: string;  // Selected demo template ID (e.g., 'citisignal')
     selectedBrand?: string;  // Selected brand ID (e.g., 'citisignal', 'default', 'buildright')
     selectedStack?: string;  // Selected stack ID (e.g., 'headless', 'edge-delivery')
+    selectedAddons?: string[];  // Selected addon IDs (e.g., ['adobe-commerce-aco'])
+    brandConfigDefaults?: Record<string, string>;  // Brand-specific config defaults (e.g., store codes)
     components?: ComponentSelection;
     componentConfigs?: ComponentConfigs;  // Component-specific environment configurations
     adobeAuth: AdobeAuthState;
@@ -48,6 +47,8 @@ export interface WizardState {
     projectsCache?: AdobeProject[];
     workspacesCache?: Workspace[];
     organizationsCache?: Organization[];
+    githubReposCache?: GitHubRepoItem[];  // GitHub repos with write access
+    githubRepoSearchFilter?: string;  // Search filter for repo selection
     
     apiVerification?: {
         isChecking: boolean;
@@ -108,6 +109,27 @@ export interface Workspace {
     id: string;
     name: string;
     title?: string;
+}
+
+/**
+ * GitHub repository item for selection UI
+ * Uses string ID for useSelectionStep compatibility
+ */
+export interface GitHubRepoItem {
+    /** String ID for selection (repo fullName) */
+    id: string;
+    /** Repository name (without owner) */
+    name: string;
+    /** Full repository name (owner/repo) - same as id */
+    fullName: string;
+    /** Repository description */
+    description?: string | null;
+    /** Last updated timestamp */
+    updatedAt?: string;
+    /** Whether repository is private */
+    isPrivate?: boolean;
+    /** GitHub web URL */
+    htmlUrl?: string;
 }
 
 // Wizard-specific simplified commerce config (different from full CommerceConfig in @/types)
@@ -305,8 +327,18 @@ export interface EDSConfig {
         user?: { login: string; avatarUrl?: string; email?: string };
         error?: string;
     };
-    /** GitHub repository name */
+    /** Repository mode: create new or use existing */
+    repoMode?: 'new' | 'existing';
+    /** GitHub repository name (for new repos) */
     repoName: string;
+    /** Selected existing repository (from searchable list) */
+    selectedRepo?: GitHubRepoItem;
+    /** Existing repository full name (owner/repo format) - deprecated, use selectedRepo */
+    existingRepo?: string;
+    /** Whether existing repo access has been verified - deprecated, use selectedRepo */
+    existingRepoVerified?: boolean;
+    /** Whether to reset existing repo to template (repurpose flow) */
+    resetToTemplate?: boolean;
     /** DA.live organization name */
     daLiveOrg: string;
     /** Whether DA.live org access has been verified */

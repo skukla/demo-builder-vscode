@@ -224,6 +224,18 @@ const ProjectsDashboardApp: React.FC = () => {
         }
     }, []);
 
+    // Handle edit project
+    const handleEditProject = useCallback(async (project: Project) => {
+        try {
+            await webviewClient.postMessage('editProject', {
+                projectPath: project.path,
+            });
+            // Wizard will open in edit mode - handled by extension
+        } catch (error) {
+            console.error('Failed to edit project:', error);
+        }
+    }, []);
+
     // Handle view mode override - saves to backend for session persistence
     const handleViewModeOverride = useCallback((mode: 'cards' | 'rows') => {
         setInitialViewMode(mode);
@@ -242,6 +254,7 @@ const ProjectsDashboardApp: React.FC = () => {
             onStartDemo={handleStartDemo}
             onStopDemo={handleStopDemo}
             onOpenBrowser={handleOpenBrowser}
+            onEditProject={handleEditProject}
             onExportProject={handleExportProject}
             onDeleteProject={handleDeleteProject}
             isLoading={isLoading}

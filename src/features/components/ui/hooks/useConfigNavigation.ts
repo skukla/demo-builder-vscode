@@ -29,6 +29,7 @@ export function useConfigNavigation({
     const [activeField, setActiveField] = useState<string | null>(null);
     const lastFocusedSectionRef = useRef<string | null>(null);
     const fieldCountInSectionRef = useRef<number>(0);
+    const isInitialFocusRef = useRef<boolean>(true);
 
     // Track timeouts for cleanup on unmount
     const timeoutsRef = useRef<NodeJS.Timeout[]>([]);
@@ -90,6 +91,12 @@ export function useConfigNavigation({
                 newSet.add(section.id);
                 return newSet;
             });
+
+            // Skip auto-scroll on initial page load (user hasn't started navigating yet)
+            if (isInitialFocusRef.current) {
+                isInitialFocusRef.current = false;
+                return;
+            }
 
             // Scroll on: 1) New section OR 2) Every 3 fields within section
             const shouldScroll = isNewSection || (fieldCountInSectionRef.current % 3 === 0);

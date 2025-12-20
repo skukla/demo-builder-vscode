@@ -56,6 +56,12 @@ interface ProjectCreationConfig {
     // For detecting same-workspace imports to skip mesh deployment
     importedWorkspaceId?: string;
     importedMeshEndpoint?: string;
+    // Brand/Stack selections
+    selectedBrand?: string;
+    selectedStack?: string;
+    // Edit mode: re-use existing project directory
+    editMode?: boolean;
+    editProjectPath?: string;
 }
 
 /**
@@ -90,9 +96,18 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const path = await import('path');
     const os = await import('os');
 
-    // Clean up orphaned/invalid directories
-    const projectPath = path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
-    await cleanupOrphanedDirectory(projectPath, context, progressTracker, fs);
+    // Determine project path based on edit mode
+    const isEditMode = typedConfig.editMode && typedConfig.editProjectPath;
+    const projectPath = isEditMode
+        ? typedConfig.editProjectPath!
+        : path.join(os.homedir(), '.demo-builder', 'projects', typedConfig.projectName);
+
+    if (isEditMode) {
+        context.logger.info(`[Project Edit] Editing existing project at: ${projectPath}`);
+    } else {
+        // Clean up orphaned/invalid directories (new project only)
+        await cleanupOrphanedDirectory(projectPath, context, progressTracker, fs);
+    }
 
     // ========================================================================
     // PROJECT INITIALIZATION
@@ -124,6 +139,8 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
             appBuilder: typedConfig.components?.appBuilderApps || [],
         },
         componentConfigs: (typedConfig.componentConfigs || {}) as Record<string, Record<string, string | number | boolean | undefined>>,
+        selectedBrand: typedConfig.selectedBrand,
+        selectedStack: typedConfig.selectedStack,
     };
 
     context.logger.debug('[Project Creation] Deferring project state save until after installation');
@@ -140,6 +157,21 @@ export async function executeProjectCreation(context: HandlerContext, config: Re
     const sharedEnvVars = registry.envVars || {};
 
     const componentDefinitions = await loadComponentDefinitions(typedConfig, registryManager, context);
+
+    // ========================================================================
+    // EDIT MODE: CLEAN SLATE FOR COMPONENTS
+    // ========================================================================
+
+    if (isEditMode) {
+        // Delete existing components directory - will be recreated during installation
+        const existingComponentsDir = path.join(projectPath, 'components');
+        const componentsExist = await fs.access(existingComponentsDir).then(() => true).catch(() => false);
+        if (componentsExist) {
+            context.logger.info('[Project Edit] Removing existing components directory');
+            progressTracker('Cleaning Up', 18, 'Removing existing components...');
+            await fs.rm(existingComponentsDir, { recursive: true, force: true });
+        }
+    }
 
     // ========================================================================
     // PHASE 1-2: COMPONENT INSTALLATION

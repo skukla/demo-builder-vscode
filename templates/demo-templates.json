@@ -19,6 +19,19 @@
           "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us"
         }
       }
+    },
+    {
+      "id": "citisignal-eds",
+      "name": "CitiSignal EDS Experience",
+      "description": "Edge Delivery Services storefront with Commerce Drop-in components",
+      "icon": "eds",
+      "featured": true,
+      "tags": ["eds", "edge-delivery", "dropin", "citisignal"],
+      "defaults": {
+        "frontend": "eds-citisignal-storefront",
+        "backend": "adobe-commerce-accs",
+        "dependencies": ["demo-inspector"]
+      }
     }
   ]
 }

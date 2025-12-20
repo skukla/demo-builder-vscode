@@ -21,6 +21,7 @@ export type MeshStatus =
     | 'deploying'
     | 'deployed'
     | 'config-changed'
+    | 'config-incomplete'
     | 'update-declined'
     | 'error';
 
@@ -219,6 +220,8 @@ export function useDashboardStatus(props: UseDashboardStatusProps = {}): UseDash
                 return { color: 'green', text: 'Deployed' };
             case 'config-changed':
                 return { color: 'yellow', text: 'Redeploy needed' };
+            case 'config-incomplete':
+                return { color: 'orange', text: 'Missing configuration' };
             case 'update-declined':
                 return { color: 'orange', text: 'Needs deployment' };
             case 'not-deployed':

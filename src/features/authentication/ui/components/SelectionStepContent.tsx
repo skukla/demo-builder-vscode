@@ -51,6 +51,8 @@ export interface SelectionLabels {
     searchPlaceholder: string;
     /** Singular noun for the item type (e.g., "project") */
     itemNoun: string;
+    /** Plural noun for the item type (e.g., "repositories") - optional, defaults to itemNoun + 's' */
+    itemNounPlural?: string;
     /** Aria label for the list */
     ariaLabel: string;
 }
@@ -204,8 +206,9 @@ export function SelectionStepContent<T extends SelectableItem>({
                 autoFocus={!selectedId}
                 renderItem={combinedRenderItem}
                 itemNoun={labels.itemNoun}
+                itemNounPlural={labels.itemNounPlural}
                 searchPlaceholder={labels.searchPlaceholder}
-                refreshAriaLabel={`Refresh ${labels.itemNoun}s`}
+                refreshAriaLabel={`Refresh ${labels.itemNounPlural || labels.itemNoun + 's'}`}
             />
         </div>
     );

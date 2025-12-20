@@ -56,6 +56,7 @@ demo-builder-vscode/
 │   │   ├── authentication/   # Adobe authentication
 │   │   ├── components/       # Component management
 │   │   ├── dashboard/        # Project dashboard
+│   │   ├── eds/              # Edge Delivery Services (→ see src/features/eds/README.md)
 │   │   ├── lifecycle/        # Project lifecycle
 │   │   ├── mesh/             # API Mesh deployment
 │   │   ├── prerequisites/    # Prerequisites system

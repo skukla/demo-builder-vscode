@@ -68,6 +68,10 @@ export interface SettingsFile {
     configs: SettingsConfigs;
     /** Adobe org/project/workspace context */
     adobe?: SettingsAdobeContext;
+    /** Brand ID selected during project creation (e.g., 'citisignal') */
+    selectedBrand?: string;
+    /** Stack ID selected during project creation (e.g., 'headless-paas') */
+    selectedStack?: string;
 }
 
 /** Current schema version */

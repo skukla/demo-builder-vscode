@@ -33,6 +33,8 @@ export interface ProjectCardProps {
     onStopDemo?: (project: Project) => void;
     /** Callback to open the demo in browser */
     onOpenBrowser?: (project: Project) => void;
+    /** Callback to edit project settings */
+    onEdit?: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
     /** Callback to delete project */
@@ -51,6 +53,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     onStartDemo,
     onStopDemo,
     onOpenBrowser,
+    onEdit,
     onExport,
     onDelete,
 }) => {
@@ -95,6 +98,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
                     onStartDemo={onStartDemo}
                     onStopDemo={onStopDemo}
                     onOpenBrowser={onOpenBrowser}
+                    onEdit={onEdit}
                     onExport={onExport}
                     onDelete={onDelete}
                     className="project-card-menu-button"

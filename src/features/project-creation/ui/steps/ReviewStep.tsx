@@ -3,6 +3,8 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useEffect, useMemo } from 'react';
 import { hasRequiredReviewData } from './reviewPredicates';
 import { cn } from '@/core/ui/utils/classNames';
+import type { Brand } from '@/types/brands';
+import type { Stack } from '@/types/stacks';
 import { BaseStepProps } from '@/types/wizard';
 
 export interface ComponentData {
@@ -24,6 +26,10 @@ export interface ComponentsData {
 
 interface ReviewStepProps extends BaseStepProps {
     componentsData?: ComponentsData;
+    /** Available brands for name resolution */
+    brands?: Brand[];
+    /** Available stacks for name resolution */
+    stacks?: Stack[];
 }
 
 /**
@@ -64,18 +70,18 @@ function LabelValue({ label, value, icon, subItems }: {
  */
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <View marginBottom="size-300">
+        <View marginBottom="size-200">
             <Text UNSAFE_className={cn('text-sm', 'font-semibold', 'text-gray-600', 'text-uppercase', 'letter-spacing-05')}>
                 {title}
             </Text>
-            <Flex direction="column" gap="size-150" marginTop="size-150">
+            <Flex direction="column" gap="size-100" marginTop="size-100">
                 {children}
             </Flex>
         </View>
     );
 }
 
-export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepProps) {
+export function ReviewStep({ state, setCanProceed, componentsData, brands, stacks }: ReviewStepProps) {
     useEffect(() => {
         const canProceed = hasRequiredReviewData(state);
         setCanProceed(canProceed);
@@ -204,14 +210,34 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
         : state.adobeWorkspace?.name;
     const hasAdobeContext = adobeOrgName || adobeProjectName || adobeWorkspaceName;
 
+    // Resolve brand/stack names
+    const brandName = state.selectedBrand
+        ? brands?.find(b => b.id === state.selectedBrand)?.name
+        : undefined;
+    const stackName = state.selectedStack
+        ? stacks?.find(s => s.id === state.selectedStack)?.name
+        : undefined;
+    const hasBrandStackContext = brandName || stackName;
+
     return (
         <div className="container-wizard">
             {/* Project Name - Hero */}
-            <Heading level={2} marginBottom="size-300">
+            <Heading level={2} marginBottom="size-200">
                 {state.projectName}
             </Heading>
 
-            <Divider size="S" marginBottom="size-300" />
+            <Divider size="S" marginBottom="size-200" />
+
+            {/* Brand/Stack Configuration Section */}
+            {hasBrandStackContext && (
+                <>
+                    <Section title="PROJECT CONFIGURATION">
+                        {brandName && <LabelValue label="Brand" value={brandName} />}
+                        {stackName && <LabelValue label="Architecture" value={stackName} />}
+                    </Section>
+                    <Divider size="S" marginBottom="size-200" />
+                </>
+            )}
 
             {/* Adobe I/O Section */}
             {hasAdobeContext && (
@@ -221,7 +247,7 @@ export function ReviewStep({ state, setCanProceed, componentsData }: ReviewStepP
                         {adobeProjectName && <LabelValue label="Project" value={adobeProjectName} />}
                         {adobeWorkspaceName && <LabelValue label="Workspace" value={adobeWorkspaceName} />}
                     </Section>
-                    <Divider size="S" marginBottom="size-300" />
+                    <Divider size="S" marginBottom="size-200" />
                 </>
             )}
 

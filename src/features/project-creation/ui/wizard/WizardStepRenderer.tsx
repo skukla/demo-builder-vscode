@@ -13,10 +13,16 @@ import { AdobeProjectStep } from '@/features/authentication/ui/steps/AdobeProjec
 import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWorkspaceStep';
 import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
+import { DataSourceConfigStep } from '@/features/eds/ui/steps/DataSourceConfigStep';
+import { GitHubSetupStep } from '@/features/eds/ui/steps/GitHubSetupStep';
+import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
+import { ArchitectureSelectionStep } from '@/features/project-creation/ui/steps/ArchitectureSelectionStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep, ComponentsData } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
+import type { Brand } from '@/types/brands';
+import type { Stack } from '@/types/stacks';
 import type { WizardState, WizardStep } from '@/types/webview';
 
 /**
@@ -47,6 +53,10 @@ export interface WizardStepRendererProps {
     existingProjectNames?: string[];
     /** Whether preparing review (import mode transition) */
     isPreparingReview: boolean;
+    /** Available brands for selection */
+    brands?: Brand[];
+    /** Available stacks for selection */
+    stacks?: Stack[];
 }
 
 /**
@@ -63,6 +73,8 @@ export function WizardStepRenderer({
     completedSteps,
     existingProjectNames,
     isPreparingReview,
+    brands,
+    stacks,
 }: WizardStepRendererProps): React.ReactElement | null {
     // Import mode: Show loading view during transition to review
     if (isPreparingReview) {
@@ -95,7 +107,10 @@ export function WizardStepRenderer({
     // Handle special cases with additional props
     switch (currentStep) {
         case 'welcome':
-            return <WelcomeStep {...baseProps} existingProjectNames={existingProjectNames} />;
+            return <WelcomeStep {...baseProps} existingProjectNames={existingProjectNames} brands={brands} stacks={stacks} />;
+
+        case 'architecture-selection':
+            return <ArchitectureSelectionStep {...baseProps} stacks={stacks || []} brands={brands || []} />;
 
         case 'component-selection':
             return <ComponentSelectionStep {...baseProps} componentsData={componentsData?.data as Record<string, unknown>} />;
@@ -112,6 +127,16 @@ export function WizardStepRenderer({
         case 'adobe-workspace':
             return <AdobeWorkspaceStep {...baseProps} completedSteps={completedSteps} />;
 
+        // EDS steps (conditional: shown only for edge-delivery stack)
+        case 'eds-github':
+            return <GitHubSetupStep {...baseProps} />;
+
+        case 'eds-repository-config':
+            return <GitHubRepoSelectionStep {...baseProps} />;
+
+        case 'eds-data-source':
+            return <DataSourceConfigStep {...baseProps} />;
+
         // Note: 'api-mesh' and 'mesh-deployment' steps removed from wizard
         // Mesh deployment now happens during ProjectCreationStep Phase 3
 
@@ -119,7 +144,7 @@ export function WizardStepRenderer({
             return <ComponentConfigStep {...baseProps} />;
 
         case 'review':
-            return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} />;
+            return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} brands={brands} stacks={stacks} />;
 
         case 'project-creation':
             return <ProjectCreationStep state={state} onBack={onBack} />;

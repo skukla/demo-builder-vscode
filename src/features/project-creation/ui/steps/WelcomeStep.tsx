@@ -2,6 +2,7 @@ import { TextField, Text } from '@adobe/react-spectrum';
 import React, { useEffect, useCallback } from 'react';
 import { BrandGallery } from '../components/BrandGallery';
 import { TemplateGallery } from '../components/TemplateGallery';
+import { deriveComponentsFromStack } from '../helpers/stackHelpers';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { useSelectableDefault } from '@/core/ui/hooks/useSelectableDefault';
 import { cn } from '@/core/ui/utils/classNames';
@@ -23,9 +24,11 @@ interface WelcomeStepProps extends BaseStepProps {
     brands?: Brand[];
     /** Available stacks/architectures for selection */
     stacks?: Stack[];
+    /** Called when architecture changes - allows wizard to reset dependent state */
+    onArchitectureChange?: () => void;
 }
 
-export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], templates, initialViewMode, brands, stacks }: WelcomeStepProps) {
+export function WelcomeStep({ state, updateState, setCanProceed, existingProjectNames = [], templates, initialViewMode, brands, stacks, onArchitectureChange }: WelcomeStepProps) {
     const defaultProjectName = 'my-commerce-demo';
     const selectableDefaultProps = useSelectableDefault();
 
@@ -98,21 +101,59 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     );
 
     // Handler for brand selection
+    // When brand changes, clears stack and triggers architecture change reset
     const handleBrandSelect = useCallback(
         (brandId: string) => {
             // When brand changes, clear any previously selected stack
             // (user may have selected a stack that's not compatible with new brand)
             if (brandId !== state.selectedBrand) {
-                updateState({ selectedBrand: brandId, selectedStack: undefined });
+                // If there was a previous selection (brand change, not initial), reset dependent state
+                const isBrandChange = state.selectedBrand && state.selectedBrand !== brandId;
+                if (isBrandChange && onArchitectureChange) {
+                    onArchitectureChange();
+                }
+
+                // Find the brand to get its configDefaults
+                const brand = brands?.find(b => b.id === brandId);
+                updateState({
+                    selectedBrand: brandId,
+                    selectedStack: undefined,
+                    brandConfigDefaults: brand?.configDefaults,
+                });
             }
         },
-        [updateState, state.selectedBrand],
+        [updateState, state.selectedBrand, brands, onArchitectureChange],
     );
 
     // Handler for stack/architecture selection
+    // Derives components from the selected stack and updates wizard state
+    // When stack CHANGES (not initial selection), notifies wizard to reset dependent state
     const handleStackSelect = useCallback(
         (stackId: string) => {
-            updateState({ selectedStack: stackId });
+            const stack = stacks?.find(s => s.id === stackId);
+            if (!stack) return;
+
+            // Detect if this is a CHANGE (different stack, not initial selection)
+            const isStackChange = state.selectedStack && state.selectedStack !== stackId;
+
+            // If changing architecture, notify wizard to reset dependent state
+            // This clears completedSteps, componentConfigs, EDS state, etc.
+            if (isStackChange && onArchitectureChange) {
+                onArchitectureChange();
+            }
+
+            updateState({
+                selectedStack: stackId,
+                components: deriveComponentsFromStack(stack),
+            });
+        },
+        [updateState, stacks, state.selectedStack, onArchitectureChange],
+    );
+
+    // Handler for addon selection changes
+    const handleAddonsChange = useCallback(
+        (addons: string[]) => {
+            updateState({ selectedAddons: addons });
         },
         [updateState],
     );
@@ -154,6 +195,7 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
     );
 
     // Brand mode: Expandable cards with architecture selection built-in
+    // When importing, brand/stack are pre-selected in state - gallery handles display
     if (hasBrands && hasStacks) {
         return (
             <BrandGallery
@@ -161,8 +203,10 @@ export function WelcomeStep({ state, updateState, setCanProceed, existingProject
                 stacks={stacks!}
                 selectedBrand={state.selectedBrand}
                 selectedStack={state.selectedStack}
+                selectedAddons={state.selectedAddons}
                 onBrandSelect={handleBrandSelect}
                 onStackSelect={handleStackSelect}
+                onAddonsChange={handleAddonsChange}
                 headerContent={projectNameField}
             />
         );

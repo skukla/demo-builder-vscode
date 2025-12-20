@@ -38,6 +38,9 @@ import { AdobeWorkspaceStep } from '@/features/authentication/ui/steps/AdobeWork
 import { ComponentConfigStep } from '@/features/components/ui/steps/ComponentConfigStep';
 import { ComponentSelectionStep } from '@/features/components/ui/steps/ComponentSelectionStep';
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
+import { GitHubSetupStep } from '@/features/eds/ui/steps/GitHubSetupStep';
+import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
+import { DataSourceConfigStep } from '@/features/eds/ui/steps/DataSourceConfigStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
@@ -176,6 +179,35 @@ export function WizardContainer({
         setComponentsData,
     });
 
+    /**
+     * Called when user changes architecture (stack) on WelcomeStep
+     * Resets dependent state to force user through new architecture's steps
+     *
+     * Note: Import mode fast-forward is controlled by comparing state.selectedStack
+     * with importedSettings.selectedStack - no flag needed.
+     */
+    const handleArchitectureChange = () => {
+        log.info('Architecture changed - resetting dependent state');
+
+        // Clear completed steps (keep only 'welcome' since user is on that step)
+        setCompletedSteps(['welcome']);
+
+        // Clear component configs (they're for the old architecture's components)
+        // Clear EDS-specific state (GitHub, repository, etc.)
+        // Preserve: projectName, selectedBrand, Adobe auth/org (still valid)
+        setState(prev => ({
+            ...prev,
+            componentConfigs: {},
+            // Clear EDS state
+            githubAuth: undefined,
+            githubUser: undefined,
+            selectedRepository: undefined,
+            repositoryName: undefined,
+            repositoryVisibility: undefined,
+            edsContentSource: undefined,
+        }));
+    };
+
     const renderStep = () => {
         // Import mode: Show loading view during transition to review
         // Uses same UI pattern as project/workspace loading states
@@ -207,7 +239,7 @@ export function WizardContainer({
 
         switch (state.currentStep) {
             case 'welcome':
-                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} templates={templates} initialViewMode={projectsViewMode} brands={brands} stacks={stacks} />;
+                return <WelcomeStep {...props} existingProjectNames={existingProjectNames} templates={templates} initialViewMode={projectsViewMode} brands={brands} stacks={stacks} onArchitectureChange={handleArchitectureChange} />;
             case 'component-selection':
                 return <ComponentSelectionStep {...props} componentsData={componentsData?.data as Record<string, unknown>} />;
             case 'prerequisites':
@@ -218,10 +250,16 @@ export function WizardContainer({
                 return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
             case 'adobe-workspace':
                 return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
+            case 'eds-github':
+                return <GitHubSetupStep {...props} />;
+            case 'eds-repository-config':
+                return <GitHubRepoSelectionStep {...props} />;
+            case 'eds-data-source':
+                return <DataSourceConfigStep {...props} />;
             case 'settings':
                 return <ComponentConfigStep {...props} />;
             case 'review':
-                return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} />;
+                return <ReviewStep state={state} updateState={updateState} setCanProceed={setCanProceed} componentsData={componentsData?.data} brands={brands} stacks={stacks} />;
             case 'project-creation':
                 return <ProjectCreationStep state={state} onBack={goBack} />;
             default:

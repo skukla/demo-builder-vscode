@@ -65,12 +65,20 @@ export function useWizardEffects({
     }, [state.currentStep, stepContentRef]);
 
     // Notify sidebar of step changes (for wizard progress display)
+    // Also sends the filtered steps array so sidebar shows correct steps based on stack selection
     useEffect(() => {
         const stepIndex = WIZARD_STEPS.findIndex(step => step.id === state.currentStep);
         if (stepIndex >= 0) {
+            // Convert steps to sidebar format (id, label)
+            const sidebarSteps = WIZARD_STEPS.map(step => ({
+                id: step.id,
+                label: step.name,
+            }));
+
             vscode.postMessage('wizardStepChanged', {
                 step: stepIndex + 1,
                 completedSteps: getCompletedStepIndices(completedSteps, WIZARD_STEPS),
+                steps: sidebarSteps,
             });
         }
     }, [state.currentStep, completedSteps, WIZARD_STEPS]);

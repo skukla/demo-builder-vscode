@@ -3,7 +3,9 @@
  *
  * Handles the final phases of project creation:
  * Phase 4: Generate environment files for all non-mesh components
- * Phase 5: Create manifest, save state, send completion
+ * Phase 5: Save state, send completion
+ *
+ * Note: Manifest writing is handled by ProjectConfigWriter (single source of truth).
  */
 
 import * as vscode from 'vscode';
@@ -74,37 +76,15 @@ export async function generateEnvironmentFiles(
 }
 
 /**
- * Phase 5: Create manifest and finalize project
+ * Phase 5: Finalize project and save state
+ *
+ * Note: Manifest is written by StateManager.saveProject() via ProjectConfigWriter.
+ * This ensures a single authoritative manifest writer.
  */
 export async function finalizeProject(
     context: FinalizationContext,
 ): Promise<void> {
-    const { project, projectPath, progressTracker, logger, saveProject } = context;
-    const fs = await import('fs/promises');
-    const path = await import('path');
-
-    progressTracker('Finalizing Project', 90, 'Creating project manifest...');
-
-    const manifest = {
-        name: project.name,
-        version: '1.0.0',
-        created: project.created.toISOString(),
-        lastModified: project.lastModified.toISOString(),
-        adobe: project.adobe,
-        componentSelections: project.componentSelections,
-        componentInstances: project.componentInstances,
-        componentConfigs: project.componentConfigs,
-        meshState: project.meshState,
-        commerce: project.commerce,
-        components: getComponentIds(project.componentInstances),
-    };
-
-    await fs.writeFile(
-        path.join(projectPath, '.demo-builder.json'),
-        JSON.stringify(manifest, null, 2),
-    );
-
-    logger.debug('[Project Creation] Project manifest created');
+    const { project, progressTracker, logger, saveProject } = context;
 
     progressTracker('Finalizing Project', 95, 'Saving project state...');
 

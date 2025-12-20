@@ -11,6 +11,7 @@ import * as authentication from '@/features/authentication';
 import * as components from '@/features/components/handlers/componentHandlers';
 
 // Import all handler modules
+import * as eds from '@/features/eds/handlers';
 import * as lifecycle from '@/features/lifecycle/handlers';
 import * as mesh from '@/features/mesh/handlers';
 import * as prerequisites from '@/features/prerequisites/handlers';
@@ -70,6 +71,14 @@ export class HandlerRegistry extends BaseHandlerRegistry {
         this.handlers.set('check-api-mesh', mesh.handleCheckApiMesh as MessageHandler);
         this.handlers.set('create-api-mesh', mesh.handleCreateApiMesh as MessageHandler);
         this.handlers.set('delete-api-mesh', mesh.handleDeleteApiMesh as MessageHandler);
+
+        // EDS handlers
+        this.handlers.set('check-github-auth', eds.handleCheckGitHubAuth as MessageHandler);
+        this.handlers.set('github-oauth', eds.handleGitHubOAuth as MessageHandler);
+        this.handlers.set('get-github-repos', eds.handleGetGitHubRepos as MessageHandler);
+        this.handlers.set('verify-dalive-org', eds.handleVerifyDaLiveOrg as MessageHandler);
+        this.handlers.set('verify-github-repo', eds.handleVerifyGitHubRepo as MessageHandler);
+        this.handlers.set('validate-accs-credentials', eds.handleValidateAccsCredentials as MessageHandler);
 
         // Project creation handlers
         this.handlers.set('validate', creation.handleValidate as MessageHandler);

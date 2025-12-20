@@ -7,7 +7,7 @@
  * 3. Card expands to show the confirmed selection (at-a-glance confirmation)
  */
 
-import { Text, DialogContainer } from '@adobe/react-spectrum';
+import { Text, DialogContainer, Checkbox, Divider } from '@adobe/react-spectrum';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useState, useMemo, useCallback } from 'react';
 import { Brand } from '@/types/brands';
@@ -17,13 +17,23 @@ import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { Modal } from '@/core/ui/components/ui/Modal';
 
+/** Addon metadata for display */
+const ADDON_METADATA: Record<string, { name: string; description: string }> = {
+    'adobe-commerce-aco': {
+        name: 'Adobe Commerce Optimizer',
+        description: 'Catalog optimization service for enhanced product discovery',
+    },
+};
+
 export interface BrandGalleryProps {
     brands: Brand[];
     stacks: Stack[];
     selectedBrand?: string;
     selectedStack?: string;
+    selectedAddons?: string[];
     onBrandSelect: (brandId: string) => void;
     onStackSelect: (stackId: string) => void;
+    onAddonsChange?: (addons: string[]) => void;
     /** Optional content to render above the brand gallery (e.g., project name field) */
     headerContent?: React.ReactNode;
 }
@@ -115,13 +125,16 @@ const BrandCard: React.FC<BrandCardProps> = ({
 };
 
 /**
- * ArchitectureModal - modal for selecting architecture/stack
+ * ArchitectureModal - modal for selecting architecture/stack and optional addons
  */
 interface ArchitectureModalProps {
     brand: Brand;
     stacks: Stack[];
     selectedStackId?: string;
-    onSelect: (stackId: string) => void;
+    selectedAddons?: string[];
+    onStackSelect: (stackId: string) => void;
+    onAddonsChange: (addons: string[]) => void;
+    onDone: () => void;
     onClose: () => void;
 }
 
@@ -129,37 +142,70 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
     brand,
     stacks,
     selectedStackId,
-    onSelect,
+    selectedAddons = [],
+    onStackSelect,
+    onAddonsChange,
+    onDone,
     onClose,
 }) => {
+    // Filter stacks based on brand's compatibleStacks (if defined)
+    const filteredStacks = useMemo(() => {
+        if (!brand.compatibleStacks || brand.compatibleStacks.length === 0) {
+            return stacks; // No restrictions - show all stacks
+        }
+        return stacks.filter(stack => brand.compatibleStacks!.includes(stack.id));
+    }, [stacks, brand.compatibleStacks]);
+
     const handleStackClick = useCallback(
         (stackId: string) => {
-            onSelect(stackId);
+            onStackSelect(stackId);
         },
-        [onSelect],
+        [onStackSelect],
     );
 
     const handleStackKeyDown = useCallback(
         (e: React.KeyboardEvent, stackId: string) => {
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                onSelect(stackId);
+                onStackSelect(stackId);
             }
         },
-        [onSelect],
+        [onStackSelect],
     );
+
+    const handleAddonToggle = useCallback(
+        (addonId: string, isSelected: boolean) => {
+            if (isSelected) {
+                onAddonsChange([...selectedAddons, addonId]);
+            } else {
+                onAddonsChange(selectedAddons.filter(id => id !== addonId));
+            }
+        },
+        [selectedAddons, onAddonsChange],
+    );
+
+    // Get available addons from brand's addons config (brand-driven, not stack-driven)
+    const availableAddons = useMemo(() => {
+        return Object.keys(brand.addons || {});
+    }, [brand.addons]);
+
+    // Build action buttons - only show Done when a stack is selected
+    const actionButtons = selectedStackId
+        ? [{ label: 'Done', variant: 'primary' as const, onPress: onDone }]
+        : [];
 
     return (
         <Modal
             title={brand.name}
             onClose={onClose}
             size="M"
+            actionButtons={actionButtons}
         >
             <Text UNSAFE_className="text-gray-600 mb-4 block">
                 How should it be built?
             </Text>
             <div className="architecture-modal-options">
-                {stacks.map((stack) => {
+                {filteredStacks.map((stack) => {
                     const isSelected = selectedStackId === stack.id;
                     return (
                         <div
@@ -190,6 +236,37 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                     );
                 })}
             </div>
+
+            {/* Services Section - only shown if stack supports addons */}
+            {availableAddons.length > 0 && (
+                <>
+                    <Divider size="S" marginTop="size-300" marginBottom="size-200" />
+                    <Text UNSAFE_className="text-gray-600 text-sm mb-2 block">
+                        Optional Services
+                    </Text>
+                    <div className="architecture-addons">
+                        {availableAddons.map((addonId) => {
+                            const addon = ADDON_METADATA[addonId];
+                            if (!addon) return null;
+                            const isRequired = brand.addons?.[addonId] === 'required';
+                            const isChecked = isRequired || selectedAddons.includes(addonId);
+                            return (
+                                <Checkbox
+                                    key={addonId}
+                                    isSelected={isChecked}
+                                    isDisabled={isRequired}
+                                    onChange={(isSelected) => handleAddonToggle(addonId, isSelected)}
+                                >
+                                    <span className="addon-label">
+                                        <span className="addon-name">{addon.name}</span>
+                                        <span className="addon-description">{addon.description}</span>
+                                    </span>
+                                </Checkbox>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
         </Modal>
     );
 };
@@ -199,12 +276,16 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     stacks,
     selectedBrand,
     selectedStack,
+    selectedAddons = [],
     onBrandSelect,
     onStackSelect,
+    onAddonsChange,
     headerContent,
 }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [modalBrandId, setModalBrandId] = useState<string | null>(null);
+    // Track modal-local addon state (synced to parent on Done)
+    const [modalAddons, setModalAddons] = useState<string[]>(selectedAddons);
 
     const filteredBrands = useMemo(() => {
         if (!searchQuery.trim()) return brands;
@@ -227,16 +308,45 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
         return stacks.find(s => s.id === selectedStack);
     }, [stacks, selectedStack]);
 
+    // Helper to get required addon IDs from brand's addons config
+    const getRequiredAddons = useCallback((brand: Brand): string[] => {
+        if (!brand.addons) return [];
+        return Object.entries(brand.addons)
+            .filter(([_, mode]) => mode === 'required')
+            .map(([id]) => id);
+    }, []);
+
     const handleCardClick = useCallback((brand: Brand) => {
         // Always open modal when clicking a card (allows changing selection)
         onBrandSelect(brand.id);
+        // Initialize modal addons with current state + brand's required addons
+        const requiredAddons = getRequiredAddons(brand);
+        const initialAddons = [...new Set([...selectedAddons, ...requiredAddons])];
+        setModalAddons(initialAddons);
         setModalBrandId(brand.id);
-    }, [onBrandSelect]);
+    }, [onBrandSelect, selectedAddons, getRequiredAddons]);
 
     const handleStackSelect = useCallback((stackId: string) => {
         onStackSelect(stackId);
-        setModalBrandId(null); // Close modal after selection
-    }, [onStackSelect]);
+        // When stack changes, keep only required addons (clear optional selections)
+        setModalAddons(() => {
+            const currentBrand = brands.find(b => b.id === modalBrandId);
+            return currentBrand ? getRequiredAddons(currentBrand) : [];
+        });
+    }, [onStackSelect, brands, modalBrandId, getRequiredAddons]);
+
+    const handleModalAddonsChange = useCallback((addons: string[]) => {
+        setModalAddons(addons);
+    }, []);
+
+    const handleModalDone = useCallback(() => {
+        // Sync addons to parent state (including required addons) and close modal
+        const currentBrand = brands.find(b => b.id === modalBrandId);
+        const requiredAddons = currentBrand ? getRequiredAddons(currentBrand) : [];
+        const finalAddons = [...new Set([...modalAddons, ...requiredAddons])];
+        onAddonsChange?.(finalAddons);
+        setModalBrandId(null);
+    }, [modalAddons, onAddonsChange, brands, modalBrandId, getRequiredAddons]);
 
     const handleModalClose = useCallback(() => {
         setModalBrandId(null);
@@ -261,7 +371,7 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                 searchQuery={searchQuery}
                 onSearchQueryChange={setSearchQuery}
                 searchPlaceholder="Filter brands..."
-                searchThreshold={5}
+                searchThreshold={2}
                 totalCount={brands.length}
                 filteredCount={filteredBrands.length}
                 itemNoun="brand"
@@ -298,7 +408,10 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
                         brand={modalBrand}
                         stacks={stacks}
                         selectedStackId={selectedBrand === modalBrand.id ? selectedStack : undefined}
-                        onSelect={handleStackSelect}
+                        selectedAddons={modalAddons}
+                        onStackSelect={handleStackSelect}
+                        onAddonsChange={handleModalAddonsChange}
+                        onDone={handleModalDone}
                         onClose={handleModalClose}
                     />
                 )}

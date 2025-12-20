@@ -380,17 +380,7 @@ export const handleEditProject: MessageHandler<{ projectPath: string }> = async 
             };
         }
 
-        // Check if demo is running or starting (can't edit while running)
-        if (project.status === 'running' || project.status === 'starting') {
-            return {
-                success: true,
-                data: {
-                    requiresStop: true,
-                    projectName: project.name,
-                },
-            };
-        }
-
+        // Note: Edit menu is only shown when project is not running (UI enforces this)
         // Extract settings for edit mode (include secrets for local edit)
         const settings = extractSettingsFromProject(project, true);
 

@@ -5,7 +5,10 @@
  * Extracted from dashboardHandlers.ts to reduce file size.
  */
 
+import * as fs from 'fs/promises';
+import * as path from 'path';
 import { ServiceLocator } from '@/core/di';
+import { parseEnvFile } from '@/core/utils/envParser';
 import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
@@ -115,13 +118,79 @@ export function getExpirationMessage(expiredMinutesAgo: number): string {
 }
 
 /**
- * Determine mesh status based on changes and component state
+ * Required environment variables for mesh deployment
+ * These must all be present for the mesh to function correctly
  */
-export function determineMeshStatus(
+const REQUIRED_MESH_ENV_VARS = [
+    'ADOBE_COMMERCE_GRAPHQL_ENDPOINT',
+    'ADOBE_CATALOG_SERVICE_ENDPOINT',
+    'ADOBE_COMMERCE_URL',
+    'ADOBE_COMMERCE_ENVIRONMENT_ID',
+    'ADOBE_COMMERCE_STORE_VIEW_CODE',
+    'ADOBE_COMMERCE_WEBSITE_CODE',
+    'ADOBE_COMMERCE_STORE_CODE',
+    'ADOBE_CATALOG_API_KEY',
+];
+
+/**
+ * Check if all required mesh configuration fields are populated in the .env file
+ *
+ * Reads the actual .env file from the mesh component path to verify configuration
+ * is complete. This catches cases where componentConfigs has data but the .env
+ * file was never generated (e.g., older projects using linkExistingMesh).
+ *
+ * @param meshPath - Path to the mesh component directory
+ * @returns Object with isComplete flag and list of missing fields
+ */
+export async function checkMeshConfigCompleteness(meshPath: string | undefined): Promise<{
+    isComplete: boolean;
+    missingFields: string[];
+}> {
+    const missingFields: string[] = [];
+
+    if (!meshPath) {
+        return { isComplete: false, missingFields: [...REQUIRED_MESH_ENV_VARS] };
+    }
+
+    // Read the .env file from the mesh component directory
+    const envFilePath = path.join(meshPath, '.env');
+    let envConfig: Record<string, string> = {};
+
+    try {
+        const content = await fs.readFile(envFilePath, 'utf-8');
+        envConfig = parseEnvFile(content);
+    } catch {
+        // .env file doesn't exist or can't be read - all fields are missing
+        return { isComplete: false, missingFields: [...REQUIRED_MESH_ENV_VARS] };
+    }
+
+    for (const field of REQUIRED_MESH_ENV_VARS) {
+        const value = envConfig[field];
+        if (value === undefined || value === null || value === '') {
+            missingFields.push(field);
+        }
+    }
+
+    return {
+        isComplete: missingFields.length === 0,
+        missingFields,
+    };
+}
+
+/**
+ * Determine mesh status based on changes, component state, and config completeness
+ */
+export async function determineMeshStatus(
     meshChanges: { hasChanges: boolean; unknownDeployedState?: boolean },
     meshComponent: ComponentInstance,
     project: Project,
-): 'deployed' | 'config-changed' | 'update-declined' | 'error' | 'checking' {
+): Promise<'deployed' | 'config-changed' | 'config-incomplete' | 'update-declined' | 'error' | 'checking'> {
+    // First check if configuration is complete (reads actual .env file)
+    const configCheck = await checkMeshConfigCompleteness(meshComponent.path);
+    if (!configCheck.isComplete) {
+        return 'config-incomplete';
+    }
+
     if (meshChanges.hasChanges) {
         // User previously declined update → 'update-declined' (orange badge)
         // Otherwise → 'config-changed' (yellow badge)
@@ -151,7 +220,7 @@ export async function checkMeshStatusAsync(
     context.logger.debug('[Dashboard] Starting async mesh status check');
 
     try {
-        let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'update-declined' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
+        let meshStatus: 'needs-auth' | 'deploying' | 'deployed' | 'config-changed' | 'config-incomplete' | 'update-declined' | 'not-deployed' | 'error' | 'checking' = 'not-deployed';
         let meshEndpoint: string | undefined;
         let meshMessage: string | undefined;
 
@@ -197,7 +266,7 @@ export async function checkMeshStatusAsync(
             }
 
             if (hasMeshDeploymentRecord(project)) {
-                meshStatus = determineMeshStatus(meshChanges, meshComponent, project);
+                meshStatus = await determineMeshStatus(meshChanges, meshComponent, project);
                 meshEndpoint = meshComponent.endpoint;
 
                 verifyMeshDeployment(context, project).catch(() => {

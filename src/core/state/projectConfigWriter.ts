@@ -81,6 +81,8 @@ export class ProjectConfigWriter {
                 componentVersions: project.componentVersions,
                 meshState: project.meshState,
                 components: getComponentIds(project.componentInstances),
+                selectedBrand: project.selectedBrand,
+                selectedStack: project.selectedStack,
             };
 
             await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));

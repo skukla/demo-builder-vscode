@@ -23,6 +23,8 @@ export interface ProjectManifest {
     componentConfigs?: Project['componentConfigs'];
     componentVersions?: Project['componentVersions'];
     meshState?: Project['meshState'];
+    selectedBrand?: string;
+    selectedStack?: string;
 }
 
 export class ProjectFileLoader {
@@ -76,6 +78,8 @@ export class ProjectFileLoader {
                 componentConfigs: manifest.componentConfigs,
                 componentVersions,
                 meshState: manifest.meshState,
+                selectedBrand: manifest.selectedBrand,
+                selectedStack: manifest.selectedStack,
             };
 
             // Detect if demo is actually running

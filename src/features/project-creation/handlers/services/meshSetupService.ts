@@ -283,10 +283,24 @@ export async function linkExistingMesh(
     context: MeshSetupContext,
     meshConfig: MeshApiConfig,
 ): Promise<void> {
-    const { project, progressTracker, logger } = context;
+    const { project, meshDefinition, sharedEnvVars, config, progressTracker, logger } = context;
 
     progressTracker('Configuring API Mesh', 75, 'Adding existing mesh to project...');
     logger.info('[Project Creation] 🔗 Phase 3: Linking existing API Mesh...');
+
+    // Generate mesh .env file (even when linking existing mesh)
+    const meshComponent = project.componentInstances?.['commerce-mesh'];
+    if (meshComponent?.path && meshDefinition) {
+        await generateComponentEnvFile(
+            meshComponent.path,
+            'commerce-mesh',
+            meshDefinition,
+            sharedEnvVars,
+            config,
+            logger,
+        );
+        logger.debug('[Project Creation] Mesh .env generated');
+    }
 
     // Preserve existing component properties (like path from Phase 1 cloning)
     const existingMeshComponent = project.componentInstances?.['commerce-mesh'];

@@ -2,11 +2,14 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { BaseWebviewCommand } from '@/core/base';
 import { WebviewCommunicationManager } from '@/core/communication';
+import { ConfigurationLoader } from '@/core/config/ConfigurationLoader';
 import { createBundleUris } from '@/core/utils/bundleUri';
 import { getWebviewHTMLWithBundles } from '@/core/utils/getWebviewHTMLWithBundles';
 import { DashboardHandlerRegistry } from '@/features/dashboard/handlers';
 import { ShowProjectsListCommand } from '@/features/projects-dashboard/commands/showProjectsList';
 import { Project, ComponentInstance } from '@/types';
+import type { Brand, BrandsConfig } from '@/types/brands';
+import type { Stack, StacksConfig } from '@/types/stacks';
 import { HandlerContext, SharedState } from '@/types/handlers';
 import { getComponentInstanceValues } from '@/types/typeGuards';
 
@@ -66,11 +69,16 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
         theme: string;
         project: { name: string; path: string } | null;
         hasMesh: boolean;
+        brandName?: string;
+        stackName?: string;
     }> {
         const project = await this.stateManager.getCurrentProject();
         const themeKind = vscode.window.activeColorTheme.kind;
         const theme = themeKind === vscode.ColorThemeKind.Dark ? 'dark' : 'light';
         const hasMesh = !!project?.componentInstances?.['commerce-mesh'];
+
+        // Resolve brand/stack names from IDs
+        const { brandName, stackName } = await this.resolveBrandStackNames(project ?? null);
 
         return {
             theme,
@@ -79,7 +87,54 @@ export class ProjectDashboardWebviewCommand extends BaseWebviewCommand {
                 path: project.path,
             } : null,
             hasMesh,
+            brandName,
+            stackName,
         };
+    }
+
+    /**
+     * Resolve brand and stack IDs to human-readable names
+     * Returns undefined for each field if ID not found (hides field in UI)
+     */
+    private async resolveBrandStackNames(project: Project | null): Promise<{
+        brandName?: string;
+        stackName?: string;
+    }> {
+        if (!project?.selectedBrand && !project?.selectedStack) {
+            return {};
+        }
+
+        try {
+            const result: { brandName?: string; stackName?: string } = {};
+
+            // Resolve brand name
+            if (project.selectedBrand) {
+                const brandsPath = path.join(this.context.extensionPath, 'templates', 'brands.json');
+                const brandsLoader = new ConfigurationLoader<BrandsConfig>(brandsPath);
+                const brandsConfig = await brandsLoader.load();
+                const brand = brandsConfig.brands.find((b: Brand) => b.id === project.selectedBrand);
+                if (brand) {
+                    result.brandName = brand.name;
+                }
+            }
+
+            // Resolve stack name
+            if (project.selectedStack) {
+                const stacksPath = path.join(this.context.extensionPath, 'templates', 'stacks.json');
+                const stacksLoader = new ConfigurationLoader<StacksConfig>(stacksPath);
+                const stacksConfig = await stacksLoader.load();
+                const stack = stacksConfig.stacks.find((s: Stack) => s.id === project.selectedStack);
+                if (stack) {
+                    result.stackName = stack.name;
+                }
+            }
+
+            return result;
+        } catch (error) {
+            // If loading fails, return empty (hide fields in UI)
+            this.logger.debug('[Dashboard] Failed to resolve brand/stack names:', error);
+            return {};
+        }
     }
 
     protected getLoadingMessage(): string {

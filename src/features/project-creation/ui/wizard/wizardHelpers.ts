@@ -247,6 +247,10 @@ export interface ImportedSettings {
         workspaceName?: string;
         workspaceTitle?: string;
     };
+    /** Brand ID from the source project (e.g., 'citisignal') */
+    selectedBrand?: string;
+    /** Stack ID from the source project (e.g., 'headless-paas') */
+    selectedStack?: string;
 }
 
 /**
@@ -494,7 +498,6 @@ export function buildProjectConfig(wizardState: WizardState, importedSettings?: 
 
     return {
         projectName: wizardState.projectName,
-        projectTemplate: wizardState.projectTemplate,
         adobe: {
             organization: wizardState.adobeOrg?.id,
             projectId: wizardState.adobeProject?.id,
@@ -519,5 +522,11 @@ export function buildProjectConfig(wizardState: WizardState, importedSettings?: 
         importedMeshEndpoint,
         // Mesh deployment happens during Project Creation (Phase 3), not as separate wizard step
         meshStepEnabled: false,
+        // Brand/Stack selections
+        selectedBrand: wizardState.selectedBrand,
+        selectedStack: wizardState.selectedStack,
+        // Edit mode: re-use existing project directory
+        editMode: wizardState.editMode,
+        editProjectPath: wizardState.editProjectPath,
     };
 }

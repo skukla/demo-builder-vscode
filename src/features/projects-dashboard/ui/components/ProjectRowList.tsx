@@ -22,6 +22,8 @@ export interface ProjectRowListProps {
     onStopDemo?: (project: Project) => void;
     /** Callback to open demo in browser */
     onOpenBrowser?: (project: Project) => void;
+    /** Callback to edit project settings */
+    onEditProject?: (project: Project) => void;
     /** Callback to export project settings */
     onExportProject?: (project: Project) => void;
     /** Callback to delete project */
@@ -38,6 +40,7 @@ export const ProjectRowList: React.FC<ProjectRowListProps> = ({
     onStartDemo,
     onStopDemo,
     onOpenBrowser,
+    onEditProject,
     onExportProject,
     onDeleteProject,
 }) => {
@@ -52,6 +55,7 @@ export const ProjectRowList: React.FC<ProjectRowListProps> = ({
                     onStartDemo={onStartDemo}
                     onStopDemo={onStopDemo}
                     onOpenBrowser={onOpenBrowser}
+                    onEdit={onEditProject}
                     onExport={onExportProject}
                     onDelete={onDeleteProject}
                 />

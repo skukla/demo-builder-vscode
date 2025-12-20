@@ -18,6 +18,7 @@
       "description": "Telecommunications demo with CitiSignal branding",
       "icon": "citisignal",
       "featured": true,
+      "compatibleStacks": ["headless-paas", "eds-paas", "eds-accs"],
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
         "ADOBE_COMMERCE_STORE_CODE": "citisignal_store",
@@ -32,6 +33,10 @@
       "name": "BuildRight",
       "description": "Construction/hardware demo with BuildRight branding",
       "icon": "buildright",
+      "compatibleStacks": ["eds-paas", "eds-accs"],
+      "addons": {
+        "adobe-commerce-aco": "required"
+      },
       "configDefaults": {
         "ADOBE_COMMERCE_WEBSITE_CODE": "buildright",
         "ADOBE_COMMERCE_STORE_CODE": "buildright_store",

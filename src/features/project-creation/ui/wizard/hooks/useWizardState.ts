@@ -96,7 +96,6 @@ function computeInitialState(
         return {
             currentStep: firstStep,
             projectName: editProject.projectName,
-            projectTemplate: 'citisignal',
             editMode: true,
             editProjectPath: editProject.projectPath,
             componentConfigs: editSettings.configs || {},
@@ -126,6 +125,9 @@ function computeInitialState(
                 name: editSettings.adobe.workspaceName || '',
                 title: editSettings.adobe.workspaceTitle,
             } : undefined,
+            // Brand/Stack from source project
+            selectedBrand: editSettings.selectedBrand,
+            selectedStack: editSettings.selectedStack,
         };
     }
 
@@ -139,6 +141,8 @@ function computeInitialState(
             hasSelections: !!importedSettings.selections,
             hasAdobe: !!importedSettings.adobe,
             hasConfigs: !!importedSettings.configs,
+            configKeys: importedSettings.configs ? Object.keys(importedSettings.configs) : [],
+            sampleConfigs: importedSettings.configs ? JSON.stringify(importedSettings.configs).slice(0, 500) : 'none',
             sourceProject: importedSettings.source?.project,
             generatedName: initialProjectName,
         });
@@ -147,7 +151,6 @@ function computeInitialState(
     return {
         currentStep: firstStep,
         projectName: initialProjectName,
-        projectTemplate: 'citisignal',
         componentConfigs: importedSettings?.configs || {},
         adobeAuth: {
             isAuthenticated: false,  // Start as false, will be checked on auth step
@@ -157,6 +160,9 @@ function computeInitialState(
         adobeOrg: adobeContext.org,
         adobeProject: adobeContext.project,
         adobeWorkspace: adobeContext.workspace,
+        // Brand/Stack from imported settings
+        selectedBrand: importedSettings?.selectedBrand,
+        selectedStack: importedSettings?.selectedStack,
     };
 }
 

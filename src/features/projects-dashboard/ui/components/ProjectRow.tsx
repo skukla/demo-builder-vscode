@@ -32,6 +32,8 @@ export interface ProjectRowProps {
     onStopDemo?: (project: Project) => void;
     /** Callback to open the demo in browser */
     onOpenBrowser?: (project: Project) => void;
+    /** Callback to edit project settings */
+    onEdit?: (project: Project) => void;
     /** Callback to export project settings */
     onExport?: (project: Project) => void;
     /** Callback to delete project */
@@ -48,6 +50,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
     onStartDemo,
     onStopDemo,
     onOpenBrowser,
+    onEdit,
     onExport,
     onDelete,
 }) => {
@@ -103,6 +106,7 @@ export const ProjectRow: React.FC<ProjectRowProps> = ({
                         onStartDemo={onStartDemo}
                         onStopDemo={onStopDemo}
                         onOpenBrowser={onOpenBrowser}
+                        onEdit={onEdit}
                         onExport={onExport}
                         onDelete={onDelete}
                         className="project-row-menu-button"
