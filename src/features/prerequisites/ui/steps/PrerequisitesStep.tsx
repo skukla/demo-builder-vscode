@@ -5,7 +5,6 @@ import {
     Button,
     ProgressBar,
 } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useRef, useCallback } from 'react';
 import {
     usePrerequisiteState,
@@ -163,16 +162,6 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                     ))}
                 </Flex>
 
-                {!hasErrors && checks.every(check => check.status === 'success') && (
-                    <View marginTop="size-300" paddingBottom="size-200">
-                        <Flex gap="size-100" alignItems="center">
-                            <CheckmarkCircle size="S" UNSAFE_className="text-green-600" />
-                            <Text UNSAFE_className={cn('success-text')}>
-                                All prerequisites installed!
-                            </Text>
-                        </Flex>
-                    </View>
-                )}
             </div>
 
             <Flex gap="size-150" marginTop="size-200">

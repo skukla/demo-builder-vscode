@@ -87,7 +87,7 @@ describe('PrerequisitesStep - Edge Cases', () => {
         });
     });
 
-    it('should show success message when all prerequisites pass', async () => {
+    it('should enable continue when all prerequisites pass', async () => {
         let loadedCallback: (data: any) => void = () => {};
         let statusCallback: (data: any) => void = () => {};
 
@@ -125,8 +125,9 @@ describe('PrerequisitesStep - Edge Cases', () => {
 
         statusCallback({ index: 0, status: 'success', message: 'Installed' });
 
+        // When all prerequisites pass, navigation should be enabled
         await waitFor(() => {
-            expect(screen.getByText('All prerequisites installed!')).toBeInTheDocument();
+            expect(mockSetCanProceed).toHaveBeenCalledWith(true);
         });
     });
 });

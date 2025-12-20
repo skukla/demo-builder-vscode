@@ -142,7 +142,7 @@ describe('PageFooter', () => {
     });
 
     describe('layout', () => {
-        it('should use space-between layout for left and right content', () => {
+        it('should use CSS Grid layout for left, center, and right content', () => {
             // Given: PageFooter with both left and right content
             const { container } = renderWithProvider(
                 <PageFooter
@@ -151,8 +151,8 @@ describe('PageFooter', () => {
                 />
             );
 
-            // Then: Flex container has space-between justification
-            // Adobe Spectrum Flex with justifyContent="space-between" creates specific DOM
+            // Then: Grid container with 3 columns exists
+            // PageFooter uses CSS Grid (gridTemplateColumns: '1fr auto 1fr')
             const cancelButton = screen.getByRole('button', { name: 'Cancel' });
             const continueButton = screen.getByRole('button', { name: 'Continue' });
 
@@ -160,9 +160,9 @@ describe('PageFooter', () => {
             expect(cancelButton).toBeInTheDocument();
             expect(continueButton).toBeInTheDocument();
 
-            // The flex container should exist (checking parent structure)
-            const flexContainer = cancelButton.closest('[class*="flex"]');
-            expect(flexContainer).toBeInTheDocument();
+            // The grid container should exist (checking for display: grid in style)
+            const gridContainer = container.querySelector('[style*="grid"]');
+            expect(gridContainer).toBeInTheDocument();
         });
     });
 
