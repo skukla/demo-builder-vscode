@@ -24,6 +24,7 @@ features/
 │   └── README.md        # Feature documentation
 ├── components/          # Component management
 ├── dashboard/           # Project dashboard (detail view)
+├── eds/                 # Edge Delivery Services (→ README.md)
 ├── lifecycle/           # Project lifecycle
 ├── mesh/                # API Mesh deployment
 ├── prerequisites/       # Prerequisites system
@@ -120,6 +121,31 @@ features/my-feature/
 - Mesh deployment status
 
 **Path Alias**: `@/features/dashboard`
+
+### eds
+
+**Purpose**: Edge Delivery Services integration with GitHub, DA.live, and Helix 5
+
+**Key Services:**
+- `GitHubService` - OAuth authentication, repository creation from templates
+- `DaLiveService` - DA.live content management with IMS token integration
+- `EdsProjectService` - Project setup orchestration (GitHub + DA.live + Helix)
+- `ToolManager` - Commerce demo ingestion tool management
+- `CleanupService` - External resource cleanup on project deletion
+- `HelixService` - Helix 5 Configuration Service integration
+- Error formatters for user-friendly error messages
+
+**Responsibilities:**
+- GitHub OAuth popup flow with CSRF protection
+- Repository creation from CitiSignal template
+- DA.live content copy for brand content
+- Helix 5 configuration via Configuration Service API
+- Code sync verification with polling
+- Tool installation for data population
+- Partial state tracking for recovery
+- Project cleanup (GitHub repo, DA.live content, Helix site)
+
+**Path Alias**: `@/features/eds`
 
 ### lifecycle
 
