@@ -122,35 +122,76 @@ export function SearchableList<T extends SearchableListItem>({
 
     // Ref for the list container to scroll to selected item
     const listContainerRef = useRef<HTMLDivElement>(null);
-    const hasScrolledRef = useRef(false);
+    // Track which selectedId we've scrolled to (prevents re-scrolling on filteredItems changes)
+    const scrolledToIdRef = useRef<string | null>(null);
 
-    // Scroll to selected item when list is ready with a pre-selection
-    // Triggers on: initial load, navigation back (component remount), or selection change
+    // Store filteredItems in a ref so we can access current value without dependency
+    const filteredItemsRef = useRef(filteredItems);
+    filteredItemsRef.current = filteredItems;
+
+    // Scroll to selected item when selection changes
+    // Only depends on selectedKeys[0] to avoid loops from filteredItems array changes
+    const selectedId = selectedKeys[0];
     useEffect(() => {
-        if (!selectedKeys.length || !listContainerRef.current) {
-            hasScrolledRef.current = false;
+        // Reset when selection clears
+        if (!selectedId) {
+            scrolledToIdRef.current = null;
             return;
         }
 
-        // Skip if we've already scrolled for this selection
-        if (hasScrolledRef.current) {
+        // Skip if we've already scrolled to this selection
+        if (scrolledToIdRef.current === selectedId) {
             return;
         }
 
-        // Small delay to ensure DOM is rendered
+        // Mark as handled immediately to prevent any possibility of loops
+        scrolledToIdRef.current = selectedId;
+
         const timer = setTimeout(() => {
-            const selectedId = selectedKeys[0];
-            const selectedElement = listContainerRef.current?.querySelector(
-                `[data-key="${selectedId}"]`,
+            if (!listContainerRef.current) {
+                return;
+            }
+
+            // First, try to find the element directly (works if item is in viewport)
+            const selectedElement = listContainerRef.current.querySelector(
+                '[aria-selected="true"]',
             );
             if (selectedElement) {
                 selectedElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
-                hasScrolledRef.current = true;
+                return;
             }
-        }, 100);
+
+            // For virtualized lists, scroll the container based on estimated position
+            const currentItems = filteredItemsRef.current;
+            const selectedIndex = currentItems.findIndex(item => item.id === selectedId);
+
+            if (selectedIndex === -1) {
+                return;
+            }
+
+            // ListView row height is approximately 48px (Spectrum default with description)
+            const estimatedRowHeight = 48;
+
+            // Try multiple selectors to find the scrollable container
+            const gridElement = listContainerRef.current.querySelector('[role="grid"]');
+            const scrollContainer = gridElement?.parentElement ||
+                listContainerRef.current.querySelector('[class*="spectrum-ListView"]');
+
+            if (scrollContainer) {
+                const targetScrollTop = selectedIndex * estimatedRowHeight;
+                const containerHeight = scrollContainer.clientHeight;
+                // Center the item in the viewport
+                const centeredScrollTop = Math.max(0, targetScrollTop - containerHeight / 2 + estimatedRowHeight / 2);
+
+                scrollContainer.scrollTo({
+                    top: centeredScrollTop,
+                    behavior: 'smooth',
+                });
+            }
+        }, 200);
 
         return () => clearTimeout(timer);
-    }, [selectedKeys]);
+    }, [selectedId]);
 
     return (
         <div className="searchable-list-container">
