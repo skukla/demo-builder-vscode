@@ -2,6 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { formatAdobeCliError, extractMeshErrorSummary } from '@/features/mesh/utils/errorFormatter';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { BaseCommand } from '@/core/base';
 import { ServiceLocator } from '@/core/di';
 import { Logger } from '@/core/logging';
@@ -182,11 +183,11 @@ export class DeployMeshCommand extends BaseCommand {
                                     }
                                 },
                                 configureTelemetry: false,
-                                useNodeVersion: null,
+                                useNodeVersion: getMeshNodeVersion(),
                                 enhancePath: true,
                             },
                         );
-                        
+
                         if (updateResult.code !== 0) {
                             // Don't re-log stderr/stdout here - they've already been streamed above
                             // Just extract a clean error message for the exception

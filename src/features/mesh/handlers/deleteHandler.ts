@@ -9,6 +9,7 @@ import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation';
 import { ensureAuthenticated } from '@/features/mesh/handlers/shared';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { ErrorCode } from '@/types/errorCodes';
 import { toError } from '@/types/typeGuards';
 
@@ -58,7 +59,7 @@ export async function handleDeleteApiMesh(
             {
                 timeout: TIMEOUTS.API_CALL,
                 configureTelemetry: false,
-                useNodeVersion: null,
+                useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,
             },
         );

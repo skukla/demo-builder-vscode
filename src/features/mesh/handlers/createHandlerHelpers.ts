@@ -9,6 +9,7 @@ import { CommandExecutor } from '@/core/shell';
 import type { CommandResult } from '@/core/shell/types';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getEndpoint } from '@/features/mesh/handlers/shared';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 
 /**
  * Create a streaming callback for mesh operations (create/update)
@@ -124,7 +125,7 @@ export async function handleMeshAlreadyExists(
                 timeout: TIMEOUTS.API_MESH_UPDATE,
                 onOutput: createProgressCallback('update', onProgress),
                 configureTelemetry: false,
-                useNodeVersion: null,
+                useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,
             },
         );

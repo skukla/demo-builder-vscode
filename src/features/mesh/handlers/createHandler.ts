@@ -12,6 +12,7 @@ import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { validateWorkspaceId } from '@/core/validation';
 import { createProgressCallback, handleMeshAlreadyExists } from '@/features/mesh/handlers/createHandlerHelpers';
 import { ensureAuthenticated, getEndpoint } from '@/features/mesh/handlers/shared';
+import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
 import { getMeshStatusCategory, extractAndParseJSON } from '@/features/mesh/utils/meshHelpers';
 import { ErrorCode } from '@/types/errorCodes';
 import { parseJSON, toError } from '@/types/typeGuards';
@@ -110,7 +111,7 @@ export async function handleCreateApiMesh(
                 timeout: TIMEOUTS.API_MESH_CREATE,
                 onOutput: createProgressCallback('create', onProgress, lastOutput),
                 configureTelemetry: false,
-                useNodeVersion: null,
+                useNodeVersion: getMeshNodeVersion(),
                 enhancePath: true,
             },
         );
@@ -180,7 +181,7 @@ export async function handleCreateApiMesh(
                     {
                         timeout: TIMEOUTS.API_CALL,
                         configureTelemetry: false,
-                        useNodeVersion: null,
+                        useNodeVersion: getMeshNodeVersion(),
                         enhancePath: true,
                         shell: true,
                     },

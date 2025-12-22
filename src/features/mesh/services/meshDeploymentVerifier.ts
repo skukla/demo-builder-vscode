@@ -89,7 +89,7 @@ export async function waitForMeshDeployment(
                 {
                     timeout: TIMEOUTS.MESH_DESCRIBE,
                     configureTelemetry: false,
-                    useNodeVersion: null,
+                    useNodeVersion: getMeshNodeVersion(),
                     enhancePath: true,
                     shell: true,
                 },
