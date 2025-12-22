@@ -315,6 +315,66 @@ export async function handleShowLogs(context: HandlerContext): Promise<SimpleRes
 }
 
 /**
+ * openExternal - Open a URL in the system browser
+ *
+ * Opens the provided URL in the user's default browser.
+ * Used for opening help pages, documentation, or setup pages.
+ * Supports data URLs by writing to a temp file first.
+ */
+export async function handleOpenExternal(
+    context: HandlerContext,
+    payload?: { url: string },
+): Promise<SimpleResult> {
+    context.logger.info('[OpenExternal] Handler called');
+
+    const { url } = payload || {};
+
+    if (!url) {
+        context.logger.warn('[OpenExternal] No URL provided');
+        return { success: false, error: 'URL is required' };
+    }
+
+    try {
+        // Handle data URLs by writing to temp file
+        if (url.startsWith('data:')) {
+            const os = await import('os');
+            const path = await import('path');
+            const fs = await import('fs/promises');
+
+            // Extract content from data URL
+            const match = url.match(/^data:([^;]+);([^,]+),(.*)$/);
+            if (!match) {
+                context.logger.error('[OpenExternal] Invalid data URL format');
+                return { success: false, error: 'Invalid data URL format' };
+            }
+
+            const [, mimeType, encoding, data] = match;
+            const content = encoding === 'charset=utf-8'
+                ? decodeURIComponent(data)
+                : Buffer.from(data, 'base64').toString('utf-8');
+
+            // Write to temp file
+            const ext = mimeType.includes('html') ? '.html' : '.txt';
+            const tempFile = path.join(os.tmpdir(), `demo-builder-setup${ext}`);
+            await fs.writeFile(tempFile, content, 'utf-8');
+
+            context.logger.info('[OpenExternal] Wrote data URL to temp file:', tempFile);
+            await vscode.env.openExternal(vscode.Uri.file(tempFile));
+        } else {
+            // Regular URL
+            context.logger.info('[OpenExternal] Opening URL');
+            await vscode.env.openExternal(vscode.Uri.parse(url));
+        }
+
+        context.logger.info('[OpenExternal] Successfully opened');
+        return { success: true };
+    } catch (error) {
+        context.logger.error('[OpenExternal] Failed to open URL', error as Error);
+        return { success: false, error: (error as Error).message };
+    }
+}
+
+/**
  * Helper: Load components
  *
  * Loads component definitions from templates/components.json

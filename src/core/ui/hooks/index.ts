@@ -20,6 +20,8 @@ export { useAutoScroll } from './useAutoScroll';
 export { useSearchFilter } from './useSearchFilter';
 export { useFocusTrap, FOCUSABLE_SELECTOR } from './useFocusTrap';
 export { useFocusOnMount } from './useFocusOnMount';
+export { useArrowKeyNavigation } from './useArrowKeyNavigation';
+export type { UseArrowKeyNavigationOptions, UseArrowKeyNavigationResult, ArrowKeyNavigationItemProps } from './useArrowKeyNavigation';
 
 // General Purpose Hooks
 export { useSelectableDefault, useSelectableDefaultWhen } from './useSelectableDefault';

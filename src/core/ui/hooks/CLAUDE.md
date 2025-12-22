@@ -25,7 +25,8 @@ hooks/
 │   ├── useAutoScroll.ts        # Auto-scroll container logic
 │   ├── useSearchFilter.ts      # Search/filter arrays
 │   ├── useFocusTrap.ts         # Focus trap for accessibility
-│   └── useFocusOnMount.ts      # Focus element on mount
+│   ├── useFocusOnMount.ts      # Focus element on mount
+│   └── useArrowKeyNavigation.ts # Arrow key navigation for lists/grids
 │
 ├── Utility Hooks
 │   ├── useDebouncedValue.ts    # Debounce any value
@@ -307,6 +308,41 @@ return (
 
 **Exported Constants:**
 - `FOCUSABLE_SELECTOR` - Standard selector string for finding focusable elements (includes native elements and ARIA roles for Spectrum components)
+
+#### useArrowKeyNavigation
+Arrow key navigation for lists/grids of focusable items.
+
+**Example:**
+```tsx
+const { getItemProps, focusItem } = useArrowKeyNavigation({
+  itemCount: items.length,
+  onSelect: (index) => handleSelect(items[index]),
+  wrap: true,
+  autoFocusFirst: true,
+  orientation: 'both'
+});
+
+return (
+  <div role="listbox">
+    {items.map((item, index) => (
+      <div key={item.id} {...getItemProps(index)}>
+        {item.name}
+      </div>
+    ))}
+  </div>
+);
+```
+
+**Features:**
+- Arrow Up/Down/Left/Right navigation (configurable orientation)
+- Home/End shortcuts
+- Enter/Space selection
+- Wrapping at boundaries (optional)
+- Auto-focus first item on mount (optional)
+- Works with radio groups, listboxes, grids
+
+**Used By:**
+- `BrandGallery` (ArchitectureModal) - Architecture selection
 
 #### useFocusOnMount
 Focus an element on mount using a simple 3-tier strategy.

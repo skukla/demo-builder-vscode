@@ -152,12 +152,31 @@ export function SearchableList<T extends SearchableListItem>({
                 return;
             }
 
+            // Try multiple selectors to find the scrollable container
+            const gridElement = listContainerRef.current.querySelector('[role="grid"]');
+            const scrollContainer = gridElement?.parentElement ||
+                listContainerRef.current.querySelector('[class*="spectrum-ListView"]');
+
+            if (!scrollContainer) {
+                return;
+            }
+
             // First, try to find the element directly (works if item is in viewport)
             const selectedElement = listContainerRef.current.querySelector(
                 '[aria-selected="true"]',
             );
             if (selectedElement) {
-                selectedElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                // Check if element is already visible in the container
+                const containerRect = scrollContainer.getBoundingClientRect();
+                const elementRect = selectedElement.getBoundingClientRect();
+
+                const isVisible =
+                    elementRect.top >= containerRect.top &&
+                    elementRect.bottom <= containerRect.bottom;
+
+                if (!isVisible) {
+                    selectedElement.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                }
                 return;
             }
 
@@ -171,18 +190,21 @@ export function SearchableList<T extends SearchableListItem>({
 
             // ListView row height is approximately 48px (Spectrum default with description)
             const estimatedRowHeight = 48;
+            const targetScrollTop = selectedIndex * estimatedRowHeight;
+            const containerHeight = scrollContainer.clientHeight;
+            const currentScrollTop = scrollContainer.scrollTop;
 
-            // Try multiple selectors to find the scrollable container
-            const gridElement = listContainerRef.current.querySelector('[role="grid"]');
-            const scrollContainer = gridElement?.parentElement ||
-                listContainerRef.current.querySelector('[class*="spectrum-ListView"]');
+            // Check if item is already visible in the viewport
+            const itemTop = targetScrollTop;
+            const itemBottom = targetScrollTop + estimatedRowHeight;
+            const viewportTop = currentScrollTop;
+            const viewportBottom = currentScrollTop + containerHeight;
 
-            if (scrollContainer) {
-                const targetScrollTop = selectedIndex * estimatedRowHeight;
-                const containerHeight = scrollContainer.clientHeight;
+            const isVisible = itemTop >= viewportTop && itemBottom <= viewportBottom;
+
+            if (!isVisible) {
                 // Center the item in the viewport
                 const centeredScrollTop = Math.max(0, targetScrollTop - containerHeight / 2 + estimatedRowHeight / 2);
-
                 scrollContainer.scrollTo({
                     top: centeredScrollTop,
                     behavior: 'smooth',

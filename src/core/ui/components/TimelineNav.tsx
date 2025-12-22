@@ -110,6 +110,8 @@ export interface TimelineNavProps {
     currentStepIndex: number;
     /** Array of completed step indices */
     completedStepIndices: number[];
+    /** Array of confirmed step indices (in edit mode, user clicked Continue on these) */
+    confirmedStepIndices?: number[];
     /** Callback when step is clicked (receives step index) */
     onStepClick?: (stepIndex: number) => void;
     /** Whether to show the header (default: true) */
@@ -134,6 +136,7 @@ export function TimelineNav({
     steps,
     currentStepIndex,
     completedStepIndices,
+    confirmedStepIndices = [],
     onStepClick,
     showHeader = true,
     headerText = 'Setup Progress',
@@ -236,11 +239,15 @@ export function TimelineNav({
 
     const getStepStatus = (index: number): TimelineStatus => {
         const isCompleted = completedStepIndices.includes(index);
+        const isConfirmed = confirmedStepIndices.includes(index);
         const isCurrent = index === currentStepIndex;
 
-        // In edit mode, show completed steps as 'review' (blue filled, no checkmark)
-        // This signals "these are done but you can still review/edit them"
-        if (isEditMode && isCompleted && !isCurrent) return 'review';
+        // In edit mode:
+        // - Confirmed steps (user clicked Continue) → green checkmark
+        // - Unconfirmed but completed → blue filled (can still review/edit)
+        if (isEditMode && isCompleted && !isCurrent) {
+            return isConfirmed ? 'completed' : 'review';
+        }
 
         if (isCurrent && isCompleted) return 'completed-current';
         if (isCurrent && !isCompleted) return 'current';
