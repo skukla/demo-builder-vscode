@@ -83,10 +83,15 @@
       "configuration": {
         "nodeVersion": "20",
         "requiredEnvVars": [
-          "COMMERCE_STORE_URL",
+          "COMMERCE_ENDPOINT",
           "COMMERCE_STORE_CODE",
           "COMMERCE_STORE_VIEW_CODE",
-          "COMMERCE_WEBSITE_CODE"
+          "COMMERCE_WEBSITE_CODE",
+          "COMMERCE_API_KEY",
+          "COMMERCE_ENVIRONMENT_ID"
+        ],
+        "optionalEnvVars": [
+          "COMMERCE_CUSTOMER_GROUP"
         ]
       }
     },
@@ -95,7 +100,20 @@
       "description": "Adobe Commerce DSN instance",
       "configuration": {
         "nodeVersion": "20",
-        "requiredServices": ["catalog-service", "live-search"]
+        "requiredServices": ["catalog-service", "live-search"],
+        "requiredEnvVars": [
+          "ADOBE_COMMERCE_URL",
+          "ADOBE_COMMERCE_GRAPHQL_ENDPOINT",
+          "ADOBE_COMMERCE_WEBSITE_CODE",
+          "ADOBE_COMMERCE_STORE_CODE",
+          "ADOBE_COMMERCE_STORE_VIEW_CODE",
+          "ADOBE_COMMERCE_ENVIRONMENT_ID",
+          "ADOBE_CATALOG_API_KEY"
+        ],
+        "optionalEnvVars": [
+          "ADOBE_COMMERCE_CUSTOMER_GROUP",
+          "ADOBE_ASSETS_URL"
+        ]
       }
     },
     "adobe-commerce-accs": {
@@ -289,6 +307,65 @@
       "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
       "description": "Customer group hash for pricing. Default is 'Not Logged In' group",
       "group": "accs"
+    },
+    "COMMERCE_ENDPOINT": {
+      "label": "Commerce GraphQL Endpoint",
+      "type": "url",
+      "required": true,
+      "placeholder": "https://edge-sandbox-graph.adobe.io/api/your-mesh-id/graphql",
+      "description": "The GraphQL endpoint URL for your Commerce backend (usually your deployed API Mesh URL)",
+      "group": "eds-commerce"
+    },
+    "COMMERCE_STORE_CODE": {
+      "label": "Store Code",
+      "type": "text",
+      "required": true,
+      "placeholder": "main_website_store",
+      "default": "main_website_store",
+      "description": "The Magento store code (e.g., 'main_website_store' or 'citisignal_store')",
+      "group": "eds-commerce"
+    },
+    "COMMERCE_STORE_VIEW_CODE": {
+      "label": "Store View Code",
+      "type": "text",
+      "required": true,
+      "placeholder": "default",
+      "default": "default",
+      "description": "The store view code (e.g., 'default' or 'citisignal_us')",
+      "group": "eds-commerce"
+    },
+    "COMMERCE_WEBSITE_CODE": {
+      "label": "Website Code",
+      "type": "text",
+      "required": true,
+      "placeholder": "base",
+      "default": "base",
+      "description": "The website code (e.g., 'base' or 'citisignal')",
+      "group": "eds-commerce"
+    },
+    "COMMERCE_API_KEY": {
+      "label": "Catalog API Key",
+      "type": "text",
+      "required": true,
+      "placeholder": "your-catalog-api-key",
+      "description": "Your Commerce Catalog Service API key (found in Magento Marketplace API Portal)",
+      "group": "eds-commerce"
+    },
+    "COMMERCE_ENVIRONMENT_ID": {
+      "label": "Environment ID",
+      "type": "text",
+      "required": true,
+      "placeholder": "your-environment-id",
+      "description": "Your Commerce SaaS environment/dataspace ID (found in Commerce Admin > Services Connector)",
+      "group": "eds-commerce"
+    },
+    "COMMERCE_CUSTOMER_GROUP": {
+      "label": "Customer Group",
+      "type": "text",
+      "required": false,
+      "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
+      "description": "Customer group hash for pricing. Default is 'Not Logged In' group",
+      "group": "eds-commerce"
     },
     "MESH_ENDPOINT": {
       "label": "Mesh Query URL",
