@@ -40,7 +40,9 @@ import { ComponentSelectionStep } from '@/features/components/ui/steps/Component
 import { PrerequisitesStep } from '@/features/prerequisites/ui/steps/PrerequisitesStep';
 import { GitHubSetupStep } from '@/features/eds/ui/steps/GitHubSetupStep';
 import { GitHubRepoSelectionStep } from '@/features/eds/ui/steps/GitHubRepoSelectionStep';
+import { DaLiveSetupStep } from '@/features/eds/ui/steps/DaLiveSetupStep';
 import { DataSourceConfigStep } from '@/features/eds/ui/steps/DataSourceConfigStep';
+import { ConnectServicesStep } from '@/features/eds/ui/steps/ConnectServicesStep';
 import { ProjectCreationStep } from '@/features/project-creation/ui/steps/ProjectCreationStep';
 import { ReviewStep } from '@/features/project-creation/ui/steps/ReviewStep';
 import { WelcomeStep } from '@/features/project-creation/ui/steps/WelcomeStep';
@@ -96,6 +98,8 @@ export function WizardContainer({
         WIZARD_STEPS,
         completedSteps,
         setCompletedSteps,
+        confirmedSteps,
+        setConfirmedSteps,
         highestCompletedStepIndex,
         setHighestCompletedStepIndex,
         canProceed,
@@ -132,6 +136,8 @@ export function WizardContainer({
         WIZARD_STEPS,
         completedSteps,
         setCompletedSteps,
+        confirmedSteps,
+        setConfirmedSteps,
         highestCompletedStepIndex,
         setHighestCompletedStepIndex,
         setAnimationDirection,
@@ -175,6 +181,7 @@ export function WizardContainer({
         setState,
         WIZARD_STEPS,
         completedSteps,
+        confirmedSteps,
         stepContentRef,
         setComponentsData,
     });
@@ -250,10 +257,14 @@ export function WizardContainer({
                 return <AdobeProjectStep {...props} completedSteps={completedSteps} />;
             case 'adobe-workspace':
                 return <AdobeWorkspaceStep {...props} completedSteps={completedSteps} />;
+            case 'eds-connect-services':
+                return <ConnectServicesStep {...props} />;
             case 'eds-github':
                 return <GitHubSetupStep {...props} />;
             case 'eds-repository-config':
                 return <GitHubRepoSelectionStep {...props} />;
+            case 'eds-dalive':
+                return <DaLiveSetupStep {...props} />;
             case 'eds-data-source':
                 return <DataSourceConfigStep {...props} />;
             case 'settings':

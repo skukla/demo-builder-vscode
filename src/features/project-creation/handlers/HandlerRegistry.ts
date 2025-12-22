@@ -37,6 +37,7 @@ export class HandlerRegistry extends BaseHandlerRegistry {
         this.handlers.set('cancel-auth-polling', lifecycle.handleCancelAuthPolling as MessageHandler);
         this.handlers.set('open-adobe-console', lifecycle.handleOpenAdobeConsole as MessageHandler);
         this.handlers.set('show-logs', lifecycle.handleShowLogs as MessageHandler);
+        this.handlers.set('openExternal', lifecycle.handleOpenExternal as MessageHandler);
 
         // Prerequisite handlers
         this.handlers.set('check-prerequisites', prerequisites.handleCheckPrerequisites as MessageHandler);
@@ -72,12 +73,23 @@ export class HandlerRegistry extends BaseHandlerRegistry {
         this.handlers.set('create-api-mesh', mesh.handleCreateApiMesh as MessageHandler);
         this.handlers.set('delete-api-mesh', mesh.handleDeleteApiMesh as MessageHandler);
 
-        // EDS handlers
+        // EDS handlers - GitHub
         this.handlers.set('check-github-auth', eds.handleCheckGitHubAuth as MessageHandler);
         this.handlers.set('github-oauth', eds.handleGitHubOAuth as MessageHandler);
+        this.handlers.set('github-change-account', eds.handleGitHubChangeAccount as MessageHandler);
         this.handlers.set('get-github-repos', eds.handleGetGitHubRepos as MessageHandler);
-        this.handlers.set('verify-dalive-org', eds.handleVerifyDaLiveOrg as MessageHandler);
         this.handlers.set('verify-github-repo', eds.handleVerifyGitHubRepo as MessageHandler);
+
+        // EDS handlers - DA.live
+        this.handlers.set('check-dalive-auth', eds.handleCheckDaLiveAuth as MessageHandler);
+        this.handlers.set('open-dalive-login', eds.handleOpenDaLiveLogin as MessageHandler);
+        this.handlers.set('store-dalive-token', eds.handleStoreDaLiveToken as MessageHandler);
+        this.handlers.set('store-dalive-token-with-org', eds.handleStoreDaLiveTokenWithOrg as MessageHandler);
+        this.handlers.set('clear-dalive-auth', eds.handleClearDaLiveAuth as MessageHandler);
+        this.handlers.set('get-dalive-sites', eds.handleGetDaLiveSites as MessageHandler);
+        this.handlers.set('verify-dalive-org', eds.handleVerifyDaLiveOrg as MessageHandler);
+
+        // EDS handlers - ACCS
         this.handlers.set('validate-accs-credentials', eds.handleValidateAccsCredentials as MessageHandler);
 
         // Project creation handlers

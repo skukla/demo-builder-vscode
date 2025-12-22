@@ -15,8 +15,10 @@ export type WizardStep =
     | 'adobe-context'  // Kept for compatibility
     | 'org-selection'  // Kept for compatibility, will be disabled in config
     | 'project-selection'  // Kept for compatibility, will be disabled in config
-    | 'eds-github'  // EDS: GitHub authentication (conditional: requiresGitHub stack)
+    | 'eds-connect-services'  // EDS: Combined GitHub + DA.live authentication (conditional: requiresGitHub OR requiresDaLive stack)
+    | 'eds-github'  // EDS: GitHub authentication (conditional: requiresGitHub stack) - legacy, use eds-connect-services
     | 'eds-repository-config'  // EDS: Repository and DA.live configuration (conditional: requiresGitHub stack)
+    | 'eds-dalive'  // EDS: DA.live authentication (conditional: requiresDaLive stack) - legacy, use eds-connect-services
     | 'eds-data-source'  // EDS: ACCS data source configuration (conditional: requiresDaLive stack)
     | 'settings'  // Component-specific settings collection
     | 'commerce-config'  // Kept for compatibility
@@ -49,6 +51,8 @@ export interface WizardState {
     organizationsCache?: Organization[];
     githubReposCache?: GitHubRepoItem[];  // GitHub repos with write access
     githubRepoSearchFilter?: string;  // Search filter for repo selection
+    daLiveSitesCache?: DaLiveSiteItem[];  // DA.live sites in current org
+    daLiveSiteSearchFilter?: string;  // Search filter for site selection
     
     apiVerification?: {
         isChecking: boolean;
@@ -131,6 +135,19 @@ export interface GitHubRepoItem {
     isPrivate?: boolean;
     /** GitHub web URL */
     htmlUrl?: string;
+}
+
+/**
+ * DA.live site item for selection UI
+ * Uses string ID for useSelectionStep compatibility
+ */
+export interface DaLiveSiteItem {
+    /** String ID for selection (site name) */
+    id: string;
+    /** Site name */
+    name: string;
+    /** Last modified timestamp */
+    lastModified?: string;
 }
 
 // Wizard-specific simplified commerce config (different from full CommerceConfig in @/types)
@@ -346,6 +363,16 @@ export interface EDSConfig {
     daLiveOrgVerified?: boolean;
     /** DA.live org verification error */
     daLiveOrgError?: string;
-    /** DA.live site name */
+    /** DA.live site mode: create new or use existing */
+    siteMode?: 'new' | 'existing';
+    /** DA.live site name (for new sites or manual entry) */
     daLiveSite: string;
+    /** Selected existing DA.live site (from searchable list) */
+    selectedSite?: DaLiveSiteItem;
+    /** DA.live authentication state */
+    daLiveAuth?: {
+        isAuthenticated: boolean;
+        isAuthenticating?: boolean;
+        error?: string;
+    };
 }

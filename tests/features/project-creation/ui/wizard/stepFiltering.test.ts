@@ -240,5 +240,63 @@ describe('stepFiltering', () => {
             expect(stepIds).toContain('welcome');
             expect(stepIds).not.toContain('special-step');
         });
+
+        it('should include step when stackRequiresAny has at least one matching property', () => {
+            // Given: A step with stackRequiresAny condition
+            const stepsWithRequiresAny: WizardStepWithCondition[] = [
+                {
+                    id: 'welcome',
+                    name: 'Welcome',
+                },
+                {
+                    id: 'connect-services',
+                    name: 'Connect Services',
+                    condition: {
+                        stackRequiresAny: ['requiresGitHub', 'requiresDaLive'],
+                    },
+                },
+            ];
+
+            // When: Filtering with a stack that has only requiresGitHub
+            const githubOnlyStack: Stack = {
+                id: 'github-only',
+                name: 'GitHub Only',
+                description: 'Test stack',
+                frontend: 'test-frontend',
+                backend: 'test-backend',
+                dependencies: [],
+                requiresGitHub: true,
+            };
+
+            const result = filterStepsForStack(stepsWithRequiresAny, githubOnlyStack);
+
+            // Then: Should include connect-services since requiresGitHub is true
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).toContain('connect-services');
+        });
+
+        it('should exclude step when stackRequiresAny has no matching properties', () => {
+            // Given: A step with stackRequiresAny condition
+            const stepsWithRequiresAny: WizardStepWithCondition[] = [
+                {
+                    id: 'welcome',
+                    name: 'Welcome',
+                },
+                {
+                    id: 'connect-services',
+                    name: 'Connect Services',
+                    condition: {
+                        stackRequiresAny: ['requiresGitHub', 'requiresDaLive'],
+                    },
+                },
+            ];
+
+            // When: Filtering with a stack that has neither property
+            const result = filterStepsForStack(stepsWithRequiresAny, headlessStack);
+
+            // Then: Should NOT include connect-services
+            const stepIds = result.map(s => s.id);
+            expect(stepIds).not.toContain('connect-services');
+        });
     });
 });

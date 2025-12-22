@@ -335,11 +335,12 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             const payload = data as {
                 step: number;
                 completedSteps?: number[];
+                confirmedSteps?: number[];
                 steps?: Array<{ id: string; label: string }>;
                 isEditMode?: boolean;
             };
             if (payload?.step) {
-                this.updateSidebarWizardContext(payload.step, payload.completedSteps, payload.steps, payload.isEditMode);
+                this.updateSidebarWizardContext(payload.step, payload.completedSteps, payload.confirmedSteps, payload.steps, payload.isEditMode);
             }
             return { success: true };
         });
@@ -462,12 +463,14 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
      *
      * @param step - Current step index (1-based)
      * @param completedSteps - Array of completed step indices
+     * @param confirmedSteps - Array of confirmed step indices (in edit mode, user clicked Continue)
      * @param filteredSteps - Optional filtered steps from webview (based on stack selection)
      * @param isEditMode - Whether we're in edit mode (reviewing existing project)
      */
     private updateSidebarWizardContext(
         step: number,
         completedSteps?: number[],
+        confirmedSteps?: number[],
         filteredSteps?: Array<{ id: string; label: string }>,
         isEditMode?: boolean,
     ): void {
@@ -493,6 +496,7 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
                 step,
                 total: sidebarSteps.length,
                 completedSteps,
+                confirmedSteps,
                 steps: sidebarSteps,
                 isEditMode,
             });

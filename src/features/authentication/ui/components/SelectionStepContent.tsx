@@ -10,6 +10,7 @@
  * Used by AdobeProjectStep and AdobeWorkspaceStep to reduce duplication.
  */
 import {
+    Flex,
     Heading,
     Item,
     Text,
@@ -93,6 +94,8 @@ export interface SelectionStepContentProps<T extends SelectableItem> {
     renderItem?: (item: T) => React.ReactNode;
     /** Custom description renderer (optional) */
     renderDescription?: (item: T) => React.ReactNode;
+    /** Optional action element to show in header (e.g., "+ New" button) */
+    headerAction?: React.ReactNode;
 }
 
 /**
@@ -121,12 +124,21 @@ export function SelectionStepContent<T extends SelectableItem>({
     labels,
     renderItem,
     renderDescription,
+    headerAction,
 }: SelectionStepContentProps<T>) {
+    // Header with optional action
+    const header = (
+        <Flex justifyContent="space-between" alignItems="center" marginBottom="size-300">
+            <Heading level={2} margin={0}>{labels.heading}</Heading>
+            {headerAction}
+        </Flex>
+    );
+
     // State 1: Loading
     if (showLoading || (isLoading && !hasLoadedOnce)) {
         return (
             <>
-                <Heading level={2} marginBottom="size-300">{labels.heading}</Heading>
+                {header}
                 <CenteredFeedbackContainer>
                     <LoadingDisplay
                         size="L"
@@ -143,7 +155,7 @@ export function SelectionStepContent<T extends SelectableItem>({
     if (error && !isLoading) {
         return (
             <>
-                <Heading level={2} marginBottom="size-300">{labels.heading}</Heading>
+                {header}
                 <StatusDisplay
                     variant="error"
                     title={labels.errorTitle}
@@ -158,7 +170,7 @@ export function SelectionStepContent<T extends SelectableItem>({
     if (items.length === 0 && !isLoading) {
         return (
             <>
-                <Heading level={2} marginBottom="size-300">{labels.heading}</Heading>
+                {header}
                 <EmptyState
                     title={labels.emptyTitle}
                     description={labels.emptyMessage}
@@ -190,7 +202,7 @@ export function SelectionStepContent<T extends SelectableItem>({
 
     return (
         <div className="selection-step-content">
-            <Heading level={2} marginBottom="size-300">{labels.heading}</Heading>
+            {header}
             <SearchableList
                 items={items}
                 selectedKeys={selectedId ? [selectedId] : []}

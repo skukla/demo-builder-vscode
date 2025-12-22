@@ -18,6 +18,12 @@ export interface StepCondition {
     stackRequires?: 'requiresGitHub' | 'requiresDaLive';
 
     /**
+     * Array of stack properties where at least ONE must be truthy.
+     * Used for combined steps that should show when GitHub OR DA.live is required.
+     */
+    stackRequiresAny?: Array<'requiresGitHub' | 'requiresDaLive'>;
+
+    /**
      * If true, this step is only shown when NO predefined stack is selected.
      * Used for steps like Component Selection that are hidden when a stack
      * already determines the components, but should appear for a future
@@ -78,7 +84,7 @@ export function filterStepsForStack(
             return true;
         }
 
-        const { stackRequires, showWhenNoStack } = step.condition;
+        const { stackRequires, stackRequiresAny, showWhenNoStack } = step.condition;
 
         // Steps with showWhenNoStack are only shown when no stack is selected
         // (already handled above - if we get here, a stack IS selected, so hide it)
@@ -89,6 +95,11 @@ export function filterStepsForStack(
         // Check if the stack has the required property set to true
         if (stackRequires) {
             return Boolean(stack[stackRequires]);
+        }
+
+        // Check if ANY of the listed stack properties is true
+        if (stackRequiresAny && stackRequiresAny.length > 0) {
+            return stackRequiresAny.some(prop => Boolean(stack[prop]));
         }
 
         return true;

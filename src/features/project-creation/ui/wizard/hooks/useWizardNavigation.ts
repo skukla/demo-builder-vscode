@@ -22,6 +22,9 @@ interface UseWizardNavigationProps {
     WIZARD_STEPS: Array<{ id: WizardStep; name: string }>;
     completedSteps: WizardStep[];
     setCompletedSteps: React.Dispatch<React.SetStateAction<WizardStep[]>>;
+    /** Steps confirmed by user in edit mode (clicked Continue) */
+    confirmedSteps: WizardStep[];
+    setConfirmedSteps: React.Dispatch<React.SetStateAction<WizardStep[]>>;
     highestCompletedStepIndex: number;
     setHighestCompletedStepIndex: React.Dispatch<React.SetStateAction<number>>;
     setAnimationDirection: React.Dispatch<React.SetStateAction<'forward' | 'backward'>>;
@@ -96,6 +99,8 @@ export function useWizardNavigation({
     WIZARD_STEPS,
     completedSteps,
     setCompletedSteps,
+    confirmedSteps,
+    setConfirmedSteps,
     highestCompletedStepIndex,
     setHighestCompletedStepIndex,
     setAnimationDirection,
@@ -244,6 +249,11 @@ export function useWizardNavigation({
                     setHighestCompletedStepIndex(Math.max(highestCompletedStepIndex, currentIndex));
                 }
 
+                // In edit mode, mark step as confirmed (user explicitly clicked Continue)
+                if (state.editMode && !confirmedSteps.includes(state.currentStep)) {
+                    setConfirmedSteps(prev => [...prev, state.currentStep]);
+                }
+
                 setIsConfirmingSelection(false);
                 navigateToStep(nextStep.id, currentIndex + 1, currentIndex);
 
@@ -255,6 +265,7 @@ export function useWizardNavigation({
     }, [
         state,
         completedSteps,
+        confirmedSteps,
         highestCompletedStepIndex,
         getCurrentStepIndex,
         navigateToStep,
@@ -262,6 +273,7 @@ export function useWizardNavigation({
         importedSettings,
         templates,
         setCompletedSteps,
+        setConfirmedSteps,
         setHighestCompletedStepIndex,
         setIsConfirmingSelection,
         setIsPreparingReview,

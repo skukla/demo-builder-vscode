@@ -16,6 +16,7 @@ import { cn } from '@/core/ui/utils/classNames';
 import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { Modal } from '@/core/ui/components/ui/Modal';
+import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
 
 /** Addon metadata for display */
 const ADDON_METADATA: Record<string, { name: string; description: string }> = {
@@ -156,19 +157,18 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
         return stacks.filter(stack => brand.compatibleStacks!.includes(stack.id));
     }, [stacks, brand.compatibleStacks]);
 
+    // Use arrow key navigation hook for stack options
+    const { getItemProps } = useArrowKeyNavigation({
+        itemCount: filteredStacks.length,
+        onSelect: (index) => onStackSelect(filteredStacks[index].id),
+        wrap: true,
+        autoFocusFirst: true,
+        orientation: 'both',
+    });
+
     const handleStackClick = useCallback(
         (stackId: string) => {
             onStackSelect(stackId);
-        },
-        [onStackSelect],
-    );
-
-    const handleStackKeyDown = useCallback(
-        (e: React.KeyboardEvent, stackId: string) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onStackSelect(stackId);
-            }
         },
         [onStackSelect],
     );
@@ -204,14 +204,16 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
             <Text UNSAFE_className="text-gray-600 mb-4 block">
                 How should it be built?
             </Text>
-            <div className="architecture-modal-options">
-                {filteredStacks.map((stack) => {
+            <div className="architecture-modal-options" role="radiogroup" aria-label="Architecture options">
+                {filteredStacks.map((stack, index) => {
                     const isSelected = selectedStackId === stack.id;
+                    const itemProps = getItemProps(index);
                     return (
                         <div
                             key={stack.id}
+                            ref={itemProps.ref}
                             role="radio"
-                            tabIndex={0}
+                            tabIndex={itemProps.tabIndex}
                             aria-checked={isSelected}
                             data-selected={isSelected ? 'true' : 'false'}
                             className={cn(
@@ -219,7 +221,7 @@ const ArchitectureModal: React.FC<ArchitectureModalProps> = ({
                                 isSelected && 'selected',
                             )}
                             onClick={() => handleStackClick(stack.id)}
-                            onKeyDown={(e) => handleStackKeyDown(e, stack.id)}
+                            onKeyDown={itemProps.onKeyDown}
                         >
                             <div className="architecture-radio">
                                 {isSelected && <div className="architecture-radio-dot" />}

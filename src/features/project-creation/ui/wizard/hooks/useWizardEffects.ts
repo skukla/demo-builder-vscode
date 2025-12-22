@@ -16,6 +16,8 @@ interface UseWizardEffectsProps {
     setState: React.Dispatch<React.SetStateAction<WizardState>>;
     WIZARD_STEPS: Array<{ id: WizardStep; name: string }>;
     completedSteps: WizardStep[];
+    /** Steps confirmed by user in edit mode (clicked Continue) */
+    confirmedSteps: WizardStep[];
     stepContentRef: React.RefObject<HTMLDivElement | null>;
     setComponentsData: React.Dispatch<React.SetStateAction<{
         success: boolean;
@@ -36,6 +38,7 @@ export function useWizardEffects({
     setState,
     WIZARD_STEPS,
     completedSteps,
+    confirmedSteps,
     stepContentRef,
     setComponentsData,
 }: UseWizardEffectsProps): void {
@@ -78,11 +81,12 @@ export function useWizardEffects({
             vscode.postMessage('wizardStepChanged', {
                 step: stepIndex + 1,
                 completedSteps: getCompletedStepIndices(completedSteps, WIZARD_STEPS),
+                confirmedSteps: getCompletedStepIndices(confirmedSteps, WIZARD_STEPS),
                 steps: sidebarSteps,
                 isEditMode: state.editMode,
             });
         }
-    }, [state.currentStep, completedSteps, WIZARD_STEPS]);
+    }, [state.currentStep, completedSteps, confirmedSteps, WIZARD_STEPS]);
 
     // Hydrate project title from API if needed (handles old projects without projectTitle stored)
     useEffect(() => {

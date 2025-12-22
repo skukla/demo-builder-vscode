@@ -91,6 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     steps={timelineSteps}
                     currentStepIndex={context.step - 1}
                     completedStepIndices={context.completedSteps || []}
+                    confirmedStepIndices={context.confirmedSteps || []}
                     onStepClick={onWizardStepClick}
                     compact={true}
                     showHeader={true}

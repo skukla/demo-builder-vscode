@@ -40,6 +40,10 @@ interface UseWizardStateReturn {
     completedSteps: WizardStep[];
     /** Update completed steps */
     setCompletedSteps: React.Dispatch<React.SetStateAction<WizardStep[]>>;
+    /** Steps confirmed by user in edit mode (clicked Continue) */
+    confirmedSteps: WizardStep[];
+    /** Update confirmed steps */
+    setConfirmedSteps: React.Dispatch<React.SetStateAction<WizardStep[]>>;
     /** Highest completed step index (for progress tracking) */
     highestCompletedStepIndex: number;
     /** Update highest completed step index */
@@ -231,6 +235,9 @@ export function useWizardState({
         }
         return [];
     });
+    // Steps confirmed by user in edit mode (user clicked Continue on these)
+    // In edit mode: blue = completed but not confirmed, green = confirmed
+    const [confirmedSteps, setConfirmedSteps] = useState<WizardStep[]>([]);
     const [highestCompletedStepIndex, setHighestCompletedStepIndex] = useState(-1);
 
     // Transition/animation state
@@ -261,6 +268,8 @@ export function useWizardState({
         WIZARD_STEPS,
         completedSteps,
         setCompletedSteps,
+        confirmedSteps,
+        setConfirmedSteps,
         highestCompletedStepIndex,
         setHighestCompletedStepIndex,
         canProceed,

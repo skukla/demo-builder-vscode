@@ -60,12 +60,13 @@ interface UseComponentConfigReturn {
 // Service group definitions with order
 // Note: 'mesh' group removed - MESH_ENDPOINT is auto-configured during project creation
 const SERVICE_GROUP_DEFS: ServiceGroupDef[] = [
-    { id: 'accs', label: 'Adobe Commerce Cloud Service', order: 1, fieldOrder: ['ACCS_HOST', 'ACCS_STORE_VIEW_CODE', 'ACCS_CUSTOMER_GROUP'] },
-    { id: 'adobe-commerce', label: 'Adobe Commerce', order: 2, fieldOrder: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT', 'ADOBE_COMMERCE_WEBSITE_CODE', 'ADOBE_COMMERCE_STORE_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', 'ADOBE_COMMERCE_CUSTOMER_GROUP', 'ADOBE_COMMERCE_ADMIN_USERNAME', 'ADOBE_COMMERCE_ADMIN_PASSWORD'] },
-    { id: 'catalog-service', label: 'Catalog Service', order: 3, fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_API_KEY'] },
-    { id: 'adobe-assets', label: 'Adobe Assets', order: 4 },
-    { id: 'integration-service', label: 'Kukla Integration Service', order: 5 },
-    { id: 'experience-platform', label: 'Experience Platform', order: 6 },
+    { id: 'eds-commerce', label: 'Commerce Settings', order: 1, fieldOrder: ['COMMERCE_ENDPOINT', 'COMMERCE_STORE_CODE', 'COMMERCE_STORE_VIEW_CODE', 'COMMERCE_WEBSITE_CODE', 'COMMERCE_API_KEY', 'COMMERCE_ENVIRONMENT_ID', 'COMMERCE_CUSTOMER_GROUP'] },
+    { id: 'accs', label: 'Adobe Commerce Cloud Service', order: 2, fieldOrder: ['ACCS_HOST', 'ACCS_STORE_VIEW_CODE', 'ACCS_CUSTOMER_GROUP'] },
+    { id: 'adobe-commerce', label: 'Adobe Commerce', order: 3, fieldOrder: ['ADOBE_COMMERCE_URL', 'ADOBE_COMMERCE_GRAPHQL_ENDPOINT', 'ADOBE_COMMERCE_WEBSITE_CODE', 'ADOBE_COMMERCE_STORE_CODE', 'ADOBE_COMMERCE_STORE_VIEW_CODE', 'ADOBE_COMMERCE_CUSTOMER_GROUP', 'ADOBE_COMMERCE_ADMIN_USERNAME', 'ADOBE_COMMERCE_ADMIN_PASSWORD'] },
+    { id: 'catalog-service', label: 'Catalog Service', order: 4, fieldOrder: ['ADOBE_CATALOG_SERVICE_ENDPOINT', 'ADOBE_COMMERCE_ENVIRONMENT_ID', 'ADOBE_CATALOG_API_KEY'] },
+    { id: 'adobe-assets', label: 'Adobe Assets', order: 5 },
+    { id: 'integration-service', label: 'Kukla Integration Service', order: 6 },
+    { id: 'experience-platform', label: 'Experience Platform', order: 7 },
     { id: 'other', label: 'Additional Settings', order: 99 },
 ];
 

@@ -43,6 +43,9 @@ export interface UseSelectionStepOptions<T extends { id: string }> {
   /** Optional: Load items immediately on mount */
   autoLoad?: boolean;
 
+  /** Optional: Payload to send with the load message */
+  messagePayload?: Record<string, unknown>;
+
   /** Optional: Filter items by search fields */
   searchFields?: Array<keyof T>;
 
@@ -155,6 +158,7 @@ export function useSelectionStep<T extends { id: string }>(
     autoSelectCustom,
     onSelect,
     autoLoad = true,
+    messagePayload = {},
     searchFields = [],
     validateBeforeLoad,
   } = options;
@@ -196,8 +200,8 @@ export function useSelectionStep<T extends { id: string }>(
     }
 
     // Send request to extension (extension will respond via message)
-    webviewClient.postMessage(messageType, {});
-  }, [messageType, validateBeforeLoad]);
+    webviewClient.postMessage(messageType, messagePayload);
+  }, [messageType, messagePayload, validateBeforeLoad]);
 
   // Refresh items (keeps cache visible during load)
   const refresh = useCallback(() => {
