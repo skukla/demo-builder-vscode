@@ -72,6 +72,11 @@
         "command": "demoBuilder.resetZoom",
         "title": "Reset Zoom (100%)",
         "category": "Demo Builder"
+      },
+      {
+        "command": "demoBuilder.testDaLiveAuth",
+        "title": "Test DA.live Auth (Dev)",
+        "category": "Demo Builder"
       }
     ],
     "configuration": {

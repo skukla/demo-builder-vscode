@@ -15,6 +15,7 @@ import { ComponentTreeProvider } from '@/features/components/providers/component
 import { SidebarProvider } from '@/features/sidebar';
 import { getProjectFrontendPort } from '@/types/typeGuards';
 import { AutoUpdater } from '@/utils/autoUpdater';
+import { DaLiveAuthService } from '@/features/eds/services/daLiveAuthService';
 
 /**
  * Check if projects list should auto-open when activity bar icon is clicked
@@ -49,6 +50,7 @@ let externalCommandManager: CommandExecutor;
 let authenticationService: AuthenticationService;
 let componentTreeProvider: ComponentTreeProvider;
 let componentTreeView: vscode.TreeView<any>;
+let daLiveAuthService: DaLiveAuthService;
 
 export async function activate(context: vscode.ExtensionContext) {
     // Initialize the debug logger first
@@ -173,6 +175,32 @@ export async function activate(context: vscode.ExtensionContext) {
 
         // Register AuthenticationService with ServiceLocator
         ServiceLocator.setAuthenticationService(authenticationService);
+
+        // Initialize DA.live auth service (for darkalley OAuth testing)
+        daLiveAuthService = new DaLiveAuthService(context);
+
+        // Register test command for DA.live OAuth (temporary - for testing darkalley client)
+        context.subscriptions.push(
+            vscode.commands.registerCommand('demoBuilder.testDaLiveAuth', async () => {
+                logger.info('[DA.live Auth] Testing darkalley OAuth flow...');
+                try {
+                    const result = await daLiveAuthService.authenticate();
+                    if (result.success) {
+                        vscode.window.showInformationMessage(
+                            `DA.live auth successful! Email: ${result.email || 'unknown'}`,
+                        );
+                    } else {
+                        vscode.window.showErrorMessage(
+                            `DA.live auth failed: ${result.error}`,
+                        );
+                    }
+                } catch (error) {
+                    vscode.window.showErrorMessage(
+                        `DA.live auth error: ${(error as Error).message}`,
+                    );
+                }
+            }),
+        );
 
         // Check workspace trust
         if (!vscode.workspace.isTrusted) {
@@ -318,6 +346,7 @@ export function deactivate() {
     componentTreeProvider?.dispose();
     stateManager?.dispose();
     externalCommandManager?.dispose();
+    daLiveAuthService?.dispose();
     // Note: authenticationService has no dispose method
 
     // Reset service locator
