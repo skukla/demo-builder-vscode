@@ -181,6 +181,18 @@ export class PrerequisitesManager {
                     this.logger.debug(`[Prerequisites] ${prereq.id}: fnm-aware check complete, installed=${status.installed}`);
                 }
 
+                // Check plugins if the prerequisite is installed and has plugins defined
+                // This ensures plugins like api-mesh are checked for perNodeVersion prerequisites
+                if (prereq.plugins && status.installed) {
+                    this.logger.debug(`[Prerequisites] ${prereq.id}: Checking ${prereq.plugins.length} plugin(s)`);
+                    status.plugins = [];
+                    for (const plugin of prereq.plugins) {
+                        const pluginStatus = await this.checkPlugin(plugin);
+                        status.plugins.push(pluginStatus);
+                        this.logger.debug(`[Prerequisites] ${prereq.id}: Plugin ${plugin.id} installed=${pluginStatus.installed}`);
+                    }
+                }
+
                 const totalDuration = Date.now() - startTime;
                 this.logger.debug(`[Prerequisites] ${prereq.id}: ✓ Complete in ${formatDuration(totalDuration)}, installed=${status.installed}`);
 

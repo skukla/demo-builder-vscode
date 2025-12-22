@@ -266,6 +266,97 @@ export async function handleInstallPrerequisite(
             }
         }
 
+        // Install plugins if the prerequisite has plugins defined (e.g., api-mesh for aio-cli)
+        // This must happen AFTER the main prerequisite is installed
+        if (prereq.plugins && prereq.plugins.length > 0) {
+            context.logger.debug(`[Prerequisites] ${prereq.name} has ${prereq.plugins.length} plugin(s) to check`);
+
+            // Get node version mapping for smart plugin installation
+            const nodeVersionMapping = await getNodeVersionMapping(context);
+
+            for (const plugin of prereq.plugins) {
+                // Check if plugin is already installed
+                const pluginCommands = await context.prereqManager?.getPluginInstallCommands(prereq.id, plugin.id);
+                if (!pluginCommands) {
+                    context.logger.debug(`[Prerequisites] No install commands found for plugin ${plugin.id}`);
+                    continue;
+                }
+
+                // Get the plugin definition from prereq to check requiredFor
+                const pluginDef = prereq.plugins.find(p => p.id === plugin.id);
+                const requiredForComponents = pluginDef?.requiredFor || [];
+
+                // For perNodeVersion prerequisites, install plugin ONLY under Node versions
+                // that are used by components requiring this plugin (via requiredFor)
+                let versionsToInstall: (string | undefined)[] = [undefined];
+
+                if (prereq.perNodeVersion && hasNodeVersions(nodeVersionMapping)) {
+                    // Filter to Node versions used by components that require this plugin
+                    const pluginNodeVersions: string[] = [];
+
+                    for (const [nodeVersion, componentId] of Object.entries(nodeVersionMapping)) {
+                        // Check if this component requires this plugin
+                        if (requiredForComponents.includes(componentId)) {
+                            pluginNodeVersions.push(nodeVersion);
+                            context.debugLogger.debug(`[Prerequisites] Plugin ${plugin.id} needed for ${componentId} (Node ${nodeVersion})`);
+                        }
+                    }
+
+                    // Also check dependencies (commerce-mesh, adobe-commerce-paas, etc.)
+                    const selection = context.sharedState.currentComponentSelection;
+                    if (selection?.dependencies) {
+                        for (const dep of selection.dependencies) {
+                            if (requiredForComponents.includes(dep)) {
+                                // Find the Node version for this dependency component
+                                const depNodeVersion = Object.entries(nodeVersionMapping)
+                                    .find(([_, compId]) => compId === dep)?.[0];
+                                if (depNodeVersion && !pluginNodeVersions.includes(depNodeVersion)) {
+                                    pluginNodeVersions.push(depNodeVersion);
+                                    context.debugLogger.debug(`[Prerequisites] Plugin ${plugin.id} needed for dependency ${dep} (Node ${depNodeVersion})`);
+                                }
+                            }
+                        }
+                    }
+
+                    if (pluginNodeVersions.length > 0) {
+                        versionsToInstall = pluginNodeVersions;
+                    } else if (targetVersions?.length) {
+                        // Fallback: use first target version if no specific mapping found
+                        versionsToInstall = [targetVersions[0]];
+                        context.debugLogger.debug(`[Prerequisites] Plugin ${plugin.id}: no specific version mapping, using ${targetVersions[0]}`);
+                    }
+                }
+
+                for (const nodeVer of versionsToInstall) {
+                    const versionLabel = nodeVer ? ` for Node ${nodeVer}` : '';
+                    context.debugLogger.debug(`[Prerequisites] Installing plugin ${plugin.name}${versionLabel}`);
+
+                    await context.sendMessage('prerequisite-status', {
+                        index: prereqId,
+                        name: prereq.name,
+                        status: 'checking',
+                        message: pluginCommands.message || `Installing ${plugin.name}${versionLabel}...`,
+                        required: !prereq.optional,
+                    });
+
+                    // Execute plugin install commands
+                    for (const cmd of pluginCommands.commands) {
+                        try {
+                            const commandManager = await import('@/core/di').then(m => m.ServiceLocator.getCommandExecutor());
+                            await commandManager.execute(cmd, {
+                                timeout: TIMEOUTS.PREREQUISITE_INSTALL,
+                                useNodeVersion: nodeVer,
+                            });
+                            context.logger.debug(`[Prerequisites] Plugin ${plugin.name} installed${versionLabel}`);
+                        } catch (pluginError) {
+                            context.logger.warn(`[Prerequisites] Failed to install plugin ${plugin.name}${versionLabel}: ${toError(pluginError).message}`);
+                            // Continue with other plugins/versions - don't fail the whole installation
+                        }
+                    }
+                }
+            }
+        }
+
         // Invalidate cache after installation (Step 2: Prerequisite Caching)
         context.prereqManager?.getCacheManager().invalidate(prereq.id);
         context.logger.debug(`[Prerequisites] Cache invalidated for ${prereq.id} after installation`);
