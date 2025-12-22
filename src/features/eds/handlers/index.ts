@@ -7,9 +7,17 @@
 export {
     handleCheckGitHubAuth,
     handleGitHubOAuth,
+    handleGitHubChangeAccount,
     handleGetGitHubRepos,
+    handleGetDaLiveSites,
     handleVerifyDaLiveOrg,
     handleVerifyGitHubRepo,
     handleValidateAccsCredentials,
+    handleDaLiveOAuth,
+    handleCheckDaLiveAuth,
+    handleOpenDaLiveLogin,
+    handleStoreDaLiveToken,
+    handleStoreDaLiveTokenWithOrg,
+    handleClearDaLiveAuth,
     clearServiceCache,
 } from './edsHandlers';

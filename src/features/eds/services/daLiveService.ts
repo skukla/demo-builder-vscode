@@ -92,11 +92,11 @@ export class DaLiveService {
     // ==========================================================
 
     /**
-     * Verify user has access to organization
-     * @param orgName - Organization name to check
-     * @returns Access result with hasAccess and reason
+     * List all sites in an organization
+     * @param orgName - Organization name
+     * @returns Array of site entries, or empty array if org not accessible
      */
-    async verifyOrgAccess(orgName: string): Promise<DaLiveOrgAccess> {
+    async listOrgSites(orgName: string): Promise<DaLiveEntry[]> {
         try {
             const token = await this.getImsToken();
             const url = `${DA_LIVE_BASE_URL}/list/${orgName}/`;
@@ -108,17 +108,82 @@ export class DaLiveService {
                 },
             });
 
-            if (response.ok) {
-                return {
-                    hasAccess: true,
-                    orgName,
-                };
+            if (!response.ok) {
+                // 404 means org doesn't exist
+                if (response.status === 404) {
+                    return [];
+                }
+                // 403 means no access
+                if (response.status === 403) {
+                    return [];
+                }
+                throw this.createErrorFromResponse(response, 'list organization sites');
             }
+
+            const entries: DaLiveEntry[] = await response.json();
+
+            // Filter to only return folders (sites are top-level folders)
+            return entries.filter(entry => entry.type === 'folder');
+        } catch (error) {
+            if (error instanceof DaLiveAuthError) {
+                throw error;
+            }
+            this.logger.error('[DA.live] Error listing org sites', error as Error);
+            throw error;
+        }
+    }
+
+    /**
+     * Check if a site exists in an organization
+     * @param orgName - Organization name
+     * @param siteName - Site name to check
+     * @returns True if site exists, false otherwise
+     */
+    async siteExists(orgName: string, siteName: string): Promise<boolean> {
+        try {
+            const token = await this.getImsToken();
+            const url = `${DA_LIVE_BASE_URL}/list/${orgName}/${siteName}/`;
+
+            const response = await this.fetchWithRetry(url, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            // 200 means site exists
+            return response.ok;
+        } catch (error) {
+            // Any error means site doesn't exist or isn't accessible
+            return false;
+        }
+    }
+
+    /**
+     * Verify user has access to organization
+     * @param orgName - Organization name to check
+     * @returns Access result with hasAccess and reason
+     */
+    async verifyOrgAccess(orgName: string): Promise<DaLiveOrgAccess> {
+        try {
+            const token = await this.getImsToken();
+            const url = `${DA_LIVE_BASE_URL}/list/${orgName}/`;
+
+            this.logger.debug(`[DA.live] Verifying org access: ${url}`);
+
+            const response = await this.fetchWithRetry(url, {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+
+            this.logger.debug(`[DA.live] Verify response status: ${response.status}`);
 
             if (response.status === 403) {
                 return {
                     hasAccess: false,
-                    reason: 'Organization access denied. You may not have permission to access this organization.',
+                    reason: 'Access denied. You may not have permission to access this organization.',
                     orgName,
                 };
             }
@@ -131,15 +196,30 @@ export class DaLiveService {
                 };
             }
 
+            if (!response.ok) {
+                return {
+                    hasAccess: false,
+                    reason: `Unexpected error: ${response.status} ${response.statusText}`,
+                    orgName,
+                };
+            }
+
+            // Parse response to get site list
+            const entries: DaLiveEntry[] = await response.json();
+            const sites = entries.filter(entry => entry.type === 'folder');
+
+            this.logger.debug(`[DA.live] Org ${orgName} has ${sites.length} sites`);
+
+            // Success - user has access
             return {
-                hasAccess: false,
-                reason: `Unexpected error: ${response.status} ${response.statusText}`,
+                hasAccess: true,
                 orgName,
             };
         } catch (error) {
             if (error instanceof DaLiveAuthError) {
                 throw error;
             }
+            this.logger.error('[DA.live] Verify org access error:', error as Error);
             return {
                 hasAccess: false,
                 reason: `Error checking access: ${(error as Error).message}`,

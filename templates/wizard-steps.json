@@ -35,12 +35,13 @@
       "enabled": true
     },
     {
-      "id": "eds-github",
-      "name": "GitHub Setup",
+      "id": "eds-connect-services",
+      "name": "Connect Services",
       "enabled": true,
       "condition": {
-        "stackRequires": "requiresGitHub"
-      }
+        "stackRequiresAny": ["requiresGitHub", "requiresDaLive"]
+      },
+      "_comment": "Combined GitHub + DA.live authentication in side-by-side panels"
     },
     {
       "id": "eds-repository-config",
@@ -52,7 +53,7 @@
     },
     {
       "id": "eds-data-source",
-      "name": "Data Source Configuration",
+      "name": "DA.live Project",
       "enabled": true,
       "condition": {
         "stackRequires": "requiresDaLive"

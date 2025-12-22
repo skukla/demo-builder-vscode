@@ -5,7 +5,7 @@
  * Handles auth status checking, OAuth flow initiation, and state updates.
  */
 
-import { useEffect, useCallback, useRef } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import type { WizardState, EDSConfig } from '@/types/webview';
@@ -48,6 +48,8 @@ interface UseGitHubAuthReturn {
     isAuthenticated: boolean;
     /** Whether OAuth flow is in progress */
     isAuthenticating: boolean;
+    /** Whether initial auth check is in progress */
+    isChecking: boolean;
     /** Authenticated user info */
     user?: { login: string; avatarUrl?: string; email?: string };
     /** Error message if auth failed */
@@ -56,6 +58,8 @@ interface UseGitHubAuthReturn {
     startOAuth: () => void;
     /** Check current auth status */
     checkAuthStatus: () => void;
+    /** Change GitHub account (clear and re-auth) */
+    changeAccount: () => void;
 }
 
 /**
@@ -65,6 +69,9 @@ export function useGitHubAuth({
     state,
     updateState,
 }: UseGitHubAuthProps): UseGitHubAuthReturn {
+    // Track whether initial auth check is in progress
+    const [isChecking, setIsChecking] = useState(true);
+
     const edsConfig = state.edsConfig;
     const githubAuth = edsConfig?.githubAuth;
 
@@ -111,6 +118,20 @@ export function useGitHubAuth({
         webviewClient.postMessage('github-oauth');
     }, []);
 
+    /**
+     * Change GitHub account - clears stored token and triggers new OAuth
+     */
+    const changeAccount = useCallback(() => {
+        log.debug('Changing GitHub account');
+        updateGitHubAuthRef.current({
+            isAuthenticated: false,
+            isAuthenticating: true,
+            user: undefined,
+            error: undefined,
+        });
+        webviewClient.postMessage('github-change-account');
+    }, []);
+
     // Check auth status on mount and subscribe to messages (runs once)
     useEffect(() => {
         // Check status once on mount
@@ -120,6 +141,9 @@ export function useGitHubAuth({
         const unsubscribeStatus = webviewClient.onMessage('github-auth-status', (data) => {
             const authData = data as GitHubAuthStatusData;
             log.debug('Received GitHub auth status:', authData);
+
+            // Initial check complete
+            setIsChecking(false);
 
             updateGitHubAuthRef.current({
                 isAuthenticated: authData.isAuthenticated,
@@ -134,6 +158,9 @@ export function useGitHubAuth({
             const authData = data as GitHubAuthStatusData;
             log.debug('GitHub OAuth complete:', authData);
 
+            // Auth complete
+            setIsChecking(false);
+
             updateGitHubAuthRef.current({
                 isAuthenticated: authData.isAuthenticated,
                 isAuthenticating: false,
@@ -146,6 +173,9 @@ export function useGitHubAuth({
         const unsubscribeError = webviewClient.onMessage('github-oauth-error', (data) => {
             const errorData = data as GitHubOAuthErrorData;
             log.error('GitHub OAuth error:', errorData.error);
+
+            // Auth check complete (with error)
+            setIsChecking(false);
 
             updateGitHubAuthRef.current({
                 isAuthenticated: false,
@@ -164,9 +194,11 @@ export function useGitHubAuth({
     return {
         isAuthenticated: githubAuth?.isAuthenticated || false,
         isAuthenticating: githubAuth?.isAuthenticating || false,
+        isChecking,
         user: githubAuth?.user,
         error: githubAuth?.error,
         startOAuth,
         checkAuthStatus,
+        changeAccount,
     };
 }

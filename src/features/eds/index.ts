@@ -25,16 +25,17 @@ export {
     formatHelixError,
 } from './services/errorFormatters';
 
-// UI Components
-export { DataSourceConfigStep } from './ui/steps/DataSourceConfigStep';
-export { GitHubSetupStep } from './ui/steps/GitHubSetupStep';
-export { EdsRepositoryConfigStep } from './ui/steps/EdsRepositoryConfigStep';
-export { useGitHubAuth } from './ui/hooks/useGitHubAuth';
+// Note: UI Components (steps, hooks) are NOT exported here.
+// They are imported directly by WizardContainer.tsx in the webpack bundle
+// to avoid mixing React/Node.js compilation contexts.
 
 // Handlers
 export {
     handleCheckGitHubAuth,
     handleGitHubOAuth,
+    handleCheckDaLiveAuth,
+    handleOpenDaLiveLogin,
+    handleStoreDaLiveToken,
     handleVerifyDaLiveOrg,
     handleValidateAccsCredentials,
 } from './handlers';

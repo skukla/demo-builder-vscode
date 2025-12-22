@@ -87,7 +87,6 @@ interface GitHubConfigurationSummaryProps {
     selectedRepo?: GitHubRepoItem;
     repoMode: 'new' | 'existing';
     repoName: string;
-    resetToTemplate: boolean;
 }
 
 function GitHubConfigurationSummary({
@@ -95,7 +94,6 @@ function GitHubConfigurationSummary({
     selectedRepo,
     repoMode,
     repoName,
-    resetToTemplate,
 }: GitHubConfigurationSummaryProps) {
     // Build display value for repository
     const getRepoDisplayValue = () => {
@@ -134,21 +132,6 @@ function GitHubConfigurationSummary({
                 status={isRepoComplete ? 'completed' : 'empty'}
                 emptyText={repoMode === 'new' ? 'Enter repository name' : 'Not selected'}
             />
-
-            {/* Reset to template indicator */}
-            {repoMode === 'existing' && selectedRepo && resetToTemplate && (
-                <>
-                    <Divider size="S" />
-                    <View marginTop="size-200">
-                        <Flex alignItems="center" gap="size-100">
-                            <Alert size="S" UNSAFE_className="text-orange-500" />
-                            <Text UNSAFE_className="text-xs text-orange-600">
-                                Will reset to template
-                            </Text>
-                        </Flex>
-                    </View>
-                </>
-            )}
 
             <style>{`
                 .text-uppercase { text-transform: uppercase; }
@@ -414,14 +397,23 @@ export function GitHubRepoSelectionStep({
                                 Reset to template (replaces all content)
                             </Checkbox>
 
-                            {resetToTemplate && (
-                                <Flex alignItems="center" gap="size-100" marginStart="size-300">
-                                    <Alert size="S" UNSAFE_className="text-orange-500" />
-                                    <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-notice-color-text-small)', fontSize: '12px' }}>
+                            {/* Warning notice - fixed height container prevents layout jump */}
+                            <View
+                                marginStart="size-300"
+                                minHeight="size-250"
+                                UNSAFE_className="reset-warning-container"
+                            >
+                                <Flex
+                                    alignItems="center"
+                                    gap="size-100"
+                                    UNSAFE_className={resetToTemplate ? 'reset-warning-visible' : 'reset-warning-hidden'}
+                                >
+                                    <Alert size="S" UNSAFE_className="text-orange-500 flex-shrink-0" />
+                                    <Text UNSAFE_className="text-xs text-orange-600">
                                         This will delete and recreate the repository with the selected template content.
                                     </Text>
                                 </Flex>
-                            )}
+                            </View>
                         </Flex>
                     )}
                 </>
@@ -436,6 +428,7 @@ export function GitHubRepoSelectionStep({
                 .text-green-600 { color: var(--spectrum-global-color-green-600); }
                 .text-blue-500 { color: var(--spectrum-global-color-blue-500); }
                 .text-orange-500 { color: var(--spectrum-global-color-orange-500); }
+                .flex-shrink-0 { flex-shrink: 0; }
 
                 /* Repository list item styling */
                 .repo-private-badge {
@@ -453,6 +446,16 @@ export function GitHubRepoSelectionStep({
                 .repo-no-description {
                     font-style: italic;
                 }
+
+                /* Reset Warning - Simple fade transition */
+                .reset-warning-visible {
+                    opacity: 1;
+                    transition: opacity 0.15s ease-out;
+                }
+                .reset-warning-hidden {
+                    opacity: 0;
+                    transition: opacity 0.15s ease-out;
+                }
             `}</style>
         </>
     );
@@ -464,7 +467,6 @@ export function GitHubRepoSelectionStep({
             selectedRepo={selectedRepo}
             repoMode={repoMode}
             repoName={repoName}
-            resetToTemplate={resetToTemplate}
         />
     );
 

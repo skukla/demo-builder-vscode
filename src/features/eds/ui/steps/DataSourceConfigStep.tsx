@@ -1,63 +1,54 @@
 /**
- * DataSourceConfigStep
+ * DataSourceConfigStep (DA.live Project Configuration)
  *
- * Wizard step for configuring content and data sources for Edge Delivery Services (EDS) projects.
+ * Wizard step for selecting or creating a DA.live site for Edge Delivery Services (EDS) projects.
+ * The DA.live organization is already configured in the Connect Services step.
  *
  * Features:
- * - DA.live organization verification and site configuration
- * - ACCS host URL input with validation
- * - Store view code configuration
- * - Customer group configuration
- * - Data source selection (CitiSignal presets or custom)
- * - ACCS credential validation
+ * - Site list from verified org
+ * - Option to create new site
+ * - Auto-loads sites on mount (org already verified)
+ *
+ * Note: Commerce backend settings (ACCS or PaaS) are handled by the Settings Collection step,
+ * which dynamically renders fields based on the selected stack's backend component.
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-    Divider,
+    ActionButton,
+    Button,
+    Flex,
     Heading,
+    Item,
+    ListView,
     Text,
     TextField,
-    Picker,
-    Item,
-    Button,
-    ProgressCircle,
-    Flex,
+    View,
 } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
-import Alert from '@spectrum-icons/workflow/Alert';
-import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { webviewLogger } from '@/core/ui/utils/webviewLogger';
+import Add from '@spectrum-icons/workflow/Add';
+import Close from '@spectrum-icons/workflow/Close';
+import Info from '@spectrum-icons/workflow/Info';
+import { EmptyState } from '@/core/ui/components/feedback/EmptyState';
+import { LoadingDisplay } from '@/core/ui/components/feedback/LoadingDisplay';
+import { StatusDisplay } from '@/core/ui/components/feedback/StatusDisplay';
+import { CenteredFeedbackContainer } from '@/core/ui/components/layout/CenteredFeedbackContainer';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
+import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
+import type { DaLiveSiteItem } from '@/types/webview';
 import type { BaseStepProps } from '@/types/wizard';
 
-const log = webviewLogger('DataSourceConfigStep');
-
-/** Data source options */
-const DATA_SOURCE_OPTIONS = [
-    { id: 'citisignal-electronics', name: 'CitiSignal Electronics' },
-    { id: 'citisignal-fashion', name: 'CitiSignal Fashion' },
-    { id: 'custom', name: 'Custom ACCS Instance' },
-];
-
-/** URL validation pattern */
-const HTTPS_URL_PATTERN = /^https:\/\/.+/;
-
-/** DA.live org verification result */
-interface DaLiveOrgVerifiedData {
-    verified: boolean;
-    orgName: string;
-    error?: string;
-}
-
-/** ACCS validation result message */
-interface AccsValidationResult {
-    valid: boolean;
-    error?: string;
+/** Validate site name format */
+function isValidSiteName(name: string): boolean {
+    // DA.live site names: lowercase alphanumeric and hyphens, must start with letter
+    return /^[a-z][a-z0-9-]*$/.test(name);
 }
 
 /**
  * DataSourceConfigStep Component
+ *
+ * Select or create a DA.live site for your EDS project.
+ * The organization was already verified in Connect Services step.
  */
 export function DataSourceConfigStep({
     state,
@@ -65,23 +56,47 @@ export function DataSourceConfigStep({
     setCanProceed,
 }: BaseStepProps): React.ReactElement {
     const edsConfig = state.edsConfig;
-    const [isValidating, setIsValidating] = useState(false);
-    const [isVerifyingOrg, setIsVerifyingOrg] = useState(false);
-    const [hostError, setHostError] = useState<string | undefined>();
-
-    // Get DA.live field values
+    const selectedSite = edsConfig?.selectedSite;
     const daLiveOrg = edsConfig?.daLiveOrg || '';
     const daLiveSite = edsConfig?.daLiveSite || '';
-    const daLiveOrgVerified = edsConfig?.daLiveOrgVerified;
-    const daLiveOrgError = edsConfig?.daLiveOrgError;
 
-    // Get ACCS field values
-    const accsHost = edsConfig?.accsHost || '';
-    const storeViewCode = edsConfig?.storeViewCode || '';
-    const customerGroup = edsConfig?.customerGroup || '';
-    const dataSource = edsConfig?.dataSource || 'custom';
-    const accsValidated = edsConfig?.accsValidated || false;
-    const accsValidationError = edsConfig?.accsValidationError;
+    // Local state
+    const [isCreatingNew, setIsCreatingNew] = useState(false);
+    const [siteNameError, setSiteNameError] = useState<string | undefined>();
+
+    // Use selection step hook for site list (auto-loads since org is pre-verified)
+    const {
+        items: sites,
+        filteredItems: filteredSites,
+        showLoading,
+        isLoading,
+        isRefreshing,
+        hasLoadedOnce,
+        error,
+        searchQuery,
+        setSearchQuery,
+        refresh,
+        selectItem,
+    } = useSelectionStep<DaLiveSiteItem>({
+        cacheKey: 'daLiveSitesCache',
+        messageType: 'get-dalive-sites',
+        messagePayload: { orgName: daLiveOrg },
+        errorMessageType: 'get-dalive-sites-error',
+        state,
+        updateState,
+        selectedItem: selectedSite,
+        searchFilterKey: 'daLiveSiteSearchFilter',
+        autoSelectSingle: false,
+        autoLoad: !!daLiveOrg,  // Auto-load when org is available
+        searchFields: ['name'],
+        onSelect: (site) => {
+            setIsCreatingNew(false);
+            updateEdsConfig({
+                selectedSite: site,
+                daLiveSite: site.name,
+            });
+        },
+    });
 
     /**
      * Update EDS config state
@@ -102,358 +117,248 @@ export function DataSourceConfigStep({
     }, [edsConfig, updateState]);
 
     /**
-     * Validate ACCS host URL format
+     * Handle creating a new site
      */
-    const validateHostUrl = useCallback((url: string): boolean => {
-        if (!url) return false;
-        return HTTPS_URL_PATTERN.test(url);
+    const handleCreateNew = useCallback(() => {
+        setIsCreatingNew(true);
+        updateEdsConfig({
+            selectedSite: undefined,
+            daLiveSite: '',
+        });
+    }, [updateEdsConfig]);
+
+    /**
+     * Cancel creating new site (go back to list)
+     */
+    const handleCancelNew = useCallback(() => {
+        setIsCreatingNew(false);
+        setSiteNameError(undefined);
     }, []);
 
     /**
-     * Handle ACCS host change
+     * Handle site name change (for new site)
      */
-    const handleHostChange = useCallback((value: string) => {
-        // Clear validation when host changes
-        updateEdsConfig({
-            accsHost: value,
-            accsValidated: false,
-            accsValidationError: undefined,
-        });
+    const handleSiteNameChange = useCallback((value: string) => {
+        // Convert to lowercase automatically
+        const normalizedValue = value.toLowerCase();
+        setSiteNameError(undefined);
+        updateEdsConfig({ daLiveSite: normalizedValue });
+    }, [updateEdsConfig]);
 
-        // Validate format
-        if (value && !validateHostUrl(value)) {
-            setHostError('URL must start with https://');
-        } else {
-            setHostError(undefined);
+    /**
+     * Validate site name on blur
+     */
+    const handleSiteNameBlur = useCallback(() => {
+        if (daLiveSite && !isValidSiteName(daLiveSite)) {
+            setSiteNameError('Must start with a letter and contain only lowercase letters, numbers, and hyphens');
         }
-    }, [updateEdsConfig, validateHostUrl]);
+    }, [daLiveSite]);
 
     /**
-     * Handle store view code change
+     * Handle list selection change
      */
-    const handleStoreViewChange = useCallback((value: string) => {
-        updateEdsConfig({
-            storeViewCode: value,
-            accsValidated: false,
-            accsValidationError: undefined,
-        });
-    }, [updateEdsConfig]);
-
-    /**
-     * Handle customer group change
-     */
-    const handleCustomerGroupChange = useCallback((value: string) => {
-        updateEdsConfig({
-            customerGroup: value,
-            accsValidated: false,
-            accsValidationError: undefined,
-        });
-    }, [updateEdsConfig]);
-
-    /**
-     * Handle data source selection
-     */
-    const handleDataSourceChange = useCallback((key: React.Key | null) => {
-        if (key === null) return;
-        const selectedSource = key as 'citisignal-electronics' | 'citisignal-fashion' | 'custom';
-        updateEdsConfig({
-            dataSource: selectedSource,
-            accsValidated: false,
-            accsValidationError: undefined,
-        });
-    }, [updateEdsConfig]);
-
-    /**
-     * Handle DA.live org change
-     */
-    const handleDaLiveOrgChange = useCallback((value: string) => {
-        updateEdsConfig({
-            daLiveOrg: value,
-            daLiveOrgVerified: undefined,
-            daLiveOrgError: undefined,
-        });
-    }, [updateEdsConfig]);
-
-    /**
-     * Handle DA.live site change
-     */
-    const handleDaLiveSiteChange = useCallback((value: string) => {
-        updateEdsConfig({ daLiveSite: value });
-    }, [updateEdsConfig]);
-
-    /**
-     * Verify DA.live organization access
-     */
-    const verifyDaLiveOrg = useCallback((orgName: string) => {
-        if (!orgName) return;
-
-        log.debug('Verifying DA.live org access:', orgName);
-        setIsVerifyingOrg(true);
-
-        webviewClient.postMessage('verify-dalive-org', {
-            orgName,
-        });
-    }, []);
-
-    /**
-     * Handle DA.live org blur - trigger verification
-     */
-    const handleDaLiveOrgBlur = useCallback(() => {
-        if (daLiveOrg && daLiveOrgVerified === undefined) {
-            verifyDaLiveOrg(daLiveOrg);
+    const handleSelectionChange = useCallback((keys: 'all' | Set<React.Key>) => {
+        if (keys === 'all') return;
+        const itemId = Array.from(keys)[0] as string;
+        const item = sites.find(s => s.id === itemId);
+        if (item) {
+            selectItem(item);
         }
-    }, [daLiveOrg, daLiveOrgVerified, verifyDaLiveOrg]);
+    }, [sites, selectItem]);
 
-    /**
-     * Validate ACCS credentials
-     */
-    const handleValidate = useCallback(async () => {
-        if (!accsHost || !storeViewCode || !customerGroup) {
-            return;
-        }
-
-        if (!validateHostUrl(accsHost)) {
-            setHostError('URL must start with https://');
-            return;
-        }
-
-        log.debug('Validating ACCS credentials');
-        setIsValidating(true);
-
-        webviewClient.postMessage('validate-accs-credentials', {
-            accsHost,
-            storeViewCode,
-            customerGroup,
-        });
-    }, [accsHost, storeViewCode, customerGroup, validateHostUrl]);
-
-    // Listen for DA.live org verification result
+    // Update canProceed based on site selection
     useEffect(() => {
-        const unsubscribe = webviewClient.onMessage('dalive-org-verified', (data) => {
-            const result = data as DaLiveOrgVerifiedData;
-            log.debug('DA.live org verification result:', result);
-            setIsVerifyingOrg(false);
+        const isNewValid = isCreatingNew && daLiveSite.trim() !== '' && isValidSiteName(daLiveSite);
+        const isExistingValid = !isCreatingNew && !!selectedSite;
+        setCanProceed(isNewValid || isExistingValid);
+    }, [isCreatingNew, daLiveSite, selectedSite, setCanProceed]);
 
-            updateEdsConfig({
-                daLiveOrgVerified: result.verified,
-                daLiveOrgError: result.error,
-            });
-        });
+    // Loading state
+    if (showLoading || (isLoading && !hasLoadedOnce)) {
+        return (
+            <SingleColumnLayout>
+                <Heading level={2} marginBottom="size-100">
+                    DA.live Project Configuration
+                </Heading>
+                <Text marginBottom="size-300" UNSAFE_className="text-sm text-gray-600">
+                    Select an existing site or create a new one in <strong>{daLiveOrg}</strong>.
+                </Text>
+                <CenteredFeedbackContainer>
+                    <LoadingDisplay
+                        size="L"
+                        message="Loading sites..."
+                        subMessage={`Fetching sites from ${daLiveOrg}`}
+                    />
+                </CenteredFeedbackContainer>
+            </SingleColumnLayout>
+        );
+    }
 
-        return unsubscribe;
-    }, [updateEdsConfig]);
+    // Error state
+    if (error && !isLoading) {
+        return (
+            <SingleColumnLayout>
+                <Heading level={2} marginBottom="size-100">
+                    DA.live Project Configuration
+                </Heading>
+                <Text marginBottom="size-300" UNSAFE_className="text-sm text-gray-600">
+                    Select an existing site or create a new one in <strong>{daLiveOrg}</strong>.
+                </Text>
+                <StatusDisplay
+                    variant="error"
+                    title="Error Loading Sites"
+                    message={error}
+                    actions={[{ label: 'Try Again', onPress: refresh, variant: 'accent' }]}
+                />
+            </SingleColumnLayout>
+        );
+    }
 
-    // Listen for ACCS validation result
-    useEffect(() => {
-        const unsubscribe = webviewClient.onMessage('accs-validation-result', (data) => {
-            const result = data as AccsValidationResult;
-            log.debug('ACCS validation result:', result);
-            setIsValidating(false);
-
-            updateEdsConfig({
-                accsValidated: result.valid,
-                accsValidationError: result.error,
-            });
-        });
-
-        return unsubscribe;
-    }, [updateEdsConfig]);
-
-    // Update canProceed based on validation state
-    useEffect(() => {
-        // DA.live requirements
-        const daLiveValid = daLiveOrg && daLiveOrgVerified === true && daLiveSite;
-
-        // ACCS requirements
-        const accsValid = accsValidated &&
-            accsHost &&
-            storeViewCode &&
-            customerGroup &&
-            validateHostUrl(accsHost);
-
-        const isValid = daLiveValid && accsValid;
-        setCanProceed(!!isValid);
-    }, [daLiveOrg, daLiveOrgVerified, daLiveSite, accsValidated, accsHost, storeViewCode, customerGroup, validateHostUrl, setCanProceed]);
-
-    // Determine if validate button should be enabled
-    const canValidate = accsHost && storeViewCode && customerGroup && validateHostUrl(accsHost) && !isValidating;
+    // Empty state
+    if (sites.length === 0 && !isLoading && !isCreatingNew) {
+        return (
+            <SingleColumnLayout>
+                <Heading level={2} marginBottom="size-100">
+                    DA.live Project Configuration
+                </Heading>
+                <Text marginBottom="size-300" UNSAFE_className="text-sm text-gray-600">
+                    Select an existing site or create a new one in <strong>{daLiveOrg}</strong>.
+                </Text>
+                <EmptyState
+                    title="No Sites Found"
+                    description={`No existing sites found in ${daLiveOrg}.`}
+                >
+                    <Button variant="accent" onPress={handleCreateNew}>
+                        <Add size="S" />
+                        <Text>Create New Site</Text>
+                    </Button>
+                </EmptyState>
+            </SingleColumnLayout>
+        );
+    }
 
     return (
         <SingleColumnLayout>
-            {/* DA.live Content Source Section */}
-            <Heading level={2} marginBottom="size-200">
-                DA.live Content Source
+            {/* Header */}
+            <Heading level={2} marginBottom="size-100">
+                DA.live Project Configuration
             </Heading>
 
             <Text marginBottom="size-300" UNSAFE_className="text-sm text-gray-600">
-                DA.live provides content authoring for your Edge Delivery site.
+                Select an existing site or create a new one in <strong>{daLiveOrg}</strong>.
             </Text>
 
-            {/* DA.live Organization */}
-            <Flex alignItems="end" gap="size-200" marginBottom="size-300">
-                <TextField
-                    label="Organization"
-                    value={daLiveOrg}
-                    onChange={handleDaLiveOrgChange}
-                    onBlur={handleDaLiveOrgBlur}
-                    placeholder="your-org"
-                    description="Your DA.live organization name"
-                    width="100%"
-                    isRequired
-                    validationState={daLiveOrgError ? 'invalid' : (daLiveOrgVerified ? 'valid' : undefined)}
-                />
-
-                {isVerifyingOrg && (
-                    <ProgressCircle
-                        aria-label="Verifying organization"
-                        isIndeterminate
-                        size="S"
-                    />
-                )}
-
-                {daLiveOrgVerified && !isVerifyingOrg && (
-                    <Flex alignItems="center" gap="size-100">
-                        <CheckmarkCircle
-                            size="S"
-                            UNSAFE_className="text-green-500"
-                        />
-                        <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-positive-color-text-small)' }}>
-                            Verified
-                        </Text>
+            {/* Site Selection - similar to projects dashboard */}
+            {!isCreatingNew && (
+                <>
+                    {/* Search + New button row */}
+                    <Flex alignItems="start" gap="size-200" marginBottom="size-100">
+                        <View flex>
+                            <SearchHeader
+                                searchQuery={searchQuery}
+                                onSearchQueryChange={setSearchQuery}
+                                searchPlaceholder="Filter sites..."
+                                searchThreshold={0}
+                                totalCount={sites.length}
+                                filteredCount={filteredSites.length}
+                                itemNoun="site"
+                                onRefresh={refresh}
+                                isRefreshing={isRefreshing}
+                                refreshAriaLabel="Refresh sites"
+                                hasLoadedOnce={hasLoadedOnce}
+                                alwaysShowCount={true}
+                            />
+                        </View>
+                        <Button variant="accent" onPress={handleCreateNew}>
+                            <Add size="S" />
+                            <Text>New</Text>
+                        </Button>
                     </Flex>
-                )}
-            </Flex>
 
-            {daLiveOrgError && (
-                <Flex alignItems="center" gap="size-100" marginBottom="size-300">
-                    <Alert
-                        size="S"
-                        UNSAFE_className="text-red-500"
-                    />
-                    <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-negative-color-text-small)' }}>
-                        {daLiveOrgError}
-                    </Text>
-                </Flex>
+                    {/* Site list */}
+                    <ListView
+                        items={filteredSites}
+                        selectionMode="single"
+                        selectedKeys={selectedSite ? [selectedSite.id] : []}
+                        onSelectionChange={handleSelectionChange}
+                        aria-label="DA.live Sites"
+                        density="spacious"
+                        UNSAFE_className="site-list"
+                    >
+                        {(item) => (
+                            <Item key={item.id} textValue={item.name}>
+                                <Text>{item.name}</Text>
+                                {item.lastModified && (
+                                    <Text slot="description" UNSAFE_className="text-xs text-gray-500">
+                                        Last modified: {new Date(item.lastModified).toLocaleDateString()}
+                                    </Text>
+                                )}
+                            </Item>
+                        )}
+                    </ListView>
+
+                    {/* No results */}
+                    {searchQuery && filteredSites.length === 0 && (
+                        <Flex justifyContent="center" UNSAFE_className="py-4">
+                            <Text UNSAFE_className="text-gray-500">
+                                No sites match "{searchQuery}"
+                            </Text>
+                        </Flex>
+                    )}
+                </>
             )}
 
-            {/* DA.live Site */}
-            <TextField
-                label="Site Name"
-                value={daLiveSite}
-                onChange={handleDaLiveSiteChange}
-                placeholder="my-site"
-                description="Name for your DA.live site"
-                width="100%"
-                isRequired
-                marginBottom="size-400"
-            />
-
-            <Divider size="M" marginY="size-400" />
-
-            {/* ACCS Configuration Section */}
-            <Heading level={2} marginBottom="size-200">
-                ACCS Configuration
-            </Heading>
-
-            <Text marginBottom="size-400">
-                Configure your Adobe Commerce Catalog Service (ACCS) connection for Edge Delivery Services.
-            </Text>
-
-            {/* Data Source Selection */}
-            <Picker
-                label="Data Source"
-                selectedKey={dataSource}
-                onSelectionChange={handleDataSourceChange}
-                width="100%"
-                marginBottom="size-300"
-            >
-                {DATA_SOURCE_OPTIONS.map(option => (
-                    <Item key={option.id}>{option.name}</Item>
-                ))}
-            </Picker>
-
-            {/* ACCS Host URL */}
-            <TextField
-                label="ACCS Host"
-                value={accsHost}
-                onChange={handleHostChange}
-                onBlur={() => {
-                    if (accsHost && !validateHostUrl(accsHost)) {
-                        setHostError('URL must start with https://');
-                    }
-                }}
-                validationState={hostError ? 'invalid' : undefined}
-                errorMessage={hostError}
-                placeholder="https://your-accs-instance.adobecommerce.com"
-                width="100%"
-                marginBottom="size-300"
-                isRequired
-            />
-
-            {/* Store View Code */}
-            <TextField
-                label="Store View Code"
-                value={storeViewCode}
-                onChange={handleStoreViewChange}
-                placeholder="default"
-                width="100%"
-                marginBottom="size-300"
-                isRequired
-            />
-
-            {/* Customer Group */}
-            <TextField
-                label="Customer Group"
-                value={customerGroup}
-                onChange={handleCustomerGroupChange}
-                placeholder="general"
-                width="100%"
-                marginBottom="size-400"
-                isRequired
-            />
-
-            {/* Validation Section */}
-            <Flex alignItems="center" gap="size-200" marginBottom="size-200">
-                <Button
-                    variant="secondary"
-                    onPress={handleValidate}
-                    isDisabled={!canValidate}
+            {/* Create New Site form */}
+            {isCreatingNew && (
+                <View
+                    backgroundColor="gray-50"
+                    borderRadius="medium"
+                    padding="size-300"
                 >
-                    {isValidating ? 'Validating...' : 'Validate Connection'}
-                </Button>
+                    <Flex justifyContent="space-between" alignItems="center" marginBottom="size-200">
+                        <Heading level={3} margin={0}>Create New Site</Heading>
+                        <ActionButton onPress={handleCancelNew} isQuiet>
+                            <Close size="S" />
+                            <Text>Cancel</Text>
+                        </ActionButton>
+                    </Flex>
 
-                {isValidating && (
-                    <ProgressCircle
-                        aria-label="Validating"
-                        isIndeterminate
-                        size="S"
+                    <TextField
+                        label="Site Name"
+                        value={daLiveSite}
+                        onChange={handleSiteNameChange}
+                        onBlur={handleSiteNameBlur}
+                        validationState={siteNameError ? 'invalid' : undefined}
+                        errorMessage={siteNameError}
+                        placeholder="my-site"
+                        description={`Will be created at da.live/${daLiveOrg}/${daLiveSite || 'my-site'}`}
+                        width="100%"
+                        isRequired
+                        autoFocus
                     />
-                )}
 
-                {accsValidated && !isValidating && (
-                    <Flex alignItems="center" gap="size-100">
-                        <CheckmarkCircle
-                            size="S"
-                            UNSAFE_className="text-green-500"
-                        />
-                        <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-positive-color-text-small)' }}>
-                            Connection validated
+                    <Flex alignItems="center" gap="size-150" marginTop="size-200">
+                        <Info size="S" UNSAFE_className="text-blue-500" />
+                        <Text UNSAFE_className="text-sm text-gray-600">
+                            A new site will be created with the selected template content.
                         </Text>
                     </Flex>
-                )}
+                </View>
+            )}
 
-                {accsValidationError && !isValidating && (
-                    <Flex alignItems="center" gap="size-100">
-                        <Alert
-                            size="S"
-                            UNSAFE_className="text-red-500"
-                        />
-                        <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-negative-color-text-small)' }}>
-                            {accsValidationError}
-                        </Text>
-                    </Flex>
-                )}
-            </Flex>
+            <style>{`
+                .text-sm { font-size: 0.875rem; }
+                .text-xs { font-size: 0.75rem; }
+                .text-gray-500 { color: var(--spectrum-global-color-gray-500); }
+                .text-gray-600 { color: var(--spectrum-global-color-gray-600); }
+                .text-blue-500 { color: var(--spectrum-global-color-blue-500); }
+                .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+                .site-list {
+                    max-height: 320px;
+                    border: 1px solid var(--spectrum-global-color-gray-300);
+                    border-radius: 4px;
+                }
+            `}</style>
         </SingleColumnLayout>
     );
 }
