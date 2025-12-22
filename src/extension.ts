@@ -277,7 +277,7 @@ export async function activate(context: vscode.ExtensionContext) {
         
         if (autoUpdateEnabled) {
             autoUpdater = new AutoUpdater(context, logger);
-            autoUpdater.checkForUpdates().catch(err => {
+            autoUpdater.checkAndNotify().catch(err => {
                 // Only log non-404 errors
                 if (!err.response || err.response.status !== 404) {
                     logger.debug(`Update check failed: ${err.message}`);

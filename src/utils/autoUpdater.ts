@@ -20,10 +20,28 @@ export class AutoUpdater {
         
         // Check for updates every 4 hours
         this.updateCheckInterval = setInterval(() => {
-            this.checkForUpdates().catch(err => {
+            this.checkAndNotify().catch(err => {
                 this.logger.warn('Auto-update check failed:', err.message);
             });
         }, TIMEOUTS.AUTO_UPDATE_CHECK_INTERVAL);
+    }
+
+    /**
+     * Check for updates and show notification if available
+     */
+    public async checkAndNotify(): Promise<void> {
+        const updateInfo = await this.checkForUpdates();
+        if (updateInfo) {
+            const action = await vscode.window.showInformationMessage(
+                `Demo Builder ${updateInfo.version} is available. Would you like to update?`,
+                'Update Now',
+                'Later'
+            );
+
+            if (action === 'Update Now') {
+                await this.downloadAndInstall(updateInfo);
+            }
+        }
     }
 
     public async checkForUpdates(): Promise<UpdateInfo | undefined> {
