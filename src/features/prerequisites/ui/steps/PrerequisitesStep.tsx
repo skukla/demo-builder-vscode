@@ -79,85 +79,93 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
                         <div
                             key={check.name}
                             ref={el => { itemRefs.current[index] = el; }}
+                            className={cn('prerequisite-item', 'prerequisite-item-grid', index !== checks.length - 1 && 'mb-2')}
                         >
-                            <Flex justifyContent="space-between" alignItems="center"
-                                UNSAFE_className={cn('prerequisite-item', index !== checks.length - 1 && 'mb-2')}
-                            >
-                            <Flex gap="size-150" alignItems="center" flex>
+                            {/* Icon - spans both rows, centered vertically in the entire item */}
+                            <div className="prerequisite-icon">
                                 {getStatusIcon(check.status)}
-                                <View flex UNSAFE_className={cn('prerequisite-content')}>
-                                            <Text UNSAFE_className={cn('prerequisite-title')}>
-                                                {check.name}
-                                                {check.isOptional && <span className="text-muted-label"> (Optional)</span>}
-                                                {check.status === 'pending' && <span className="text-muted-label"> (Waiting)</span>}
-                                            </Text>
-                                            <Text UNSAFE_className={cn('prerequisite-description')}>
-                                                {check.description}
-                                            </Text>
-                                            {renderPrerequisiteMessage(check)}
-                                            {check.status === 'checking' && check.unifiedProgress && (
-                                                <View marginTop="size-100" UNSAFE_className="animate-fade-in">
-                                                    <ProgressBar
-                                                        label={
-                                                            `Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}${
-                                                                check.unifiedProgress.command?.detail ? ` - ${check.unifiedProgress.command.detail}` : ''
-                                                            }`
-                                                        }
-                                                        value={getProgressValue(check.unifiedProgress)}
-                                                        maxValue={100}
-                                                        size="S"
-                                                        UNSAFE_className="mb-2 progress-bar-small-label progress-bar-full-width"
-                                                    />
-                                                </View>
-                                            )}
-                                            {check.plugins && check.plugins.length > 0 &&
-                                                shouldShowPluginDetails(check.status, check.nodeVersionStatus) && (
-                                                <View marginTop={check.nodeVersionStatus ? 'size-50' : 'size-100'} UNSAFE_className="animate-fade-in">
-                                                    {(() => {
-                                                        if (check.nodeVersionStatus && check.plugins.length === 1) {
-                                                            const plugin = check.plugins[0];
-                                                            const versions = check.nodeVersionStatus
-                                                                .filter(v => v.installed)
-                                                                .map(v => v.version)
-                                                                .join(', ');
-                                                            return (
-                                                                <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
-                                                                    <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : 'prerequisite-plugin-item')}>
-                                                                        {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
-                                                                        {versions ? ` (${versions})` : ''}
-                                                                    </Text>
-                                                                    {renderPluginStatusIcon(check.status, plugin.installed)}
-                                                                </Flex>
-                                                            );
-                                                        }
-                                                        return (
-                                                            <>
-                                                                {check.plugins.map(plugin => (
-                                                                    <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
-                                                                        <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : 'prerequisite-plugin-item')}>
-                                                                            {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
-                                                                        </Text>
-                                                                        {renderPluginStatusIcon(check.status, plugin.installed)}
-                                                                    </Flex>
-                                                                ))}
-                                                            </>
-                                                        );
-                                                    })()}
-                                                 </View>
-                                             )}
-                                </View>
-                            </Flex>
-                            {check.status === 'error' && check.canInstall && (
-                                <Button
+                            </div>
+
+                            {/* Header content - row 1 */}
+                            <div className="prerequisite-header">
+                                <div className="prerequisite-header-inner">
+                                    <div>
+                                        <div className="prerequisite-title">
+                                            {check.name}
+                                            {check.isOptional && <span className="text-muted-label"> (Optional)</span>}
+                                            {check.status === 'pending' && <span className="text-muted-label"> (Waiting)</span>}
+                                        </div>
+                                        <div className="prerequisite-description">
+                                            {check.description}
+                                        </div>
+                                    </div>
+                                    {check.status === 'error' && check.canInstall && (
+                                        <Button
                                             variant="secondary"
                                             onPress={() => installPrerequisite(index)}
                                             isDisabled={installingIndex !== null}
                                             UNSAFE_className={cn('btn-compact', 'min-w-100')}
                                         >
                                             Install
-                                </Button>
-                            )}
-                        </Flex>
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Expandable content - row 2 */}
+                            <div className="prerequisite-expandable">
+                                {renderPrerequisiteMessage(check)}
+                                {check.status === 'checking' && check.unifiedProgress && (
+                                    <View marginTop="size-100" UNSAFE_className="animate-fade-in">
+                                        <ProgressBar
+                                            label={
+                                                `Step ${check.unifiedProgress.overall.currentStep}/${check.unifiedProgress.overall.totalSteps}: ${check.unifiedProgress.overall.stepName}${
+                                                    check.unifiedProgress.command?.detail ? ` - ${check.unifiedProgress.command.detail}` : ''
+                                                }`
+                                            }
+                                            value={getProgressValue(check.unifiedProgress)}
+                                            maxValue={100}
+                                            size="S"
+                                            UNSAFE_className="mb-2 progress-bar-small-label progress-bar-full-width"
+                                        />
+                                    </View>
+                                )}
+                                {check.plugins && check.plugins.length > 0 &&
+                                    shouldShowPluginDetails(check.status, check.nodeVersionStatus) && (
+                                    <View marginTop={check.nodeVersionStatus ? 'size-50' : 'size-100'} UNSAFE_className="animate-fade-in">
+                                        {(() => {
+                                            if (check.nodeVersionStatus && check.plugins.length === 1) {
+                                                const plugin = check.plugins[0];
+                                                const versions = check.nodeVersionStatus
+                                                    .filter(v => v.installed)
+                                                    .map(v => v.version)
+                                                    .join(', ');
+                                                return (
+                                                    <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
+                                                        <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : 'prerequisite-plugin-item')}>
+                                                            {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
+                                                            {versions ? ` (${versions})` : ''}
+                                                        </Text>
+                                                        {renderPluginStatusIcon(check.status, plugin.installed)}
+                                                    </Flex>
+                                                );
+                                            }
+                                            return (
+                                                <>
+                                                    {check.plugins.map(plugin => (
+                                                        <Flex key={plugin.id} alignItems="center" marginBottom="size-50">
+                                                            <Text UNSAFE_className={cn(check.status === 'success' ? 'text-sm' : 'prerequisite-plugin-item')}>
+                                                                {plugin.name.replace(/\s*✓\s*$/, '').replace(/\s*✗\s*$/, '')}
+                                                            </Text>
+                                                            {renderPluginStatusIcon(check.status, plugin.installed)}
+                                                        </Flex>
+                                                    ))}
+                                                </>
+                                            );
+                                        })()}
+                                    </View>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </Flex>
@@ -167,7 +175,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
             <Flex gap="size-150" marginTop="size-200">
                 <Button
                     variant="secondary"
-                    onPress={checkPrerequisites}
+                    onPress={() => checkPrerequisites(true)}
                     isDisabled={isChecking || installingIndex !== null}
                     UNSAFE_className={cn('btn-standard', 'text-base')}
                 >
