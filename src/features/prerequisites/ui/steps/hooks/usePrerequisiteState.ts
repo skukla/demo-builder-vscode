@@ -90,7 +90,7 @@ interface UsePrerequisiteStateReturn {
     setInstallingIndex: React.Dispatch<React.SetStateAction<number | null>>;
     versionComponentMapping: { [key: string]: string };
     checkInProgressRef: React.MutableRefObject<boolean>;
-    checkPrerequisites: () => void;
+    checkPrerequisites: (isRecheck?: boolean) => void;
     installPrerequisite: (index: number) => void;
 }
 
@@ -113,14 +113,14 @@ export function usePrerequisiteState(
     const checkInProgressRef = useRef<boolean>(false);
 
     // Check prerequisites function
-    const checkPrerequisites = useCallback(() => {
+    const checkPrerequisites = useCallback((isRecheck?: boolean) => {
         if (checkInProgressRef.current) {
             return;
         }
 
         checkInProgressRef.current = true;
         setIsChecking(true);
-        webviewClient.postMessage('check-prerequisites');
+        webviewClient.postMessage('check-prerequisites', { isRecheck: isRecheck ?? false });
         scrollToTop();
     }, [scrollToTop]);
 

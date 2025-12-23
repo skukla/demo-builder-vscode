@@ -14,7 +14,7 @@ export function usePrerequisiteNavigation(
     isChecking: boolean,
     checks: PrerequisiteCheck[],
     checkInProgressRef: React.MutableRefObject<boolean>,
-    checkPrerequisites: () => void,
+    checkPrerequisites: (isRecheck?: boolean) => void,
     resetAutoScroll: () => void,
 ): void {
     // Trigger prerequisites check when navigating back to this step
@@ -24,7 +24,8 @@ export function usePrerequisiteNavigation(
             resetAutoScroll();
 
             const timer = setTimeout(() => {
-                checkPrerequisites();
+                // When navigating back to prerequisites step, treat as recheck to clear stale cache
+                checkPrerequisites(true);
             }, FRONTEND_TIMEOUTS.UI_UPDATE_DELAY);
 
             return () => {
