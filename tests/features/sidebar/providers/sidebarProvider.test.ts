@@ -25,7 +25,12 @@ jest.mock('vscode', () => ({
         registerWebviewViewProvider: jest.fn(),
     },
     commands: {
-        executeCommand: jest.fn(),
+        executeCommand: jest.fn().mockResolvedValue(undefined),
+    },
+    workspace: {
+        getConfiguration: jest.fn().mockReturnValue({
+            get: jest.fn().mockReturnValue(true),
+        }),
     },
     ColorThemeKind: {
         Light: 1,

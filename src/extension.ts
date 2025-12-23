@@ -270,20 +270,9 @@ export async function activate(context: vscode.ExtensionContext) {
             }),
         );
 
-        // Initialize auto-updater if enabled
-        const autoUpdateEnabled = vscode.workspace
-            .getConfiguration('demoBuilder')
-            .get<boolean>('autoUpdate', true);
-        
-        if (autoUpdateEnabled) {
-            autoUpdater = new AutoUpdater(context, logger);
-            autoUpdater.checkAndNotify().catch(err => {
-                // Only log non-404 errors
-                if (!err.response || err.response.status !== 404) {
-                    logger.debug(`Update check failed: ${err.message}`);
-                }
-            });
-        }
+        // Initialize auto-updater (but don't check yet - wait for sidebar activation)
+        // Update checks are triggered when the user clicks the sidebar icon
+        autoUpdater = new AutoUpdater(context, logger);
 
         // Clean up any stale flag files from previous versions
         // (The workspace folder addition that used this flag was removed in beta.64)
@@ -308,23 +297,8 @@ export async function activate(context: vscode.ExtensionContext) {
         // when the sidebar becomes visible with no active webview panels.
         // No explicit setTimeout needed here - that would cause double-opening.
 
-        // Auto-check for updates on startup (if enabled)
-        const autoCheck = vscode.workspace.getConfiguration('demoBuilder')
-            .get<boolean>('autoUpdate', true);
-
-        if (autoCheck) {
-            // Check in background, don't block activation
-            setTimeout(() => {
-                vscode.commands.executeCommand('demoBuilder.checkForUpdates').then(
-                    () => {
-                        // Success - no action needed
-                    },
-                    (err: Error) => {
-                        logger.debug('[Updates] Background check failed:', err);
-                    },
-                );
-            }, TIMEOUTS.STARTUP_UPDATE_CHECK_DELAY);
-        }
+        // Note: Update checks are triggered when the sidebar is first activated
+        // (see SidebarProvider.resolveWebviewView)
 
         logger.info('[Extension] Ready');
 

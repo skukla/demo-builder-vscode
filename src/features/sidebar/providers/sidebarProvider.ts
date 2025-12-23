@@ -34,6 +34,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     // Track when we're showing the Projects List (vs Project Dashboard)
     private showingProjectsList = false;
 
+    // Track if we've already triggered the initial update check
+    private hasCheckedForUpdates = false;
+
     constructor(
         private context: vscode.ExtensionContext,
         private stateManager: StateManager,
@@ -90,6 +93,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             this.openMainDashboard();
         }
 
+        // Trigger update check on first sidebar activation (if enabled)
+        // This defers update checking until the user actually opens the extension
+        if (!this.hasCheckedForUpdates) {
+            this.hasCheckedForUpdates = true;
+            this.triggerUpdateCheck();
+        }
+
         this.logger.debug('Sidebar view resolved');
     }
 
@@ -98,6 +108,28 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
      */
     private hasOpenWebview(): boolean {
         return BaseWebviewCommand.getActivePanelCount() > 0;
+    }
+
+    /**
+     * Trigger update check if auto-update is enabled
+     * Called once when sidebar is first activated
+     */
+    private triggerUpdateCheck(): void {
+        const autoUpdateEnabled = vscode.workspace
+            .getConfiguration('demoBuilder')
+            .get<boolean>('autoUpdate', true);
+
+        if (autoUpdateEnabled) {
+            // Run in background, don't block sidebar activation
+            vscode.commands.executeCommand('demoBuilder.checkForUpdates').then(
+                () => {
+                    // Success - no action needed
+                },
+                (err: Error) => {
+                    this.logger.debug('[Updates] Background check failed:', err);
+                },
+            );
+        }
     }
 
     /**
