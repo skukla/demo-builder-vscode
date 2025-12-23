@@ -55,11 +55,11 @@ export class SyntheticProgressStrategy implements IProgressStrategy {
             }, TIMEOUTS.PROGRESS_UPDATE_INTERVAL);
 
             child.stdout.on('data', (data) => {
-                deps.logger.info(`[${step.name}] ${data.toString().trim()}`);
+                deps.logger.trace(`[${context.stepName}] ${data.toString().trim()}`);
             });
 
             child.stderr.on('data', (data) => {
-                deps.logger.warn(`[${step.name}] ${data.toString().trim()}`);
+                deps.logger.trace(`[${context.stepName}] ${data.toString().trim()}`);
             });
 
             child.on('close', async (code) => {

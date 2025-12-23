@@ -62,13 +62,13 @@ export class MilestoneProgressStrategy implements IProgressStrategy {
             child.stdout.on('data', async (data) => {
                 const output = data.toString();
                 await checkMilestones(output);
-                deps.logger.info(`[${step.name}] ${output.trim()}`);
+                deps.logger.trace(`[${context.stepName}] ${output.trim()}`);
             });
 
             child.stderr.on('data', async (data) => {
                 const output = data.toString();
                 await checkMilestones(output);
-                deps.logger.warn(`[${step.name}] ${output.trim()}`);
+                deps.logger.trace(`[${context.stepName}] ${output.trim()}`);
             });
 
             child.on('close', (code) => {

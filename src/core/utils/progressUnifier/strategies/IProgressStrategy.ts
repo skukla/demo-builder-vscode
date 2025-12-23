@@ -17,8 +17,10 @@ export interface StrategyDependencies {
     timerProvider: ITimerProvider;
     /** Date provider for time tracking */
     dateProvider: IDateProvider;
-    /** Logger for debug output */
+    /** Logger for output */
     logger: {
+        trace(message: string): void;
+        debug(message: string): void;
         info(message: string): void;
         warn(message: string): void;
     };

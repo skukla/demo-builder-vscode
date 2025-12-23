@@ -53,11 +53,11 @@ export class ExactProgressStrategy implements IProgressStrategy {
                     );
                 }
 
-                deps.logger.info(`[${step.name}] ${output.trim()}`);
+                deps.logger.trace(`[${context.stepName}] ${output.trim()}`);
             });
 
             child.stderr.on('data', (data) => {
-                deps.logger.warn(`[${step.name}] ${data.toString().trim()}`);
+                deps.logger.trace(`[${context.stepName}] ${data.toString().trim()}`);
             });
 
             child.on('close', (code) => {
