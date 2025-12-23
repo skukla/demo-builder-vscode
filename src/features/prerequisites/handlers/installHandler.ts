@@ -19,6 +19,7 @@ import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getRequiredNodeVersions, getNodeVersionMapping, checkPerNodeVersionStatus, determinePrerequisiteStatus, hasNodeVersions, getNodeVersionKeys } from '@/features/prerequisites/handlers/shared';
 import { InstallStep } from '@/features/prerequisites/services/PrerequisitesManager';
+import { getInstalledNodeVersions } from '@/features/prerequisites/services/versioning';
 import { ErrorCode } from '@/types/errorCodes';
 import { isTimeout, toAppError } from '@/types/errors';
 import { SimpleResult } from '@/types/results';
@@ -185,11 +186,22 @@ export async function handleInstallPrerequisite(
             // Use shared utility to check which Node versions need the prerequisite installed
             const perNodeStatus = await checkPerNodeVersionStatus(prereq, versionsToCheck, context);
             const missingNodeVersions = perNodeStatus.missingVariantMajors;
-            targetVersions = missingNodeVersions.length > 0 ? missingNodeVersions : [];
+
+            // Filter to only Node versions actually installed in fnm
+            // (prevents trying to install under system Node when fnm has nothing)
+            const fnmInstalledVersions = await getInstalledNodeVersions(context.logger);
+            const fnmInstalledSet = new Set(fnmInstalledVersions);
+            const installableVersions = missingNodeVersions.filter(v => fnmInstalledSet.has(v));
+
+            if (installableVersions.length < missingNodeVersions.length) {
+                context.logger.debug(`[Prerequisites] Some Node versions not in fnm, will only install ${prereq.name} for: ${installableVersions.join(', ') || 'none'}`);
+            }
+
+            targetVersions = installableVersions;
 
             // If no versions need installation, return early
             if (!targetVersions || targetVersions.length === 0) {
-                context.logger.debug(`[Prerequisites] ${prereq.name} already installed for all required Node versions or no Node versions available`);
+                context.logger.debug(`[Prerequisites] ${prereq.name} already installed for all required Node versions or no Node versions available in fnm`);
                 await context.sendMessage('prerequisite-install-complete', { index: prereqId, continueChecking: true });
                 return { success: true };
             }
@@ -319,7 +331,17 @@ export async function handleInstallPrerequisite(
                     }
 
                     if (pluginNodeVersions.length > 0) {
-                        versionsToInstall = pluginNodeVersions;
+                        // Filter to only Node versions that exist in fnm
+                        const fnmVersions = await getInstalledNodeVersions(context.logger);
+                        const fnmSet = new Set(fnmVersions);
+                        const installablePluginVersions = pluginNodeVersions.filter(v => fnmSet.has(v));
+
+                        if (installablePluginVersions.length > 0) {
+                            versionsToInstall = installablePluginVersions;
+                        } else {
+                            context.logger.debug(`[Prerequisites] Plugin ${plugin.id}: Node versions not in fnm, skipping`);
+                            continue;
+                        }
                     } else if (targetVersions?.length) {
                         // Fallback: use first target version if no specific mapping found
                         versionsToInstall = [targetVersions[0]];
