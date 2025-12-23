@@ -121,9 +121,12 @@ export async function deployMeshComponent(
         }
 
         if (deployResult.code !== 0) {
-            const errorMsg = deployResult.stderr || deployResult.stdout || 'Mesh deployment failed';
+            // Use .trim() to handle whitespace-only output (e.g., "\n")
+            const errorMsg = deployResult.stderr?.trim() || deployResult.stdout?.trim() || 'Mesh deployment failed';
             const { formatAdobeCliError } = await import('@/features/mesh/utils/errorFormatter');
-            throw new Error(formatAdobeCliError(errorMsg));
+            const formattedError = formatAdobeCliError(errorMsg);
+            // Ensure we always have a meaningful error message
+            throw new Error(formattedError || 'Mesh deployment failed');
         }
 
         logger.debug(`[Mesh Deployment] ${meshCommand} command completed, verifying deployment...`);
