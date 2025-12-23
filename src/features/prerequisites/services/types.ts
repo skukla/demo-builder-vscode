@@ -61,8 +61,11 @@ export interface PrerequisitePlugin {
     description: string;
     check: PrerequisiteCheck;
     install: {
-        commands: string[];
+        // Legacy format: direct commands array
+        commands?: string[];
         message?: string;
+        // New format: steps array (consistent with PrerequisiteInstall)
+        steps?: InstallStep[];
     };
     requiredFor?: string[];
 }

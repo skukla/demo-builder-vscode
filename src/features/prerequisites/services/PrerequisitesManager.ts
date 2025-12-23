@@ -327,9 +327,19 @@ export class PrerequisitesManager {
 
         if (!plugin) return undefined;
 
+        // Plugin install uses steps array format (same as prerequisites)
+        // Extract commands from first step, or use direct commands if available
+        const firstStep = plugin.install.steps?.[0];
+        const commands = firstStep?.commands || (plugin.install as { commands?: string[] }).commands;
+
+        if (!commands || commands.length === 0) {
+            this.logger.warn(`[Prerequisites] Plugin ${pluginId} has no install commands defined`);
+            return undefined;
+        }
+
         return {
-            commands: plugin.install.commands,
-            message: plugin.install.message,
+            commands,
+            message: firstStep?.message || (plugin.install as { message?: string }).message,
         };
     }
 

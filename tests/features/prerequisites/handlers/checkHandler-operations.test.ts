@@ -81,20 +81,21 @@ describe('Prerequisites Check Handler - Core Operations', () => {
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             mockConfig.prerequisites
         );
-        (context.prereqManager!.checkPrerequisite as jest.Mock)
-            .mockResolvedValueOnce(mockNodeResult)
-            .mockResolvedValueOnce(mockNpmResult);
+        // Node uses checkMultipleNodeVersions (component-driven), npm uses checkPrerequisite
+        (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
+        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({ '20': 'frontend' });
+        (context.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            { version: 'Node 20', component: 'frontend', installed: true },
+        ]);
+        (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValueOnce(mockNpmResult);
 
         await handleCheckPrerequisites(context);
 
-        expect(context.prereqManager!.checkPrerequisite).toHaveBeenCalledTimes(2);
-        expect(context.prereqManager!.checkPrerequisite).toHaveBeenNthCalledWith(
-            1,
-            mockConfig.prerequisites[0]
-        );
-        expect(context.prereqManager!.checkPrerequisite).toHaveBeenNthCalledWith(
-            2,
-            mockConfig.prerequisites[1]
+        // Node uses checkMultipleNodeVersions, npm uses checkPrerequisite
+        expect(context.prereqManager!.checkMultipleNodeVersions).toHaveBeenCalledTimes(1);
+        expect(context.prereqManager!.checkPrerequisite).toHaveBeenCalledTimes(1);
+        expect(context.prereqManager!.checkPrerequisite).toHaveBeenCalledWith(
+            mockConfig.prerequisites[1] // npm
         );
     });
 
@@ -104,9 +105,13 @@ describe('Prerequisites Check Handler - Core Operations', () => {
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             mockConfig.prerequisites
         );
-        (context.prereqManager!.checkPrerequisite as jest.Mock)
-            .mockResolvedValueOnce(mockNodeResult)
-            .mockResolvedValueOnce(mockNpmResult);
+        // Node uses checkMultipleNodeVersions (component-driven), npm uses checkPrerequisite
+        (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
+        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({ '20': 'frontend' });
+        (context.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            { version: 'Node 20', component: 'frontend', installed: true },
+        ]);
+        (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValueOnce(mockNpmResult);
 
         const result = await handleCheckPrerequisites(context);
 
@@ -182,9 +187,13 @@ describe('Prerequisites Check Handler - Core Operations', () => {
         (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
             mockConfig.prerequisites
         );
-        (context.prereqManager!.checkPrerequisite as jest.Mock)
-            .mockResolvedValueOnce(mockNodeResult)
-            .mockResolvedValueOnce(mockNpmResult);
+        // Node uses checkMultipleNodeVersions (component-driven), npm uses checkPrerequisite
+        (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
+        (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({ '20': 'frontend' });
+        (context.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockResolvedValue([
+            { version: 'Node 20', component: 'frontend', installed: true },
+        ]);
+        (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValueOnce(mockNpmResult);
 
         await handleCheckPrerequisites(context);
 

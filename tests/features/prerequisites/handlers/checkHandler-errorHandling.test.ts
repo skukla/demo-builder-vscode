@@ -57,14 +57,17 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
     });
 
     describe('error handling', () => {
-        it('should handle prerequisite check timeout errors', async () => {
+        it('should handle Node version check timeout errors', async () => {
             const timeoutError = new Error('Operation timeout');
             const context = createMockContext();
             (context.prereqManager!.loadConfig as jest.Mock).mockResolvedValue(mockConfig);
             (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 [mockConfig.prerequisites[0]]
             );
-            (context.prereqManager!.checkPrerequisite as jest.Mock).mockRejectedValue(timeoutError);
+            // Node now uses checkMultipleNodeVersions (component-driven), not checkPrerequisite
+            (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
+            (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({ '20': 'frontend' });
+            (context.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockRejectedValue(timeoutError);
 
             await handleCheckPrerequisites(context);
 
@@ -87,9 +90,11 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
             (context.prereqManager!.resolveDependencies as jest.Mock).mockReturnValue(
                 mockConfig.prerequisites
             );
-            (context.prereqManager!.checkPrerequisite as jest.Mock)
-                .mockRejectedValueOnce(checkError)
-                .mockResolvedValueOnce(mockNpmResult);
+            // Node uses checkMultipleNodeVersions, npm uses checkPrerequisite
+            (shared.hasNodeVersions as jest.Mock).mockReturnValue(true);
+            (shared.getNodeVersionMapping as jest.Mock).mockResolvedValue({ '20': 'frontend' });
+            (context.prereqManager!.checkMultipleNodeVersions as jest.Mock).mockRejectedValueOnce(checkError);
+            (context.prereqManager!.checkPrerequisite as jest.Mock).mockResolvedValueOnce(mockNpmResult);
 
             await handleCheckPrerequisites(context);
 
@@ -98,7 +103,9 @@ describe('Prerequisites Check Handler - Error Handling & Edge Cases', () => {
                 checkError
             );
             // Should continue to check npm despite Node.js failure
-            expect(context.prereqManager!.checkPrerequisite).toHaveBeenCalledTimes(2);
+            // Node uses checkMultipleNodeVersions (1 call), npm uses checkPrerequisite (1 call)
+            expect(context.prereqManager!.checkMultipleNodeVersions).toHaveBeenCalledTimes(1);
+            expect(context.prereqManager!.checkPrerequisite).toHaveBeenCalledTimes(1);
         });
 
         it('should handle config loading failures', async () => {

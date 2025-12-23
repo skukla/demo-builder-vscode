@@ -396,6 +396,20 @@ export class CreateProjectWebviewCommand extends BaseWebviewCommand {
             this.editProject = options?.editProject ?? null;
             if (this.editProject) {
                 this.logger.debug(`[Project Creation] Loading wizard in edit mode for project: ${this.editProject.projectName}`);
+
+                // Populate sharedState with existing component selection for prerequisites check
+                // This ensures Node version requirements are known based on project's components
+                if (this.editProject.settings?.selections) {
+                    const selections = this.editProject.settings.selections;
+                    this.sharedState.currentComponentSelection = {
+                        frontend: selections.frontend,
+                        backend: selections.backend,
+                        dependencies: selections.dependencies ?? [],
+                        integrations: selections.integrations ?? [],
+                        appBuilder: selections.appBuilder ?? [],
+                    };
+                    this.logger.debug(`[Project Creation] Loaded component selection for edit mode: frontend=${selections.frontend}, backend=${selections.backend}`);
+                }
             }
 
             // Dispose Projects List if open (replace it with the wizard)

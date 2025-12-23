@@ -121,20 +121,53 @@ export async function handleCheckPrerequisites(
 
             // Check prerequisite with timeout error handling
             let checkResult;
+            let nodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
+
             try {
-                checkResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;
+                if (prereq.id === 'node') {
+                    // COMPONENT-DRIVEN NODE CHECK:
+                    // Node versions are determined by component requirements and managed via fnm.
+                    // System Node is irrelevant - we only care about fnm-managed versions.
+                    if (hasNodeVersions(nodeVersionMapping)) {
+                        nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);
+
+                        const allVersionsInstalled = nodeVersionStatus?.every(v => v.installed) ?? false;
+                        const installedVersions = nodeVersionStatus?.filter(v => v.installed).map(v => v.version).join(', ');
+
+                        context.logger.debug(`[Prerequisites] Node fnm check: ${allVersionsInstalled ? 'all installed' : 'missing versions'} (installed: ${installedVersions || 'none'})`);
+
+                        checkResult = {
+                            id: prereq.id,
+                            name: prereq.name,
+                            description: prereq.description,
+                            installed: allVersionsInstalled,
+                            optional: prereq.optional || false,
+                            canInstall: true,
+                            version: installedVersions || undefined,
+                        };
+                    } else {
+                        // No components selected - shouldn't happen in normal flow
+                        // Mark as not installed since we can't determine required versions
+                        context.logger.warn('[Prerequisites] Node check with no component selection - cannot determine required versions');
+                        checkResult = {
+                            id: prereq.id,
+                            name: prereq.name,
+                            description: prereq.description,
+                            installed: false,
+                            optional: prereq.optional || false,
+                            canInstall: false, // Can't install without knowing versions
+                        };
+                    }
+                } else {
+                    // Standard check for non-Node prerequisites
+                    checkResult = prereq ? await context.prereqManager?.checkPrerequisite(prereq) : undefined;
+                }
             } catch (error) {
                 await handlePrerequisiteCheckError(context, prereq, i, error);
                 continue;
             }
 
             if (!checkResult || !prereq) continue;
-
-            // For Node.js, check multiple versions if we have a mapping
-            let nodeVersionStatus: { version: string; component: string; installed: boolean }[] | undefined;
-            if (prereq.id === 'node' && hasNodeVersions(nodeVersionMapping)) {
-                nodeVersionStatus = await context.prereqManager?.checkMultipleNodeVersions(nodeVersionMapping);
-            }
 
             // For per-node-version prerequisites (e.g., Adobe I/O CLI), detect partial installs across required Node majors
             // OPTIMIZATION: Reuse cached per-version results from checkPrerequisite() instead of re-checking
