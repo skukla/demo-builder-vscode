@@ -162,4 +162,109 @@ describe('Install Handler - FNM Shell Options', () => {
         expect(mockContext.progressUnifier!.executeStep).toHaveBeenCalledTimes(1);
         expect(shared.checkPerNodeVersionStatus).toHaveBeenCalled();
     });
+
+    it('should install Adobe CLI for multiple missing versions in sorted order', async () => {
+        // Given: Adobe CLI is NOT installed for Node 18 and 20 (in fnm)
+        const states = new Map();
+        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
+        mockContext.sharedState.currentPrerequisiteStates = states;
+        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
+            steps: [
+                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
+            ],
+        });
+
+        // Missing for versions 20, 18 (unsorted order) - matches fnm list which has 18 and 20
+        (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValueOnce({
+            perNodeVersionStatus: [
+                { version: 'Node 20', major: '20', component: '', installed: false },
+                { version: 'Node 18', major: '18', component: '', installed: false },
+            ],
+            perNodeVariantMissing: true,
+            missingVariantMajors: ['20', '18'], // Unsorted
+        });
+
+        (shared.getRequiredNodeVersions as jest.Mock).mockResolvedValue(['18', '20']);
+
+        const executedVersions: string[] = [];
+        (mockContext.progressUnifier!.executeStep as jest.Mock).mockImplementation(
+            async (step: any, current: number, total: number, callback: any, options?: any) => {
+                if (options?.nodeVersion) {
+                    executedVersions.push(options.nodeVersion);
+                }
+                await callback?.({ current: current + 1, total, message: step.message });
+            }
+        );
+
+        // When: handleInstallPrerequisite is called
+        const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+        // Then: Installation happens in sorted order (18, 20)
+        expect(result.success).toBe(true);
+        expect(executedVersions).toEqual(['18', '20']);
+    });
+
+    it('should skip installation when all required versions have CLI installed', async () => {
+        // Given: Adobe CLI is already installed for all required Node versions
+        const states = new Map();
+        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
+        mockContext.sharedState.currentPrerequisiteStates = states;
+        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
+            steps: [
+                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing Adobe I/O CLI for Node {version}', command: 'npm install -g @adobe/aio-cli' },
+            ],
+        });
+
+        // All versions have CLI installed (none missing)
+        (shared.checkPerNodeVersionStatus as jest.Mock).mockResolvedValueOnce({
+            perNodeVersionStatus: [
+                { version: 'Node 18', major: '18', component: '10.0.0', installed: true },
+                { version: 'Node 20', major: '20', component: '10.0.0', installed: true },
+                { version: 'Node 24', major: '24', component: '10.0.0', installed: true },
+            ],
+            perNodeVariantMissing: false,
+            missingVariantMajors: [],
+        });
+
+        // When: handleInstallPrerequisite is called
+        const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+        // Then: No installation steps should execute
+        expect(result.success).toBe(true);
+        expect(mockContext.progressUnifier!.executeStep).not.toHaveBeenCalled();
+        // Should send install-complete message
+        expect(mockContext.sendMessage).toHaveBeenCalledWith(
+            'prerequisite-install-complete',
+            expect.objectContaining({ index: 0, continueChecking: true })
+        );
+    });
+
+    it('should handle checkPerNodeVersionStatus failure gracefully', async () => {
+        // Given: checkPerNodeVersionStatus throws an error (fnm command failed)
+        const states = new Map();
+        states.set(0, { prereq: mockAdobeCliPrereq, result: mockNodeResult });
+        mockContext.sharedState.currentPrerequisiteStates = states;
+        (mockContext.prereqManager!.getInstallSteps as jest.Mock).mockReturnValue({
+            steps: [
+                { name: 'Install Adobe I/O CLI (Node {version})', message: 'Installing...', command: 'npm install -g @adobe/aio-cli' },
+            ],
+        });
+
+        const checkError = new Error('fnm command failed');
+        (shared.checkPerNodeVersionStatus as jest.Mock).mockRejectedValueOnce(checkError);
+
+        // When: handleInstallPrerequisite is called
+        const result = await handleInstallPrerequisite(mockContext, { prereqId: 0 });
+
+        // Then: Returns failure with error message
+        expect(result.success).toBe(false);
+        expect(mockContext.sendMessage).toHaveBeenCalledWith(
+            'prerequisite-status',
+            expect.objectContaining({
+                index: 0,
+                status: 'error',
+                message: expect.stringContaining('fnm command failed'),
+            })
+        );
+    });
 });

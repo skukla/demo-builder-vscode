@@ -197,7 +197,8 @@ export async function handleInstallPrerequisite(
                 context.logger.debug(`[Prerequisites] Some Node versions not in fnm, will only install ${prereq.name} for: ${installableVersions.join(', ') || 'none'}`);
             }
 
-            targetVersions = installableVersions;
+            // Sort versions in ascending order for predictable installation order
+            targetVersions = installableVersions.sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 
             // If no versions need installation, return early
             if (!targetVersions || targetVersions.length === 0) {
