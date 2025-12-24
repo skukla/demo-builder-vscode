@@ -104,6 +104,103 @@ describe('EnvironmentSetup - Path Discovery', () => {
 
             expect(result).toBeNull();
         });
+
+        it('should find fnm in self-install location (~/.fnm/fnm)', () => {
+            // Given: fnm is installed at fnm's default self-install location
+            const selfInstallPath = path.join(mockHomeDir, '.fnm/fnm');
+            mockFnmInstallation(selfInstallPath);
+
+            // When: findFnmPath is called
+            const result = environmentSetup.findFnmPath();
+
+            // Then: Returns the self-install path
+            expect(result).toBe(selfInstallPath);
+        });
+
+        it('should find fnm via which command when not in common locations', () => {
+            // Given: fnm is NOT in common locations but IS in PATH
+            const { execSync } = require('child_process');
+            const customPath = '/custom/path/fnm';
+
+            // No common paths exist, only custom path
+            (fsSync.existsSync as jest.Mock).mockImplementation((checkPath: string) => {
+                return checkPath === customPath;
+            });
+
+            // which command returns custom path
+            (execSync as jest.Mock).mockReturnValue(customPath + '\n');
+
+            // When: findFnmPath is called
+            const result = environmentSetup.findFnmPath();
+
+            // Then: Returns the custom path from which command
+            expect(result).toBe(customPath);
+        });
+
+        it('should reject which result if path does not exist (security)', () => {
+            // Given: fnm is NOT in common locations
+            // And: which fnm returns a path that doesn't exist
+            const { execSync } = require('child_process');
+
+            // No paths exist (including the which result)
+            (fsSync.existsSync as jest.Mock).mockReturnValue(false);
+
+            // which command returns a non-existent path
+            (execSync as jest.Mock).mockReturnValue('/fake/path/fnm\n');
+
+            // When: findFnmPath is called
+            const result = environmentSetup.findFnmPath();
+
+            // Then: Returns null (security: PATH manipulation protection)
+            expect(result).toBeNull();
+        });
+
+        it('should use first line from which command with multiple results', () => {
+            // Given: which fnm returns multiple paths (one per line)
+            const { execSync } = require('child_process');
+            const firstPath = '/first/fnm';
+            const secondPath = '/second/fnm';
+
+            // Only first path exists
+            (fsSync.existsSync as jest.Mock).mockImplementation((checkPath: string) => {
+                return checkPath === firstPath;
+            });
+
+            // which returns multiple paths
+            (execSync as jest.Mock).mockReturnValue(`${firstPath}\n${secondPath}\n`);
+
+            // When: findFnmPath is called
+            const result = environmentSetup.findFnmPath();
+
+            // Then: Returns only the first path
+            expect(result).toBe(firstPath);
+        });
+
+        it('should cache null result and not retry path discovery', () => {
+            // Given: fnm is not installed anywhere
+            const { execSync } = require('child_process');
+
+            (fsSync.existsSync as jest.Mock).mockReturnValue(false);
+            (execSync as jest.Mock).mockImplementation(() => {
+                throw new Error('Command not found');
+            });
+
+            // First call - returns null
+            const result1 = environmentSetup.findFnmPath();
+            expect(result1).toBeNull();
+
+            // Clear mock call counts to verify caching
+            (fsSync.existsSync as jest.Mock).mockClear();
+            (execSync as jest.Mock).mockClear();
+
+            // When: findFnmPath is called again
+            const result2 = environmentSetup.findFnmPath();
+
+            // Then: Returns null without checking file system again
+            expect(result2).toBeNull();
+            expect(fsSync.existsSync).not.toHaveBeenCalled();
+            expect(execSync).not.toHaveBeenCalled();
+        });
     });
 
     describe('findNpmGlobalPaths', () => {

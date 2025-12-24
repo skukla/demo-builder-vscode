@@ -187,5 +187,96 @@ describe('EnvironmentSetup - Node Version Management', () => {
 
             expect(result).toBeNull();
         });
+
+        it('should respect FNM_DIR when scanning for Adobe CLI installation', async () => {
+            // Given: FNM_DIR environment variable is set to custom location
+            const customFnmDir = '/custom/fnm';
+            process.env.FNM_DIR = customFnmDir;
+
+            // No infrastructure version
+            (vscode.extensions.getExtension as jest.Mock).mockReturnValue(undefined);
+
+            const fnmBase = path.join(customFnmDir, 'node-versions');
+            const aioPath = path.join(fnmBase, 'v18.0.0/installation/bin/aio');
+
+            (fsSync.existsSync as jest.Mock).mockImplementation((checkPath: string) => {
+                return checkPath === fnmBase || checkPath === aioPath;
+            });
+
+            (fsSync.readdirSync as jest.Mock).mockImplementation((dir: string) => {
+                if (dir === fnmBase) {
+                    return ['v18.0.0'];
+                }
+                return [];
+            });
+
+            // When: findAdobeCLINodeVersion is called
+            const result = await environmentSetup.findAdobeCLINodeVersion();
+
+            // Then: Returns version from custom FNM_DIR
+            expect(result).toBe('18');
+
+            // Cleanup
+            delete process.env.FNM_DIR;
+        });
+
+        it('should use default fnm path when FNM_DIR is not set for Adobe CLI scanning', async () => {
+            // Given: FNM_DIR environment variable is NOT set
+            delete process.env.FNM_DIR;
+
+            // No infrastructure version
+            (vscode.extensions.getExtension as jest.Mock).mockReturnValue(undefined);
+
+            const fnmBase = path.join(mockHomeDir, '.local/share/fnm/node-versions');
+            const aioPath = path.join(fnmBase, 'v20.0.0/installation/bin/aio');
+            const nvmBase = path.join(mockHomeDir, '.nvm/versions/node');
+
+            (fsSync.existsSync as jest.Mock).mockImplementation((checkPath: string) => {
+                // fnm paths exist
+                if (checkPath === fnmBase || checkPath === aioPath) {
+                    return true;
+                }
+                // nvm paths don't exist
+                if (checkPath === nvmBase || checkPath.includes('.nvm')) {
+                    return false;
+                }
+                return false;
+            });
+
+            (fsSync.readdirSync as jest.Mock).mockImplementation((dir: string) => {
+                if (dir === fnmBase) {
+                    return ['v20.0.0'];
+                }
+                return [];
+            });
+
+            // When: findAdobeCLINodeVersion is called
+            const result = await environmentSetup.findAdobeCLINodeVersion();
+
+            // Then: Returns version from default fnm location
+            expect(result).toBe('20');
+        });
+
+        it('should cache null Adobe CLI version result', async () => {
+            // Given: No Adobe CLI is installed anywhere
+            (vscode.extensions.getExtension as jest.Mock).mockReturnValue(undefined);
+            (fsSync.existsSync as jest.Mock).mockReturnValue(false);
+
+            // First call - returns null
+            const result1 = await environmentSetup.findAdobeCLINodeVersion();
+            expect(result1).toBeNull();
+
+            // Clear mock call counts to verify caching
+            (fsSync.existsSync as jest.Mock).mockClear();
+            (fsSync.readdirSync as jest.Mock).mockClear();
+
+            // When: findAdobeCLINodeVersion is called again
+            const result2 = await environmentSetup.findAdobeCLINodeVersion();
+
+            // Then: Returns null without rescanning directories
+            expect(result2).toBeNull();
+            // existsSync should not be called again (cached result)
+            expect(fsSync.existsSync).not.toHaveBeenCalled();
+        });
     });
 });
