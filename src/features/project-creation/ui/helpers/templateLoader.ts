@@ -1,11 +1,16 @@
 /**
  * Template Loader
  *
- * Utility for loading and validating demo templates from demo-templates.json.
+ * Utility for loading and validating demo templates from templates.json.
  * Provides runtime validation to ensure template integrity.
+ *
+ * Updated for vertical stack architecture:
+ * - stack: Reference to stacks.json
+ * - brand: Reference to brands.json
+ * - source: Git configuration for cloning
  */
 
-import templatesConfig from '../../../../../templates/demo-templates.json';
+import templatesConfig from '../../../../../templates/templates.json';
 import type {
     DemoTemplate,
     DemoTemplatesConfig,
@@ -13,7 +18,17 @@ import type {
 } from '@/types/templates';
 
 /**
- * Load demo templates from demo-templates.json
+ * Options for template validation
+ */
+export interface TemplateValidationOptions {
+    /** Known stack IDs for cross-reference validation */
+    knownStacks?: string[];
+    /** Known brand IDs for cross-reference validation */
+    knownBrands?: string[];
+}
+
+/**
+ * Load demo templates from templates.json
  *
  * @returns Promise resolving to array of demo templates
  */
@@ -25,41 +40,18 @@ export async function loadDemoTemplates(): Promise<DemoTemplate[]> {
 }
 
 /**
- * Validate component references against known components
- *
- * @param componentIds - Single component ID or array of component IDs to validate
- * @param knownComponents - Array of valid component IDs
- * @param category - Category name for error messages (e.g., 'frontend', 'dependency')
- * @returns Array of error messages for unknown components
- */
-function validateComponentReferences(
-    componentIds: string | string[] | undefined,
-    knownComponents: string[],
-    category: string,
-): string[] {
-    if (!componentIds) {
-        return [];
-    }
-
-    const ids = Array.isArray(componentIds) ? componentIds : [componentIds];
-    return ids
-        .filter(id => !knownComponents.includes(id))
-        .map(id => `Unknown ${category} component: ${id}`);
-}
-
-/**
  * Validate a demo template
  *
- * Checks that the template has all required fields and optionally validates
- * that component references exist in the known components list.
+ * Checks that the template has all required fields for the vertical stack architecture
+ * and optionally validates that stack/brand references exist in known lists.
  *
  * @param template - The template to validate
- * @param knownComponents - Optional array of valid component IDs for reference validation
+ * @param options - Optional validation options for cross-reference validation
  * @returns Validation result with errors if any
  */
 export function validateTemplate(
     template: DemoTemplate,
-    knownComponents?: string[],
+    options?: TemplateValidationOptions,
 ): TemplateValidationResult {
     const errors: string[] = [];
 
@@ -76,21 +68,40 @@ export function validateTemplate(
         errors.push('Template must have a description');
     }
 
-    if (!template.defaults) {
-        errors.push('Template must have defaults');
+    // Validate new structure: stack, brand, source
+    if (!template.stack) {
+        errors.push('Template must have a stack');
     }
 
-    // If knownComponents provided, validate component references
-    if (knownComponents && knownComponents.length > 0 && template.defaults) {
-        const { frontend, backend, dependencies, integrations, appBuilder } = template.defaults;
+    if (!template.brand) {
+        errors.push('Template must have a brand');
+    }
 
-        errors.push(
-            ...validateComponentReferences(frontend, knownComponents, 'frontend'),
-            ...validateComponentReferences(backend, knownComponents, 'backend'),
-            ...validateComponentReferences(dependencies, knownComponents, 'dependency'),
-            ...validateComponentReferences(integrations, knownComponents, 'integration'),
-            ...validateComponentReferences(appBuilder, knownComponents, 'appBuilder'),
-        );
+    if (!template.source) {
+        errors.push('Template must have a source');
+    }
+
+    // Cross-reference validation if options provided
+    if (options) {
+        // Validate stack reference
+        if (
+            options.knownStacks &&
+            options.knownStacks.length > 0 &&
+            template.stack &&
+            !options.knownStacks.includes(template.stack)
+        ) {
+            errors.push(`Unknown stack reference: ${template.stack}`);
+        }
+
+        // Validate brand reference
+        if (
+            options.knownBrands &&
+            options.knownBrands.length > 0 &&
+            template.brand &&
+            !options.knownBrands.includes(template.brand)
+        ) {
+            errors.push(`Unknown brand reference: ${template.brand}`);
+        }
     }
 
     return {
