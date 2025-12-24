@@ -1,49 +1,50 @@
 {
   "$schema": "./components.schema.json",
-  "version": "2.0.0",
+  "version": "3.0.0",
+
   "infrastructure": {
     "adobe-cli": {
       "name": "Adobe I/O CLI & SDK",
       "description": "Command-line interface and SDK for Adobe I/O services"
     }
   },
-  "selectionGroups": {
-    "frontends": ["citisignal-nextjs", "eds-citisignal-storefront"],
-    "backends": ["adobe-commerce-paas", "adobe-commerce-accs"],
-    "dependencies": ["commerce-mesh", "demo-inspector"],
-    "appBuilderApps": ["integration-service"],
-    "integrations": ["experience-platform"],
-    "addons": ["adobe-commerce-aco"],
-    "tools": ["commerce-demo-ingestion"]
-  },
-  "components": {
-    "citisignal-nextjs": {
-      "name": "Headless CitiSignal",
-      "description": "NextJS-based storefront with Adobe mesh integration",
+
+  "frontends": {
+    "eds": {
+      "name": "Edge Delivery Services",
+      "description": "EDS storefront with Commerce Drop-in components",
+      "icon": {
+        "light": "eds-file-icon-light.svg",
+        "dark": "eds-file-icon-dark.svg"
+      },
+      "configuration": {
+        "nodeVersion": "20",
+        "requiredEnvVars": [
+          "MESH_ENDPOINT",
+          "ADOBE_COMMERCE_STORE_CODE",
+          "ADOBE_COMMERCE_STORE_VIEW_CODE",
+          "ADOBE_COMMERCE_WEBSITE_CODE",
+          "ADOBE_CATALOG_API_KEY",
+          "ADOBE_COMMERCE_ENVIRONMENT_ID"
+        ],
+        "optionalEnvVars": [
+          "ADOBE_COMMERCE_CUSTOMER_GROUP",
+          "ADOBE_ASSETS_URL"
+        ]
+      },
+      "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
+      "dependencies": {
+        "required": [],
+        "optional": ["demo-inspector"]
+      }
+    },
+    "headless": {
+      "name": "Headless Storefront",
+      "description": "Next.js-based headless storefront with Adobe mesh integration",
       "icon": {
         "light": "nextjs-file-icon-light.svg",
         "dark": "nextjs-file-icon-dark.svg"
       },
-      "version": "latest",
-      "source": {
-        "type": "git",
-        "url": "https://github.com/skukla/citisignal-nextjs",
-        "branch": "master",
-        "gitOptions": {
-          "shallow": false,
-          "recursive": false
-        }
-      },
-      "dependencies": {
-        "required": ["commerce-mesh"]
-      },
-      "submodules": {
-        "demo-inspector": {
-          "path": "src/demo-inspector",
-          "repository": "skukla/demo-inspector"
-        }
-      },
-      "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
       "configuration": {
         "nodeVersion": "24",
         "requiredEnvVars": [
@@ -55,46 +56,26 @@
           "ADOBE_COMMERCE_STORE_CODE",
           "ADOBE_CATALOG_API_KEY"
         ],
-        "optionalEnvVars": ["ADOBE_ASSETS_URL", "ADOBE_COMMERCE_CUSTOMER_GROUP"]
-      }
-    },
-    "eds-citisignal-storefront": {
-      "name": "CitiSignal EDS Storefront",
-      "description": "Edge Delivery Services storefront with Commerce Drop-in components",
-      "icon": {
-        "light": "eds-file-icon-light.svg",
-        "dark": "eds-file-icon-dark.svg"
-      },
-      "version": "latest",
-      "source": {
-        "type": "git",
-        "url": "https://github.com/skukla/citisignal-one",
-        "branch": "main",
-        "gitOptions": {
-          "shallow": true,
-          "recursive": false
-        }
-      },
-      "dependencies": {
-        "required": [],
-        "optional": ["demo-inspector"]
+        "optionalEnvVars": [
+          "ADOBE_ASSETS_URL",
+          "ADOBE_COMMERCE_CUSTOMER_GROUP"
+        ]
       },
       "compatibleBackends": ["adobe-commerce-paas", "adobe-commerce-accs"],
-      "configuration": {
-        "nodeVersion": "20",
-        "requiredEnvVars": [
-          "COMMERCE_ENDPOINT",
-          "COMMERCE_STORE_CODE",
-          "COMMERCE_STORE_VIEW_CODE",
-          "COMMERCE_WEBSITE_CODE",
-          "COMMERCE_API_KEY",
-          "COMMERCE_ENVIRONMENT_ID"
-        ],
-        "optionalEnvVars": [
-          "COMMERCE_CUSTOMER_GROUP"
-        ]
+      "dependencies": {
+        "required": ["commerce-mesh"],
+        "optional": []
+      },
+      "submodules": {
+        "demo-inspector": {
+          "path": "src/demo-inspector",
+          "repository": "skukla/demo-inspector"
+        }
       }
-    },
+    }
+  },
+
+  "backends": {
     "adobe-commerce-paas": {
       "name": "Adobe Commerce PaaS",
       "description": "Adobe Commerce DSN instance",
@@ -129,26 +110,10 @@
           "ACCS_CUSTOMER_GROUP"
         ]
       }
-    },
-    "adobe-commerce-aco": {
-      "name": "Adobe Commerce Optimizer",
-      "description": "Catalog optimization service for enhanced product discovery and merchandising",
-      "addonFor": ["adobe-commerce-paas", "adobe-commerce-accs"],
-      "configuration": {
-        "requiredEnvVars": [
-          "ACO_API_URL",
-          "ACO_API_KEY",
-          "ACO_TENANT_ID",
-          "ACO_ENVIRONMENT_ID"
-        ]
-      }
-    },
-    "demo-inspector": {
-      "name": "Demo Inspector",
-      "description": "Interactive inspector overlay for demos",
-      "subType": "inspector",
-      "icon": "eye"
-    },
+    }
+  },
+
+  "mesh": {
     "commerce-mesh": {
       "name": "Adobe Commerce API Mesh",
       "description": "GraphQL gateway for unifying commerce data sources",
@@ -181,19 +146,79 @@
         ],
         "providesEnvVars": ["MESH_ENDPOINT"]
       }
-    },
-    "experience-platform": {
-      "name": "Experience Platform",
-      "description": "Adobe Experience Platform integration via Commerce Data Sharing",
-      "requiresApiKey": true,
-      "endpoint": "https://platform.adobe.io",
-      "configuration": {
-        "requiredEnvVars": [
-          "EXPERIENCE_PLATFORM_DATASTREAM_ID",
-          "EXPERIENCE_PLATFORM_API_KEY"
-        ]
+    }
+  },
+
+  "brands": {
+    "citisignal": {
+      "name": "CitiSignal",
+      "description": "Modern telecommunications brand",
+      "icon": "citisignal",
+      "configDefaults": {
+        "ADOBE_COMMERCE_WEBSITE_CODE": "citisignal",
+        "ADOBE_COMMERCE_STORE_CODE": "citisignal_store",
+        "ADOBE_COMMERCE_STORE_VIEW_CODE": "citisignal_us"
+      },
+      "contentSource": {
+        "daLive": {
+          "template": "citisignal"
+        }
       }
     },
+    "buildright": {
+      "name": "BuildRight",
+      "description": "Hardware and home improvement brand",
+      "icon": "buildright",
+      "configDefaults": {
+        "ADOBE_COMMERCE_WEBSITE_CODE": "buildright",
+        "ADOBE_COMMERCE_STORE_CODE": "buildright_store",
+        "ADOBE_COMMERCE_STORE_VIEW_CODE": "buildright_us"
+      },
+      "contentSource": {
+        "daLive": {
+          "template": "buildright"
+        }
+      }
+    }
+  },
+
+  "stacks": {
+    "eds-paas": {
+      "name": "EDS + Commerce PaaS",
+      "description": "Edge Delivery Services with Adobe Commerce PaaS backend",
+      "frontend": "eds",
+      "backend": "adobe-commerce-paas",
+      "requiredComponents": ["commerce-mesh"],
+      "optionalComponents": ["demo-inspector", "integration-service"]
+    },
+    "eds-accs": {
+      "name": "EDS + Commerce Cloud Service",
+      "description": "Edge Delivery Services with Adobe Commerce Cloud Service backend",
+      "frontend": "eds",
+      "backend": "adobe-commerce-accs",
+      "requiredComponents": [],
+      "optionalComponents": ["demo-inspector"]
+    },
+    "headless-paas": {
+      "name": "Headless + Commerce PaaS",
+      "description": "Next.js headless storefront with Adobe Commerce PaaS backend",
+      "frontend": "headless",
+      "backend": "adobe-commerce-paas",
+      "requiredComponents": ["commerce-mesh"],
+      "optionalComponents": ["demo-inspector", "integration-service"]
+    }
+  },
+
+  "dependencies": {
+    "demo-inspector": {
+      "name": "Demo Inspector",
+      "description": "Interactive inspector overlay for demos",
+      "subType": "inspector",
+      "icon": "eye"
+    }
+  },
+
+  "appBuilderApps": {
     "integration-service": {
       "name": "Kukla Integration Service",
       "description": "Custom integration service for Target Product Recommendations, AEM Assets, and more",
@@ -229,7 +254,41 @@
         ],
         "optionalEnvVars": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"]
       }
-    },
+    }
+  },
+
+  "integrations": {
+    "experience-platform": {
+      "name": "Experience Platform",
+      "description": "Adobe Experience Platform integration via Commerce Data Sharing",
+      "requiresApiKey": true,
+      "endpoint": "https://platform.adobe.io",
+      "configuration": {
+        "requiredEnvVars": [
+          "EXPERIENCE_PLATFORM_DATASTREAM_ID",
+          "EXPERIENCE_PLATFORM_API_KEY"
+        ]
+      }
+    }
+  },
+
+  "addons": {
+    "adobe-commerce-aco": {
+      "name": "Adobe Commerce Optimizer",
+      "description": "Catalog optimization service for enhanced product discovery and merchandising",
+      "addonFor": ["adobe-commerce-paas", "adobe-commerce-accs"],
+      "configuration": {
+        "requiredEnvVars": [
+          "ACO_API_URL",
+          "ACO_API_KEY",
+          "ACO_TENANT_ID",
+          "ACO_ENVIRONMENT_ID"
+        ]
+      }
+    }
+  },
+
+  "tools": {
     "commerce-demo-ingestion": {
       "name": "Commerce Demo Ingestion",
       "description": "Tool for populating ACCS instances with demo data",
@@ -263,6 +322,7 @@
       }
     }
   },
+
   "services": {
     "catalog-service": {
       "name": "Catalog Service",
@@ -283,6 +343,7 @@
       ]
     }
   },
+
   "envVars": {
     "ACCS_HOST": {
       "label": "ACCS Host URL",
@@ -307,65 +368,6 @@
       "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
       "description": "Customer group hash for pricing. Default is 'Not Logged In' group",
       "group": "accs"
-    },
-    "COMMERCE_ENDPOINT": {
-      "label": "Commerce GraphQL Endpoint",
-      "type": "url",
-      "required": true,
-      "placeholder": "https://edge-sandbox-graph.adobe.io/api/your-mesh-id/graphql",
-      "description": "The GraphQL endpoint URL for your Commerce backend (usually your deployed API Mesh URL)",
-      "group": "eds-commerce"
-    },
-    "COMMERCE_STORE_CODE": {
-      "label": "Store Code",
-      "type": "text",
-      "required": true,
-      "placeholder": "main_website_store",
-      "default": "main_website_store",
-      "description": "The Magento store code (e.g., 'main_website_store' or 'citisignal_store')",
-      "group": "eds-commerce"
-    },
-    "COMMERCE_STORE_VIEW_CODE": {
-      "label": "Store View Code",
-      "type": "text",
-      "required": true,
-      "placeholder": "default",
-      "default": "default",
-      "description": "The store view code (e.g., 'default' or 'citisignal_us')",
-      "group": "eds-commerce"
-    },
-    "COMMERCE_WEBSITE_CODE": {
-      "label": "Website Code",
-      "type": "text",
-      "required": true,
-      "placeholder": "base",
-      "default": "base",
-      "description": "The website code (e.g., 'base' or 'citisignal')",
-      "group": "eds-commerce"
-    },
-    "COMMERCE_API_KEY": {
-      "label": "Catalog API Key",
-      "type": "text",
-      "required": true,
-      "placeholder": "your-catalog-api-key",
-      "description": "Your Commerce Catalog Service API key (found in Magento Marketplace API Portal)",
-      "group": "eds-commerce"
-    },
-    "COMMERCE_ENVIRONMENT_ID": {
-      "label": "Environment ID",
-      "type": "text",
-      "required": true,
-      "placeholder": "your-environment-id",
-      "description": "Your Commerce SaaS environment/dataspace ID (found in Commerce Admin > Services Connector)",
-      "group": "eds-commerce"
-    },
-    "COMMERCE_CUSTOMER_GROUP": {
-      "label": "Customer Group",
-      "type": "text",
-      "required": false,
-      "default": "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c",
-      "description": "Customer group hash for pricing. Default is 'Not Logged In' group",
-      "group": "eds-commerce"
     },
     "MESH_ENDPOINT": {
       "label": "Mesh Query URL",
@@ -543,6 +545,50 @@
       "placeholder": "your-datastream-id",
       "description": "Create a datastream in the Adobe Experience Platform Data Collection UI",
       "group": "experience-platform"
+    },
+    "ACO_API_URL": {
+      "label": "ACO API URL",
+      "type": "url",
+      "required": true,
+      "placeholder": "https://commerce-optimizer.adobe.io",
+      "description": "Adobe Commerce Optimizer API endpoint",
+      "group": "adobe-commerce-aco"
+    },
+    "ACO_API_KEY": {
+      "label": "ACO API Key",
+      "type": "text",
+      "required": true,
+      "placeholder": "your-aco-api-key",
+      "description": "API key for Adobe Commerce Optimizer",
+      "group": "adobe-commerce-aco"
+    },
+    "ACO_TENANT_ID": {
+      "label": "ACO Tenant ID",
+      "type": "text",
+      "required": true,
+      "placeholder": "your-tenant-id",
+      "description": "Your Adobe Commerce Optimizer tenant identifier",
+      "group": "adobe-commerce-aco"
+    },
+    "ACO_ENVIRONMENT_ID": {
+      "label": "ACO Environment ID",
+      "type": "text",
+      "required": true,
+      "placeholder": "your-environment-id",
+      "description": "Your Adobe Commerce Optimizer environment identifier",
+      "group": "adobe-commerce-aco"
     }
+  },
+
+  "selectionGroups": {
+    "frontends": ["eds", "headless"],
+    "backends": ["adobe-commerce-paas", "adobe-commerce-accs"],
+    "stacks": ["eds-paas", "eds-accs", "headless-paas"],
+    "brands": ["citisignal", "buildright"],
+    "dependencies": ["demo-inspector"],
+    "appBuilderApps": ["integration-service"],
+    "integrations": ["experience-platform"],
+    "addons": ["adobe-commerce-aco"],
+    "tools": ["commerce-demo-ingestion"]
   }
 }
