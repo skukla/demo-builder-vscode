@@ -12,7 +12,7 @@ export class AutoUpdater {
     private context: vscode.ExtensionContext;
     private logger: Logger;
     private updateCheckInterval: NodeJS.Timeout | undefined;
-    private readonly UPDATE_CHECK_URL = 'https://api.github.com/repos/skukla/demo-builder-vscode/releases/latest';
+    private readonly REPO = 'skukla/demo-builder-vscode';
 
     constructor(context: vscode.ExtensionContext, logger: Logger) {
         this.context = context;
@@ -47,37 +47,61 @@ export class AutoUpdater {
     public async checkForUpdates(): Promise<UpdateInfo | undefined> {
         try {
             const currentVersion = this.context.extension.packageJSON.version;
+            const channel = this.getUpdateChannel();
             // Debug level for background checks (only log to info when update found)
-            this.logger.debug(`[Updates] Background check starting (current: ${currentVersion})`);
+            this.logger.debug(`[Updates] Background check starting (current: ${currentVersion}, channel: ${channel})`);
 
             // For development, use mock data
             if (process.env.NODE_ENV === 'development') {
                 return this.getMockUpdateInfo();
             }
 
-            // Fetch latest release from GitHub
-            const response = await axios.get(this.UPDATE_CHECK_URL, {
+            // Fetch latest release from GitHub based on channel
+            // Stable: /releases/latest (non-prereleases only)
+            // Beta: /releases?per_page=20 (includes prereleases, sorted by semver)
+            const url = channel === 'stable'
+                ? `https://api.github.com/repos/${this.REPO}/releases/latest`
+                : `https://api.github.com/repos/${this.REPO}/releases?per_page=20`;
+
+            const response = await axios.get(url, {
                 headers: {
                     'Accept': 'application/vnd.github.v3+json',
                 },
                 timeout: TIMEOUTS.UPDATE_CHECK,
             });
 
-            const latestVersion = response.data.tag_name.replace('v', '');
-            
+            // Get the latest release based on channel
+            let release = response.data;
+            if (channel === 'beta' && Array.isArray(response.data)) {
+                // For beta: filter non-draft, sort by semver, take first
+                const nonDraftReleases = response.data.filter((r: { draft: boolean }) => !r.draft);
+                if (nonDraftReleases.length === 0) {
+                    this.logger.debug('[Updates] No releases found');
+                    return undefined;
+                }
+                release = nonDraftReleases.sort((a: { tag_name: string }, b: { tag_name: string }) => {
+                    const versionA = a.tag_name.replace(/^v/, '');
+                    const versionB = b.tag_name.replace(/^v/, '');
+                    return semver.gt(versionA, versionB) ? -1 : 1;
+                })[0];
+            }
+
+            const latestVersion = release.tag_name.replace('v', '');
+            this.logger.debug(`[Updates] Latest ${channel} version: ${latestVersion}`);
+
             // Compare versions
             if (semver.gt(latestVersion, currentVersion)) {
-                const vsixAsset = response.data.assets.find((asset: { name: string }) =>
+                const vsixAsset = release.assets.find((asset: { name: string }) =>
                     asset.name.endsWith('.vsix'),
                 );
 
                 if (vsixAsset) {
                     const updateInfo: UpdateInfo = {
                         version: latestVersion,
-                        critical: response.data.body?.includes('[CRITICAL]') || false,
+                        critical: release.body?.includes('[CRITICAL]') || false,
                         downloadUrl: vsixAsset.browser_download_url,
-                        changelogUrl: response.data.html_url,
-                        releaseDate: response.data.published_at,
+                        changelogUrl: release.html_url,
+                        releaseDate: release.published_at,
                         minSupportedVersion: '1.0.0',
                     };
 
@@ -104,6 +128,11 @@ export class AutoUpdater {
             }
             return undefined;
         }
+    }
+
+    private getUpdateChannel(): 'stable' | 'beta' {
+        return vscode.workspace.getConfiguration('demoBuilder')
+            .get<'stable' | 'beta'>('updateChannel', 'stable');
     }
 
     private getMockUpdateInfo(): UpdateInfo | undefined {
