@@ -1,31 +1,45 @@
+# Source files (bundled by esbuild/webpack)
 .vscode/**
 .vscode-test/**
 src/**
+webview-ui/**
+
+# Dependencies (bundled by esbuild)
+node_modules/**
+
+# Build config
 .gitignore
 .eslintrc.json
-**/*.map
-**/*.ts
-**/.git/**
-scripts/keys.json
 tsconfig.json
 tsconfig.build.json
 tsconfig.webview.json
 webpack.config.js
+esbuild.config.js
 eslint.config.mjs
-.github/**
-test/**
-tests/**
-docs/**
-templates/**/*.md
-*.md
-!README.md
-!CHANGELOG.md
-coverage/**
-report/**
-.rptc/**
-.claude/**
 .prettierignore
 .swcrc
 jest.config.js
 package.json.backup
-webview-ui/**
+package-lock.json
+
+# Development files
+**/*.map
+**/*.ts
+**/.git/**
+.github/**
+test/**
+tests/**
+docs/**
+coverage/**
+report/**
+.rptc/**
+.claude/**
+
+# Scripts (except required ones)
+scripts/keys.json
+
+# Documentation (keep README)
+templates/**/*.md
+*.md
+!README.md
+!CHANGELOG.md
