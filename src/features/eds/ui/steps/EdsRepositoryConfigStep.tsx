@@ -27,12 +27,14 @@ import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
 import { webviewLogger } from '@/core/ui/utils/webviewLogger';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
+import {
+    isValidRepositoryName,
+    getRepositoryNameError,
+    normalizeRepositoryName,
+} from '@/core/validation/normalizers';
 import type { BaseStepProps } from '@/types/wizard';
 
 const log = webviewLogger('EdsRepositoryConfigStep');
-
-/** Repository name validation pattern */
-const REPO_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
 
 /** Existing repo format: owner/repo */
 const EXISTING_REPO_PATTERN = /^[a-zA-Z0-9_-]+\/[a-zA-Z0-9._-]+$/;
@@ -100,8 +102,7 @@ export function EdsRepositoryConfigStep({
      * Validate repository name format
      */
     const validateRepoName = useCallback((name: string): boolean => {
-        if (!name) return false;
-        return REPO_NAME_PATTERN.test(name);
+        return isValidRepositoryName(name);
     }, []);
 
     /**
@@ -127,16 +128,17 @@ export function EdsRepositoryConfigStep({
 
     /**
      * Handle repository name change (new repo)
+     * Normalizes input and validates the result
      */
     const handleRepoNameChange = useCallback((value: string) => {
-        updateEdsConfig({ repoName: value });
+        // Normalize the input for consistent repo naming
+        const normalized = normalizeRepositoryName(value);
+        updateEdsConfig({ repoName: normalized });
 
-        if (value && !validateRepoName(value)) {
-            setRepoNameError('Must start with a letter or number, can contain letters, numbers, dots, hyphens, and underscores');
-        } else {
-            setRepoNameError(undefined);
-        }
-    }, [updateEdsConfig, validateRepoName]);
+        // Validate and show error if needed
+        const error = getRepositoryNameError(normalized);
+        setRepoNameError(error);
+    }, [updateEdsConfig]);
 
     /**
      * Validate existing repo format (owner/repo)

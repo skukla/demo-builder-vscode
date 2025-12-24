@@ -29,6 +29,11 @@ import Alert from '@spectrum-icons/workflow/Alert';
 import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import Info from '@spectrum-icons/workflow/Info';
 import { TwoColumnLayout } from '@/core/ui/components/layout/TwoColumnLayout';
+import {
+    isValidRepositoryName,
+    getRepositoryNameError,
+    normalizeRepositoryName,
+} from '@/core/validation/normalizers';
 import { SelectionStepContent } from '@/features/authentication/ui/components/SelectionStepContent';
 import { useSelectionStep } from '@/features/authentication/ui/hooks/useSelectionStep';
 import type { GitHubRepoItem } from '@/types/webview';
@@ -152,12 +157,6 @@ function GitHubConfigurationSummary({
 /**
  * GitHubRepoSelectionStep Component
  */
-/** Validate repository name format */
-function isValidRepoName(name: string): boolean {
-    // GitHub repo names: alphanumeric, hyphens, underscores, must start with alphanumeric
-    return /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(name);
-}
-
 export function GitHubRepoSelectionStep({
     state,
     updateState,
@@ -275,24 +274,29 @@ export function GitHubRepoSelectionStep({
 
     /**
      * Handle repository name change
+     * Normalizes input for consistent repo naming
      */
     const handleRepoNameChange = useCallback((value: string) => {
-        setRepoNameError(undefined);
-        updateEdsConfig({ repoName: value });
+        // Normalize the input for consistent repo naming
+        const normalized = normalizeRepositoryName(value);
+        updateEdsConfig({ repoName: normalized });
+
+        // Validate and show error if needed
+        const error = getRepositoryNameError(normalized);
+        setRepoNameError(error);
     }, [updateEdsConfig]);
 
     /**
      * Validate repository name on blur
      */
     const handleRepoNameBlur = useCallback(() => {
-        if (repoName && !isValidRepoName(repoName)) {
-            setRepoNameError('Must start with a letter or number, and contain only letters, numbers, hyphens, underscores, or periods');
-        }
+        const error = getRepositoryNameError(repoName);
+        setRepoNameError(error);
     }, [repoName]);
 
     // Update canProceed based on selection
     useEffect(() => {
-        const isNewValid = repoMode === 'new' && repoName.trim() !== '' && isValidRepoName(repoName);
+        const isNewValid = repoMode === 'new' && repoName.trim() !== '' && isValidRepositoryName(repoName);
         const isExistingValid = repoMode === 'existing' && !!selectedRepo;
         setCanProceed(isNewValid || isExistingValid);
     }, [repoMode, repoName, selectedRepo, setCanProceed]);

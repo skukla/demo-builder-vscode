@@ -4,6 +4,14 @@
  * Provides input sanitization, field validation, and security validation.
  */
 
+// Name normalization
+export {
+    normalizeProjectName,
+    normalizeRepositoryName,
+    isValidRepositoryName,
+    getRepositoryNameError,
+} from './normalizers';
+
 // Sensitive data redaction
 export {
     sanitizeErrorForLogging,
