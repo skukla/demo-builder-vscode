@@ -1,6 +1,9 @@
 /**
  * Verifies API Mesh deployment status with Adobe I/O
  * Checks if mesh actually exists, not just if we think it's deployed
+ *
+ * DI Pattern: MeshVerifierService uses constructor injection for logger.
+ * Backward-compatible function exports use a lazy-loaded default logger.
  */
 
 import { getMeshNodeVersion } from './meshConfig';
@@ -9,17 +12,63 @@ import { getLogger } from '@/core/logging';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import type { MeshVerificationResult } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
+import type { Logger } from '@/types/logger';
 import { parseJSON } from '@/types/typeGuards';
 
 export type { MeshVerificationResult };
 
 /**
- * Fetch mesh info from Adobe I/O via aio api-mesh:describe
- * Returns mesh ID and endpoint if found
+ * Lazy-loaded default logger for backward-compatible function exports.
+ * Avoids module-level instantiation issues during testing.
  */
-async function fetchMeshInfoFromAdobeIO(): Promise<{ meshId?: string; endpoint?: string } | null> {
+let _defaultLogger: Logger | null = null;
+function getDefaultLogger(): Logger {
+    if (!_defaultLogger) {
+        _defaultLogger = getLogger();
+    }
+    return _defaultLogger;
+}
+
+/**
+ * MeshVerifierService - Verifies API Mesh deployment status with Adobe I/O
+ *
+ * Uses constructor injection for the logger dependency (DI pattern).
+ * Provides instance methods that use the injected logger.
+ */
+export class MeshVerifierService {
+    private logger: Logger;
+
+    constructor(logger: Logger) {
+        this.logger = logger;
+    }
+
+    /**
+     * Verify that a mesh actually exists in Adobe I/O
+     */
+    async verifyMeshDeployment(project: Project): Promise<MeshVerificationResult> {
+        return verifyMeshDeploymentImpl(project, this.logger);
+    }
+
+    /**
+     * Update project with verified mesh status
+     */
+    async syncMeshStatus(
+        project: Project,
+        verificationResult: MeshVerificationResult,
+    ): Promise<void> {
+        return syncMeshStatusImpl(project, verificationResult);
+    }
+}
+
+// ============================================================================
+// Implementation Functions (shared between service and backward-compatible exports)
+// ============================================================================
+
+/**
+ * Implementation: Fetch mesh info from Adobe I/O via aio api-mesh:describe
+ */
+async function fetchMeshInfoFromAdobeIOImpl(logger: Logger): Promise<{ meshId?: string; endpoint?: string } | null> {
     const commandManager = ServiceLocator.getCommandExecutor();
-    const logger = getLogger();
 
     try {
         const result = await commandManager.execute(
@@ -82,14 +131,12 @@ async function fetchMeshInfoFromAdobeIO(): Promise<{ meshId?: string; endpoint?:
 }
 
 /**
- * Attempt to recover missing mesh ID by fetching from Adobe I/O
- * This is a self-healing mechanism for projects created before mesh ID was saved
+ * Implementation: Attempt to recover missing mesh ID by fetching from Adobe I/O
  */
-async function tryRecoverMeshId(meshComponent: ComponentInstance): Promise<string | null> {
-    const logger = getLogger();
+async function tryRecoverMeshIdImpl(meshComponent: ComponentInstance, logger: Logger): Promise<string | null> {
     logger.debug('[Mesh Verifier] Attempting to recover missing mesh ID from Adobe I/O...');
 
-    const meshInfo = await fetchMeshInfoFromAdobeIO();
+    const meshInfo = await fetchMeshInfoFromAdobeIOImpl(logger);
 
     if (meshInfo?.meshId) {
         logger.debug('[Mesh Verifier] Successfully recovered mesh ID from Adobe I/O');
@@ -114,13 +161,9 @@ async function tryRecoverMeshId(meshComponent: ComponentInstance): Promise<strin
 }
 
 /**
- * Verify that a mesh actually exists in Adobe I/O
- * Calls `aio api-mesh:describe` to check real deployment status
- *
- * Note: If mesh ID is missing from metadata, attempts to recover it from Adobe I/O.
- * The caller should save the project if meshIdRecovered is true in the result.
+ * Implementation: Verify that a mesh actually exists in Adobe I/O
  */
-export async function verifyMeshDeployment(project: Project): Promise<MeshVerificationResult> {
+async function verifyMeshDeploymentImpl(project: Project, logger: Logger): Promise<MeshVerificationResult> {
     const meshComponent = project.componentInstances?.['commerce-mesh'];
 
     // No mesh component = no mesh
@@ -134,7 +177,7 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
 
     if (!meshId) {
         // Attempt to recover mesh ID from Adobe I/O (self-healing for older projects)
-        meshId = await tryRecoverMeshId(meshComponent);
+        meshId = await tryRecoverMeshIdImpl(meshComponent, logger);
         if (meshId) {
             meshIdRecovered = true;
         } else {
@@ -147,7 +190,7 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
 
     try {
         const commandManager = ServiceLocator.getCommandExecutor();
-        
+
         // Call aio api-mesh:describe to verify mesh exists
         // Uses Node version defined in commerce-mesh component configuration
         const result = await commandManager.execute(
@@ -159,26 +202,29 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
                 enhancePath: true,
             },
         );
-        
+
+        logger.debug(`[Mesh Verifier] verify describe: code=${result.code}`);
+
         if (result.code !== 0) {
             // Mesh doesn't exist or command failed
+            logger.debug(`[Mesh Verifier] verify failed: ${result.stderr?.substring(0, 200)}`);
             return {
                 success: false,
                 error: result.stderr || 'Failed to verify mesh deployment',
             };
         }
-        
+
         // Parse output to extract mesh info
         const output = result.stdout;
-        
+
         // Try to find mesh ID in output - handle formats like "Mesh ID:", "mesh_id:", "meshId:"
         const meshIdMatch = /mesh[\s_-]?id[:\s]+([a-f0-9-]+)/i.exec(output);
         const foundMeshId = meshIdMatch ? meshIdMatch[1] : null;
-        
+
         // Try to find endpoint
         const endpointMatch = /endpoint[:\s]+([^\s\n]+)/i.exec(output);
         const endpoint = endpointMatch ? endpointMatch[1] : undefined;
-        
+
         // Try JSON parsing as fallback
         if (!foundMeshId || !endpoint) {
             try {
@@ -216,7 +262,7 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
                 meshIdRecovered,
             },
         };
-        
+
     } catch (error) {
         return {
             success: false,
@@ -226,13 +272,12 @@ export async function verifyMeshDeployment(project: Project): Promise<MeshVerifi
 }
 
 /**
- * Update project with verified mesh status
- * Call this after verification to sync project state with Adobe I/O reality
+ * Implementation: Update project with verified mesh status
  */
-export async function syncMeshStatus(
+function syncMeshStatusImpl(
     project: Project,
     verificationResult: MeshVerificationResult,
-): Promise<void> {
+): void {
     const meshComponent = project.componentInstances?.['commerce-mesh'];
     if (!meshComponent) {
         return;
@@ -261,3 +306,23 @@ export async function syncMeshStatus(
     }
 }
 
+// ============================================================================
+// Backward-compatible Function Exports
+// ============================================================================
+
+/**
+ * Backward-compatible export: Verify that a mesh actually exists in Adobe I/O
+ */
+export async function verifyMeshDeployment(project: Project): Promise<MeshVerificationResult> {
+    return verifyMeshDeploymentImpl(project, getDefaultLogger());
+}
+
+/**
+ * Backward-compatible export: Update project with verified mesh status
+ */
+export async function syncMeshStatus(
+    project: Project,
+    verificationResult: MeshVerificationResult,
+): Promise<void> {
+    syncMeshStatusImpl(project, verificationResult);
+}

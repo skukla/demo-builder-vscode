@@ -17,14 +17,16 @@ jest.mock('@/features/mesh/services/stalenessDetector', () => ({
     calculateMeshSourceHash: jest.fn(),
 }));
 
+const mockLogger = {
+    trace: jest.fn(),
+    info: jest.fn(),
+    debug: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+};
 jest.mock('@/core/logging', () => ({
-    Logger: jest.fn().mockImplementation(() => ({
-        trace: jest.fn(),
-        info: jest.fn(),
-        debug: jest.fn(),
-        warn: jest.fn(),
-        error: jest.fn(),
-    })),
+    Logger: jest.fn().mockImplementation(() => mockLogger),
+    getLogger: jest.fn(() => mockLogger),
 }));
 
 jest.mock('@/core/di', () => ({

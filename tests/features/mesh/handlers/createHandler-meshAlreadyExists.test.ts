@@ -288,7 +288,6 @@ describe('handleMeshAlreadyExists', () => {
                     streaming: true,
                     shell: true,
                     configureTelemetry: false,
-                    useNodeVersion: null,
                     enhancePath: true,
                 })
             );

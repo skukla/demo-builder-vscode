@@ -4,21 +4,22 @@
  * Tracks:
  * - Environment variables used in mesh.json
  * - Source file hashes (resolvers, schemas, config)
+ *
+ * DI Pattern: StalenessDetectorService uses constructor injection for logger.
+ * Backward-compatible function exports use a lazy-loaded default logger.
  */
 
 import * as crypto from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { Logger } from '@/core/logging';
+import { getLogger } from '@/core/logging';
 import { getFrontendEnvVars } from '@/core/state';
 import type { MeshState, MeshChanges } from '@/features/mesh/services/types';
 import { Project } from '@/types';
+import type { Logger } from '@/types/logger';
 import { parseJSON, hasEntries } from '@/types/typeGuards';
 
 export type { MeshState, MeshChanges };
-
-// Create logger instance for this module
-const logger = new Logger('MeshStaleness');
 
 /**
  * Environment variables that affect mesh deployment
@@ -35,9 +36,99 @@ const MESH_ENV_VARS = [
 ];
 
 /**
+ * Lazy-loaded default logger for backward-compatible function exports.
+ * Avoids module-level instantiation issues during testing.
+ */
+let _defaultLogger: Logger | null = null;
+function getDefaultLogger(): Logger {
+    if (!_defaultLogger) {
+        _defaultLogger = getLogger();
+    }
+    return _defaultLogger;
+}
+
+/**
+ * StalenessDetectorService - Detects changes requiring API Mesh redeployment
+ *
+ * Uses constructor injection for the logger dependency (DI pattern).
+ * Provides instance methods that use the injected logger.
+ */
+export class StalenessDetectorService {
+    private logger: Logger;
+
+    constructor(logger: Logger) {
+        this.logger = logger;
+    }
+
+    /**
+     * Get current mesh-related environment variables from component config
+     * (Static method for backward compatibility)
+     */
+    static getMeshEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
+        return getMeshEnvVarsImpl(componentConfig);
+    }
+
+    /**
+     * Get current mesh-related environment variables from component config
+     */
+    getMeshEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
+        return getMeshEnvVarsImpl(componentConfig);
+    }
+
+    /**
+     * Fetch deployed mesh configuration from Adobe I/O
+     */
+    async fetchDeployedMeshConfig(): Promise<Record<string, string> | null> {
+        return fetchDeployedMeshConfigImpl(this.logger);
+    }
+
+    /**
+     * Calculate hash of mesh source files
+     */
+    async calculateMeshSourceHash(meshComponentPath: string): Promise<string | null> {
+        return calculateMeshSourceHashImpl(meshComponentPath, this.logger);
+    }
+
+    /**
+     * Get current mesh state from project
+     */
+    getCurrentMeshState(project: Project): MeshState | null {
+        return getCurrentMeshStateImpl(project);
+    }
+
+    /**
+     * Detect if mesh has changes requiring redeployment
+     */
+    async detectMeshChanges(
+        project: Project,
+        newComponentConfigs: Record<string, unknown>,
+    ): Promise<MeshChanges> {
+        return detectMeshChangesImpl(project, newComponentConfigs, this.logger);
+    }
+
+    /**
+     * Update mesh state after deployment
+     */
+    async updateMeshState(project: Project): Promise<void> {
+        return updateMeshStateImpl(project, this.logger);
+    }
+
+    /**
+     * Detect if frontend env vars have changed since demo started
+     */
+    detectFrontendChanges(project: Project): boolean {
+        return detectFrontendChangesImpl(project);
+    }
+}
+
+// ============================================================================
+// Implementation Functions (shared between service and backward-compatible exports)
+// ============================================================================
+
+/**
  * Get current mesh-related environment variables from component config
  */
-export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
+function getMeshEnvVarsImpl(componentConfig: Record<string, unknown>): Record<string, string> {
     const result: Record<string, string> = {};
 
     // Extract only mesh-related env vars from component config
@@ -55,10 +146,16 @@ export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record
 }
 
 /**
- * Fetch deployed mesh configuration from Adobe I/O
- * Returns environment variables that were used in the deployed mesh
+ * Backward-compatible export: Get current mesh-related environment variables
  */
-export async function fetchDeployedMeshConfig(): Promise<Record<string, string> | null> {
+export function getMeshEnvVars(componentConfig: Record<string, unknown>): Record<string, string> {
+    return getMeshEnvVarsImpl(componentConfig);
+}
+
+/**
+ * Implementation: Fetch deployed mesh configuration from Adobe I/O
+ */
+async function fetchDeployedMeshConfigImpl(logger: Logger): Promise<Record<string, string> | null> {
     try {
         const { ServiceLocator } = await import('@/core/di');
         const { TIMEOUTS } = await import('@/core/utils/timeoutConfig');
@@ -92,11 +189,11 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
             logger.debug('[Mesh Staleness] Failed to parse mesh data');
             return null;
         }
-        
+
         // Extract environment variables from the mesh configuration
         // Match the structure we generate in meshDeployer.ts
         const deployedEnvVars: Record<string, string> = {};
-        
+
         if (meshData.meshConfig?.sources) {
             for (const source of meshData.meshConfig.sources) {
                 // Commerce GraphQL endpoint (source name: 'magento')
@@ -120,13 +217,13 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
                 }
             }
         }
-        
+
         logger.debug('[Mesh Staleness] Successfully fetched deployed mesh config', {
             keyCount: Object.keys(deployedEnvVars).length,
         });
-        
+
         return deployedEnvVars;
-        
+
     } catch (error) {
         logger.trace('[Mesh Staleness] Failed to fetch deployed mesh config:', error);
         return null;
@@ -134,16 +231,23 @@ export async function fetchDeployedMeshConfig(): Promise<Record<string, string> 
 }
 
 /**
- * Calculate hash of mesh source files (same logic as update-mesh.js)
+ * Backward-compatible export: Fetch deployed mesh configuration from Adobe I/O
  */
-export async function calculateMeshSourceHash(meshComponentPath: string): Promise<string | null> {
+export async function fetchDeployedMeshConfig(): Promise<Record<string, string> | null> {
+    return fetchDeployedMeshConfigImpl(getDefaultLogger());
+}
+
+/**
+ * Implementation: Calculate hash of mesh source files
+ */
+async function calculateMeshSourceHashImpl(meshComponentPath: string, logger: Logger): Promise<string | null> {
     try {
         const resolversDir = path.join(meshComponentPath, 'build', 'resolvers');
         const schemasDir = path.join(meshComponentPath, 'schema');
         const meshConfigPath = path.join(meshComponentPath, 'mesh.config.js');
-        
+
         let combinedContent = '';
-        
+
         // Include mesh config - changes to this ALWAYS require deployment
         try {
             const meshConfig = await fs.readFile(meshConfigPath, 'utf-8');
@@ -151,13 +255,13 @@ export async function calculateMeshSourceHash(meshComponentPath: string): Promis
         } catch {
             // mesh.config.js might not exist yet
         }
-        
+
         // Include all resolver files
         try {
             const resolverFiles = (await fs.readdir(resolversDir))
                 .filter(f => f.endsWith('.js'))
                 .sort(); // Sort for consistent hash
-                
+
             for (const file of resolverFiles) {
                 const filePath = path.join(resolversDir, file);
                 const content = await fs.readFile(filePath, 'utf-8');
@@ -166,13 +270,13 @@ export async function calculateMeshSourceHash(meshComponentPath: string): Promis
         } catch {
             // build/resolvers might not exist yet
         }
-        
+
         // Include all schema files
         try {
             const schemaFiles = (await fs.readdir(schemasDir))
                 .filter(f => f.endsWith('.graphql'))
                 .sort();
-                
+
             for (const file of schemaFiles) {
                 const filePath = path.join(schemasDir, file);
                 const content = await fs.readFile(filePath, 'utf-8');
@@ -181,11 +285,11 @@ export async function calculateMeshSourceHash(meshComponentPath: string): Promis
         } catch {
             // schema directory might not exist yet
         }
-        
+
         if (!combinedContent) {
             return null;
         }
-        
+
         return crypto.createHash('md5').update(combinedContent).digest('hex');
     } catch (error) {
         logger.error('Error calculating source hash', error instanceof Error ? error : undefined);
@@ -194,15 +298,22 @@ export async function calculateMeshSourceHash(meshComponentPath: string): Promis
 }
 
 /**
- * Get current mesh state from project
+ * Backward-compatible export: Calculate hash of mesh source files
  */
-export function getCurrentMeshState(project: Project): MeshState | null {
+export async function calculateMeshSourceHash(meshComponentPath: string): Promise<string | null> {
+    return calculateMeshSourceHashImpl(meshComponentPath, getDefaultLogger());
+}
+
+/**
+ * Implementation: Get current mesh state from project
+ */
+function getCurrentMeshStateImpl(project: Project): MeshState | null {
     // Return the stored mesh state (from last deployment)
     // This represents the DEPLOYED configuration, not the current config
     if (!project.meshState) {
         return null;
     }
-    
+
     return {
         envVars: project.meshState.envVars || {},
         sourceHash: project.meshState.sourceHash || null,
@@ -211,11 +322,19 @@ export function getCurrentMeshState(project: Project): MeshState | null {
 }
 
 /**
- * Detect if mesh has changes requiring redeployment
+ * Backward-compatible export: Get current mesh state from project
  */
-export async function detectMeshChanges(
+export function getCurrentMeshState(project: Project): MeshState | null {
+    return getCurrentMeshStateImpl(project);
+}
+
+/**
+ * Implementation: Detect if mesh has changes requiring redeployment
+ */
+async function detectMeshChangesImpl(
     project: Project,
     newComponentConfigs: Record<string, unknown>,
+    logger: Logger,
 ): Promise<MeshChanges> {
     const meshInstance = project.componentInstances?.['commerce-mesh'];
     if (!meshInstance?.path) {
@@ -226,10 +345,10 @@ export async function detectMeshChanges(
             changedEnvVars: [],
         };
     }
-    
+
     // Get current deployed state
-    const currentState = getCurrentMeshState(project);
-    
+    const currentState = getCurrentMeshStateImpl(project);
+
     if (!currentState) {
         // No previous state, assume fresh deployment needed
         return {
@@ -239,7 +358,7 @@ export async function detectMeshChanges(
             changedEnvVars: MESH_ENV_VARS,
         };
     }
-    
+
     // If envVars is empty, it means meshState exists but env vars were never captured
     // Try to fetch the deployed config from Adobe I/O to establish baseline
     const envVarsExist = hasEntries(currentState.envVars);
@@ -248,7 +367,7 @@ export async function detectMeshChanges(
     if (!envVarsExist) {
         logger.debug('[Mesh Staleness] meshState.envVars is empty, attempting to fetch deployed config from Adobe I/O');
 
-        const deployedConfig = await fetchDeployedMeshConfig();
+        const deployedConfig = await fetchDeployedMeshConfigImpl(logger);
 
         if (deployedConfig) {
             // Successfully fetched deployed config - use it as baseline
@@ -273,32 +392,32 @@ export async function detectMeshChanges(
             };
         }
     }
-    
+
     // Check env vars changes
     const newMeshConfig = (newComponentConfigs['commerce-mesh'] as Record<string, unknown> | undefined) || {};
-    const newEnvVars = getMeshEnvVars(newMeshConfig);
+    const newEnvVars = getMeshEnvVarsImpl(newMeshConfig);
 
     const changedEnvVars: string[] = [];
     MESH_ENV_VARS.forEach(key => {
         // Normalize: treat missing keys as empty strings for robust comparison
         const oldValue = currentState.envVars[key] || '';
         const newValue = newEnvVars[key] || '';
-        
+
         if (oldValue !== newValue) {
             changedEnvVars.push(key);
-            logger.debug(`[Mesh Staleness]   ❌ ${key} changed: "${oldValue}" → "${newValue}"`);
+            logger.debug(`[Mesh Staleness]   ${key} changed: "${oldValue}" -> "${newValue}"`);
         }
     });
-    
+
     const envVarsChanged = changedEnvVars.length > 0;
 
     if (envVarsChanged) {
         logger.debug(`[Mesh Staleness] Detected ${changedEnvVars.length} changed env vars:`, changedEnvVars);
     }
-    
+
     // Check source files changes
-    const newSourceHash = await calculateMeshSourceHash(meshInstance.path);
-    
+    const newSourceHash = await calculateMeshSourceHashImpl(meshInstance.path, logger);
+
     // If old hash is null, it means meshState was never captured after deployment
     // In this case, DON'T flag as changed (assume deployed = current state)
     let sourceFilesChanged = false;
@@ -307,7 +426,7 @@ export async function detectMeshChanges(
     } else {
         sourceFilesChanged = newSourceHash !== null && newSourceHash !== currentState.sourceHash;
     }
-    
+
     return {
         hasChanges: envVarsChanged || sourceFilesChanged,
         envVarsChanged,
@@ -318,18 +437,28 @@ export async function detectMeshChanges(
 }
 
 /**
- * Update mesh state after deployment
+ * Backward-compatible export: Detect if mesh has changes requiring redeployment
  */
-export async function updateMeshState(project: Project): Promise<void> {
+export async function detectMeshChanges(
+    project: Project,
+    newComponentConfigs: Record<string, unknown>,
+): Promise<MeshChanges> {
+    return detectMeshChangesImpl(project, newComponentConfigs, getDefaultLogger());
+}
+
+/**
+ * Implementation: Update mesh state after deployment
+ */
+async function updateMeshStateImpl(project: Project, logger: Logger): Promise<void> {
     const meshInstance = project.componentInstances?.['commerce-mesh'];
     if (!meshInstance?.path) {
         return;
     }
-    
+
     const meshConfig = project.componentConfigs?.['commerce-mesh'] || {};
-    const envVars = getMeshEnvVars(meshConfig);
-    const sourceHash = await calculateMeshSourceHash(meshInstance.path);
-    
+    const envVars = getMeshEnvVarsImpl(meshConfig);
+    const sourceHash = await calculateMeshSourceHashImpl(meshInstance.path, logger);
+
     project.meshState = {
         envVars,
         sourceHash,
@@ -341,10 +470,16 @@ export async function updateMeshState(project: Project): Promise<void> {
 }
 
 /**
- * Detect if frontend env vars have changed since demo started
- * Returns true if any frontend-relevant env var changed
+ * Backward-compatible export: Update mesh state after deployment
  */
-export function detectFrontendChanges(project: Project): boolean {
+export async function updateMeshState(project: Project): Promise<void> {
+    return updateMeshStateImpl(project, getDefaultLogger());
+}
+
+/**
+ * Implementation: Detect if frontend env vars have changed since demo started
+ */
+function detectFrontendChangesImpl(project: Project): boolean {
     const frontendInstance = project.componentInstances?.['citisignal-nextjs'];
     if (!frontendInstance || !project.frontendEnvState) {
         return false;
@@ -365,5 +500,12 @@ export function detectFrontendChanges(project: Project): boolean {
     }
 
     return false;
+}
+
+/**
+ * Backward-compatible export: Detect if frontend env vars have changed since demo started
+ */
+export function detectFrontendChanges(project: Project): boolean {
+    return detectFrontendChangesImpl(project);
 }
 

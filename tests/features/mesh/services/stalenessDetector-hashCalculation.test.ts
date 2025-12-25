@@ -8,6 +8,16 @@ jest.mock('crypto', () => ({
     createHash: jest.fn(),
 }));
 
+jest.mock('@/core/logging', () => ({
+    getLogger: () => ({
+        debug: jest.fn(),
+        info: jest.fn(),
+        warn: jest.fn(),
+        error: jest.fn(),
+        trace: jest.fn(),
+    }),
+}));
+
 import { calculateMeshSourceHash } from '@/features/mesh/services/stalenessDetector';
 import * as fs from 'fs/promises';
 import * as crypto from 'crypto';
