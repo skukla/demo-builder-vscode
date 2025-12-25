@@ -25,6 +25,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { DashboardEmptyState } from './components/DashboardEmptyState';
 import { ProjectRowList } from './components/ProjectRowList';
 import { ProjectsGrid } from './components/ProjectsGrid';
+import { buildMenuItems } from './projectsDashboardHelpers';
 import { PageHeader } from '@/core/ui/components/layout/PageHeader';
 import { PageLayout } from '@/core/ui/components/layout/PageLayout';
 import { SearchHeader, type ViewMode } from '@/core/ui/components/navigation/SearchHeader';
@@ -230,11 +231,7 @@ export const ProjectsDashboard: React.FC<ProjectsDashboardProps> = ({
                                         onImportFromFile();
                                     }
                                 }}
-                                items={[
-                                    { key: 'new', label: 'New Project', icon: 'add' },
-                                    ...(onCopyFromExisting ? [{ key: 'copy', label: 'Copy from Existing...', icon: 'copy' }] : []),
-                                    ...(onImportFromFile ? [{ key: 'import', label: 'Import from File...', icon: 'import' }] : []),
-                                ]}
+                                items={buildMenuItems({ onCopyFromExisting, onImportFromFile })}
                             >
                                 {(item) => (
                                     <Item key={item.key} textValue={item.label}>
