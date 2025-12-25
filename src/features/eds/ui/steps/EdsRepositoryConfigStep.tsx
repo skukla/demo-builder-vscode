@@ -32,6 +32,7 @@ import {
     getRepositoryNameError,
     normalizeRepositoryName,
 } from '@/core/validation/normalizers';
+import { getValidationState } from '../helpers/validationHelpers';
 import type { BaseStepProps } from '@/types/wizard';
 
 const log = webviewLogger('EdsRepositoryConfigStep');
@@ -329,7 +330,7 @@ export function EdsRepositoryConfigStep({
                             value={existingRepo}
                             onChange={handleExistingRepoChange}
                             onBlur={handleExistingRepoBlur}
-                            validationState={existingRepoError ? 'invalid' : (existingRepoVerified ? 'valid' : undefined)}
+                            validationState={getValidationState(existingRepoError, existingRepoVerified)}
                             errorMessage={existingRepoError}
                             placeholder="owner/repository"
                             description="Your existing GitHub repository (e.g., my-org/my-eds-site)"
@@ -399,7 +400,7 @@ export function EdsRepositoryConfigStep({
                     description="Your DA.live organization name"
                     width="100%"
                     isRequired
-                    validationState={daLiveOrgError ? 'invalid' : (daLiveOrgVerified ? 'valid' : undefined)}
+                    validationState={getValidationState(daLiveOrgError, daLiveOrgVerified)}
                 />
 
                 {isVerifyingOrg && (

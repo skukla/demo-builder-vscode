@@ -1,0 +1,132 @@
+/**
+ * VerifiedField
+ *
+ * Presentational component for text fields that require backend verification.
+ * Shows verifying spinner and verified checkmark states.
+ *
+ * @example
+ * <VerifiedField
+ *   label="Organization"
+ *   value={org}
+ *   onChange={setOrg}
+ *   onBlur={handleVerify}
+ *   isVerifying={isVerifying}
+ *   isVerified={isVerified}
+ *   error={error}
+ *   placeholder="your-org"
+ *   description="Your DA.live organization name"
+ * />
+ */
+
+import React from 'react';
+import { TextField, Flex, Text, ProgressCircle } from '@adobe/react-spectrum';
+import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
+import Alert from '@spectrum-icons/workflow/Alert';
+
+/** Props for VerifiedField component */
+export interface VerifiedFieldProps {
+    /** Field label */
+    label: string;
+    /** Current value */
+    value: string;
+    /** Called when value changes */
+    onChange: (value: string) => void;
+    /** Called when field loses focus */
+    onBlur: () => void;
+    /** Whether verification is in progress */
+    isVerifying: boolean;
+    /** Whether field is verified */
+    isVerified: boolean;
+    /** Error message to display */
+    error?: string;
+    /** Placeholder text */
+    placeholder?: string;
+    /** Description text below field */
+    description?: string;
+    /** Whether field is required */
+    isRequired?: boolean;
+    /** Full width */
+    width?: string;
+}
+
+/**
+ * VerifiedField Component
+ *
+ * TextField with verification status indicators.
+ * Pure presentational component - no business logic.
+ */
+export function VerifiedField({
+    label,
+    value,
+    onChange,
+    onBlur,
+    isVerifying,
+    isVerified,
+    error,
+    placeholder,
+    description,
+    isRequired,
+    width = '100%',
+}: VerifiedFieldProps): React.ReactElement {
+    // Determine validation state
+    const getValidationState = (): 'invalid' | 'valid' | undefined => {
+        if (error) return 'invalid';
+        if (isVerified) return 'valid';
+        return undefined;
+    };
+
+    return (
+        <Flex direction="column" gap="size-100" width={width}>
+            <Flex alignItems="end" gap="size-200">
+                <TextField
+                    label={label}
+                    value={value}
+                    onChange={onChange}
+                    onBlur={onBlur}
+                    placeholder={placeholder}
+                    description={description}
+                    isRequired={isRequired}
+                    width="100%"
+                    validationState={getValidationState()}
+                />
+
+                {isVerifying && (
+                    <ProgressCircle
+                        aria-label="Verifying"
+                        isIndeterminate
+                        size="S"
+                    />
+                )}
+
+                {isVerified && !isVerifying && !error && (
+                    <Flex alignItems="center" gap="size-100">
+                        <CheckmarkCircle
+                            size="S"
+                            UNSAFE_className="text-green-500"
+                        />
+                        <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-positive-color-text-small)' }}>
+                            Verified
+                        </Text>
+                    </Flex>
+                )}
+            </Flex>
+
+            {error && (
+                <Flex alignItems="center" gap="size-100">
+                    <Alert
+                        size="S"
+                        UNSAFE_className="text-red-500"
+                    />
+                    <Text UNSAFE_style={{ color: 'var(--spectrum-semantic-negative-color-text-small)' }}>
+                        {error}
+                    </Text>
+                </Flex>
+            )}
+
+            <style>{`
+                .text-green-500 { color: var(--spectrum-semantic-positive-color-icon); }
+                .text-red-500 { color: var(--spectrum-semantic-negative-color-icon); }
+            `}</style>
+        </Flex>
+    );
+}
