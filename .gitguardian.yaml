@@ -1,0 +1,14 @@
+# GitGuardian Configuration
+# Excludes test files and directories from secret scanning to prevent false positives
+# from test fixtures like mock JWT tokens, fake API keys, etc.
+
+paths-ignore:
+  - "**/tests/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+  - "**/__tests__/**"
+  - "**/__mocks__/**"
+  - "**/test/**"
+  - "**/fixtures/**"
