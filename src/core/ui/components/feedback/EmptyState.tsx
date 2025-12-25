@@ -13,6 +13,8 @@ export interface EmptyStateProps {
     iconColor?: string;
     /** Whether to center the display (default: true) */
     centered?: boolean;
+    /** Optional action buttons or additional content */
+    children?: React.ReactNode;
 }
 
 /**
@@ -35,19 +37,23 @@ export const EmptyState = React.memo<EmptyStateProps>(({
     description,
     iconColor = 'text-yellow-600',
     centered = true,
+    children,
 }) => {
     const content = (
-        <Well>
-            <Flex gap="size-200" alignItems="center">
-                {icon || <AlertCircle UNSAFE_className={iconColor} />}
-                <Flex direction="column" gap="size-50">
-                    <Text>
-                        <strong>{title}</strong>
-                    </Text>
-                    <Text UNSAFE_className="text-sm">{description}</Text>
+        <Flex direction="column" gap="size-300" alignItems="center">
+            <Well>
+                <Flex gap="size-200" alignItems="center">
+                    {icon || <AlertCircle UNSAFE_className={iconColor} />}
+                    <Flex direction="column" gap="size-50">
+                        <Text>
+                            <strong>{title}</strong>
+                        </Text>
+                        <Text UNSAFE_className="text-sm">{description}</Text>
+                    </Flex>
                 </Flex>
-            </Flex>
-        </Well>
+            </Well>
+            {children}
+        </Flex>
     );
 
     if (centered) {
