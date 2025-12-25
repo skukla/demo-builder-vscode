@@ -82,7 +82,8 @@ describe('PrerequisitesStep - Recheck Functionality', () => {
         await user.click(recheckButton);
 
         // Should trigger at least 2 checks (initial + recheck)
-        expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites');
+        // Initial check uses isRecheck: false, recheck uses isRecheck: true
+        expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites', expect.objectContaining({ isRecheck: expect.any(Boolean) }));
     });
 
     it('should disable recheck during checking', async () => {

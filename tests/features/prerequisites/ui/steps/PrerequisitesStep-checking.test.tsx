@@ -79,7 +79,7 @@ describe('PrerequisitesStep - Happy Path Checking', () => {
             </Provider>
         );
 
-        expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites');
+        expect(mockPostMessage).toHaveBeenCalledWith('check-prerequisites', { isRecheck: false });
     });
 
     it('should display loaded prerequisites', async () => {

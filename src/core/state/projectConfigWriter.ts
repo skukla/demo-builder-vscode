@@ -11,6 +11,32 @@ import { Logger } from '@/core/logging';
 import type { Project } from '@/types';
 import { getComponentIds } from '@/types/typeGuards';
 
+/**
+ * Get the Catalog Service API key from a project's commerce configuration.
+ *
+ * SOP Compliance: Reduces optional chaining depth from 3 levels to 1.
+ * Pattern: project.commerce?.services.catalog?.apiKey -> getCatalogApiKey(project)
+ *
+ * @param project - The project to extract the API key from
+ * @returns The catalog API key, or empty string if not configured
+ */
+export function getCatalogApiKey(project: Project): string {
+    return project.commerce?.services?.catalog?.apiKey || '';
+}
+
+/**
+ * Get the Live Search API key from a project's commerce configuration.
+ *
+ * SOP Compliance: Reduces optional chaining depth from 3 levels to 1.
+ * Pattern: project.commerce?.services.liveSearch?.apiKey -> getLiveSearchApiKey(project)
+ *
+ * @param project - The project to extract the API key from
+ * @returns The live search API key, or empty string if not configured
+ */
+export function getLiveSearchApiKey(project: Project): string {
+    return project.commerce?.services?.liveSearch?.apiKey || '';
+}
+
 export class ProjectConfigWriter {
     private logger: Logger;
 
@@ -109,8 +135,8 @@ export class ProjectConfigWriter {
             `COMMERCE_STORE_VIEW=${project.commerce?.instance.storeView || ''}`,
             '',
             '# API Keys',
-            `CATALOG_API_KEY=${project.commerce?.services.catalog?.apiKey || ''}`,
-            `SEARCH_API_KEY=${project.commerce?.services.liveSearch?.apiKey || ''}`,
+            `CATALOG_API_KEY=${getCatalogApiKey(project)}`,
+            `SEARCH_API_KEY=${getLiveSearchApiKey(project)}`,
             '',
             '# Note: Component-specific environment variables are now stored in each component\'s .env file',
         ].join('\n');
