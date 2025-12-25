@@ -38,6 +38,15 @@ jest.mock('@/features/eds/services/daLiveService', () => ({
     DaLiveService: jest.fn().mockImplementation(() => mockDaLiveService),
 }));
 
+// Mock edsHelpers - service getters use caching pattern
+jest.mock('@/features/eds/handlers/edsHelpers', () => ({
+    getGitHubService: jest.fn(() => mockGitHubService),
+    getDaLiveService: jest.fn(() => mockDaLiveService),
+    getDaLiveAuthService: jest.fn(() => ({})),
+    validateDaLiveToken: jest.fn(() => ({ valid: true })),
+    clearServiceCache: jest.fn(),
+}));
+
 // Mock vscode authentication
 jest.mock('vscode', () => ({
     authentication: {
@@ -65,6 +74,10 @@ function createMockHandlerContext(overrides?: Partial<HandlerContext>): jest.Moc
         debugLogger: mockLogger as any,
         context: {
             secrets: {} as any, // For GitHubService instantiation
+            globalState: {
+                get: jest.fn().mockReturnValue('test-da-live-token'), // For DA.live token storage
+                update: jest.fn().mockResolvedValue(undefined),
+            },
         } as any,
         panel: undefined,
         stateManager: {} as any,
@@ -194,10 +207,12 @@ describe('EDS Handlers', () => {
 
     describe('handleVerifyDaLiveOrg', () => {
         it('should check org access and return verified status', async () => {
-            // Given: User has access to DA.live org
-            mockDaLiveService.verifyOrgAccess.mockResolvedValue({
-                hasAccess: true,
+            // Given: User has access to DA.live org - mock fetch response (handler uses fetch directly)
+            const mockFetch = jest.fn().mockResolvedValue({
+                ok: true,
+                status: 200,
             });
+            global.fetch = mockFetch;
 
             const { handleVerifyDaLiveOrg } = await import('@/features/eds/handlers/edsHandlers');
 

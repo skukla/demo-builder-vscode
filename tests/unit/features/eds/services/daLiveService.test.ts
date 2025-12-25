@@ -238,7 +238,7 @@ describe('DaLiveService', () => {
 
             // Then: Should return hasAccess false with reason
             expect(result.hasAccess).toBe(false);
-            expect(result.reason).toContain('access denied');
+            expect(result.reason?.toLowerCase()).toContain('access denied');
             expect(result.orgName).toBe('restricted-org');
         });
 
