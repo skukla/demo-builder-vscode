@@ -104,11 +104,29 @@ export function renderFormField(
 }
 
 /**
+ * Check if a component has environment variables configured.
+ *
+ * SOP Compliance: Reduces optional chaining depth from 3 levels to 1.
+ * Pattern: dep.configuration?.requiredEnvVars?.length -> hasComponentEnvVars(dep)
+ *
+ * @param componentDef - The component definition to check (may be undefined)
+ * @returns True if the component has required or optional env vars configured
+ */
+export function hasComponentEnvVars(componentDef: ComponentData | undefined): boolean {
+    if (!componentDef?.configuration) {
+        return false;
+    }
+    const required = componentDef.configuration.requiredEnvVars?.length || 0;
+    const optional = componentDef.configuration.optionalEnvVars?.length || 0;
+    return required > 0 || optional > 0;
+}
+
+/**
  * Check if a component has environment variables configured
+ * @deprecated Use hasComponentEnvVars instead, which handles undefined input
  */
 export function componentHasEnvVars(componentDef: ComponentData): boolean {
-    return (componentDef.configuration?.requiredEnvVars?.length || 0) > 0 ||
-           (componentDef.configuration?.optionalEnvVars?.length || 0) > 0;
+    return hasComponentEnvVars(componentDef);
 }
 
 /**

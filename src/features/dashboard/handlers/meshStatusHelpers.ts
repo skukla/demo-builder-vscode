@@ -3,6 +3,10 @@
  *
  * Helper functions for mesh status checking, verification, and UI updates.
  * Extracted from dashboardHandlers.ts to reduce file size.
+ *
+ * Note: Core status functions have been moved to dashboard services.
+ * This file re-exports them for backward compatibility and contains
+ * handler-specific logic.
  */
 
 import * as fs from 'fs/promises';
@@ -13,7 +17,23 @@ import { detectMeshChanges } from '@/features/mesh/services/stalenessDetector';
 import { MESH_STATUS_MESSAGES } from '@/features/mesh/services/types';
 import { Project, ComponentInstance } from '@/types';
 import { HandlerContext } from '@/types/handlers';
-import { hasEntries, getProjectFrontendPort } from '@/types/typeGuards';
+
+// Import from services for use in this file
+import {
+    buildStatusPayload,
+    hasMeshDeploymentRecord,
+    getMeshEndpointFromConfigs,
+    type MeshStatusInfo,
+} from '../services/dashboardStatusService';
+
+// Re-export for backward compatibility
+export {
+    buildStatusPayload,
+    hasMeshDeploymentRecord,
+    getMeshEndpointFromConfigs,
+    type MeshStatusInfo,
+    type StatusPayload,
+} from '../services/dashboardStatusService';
 
 /**
  * Type for project with guaranteed Adobe workspace context
@@ -58,50 +78,8 @@ export function hasAdobeProjectContext(project: Project | null | undefined): pro
     return Boolean(organization && projectId);
 }
 
-/**
- * Mesh status info for UI updates
- */
-export interface MeshStatusInfo {
-    status: string;
-    endpoint?: string;
-    message?: string;
-}
-
-/**
- * Build the standard status payload for dashboard updates
- */
-export function buildStatusPayload(
-    project: Project,
-    frontendConfigChanged: boolean,
-    mesh?: MeshStatusInfo,
-): {
-    name: string;
-    path: string;
-    status: string;
-    port: number | undefined;
-    adobeOrg: string | undefined;
-    adobeProject: string | undefined;
-    frontendConfigChanged: boolean;
-    mesh?: MeshStatusInfo;
-} {
-    return {
-        name: project.name,
-        path: project.path,
-        status: project.status || 'ready',
-        port: getProjectFrontendPort(project),
-        adobeOrg: project.adobe?.organization,
-        adobeProject: project.adobe?.projectName,
-        frontendConfigChanged,
-        mesh,
-    };
-}
-
-/**
- * Check if mesh has been deployed (has env vars recorded from previous deployment)
- */
-export function hasMeshDeploymentRecord(project: Project): boolean {
-    return Boolean(project.meshState && hasEntries(project.meshState.envVars));
-}
+// MeshStatusInfo, buildStatusPayload, hasMeshDeploymentRecord are now in dashboardStatusService
+// and re-exported above for backward compatibility
 
 /**
  * Format session expiration message
@@ -196,21 +174,7 @@ export async function checkMeshConfigCompleteness(
     };
 }
 
-/**
- * Get MESH_ENDPOINT from componentConfigs (checks all component configs)
- */
-function getMeshEndpointFromConfigs(project: Project): string | undefined {
-    if (!project.componentConfigs) return undefined;
-
-    // Check all component configs for MESH_ENDPOINT (usually in frontend config)
-    for (const configValues of Object.values(project.componentConfigs)) {
-        const endpoint = configValues?.MESH_ENDPOINT;
-        if (endpoint && typeof endpoint === 'string' && endpoint.trim() !== '') {
-            return endpoint;
-        }
-    }
-    return undefined;
-}
+// getMeshEndpointFromConfigs is now in dashboardStatusService and re-exported above
 
 /**
  * Determine mesh status based on changes, component state, and config completeness

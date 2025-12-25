@@ -14,3 +14,8 @@ export type {
     StatusColor,
     StatusDisplay,
 } from './useDashboardStatus';
+export { useFieldSyncWithBackend } from './useFieldSyncWithBackend';
+export type {
+    UseFieldSyncWithBackendOptions,
+    UseFieldSyncWithBackendReturn,
+} from './useFieldSyncWithBackend';

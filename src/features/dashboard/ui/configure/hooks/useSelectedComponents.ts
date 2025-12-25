@@ -6,7 +6,7 @@
  */
 
 import { useMemo } from 'react';
-import { getAllComponentDefinitions, discoverComponentsFromInstances } from '../configureHelpers';
+import { getAllComponentDefinitions, discoverComponentsFromInstances, hasComponentEnvVars } from '../configureHelpers';
 import type { ComponentsData, ComponentData } from '../configureTypes';
 import type { Project } from '@/types/base';
 
@@ -44,12 +44,8 @@ export function useSelectedComponents({
 
             comp.dependencies?.required?.forEach(depId => {
                 const dep = findComponent(depId);
-                if (dep && !components.some(c => c.id === depId)) {
-                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                    if (hasEnvVars) {
-                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                    }
+                if (dep && !components.some(c => c.id === depId) && hasComponentEnvVars(dep)) {
+                    components.push({ id: dep.id, data: dep, type: 'Dependency' });
                 }
             });
 
@@ -57,12 +53,8 @@ export function useSelectedComponents({
                 const dep = findComponent(depId);
                 if (dep && !components.some(c => c.id === depId)) {
                     const isSelected = project.componentSelections?.dependencies?.includes(depId);
-                    if (isSelected) {
-                        const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                           (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                        if (hasEnvVars) {
-                            components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                        }
+                    if (isSelected && hasComponentEnvVars(dep)) {
+                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
                     }
                 }
             });
@@ -81,12 +73,8 @@ export function useSelectedComponents({
         project.componentSelections?.dependencies?.forEach((depId: string) => {
             if (!components.some(c => c.id === depId)) {
                 const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId);
-                if (dep) {
-                    const hasEnvVars = (dep.configuration?.requiredEnvVars?.length || 0) > 0 ||
-                                       (dep.configuration?.optionalEnvVars?.length || 0) > 0;
-                    if (hasEnvVars) {
-                        components.push({ id: dep.id, data: dep, type: 'Dependency' });
-                    }
+                if (dep && hasComponentEnvVars(dep)) {
+                    components.push({ id: dep.id, data: dep, type: 'Dependency' });
                 }
             }
         });

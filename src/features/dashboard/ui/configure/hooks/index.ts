@@ -9,6 +9,7 @@
  * - useConfigureFields: Field value management
  * - useConfigureNavigation: Navigation sections and field navigation
  * - useConfigureActions: Save and cancel operations
+ * - useSmartFieldFocusScroll: Smart scroll to section on field focus
  */
 
 export { useSelectedComponents } from './useSelectedComponents';
@@ -19,3 +20,8 @@ export { useFieldValidation } from './useFieldValidation';
 export { useConfigureFields } from './useConfigureFields';
 export { useConfigureNavigation } from './useConfigureNavigation';
 export { useConfigureActions } from './useConfigureActions';
+export { useSmartFieldFocusScroll } from './useSmartFieldFocusScroll';
+export type {
+    UseSmartFieldFocusScrollOptions,
+    UseSmartFieldFocusScrollReturn,
+} from './useSmartFieldFocusScroll';

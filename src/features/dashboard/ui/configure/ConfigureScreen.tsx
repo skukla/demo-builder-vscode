@@ -165,11 +165,18 @@ function renderFormField(
 }
 
 /**
- * Check if a component has environment variables configured
+ * Check if a component has environment variables configured.
+ *
+ * SOP Compliance: Reduces optional chaining depth from 3 levels to 1.
+ * Uses hasComponentEnvVars pattern internally.
  */
-function componentHasEnvVars(componentDef: ComponentData): boolean {
-    return (componentDef.configuration?.requiredEnvVars?.length || 0) > 0 ||
-           (componentDef.configuration?.optionalEnvVars?.length || 0) > 0;
+function componentHasEnvVars(componentDef: ComponentData | undefined): boolean {
+    if (!componentDef?.configuration) {
+        return false;
+    }
+    const required = componentDef.configuration.requiredEnvVars?.length || 0;
+    const optional = componentDef.configuration.optionalEnvVars?.length || 0;
+    return required > 0 || optional > 0;
 }
 
 /**

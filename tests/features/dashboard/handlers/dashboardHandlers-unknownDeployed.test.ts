@@ -97,15 +97,15 @@ describe('dashboardHandlers - handleRequestStatus - unknownDeployedState handlin
         // Wait for async check to complete
         await flushPromises();
 
-        // Then: Async update sends "not-deployed" status (safe assumption when verification failed)
-        // 'checking' is a transient state, not a final status
+        // Then: Async update sends "error" status when verification fails
+        // Changed from "not-deployed" to "error" for clearer error reporting
         expect(mockContext.panel?.webview.postMessage).toHaveBeenCalledWith(
             expect.objectContaining({
                 type: 'statusUpdate',
                 payload: expect.objectContaining({
                     mesh: expect.objectContaining({
-                        status: 'not-deployed',
-                        message: 'Unable to verify deployment status',
+                        status: 'error',
+                        message: 'Failed to check deployment status',
                     }),
                 }),
             })
