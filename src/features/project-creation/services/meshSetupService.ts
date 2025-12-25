@@ -7,7 +7,7 @@
  * Supports retry on failure with user interaction via meshPhase progress state.
  */
 
-import { ProgressTracker } from '../shared';
+import { ProgressTracker } from '../handlers/shared';
 import { ServiceLocator } from '@/core/di';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { getMeshNodeVersion } from '@/features/mesh/services/meshConfig';
@@ -95,7 +95,7 @@ export async function deployNewMesh(
 
     // Generate mesh .env BEFORE deployment (mesh needs commerce URLs from .env)
     progressTracker('Configuring API Mesh', 70, 'Generating mesh configuration...');
-    logger.info('[Project Creation] 🔧 Phase 3: Configuring and deploying API Mesh...');
+    logger.info('[Project Creation] Phase 3: Configuring and deploying API Mesh...');
 
     await generateComponentEnvFile(
         meshComponent.path,
@@ -220,7 +220,7 @@ export async function deployNewMesh(
                 // Update meshState to track deployment
                 await updateProjectMeshState(project, logger);
 
-                logger.info(`[Project Creation] ✅ Phase 3 complete: Mesh deployed${endpoint ? ' at ' + endpoint : ''}`);
+                logger.info(`[Project Creation] Phase 3 complete: Mesh deployed${endpoint ? ' at ' + endpoint : ''}`);
                 return; // Success, exit the retry loop
             } else {
                 throw new Error(meshDeployResult.error || 'Mesh deployment failed');
@@ -286,7 +286,7 @@ export async function linkExistingMesh(
     const { project, meshDefinition, sharedEnvVars, config, progressTracker, logger } = context;
 
     progressTracker('Configuring API Mesh', 75, 'Adding existing mesh to project...');
-    logger.info('[Project Creation] 🔗 Phase 3: Linking existing API Mesh...');
+    logger.info('[Project Creation] Phase 3: Linking existing API Mesh...');
 
     // Generate mesh .env file (even when linking existing mesh)
     const meshComponent = project.componentInstances?.['commerce-mesh'];
@@ -322,7 +322,7 @@ export async function linkExistingMesh(
 
     await updateProjectMeshState(project, logger);
 
-    logger.info('[Project Creation] ✅ Phase 3 complete: Existing mesh linked');
+    logger.info('[Project Creation] Phase 3 complete: Existing mesh linked');
 }
 
 /**

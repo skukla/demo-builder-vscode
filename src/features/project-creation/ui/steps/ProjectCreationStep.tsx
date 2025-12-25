@@ -10,6 +10,7 @@ import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayo
 import { vscode, webviewClient } from '@/core/ui/utils/vscode-api';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { MeshErrorDialog } from '@/features/mesh/ui/steps/components/MeshErrorDialog';
+import { getCancelButtonText } from '../helpers/buttonTextHelpers';
 import { WizardState } from '@/types/webview';
 
 interface ProjectCreationStepProps {
@@ -260,7 +261,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
                             isQuiet
                             isDisabled={isCancelling}
                         >
-                            {isCheckingMesh ? 'Back' : isCancelling ? 'Cancelling...' : 'Cancel'}
+                            {getCancelButtonText(isCheckingMesh, isCancelling)}
                         </Button>
                     }
                     centerContent={

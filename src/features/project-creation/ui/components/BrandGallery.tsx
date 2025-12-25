@@ -17,6 +17,7 @@ import { SearchHeader } from '@/core/ui/components/navigation/SearchHeader';
 import { SingleColumnLayout } from '@/core/ui/components/layout/SingleColumnLayout';
 import { Modal } from '@/core/ui/components/ui/Modal';
 import { useArrowKeyNavigation } from '@/core/ui/hooks/useArrowKeyNavigation';
+import { filterBrandsBySearchQuery } from './brandGalleryHelpers';
 
 /** Addon metadata for display */
 const ADDON_METADATA: Record<string, { name: string; description: string }> = {
@@ -289,14 +290,10 @@ export const BrandGallery: React.FC<BrandGalleryProps> = ({
     // Track modal-local addon state (synced to parent on Done)
     const [modalAddons, setModalAddons] = useState<string[]>(selectedAddons);
 
-    const filteredBrands = useMemo(() => {
-        if (!searchQuery.trim()) return brands;
-        const query = searchQuery.toLowerCase();
-        return brands.filter(b =>
-            b.name.toLowerCase().includes(query) ||
-            b.description.toLowerCase().includes(query)
-        );
-    }, [brands, searchQuery]);
+    const filteredBrands = useMemo(
+        () => filterBrandsBySearchQuery(brands, searchQuery),
+        [brands, searchQuery]
+    );
 
     // Get the brand object for the modal
     const modalBrand = useMemo(() => {

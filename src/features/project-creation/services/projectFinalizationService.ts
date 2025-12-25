@@ -9,7 +9,7 @@
  */
 
 import * as vscode from 'vscode';
-import { ProgressTracker } from '../shared';
+import { ProgressTracker } from '../handlers/shared';
 import type { ComponentDefinitionEntry } from './componentInstallationOrchestrator';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';
 import { generateComponentEnvFile, EnvGenerationConfig } from '@/features/project-creation/helpers';
@@ -39,7 +39,7 @@ export async function generateEnvironmentFiles(
     const { project, componentDefinitions, sharedEnvVars, config, progressTracker, logger } = context;
 
     progressTracker('Configuring Environment', 85, 'Generating environment files...');
-    logger.debug('[Project Creation] 📝 Phase 4: Generating environment configuration...');
+    logger.debug('[Project Creation] Phase 4: Generating environment configuration...');
 
     // Get deployed mesh endpoint (if available)
     const deployedMeshEndpoint = project.componentInstances?.['commerce-mesh']?.endpoint;
@@ -72,7 +72,7 @@ export async function generateEnvironmentFiles(
         );
     }
 
-    logger.debug('[Project Creation] ✅ Phase 4 complete: Environment configured');
+    logger.debug('[Project Creation] Phase 4 complete: Environment configured');
 }
 
 /**
@@ -113,14 +113,14 @@ export async function finalizeProject(
         }
 
         await saveProject();
-        logger.debug('[Project Creation] ✅ Project state saved successfully');
+        logger.debug('[Project Creation] Project state saved successfully');
     } catch (saveError) {
-        logger.error('[Project Creation] ❌ Failed to save project', saveError instanceof Error ? saveError : undefined);
+        logger.error('[Project Creation] Failed to save project', saveError instanceof Error ? saveError : undefined);
         throw saveError;
     }
 
     progressTracker('Project Created', 100, 'Project creation complete');
-    logger.debug('[Project Creation] ✅ Phase 5 complete: Project finalized');
+    logger.debug('[Project Creation] Phase 5 complete: Project finalized');
 }
 
 /**
@@ -138,9 +138,9 @@ export async function sendCompletionAndCleanup(
             success: true,
             message: 'Your demo is ready to start',
         });
-        logger.debug('[Project Creation] ✅ Completion message sent');
+        logger.debug('[Project Creation] Completion message sent');
     } catch (messageError) {
-        logger.error('[Project Creation] ❌ Failed to send completion message', messageError instanceof Error ? messageError : undefined);
+        logger.error('[Project Creation] Failed to send completion message', messageError instanceof Error ? messageError : undefined);
     }
 
     // Auto-close the webview panel after timeout as a fallback

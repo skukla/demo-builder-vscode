@@ -28,6 +28,23 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
+// Mock brandStackLoader to prevent undefined components access in tests
+jest.mock('@/features/project-creation/ui/helpers/brandStackLoader', () => ({
+    __esModule: true,
+    loadBrands: async () => [
+        { id: 'test-brand', name: 'Test Brand', description: 'Test', logo: '/test.svg', stacks: ['test-stack'] },
+    ],
+    loadStacks: async () => [
+        { id: 'test-stack', name: 'Test Stack', frontend: 'test-frontend', backend: 'test-backend' },
+    ],
+}));
+
+// Mock templateLoader
+jest.mock('@/features/project-creation/ui/helpers/templateLoader', () => ({
+    __esModule: true,
+    loadDemoTemplates: async () => [{ id: 'test-template', name: 'Test Template', description: 'Test' }],
+}));
+
 // Store mock implementations so we can change them per test
 let authStepImpl: (props: { setCanProceed: (val: boolean) => void }) => React.ReactElement;
 

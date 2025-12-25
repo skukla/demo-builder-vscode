@@ -1,9 +1,13 @@
 /**
- * Project Creation Handlers - Barrel Export
+ * Project Creation Handlers - Public API
  *
- * Exports all project creation handler functions for clean imports.
+ * Exports the handler registry and individual handlers for backward compatibility.
  */
 
+// Export registry (preferred)
+export { HandlerRegistry } from './HandlerRegistry';
+
+// Export individual handlers (backward compatibility)
 export * from './validateHandler';
 export * from './createHandler';
 export * from './executor';

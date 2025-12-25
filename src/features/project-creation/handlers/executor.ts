@@ -19,7 +19,7 @@ import {
     finalizeProject,
     sendCompletionAndCleanup,
     type ComponentDefinitionEntry,
-} from './services';
+} from '../services';
 import { ProgressTracker } from './shared';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
 import { TIMEOUTS } from '@/core/utils/timeoutConfig';

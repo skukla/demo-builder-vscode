@@ -1,7 +1,7 @@
 import { View, Text, Flex, Heading, Divider } from '@adobe/react-spectrum';
-import CheckmarkCircle from '@spectrum-icons/workflow/CheckmarkCircle';
 import React, { useEffect, useMemo } from 'react';
 import { hasRequiredReviewData } from './reviewPredicates';
+import { resolveServiceNames, buildComponentInfoList } from './reviewStepHelpers';
 import { cn } from '@/core/ui/utils/classNames';
 import type { Brand } from '@/types/brands';
 import type { Stack } from '@/types/stacks';
@@ -91,111 +91,26 @@ export function ReviewStep({ state, setCanProceed, componentsData, brands, stack
     const hasDemoInspector = state.components?.dependencies?.includes('demo-inspector') ?? false;
 
     // Get backend services - resolve from raw registry services
-    const backendServiceNames = useMemo(() => {
-        if (!state.components?.backend || !componentsData?.backends || !componentsData?.services) return [];
-        const backend = componentsData.backends.find(b => b.id === state.components?.backend);
-        const serviceIds = (backend?.configuration?.requiredServices as string[] | undefined) || [];
-        return serviceIds
-            .map(id => componentsData.services?.[id]?.name)
-            .filter((name): name is string => Boolean(name));
-    }, [state.components?.backend, componentsData?.backends, componentsData?.services]);
+    const backendServiceNames = useMemo(
+        () => resolveServiceNames(
+            state.components?.backend,
+            componentsData?.backends,
+            componentsData?.services
+        ),
+        [state.components?.backend, componentsData?.backends, componentsData?.services]
+    );
 
-    // Derive component info
-    const componentInfo = useMemo(() => {
-        const info: { label: string; value: React.ReactNode; subItems?: string[] }[] = [];
-
-        // Frontend with Demo Inspector indicator
-        if (state.components?.frontend && componentsData?.frontends) {
-            const frontend = componentsData.frontends.find(f => f.id === state.components?.frontend);
-            if (frontend) {
-                info.push({
-                    label: 'Frontend',
-                    value: frontend.name,
-                    subItems: hasDemoInspector ? ['Demo Inspector'] : undefined,
-                });
-            }
-        }
-
-        // Middleware (API Mesh)
-        if (state.components?.dependencies?.includes('commerce-mesh') && componentsData?.dependencies) {
-            const mesh = componentsData.dependencies.find(d => d.id === 'commerce-mesh');
-            if (mesh) {
-                const isDeployed = state.apiMesh?.meshStatus === 'deployed';
-                info.push({
-                    label: 'Middleware',
-                    value: (
-                        <Flex gap="size-100" alignItems="center">
-                            <Text UNSAFE_className="text-md">{mesh.name}</Text>
-                            {isDeployed && (
-                                <>
-                                    <Text UNSAFE_className={cn('text-md', 'text-gray-500')}>·</Text>
-                                    <CheckmarkCircle size="XS" UNSAFE_className="text-green-600" />
-                                    <Text UNSAFE_className="text-md">Deployed</Text>
-                                </>
-                            )}
-                        </Flex>
-                    ),
-                });
-            }
-        }
-
-        // Backend with services
-        if (state.components?.backend && componentsData?.backends) {
-            const backend = componentsData.backends.find(b => b.id === state.components?.backend);
-            if (backend) {
-                info.push({
-                    label: 'Backend',
-                    value: backend.name,
-                    subItems: backendServiceNames.length > 0 ? backendServiceNames : undefined,
-                });
-            }
-        }
-
-        // Other dependencies (not mesh, not demo-inspector which is frontend-associated)
-        if (state.components?.dependencies && componentsData?.dependencies) {
-            const otherDeps = state.components.dependencies
-                .filter(id => id !== 'commerce-mesh' && id !== 'demo-inspector')
-                .map(id => componentsData.dependencies?.find(d => d.id === id))
-                .filter(Boolean);
-
-            if (otherDeps.length > 0) {
-                info.push({
-                    label: 'Dependencies',
-                    value: otherDeps.map(d => d!.name).join(', '),
-                });
-            }
-        }
-
-        // Integrations
-        if (state.components?.integrations && componentsData?.integrations) {
-            const integrations = state.components.integrations
-                .map(id => componentsData.integrations?.find(i => i.id === id))
-                .filter(Boolean);
-
-            if (integrations.length > 0) {
-                info.push({
-                    label: 'Integrations',
-                    value: integrations.map(i => i!.name).join(', '),
-                });
-            }
-        }
-
-        // App Builder
-        if (state.components?.appBuilderApps && componentsData?.appBuilder) {
-            const apps = state.components.appBuilderApps
-                .map(id => componentsData.appBuilder?.find(a => a.id === id))
-                .filter(Boolean);
-
-            if (apps.length > 0) {
-                info.push({
-                    label: 'App Builder',
-                    value: apps.map(a => a!.name).join(', '),
-                });
-            }
-        }
-
-        return info;
-    }, [state.components, state.apiMesh?.meshStatus, componentsData, hasDemoInspector, backendServiceNames]);
+    // Derive component info using extracted helper
+    const componentInfo = useMemo(
+        () => buildComponentInfoList(
+            state.components,
+            state.apiMesh?.meshStatus,
+            componentsData,
+            hasDemoInspector,
+            backendServiceNames
+        ),
+        [state.components, state.apiMesh?.meshStatus, componentsData, hasDemoInspector, backendServiceNames]
+    );
 
     // Adobe context info - prefer title (human-readable) over name (often ID-like)
     // Use explicit empty check since empty string is falsy but should still fallback

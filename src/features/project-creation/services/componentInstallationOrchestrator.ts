@@ -6,7 +6,7 @@
  * Phase 2: Install npm dependencies for all components
  */
 
-import { ProgressTracker } from '../shared';
+import { ProgressTracker } from '../handlers/shared';
 import type { Project, TransformedComponentDefinition } from '@/types';
 import type { Logger } from '@/types/logger';
 
@@ -38,7 +38,7 @@ export async function cloneAllComponents(
     const { project, componentDefinitions, progressTracker, logger, saveProject } = context;
 
     progressTracker('Downloading Components', 25, 'Cloning repositories...');
-    logger.debug('[Project Creation] 📥 Phase 1: Downloading components...');
+    logger.debug('[Project Creation] Phase 1: Downloading components...');
 
     const { ComponentManager } = await import('@/features/components/services/componentManager');
     const componentManager = new ComponentManager(logger);
@@ -69,7 +69,7 @@ export async function cloneAllComponents(
     // Save project state after all clones (show components in sidebar)
     await saveProject();
     progressTracker('Downloading Components', 40, 'All components downloaded');
-    logger.debug('[Project Creation] ✅ Phase 1 complete: All components downloaded');
+    logger.debug('[Project Creation] Phase 1 complete: All components downloaded');
 }
 
 /**
@@ -81,7 +81,7 @@ export async function installAllComponents(
     const { project, componentDefinitions, progressTracker, logger } = context;
 
     progressTracker('Installing Components', 40, 'Installing npm packages...');
-    logger.debug('[Project Creation] 📦 Phase 2: Installing components...');
+    logger.debug('[Project Creation] Phase 2: Installing components...');
 
     const { ComponentManager } = await import('@/features/components/services/componentManager');
     const componentManager = new ComponentManager(logger);
@@ -116,5 +116,5 @@ export async function installAllComponents(
     }
 
     progressTracker('Installing Components', 70, 'All components installed');
-    logger.debug('[Project Creation] ✅ Phase 2 complete: All components installed');
+    logger.debug('[Project Creation] Phase 2 complete: All components installed');
 }

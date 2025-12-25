@@ -20,6 +20,41 @@ jest.mock('@/core/ui/utils/vscode-api', () => ({
     },
 }));
 
+// Mock brandStackLoader to prevent undefined components access in tests
+// WizardContainer calls loadBrands() and loadStacks() which access components.json
+jest.mock('@/features/project-creation/ui/helpers/brandStackLoader', () => ({
+    __esModule: true,
+    loadBrands: async () => [
+        {
+            id: 'test-brand',
+            name: 'Test Brand',
+            description: 'Test brand for unit tests',
+            logo: '/test-logo.svg',
+            stacks: ['test-stack'],
+        },
+    ],
+    loadStacks: async () => [
+        {
+            id: 'test-stack',
+            name: 'Test Stack',
+            frontend: 'test-frontend',
+            backend: 'test-backend',
+        },
+    ],
+}));
+
+// Mock templateLoader to prevent JSON import issues in tests
+jest.mock('@/features/project-creation/ui/helpers/templateLoader', () => ({
+    __esModule: true,
+    loadDemoTemplates: async () => [
+        {
+            id: 'test-template',
+            name: 'Test Template',
+            description: 'Test template for unit tests',
+        },
+    ],
+}));
+
 // Mock all step components
 jest.mock('@/features/project-creation/ui/steps/WelcomeStep', () => ({
     WelcomeStep: ({ setCanProceed }: any) => {

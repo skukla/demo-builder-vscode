@@ -1,0 +1,74 @@
+/**
+ * useStepValidation Hook
+ *
+ * Validates wizard steps based on the current wizard state.
+ * Returns whether the step is valid and if the user can proceed.
+ *
+ * @module features/project-creation/ui/hooks/useStepValidation
+ */
+
+import { useMemo } from 'react';
+import type { WizardState } from '@/types/webview';
+
+/**
+ * Step validation result
+ */
+export interface StepValidation {
+    /** Whether the step is valid */
+    isValid: boolean;
+    /** Whether the user can proceed to next step */
+    canProceed: boolean;
+}
+
+/**
+ * Validation functions for each step
+ */
+const STEP_VALIDATORS: Record<string, (state: WizardState) => boolean> = {
+    'adobe-auth': (state) => state.adobeAuth?.isAuthenticated === true,
+    'project-name': (state) => Boolean(state.projectName?.trim()),
+    'component-selection': (state) => {
+        const components = state.components;
+        if (!components) return false;
+        // Check if at least one stack or frontend is selected
+        return Boolean(components.frontend || components.backend);
+    },
+    'adobe-project': (state) => Boolean(state.adobeProject),
+    'adobe-workspace': (state) => Boolean(state.adobeWorkspace),
+};
+
+/**
+ * Hook to validate wizard step based on state
+ *
+ * @param stepName - Name of the step to validate
+ * @param state - Current wizard state
+ * @returns StepValidation with isValid and canProceed flags
+ *
+ * @example
+ * ```tsx
+ * const { isValid, canProceed } = useStepValidation('adobe-auth', wizardState);
+ *
+ * return (
+ *     <Button disabled={!canProceed}>Continue</Button>
+ * );
+ * ```
+ */
+export function useStepValidation(
+    stepName: string,
+    state: WizardState
+): StepValidation {
+    return useMemo(() => {
+        const validator = STEP_VALIDATORS[stepName];
+
+        // Unknown steps are considered valid by default
+        if (!validator) {
+            return { isValid: true, canProceed: true };
+        }
+
+        const isValid = validator(state);
+
+        return {
+            isValid,
+            canProceed: isValid,
+        };
+    }, [stepName, state]);
+}

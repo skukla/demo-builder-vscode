@@ -1,7 +1,8 @@
 /**
- * Project Creation Handler Services
+ * Project Creation Services
  *
  * Extracted services for complex project creation operations.
+ * Moved from handlers/services/ to feature-level services/.
  */
 
 export {
