@@ -11,8 +11,8 @@
 
 import * as vscode from 'vscode';
 import { HandlerContext } from '@/commands/handlers/HandlerContext';
-import { sessionUIState } from '@/core/state/sessionUIState';
 import { validateProjectPath, validateURL } from '@/core/validation';
+import { toggleLogsPanel } from '../services/lifecycleService';
 import { ErrorCode } from '@/types/errorCodes';
 import { SimpleResult, DataResult } from '@/types/results';
 import { toError } from '@/types/typeGuards';
@@ -270,31 +270,8 @@ export async function handleOpenAdobeConsole(
     }
 }
 
-/**
- * Toggle the logs output panel
- *
- * Shared utility for toggling the logs panel. Used by both wizard and dashboard.
- * Returns the new visibility state.
- */
-export async function toggleLogsPanel(): Promise<boolean> {
-    if (sessionUIState.isLogsViewShown) {
-        await vscode.commands.executeCommand('workbench.action.closePanel');
-        sessionUIState.isLogsViewShown = false;
-    } else {
-        await vscode.commands.executeCommand('demoBuilder.showLogs');
-        sessionUIState.isLogsViewShown = true;
-    }
-    return sessionUIState.isLogsViewShown;
-}
-
-/**
- * Reset logs view state - for testing only
- * @internal
- * @deprecated Use sessionUIState.reset() instead
- */
-export function resetLogsViewState(): void {
-    sessionUIState.isLogsViewShown = false;
-}
+// Re-export for backward compatibility (toggleLogsPanel imported at top for use in this file)
+export { toggleLogsPanel, resetLogsViewState } from '../services/lifecycleService';
 
 /**
  * show-logs - Toggle the VS Code output panel with Demo Builder logs

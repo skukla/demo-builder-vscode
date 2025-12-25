@@ -1,9 +1,13 @@
 /**
- * Mesh Handlers - Barrel Export
+ * Mesh Handlers - Public API
  *
- * Exports all mesh handler functions for clean imports.
+ * Exports the handler registry and individual handlers for backward compatibility.
  */
 
+// Export registry (preferred)
+export { MeshHandlerRegistry } from './MeshHandlerRegistry';
+
+// Export individual handlers (backward compatibility)
 export * from './checkHandler';
 export * from './createHandler';
 export * from './deleteHandler';

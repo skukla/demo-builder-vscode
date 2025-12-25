@@ -1,8 +1,9 @@
 /**
  * Dashboard Handlers - Public API
  *
- * Exports all dashboard message handlers and the handler registry.
+ * Exports only the handler registry.
+ * Individual handlers are internal and should not be exported.
  */
 
-export * from './dashboardHandlers';
+// Only export the registry - individual handlers are internal
 export { DashboardHandlerRegistry } from './HandlerRegistry';

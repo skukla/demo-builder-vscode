@@ -2,6 +2,9 @@
  * Lifecycle Feature
  *
  * Manages demo lifecycle operations (start, stop, project management)
+ *
+ * Internal Services (not exported):
+ * - services/lifecycleService: Logs panel toggling, UI state management
  */
 
 // Export commands

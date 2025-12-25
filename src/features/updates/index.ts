@@ -3,12 +3,24 @@
  *
  * Handles extension and component updates via GitHub Releases,
  * including background checking, auto-updates, and manual updates.
+ *
+ * Public API:
+ * - UpdateManager: Check for extension and component updates
+ * - ComponentUpdater: Update components with snapshot/rollback safety
+ * - ExtensionUpdater: Download and install extension updates
+ * - CheckUpdatesCommand: VS Code command for manual update checks
  */
 
-// Export services
-export * from './services/updateManager';
-export * from './services/componentUpdater';
-export * from './services/extensionUpdater';
+// Services
+export { UpdateManager } from './services/updateManager';
+export type { UpdateCheckResult, MultiProjectUpdateResult } from './services/updateManager';
 
-// Export commands
-export * from './commands/checkUpdates';
+export { ComponentUpdater } from './services/componentUpdater';
+
+export { ExtensionUpdater } from './services/extensionUpdater';
+
+// Commands
+export { CheckUpdatesCommand } from './commands/checkUpdates';
+
+// Note: Internal types (ReleaseInfo, GitHubRelease, etc.) are NOT exported.
+// They are internal to the update services.
