@@ -1,12 +1,24 @@
 /**
  * Lifecycle Handlers - Public API
  *
- * Exports only the handler registry. Individual handlers are internal
- * and should be accessed via the registry for message dispatch.
+ * Exports the handler registry and individual handlers.
+ * Individual handlers are exported for use by project-creation HandlerRegistry.
  */
 
-// Export registry only (preferred)
+// Export registry (preferred for new code)
 export { LifecycleHandlerRegistry } from './LifecycleHandlerRegistry';
 
-// Note: Individual handlers (handleReady, handleCancel, etc.) are NOT exported.
-// They are internal and registered with LifecycleHandlerRegistry.
+// Export individual handlers (for backward compatibility with project-creation)
+export {
+    handleReady,
+    handleCancel,
+    handleCancelProjectCreation,
+    handleCancelMeshCreation,
+    handleCancelAuthPolling,
+    handleOpenProject,
+    handleBrowseFiles,
+    handleLog,
+    handleOpenAdobeConsole,
+    handleShowLogs,
+    handleOpenExternal,
+} from './lifecycleHandlers';
