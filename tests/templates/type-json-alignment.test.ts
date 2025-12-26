@@ -267,6 +267,142 @@ const SELECTION_GROUPS_FIELDS = new Set([
 ]);
 
 // ============================================================================
+// Prerequisites.json Field Sets
+// From src/features/prerequisites/services/types.ts
+// ============================================================================
+
+/**
+ * Root-level fields for prerequisites.json
+ * From PrerequisitesConfig interface
+ */
+const PREREQUISITES_ROOT_FIELDS = new Set([
+    '$schema',
+    'version',
+    'prerequisites',
+    'componentRequirements',
+]);
+
+/**
+ * PrerequisiteDefinition fields
+ * From src/features/prerequisites/services/types.ts
+ */
+const PREREQUISITE_DEFINITION_FIELDS = new Set([
+    'id',
+    'name',
+    'description',
+    'optional',
+    'depends',
+    'perNodeVersion',
+    'check',
+    'install',
+    'uninstall',
+    'postInstall',
+    'multiVersion',
+    'versionCheck',
+    'plugins',
+]);
+
+/**
+ * PrerequisiteCheck fields
+ * From src/features/prerequisites/services/types.ts
+ */
+const PREREQUISITE_CHECK_FIELDS = new Set([
+    'command',
+    'parseVersion',
+    'contains',
+    'parseInstalledVersions',
+]);
+
+/**
+ * PrerequisiteInstall fields
+ * From src/features/prerequisites/services/types.ts
+ */
+const PREREQUISITE_INSTALL_FIELDS = new Set([
+    'commands',
+    'message',
+    'requires',
+    'dynamic',
+    'template',
+    'versions',
+    'manual',
+    'url',
+    'steps',
+]);
+
+/**
+ * InstallStep fields
+ * From src/features/prerequisites/services/types.ts
+ */
+const INSTALL_STEP_FIELDS = new Set([
+    'name',
+    'message',
+    'commands',
+    'commandTemplate',
+    'estimatedDuration',
+    'progressStrategy',
+    'milestones',
+    'progressParser',
+    'continueOnError',
+]);
+
+/**
+ * ProgressMilestone fields
+ * From src/features/prerequisites/services/types.ts
+ */
+const PROGRESS_MILESTONE_FIELDS = new Set([
+    'pattern',
+    'progress',
+    'message',
+]);
+
+/**
+ * PrerequisitePlugin fields
+ * From src/features/prerequisites/services/types.ts
+ */
+const PREREQUISITE_PLUGIN_FIELDS = new Set([
+    'id',
+    'name',
+    'description',
+    'check',
+    'install',
+    'requiredFor',
+]);
+
+/**
+ * ComponentRequirement fields
+ * From src/features/prerequisites/services/types.ts
+ */
+const COMPONENT_REQUIREMENT_FIELDS = new Set([
+    'prerequisites',
+    'plugins',
+    'nodeVersions',
+]);
+
+/**
+ * PostInstall fields
+ * From src/features/prerequisites/services/types.ts
+ */
+const POST_INSTALL_FIELDS = new Set([
+    'message',
+    'action',
+]);
+
+// ============================================================================
+// Logging.json Field Sets
+// From src/core/logging/stepLogger.ts - LoggingTemplates interface
+// ============================================================================
+
+/**
+ * Root-level fields for logging.json
+ * From LoggingTemplates interface: operations, statuses, [key: string] index signature
+ * Note: Index signature allows extensibility, but current implementation only uses these two
+ */
+const LOGGING_ROOT_FIELDS = new Set([
+    'operations',
+    'statuses',
+]);
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -309,17 +445,23 @@ describe('Type/JSON Alignment Validation', () => {
     let stacksConfig: Record<string, unknown>;
     let brandsConfig: Record<string, unknown>;
     let componentsConfig: Record<string, unknown>;
+    let prerequisitesConfig: Record<string, unknown>;
+    let loggingConfig: Record<string, unknown>;
 
     beforeAll(() => {
         const templatesPath = path.join(__dirname, '../../templates/templates.json');
         const stacksPath = path.join(__dirname, '../../templates/stacks.json');
         const brandsPath = path.join(__dirname, '../../templates/brands.json');
         const componentsPath = path.join(__dirname, '../../templates/components.json');
+        const prerequisitesPath = path.join(__dirname, '../../templates/prerequisites.json');
+        const loggingPath = path.join(__dirname, '../../templates/logging.json');
 
         templatesConfig = JSON.parse(fs.readFileSync(templatesPath, 'utf-8'));
         stacksConfig = JSON.parse(fs.readFileSync(stacksPath, 'utf-8'));
         brandsConfig = JSON.parse(fs.readFileSync(brandsPath, 'utf-8'));
         componentsConfig = JSON.parse(fs.readFileSync(componentsPath, 'utf-8'));
+        prerequisitesConfig = JSON.parse(fs.readFileSync(prerequisitesPath, 'utf-8'));
+        loggingConfig = JSON.parse(fs.readFileSync(loggingPath, 'utf-8'));
     });
 
     // ========================================================================
@@ -652,15 +794,304 @@ describe('Type/JSON Alignment Validation', () => {
     });
 
     // ========================================================================
-    // Summary validation (catches all at once for CI clarity)
+    // prerequisites.json alignment
     // ========================================================================
 
-    describe('aggregate alignment check', () => {
-        it('should pass all type/JSON alignment checks', () => {
-            // This test provides a single pass/fail for CI pipelines
-            // Individual tests above provide specific failure details
-            const allPassed = true; // If we get here, previous tests passed
-            expect(allPassed).toBe(true);
+    describe('prerequisites.json <-> PrerequisitesConfig alignment', () => {
+        it('should have no unknown fields in root config', () => {
+            const unknown = findUnknownFields(prerequisitesConfig, PREREQUISITES_ROOT_FIELDS);
+            if (unknown.length > 0) {
+                fail(`prerequisites.json root has unknown fields: ${unknown.join(', ')}. ` +
+                     `Add to PrerequisitesConfig (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+            }
+        });
+
+        it('should have no unknown fields in any prerequisite definition', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                const unknown = findUnknownFields(prereq, PREREQUISITE_DEFINITION_FIELDS);
+                if (unknown.length > 0) {
+                    fail(formatUnknownFieldsError(
+                        'Prerequisite',
+                        prereq.id,
+                        unknown,
+                        'src/features/prerequisites/services/types.ts - PrerequisiteDefinition'
+                    ));
+                }
+            });
+        });
+
+        it('should have no unknown fields in prerequisite.check blocks', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                if (prereq.check) {
+                    const check = prereq.check as Record<string, unknown>;
+                    const unknown = findUnknownFields(check, PREREQUISITE_CHECK_FIELDS);
+                    if (unknown.length > 0) {
+                        fail(`Prerequisite "${prereq.id}" check has unknown fields: ${unknown.join(', ')}. ` +
+                             `Add to PrerequisiteCheck (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                    }
+                }
+            });
+        });
+
+        it('should have no unknown fields in prerequisite.versionCheck blocks', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                if (prereq.versionCheck) {
+                    const versionCheck = prereq.versionCheck as Record<string, unknown>;
+                    const unknown = findUnknownFields(versionCheck, PREREQUISITE_CHECK_FIELDS);
+                    if (unknown.length > 0) {
+                        fail(`Prerequisite "${prereq.id}" versionCheck has unknown fields: ${unknown.join(', ')}. ` +
+                             `Add to PrerequisiteCheck (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                    }
+                }
+            });
+        });
+
+        it('should have no unknown fields in prerequisite.install blocks', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                if (prereq.install) {
+                    const install = prereq.install as Record<string, unknown>;
+                    const unknown = findUnknownFields(install, PREREQUISITE_INSTALL_FIELDS);
+                    if (unknown.length > 0) {
+                        fail(`Prerequisite "${prereq.id}" install has unknown fields: ${unknown.join(', ')}. ` +
+                             `Add to PrerequisiteInstall (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                    }
+                }
+            });
+        });
+
+        it('should have no unknown fields in prerequisite.uninstall blocks', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                if (prereq.uninstall) {
+                    const uninstall = prereq.uninstall as Record<string, unknown>;
+                    const unknown = findUnknownFields(uninstall, PREREQUISITE_INSTALL_FIELDS);
+                    if (unknown.length > 0) {
+                        fail(`Prerequisite "${prereq.id}" uninstall has unknown fields: ${unknown.join(', ')}. ` +
+                             `Add to PrerequisiteInstall (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                    }
+                }
+            });
+        });
+
+        it('should have no unknown fields in prerequisite.postInstall blocks', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                if (prereq.postInstall) {
+                    const postInstall = prereq.postInstall as Record<string, unknown>;
+                    const unknown = findUnknownFields(postInstall, POST_INSTALL_FIELDS);
+                    if (unknown.length > 0) {
+                        fail(`Prerequisite "${prereq.id}" postInstall has unknown fields: ${unknown.join(', ')}. ` +
+                             `Add to PostInstall (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                    }
+                }
+            });
+        });
+
+        it('should have no unknown fields in install.steps entries', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                if (prereq.install) {
+                    const install = prereq.install as Record<string, unknown>;
+                    if (install.steps) {
+                        const steps = install.steps as Array<Record<string, unknown>>;
+                        steps.forEach((step, index) => {
+                            const unknown = findUnknownFields(step, INSTALL_STEP_FIELDS);
+                            if (unknown.length > 0) {
+                                fail(`Prerequisite "${prereq.id}" install.steps[${index}] has unknown fields: ` +
+                                     `${unknown.join(', ')}. Add to InstallStep (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                            }
+                        });
+                    }
+                }
+            });
+        });
+
+        it('should have no unknown fields in step.milestones entries', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                if (prereq.install) {
+                    const install = prereq.install as Record<string, unknown>;
+                    if (install.steps) {
+                        const steps = install.steps as Array<Record<string, unknown>>;
+                        steps.forEach((step, stepIndex) => {
+                            if (step.milestones) {
+                                const milestones = step.milestones as Array<Record<string, unknown>>;
+                                milestones.forEach((milestone, milestoneIndex) => {
+                                    const unknown = findUnknownFields(milestone, PROGRESS_MILESTONE_FIELDS);
+                                    if (unknown.length > 0) {
+                                        fail(`Prerequisite "${prereq.id}" install.steps[${stepIndex}].milestones[${milestoneIndex}] ` +
+                                             `has unknown fields: ${unknown.join(', ')}. ` +
+                                             `Add to ProgressMilestone (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+            });
+        });
+
+        it('should have no unknown fields in prerequisite.plugins entries', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                if (prereq.plugins) {
+                    const plugins = prereq.plugins as Array<Record<string, unknown>>;
+                    plugins.forEach((plugin, index) => {
+                        const unknown = findUnknownFields(plugin, PREREQUISITE_PLUGIN_FIELDS);
+                        if (unknown.length > 0) {
+                            fail(`Prerequisite "${prereq.id}" plugins[${index}] has unknown fields: ` +
+                                 `${unknown.join(', ')}. Add to PrerequisitePlugin (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                        }
+                    });
+                }
+            });
+        });
+
+        it('should have no unknown fields in plugin.check blocks', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                if (prereq.plugins) {
+                    const plugins = prereq.plugins as Array<Record<string, unknown>>;
+                    plugins.forEach((plugin, index) => {
+                        if (plugin.check) {
+                            const check = plugin.check as Record<string, unknown>;
+                            const unknown = findUnknownFields(check, PREREQUISITE_CHECK_FIELDS);
+                            if (unknown.length > 0) {
+                                fail(`Prerequisite "${prereq.id}" plugins[${index}].check has unknown fields: ` +
+                                     `${unknown.join(', ')}. Add to PrerequisiteCheck (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        it('should have no unknown fields in plugin.install blocks', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                if (prereq.plugins) {
+                    const plugins = prereq.plugins as Array<Record<string, unknown>>;
+                    plugins.forEach((plugin, index) => {
+                        if (plugin.install) {
+                            const install = plugin.install as Record<string, unknown>;
+                            const unknown = findUnknownFields(install, PREREQUISITE_INSTALL_FIELDS);
+                            if (unknown.length > 0) {
+                                fail(`Prerequisite "${prereq.id}" plugins[${index}].install has unknown fields: ` +
+                                     `${unknown.join(', ')}. Add to PrerequisiteInstall (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        it('should have no unknown fields in plugin.install.steps entries', () => {
+            const prerequisites = prerequisitesConfig.prerequisites as Array<Record<string, unknown>>;
+            prerequisites.forEach(prereq => {
+                if (prereq.plugins) {
+                    const plugins = prereq.plugins as Array<Record<string, unknown>>;
+                    plugins.forEach((plugin, pluginIndex) => {
+                        if (plugin.install) {
+                            const install = plugin.install as Record<string, unknown>;
+                            if (install.steps) {
+                                const steps = install.steps as Array<Record<string, unknown>>;
+                                steps.forEach((step, stepIndex) => {
+                                    const unknown = findUnknownFields(step, INSTALL_STEP_FIELDS);
+                                    if (unknown.length > 0) {
+                                        fail(`Prerequisite "${prereq.id}" plugins[${pluginIndex}].install.steps[${stepIndex}] ` +
+                                             `has unknown fields: ${unknown.join(', ')}. ` +
+                                             `Add to InstallStep (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        it('should have no unknown fields in componentRequirements entries', () => {
+            const requirements = prerequisitesConfig.componentRequirements as Record<string, Record<string, unknown>> | undefined;
+            if (!requirements) return;
+
+            Object.entries(requirements).forEach(([componentId, requirement]) => {
+                const unknown = findUnknownFields(requirement, COMPONENT_REQUIREMENT_FIELDS);
+                if (unknown.length > 0) {
+                    fail(`componentRequirements["${componentId}"] has unknown fields: ${unknown.join(', ')}. ` +
+                         `Add to ComponentRequirement (src/features/prerequisites/services/types.ts) or remove from JSON.`);
+                }
+            });
         });
     });
+
+    // ========================================================================
+    // logging.json alignment
+    // ========================================================================
+
+    describe('logging.json <-> LoggingTemplates alignment', () => {
+        it('should have no unknown fields in root config', () => {
+            const unknown = findUnknownFields(loggingConfig, LOGGING_ROOT_FIELDS);
+            if (unknown.length > 0) {
+                fail(`logging.json root has unknown fields: ${unknown.join(', ')}. ` +
+                     `Add to LoggingTemplates (src/core/logging/stepLogger.ts) or remove from JSON.`);
+            }
+        });
+
+        it('should have operations section as an object', () => {
+            expect(loggingConfig.operations).toBeDefined();
+            expect(typeof loggingConfig.operations).toBe('object');
+            expect(loggingConfig.operations).not.toBeNull();
+        });
+
+        it('should have statuses section as an object', () => {
+            expect(loggingConfig.statuses).toBeDefined();
+            expect(typeof loggingConfig.statuses).toBe('object');
+            expect(loggingConfig.statuses).not.toBeNull();
+        });
+
+        it('should have only string values in operations section', () => {
+            const operations = loggingConfig.operations as Record<string, unknown>;
+            Object.entries(operations).forEach(([key, value]) => {
+                if (typeof value !== 'string') {
+                    fail(`logging.json operations.${key} is not a string: found ${typeof value}. ` +
+                         `All logging template values must be strings.`);
+                }
+            });
+        });
+
+        it('should have non-empty string values in operations section', () => {
+            const operations = loggingConfig.operations as Record<string, unknown>;
+            Object.entries(operations).forEach(([key, value]) => {
+                if (typeof value === 'string' && value.trim() === '') {
+                    fail(`logging.json operations.${key} is empty. ` +
+                         `Logging templates must contain message text.`);
+                }
+            });
+        });
+
+        it('should have only string values in statuses section', () => {
+            const statuses = loggingConfig.statuses as Record<string, unknown>;
+            Object.entries(statuses).forEach(([key, value]) => {
+                if (typeof value !== 'string') {
+                    fail(`logging.json statuses.${key} is not a string: found ${typeof value}. ` +
+                         `All logging template values must be strings.`);
+                }
+            });
+        });
+
+        it('should have non-empty string values in statuses section', () => {
+            const statuses = loggingConfig.statuses as Record<string, unknown>;
+            Object.entries(statuses).forEach(([key, value]) => {
+                if (typeof value === 'string' && value.trim() === '') {
+                    fail(`logging.json statuses.${key} is empty. ` +
+                         `Logging templates must contain message text.`);
+                }
+            });
+        });
+    });
+
 });
