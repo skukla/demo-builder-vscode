@@ -120,6 +120,153 @@ const CONTENT_SOURCES_FIELDS = new Set([
 ]);
 
 // ============================================================================
+// Components.json v3.0.0 Field Sets
+// From src/types/components.ts - RawComponentRegistry, RawComponentDefinition
+// ============================================================================
+
+/**
+ * Root-level fields for components.json v3.0.0
+ * All top-level sections that can appear in components.json
+ */
+const COMPONENTS_ROOT_FIELDS = new Set([
+    '$schema',
+    'version',
+    'infrastructure',
+    'frontends',
+    'backends',
+    'mesh',
+    'brands',
+    'stacks',
+    'dependencies',
+    'appBuilderApps',
+    'integrations',
+    'addons',
+    'tools',
+    'services',
+    'envVars',
+    'selectionGroups',
+]);
+
+/**
+ * Component definition fields from RawComponentDefinition interface
+ * Common fields across frontend, backend, mesh, dependencies, appBuilderApps, etc.
+ */
+const COMPONENT_DEFINITION_FIELDS = new Set([
+    'name',
+    'description',
+    'type',
+    'subType',
+    'icon',
+    'source',
+    'dependencies',
+    'configuration',
+    'compatibleBackends',
+    'features',
+    'requiresApiKey',
+    'endpoint',
+    'requiresDeployment',
+    'submodules',
+    // Additional fields found in specific sections:
+    'addonFor',           // addons section
+    'category',           // tools section
+    'hidden',             // tools section
+    'dataRepository',     // tools section
+    'installPath',        // tools section
+    'configDefaults',     // brands section (in components.json)
+    'contentSource',      // brands section (in components.json)
+    'frontend',           // stacks section
+    'backend',            // stacks section
+    'requiredComponents', // stacks section
+    'optionalComponents', // stacks section
+    'requiredEnvVars',    // services section (at top level, not in configuration)
+]);
+
+/**
+ * Component configuration fields
+ * From RawComponentDefinition.configuration
+ */
+const COMPONENT_CONFIGURATION_FIELDS = new Set([
+    'requiredEnvVars',
+    'optionalEnvVars',
+    'port',
+    'nodeVersion',
+    'buildScript',
+    'required',
+    'requiredServices',
+    'services',
+    'meshIntegration',
+    'providesEndpoint',
+    'providesEnvVars',
+    'requiresDeployment',
+    'deploymentTarget',
+    'runtime',
+    'actions',
+    'impact',
+    'removable',
+    'defaultEnabled',
+    'position',
+    'startOpen',
+    'scripts',            // tools configuration
+]);
+
+/**
+ * Component source fields
+ * From RawComponentDefinition.source
+ */
+const COMPONENT_SOURCE_FIELDS = new Set([
+    'type',
+    'url',
+    'package',
+    'version',
+    'branch',
+    'gitOptions',
+    'timeouts',
+]);
+
+/**
+ * Git options fields
+ */
+const COMPONENT_GIT_OPTIONS_FIELDS = new Set([
+    'shallow',
+    'recursive',
+    'tag',
+    'commit',
+]);
+
+/**
+ * EnvVar definition fields from components.json envVars section
+ */
+const ENV_VAR_DEFINITION_FIELDS = new Set([
+    'label',
+    'type',
+    'required',
+    'default',
+    'placeholder',
+    'description',
+    'help',
+    'group',
+    'providedBy',
+    'usedBy',
+    'options',
+    'validation',
+]);
+
+/**
+ * Selection groups fields
+ */
+const SELECTION_GROUPS_FIELDS = new Set([
+    'frontends',
+    'backends',
+    'stacks',
+    'brands',
+    'dependencies',
+    'appBuilderApps',
+    'integrations',
+    'addons',
+    'tools',
+]);
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -161,15 +308,18 @@ describe('Type/JSON Alignment Validation', () => {
     let templatesConfig: Record<string, unknown>;
     let stacksConfig: Record<string, unknown>;
     let brandsConfig: Record<string, unknown>;
+    let componentsConfig: Record<string, unknown>;
 
     beforeAll(() => {
         const templatesPath = path.join(__dirname, '../../templates/templates.json');
         const stacksPath = path.join(__dirname, '../../templates/stacks.json');
         const brandsPath = path.join(__dirname, '../../templates/brands.json');
+        const componentsPath = path.join(__dirname, '../../templates/components.json');
 
         templatesConfig = JSON.parse(fs.readFileSync(templatesPath, 'utf-8'));
         stacksConfig = JSON.parse(fs.readFileSync(stacksPath, 'utf-8'));
         brandsConfig = JSON.parse(fs.readFileSync(brandsPath, 'utf-8'));
+        componentsConfig = JSON.parse(fs.readFileSync(componentsPath, 'utf-8'));
     });
 
     // ========================================================================
@@ -351,6 +501,153 @@ describe('Type/JSON Alignment Validation', () => {
                     }
                 }
             });
+        });
+    });
+
+    // ========================================================================
+    // components.json alignment (v3.0.0 structure)
+    // ========================================================================
+
+    describe('components.json <-> RawComponentRegistry alignment', () => {
+        /**
+         * Helper to validate all entries in a section have no unknown fields
+         */
+        function validateSectionEntries(
+            sectionName: string,
+            allowedFields: Set<string>,
+            typeLabel: string
+        ): void {
+            const section = componentsConfig[sectionName] as Record<string, Record<string, unknown>> | undefined;
+            if (!section) return;
+
+            Object.entries(section).forEach(([id, entry]) => {
+                const unknown = findUnknownFields(entry, allowedFields);
+                if (unknown.length > 0) {
+                    fail(formatUnknownFieldsError(
+                        typeLabel,
+                        id,
+                        unknown,
+                        'src/types/components.ts - RawComponentDefinition'
+                    ));
+                }
+            });
+        }
+
+        it('should have no unknown fields in root config', () => {
+            const unknown = findUnknownFields(componentsConfig, COMPONENTS_ROOT_FIELDS);
+            if (unknown.length > 0) {
+                fail(`components.json root has unknown fields: ${unknown.join(', ')}. ` +
+                     `Add to COMPONENTS_ROOT_FIELDS or RawComponentRegistry (src/types/components.ts) or remove from JSON.`);
+            }
+        });
+
+        // Component section tests - parameterized to eliminate duplication
+        const componentSections = [
+            ['frontends', 'Frontend component'],
+            ['backends', 'Backend component'],
+            ['mesh', 'Mesh component'],
+            ['dependencies', 'Dependency component'],
+            ['appBuilderApps', 'App Builder app'],
+            ['integrations', 'Integration'],
+            ['addons', 'Addon'],
+            ['tools', 'Tool'],
+            ['services', 'Service'],
+            ['infrastructure', 'Infrastructure component'],
+            ['brands', 'Brand (in components.json)'],
+            ['stacks', 'Stack (in components.json)'],
+        ] as const;
+
+        it.each(componentSections)(
+            'should have no unknown fields in %s entries',
+            (sectionName, typeLabel) => {
+                validateSectionEntries(sectionName, COMPONENT_DEFINITION_FIELDS, typeLabel);
+            }
+        );
+
+        it('should have no unknown fields in component configuration blocks', () => {
+            const sectionsWithConfig = [
+                'frontends', 'backends', 'mesh', 'appBuilderApps',
+                'integrations', 'addons', 'tools'
+            ] as const;
+
+            sectionsWithConfig.forEach(section => {
+                const components = componentsConfig[section] as Record<string, Record<string, unknown>> | undefined;
+                if (!components) return;
+
+                Object.entries(components).forEach(([id, component]) => {
+                    if (!component.configuration) return;
+                    const config = component.configuration as Record<string, unknown>;
+                    const unknown = findUnknownFields(config, COMPONENT_CONFIGURATION_FIELDS);
+                    if (unknown.length > 0) {
+                        fail(`${section}.${id}.configuration has unknown fields: ${unknown.join(', ')}. ` +
+                             `Add to COMPONENT_CONFIGURATION_FIELDS or RawComponentDefinition.configuration (src/types/components.ts) or remove from JSON.`);
+                    }
+                });
+            });
+        });
+
+        it('should have no unknown fields in component source blocks', () => {
+            const sectionsWithSource = ['frontends', 'backends', 'mesh', 'appBuilderApps', 'tools'] as const;
+
+            sectionsWithSource.forEach(section => {
+                const components = componentsConfig[section] as Record<string, Record<string, unknown>> | undefined;
+                if (!components) return;
+
+                Object.entries(components).forEach(([id, component]) => {
+                    if (!component.source) return;
+                    const source = component.source as Record<string, unknown>;
+                    const unknown = findUnknownFields(source, COMPONENT_SOURCE_FIELDS);
+                    if (unknown.length > 0) {
+                        fail(`${section}.${id}.source has unknown fields: ${unknown.join(', ')}. ` +
+                             `Add to COMPONENT_SOURCE_FIELDS or RawComponentDefinition.source (src/types/components.ts) or remove from JSON.`);
+                    }
+                });
+            });
+        });
+
+        it('should have no unknown fields in source.gitOptions blocks', () => {
+            const sectionsWithSource = ['frontends', 'backends', 'mesh', 'appBuilderApps', 'tools'] as const;
+
+            sectionsWithSource.forEach(section => {
+                const components = componentsConfig[section] as Record<string, Record<string, unknown>> | undefined;
+                if (!components) return;
+
+                Object.entries(components).forEach(([id, component]) => {
+                    if (!component.source) return;
+                    const source = component.source as Record<string, unknown>;
+                    if (!source.gitOptions) return;
+                    const gitOptions = source.gitOptions as Record<string, unknown>;
+                    const unknown = findUnknownFields(gitOptions, COMPONENT_GIT_OPTIONS_FIELDS);
+                    if (unknown.length > 0) {
+                        fail(`${section}.${id}.source.gitOptions has unknown fields: ${unknown.join(', ')}. ` +
+                             `Add to COMPONENT_GIT_OPTIONS_FIELDS (src/types/components.ts) or remove from JSON.`);
+                    }
+                });
+            });
+        });
+
+        it('should have no unknown fields in envVars entries', () => {
+            const envVars = componentsConfig.envVars as Record<string, Record<string, unknown>> | undefined;
+            if (!envVars) return;
+
+            Object.entries(envVars).forEach(([key, envVar]) => {
+                const unknown = findUnknownFields(envVar, ENV_VAR_DEFINITION_FIELDS);
+                if (unknown.length > 0) {
+                    fail(`envVars.${key} has unknown fields: ${unknown.join(', ')}. ` +
+                         `Add to ENV_VAR_DEFINITION_FIELDS or EnvVarDefinition (src/types/components.ts) or remove from JSON.`);
+                }
+            });
+        });
+
+        it('should have no unknown fields in selectionGroups', () => {
+            const selectionGroups = componentsConfig.selectionGroups as Record<string, unknown> | undefined;
+            if (!selectionGroups) return;
+
+            const unknown = findUnknownFields(selectionGroups, SELECTION_GROUPS_FIELDS);
+            if (unknown.length > 0) {
+                fail(`selectionGroups has unknown fields: ${unknown.join(', ')}. ` +
+                     `Add to SELECTION_GROUPS_FIELDS or RawComponentRegistry.selectionGroups (src/types/components.ts) or remove from JSON.`);
+            }
         });
     });
 

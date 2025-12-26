@@ -1,6 +1,19 @@
 /**
  * Shared test utilities for ComponentRegistryManager tests
  *
+ * MOCK DERIVATION PATTERN:
+ * These mocks are derived from templates/components.json structure.
+ * When components.json schema changes:
+ * 1. Add new mock version (e.g., mockRawRegistryV4) matching new structure
+ * 2. Update tests/templates/type-json-alignment.test.ts if new fields added
+ * 3. Keep old mocks for backward compatibility testing
+ *
+ * See tests/README.md "Mock Derivation Guidelines" for full documentation.
+ *
+ * Current versions:
+ * - mockRawRegistry: v2.0 structure (unified 'components' map)
+ * - mockRawRegistryV3: v3.0.0 structure (separate frontends/backends/mesh sections)
+ *
  * NOTE: Mock declarations must be in each test file (Jest hoisting requirement).
  * This file contains only shared test data and helper functions.
  */
@@ -162,6 +175,9 @@ export const mockRawRegistry: RawComponentRegistry = {
  * v3.0.0 uses separate top-level sections (frontends, backends, mesh, etc.)
  * instead of a unified 'components' map. This mock validates that the
  * ComponentRegistryManager correctly handles both structures.
+ *
+ * IMPORTANT: Keep this mock aligned with actual templates/components.json v3.0.0 structure.
+ * All top-level sections must be represented. See type-json-alignment.test.ts for validation.
  */
 export const mockRawRegistryV3: RawComponentRegistry = {
     version: '3.0.0',
@@ -169,7 +185,7 @@ export const mockRawRegistryV3: RawComponentRegistry = {
         frontends: ['eds', 'headless'],
         backends: ['adobe-commerce-paas'],
         dependencies: ['demo-inspector'],
-        integrations: [],
+        integrations: ['experience-platform'],
         appBuilderApps: ['integration-service'],
     },
     // v3.0.0: Components in separate sections (NOT in 'components' map)
@@ -253,6 +269,19 @@ export const mockRawRegistryV3: RawComponentRegistry = {
 };
 
 /**
+ * v3.0.0 section names for iteration and validation
+ */
+export const V3_COMPONENT_SECTIONS = [
+    'frontends',
+    'backends',
+    'mesh',
+    'dependencies',
+    'appBuilderApps',
+] as const;
+
+export type V3ComponentSection = typeof V3_COMPONENT_SECTIONS[number];
+
+/**
  * Known injection payloads for security testing
  */
 export const injectionPayloads = [
@@ -279,39 +308,78 @@ export function getMockLoader(): any {
 
 /**
  * Create a modified registry with malicious nodeVersion in specific component
+ *
+ * Supports both v2.0 (components map) and v3.0.0 (section-based) structures.
+ *
+ * @param componentPath - Path like "frontends.eds" or "components.frontend1" (v2.0)
+ * @param maliciousVersion - Malicious nodeVersion value to inject
+ * @param useV3 - If true, use mockRawRegistryV3 as base (default: false for backward compatibility)
  */
 export function createMaliciousRegistry(
     componentPath: string,
-    maliciousVersion: string
+    maliciousVersion: string,
+    useV3: boolean = false
 ): RawComponentRegistry {
     const [section, componentId] = componentPath.split('.');
+    const baseRegistry = useV3 ? mockRawRegistryV3 : mockRawRegistry;
 
     if (section === 'infrastructure') {
         return {
-            ...mockRawRegistry,
+            ...baseRegistry,
             infrastructure: {
+                ...baseRegistry.infrastructure,
                 [componentId]: {
-                    ...mockRawRegistry.infrastructure![componentId],
+                    ...baseRegistry.infrastructure![componentId],
                     configuration: {
-                        ...mockRawRegistry.infrastructure![componentId].configuration,
-                        nodeVersion: maliciousVersion,
-                    },
-                },
-            },
-        };
-    } else {
-        return {
-            ...mockRawRegistry,
-            components: {
-                ...mockRawRegistry.components!,
-                [componentId]: {
-                    ...mockRawRegistry.components![componentId],
-                    configuration: {
-                        ...mockRawRegistry.components![componentId].configuration,
+                        ...baseRegistry.infrastructure![componentId].configuration,
                         nodeVersion: maliciousVersion,
                     },
                 },
             },
         };
     }
+
+    // v3.0.0: Handle section-based structure
+    if (useV3 && V3_COMPONENT_SECTIONS.includes(section as V3ComponentSection)) {
+        const sectionData = baseRegistry[section as V3ComponentSection] as Record<string, any>;
+        return {
+            ...baseRegistry,
+            [section]: {
+                ...sectionData,
+                [componentId]: {
+                    ...sectionData[componentId],
+                    configuration: {
+                        ...sectionData[componentId]?.configuration,
+                        nodeVersion: maliciousVersion,
+                    },
+                },
+            },
+        };
+    }
+
+    // v2.0: Handle components map structure
+    return {
+        ...baseRegistry,
+        components: {
+            ...baseRegistry.components!,
+            [componentId]: {
+                ...baseRegistry.components![componentId],
+                configuration: {
+                    ...baseRegistry.components![componentId].configuration,
+                    nodeVersion: maliciousVersion,
+                },
+            },
+        },
+    };
+}
+
+/**
+ * Create a modified v3.0.0 registry with malicious nodeVersion
+ * Convenience wrapper for v3.0.0 structure tests
+ */
+export function createMaliciousRegistryV3(
+    componentPath: string,
+    maliciousVersion: string
+): RawComponentRegistry {
+    return createMaliciousRegistry(componentPath, maliciousVersion, true);
 }
