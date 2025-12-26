@@ -35,7 +35,7 @@ export class AutoUpdater {
             const action = await vscode.window.showInformationMessage(
                 `Demo Builder ${updateInfo.version} is available. Would you like to update?`,
                 'Update Now',
-                'Later'
+                'Later',
             );
 
             if (action === 'Update Now') {
