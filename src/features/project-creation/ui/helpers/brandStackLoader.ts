@@ -18,7 +18,7 @@ interface ComponentDefinition {
 }
 
 interface ComponentsConfig {
-    components: Record<string, ComponentDefinition>;
+    frontends: Record<string, ComponentDefinition>;
 }
 
 /**
@@ -62,7 +62,7 @@ export async function loadBrands(): Promise<Brand[]> {
  */
 export async function loadStacks(): Promise<Stack[]> {
     const stacks = (stacksConfig as StacksConfig).stacks;
-    const components = (componentsConfig as ComponentsConfig).components;
+    const frontends = (componentsConfig as ComponentsConfig).frontends;
 
-    return stacks.filter((stack) => isStackCompatible(stack, components));
+    return stacks.filter((stack) => isStackCompatible(stack, frontends));
 }

@@ -50,8 +50,14 @@ export function applyTemplateDefaults(
         return state;
     }
 
-    // Build component selection from template defaults
+    // New templates use stack/brand references, legacy templates use defaults
+    // If no defaults, return state unchanged (brand/stack mode handles this differently)
     const { defaults } = template;
+    if (!defaults) {
+        return state;
+    }
+
+    // Build component selection from template defaults (legacy mode)
     const components: ComponentSelection = {
         frontend: defaults.frontend,
         backend: defaults.backend,

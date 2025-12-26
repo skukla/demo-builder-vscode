@@ -55,7 +55,7 @@ export function ProjectCreationStep({ state, onBack }: ProjectCreationStepProps)
         setMeshCheckResult(null);
 
         try {
-            const result = await webviewClient.sendRequest<MeshCheckResult>('check-api-mesh', {
+            const result = await webviewClient.request<MeshCheckResult>('check-api-mesh', {
                 workspaceId: state.adobeWorkspace?.id,
                 selectedComponents: [
                     state.components?.frontend,

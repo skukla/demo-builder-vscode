@@ -21,7 +21,7 @@ interface BrandCardProps {
     isFeatured: boolean;
     onSelect: (brandId: string) => void;
     onNavigate: (direction: 'prev' | 'next' | 'first' | 'last') => void;
-    cardRef: React.RefObject<HTMLDivElement>;
+    cardRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const BrandCard: React.FC<BrandCardProps> = ({ brand, isSelected, isFeatured, onSelect, onNavigate, cardRef }) => {
@@ -91,11 +91,11 @@ export const BrandSelector: React.FC<BrandSelectorProps> = ({
     onSelect,
 }) => {
     // Create refs for each card to manage focus
-    const cardRefs = useRef<Array<React.RefObject<HTMLDivElement>>>([]);
+    const cardRefs = useRef<Array<React.RefObject<HTMLDivElement | null>>>([]);
 
     // Ensure we have refs for all brands
     if (cardRefs.current.length !== brands.length) {
-        cardRefs.current = brands.map(() => React.createRef<HTMLDivElement>());
+        cardRefs.current = brands.map(() => React.createRef<HTMLDivElement | null>());
     }
 
     // Handle keyboard navigation between cards

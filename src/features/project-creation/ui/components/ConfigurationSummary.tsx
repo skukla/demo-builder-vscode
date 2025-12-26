@@ -89,6 +89,7 @@ function StatusSection({ label, value, description, status, emptyText = 'Not sel
 
 export function ConfigurationSummary({ state, completedSteps = [], currentStep }: ConfigurationSummaryProps) {
     // Define step order for determining if a step is "ahead" of current step
+    // Note: 'api-mesh' removed - mesh deployment now happens in Project Creation Phase 3
     const stepOrder: WizardStep[] = [
         'welcome',
         'component-selection',
@@ -96,7 +97,6 @@ export function ConfigurationSummary({ state, completedSteps = [], currentStep }
         'adobe-auth',
         'adobe-project',
         'adobe-workspace',
-        'api-mesh',
         'settings',
         'review',
         'project-creation',

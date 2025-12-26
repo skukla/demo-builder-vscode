@@ -20,7 +20,7 @@ interface StackCardProps {
     isSelected: boolean;
     onSelect: (stackId: string) => void;
     onNavigate: (direction: 'prev' | 'next' | 'first' | 'last') => void;
-    cardRef: React.RefObject<HTMLDivElement>;
+    cardRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const StackCard: React.FC<StackCardProps> = ({ stack, isSelected, onSelect, onNavigate, cardRef }) => {
@@ -99,11 +99,11 @@ export const StackSelector: React.FC<StackSelectorProps> = ({
     onSelect,
 }) => {
     // Create refs for each card to manage focus
-    const cardRefs = useRef<Array<React.RefObject<HTMLDivElement>>>([]);
+    const cardRefs = useRef<Array<React.RefObject<HTMLDivElement | null>>>([]);
 
     // Ensure we have refs for all stacks
     if (cardRefs.current.length !== stacks.length) {
-        cardRefs.current = stacks.map(() => React.createRef<HTMLDivElement>());
+        cardRefs.current = stacks.map(() => React.createRef<HTMLDivElement | null>());
     }
 
     // Handle keyboard navigation between cards
