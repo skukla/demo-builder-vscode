@@ -259,21 +259,15 @@ describe('Spinner', () => {
 Test mocks for JSON configuration files MUST be derived from actual file structure to prevent mock drift:
 
 1. **Primary pattern**: Use `testUtils.ts` files for shared mock data
-2. **Version alignment**: When JSON structure changes (e.g., v2.0 → v3.0.0), add new versioned mocks
+2. **Structure alignment**: Keep mocks aligned with current JSON structure
 3. **Drift detection**: `tests/templates/type-json-alignment.test.ts` catches type/JSON misalignment
 4. **Validation tests**: `tests/features/components/services/ComponentRegistryManager-mockValidation.test.ts` validates mock structure
 
 ### Example: ComponentRegistryManager.testUtils.ts
 
 ```typescript
-// v2.0 structure (unified 'components' map)
+// Current structure (section-based organization)
 export const mockRawRegistry: RawComponentRegistry = {
-    version: '2.0',
-    components: { frontend1: {...}, backend1: {...} }
-};
-
-// v3.0.0 structure (separate top-level sections)
-export const mockRawRegistryV3: RawComponentRegistry = {
     version: '3.0.0',
     frontends: { eds: {...} },
     backends: { 'adobe-commerce-paas': {...} },
@@ -285,23 +279,23 @@ export const mockRawRegistryV3: RawComponentRegistry = {
 
 | Scenario | Action |
 |----------|--------|
-| JSON schema changes | Add new versioned mock (e.g., `mockRawRegistryV4`) |
+| JSON schema changes | Update mock to match new structure |
 | Tests fail after JSON update | Verify mock reflects actual structure |
 | Adding new JSON field | Add field to mock AND `type-json-alignment.test.ts` |
-| Breaking structure change | Keep old mock for backward compatibility tests |
+| Removing deprecated fields | Remove from mock and update type definitions |
 
 ### Key Files
 
 - `tests/templates/type-json-alignment.test.ts` - Catches JSON/TypeScript type drift
-- `tests/features/components/services/ComponentRegistryManager.testUtils.ts` - Versioned component mocks
+- `tests/features/components/services/ComponentRegistryManager.testUtils.ts` - Shared component mocks
 - `tests/features/components/services/ComponentRegistryManager-mockValidation.test.ts` - Mock structure validation
 
 ### Why This Matters
 
-The v3.0.0 components.json migration revealed that tests using v2.0 mock structure passed while actual runtime code failed. This pattern prevents that class of bugs by:
+A past migration revealed that tests using outdated mock structures can pass while actual runtime code fails. This pattern prevents that class of bugs by:
 
 1. **Automated detection**: Type alignment tests catch unknown fields immediately
-2. **Version clarity**: Separate mock variables for each major version
+2. **Structure validation**: Mock validation tests ensure mocks match current JSON
 3. **Documentation**: Clear comments explaining mock derivation source
 
 ## Test Coverage

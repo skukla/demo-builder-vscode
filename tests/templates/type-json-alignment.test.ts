@@ -120,12 +120,12 @@ const CONTENT_SOURCES_FIELDS = new Set([
 ]);
 
 // ============================================================================
-// Components.json v3.0.0 Field Sets
+// Components.json Field Sets
 // From src/types/components.ts - RawComponentRegistry, RawComponentDefinition
 // ============================================================================
 
 /**
- * Root-level fields for components.json v3.0.0
+ * Root-level fields for components.json
  * All top-level sections that can appear in components.json
  */
 const COMPONENTS_ROOT_FIELDS = new Set([
@@ -647,7 +647,7 @@ describe('Type/JSON Alignment Validation', () => {
     });
 
     // ========================================================================
-    // components.json alignment (v3.0.0 structure)
+    // components.json alignment
     // ========================================================================
 
     describe('components.json <-> RawComponentRegistry alignment', () => {

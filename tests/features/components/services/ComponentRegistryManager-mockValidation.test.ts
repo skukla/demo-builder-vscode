@@ -32,7 +32,7 @@ describe('Mock Structure Validation', () => {
             expect(actualComponentsJson.version).toBe('3.0.0');
         });
 
-        it('should have all v3.0.0 component sections present', () => {
+        it('should have all component sections present', () => {
             // All sections defined in COMPONENT_SECTIONS should be present in mock
             COMPONENT_SECTIONS.forEach(section => {
                 expect(mockRawRegistry[section]).toBeDefined();
@@ -59,8 +59,8 @@ describe('Mock Structure Validation', () => {
             expect(Object.keys(mockRawRegistry.infrastructure || {}).length).toBeGreaterThan(0);
         });
 
-        it('should NOT have deprecated components map (v2.0 structure)', () => {
-            // v3.0.0 mocks should NOT use the deprecated 'components' map
+        it('should use section-based structure (not deprecated components map)', () => {
+            // Current structure uses separate sections, not unified 'components' map
             expect(mockRawRegistry.components).toBeUndefined();
         });
 
@@ -91,26 +91,26 @@ describe('Mock Structure Validation', () => {
     });
 
     describe('createMaliciousRegistry', () => {
-        it('should create malicious registry for v3.0.0 frontends section', () => {
+        it('should create malicious registry for frontends section', () => {
             const malicious = createMaliciousRegistry('frontends.eds', '20; rm -rf /');
 
             expect(malicious.version).toBe('3.0.0');
             expect(malicious.frontends?.eds.configuration?.nodeVersion).toBe('20; rm -rf /');
         });
 
-        it('should create malicious registry for v3.0.0 backends section', () => {
+        it('should create malicious registry for backends section', () => {
             const malicious = createMaliciousRegistry('backends.adobe-commerce-paas', '20 && cat /etc/passwd');
 
             expect(malicious.backends?.['adobe-commerce-paas'].configuration?.nodeVersion).toBe('20 && cat /etc/passwd');
         });
 
-        it('should create malicious registry for v3.0.0 mesh section', () => {
+        it('should create malicious registry for mesh section', () => {
             const malicious = createMaliciousRegistry('mesh.commerce-mesh', '20`whoami`');
 
             expect(malicious.mesh?.['commerce-mesh'].configuration?.nodeVersion).toBe('20`whoami`');
         });
 
-        it('should create malicious registry for v3.0.0 appBuilderApps section', () => {
+        it('should create malicious registry for appBuilderApps section', () => {
             const malicious = createMaliciousRegistry('appBuilderApps.integration-service', '22$(id)');
 
             expect(malicious.appBuilderApps?.['integration-service'].configuration?.nodeVersion).toBe('22$(id)');
@@ -143,10 +143,10 @@ describe('Mock Structure Validation', () => {
             });
         });
 
-        it('should have v3.0.0 structure (not v2.0 components map)', () => {
-            // v3.0.0 should NOT have a 'components' map at root level
+        it('should have section-based structure (not deprecated components map)', () => {
+            // Current structure uses separate sections, not unified 'components' map
             expect(actualComponentsJson.components).toBeUndefined();
-            // v3.0.0 should have separate sections
+            // Should have separate sections for frontends/backends
             expect(actualComponentsJson.frontends).toBeDefined();
             expect(actualComponentsJson.backends).toBeDefined();
         });

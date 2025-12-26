@@ -1,14 +1,14 @@
 /**
- * ComponentRegistryManager v3.0.0 Structure Tests
+ * ComponentRegistryManager Structure Tests
  *
  * These tests validate that ComponentRegistryManager correctly handles the
- * v3.0.0 components.json structure where components are in separate sections
+ * current components.json structure where components are in separate sections
  * (frontends, backends, mesh, dependencies, appBuilderApps) rather than a
  * unified 'components' map.
  *
  * This test suite was added after a bug where the 'eds' frontend wasn't
- * recognized because the code only looked in raw.components (v2.0 structure)
- * instead of raw.frontends (v3.0.0 structure).
+ * recognized because the code only looked in raw.components (legacy structure)
+ * instead of raw.frontends (current section-based structure).
  */
 
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
@@ -25,7 +25,7 @@ jest.mock('@/core/config/ConfigurationLoader', () => {
     };
 });
 
-describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
+describe('ComponentRegistryManager - Section-Based Structure', () => {
     let manager: ComponentRegistryManager;
     let mockLoader: ReturnType<typeof getMockLoader>;
 
@@ -35,7 +35,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         mockLoader = getMockLoader();
     });
 
-    describe('loading v3.0.0 structure', () => {
+    describe('loading registry structure', () => {
         it('should load frontends from separate "frontends" section', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
@@ -86,7 +86,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
     });
 
-    describe('getComponentById with v3.0.0 structure', () => {
+    describe('getComponentById', () => {
         it('should find frontend by id (eds)', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
@@ -126,7 +126,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
     });
 
-    describe('getNodeVersionToComponentMapping with v3.0.0 structure', () => {
+    describe('getNodeVersionToComponentMapping', () => {
         it('should return node version mapping for eds frontend', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
@@ -162,7 +162,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
     });
 
-    describe('getRequiredNodeVersions with v3.0.0 structure', () => {
+    describe('getRequiredNodeVersions', () => {
         it('should return required node versions for eds + paas', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
@@ -188,7 +188,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
     });
 
-    describe('getFrontends/getBackends with v3.0.0 structure', () => {
+    describe('getFrontends/getBackends', () => {
         it('should return all frontends', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 

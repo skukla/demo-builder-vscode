@@ -2,7 +2,7 @@
  * Shared test utilities for ComponentRegistryManager tests
  *
  * MOCK DERIVATION PATTERN:
- * This mock is derived from templates/components.json v3.0.0 structure.
+ * This mock is derived from templates/components.json current structure.
  * When components.json schema changes:
  * 1. Update mockRawRegistry to match new structure
  * 2. Update tests/templates/type-json-alignment.test.ts to validate new fields
@@ -16,7 +16,7 @@
 import type { RawComponentRegistry } from '@/types';
 
 /**
- * Sample raw registry data for testing (v3.0.0 structure)
+ * Sample raw registry data for testing (current structure)
  *
  * Uses separate top-level sections (frontends, backends, mesh, etc.)
  * matching the current templates/components.json structure.
