@@ -129,9 +129,14 @@ export interface RawComponentDefinition {
 
 /**
  * RawComponentRegistry - Raw registry structure from JSON
+ *
+ * Supports components.json v3.0.0 structure where components are in
+ * separate top-level sections (frontends, backends, mesh, etc.) rather
+ * than a unified 'components' map.
  */
 export interface RawComponentRegistry {
     version: string;
+    /** @deprecated v2.0 structure - use separate sections below */
     components?: Record<string, RawComponentDefinition>;
     selectionGroups?: {
         frontends?: string[];
@@ -140,6 +145,16 @@ export interface RawComponentRegistry {
         integrations?: string[];
         appBuilderApps?: string[];
     };
+    /** v3.0.0: Frontend components (e.g., eds, headless) */
+    frontends?: Record<string, RawComponentDefinition>;
+    /** v3.0.0: Backend components (e.g., adobe-commerce-paas) */
+    backends?: Record<string, RawComponentDefinition>;
+    /** v3.0.0: Mesh components (e.g., commerce-mesh) */
+    mesh?: Record<string, RawComponentDefinition>;
+    /** v3.0.0: Dependencies (e.g., demo-inspector) */
+    dependencies?: Record<string, RawComponentDefinition>;
+    /** v3.0.0: App Builder apps (e.g., integration-service) */
+    appBuilderApps?: Record<string, RawComponentDefinition>;
     infrastructure?: Record<string, RawComponentDefinition>;
     services?: Record<string, ServiceDefinition>;
     envVars?: Record<string, Omit<EnvVarDefinition, 'key'>>;
