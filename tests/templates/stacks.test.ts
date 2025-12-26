@@ -48,7 +48,7 @@ describe('stacks.json', () => {
         it('should use NextJS frontend and PaaS backend', () => {
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
             const headless = stacks.find(s => s.id === 'headless-paas');
-            expect(headless?.frontend).toBe('citisignal-nextjs');
+            expect(headless?.frontend).toBe('headless');
             expect(headless?.backend).toBe('adobe-commerce-paas');
         });
 
@@ -84,7 +84,7 @@ describe('stacks.json', () => {
         it('should use EDS frontend and ACCS backend', () => {
             const stacks = stacksConfig.stacks as Array<Record<string, unknown>>;
             const eds = stacks.find(s => s.id === 'eds-accs');
-            expect(eds?.frontend).toBe('eds-citisignal-storefront');
+            expect(eds?.frontend).toBe('eds');
             expect(eds?.backend).toBe('adobe-commerce-accs');
         });
 
@@ -140,14 +140,7 @@ describe('stacks.json', () => {
 
             stacks.forEach(stack => {
                 const frontend = stack.frontend as string;
-                // Note: stacks.json uses IDs like "citisignal-nextjs" but components.json uses "headless"
-                // This is a known mapping: citisignal-nextjs -> headless, eds-citisignal-storefront -> eds
-                const frontendMap: Record<string, string> = {
-                    'citisignal-nextjs': 'headless',
-                    'eds-citisignal-storefront': 'eds'
-                };
-                const mappedFrontend = frontendMap[frontend] || frontend;
-                expect(frontends).toHaveProperty(mappedFrontend);
+                expect(frontends).toHaveProperty(frontend);
             });
         });
 
