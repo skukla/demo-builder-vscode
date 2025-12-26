@@ -5,8 +5,8 @@
  * progress tracking during long-running operations.
  */
 
-import { createTestableProgressUnifier } from '../../helpers/progressUnifierTestHelpers';
-import { createMockStep, createProgressCollector, createMockLogger } from './progressUnifier.testUtils';
+import { createTestableProgressUnifier } from '../../../helpers/progressUnifierTestHelpers';
+import { createMockStep, createProgressCollector, createMockLogger } from './testUtils';
 
 describe('ProgressUnifier - Progress Tracking Strategies', () => {
     const progressCollectorFactory = createProgressCollector();

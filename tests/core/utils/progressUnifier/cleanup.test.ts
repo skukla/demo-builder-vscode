@@ -5,8 +5,8 @@
  * or error, preventing memory leaks and zombie timers.
  */
 
-import { createTestableProgressUnifier } from '../../helpers/progressUnifierTestHelpers';
-import { createMockStep, createProgressCollector, createMockLogger } from './progressUnifier.testUtils';
+import { createTestableProgressUnifier } from '../../../helpers/progressUnifierTestHelpers';
+import { createMockStep, createProgressCollector, createMockLogger } from './testUtils';
 
 describe('ProgressUnifier - Timer Cleanup', () => {
     const progressCollectorFactory = createProgressCollector();

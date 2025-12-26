@@ -85,5 +85,106 @@ describe('DI Patterns', () => {
                 'AuthenticationService not initialized'
             );
         });
+
+        it('should throw if AuthenticationService registered twice', () => {
+            const mockAuthService = {
+                getTokenStatus: jest.fn(),
+                login: jest.fn(),
+            } as any;
+
+            ServiceLocator.setAuthenticationService(mockAuthService);
+
+            expect(() => ServiceLocator.setAuthenticationService(mockAuthService)).toThrow(
+                'already registered'
+            );
+        });
+    });
+
+    describe('ServiceLocator - SidebarProvider Singleton', () => {
+        it('should return same SidebarProvider instance on multiple calls', () => {
+            const mockSidebarProvider = {
+                resolveWebviewView: jest.fn(),
+                setContext: jest.fn(),
+            } as any;
+
+            ServiceLocator.setSidebarProvider(mockSidebarProvider);
+
+            const first = ServiceLocator.getSidebarProvider();
+            const second = ServiceLocator.getSidebarProvider();
+
+            expect(first).toBe(second);
+            expect(first).toBe(mockSidebarProvider);
+        });
+
+        it('should throw if SidebarProvider not initialized', () => {
+            expect(() => ServiceLocator.getSidebarProvider()).toThrow(
+                'SidebarProvider not initialized'
+            );
+        });
+
+        it('should throw if SidebarProvider registered twice', () => {
+            const mockSidebarProvider = {
+                resolveWebviewView: jest.fn(),
+                setContext: jest.fn(),
+            } as any;
+
+            ServiceLocator.setSidebarProvider(mockSidebarProvider);
+
+            expect(() => ServiceLocator.setSidebarProvider(mockSidebarProvider)).toThrow(
+                'already registered'
+            );
+        });
+
+        it('should report isSidebarInitialized correctly', () => {
+            expect(ServiceLocator.isSidebarInitialized()).toBe(false);
+
+            const mockSidebarProvider = {
+                resolveWebviewView: jest.fn(),
+                setContext: jest.fn(),
+            } as any;
+
+            ServiceLocator.setSidebarProvider(mockSidebarProvider);
+
+            expect(ServiceLocator.isSidebarInitialized()).toBe(true);
+        });
+    });
+
+    describe('ServiceLocator - Reset Behavior', () => {
+        it('should clear all services on reset', () => {
+            // Given: All services registered
+            const { CommandExecutor } = require('@/core/shell');
+            ServiceLocator.setCommandExecutor(new CommandExecutor());
+            ServiceLocator.setAuthenticationService({ getTokenStatus: jest.fn() } as any);
+            ServiceLocator.setSidebarProvider({ resolveWebviewView: jest.fn() } as any);
+
+            expect(ServiceLocator.isInitialized()).toBe(true);
+            expect(ServiceLocator.isSidebarInitialized()).toBe(true);
+
+            // When: Reset is called
+            ServiceLocator.reset();
+
+            // Then: All services are cleared
+            expect(ServiceLocator.isInitialized()).toBe(false);
+            expect(ServiceLocator.isSidebarInitialized()).toBe(false);
+            expect(() => ServiceLocator.getCommandExecutor()).toThrow('not initialized');
+            expect(() => ServiceLocator.getAuthenticationService()).toThrow('not initialized');
+            expect(() => ServiceLocator.getSidebarProvider()).toThrow('not initialized');
+        });
+
+        it('should allow re-registration after reset', () => {
+            // Given: A service was registered and then reset
+            const { CommandExecutor } = require('@/core/shell');
+            const executor1 = new CommandExecutor();
+            ServiceLocator.setCommandExecutor(executor1);
+            ServiceLocator.reset();
+
+            // When: Register a new instance
+            const executor2 = new CommandExecutor();
+            ServiceLocator.setCommandExecutor(executor2);
+
+            // Then: New instance is returned
+            expect(ServiceLocator.getCommandExecutor()).toBe(executor2);
+            expect(ServiceLocator.getCommandExecutor()).not.toBe(executor1);
+        });
     });
 });

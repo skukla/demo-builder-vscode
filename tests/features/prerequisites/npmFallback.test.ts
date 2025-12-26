@@ -141,37 +141,33 @@ describe('npm --prefer-offline Fallback Logic', () => {
             }
         });
 
-        it('should retry npm install without --prefer-offline on cache miss', async () => {
-            // First attempt with --prefer-offline fails with cache error
+        it.skip('should retry npm install without --prefer-offline on cache miss (UNIMPLEMENTED)', async () => {
+            // SKIPPED: Feature not implemented - npm fallback retry logic
+            // When implemented, this test should:
+            // 1. Try installation with --prefer-offline
+            // 2. Detect ENOTCACHED error
+            // 3. Retry without --prefer-offline
+            // 4. Return success
+
             const cacheError: any = new Error('npm ERR! code ENOTCACHED');
             cacheError.code = 'ENOTCACHED';
             cacheError.stderr = 'npm ERR! code ENOTCACHED\nnpm ERR! cache mode is offline but no cached response is available';
 
             mockExecutor.execute
-                .mockRejectedValueOnce(cacheError)  // First attempt fails
-                .mockResolvedValueOnce({             // Second attempt succeeds
+                .mockRejectedValueOnce(cacheError)
+                .mockResolvedValueOnce({
                     stdout: 'added 150 packages',
                     stderr: '',
                     code: 0,
                     duration: 45000,
                 });
-
-            // This test will pass once fallback logic is implemented
-            // For now, it should fail because no fallback exists
-
-            // TODO: Implement installPrerequisite method that:
-            // 1. Tries installation with --prefer-offline
-            // 2. Detects ENOTCACHED error
-            // 3. Retries without --prefer-offline
-            // 4. Returns success
-
-            // Placeholder for future implementation test
-            expect(true).toBe(true); // Will be replaced with actual test
         });
 
-        it('should only remove --prefer-offline flag, keeping other performance flags', async () => {
-            // When falling back, should remove ONLY --prefer-offline
-            // but keep --no-audit, --no-fund, and --verbose
+        it.skip('should only remove --prefer-offline flag, keeping other performance flags (UNIMPLEMENTED)', async () => {
+            // SKIPPED: Feature not implemented - npm fallback retry logic
+            // When implemented, verify fallback command contains:
+            // --no-audit --no-fund --verbose
+            // but NOT --prefer-offline
 
             const cacheError: any = new Error('npm ERR! code ENOTCACHED');
             cacheError.code = 'ENOTCACHED';
@@ -184,12 +180,6 @@ describe('npm --prefer-offline Fallback Logic', () => {
                     code: 0,
                     duration: 50000,
                 });
-
-            // TODO: Verify fallback command contains:
-            // --no-audit --no-fund --verbose
-            // but NOT --prefer-offline
-
-            expect(true).toBe(true); // Placeholder
         });
 
         it('should not retry if error is not cache-related', async () => {
@@ -212,7 +202,11 @@ describe('npm --prefer-offline Fallback Logic', () => {
             expect(mockExecutor.execute).toHaveBeenCalledTimes(1);
         });
 
-        it('should log fallback attempt for debugging', async () => {
+        it.skip('should log fallback attempt for debugging (UNIMPLEMENTED)', async () => {
+            // SKIPPED: Feature not implemented - npm fallback retry logic
+            // When implemented, verify logger.warn or logger.info is called with fallback message
+            // e.g., "npm cache miss detected, retrying without --prefer-offline"
+
             const cacheError: any = new Error('npm ERR! code ENOTCACHED');
             cacheError.code = 'ENOTCACHED';
 
@@ -224,11 +218,6 @@ describe('npm --prefer-offline Fallback Logic', () => {
                     code: 0,
                     duration: 48000,
                 });
-
-            // TODO: Verify logger.warn or logger.info is called with fallback message
-            // e.g., "npm cache miss detected, retrying without --prefer-offline"
-
-            expect(true).toBe(true); // Placeholder
         });
     });
 });

@@ -5,8 +5,8 @@
  * version substitution, and backward compatibility with static commands.
  */
 
-import { createTestableProgressUnifier } from '../../helpers/progressUnifierTestHelpers';
-import { createMockStep, createProgressCollector, createMockLogger } from './progressUnifier.testUtils';
+import { createTestableProgressUnifier } from '../../../helpers/progressUnifierTestHelpers';
+import { createMockStep, createProgressCollector, createMockLogger } from './testUtils';
 
 describe('ProgressUnifier - Command Resolution', () => {
     const progressCollectorFactory = createProgressCollector();
