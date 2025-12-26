@@ -16,9 +16,18 @@ import { WizardState } from '@/types/webview';
 export const mockPostMessage = jest.fn();
 export const mockOnMessage = jest.fn().mockReturnValue(jest.fn());
 
-// Base state for tests
+// Base state for tests (new project - no components selected yet)
 export const baseState: Partial<WizardState> = {
     currentStep: 'prerequisites',
+};
+
+// State with components (edit project or after component selection)
+export const baseStateWithComponents: Partial<WizardState> = {
+    currentStep: 'prerequisites',
+    components: {
+        frontend: 'headless',
+        backend: 'commerce-paas',
+    },
 };
 
 // Mock functions used across tests

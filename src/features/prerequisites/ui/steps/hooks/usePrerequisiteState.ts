@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { FRONTEND_TIMEOUTS } from '@/core/ui/utils/frontendTimeouts';
 import { webviewClient } from '@/core/ui/utils/WebviewClient';
-import { PrerequisiteCheck, UnifiedProgress } from '@/types/webview';
+import { PrerequisiteCheck, UnifiedProgress, ComponentSelection } from '@/types/webview';
 
 export interface PrerequisitesLoadedData {
     prerequisites: Array<{
@@ -105,6 +105,7 @@ interface UsePrerequisiteStateReturn {
  */
 export function usePrerequisiteState(
     scrollToTop: () => void,
+    componentSelection?: ComponentSelection,
 ): UsePrerequisiteStateReturn {
     const [checks, setChecks] = useState<PrerequisiteCheck[]>(INITIAL_LOADING_STATE);
     const [isChecking, setIsChecking] = useState(false);
@@ -120,9 +121,13 @@ export function usePrerequisiteState(
 
         checkInProgressRef.current = true;
         setIsChecking(true);
-        webviewClient.postMessage('check-prerequisites', { isRecheck: isRecheck ?? false });
+
+        webviewClient.postMessage('check-prerequisites', {
+            isRecheck: isRecheck ?? false,
+            componentSelection,
+        });
         scrollToTop();
-    }, [scrollToTop]);
+    }, [scrollToTop, componentSelection]);
 
     // Install prerequisite function
     const installPrerequisite = useCallback((index: number) => {

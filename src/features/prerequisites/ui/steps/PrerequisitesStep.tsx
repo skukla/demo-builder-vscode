@@ -18,15 +18,17 @@ import {
 } from './hooks';
 import { cn } from '@/core/ui/utils/classNames';
 import { NavigableStepProps } from '@/types/wizard';
+import { WizardState } from '@/types/webview';
 
 // Extracted hooks and helpers
 
 interface PrerequisitesStepProps extends NavigableStepProps {
+    state: WizardState;
     componentsData?: Record<string, unknown>;
     currentStep?: string;
 }
 
-export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesStepProps) {
+export function PrerequisitesStep({ state, setCanProceed, currentStep }: PrerequisitesStepProps) {
     // Create scroll container ref at component level to break circular dependency
     const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -45,7 +47,7 @@ export function PrerequisitesStep({ setCanProceed, currentStep }: PrerequisitesS
         checkInProgressRef,
         checkPrerequisites,
         installPrerequisite,
-    } = usePrerequisiteState(scrollToTop);
+    } = usePrerequisiteState(scrollToTop, state.components);
 
     // Auto-scroll hook with actual checks (pass the shared ref)
     const {
