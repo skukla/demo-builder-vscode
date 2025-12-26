@@ -25,7 +25,7 @@ jest.mock('vscode', () => ({
 }), { virtual: true });
 
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
-import { mockRawRegistry } from './ComponentRegistryManager.testUtils';
+import { mockRawRegistry, createMaliciousRegistry } from './ComponentRegistryManager.testUtils';
 
 describe('ComponentRegistryManager - Node Version Security Validation', () => {
     let manager: ComponentRegistryManager;
@@ -47,17 +47,16 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
 
             // When: getRequiredNodeVersions() is called
             const versions = await manager.getRequiredNodeVersions(
-                'frontend1',  // Node 20
-                'backend1',   // Node 20
-                ['dep1'],     // Node 18
+                'eds',                    // Node 20
+                'adobe-commerce-paas',    // Node 20
+                ['demo-inspector'],       // No nodeVersion
                 undefined,
-                ['app1']      // Node 22
+                ['integration-service']   // Node 22
             );
 
             // Then: All versions returned without error
             expect(versions.size).toBeGreaterThan(0);
             expect(versions.has('20')).toBe(true);
-            expect(versions.has('18')).toBe(true);
             expect(versions.has('22')).toBe(true);
         });
 
@@ -65,12 +64,12 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
             // Given: Component with semantic version
             const registryWithSemver = {
                 ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    frontend1: {
-                        ...mockRawRegistry.components!.frontend1,
+                frontends: {
+                    ...mockRawRegistry.frontends,
+                    eds: {
+                        ...mockRawRegistry.frontends!.eds,
                         configuration: {
-                            ...mockRawRegistry.components!.frontend1.configuration,
+                            ...mockRawRegistry.frontends!.eds.configuration,
                             nodeVersion: '20.11.0'
                         }
                     }
@@ -79,7 +78,7 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
             mockLoader.load.mockResolvedValue(registryWithSemver);
 
             // When: getRequiredNodeVersions() is called
-            const versions = await manager.getRequiredNodeVersions('frontend1');
+            const versions = await manager.getRequiredNodeVersions('eds');
 
             // Then: Semantic version accepted
             expect(versions.has('20.11.0')).toBe(true);
@@ -87,70 +86,34 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
 
         it('should throw error for injection payload in nodeVersion', async () => {
             // Given: components.json manually edited with malicious version
-            const maliciousRegistry = {
-                ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    frontend1: {
-                        ...mockRawRegistry.components!.frontend1,
-                        configuration: {
-                            ...mockRawRegistry.components!.frontend1.configuration,
-                            nodeVersion: '20; rm -rf /'
-                        }
-                    }
-                }
-            };
+            const maliciousRegistry = createMaliciousRegistry('frontends.eds', '20; rm -rf /');
             mockLoader.load.mockResolvedValue(maliciousRegistry);
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getRequiredNodeVersions('frontend1')
+                manager.getRequiredNodeVersions('eds')
             ).rejects.toThrow(/Invalid Node/);
         });
 
         it('should throw error for invalid version format with v prefix', async () => {
             // Given: Component with "v" prefix (invalid)
-            const invalidRegistry = {
-                ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    frontend1: {
-                        ...mockRawRegistry.components!.frontend1,
-                        configuration: {
-                            ...mockRawRegistry.components!.frontend1.configuration,
-                            nodeVersion: 'v20'
-                        }
-                    }
-                }
-            };
+            const invalidRegistry = createMaliciousRegistry('frontends.eds', 'v20');
             mockLoader.load.mockResolvedValue(invalidRegistry);
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getRequiredNodeVersions('frontend1')
+                manager.getRequiredNodeVersions('eds')
             ).rejects.toThrow(/Invalid Node/);
         });
 
         it('should throw error for invalid version format "latest"', async () => {
             // Given: Component with "latest" keyword (invalid - not in allowlist)
-            const invalidRegistry = {
-                ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    frontend1: {
-                        ...mockRawRegistry.components!.frontend1,
-                        configuration: {
-                            ...mockRawRegistry.components!.frontend1.configuration,
-                            nodeVersion: 'latest'
-                        }
-                    }
-                }
-            };
+            const invalidRegistry = createMaliciousRegistry('frontends.eds', 'latest');
             mockLoader.load.mockResolvedValue(invalidRegistry);
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getRequiredNodeVersions('frontend1')
+                manager.getRequiredNodeVersions('eds')
             ).rejects.toThrow(/Invalid Node/);
         });
 
@@ -170,60 +133,35 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
 
             // When & Then: Each payload rejected
             for (const payload of injectionPayloads) {
-                const maliciousRegistry = {
-                    ...mockRawRegistry,
-                    components: {
-                        ...mockRawRegistry.components!,
-                        frontend1: {
-                            ...mockRawRegistry.components!.frontend1,
-                            configuration: {
-                                ...mockRawRegistry.components!.frontend1.configuration,
-                                nodeVersion: payload
-                            }
-                        }
-                    }
-                };
+                const maliciousRegistry = createMaliciousRegistry('frontends.eds', payload);
                 mockLoader.load.mockResolvedValue(maliciousRegistry);
 
                 await expect(
-                    manager.getRequiredNodeVersions('frontend1')
+                    manager.getRequiredNodeVersions('eds')
                 ).rejects.toThrow(/Invalid Node/);
             }
         });
 
         it('should validate nodeVersion in backend component', async () => {
             // Given: Backend with malicious version
-            const maliciousRegistry = {
-                ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    backend1: {
-                        ...mockRawRegistry.components!.backend1,
-                        configuration: {
-                            ...mockRawRegistry.components!.backend1.configuration,
-                            nodeVersion: '20; rm -rf /'
-                        }
-                    }
-                }
-            };
+            const maliciousRegistry = createMaliciousRegistry('backends.adobe-commerce-paas', '20; rm -rf /');
             mockLoader.load.mockResolvedValue(maliciousRegistry);
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getRequiredNodeVersions(undefined, 'backend1')
+                manager.getRequiredNodeVersions(undefined, 'adobe-commerce-paas')
             ).rejects.toThrow(/Invalid Node/);
         });
 
         it('should validate nodeVersion in dependencies', async () => {
-            // Given: Dependency with malicious version
+            // Given: Dependency with malicious version (demo-inspector has no nodeVersion, add one)
             const maliciousRegistry = {
                 ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    dep1: {
-                        ...mockRawRegistry.components!.dep1,
+                dependencies: {
+                    ...mockRawRegistry.dependencies,
+                    'demo-inspector': {
+                        ...mockRawRegistry.dependencies!['demo-inspector'],
                         configuration: {
-                            ...mockRawRegistry.components!.dep1.configuration,
                             nodeVersion: '20; rm -rf /'
                         }
                     }
@@ -233,30 +171,18 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getRequiredNodeVersions(undefined, undefined, ['dep1'])
+                manager.getRequiredNodeVersions(undefined, undefined, ['demo-inspector'])
             ).rejects.toThrow(/Invalid Node/);
         });
 
         it('should validate nodeVersion in app builder components', async () => {
             // Given: App Builder with malicious version
-            const maliciousRegistry = {
-                ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    app1: {
-                        ...mockRawRegistry.components!.app1,
-                        configuration: {
-                            ...mockRawRegistry.components!.app1.configuration,
-                            nodeVersion: '20; rm -rf /'
-                        }
-                    }
-                }
-            };
+            const maliciousRegistry = createMaliciousRegistry('appBuilderApps.integration-service', '20; rm -rf /');
             mockLoader.load.mockResolvedValue(maliciousRegistry);
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getRequiredNodeVersions(undefined, undefined, undefined, undefined, ['app1'])
+                manager.getRequiredNodeVersions(undefined, undefined, undefined, undefined, ['integration-service'])
             ).rejects.toThrow(/Invalid Node/);
         });
     });
@@ -264,18 +190,7 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
     describe('getNodeVersionToComponentMapping - security validation', () => {
         it('should validate versions in infrastructure components', async () => {
             // Given: Infrastructure with malicious version
-            const maliciousRegistry = {
-                ...mockRawRegistry,
-                infrastructure: {
-                    infra1: {
-                        ...mockRawRegistry.infrastructure!.infra1,
-                        configuration: {
-                            ...mockRawRegistry.infrastructure!.infra1.configuration,
-                            nodeVersion: '20; rm -rf /'
-                        }
-                    }
-                }
-            };
+            const maliciousRegistry = createMaliciousRegistry('infrastructure.adobe-cli', '20; rm -rf /');
             mockLoader.load.mockResolvedValue(maliciousRegistry);
 
             // When & Then: Validation error thrown
@@ -286,60 +201,35 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
 
         it('should validate versions in frontend mapping', async () => {
             // Given: Frontend with malicious version
-            const maliciousRegistry = {
-                ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    frontend1: {
-                        ...mockRawRegistry.components!.frontend1,
-                        configuration: {
-                            ...mockRawRegistry.components!.frontend1.configuration,
-                            nodeVersion: '20; rm -rf /'
-                        }
-                    }
-                }
-            };
+            const maliciousRegistry = createMaliciousRegistry('frontends.eds', '20; rm -rf /');
             mockLoader.load.mockResolvedValue(maliciousRegistry);
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getNodeVersionToComponentMapping('frontend1')
+                manager.getNodeVersionToComponentMapping('eds')
             ).rejects.toThrow(/Invalid Node/);
         });
 
         it('should validate versions in backend mapping', async () => {
             // Given: Backend with malicious version
-            const maliciousRegistry = {
-                ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    backend1: {
-                        ...mockRawRegistry.components!.backend1,
-                        configuration: {
-                            ...mockRawRegistry.components!.backend1.configuration,
-                            nodeVersion: '20; rm -rf /'
-                        }
-                    }
-                }
-            };
+            const maliciousRegistry = createMaliciousRegistry('backends.adobe-commerce-paas', '20; rm -rf /');
             mockLoader.load.mockResolvedValue(maliciousRegistry);
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getNodeVersionToComponentMapping(undefined, 'backend1')
+                manager.getNodeVersionToComponentMapping(undefined, 'adobe-commerce-paas')
             ).rejects.toThrow(/Invalid Node/);
         });
 
         it('should validate versions in dependencies mapping', async () => {
-            // Given: Dependency with malicious version
+            // Given: Dependency with malicious version (demo-inspector has no nodeVersion, add one)
             const maliciousRegistry = {
                 ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    dep1: {
-                        ...mockRawRegistry.components!.dep1,
+                dependencies: {
+                    ...mockRawRegistry.dependencies,
+                    'demo-inspector': {
+                        ...mockRawRegistry.dependencies!['demo-inspector'],
                         configuration: {
-                            ...mockRawRegistry.components!.dep1.configuration,
                             nodeVersion: '20; rm -rf /'
                         }
                     }
@@ -349,30 +239,18 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getNodeVersionToComponentMapping(undefined, undefined, ['dep1'])
+                manager.getNodeVersionToComponentMapping(undefined, undefined, ['demo-inspector'])
             ).rejects.toThrow(/Invalid Node/);
         });
 
         it('should validate versions in app builder mapping', async () => {
             // Given: App Builder with malicious version
-            const maliciousRegistry = {
-                ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    app1: {
-                        ...mockRawRegistry.components!.app1,
-                        configuration: {
-                            ...mockRawRegistry.components!.app1.configuration,
-                            nodeVersion: '20; rm -rf /'
-                        }
-                    }
-                }
-            };
+            const maliciousRegistry = createMaliciousRegistry('appBuilderApps.integration-service', '20; rm -rf /');
             mockLoader.load.mockResolvedValue(maliciousRegistry);
 
             // When & Then: Validation error thrown
             await expect(
-                manager.getNodeVersionToComponentMapping(undefined, undefined, undefined, undefined, ['app1'])
+                manager.getNodeVersionToComponentMapping(undefined, undefined, undefined, undefined, ['integration-service'])
             ).rejects.toThrow(/Invalid Node/);
         });
 
@@ -382,17 +260,16 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
 
             // When: getNodeVersionToComponentMapping() is called
             const mapping = await manager.getNodeVersionToComponentMapping(
-                'frontend1',
-                'backend1',
-                ['dep1'],
+                'eds',
+                'adobe-commerce-paas',
+                ['demo-inspector'],
                 undefined,
-                ['app1']
+                ['integration-service']
             );
 
             // Then: Mapping returned without errors
             expect(Object.keys(mapping).length).toBeGreaterThan(0);
             expect(mapping['20']).toBeDefined();
-            expect(mapping['18']).toBeDefined();
             expect(mapping['22']).toBeDefined();
         });
     });

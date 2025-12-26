@@ -30,7 +30,7 @@ describe('Component Registry Manager - Loading and Transformation', () => {
 
             expect(mockLoader.load).toHaveBeenCalledTimes(1);
             expect(registry).toBeDefined();
-            expect(registry.version).toBe('2.0');
+            expect(registry.version).toBe('3.0.0');
         });
 
         it('should return cached registry on subsequent calls', async () => {
@@ -62,8 +62,8 @@ describe('Component Registry Manager - Loading and Transformation', () => {
             const registry = await manager.loadRegistry();
 
             expect(registry.infrastructure).toHaveLength(1);
-            expect(registry.infrastructure![0].id).toBe('infra1');
-            expect(registry.infrastructure![0].name).toBe('Infrastructure 1');
+            expect(registry.infrastructure![0].id).toBe('adobe-cli');
+            expect(registry.infrastructure![0].name).toBe('Adobe I/O CLI & SDK');
         });
 
         it('should preserve required and optional env vars for components', async () => {
@@ -74,8 +74,7 @@ describe('Component Registry Manager - Loading and Transformation', () => {
 
             expect(frontend.configuration?.requiredEnvVars).toBeDefined();
             expect(frontend.configuration?.requiredEnvVars).toHaveLength(2);
-            expect(frontend.configuration?.requiredEnvVars).toContain('VAR1');
-            expect(frontend.configuration?.requiredEnvVars).toContain('VAR2');
+            expect(frontend.configuration?.requiredEnvVars).toEqual(expect.arrayContaining(['VAR1', 'VAR2']));
         });
     });
 });

@@ -37,51 +37,51 @@ describe('DependencyResolver', () => {
 
     describe('dependency resolution', () => {
         it('should resolve required dependencies', async () => {
-            const result = await resolver.resolveDependencies('frontend1', 'backend1');
+            const result = await resolver.resolveDependencies('eds', 'adobe-commerce-paas');
 
             expect(result.required).toHaveLength(1);
-            expect(result.required[0].id).toBe('dep1');
+            expect(result.required[0].id).toBe('demo-inspector');
         });
 
         it('should resolve optional dependencies when selected', async () => {
             const registryWithOptional = {
                 ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    frontend1: {
-                        ...mockRawRegistry.components!.frontend1,
+                frontends: {
+                    ...mockRawRegistry.frontends,
+                    eds: {
+                        ...mockRawRegistry.frontends!.eds,
                         dependencies: {
-                            required: ['dep1'],
-                            optional: ['integration1'],
+                            required: ['demo-inspector'],
+                            optional: ['experience-platform'],
                         },
                     },
                 },
             };
             mockLoader.load.mockResolvedValue(registryWithOptional);
 
-            const result = await resolver.resolveDependencies('frontend1', 'backend1', ['integration1']);
+            const result = await resolver.resolveDependencies('eds', 'adobe-commerce-paas', ['experience-platform']);
 
             expect(result.optional).toHaveLength(1);
             expect(result.selected).toHaveLength(1);
-            expect(result.selected[0].id).toBe('integration1');
+            expect(result.selected[0].id).toBe('experience-platform');
         });
 
         it('should combine required and selected in all array', async () => {
-            const result = await resolver.resolveDependencies('frontend1', 'backend1');
+            const result = await resolver.resolveDependencies('eds', 'adobe-commerce-paas');
 
             expect(result.all).toHaveLength(1);
-            expect(result.all[0].id).toBe('dep1');
+            expect(result.all[0].id).toBe('demo-inspector');
         });
 
         it('should throw error for invalid frontend', async () => {
             await expect(
-                resolver.resolveDependencies('nonexistent', 'backend1')
+                resolver.resolveDependencies('nonexistent', 'adobe-commerce-paas')
             ).rejects.toThrow('Invalid frontend or backend selection');
         });
 
         it('should throw error for invalid backend', async () => {
             await expect(
-                resolver.resolveDependencies('frontend1', 'nonexistent')
+                resolver.resolveDependencies('eds', 'nonexistent')
             ).rejects.toThrow('Invalid frontend or backend selection');
         });
     });
@@ -90,8 +90,8 @@ describe('DependencyResolver', () => {
         it('should validate dependency chain without errors', async () => {
             const deps = [
                 {
-                    id: 'dep1',
-                    name: 'Dependency 1',
+                    id: 'demo-inspector',
+                    name: 'Demo Inspector',
                     type: 'dependency' as const,
                     source: { type: 'git' as const, url: 'url', version: '1.0.0' },
                 },
@@ -106,12 +106,12 @@ describe('DependencyResolver', () => {
         it('should detect circular dependencies', async () => {
             const registryWithCircular = {
                 ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    dep1: {
-                        ...mockRawRegistry.components!.dep1,
+                dependencies: {
+                    ...mockRawRegistry.dependencies,
+                    'demo-inspector': {
+                        ...mockRawRegistry.dependencies!['demo-inspector'],
                         dependencies: {
-                            required: ['dep1'], // Self-reference
+                            required: ['demo-inspector'], // Self-reference
                             optional: [],
                         },
                     },
@@ -121,12 +121,12 @@ describe('DependencyResolver', () => {
 
             const deps = [
                 {
-                    id: 'dep1',
-                    name: 'Dependency 1',
+                    id: 'demo-inspector',
+                    name: 'Demo Inspector',
                     type: 'dependency' as const,
                     source: { type: 'git' as const, url: 'url', version: '1.0.0' },
                     dependencies: {
-                        required: ['dep1'],
+                        required: ['demo-inspector'],
                         optional: [],
                     },
                 },
@@ -142,14 +142,14 @@ describe('DependencyResolver', () => {
         it('should warn about version conflicts', async () => {
             const deps = [
                 {
-                    id: 'dep1',
-                    name: 'Dependency 1',
+                    id: 'demo-inspector',
+                    name: 'Demo Inspector',
                     type: 'dependency' as const,
                     source: { type: 'git' as const, url: 'url', version: '1.0.0' },
                 },
                 {
-                    id: 'dep1',
-                    name: 'Dependency 1',
+                    id: 'demo-inspector',
+                    name: 'Demo Inspector',
                     type: 'dependency' as const,
                     source: { type: 'git' as const, url: 'url', version: '2.0.0' },
                 },

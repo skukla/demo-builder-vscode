@@ -165,6 +165,7 @@ export class ComponentRegistryManager {
             ...(raw.mesh || {}),            // v3.0.0: mesh section (contains commerce-mesh)
             ...(raw.dependencies || {}),    // v3.0.0: dependencies section
             ...(raw.appBuilderApps || {}),  // v3.0.0: appBuilderApps section
+            ...(raw.integrations || {}),    // v3.0.0: integrations section
         };
 
         const enhanceComponent = (id: string): TransformedComponentDefinition | null => {

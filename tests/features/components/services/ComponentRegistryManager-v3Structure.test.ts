@@ -12,7 +12,7 @@
  */
 
 import { ComponentRegistryManager } from '@/features/components/services/ComponentRegistryManager';
-import { mockRawRegistryV3, getMockLoader } from './ComponentRegistryManager.testUtils';
+import { mockRawRegistry, getMockLoader } from './ComponentRegistryManager.testUtils';
 
 // Mock ConfigurationLoader (Jest hoisting requirement)
 jest.mock('@/core/config/ConfigurationLoader', () => {
@@ -37,7 +37,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
 
     describe('loading v3.0.0 structure', () => {
         it('should load frontends from separate "frontends" section', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const registry = await manager.loadRegistry();
 
@@ -47,7 +47,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
 
         it('should load backends from separate "backends" section', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const registry = await manager.loadRegistry();
 
@@ -56,7 +56,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
 
         it('should load dependencies from separate "dependencies" section', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const registry = await manager.loadRegistry();
 
@@ -65,7 +65,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
 
         it('should load app builder apps from separate "appBuilderApps" section', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const registry = await manager.loadRegistry();
 
@@ -74,7 +74,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
 
         it('should preserve component configuration including nodeVersion', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const registry = await manager.loadRegistry();
 
@@ -88,7 +88,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
 
     describe('getComponentById with v3.0.0 structure', () => {
         it('should find frontend by id (eds)', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const component = await manager.getComponentById('eds');
 
@@ -98,7 +98,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
 
         it('should find backend by id (adobe-commerce-paas)', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const component = await manager.getComponentById('adobe-commerce-paas');
 
@@ -107,7 +107,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
 
         it('should find dependency by id (demo-inspector)', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const component = await manager.getComponentById('demo-inspector');
 
@@ -116,7 +116,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
 
         it('should find app builder app by id (integration-service)', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const component = await manager.getComponentById('integration-service');
 
@@ -128,7 +128,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
 
     describe('getNodeVersionToComponentMapping with v3.0.0 structure', () => {
         it('should return node version mapping for eds frontend', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const mapping = await manager.getNodeVersionToComponentMapping('eds', 'adobe-commerce-paas');
 
@@ -137,7 +137,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
 
         it('should return node version mapping for headless frontend', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const mapping = await manager.getNodeVersionToComponentMapping('headless', 'adobe-commerce-paas');
 
@@ -147,7 +147,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
 
         it('should include app builder node versions', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const mapping = await manager.getNodeVersionToComponentMapping(
                 'eds',
@@ -164,7 +164,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
 
     describe('getRequiredNodeVersions with v3.0.0 structure', () => {
         it('should return required node versions for eds + paas', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas');
 
@@ -172,7 +172,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
 
         it('should return multiple node versions for headless + paas + app builder', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const versions = await manager.getRequiredNodeVersions(
                 'headless',
@@ -190,7 +190,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
 
     describe('getFrontends/getBackends with v3.0.0 structure', () => {
         it('should return all frontends', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const frontends = await manager.getFrontends();
 
@@ -200,7 +200,7 @@ describe('ComponentRegistryManager - v3.0.0 Structure Support', () => {
         });
 
         it('should return all backends', async () => {
-            mockLoader.load.mockResolvedValue(mockRawRegistryV3);
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const backends = await manager.getBackends();
 

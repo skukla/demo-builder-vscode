@@ -38,14 +38,14 @@ describe('ComponentRegistryManager - Configuration', () => {
         });
 
         it('should resolve node versions from frontend and backend', async () => {
-            const versions = await manager.getRequiredNodeVersions('frontend1', 'backend1');
+            const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas');
 
             expect(versions.size).toBe(1);
             expect(versions.has('20')).toBe(true);
         });
 
         it('should include dependency node versions', async () => {
-            const versions = await manager.getRequiredNodeVersions('frontend1', 'backend1', ['dep1']);
+            const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['demo-inspector']);
 
             expect(versions.size).toBe(2);
             expect(versions.has('20')).toBe(true);
@@ -54,11 +54,11 @@ describe('ComponentRegistryManager - Configuration', () => {
 
         it('should include app builder node versions', async () => {
             const versions = await manager.getRequiredNodeVersions(
-                'frontend1',
-                'backend1',
+                'eds',
+                'adobe-commerce-paas',
                 undefined,
                 undefined,
-                ['app1']
+                ['integration-service']
             );
 
             expect(versions.size).toBe(2);
@@ -75,16 +75,16 @@ describe('ComponentRegistryManager - Configuration', () => {
         it('should handle components without node version', async () => {
             mockLoader.load.mockResolvedValue({
                 ...mockRawRegistry,
-                components: {
-                    ...mockRawRegistry.components!,
-                    frontend1: {
-                        ...mockRawRegistry.components!.frontend1,
+                frontends: {
+                    ...mockRawRegistry.frontends,
+                    eds: {
+                        ...mockRawRegistry.frontends!.eds,
                         configuration: {},
                     },
                 },
             });
 
-            const versions = await manager.getRequiredNodeVersions('frontend1');
+            const versions = await manager.getRequiredNodeVersions('eds');
 
             expect(versions.size).toBe(0);
         });
@@ -96,25 +96,25 @@ describe('ComponentRegistryManager - Configuration', () => {
         });
 
         it('should return true for compatible frontend and backend', async () => {
-            const isCompatible = await manager.checkCompatibility('frontend1', 'backend1');
+            const isCompatible = await manager.checkCompatibility('eds', 'adobe-commerce-paas');
 
             expect(isCompatible).toBe(true);
         });
 
         it('should return false for incompatible frontend and backend', async () => {
-            const isCompatible = await manager.checkCompatibility('frontend1', 'nonexistent');
+            const isCompatible = await manager.checkCompatibility('eds', 'nonexistent');
 
             expect(isCompatible).toBe(false);
         });
 
         it('should return false when frontend not found', async () => {
-            const isCompatible = await manager.checkCompatibility('nonexistent', 'backend1');
+            const isCompatible = await manager.checkCompatibility('nonexistent', 'adobe-commerce-paas');
 
             expect(isCompatible).toBe(false);
         });
 
         it('should return false when frontend has no compatibleBackends', async () => {
-            const isCompatible = await manager.checkCompatibility('frontend2', 'backend1');
+            const isCompatible = await manager.checkCompatibility('headless', 'adobe-commerce-paas');
 
             expect(isCompatible).toBe(false);
         });
