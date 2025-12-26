@@ -157,6 +157,102 @@ export const mockRawRegistry: RawComponentRegistry = {
 };
 
 /**
+ * Sample raw registry data for testing v3.0.0 structure
+ *
+ * v3.0.0 uses separate top-level sections (frontends, backends, mesh, etc.)
+ * instead of a unified 'components' map. This mock validates that the
+ * ComponentRegistryManager correctly handles both structures.
+ */
+export const mockRawRegistryV3: RawComponentRegistry = {
+    version: '3.0.0',
+    selectionGroups: {
+        frontends: ['eds', 'headless'],
+        backends: ['adobe-commerce-paas'],
+        dependencies: ['demo-inspector'],
+        integrations: [],
+        appBuilderApps: ['integration-service'],
+    },
+    // v3.0.0: Components in separate sections (NOT in 'components' map)
+    frontends: {
+        eds: {
+            id: 'eds',
+            name: 'Edge Delivery Services',
+            description: 'EDS storefront',
+            type: 'frontend',
+            compatibleBackends: ['adobe-commerce-paas'],
+            configuration: {
+                nodeVersion: '20',
+                requiredEnvVars: ['MESH_ENDPOINT'],
+            },
+        },
+        headless: {
+            id: 'headless',
+            name: 'Headless Storefront',
+            description: 'Next.js headless storefront',
+            type: 'frontend',
+            compatibleBackends: ['adobe-commerce-paas'],
+            configuration: {
+                nodeVersion: '24',
+                requiredEnvVars: ['MESH_ENDPOINT'],
+            },
+        },
+    },
+    backends: {
+        'adobe-commerce-paas': {
+            id: 'adobe-commerce-paas',
+            name: 'Adobe Commerce PaaS',
+            description: 'Adobe Commerce DSN instance',
+            type: 'backend',
+            configuration: {
+                nodeVersion: '20',
+            },
+        },
+    },
+    mesh: {
+        'commerce-mesh': {
+            id: 'commerce-mesh',
+            name: 'Adobe Commerce API Mesh',
+            description: 'GraphQL gateway',
+            type: 'dependency',
+            subType: 'mesh',
+            configuration: {
+                nodeVersion: '20',
+            },
+        },
+    },
+    dependencies: {
+        'demo-inspector': {
+            id: 'demo-inspector',
+            name: 'Demo Inspector',
+            description: 'Interactive inspector overlay',
+            type: 'dependency',
+            subType: 'inspector',
+        },
+    },
+    appBuilderApps: {
+        'integration-service': {
+            id: 'integration-service',
+            name: 'Kukla Integration Service',
+            description: 'Custom integration service',
+            type: 'app-builder',
+            configuration: {
+                nodeVersion: '22',
+            },
+        },
+    },
+    infrastructure: {
+        'adobe-cli': {
+            id: 'adobe-cli',
+            name: 'Adobe I/O CLI & SDK',
+            description: 'Command-line interface',
+            type: 'external-system',
+        },
+    },
+    services: {},
+    envVars: {},
+};
+
+/**
  * Known injection payloads for security testing
  */
 export const injectionPayloads = [
