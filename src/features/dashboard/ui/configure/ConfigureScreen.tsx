@@ -17,6 +17,11 @@ import { toServiceGroupWithSortedFields } from '@/features/components/services/s
 import type { Project } from '@/types/base';
 import { hasEntries } from '@/types/typeGuards';
 import { ComponentEnvVar, ComponentConfigs } from '@/types/webview';
+import {
+    getAllComponentDefinitions,
+    hasComponentEnvVars,
+    discoverComponentsFromInstances,
+} from './configureHelpers';
 
 export interface ComponentsData {
     frontends?: ComponentData[];
@@ -64,25 +69,6 @@ interface ComponentInstance {
 interface SaveConfigurationResponse {
     success: boolean;
     error?: string;
-}
-
-/**
- * Get all component definitions from componentsData
- *
- * SOP §8: Extracted conditional spread chain to named helper
- *
- * @param data - Components data containing all category arrays
- * @returns Flattened array of all component definitions
- */
-function getAllComponentDefinitions(data: ComponentsData): ComponentData[] {
-    const categories: (ComponentData[] | undefined)[] = [
-        data.frontends,
-        data.backends,
-        data.dependencies,
-        data.integrations,
-        data.appBuilder,
-    ];
-    return categories.flatMap(arr => arr ?? []);
 }
 
 /**
@@ -164,65 +150,6 @@ function renderFormField(
     );
 }
 
-/**
- * Check if a component has environment variables configured.
- *
- * SOP Compliance: Reduces optional chaining depth from 3 levels to 1.
- * Uses hasComponentEnvVars pattern internally.
- */
-function componentHasEnvVars(componentDef: ComponentData | undefined): boolean {
-    if (!componentDef?.configuration) {
-        return false;
-    }
-    const required = componentDef.configuration.requiredEnvVars?.length || 0;
-    const optional = componentDef.configuration.optionalEnvVars?.length || 0;
-    return required > 0 || optional > 0;
-}
-
-/**
- * Capitalize the first letter of a string
- */
-function capitalizeFirst(str: string): string {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-/**
- * Get component type display name from instance
- */
-function getComponentTypeDisplay(instance: ComponentInstance): string {
-    const instanceType = instance?.type;
-    return instanceType ? capitalizeFirst(instanceType) : 'Component';
-}
-
-/**
- * Discover components from componentInstances as fallback
- *
- * SOP §6: Extracted callback body complexity from forEach
- *
- * @param componentInstances - Map of component ID to instance
- * @param allComponentDefs - All component definitions to search
- * @returns Array of discovered components with their data and types
- */
-function discoverComponentsFromInstances(
-    componentInstances: Record<string, ComponentInstance>,
-    allComponentDefs: ComponentData[],
-): Array<{ id: string; data: ComponentData; type: string }> {
-    const discovered: Array<{ id: string; data: ComponentData; type: string }> = [];
-
-    for (const [id, instance] of Object.entries(componentInstances)) {
-        const componentDef = allComponentDefs.find((c: ComponentData) => c.id === id);
-        if (componentDef && componentHasEnvVars(componentDef)) {
-            discovered.push({
-                id: componentDef.id,
-                data: componentDef,
-                type: getComponentTypeDisplay(instance),
-            });
-        }
-    }
-
-    return discovered;
-}
-
 export function ConfigureScreen({ project, componentsData, existingEnvValues }: ConfigureScreenProps) {
     const [componentConfigs, setComponentConfigs] = useState<ComponentConfigs>({});
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
@@ -269,7 +196,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
 
             comp.dependencies?.required?.forEach(depId => {
                 const dep = findComponent(depId);
-                if (dep && !components.some(c => c.id === depId) && componentHasEnvVars(dep)) {
+                if (dep && !components.some(c => c.id === depId) && hasComponentEnvVars(dep)) {
                     components.push({ id: dep.id, data: dep, type: 'Dependency' });
                 }
             });
@@ -278,7 +205,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
                 const dep = findComponent(depId);
                 if (dep && !components.some(c => c.id === depId)) {
                     const isSelected = project.componentSelections?.dependencies?.includes(depId);
-                    if (isSelected && componentHasEnvVars(dep)) {
+                    if (isSelected && hasComponentEnvVars(dep)) {
                         components.push({ id: dep.id, data: dep, type: 'Dependency' });
                     }
                 }
@@ -298,7 +225,7 @@ export function ConfigureScreen({ project, componentsData, existingEnvValues }: 
         project.componentSelections?.dependencies?.forEach((depId: string) => {
             if (!components.some(c => c.id === depId)) {
                 const dep = componentsData.dependencies?.find((d: ComponentData) => d.id === depId);
-                if (dep && componentHasEnvVars(dep)) {
+                if (dep && hasComponentEnvVars(dep)) {
                     components.push({ id: dep.id, data: dep, type: 'Dependency' });
                 }
             }
