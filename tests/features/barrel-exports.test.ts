@@ -229,4 +229,102 @@ describe('Feature Barrel Exports', () => {
             expect((exports as Record<string, unknown>).extractTarball).toBeUndefined();
         });
     });
+
+    describe('lifecycle feature', () => {
+        it('should export StartDemoCommand', async () => {
+            const exports = await import('@/features/lifecycle');
+
+            expect(exports.StartDemoCommand).toBeDefined();
+            expect(typeof exports.StartDemoCommand).toBe('function');
+        });
+
+        it('should export StopDemoCommand', async () => {
+            const exports = await import('@/features/lifecycle');
+
+            expect(exports.StopDemoCommand).toBeDefined();
+            expect(typeof exports.StopDemoCommand).toBe('function');
+        });
+
+        it('should export LifecycleHandlerRegistry', async () => {
+            const exports = await import('@/features/lifecycle');
+
+            expect(exports.LifecycleHandlerRegistry).toBeDefined();
+            expect(typeof exports.LifecycleHandlerRegistry).toBe('function');
+        });
+
+        it('should NOT export internal process cleanup helpers', async () => {
+            const exports = await import('@/features/lifecycle');
+
+            // ProcessCleanup is internal to commands, not a public API
+            expect((exports as Record<string, unknown>).ProcessCleanup).toBeUndefined();
+            expect((exports as Record<string, unknown>).killProcessOnPort).toBeUndefined();
+        });
+
+        it('should NOT export individual handler functions via wildcard', async () => {
+            const exports = await import('@/features/lifecycle');
+
+            // Individual handlers should not be exposed via barrel
+            // Only LifecycleHandlerRegistry should be public
+            expect((exports as Record<string, unknown>).handleReady).toBeUndefined();
+            expect((exports as Record<string, unknown>).handleCancel).toBeUndefined();
+            expect((exports as Record<string, unknown>).handleCancelProjectCreation).toBeUndefined();
+        });
+    });
+
+    describe('authentication feature', () => {
+        it('should export AuthenticationService', async () => {
+            const exports = await import('@/features/authentication');
+
+            expect(exports.AuthenticationService).toBeDefined();
+            expect(typeof exports.AuthenticationService).toBe('function');
+        });
+
+        it('should export AdobeEntityService', async () => {
+            const exports = await import('@/features/authentication');
+
+            expect(exports.AdobeEntityService).toBeDefined();
+            expect(typeof exports.AdobeEntityService).toBe('function');
+        });
+
+        it('should export TokenManager', async () => {
+            const exports = await import('@/features/authentication');
+
+            expect(exports.TokenManager).toBeDefined();
+            expect(typeof exports.TokenManager).toBe('function');
+        });
+
+        it('should export handler functions for HandlerRegistry use', async () => {
+            const exports = await import('@/features/authentication');
+
+            // Auth handlers needed by project-creation HandlerRegistry
+            expect(exports.handleCheckAuth).toBeDefined();
+            expect(exports.handleAuthenticate).toBeDefined();
+        });
+
+        it('should export project handlers for HandlerRegistry use', async () => {
+            const exports = await import('@/features/authentication');
+
+            // Project handlers needed by project-creation HandlerRegistry
+            expect(exports.handleEnsureOrgSelected).toBeDefined();
+            expect(exports.handleGetProjects).toBeDefined();
+            expect(exports.handleSelectProject).toBeDefined();
+            expect(exports.handleCheckProjectApis).toBeDefined();
+        });
+
+        it('should export workspace handlers for HandlerRegistry use', async () => {
+            const exports = await import('@/features/authentication');
+
+            // Workspace handlers needed by project-creation HandlerRegistry
+            expect(exports.handleGetWorkspaces).toBeDefined();
+            expect(exports.handleSelectWorkspace).toBeDefined();
+        });
+
+        it('should NOT export internal validation utilities', async () => {
+            const exports = await import('@/features/authentication');
+
+            // Internal utilities should not be exposed
+            expect((exports as Record<string, unknown>).validateProjectId).toBeUndefined();
+            expect((exports as Record<string, unknown>).validateWorkspaceId).toBeUndefined();
+        });
+    });
 });

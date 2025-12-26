@@ -3,6 +3,15 @@
  *
  * Handles Adobe authentication, organization selection, project selection,
  * and workspace management via Adobe Console SDK.
+ *
+ * Public API:
+ * - AuthenticationService: Main service for Adobe authentication
+ * - AdobeEntityService: Organization, project, workspace operations
+ * - TokenManager: Token validation and caching
+ * - Handler functions for HandlerRegistry use
+ *
+ * Internal Services (not exported):
+ * - Validation utilities (use @/core/validation instead)
  */
 
 // Main service
@@ -17,10 +26,18 @@ export { AuthCacheManager } from './services/authCacheManager';
 export { AuthenticationErrorFormatter } from './services/authenticationErrorFormatter';
 export { PerformanceTracker } from './services/performanceTracker';
 
-// Handlers
+// Handlers - Explicit named exports (no wildcards)
 export { handleCheckAuth, handleAuthenticate } from './handlers/authenticationHandlers';
-export * from './handlers/projectHandlers';
-export * from './handlers/workspaceHandlers';
+export {
+    handleEnsureOrgSelected,
+    handleGetProjects,
+    handleSelectProject,
+    handleCheckProjectApis,
+} from './handlers/projectHandlers';
+export {
+    handleGetWorkspaces,
+    handleSelectWorkspace,
+} from './handlers/workspaceHandlers';
 
 // Types
 export type {

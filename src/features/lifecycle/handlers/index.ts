@@ -1,11 +1,12 @@
 /**
  * Lifecycle Handlers - Public API
  *
- * Exports the handler registry and individual handlers for backward compatibility.
+ * Exports only the handler registry. Individual handlers are internal
+ * and should be accessed via the registry for message dispatch.
  */
 
-// Export registry (preferred)
+// Export registry only (preferred)
 export { LifecycleHandlerRegistry } from './LifecycleHandlerRegistry';
 
-// Export individual handlers (backward compatibility)
-export * from './lifecycleHandlers';
+// Note: Individual handlers (handleReady, handleCancel, etc.) are NOT exported.
+// They are internal and registered with LifecycleHandlerRegistry.
