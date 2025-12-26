@@ -10,8 +10,7 @@ export interface SearchableListItem {
     id: string;
     title?: string;
     name?: string;
-    description?: string;
-    [key: string]: any;
+    description?: string | null | undefined;
 }
 
 export interface SearchableListProps<T extends SearchableListItem> {

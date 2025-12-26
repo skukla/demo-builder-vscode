@@ -7,6 +7,9 @@
 
 import { webviewClient } from './WebviewClient';
 
+// Re-export for consumers that need direct WebviewClient access
+export { webviewClient };
+
 /**
  * Simplified vscode API for webview use
  * Provides common operations without requiring direct WebviewClient usage

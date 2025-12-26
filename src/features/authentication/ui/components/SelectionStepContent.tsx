@@ -29,7 +29,7 @@ export interface SelectableItem {
     id: string;
     name: string;
     title?: string;
-    description?: string;
+    description?: string | null | undefined;
 }
 
 /**
