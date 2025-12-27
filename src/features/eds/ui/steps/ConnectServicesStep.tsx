@@ -62,7 +62,7 @@ export function ConnectServicesStep({
 
     const handleDaLiveReset = () => {
         daLiveAuth.resetAuth();
-        setShowDaLiveInput(false);
+        setShowDaLiveInput(true);  // Show input form directly for credential change
     };
 
     const handleCancelInput = () => {
