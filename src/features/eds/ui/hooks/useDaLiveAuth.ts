@@ -91,6 +91,8 @@ interface UseDaLiveAuthReturn {
     checkAuthStatus: () => void;
     /** Reset DA.live auth (clear token and org) */
     resetAuth: () => void;
+    /** Cancel current auth attempt (reset isAuthenticating without clearing token) */
+    cancelAuth: () => void;
 }
 
 /**
@@ -206,6 +208,14 @@ export function useDaLiveAuth({
         // Tell backend to clear stored token
         webviewClient.postMessage('clear-dalive-auth');
     }, [edsConfig, updateState]);
+
+    /**
+     * Cancel current auth attempt (without clearing stored token)
+     */
+    const cancelAuth = useCallback(() => {
+        log.debug('Cancelling DA.live auth attempt');
+        updateDaLiveAuth({ isAuthenticating: false, error: undefined });
+    }, [updateDaLiveAuth]);
 
     // Check auth status on mount and subscribe to messages (runs once)
     useEffect(() => {
@@ -349,5 +359,6 @@ export function useDaLiveAuth({
         storeTokenWithOrg,
         checkAuthStatus,
         resetAuth,
+        cancelAuth,
     };
 }

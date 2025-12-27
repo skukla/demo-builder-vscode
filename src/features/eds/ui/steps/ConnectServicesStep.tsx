@@ -66,6 +66,7 @@ export function ConnectServicesStep({
     };
 
     const handleCancelInput = () => {
+        daLiveAuth.cancelAuth();
         setShowDaLiveInput(false);
     };
 
