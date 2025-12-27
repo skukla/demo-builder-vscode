@@ -12,9 +12,12 @@ import {
     mockRequestAuth,
     baseState,
     authenticatedState,
+    stateWithProjectSelected,
     successAuthData,
     timeoutAuthData,
     checkingAuthData,
+    reAuthSameOrgData,
+    reAuthDifferentOrgData,
     resetMocks,
     AuthStatusData,
 } from './useAuthStatus.testUtils';
@@ -200,10 +203,12 @@ describe('useAuthStatus', () => {
             });
         });
 
-        it('should force login and clear org/project/workspace when force=true', () => {
+        it('should request forced auth without immediately clearing state when force=true', () => {
+            // New behavior: handleLogin(true) does NOT clear org/project/workspace immediately
+            // Instead, the auth-status handler clears them only if the org actually changes
             const { result } = renderHook(() =>
                 useAuthStatus({
-                    state: authenticatedState as WizardState,
+                    state: stateWithProjectSelected as WizardState,
                     updateState: mockUpdateState,
                     setCanProceed: mockSetCanProceed,
                 })
@@ -216,11 +221,17 @@ describe('useAuthStatus', () => {
             });
 
             expect(mockRequestAuth).toHaveBeenCalledWith(true);
-            expect(mockUpdateState).toHaveBeenCalledWith(
+            // Should NOT clear org/project/workspace immediately
+            expect(mockUpdateState).toHaveBeenCalledWith({
+                adobeAuth: expect.objectContaining({
+                    isChecking: true,
+                    error: undefined,
+                }),
+            });
+            // Verify it was NOT called with undefined org/project/workspace
+            expect(mockUpdateState).not.toHaveBeenCalledWith(
                 expect.objectContaining({
                     adobeOrg: undefined,
-                    adobeProject: undefined,
-                    adobeWorkspace: undefined,
                 })
             );
         });
@@ -384,6 +395,146 @@ describe('useAuthStatus', () => {
                 expect(result.current.authStatus).toBe('');
                 expect(result.current.authSubMessage).toBe('');
             });
+        });
+    });
+
+    describe('re-authentication state preservation', () => {
+        it('should preserve project/workspace when re-authenticating with same org', async () => {
+            let authCallback: ((data: unknown) => void) | null = null;
+            mockOnMessage.mockImplementation((type: string, callback: (data: unknown) => void) => {
+                if (type === 'auth-status') {
+                    authCallback = callback;
+                }
+                return jest.fn();
+            });
+
+            const { result } = renderHook(() =>
+                useAuthStatus({
+                    state: stateWithProjectSelected as WizardState,
+                    updateState: mockUpdateState,
+                    setCanProceed: mockSetCanProceed,
+                })
+            );
+
+            mockUpdateState.mockClear();
+
+            // Trigger forced re-auth (e.g., token expiring)
+            act(() => {
+                result.current.handleLogin(true);
+            });
+
+            mockUpdateState.mockClear();
+
+            // Simulate auth-status response with SAME org
+            act(() => {
+                authCallback?.(reAuthSameOrgData);
+            });
+
+            await waitFor(() => {
+                // Should update auth state
+                expect(mockUpdateState).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        adobeAuth: expect.objectContaining({
+                            isAuthenticated: true,
+                        }),
+                        adobeOrg: expect.objectContaining({
+                            id: 'org-123',
+                        }),
+                    })
+                );
+            });
+
+            // Should NOT have been called with adobeProject: undefined
+            const allCalls = mockUpdateState.mock.calls;
+            const clearedProject = allCalls.some(
+                (call) => call[0]?.adobeProject === undefined && 'adobeProject' in call[0]
+            );
+            expect(clearedProject).toBe(false);
+        });
+
+        it('should clear project/workspace when re-authenticating with different org', async () => {
+            let authCallback: ((data: unknown) => void) | null = null;
+            mockOnMessage.mockImplementation((type: string, callback: (data: unknown) => void) => {
+                if (type === 'auth-status') {
+                    authCallback = callback;
+                }
+                return jest.fn();
+            });
+
+            const { result } = renderHook(() =>
+                useAuthStatus({
+                    state: stateWithProjectSelected as WizardState,
+                    updateState: mockUpdateState,
+                    setCanProceed: mockSetCanProceed,
+                })
+            );
+
+            mockUpdateState.mockClear();
+
+            // Trigger forced re-auth
+            act(() => {
+                result.current.handleLogin(true);
+            });
+
+            mockUpdateState.mockClear();
+
+            // Simulate auth-status response with DIFFERENT org
+            act(() => {
+                authCallback?.(reAuthDifferentOrgData);
+            });
+
+            await waitFor(() => {
+                // Should clear project and workspace because org changed
+                expect(mockUpdateState).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        adobeAuth: expect.objectContaining({
+                            isAuthenticated: true,
+                        }),
+                        adobeOrg: expect.objectContaining({
+                            id: 'org-999',  // New org
+                        }),
+                        adobeProject: undefined,
+                        adobeWorkspace: undefined,
+                    })
+                );
+            });
+        });
+
+        it('should not clear state on regular auth check (non-forced)', async () => {
+            let authCallback: ((data: unknown) => void) | null = null;
+            mockOnMessage.mockImplementation((type: string, callback: (data: unknown) => void) => {
+                if (type === 'auth-status') {
+                    authCallback = callback;
+                }
+                return jest.fn();
+            });
+
+            renderHook(() =>
+                useAuthStatus({
+                    state: stateWithProjectSelected as WizardState,
+                    updateState: mockUpdateState,
+                    setCanProceed: mockSetCanProceed,
+                })
+            );
+
+            mockUpdateState.mockClear();
+
+            // Simulate regular auth-status (not from forced re-auth)
+            // The preAuthOrgIdRef should be undefined, so no clearing should happen
+            act(() => {
+                authCallback?.(reAuthDifferentOrgData);
+            });
+
+            await waitFor(() => {
+                expect(mockUpdateState).toHaveBeenCalled();
+            });
+
+            // Should NOT clear project/workspace because this wasn't a forced re-auth
+            const allCalls = mockUpdateState.mock.calls;
+            const clearedProject = allCalls.some(
+                (call) => call[0]?.adobeProject === undefined && 'adobeProject' in call[0]
+            );
+            expect(clearedProject).toBe(false);
         });
     });
 
