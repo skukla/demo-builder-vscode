@@ -46,6 +46,8 @@ export interface GitHubServiceCardProps {
     onChangeAccount?: () => void;
     /** Layout variant */
     variant: 'card' | 'checklist';
+    /** Show compact view (minimal details when another card is active) */
+    compact?: boolean;
 }
 
 /** GitHub SVG icon */
@@ -70,6 +72,7 @@ export function GitHubServiceCard({
     onConnect,
     onChangeAccount,
     variant,
+    compact = false,
 }: GitHubServiceCardProps): React.ReactElement {
     const isLoading = isChecking || isAuthenticating;
 
@@ -98,19 +101,26 @@ export function GitHubServiceCard({
                             </Text>
                         </Flex>
                     ) : isAuthenticated && user ? (
-                        <Flex alignItems="center" justifyContent="space-between">
+                        compact ? (
                             <Flex alignItems="center" gap="size-100">
                                 <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                                <Text UNSAFE_className="status-text">
-                                    {user.login}
-                                </Text>
+                                <Text UNSAFE_className="status-text">Connected</Text>
                             </Flex>
-                            {onChangeAccount && (
-                                <button className="service-action-link" onClick={onChangeAccount}>
-                                    Change
-                                </button>
-                            )}
-                        </Flex>
+                        ) : (
+                            <Flex alignItems="center" justifyContent="space-between">
+                                <Flex alignItems="center" gap="size-100">
+                                    <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                                    <Text UNSAFE_className="status-text">
+                                        {user.login}
+                                    </Text>
+                                </Flex>
+                                {onChangeAccount && (
+                                    <button className="service-action-link" onClick={onChangeAccount}>
+                                        Change
+                                    </button>
+                                )}
+                            </Flex>
+                        )
                     ) : error ? (
                         <Flex direction="column" gap="size-100">
                             <Flex alignItems="center" gap="size-100">

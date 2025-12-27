@@ -50,6 +50,8 @@ export interface DaLiveServiceCardProps {
     onCancelInput: () => void;
     /** Layout variant */
     variant: 'card' | 'checklist';
+    /** Show compact view (minimal details when another card is active) */
+    compact?: boolean;
 }
 
 /**
@@ -71,6 +73,7 @@ export function DaLiveServiceCard({
     onReset,
     onCancelInput,
     variant,
+    compact = false,
 }: DaLiveServiceCardProps): React.ReactElement {
     const [orgValue, setOrgValue] = useState('');
     const [tokenValue, setTokenValue] = useState('');
@@ -115,17 +118,24 @@ export function DaLiveServiceCard({
                             </Text>
                         </Flex>
                     ) : isAuthenticated ? (
-                        <Flex alignItems="center" justifyContent="space-between">
+                        compact ? (
                             <Flex alignItems="center" gap="size-100">
                                 <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
-                                <Text UNSAFE_className="status-text">
-                                    {verifiedOrg || 'Connected'}
-                                </Text>
+                                <Text UNSAFE_className="status-text">Connected</Text>
                             </Flex>
-                            <button className="service-action-link" onClick={onReset}>
-                                Change
-                            </button>
-                        </Flex>
+                        ) : (
+                            <Flex alignItems="center" justifyContent="space-between">
+                                <Flex alignItems="center" gap="size-100">
+                                    <CheckmarkCircle size="S" UNSAFE_className="status-icon-success" />
+                                    <Text UNSAFE_className="status-text">
+                                        {verifiedOrg || 'Connected'}
+                                    </Text>
+                                </Flex>
+                                <button className="service-action-link" onClick={onReset}>
+                                    Change
+                                </button>
+                            </Flex>
+                        )
                     ) : showInput ? (
                         <div className="dalive-input-form">
                             <input
