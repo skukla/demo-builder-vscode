@@ -12,7 +12,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Heading, Text, Flex, ActionButton, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
+import { Flex, ActionButton, Tooltip, TooltipTrigger } from '@adobe/react-spectrum';
 import ViewGrid from '@spectrum-icons/workflow/ViewGrid';
 import ViewList from '@spectrum-icons/workflow/ViewList';
 import ViewColumn from '@spectrum-icons/workflow/ViewColumn';
@@ -79,10 +79,7 @@ export function ConnectServicesStep({
 
     return (
         <SingleColumnLayout maxWidth="900px">
-            <Flex justifyContent="space-between" alignItems="center" marginBottom="size-100">
-                <Heading level={2} margin={0}>
-                    Connect Your Services
-                </Heading>
+            <Flex justifyContent="end" marginBottom="size-200">
                 <Flex gap="size-50">
                     <TooltipTrigger>
                         <ActionButton
@@ -119,9 +116,6 @@ export function ConnectServicesStep({
                     </TooltipTrigger>
                 </Flex>
             </Flex>
-            <Text marginBottom="size-300">
-                Set up GitHub and DA.live to manage your Edge Delivery project.
-            </Text>
 
             <div className={containerClass}>
                 <GitHubServiceCard
