@@ -91,10 +91,13 @@ describe('Mock Structure Validation', () => {
             expect(mockRawRegistry.frontends?.headless?.configuration?.nodeVersion).toBe('24');
             // integration-service requires Node
             expect(mockRawRegistry.appBuilderApps?.['integration-service']?.configuration?.nodeVersion).toBe('22');
-            // demo-inspector requires Node
-            expect(mockRawRegistry.dependencies?.['demo-inspector']?.configuration?.nodeVersion).toBe('18');
             // commerce-mesh requires Node
             expect(mockRawRegistry.mesh?.['commerce-mesh']?.configuration?.nodeVersion).toBe('20');
+        });
+
+        it('should NOT have nodeVersion for browser-only components', () => {
+            // demo-inspector is a browser overlay, not a Node.js tool
+            expect(mockRawRegistry.dependencies?.['demo-inspector']?.configuration?.nodeVersion).toBeUndefined();
         });
 
         it('should NOT have nodeVersion for remote services', () => {

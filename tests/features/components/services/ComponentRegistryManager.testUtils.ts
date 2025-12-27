@@ -91,9 +91,7 @@ export const mockRawRegistry: RawComponentRegistry = {
             description: 'Interactive inspector overlay',
             type: 'dependency',
             subType: 'inspector',
-            configuration: {
-                nodeVersion: '18',
-            },
+            // No nodeVersion - demo-inspector is a browser overlay, not a Node.js tool
         },
     },
     appBuilderApps: {

@@ -41,13 +41,12 @@ describe('Component Registry Manager - Node Version Resolution', () => {
             expect(versions.has('24')).toBe(true);
         });
 
-        it('should include dependency node versions', async () => {
-            // Given: EDS + PaaS with demo-inspector dependency (Node 18)
+        it('should return empty for dependencies without nodeVersion', async () => {
+            // Given: demo-inspector is a browser overlay without Node requirement
             const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['demo-inspector']);
 
-            // Then: Only demo-inspector's Node 18 is required
-            expect(versions.size).toBe(1);
-            expect(versions.has('18')).toBe(true);
+            // Then: No Node versions required
+            expect(versions.size).toBe(0);
         });
 
         it('should include app builder node versions', async () => {
@@ -133,17 +132,17 @@ describe('Component Registry Manager - Node Version Resolution', () => {
 
         it('should keep separate versions distinct', async () => {
             // Given: Different components require different Node versions
-            // demo-inspector (Node 18) + integration-service (Node 22)
+            // headless (Node 24) + integration-service (Node 22)
             const mapping = await manager.getNodeVersionToComponentMapping(
+                'headless',
                 undefined,
                 undefined,
-                ['demo-inspector'],
                 undefined,
                 ['integration-service']
             );
 
             // Then: Each version should have its own component
-            expect(mapping['18']).toBe('Demo Inspector');
+            expect(mapping['24']).toBe('Headless Storefront');
             expect(mapping['22']).toBe('Kukla Integration Service');
         });
 
@@ -156,15 +155,17 @@ describe('Component Registry Manager - Node Version Resolution', () => {
         });
 
         it('should not duplicate component names when same component referenced multiple times', async () => {
-            // Given: demo-inspector explicitly listed twice
+            // Given: integration-service explicitly listed twice
             const mapping = await manager.getNodeVersionToComponentMapping(
                 undefined,
                 undefined,
-                ['demo-inspector', 'demo-inspector'] // Duplicate in the array
+                undefined,
+                undefined,
+                ['integration-service', 'integration-service'] // Duplicate in the array
             );
 
             // Then: Should not have duplicates
-            expect(mapping['18']).toBe('Demo Inspector');
+            expect(mapping['22']).toBe('Kukla Integration Service');
         });
     });
 

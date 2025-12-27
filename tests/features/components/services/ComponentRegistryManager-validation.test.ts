@@ -45,18 +45,18 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
             // Given: components.json has valid numeric versions
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
-            // When: getRequiredNodeVersions() is called
+            // When: getRequiredNodeVersions() is called with components that have nodeVersion
             const versions = await manager.getRequiredNodeVersions(
-                'eds',                    // No nodeVersion (remote service)
-                'adobe-commerce-paas',    // No nodeVersion (remote service)
-                ['demo-inspector'],       // Node 18
+                'headless',               // Node 24
+                undefined,
+                undefined,
                 undefined,
                 ['integration-service']   // Node 22
             );
 
-            // Then: Versions from dependencies and app builder returned
+            // Then: Versions from frontend and app builder returned
             expect(versions.size).toBe(2);
-            expect(versions.has('18')).toBe(true);  // demo-inspector
+            expect(versions.has('24')).toBe(true);  // headless
             expect(versions.has('22')).toBe(true);  // integration-service
         });
 
@@ -260,16 +260,16 @@ describe('ComponentRegistryManager - Node Version Security Validation', () => {
 
             // When: getNodeVersionToComponentMapping() is called
             const mapping = await manager.getNodeVersionToComponentMapping(
-                'eds',                    // No nodeVersion (remote service)
-                'adobe-commerce-paas',    // No nodeVersion (remote service)
-                ['demo-inspector'],       // Node 18
+                'headless',               // Node 24
+                undefined,
+                undefined,
                 undefined,
                 ['integration-service']   // Node 22
             );
 
-            // Then: Mapping returned without errors (only deps have Node versions)
+            // Then: Mapping returned without errors
             expect(Object.keys(mapping).length).toBe(2);
-            expect(mapping['18']).toBeDefined();  // demo-inspector
+            expect(mapping['24']).toBeDefined();  // headless
             expect(mapping['22']).toBeDefined();  // integration-service
         });
     });

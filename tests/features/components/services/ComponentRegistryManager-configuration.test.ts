@@ -52,12 +52,11 @@ describe('ComponentRegistryManager - Configuration', () => {
             expect(versions.has('24')).toBe(true);
         });
 
-        it('should include dependency node versions', async () => {
-            // demo-inspector requires Node 18
+        it('should return empty for dependencies without nodeVersion', async () => {
+            // demo-inspector is a browser overlay without Node requirement
             const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['demo-inspector']);
 
-            expect(versions.size).toBe(1);
-            expect(versions.has('18')).toBe(true);
+            expect(versions.size).toBe(0);
         });
 
         it('should include app builder node versions', async () => {
