@@ -52,6 +52,10 @@ export function useAuthStatus({
     const isSwitchingRef = useRef(false);
     const authTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Track org ID before re-auth to detect if it changes
+    // This allows us to preserve project/workspace when re-authenticating with same org
+    const preAuthOrgIdRef = useRef<string | undefined>(undefined);
+
     const showLoadingSpinner = state.adobeAuth.isChecking;
 
     const checkAuthentication = useCallback(() => {
@@ -78,6 +82,9 @@ export function useAuthStatus({
 
         if (force) {
             isSwitchingRef.current = true;
+            // Save current org ID to detect if it changes after re-auth
+            // This preserves project/workspace when re-authenticating with same org
+            preAuthOrgIdRef.current = state.adobeOrg?.id;
         }
 
         updateState({
@@ -86,15 +93,12 @@ export function useAuthStatus({
                 isChecking: true,
                 error: undefined,
             },
-            ...(force && {
-                adobeOrg: undefined,
-                adobeProject: undefined,
-                adobeWorkspace: undefined,
-            }),
+            // Don't clear org/project/workspace here - auth-status handler
+            // will clear them only if the org actually changes
         });
 
         webviewClient.requestAuth(force);
-    }, [state.adobeAuth, updateState]);
+    }, [state.adobeAuth, state.adobeOrg?.id, updateState]);
 
     // Check authentication on mount
     useEffect(() => {
@@ -134,6 +138,24 @@ export function useAuthStatus({
                 setAuthTimeout(false);
             }
 
+            // Check if org changed after re-auth
+            // Only clear project/workspace if the org actually changed
+            const newOrgId = authData.organization?.id;
+            const orgChanged = preAuthOrgIdRef.current !== undefined &&
+                               preAuthOrgIdRef.current !== newOrgId;
+
+            if (preAuthOrgIdRef.current !== undefined) {
+                log.debug('Re-auth org comparison:', {
+                    previousOrgId: preAuthOrgIdRef.current,
+                    newOrgId,
+                    orgChanged,
+                    willClearProject: orgChanged,
+                });
+            }
+
+            // Clear the ref after comparison
+            preAuthOrgIdRef.current = undefined;
+
             updateState({
                 adobeAuth: {
                     isAuthenticated: authData.isAuthenticated,
@@ -151,6 +173,11 @@ export function useAuthStatus({
                     code: authData.organization.code,
                     name: authData.organization.name,
                 } : undefined,
+                // Only clear dependent state if org actually changed
+                ...(orgChanged && {
+                    adobeProject: undefined,
+                    adobeWorkspace: undefined,
+                }),
             });
             setAuthStatus(authData.message || '');
             setAuthSubMessage(authData.subMessage || '');
