@@ -108,6 +108,12 @@ export class ComponentRegistryManager {
      * // Result: mapping['20'] = 'Frontend'
      *
      * @example
+     * // Multiple components with same version - aggregated
+     * this.validateAndMapNodeVersion('20', 'Frontend', mapping, 'component');
+     * this.validateAndMapNodeVersion('20', 'Backend', mapping, 'component');
+     * // Result: mapping['20'] = 'Frontend, Backend'
+     *
+     * @example
      * // Invalid version - throws error with context
      * this.validateAndMapNodeVersion('20; rm -rf /', 'Frontend', mapping, 'component');
      * // Throws: "Invalid Node version in component "Frontend": Invalid Node.js version format..."
@@ -123,7 +129,19 @@ export class ComponentRegistryManager {
             // This validation happens at the SOURCE (component registry) before values reach
             // CommandExecutor, providing an additional layer of security against command injection.
             validateNodeVersion(version);
-            mapping[version] = componentName;
+
+            // Aggregate component names when multiple components require the same Node version
+            // This provides accurate labeling (e.g., "Edge Delivery Services, Adobe Commerce PaaS")
+            // instead of showing only the last-processed component
+            if (mapping[version]) {
+                // Avoid duplicates (same component might be referenced multiple times)
+                const existingNames = mapping[version].split(', ');
+                if (!existingNames.includes(componentName)) {
+                    mapping[version] = `${mapping[version]}, ${componentName}`;
+                }
+            } else {
+                mapping[version] = componentName;
+            }
         } catch (error) {
             throw this.formatNodeVersionError(componentName, componentType, error as Error);
         }
