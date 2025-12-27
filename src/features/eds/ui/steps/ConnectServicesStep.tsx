@@ -128,7 +128,6 @@ export function ConnectServicesStep({
                     onConnect={gitHubAuth.startOAuth}
                     onChangeAccount={gitHubAuth.changeAccount}
                     variant={cardVariant}
-                    compact={showDaLiveInput}
                 />
                 <DaLiveServiceCard
                     isChecking={daLiveAuth.isChecking}
