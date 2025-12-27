@@ -73,6 +73,16 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
             expect(registry.components.appBuilder[0].id).toBe('integration-service');
         });
 
+        it('should load mesh components from separate "mesh" section', async () => {
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
+
+            const registry = await manager.loadRegistry();
+
+            expect(registry.components.mesh).toHaveLength(1);
+            expect(registry.components.mesh![0].id).toBe('commerce-mesh');
+            expect(registry.components.mesh![0].configuration?.nodeVersion).toBe('20');
+        });
+
         it('should preserve component configuration including nodeVersion where defined', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
@@ -125,6 +135,16 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
             expect(component).toBeDefined();
             expect(component?.name).toBe('Kukla Integration Service');
             expect(component?.configuration?.nodeVersion).toBe('22');
+        });
+
+        it('should find mesh component by id (commerce-mesh)', async () => {
+            mockLoader.load.mockResolvedValue(mockRawRegistry);
+
+            const component = await manager.getComponentById('commerce-mesh');
+
+            expect(component).toBeDefined();
+            expect(component?.name).toBe('Adobe Commerce API Mesh');
+            expect(component?.configuration?.nodeVersion).toBe('20');
         });
     });
 

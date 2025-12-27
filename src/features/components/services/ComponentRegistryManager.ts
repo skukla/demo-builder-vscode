@@ -162,12 +162,14 @@ export class ComponentRegistryManager {
             frontends: TransformedComponentDefinition[];
             backends: TransformedComponentDefinition[];
             dependencies: TransformedComponentDefinition[];
+            mesh: TransformedComponentDefinition[];
             integrations: TransformedComponentDefinition[];
             appBuilder: TransformedComponentDefinition[];
         } = {
             frontends: [],
             backends: [],
             dependencies: [],
+            mesh: [],
             integrations: [],
             appBuilder: [],
         };
@@ -209,6 +211,14 @@ export class ComponentRegistryManager {
         addComponents(groups.appBuilderApps, components.appBuilder);
         addComponents(groups.integrations, components.integrations);
         addComponents(groups.dependencies, components.dependencies);
+
+        // Mesh components are loaded directly from mesh section (not via selectionGroups)
+        if (raw.mesh) {
+            for (const id of Object.keys(raw.mesh)) {
+                const enhanced = enhanceComponent(id);
+                if (enhanced) components.mesh.push(enhanced);
+            }
+        }
 
         const infrastructure: TransformedComponentDefinition[] = [];
         if (raw.infrastructure) {
@@ -305,6 +315,7 @@ export class ComponentRegistryManager {
             ...registry.components.frontends,
             ...registry.components.backends,
             ...registry.components.dependencies,
+            ...(registry.components.mesh || []),
             ...(registry.components.integrations || []),
             ...(registry.components.appBuilder || []),
         ];

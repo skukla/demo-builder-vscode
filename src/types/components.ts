@@ -196,6 +196,7 @@ export interface ComponentRegistry {
         frontends: TransformedComponentDefinition[];
         backends: TransformedComponentDefinition[];
         dependencies: TransformedComponentDefinition[];
+        mesh?: TransformedComponentDefinition[];
         integrations?: TransformedComponentDefinition[];
         appBuilder?: TransformedComponentDefinition[];
     };

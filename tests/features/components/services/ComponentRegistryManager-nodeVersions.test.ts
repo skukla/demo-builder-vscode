@@ -49,6 +49,15 @@ describe('Component Registry Manager - Node Version Resolution', () => {
             expect(versions.size).toBe(0);
         });
 
+        it('should include mesh node versions when passed as dependency', async () => {
+            // Given: EDS + PaaS with commerce-mesh (Node 20)
+            const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['commerce-mesh']);
+
+            // Then: commerce-mesh's Node 20 is required
+            expect(versions.size).toBe(1);
+            expect(versions.has('20')).toBe(true);
+        });
+
         it('should include app builder node versions', async () => {
             // Given: EDS + PaaS with integration-service (Node 22)
             const versions = await manager.getRequiredNodeVersions(
