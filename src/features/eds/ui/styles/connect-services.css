@@ -16,6 +16,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 20px;
     margin-top: 8px;
+    align-items: start; /* Each card takes its natural height */
 }
 
 .services-cards-vertical {
