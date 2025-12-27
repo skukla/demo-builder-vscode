@@ -37,22 +37,31 @@ describe('ComponentRegistryManager - Configuration', () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
         });
 
-        it('should resolve node versions from frontend and backend', async () => {
+        it('should return empty set when frontend and backend have no Node requirements', async () => {
+            // EDS and PaaS don't require Node (they're remote services)
             const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas');
 
+            expect(versions.size).toBe(0);
+        });
+
+        it('should resolve node version from headless frontend', async () => {
+            // Headless (Next.js) requires Node 24
+            const versions = await manager.getRequiredNodeVersions('headless');
+
             expect(versions.size).toBe(1);
-            expect(versions.has('20')).toBe(true);
+            expect(versions.has('24')).toBe(true);
         });
 
         it('should include dependency node versions', async () => {
+            // demo-inspector requires Node 18
             const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['demo-inspector']);
 
-            expect(versions.size).toBe(2);
-            expect(versions.has('20')).toBe(true);
+            expect(versions.size).toBe(1);
             expect(versions.has('18')).toBe(true);
         });
 
         it('should include app builder node versions', async () => {
+            // integration-service requires Node 22
             const versions = await manager.getRequiredNodeVersions(
                 'eds',
                 'adobe-commerce-paas',
@@ -61,30 +70,12 @@ describe('ComponentRegistryManager - Configuration', () => {
                 ['integration-service']
             );
 
-            expect(versions.size).toBe(2);
-            expect(versions.has('20')).toBe(true);
+            expect(versions.size).toBe(1);
             expect(versions.has('22')).toBe(true);
         });
 
         it('should return empty set when no components specified', async () => {
             const versions = await manager.getRequiredNodeVersions();
-
-            expect(versions.size).toBe(0);
-        });
-
-        it('should handle components without node version', async () => {
-            mockLoader.load.mockResolvedValue({
-                ...mockRawRegistry,
-                frontends: {
-                    ...mockRawRegistry.frontends,
-                    eds: {
-                        ...mockRawRegistry.frontends!.eds,
-                        configuration: {},
-                    },
-                },
-            });
-
-            const versions = await manager.getRequiredNodeVersions('eds');
 
             expect(versions.size).toBe(0);
         });

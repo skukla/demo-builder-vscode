@@ -24,22 +24,34 @@ describe('Component Registry Manager - Node Version Resolution', () => {
     });
 
     describe('node version resolution', () => {
-        it('should resolve node versions from frontend and backend', async () => {
+        it('should return empty set when frontend and backend have no Node requirements', async () => {
+            // Given: EDS and PaaS don't require Node (they're remote services)
+            // When: Getting required Node versions
             const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas');
 
+            // Then: No Node versions are required
+            expect(versions.size).toBe(0);
+        });
+
+        it('should resolve node version from headless frontend', async () => {
+            // Given: Headless (Next.js) requires Node 24 for local development
+            const versions = await manager.getRequiredNodeVersions('headless');
+
             expect(versions.size).toBe(1);
-            expect(versions.has('20')).toBe(true);
+            expect(versions.has('24')).toBe(true);
         });
 
         it('should include dependency node versions', async () => {
+            // Given: EDS + PaaS with demo-inspector dependency (Node 18)
             const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas', ['demo-inspector']);
 
-            expect(versions.size).toBe(2);
-            expect(versions.has('20')).toBe(true);
+            // Then: Only demo-inspector's Node 18 is required
+            expect(versions.size).toBe(1);
             expect(versions.has('18')).toBe(true);
         });
 
         it('should include app builder node versions', async () => {
+            // Given: EDS + PaaS with integration-service (Node 22)
             const versions = await manager.getRequiredNodeVersions(
                 'eds',
                 'adobe-commerce-paas',
@@ -48,8 +60,24 @@ describe('Component Registry Manager - Node Version Resolution', () => {
                 ['integration-service']
             );
 
+            // Then: Only integration-service's Node 22 is required
+            expect(versions.size).toBe(1);
+            expect(versions.has('22')).toBe(true);
+        });
+
+        it('should combine versions from multiple components', async () => {
+            // Given: Headless frontend (Node 24) + integration-service (Node 22)
+            const versions = await manager.getRequiredNodeVersions(
+                'headless',
+                undefined,
+                undefined,
+                undefined,
+                ['integration-service']
+            );
+
+            // Then: Both Node versions are required
             expect(versions.size).toBe(2);
-            expect(versions.has('20')).toBe(true);
+            expect(versions.has('24')).toBe(true);
             expect(versions.has('22')).toBe(true);
         });
 
@@ -58,79 +86,69 @@ describe('Component Registry Manager - Node Version Resolution', () => {
 
             expect(versions.size).toBe(0);
         });
-
-        it('should handle components without node version', async () => {
-            mockLoader.load.mockResolvedValue({
-                ...mockRawRegistry,
-                frontends: {
-                    ...mockRawRegistry.frontends,
-                    eds: {
-                        ...mockRawRegistry.frontends!.eds,
-                        configuration: {},
-                    },
-                },
-            });
-
-            const versions = await manager.getRequiredNodeVersions('eds');
-
-            expect(versions.size).toBe(0);
-        });
     });
 
     describe('node version to component mapping', () => {
-        it('should aggregate component names when multiple components share same version', async () => {
-            // Given: EDS frontend and PaaS backend both require Node 20
-            // When: Getting the version-to-component mapping
+        it('should return empty mapping when no components have Node requirements', async () => {
+            // Given: EDS and PaaS don't require Node
             const mapping = await manager.getNodeVersionToComponentMapping('eds', 'adobe-commerce-paas');
 
-            // Then: Both component names should be listed for Node 20
-            expect(mapping['20']).toBe('Edge Delivery Services, Adobe Commerce PaaS');
+            // Then: No Node version mappings
+            expect(Object.keys(mapping).length).toBe(0);
         });
 
-        it('should aggregate dependency component with frontend and backend when same version', async () => {
-            // Given: A custom registry where demo-inspector also uses Node 20
+        it('should aggregate component names when multiple components share same version', async () => {
+            // Given: A registry where multiple dependencies use Node 20
             mockLoader.load.mockResolvedValue({
                 ...mockRawRegistry,
                 dependencies: {
                     'demo-inspector': {
                         ...mockRawRegistry.dependencies!['demo-inspector'],
-                        configuration: {
-                            nodeVersion: '20', // Same as frontend/backend
-                        },
+                        configuration: { nodeVersion: '20' },
                     },
+                    'another-dep': {
+                        id: 'another-dep',
+                        name: 'Another Dependency',
+                        description: 'Test dependency',
+                        type: 'dependency',
+                        configuration: { nodeVersion: '20' },
+                    },
+                },
+                selectionGroups: {
+                    ...mockRawRegistry.selectionGroups,
+                    dependencies: ['demo-inspector', 'another-dep'],
                 },
             });
 
-            // When: Getting the version-to-component mapping with dependency
+            // When: Getting the version-to-component mapping
             const mapping = await manager.getNodeVersionToComponentMapping(
-                'eds',
-                'adobe-commerce-paas',
-                ['demo-inspector']
+                undefined,
+                undefined,
+                ['demo-inspector', 'another-dep']
             );
 
-            // Then: All three component names should be listed for Node 20
-            expect(mapping['20']).toBe('Edge Delivery Services, Adobe Commerce PaaS, Demo Inspector');
+            // Then: Both component names should be listed for Node 20
+            expect(mapping['20']).toBe('Demo Inspector, Another Dependency');
         });
 
         it('should keep separate versions distinct', async () => {
             // Given: Different components require different Node versions
-            // When: Getting the version-to-component mapping with app builder app
+            // demo-inspector (Node 18) + integration-service (Node 22)
             const mapping = await manager.getNodeVersionToComponentMapping(
-                'eds',
-                'adobe-commerce-paas',
                 undefined,
+                undefined,
+                ['demo-inspector'],
                 undefined,
                 ['integration-service']
             );
 
-            // Then: Each version should have its own component list
-            expect(mapping['20']).toBe('Edge Delivery Services, Adobe Commerce PaaS');
+            // Then: Each version should have its own component
+            expect(mapping['18']).toBe('Demo Inspector');
             expect(mapping['22']).toBe('Kukla Integration Service');
         });
 
         it('should show single component name when only one component uses a version', async () => {
             // Given: Headless frontend uses Node 24 alone
-            // When: Getting the version-to-component mapping
             const mapping = await manager.getNodeVersionToComponentMapping('headless');
 
             // Then: Should show single component name without commas
@@ -138,33 +156,15 @@ describe('Component Registry Manager - Node Version Resolution', () => {
         });
 
         it('should not duplicate component names when same component referenced multiple times', async () => {
-            // Given: A registry where same component could be referenced twice
-            // (e.g., frontend explicitly specifying same dependency that's already included)
-            mockLoader.load.mockResolvedValue({
-                ...mockRawRegistry,
-                dependencies: {
-                    'demo-inspector': {
-                        ...mockRawRegistry.dependencies!['demo-inspector'],
-                        configuration: {
-                            nodeVersion: '20', // Same as frontend/backend
-                        },
-                    },
-                },
-            });
-
-            // When: Getting the mapping with demo-inspector explicitly listed twice
-            // (simulating a case where component might be added from multiple sources)
+            // Given: demo-inspector explicitly listed twice
             const mapping = await manager.getNodeVersionToComponentMapping(
-                'eds',
-                'adobe-commerce-paas',
+                undefined,
+                undefined,
                 ['demo-inspector', 'demo-inspector'] // Duplicate in the array
             );
 
-            // Then: Should not have duplicates in the Node 20 list
-            const node20Components = mapping['20'].split(', ');
-            const uniqueComponents = new Set(node20Components);
-            expect(node20Components.length).toBe(uniqueComponents.size);
-            expect(mapping['20']).toBe('Edge Delivery Services, Adobe Commerce PaaS, Demo Inspector');
+            // Then: Should not have duplicates
+            expect(mapping['18']).toBe('Demo Inspector');
         });
     });
 

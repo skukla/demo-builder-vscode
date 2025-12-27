@@ -29,23 +29,22 @@ describe('Component Registry Manager - Security Validation', () => {
 
     describe('getRequiredNodeVersions - security validation', () => {
         it('should accept valid numeric versions from components.json', async () => {
-            // Given: components.json has valid numeric versions ("20", "22", "24")
+            // Given: components.json has valid numeric versions
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             // When: getRequiredNodeVersions() is called
             const versions = await manager.getRequiredNodeVersions(
-                'eds',                    // Node 20
-                'adobe-commerce-paas',    // Node 20
+                'eds',                    // No nodeVersion (remote service)
+                'adobe-commerce-paas',    // No nodeVersion (remote service)
                 ['demo-inspector'],       // Node 18
                 undefined,
                 ['integration-service']   // Node 22
             );
 
-            // Then: All versions returned without error
-            expect(versions.size).toBeGreaterThan(0);
-            expect(versions.has('20')).toBe(true);
-            expect(versions.has('18')).toBe(true);
-            expect(versions.has('22')).toBe(true);
+            // Then: All versions returned without error (only deps have Node versions)
+            expect(versions.size).toBe(2);
+            expect(versions.has('18')).toBe(true);  // demo-inspector
+            expect(versions.has('22')).toBe(true);  // integration-service
         });
 
         it('should accept valid semantic versions', async () => {
@@ -214,18 +213,17 @@ describe('Component Registry Manager - Security Validation', () => {
 
             // When: getNodeVersionToComponentMapping() is called
             const mapping = await manager.getNodeVersionToComponentMapping(
-                'eds',
-                'adobe-commerce-paas',
-                ['demo-inspector'],
+                'eds',                    // No nodeVersion (remote service)
+                'adobe-commerce-paas',    // No nodeVersion (remote service)
+                ['demo-inspector'],       // Node 18
                 undefined,
-                ['integration-service']
+                ['integration-service']   // Node 22
             );
 
-            // Then: Mapping returned without errors
-            expect(Object.keys(mapping).length).toBeGreaterThan(0);
-            expect(mapping['20']).toBeDefined();
-            expect(mapping['18']).toBeDefined();
-            expect(mapping['22']).toBeDefined();
+            // Then: Mapping returned without errors (only deps have Node versions)
+            expect(Object.keys(mapping).length).toBe(2);
+            expect(mapping['18']).toBeDefined();  // demo-inspector
+            expect(mapping['22']).toBeDefined();  // integration-service
         });
     });
 });

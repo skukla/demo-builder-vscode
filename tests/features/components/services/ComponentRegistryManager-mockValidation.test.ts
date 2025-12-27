@@ -65,28 +65,43 @@ describe('Mock Structure Validation', () => {
         });
 
         it('should have component definitions with required fields', () => {
-            // Check frontends have name, description, configuration
+            // Check frontends have name and description
             const frontends = mockRawRegistry.frontends;
             if (frontends) {
                 Object.entries(frontends).forEach(([id, component]) => {
                     expect(component.name).toBeDefined();
                     expect(component.description).toBeDefined();
-                    // Node version should be in configuration
-                    if (component.configuration) {
-                        expect(component.configuration.nodeVersion).toBeDefined();
-                    }
+                    // Note: nodeVersion is optional - some components (EDS, PaaS) don't need Node
                 });
             }
         });
 
-        it('should have backends with nodeVersion in configuration', () => {
+        it('should have backends with name defined', () => {
             const backends = mockRawRegistry.backends;
             if (backends) {
                 Object.entries(backends).forEach(([id, component]) => {
                     expect(component.name).toBeDefined();
-                    expect(component.configuration?.nodeVersion).toBeDefined();
+                    // Note: nodeVersion is optional - PaaS is a remote service without Node requirement
                 });
             }
+        });
+
+        it('should have nodeVersion for components that require local Node.js', () => {
+            // headless (Next.js) requires Node for local development
+            expect(mockRawRegistry.frontends?.headless?.configuration?.nodeVersion).toBe('24');
+            // integration-service requires Node
+            expect(mockRawRegistry.appBuilderApps?.['integration-service']?.configuration?.nodeVersion).toBe('22');
+            // demo-inspector requires Node
+            expect(mockRawRegistry.dependencies?.['demo-inspector']?.configuration?.nodeVersion).toBe('18');
+            // commerce-mesh requires Node
+            expect(mockRawRegistry.mesh?.['commerce-mesh']?.configuration?.nodeVersion).toBe('20');
+        });
+
+        it('should NOT have nodeVersion for remote services', () => {
+            // EDS runs on Edge Delivery, not local Node
+            expect(mockRawRegistry.frontends?.eds?.configuration?.nodeVersion).toBeUndefined();
+            // PaaS is a remote Commerce instance
+            expect(mockRawRegistry.backends?.['adobe-commerce-paas']?.configuration?.nodeVersion).toBeUndefined();
         });
     });
 

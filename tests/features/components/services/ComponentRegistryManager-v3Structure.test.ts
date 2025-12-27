@@ -73,14 +73,16 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
             expect(registry.components.appBuilder[0].id).toBe('integration-service');
         });
 
-        it('should preserve component configuration including nodeVersion', async () => {
+        it('should preserve component configuration including nodeVersion where defined', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const registry = await manager.loadRegistry();
 
+            // EDS doesn't have nodeVersion (it's a remote service)
             const eds = registry.components.frontends.find(f => f.id === 'eds');
-            expect(eds?.configuration?.nodeVersion).toBe('20');
+            expect(eds?.configuration?.nodeVersion).toBeUndefined();
 
+            // Headless (Next.js) has nodeVersion for local development
             const headless = registry.components.frontends.find(f => f.id === 'headless');
             expect(headless?.configuration?.nodeVersion).toBe('24');
         });
@@ -94,7 +96,7 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
 
             expect(component).toBeDefined();
             expect(component?.name).toBe('Edge Delivery Services');
-            expect(component?.configuration?.nodeVersion).toBe('20');
+            // EDS doesn't have nodeVersion requirement
         });
 
         it('should find backend by id (adobe-commerce-paas)', async () => {
@@ -127,31 +129,30 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
     });
 
     describe('getNodeVersionToComponentMapping', () => {
-        it('should return node version mapping for eds frontend', async () => {
+        it('should return empty mapping for eds + paas (no Node requirements)', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const mapping = await manager.getNodeVersionToComponentMapping('eds', 'adobe-commerce-paas');
 
-            // eds requires Node 20, adobe-commerce-paas requires Node 20
-            expect(mapping['20']).toBeDefined();
+            // EDS and PaaS don't have Node requirements
+            expect(Object.keys(mapping).length).toBe(0);
         });
 
         it('should return node version mapping for headless frontend', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
-            const mapping = await manager.getNodeVersionToComponentMapping('headless', 'adobe-commerce-paas');
+            const mapping = await manager.getNodeVersionToComponentMapping('headless');
 
-            // headless requires Node 24, adobe-commerce-paas requires Node 20
+            // headless requires Node 24
             expect(mapping['24']).toBe('Headless Storefront');
-            expect(mapping['20']).toBe('Adobe Commerce PaaS');
         });
 
         it('should include app builder node versions', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const mapping = await manager.getNodeVersionToComponentMapping(
-                'eds',
-                'adobe-commerce-paas',
+                undefined,
+                undefined,
                 undefined,
                 undefined,
                 ['integration-service']
@@ -163,28 +164,28 @@ describe('ComponentRegistryManager - Section-Based Structure', () => {
     });
 
     describe('getRequiredNodeVersions', () => {
-        it('should return required node versions for eds + paas', async () => {
+        it('should return empty set for eds + paas (no Node requirements)', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const versions = await manager.getRequiredNodeVersions('eds', 'adobe-commerce-paas');
 
-            expect(versions.has('20')).toBe(true);
+            expect(versions.size).toBe(0);
         });
 
-        it('should return multiple node versions for headless + paas + app builder', async () => {
+        it('should return node versions for headless + app builder', async () => {
             mockLoader.load.mockResolvedValue(mockRawRegistry);
 
             const versions = await manager.getRequiredNodeVersions(
                 'headless',
-                'adobe-commerce-paas',
+                undefined,
                 undefined,
                 undefined,
                 ['integration-service']
             );
 
             expect(versions.has('24')).toBe(true); // headless
-            expect(versions.has('20')).toBe(true); // adobe-commerce-paas
             expect(versions.has('22')).toBe(true); // integration-service
+            expect(versions.size).toBe(2);
         });
     });
 

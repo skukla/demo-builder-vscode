@@ -18,7 +18,6 @@
         "dark": "eds-file-icon-dark.svg"
       },
       "configuration": {
-        "nodeVersion": "20",
         "requiredEnvVars": [
           "MESH_ENDPOINT",
           "ADOBE_COMMERCE_STORE_CODE",
@@ -80,7 +79,6 @@
       "name": "Adobe Commerce PaaS",
       "description": "Adobe Commerce DSN instance",
       "configuration": {
-        "nodeVersion": "20",
         "requiredServices": ["catalog-service", "live-search"],
         "requiredEnvVars": [
           "ADOBE_COMMERCE_URL",
@@ -101,7 +99,6 @@
       "name": "Adobe Commerce Cloud Service",
       "description": "Adobe's managed SaaS commerce backend",
       "configuration": {
-        "nodeVersion": "20",
         "requiredEnvVars": [
           "ACCS_HOST",
           "ACCS_STORE_VIEW_CODE"

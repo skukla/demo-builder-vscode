@@ -45,7 +45,7 @@ export const mockRawRegistry: RawComponentRegistry = {
                 optional: [],
             },
             configuration: {
-                nodeVersion: '20',
+                // No nodeVersion - EDS runs on Edge Delivery, not local Node
                 requiredEnvVars: ['VAR1', 'VAR2'],
             },
         },
@@ -56,7 +56,7 @@ export const mockRawRegistry: RawComponentRegistry = {
             type: 'frontend',
             // Note: No compatibleBackends - used to test incompatible frontend scenarios
             configuration: {
-                nodeVersion: '24',
+                nodeVersion: '24', // Next.js requires Node for local dev
                 requiredEnvVars: ['MESH_ENDPOINT'],
             },
         },
@@ -68,7 +68,7 @@ export const mockRawRegistry: RawComponentRegistry = {
             description: 'Adobe Commerce DSN instance',
             type: 'backend',
             configuration: {
-                nodeVersion: '20',
+                // No nodeVersion - PaaS is a remote Commerce instance
             },
         },
     },
